@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Big Race - Project Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-dark: #0d0b0a;
+            --bg-medium: #1a1612;
+            --card-bg: #242019;
+            --text-light: #e8e6e3;
+            --text-muted: #8a7f73;
+            --accent-gold: #c9a961;
+            --border: #2d2925;
+            --divider: #363330;
+            --success: #52c186;
+            --warning: #e8a87c;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-light);
+            min-height: 100vh;
+            font-weight: 400;
+            letter-spacing: -0.01em;
+        }
+
+        /* Layout */
+        .app-layout {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: var(--bg-medium);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .back-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.875em;
+            margin-bottom: 16px;
+            transition: color 0.2s ease;
+        }
+
+        .back-btn:hover {
+            color: var(--accent-gold);
+        }
+
+        .project-info h2 {
+            font-size: 1.25em;
+            font-weight: 600;
+            margin-bottom: 4px;
+            letter-spacing: -0.02em;
+        }
+
+        .project-code {
+            font-size: 0.8125em;
+            color: var(--text-muted);
+        }
+
+        .nav-section {
+            padding: 24px 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .nav-section-title {
+            font-size: 0.6875em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            padding: 0 8px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-bottom: 2px;
+            font-size: 0.875em;
+            color: var(--text-muted);
+        }
+
+        .nav-item:hover {
+            background: rgba(201, 169, 97, 0.08);
+            color: var(--text-light);
+        }
+
+        .nav-item.active {
+            background: rgba(201, 169, 97, 0.12);
+            color: var(--accent-gold);
+            font-weight: 500;
+        }
+
+        .nav-icon {
+            width: 18px;
+            font-size: 1.1em;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Top Bar */
+        .top-bar {
+            height: 60px;
+            background: var(--bg-medium);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 32px;
+        }
+
+        .view-tabs {
+            display: flex;
+            gap: 4px;
+        }
+
+        .view-tab {
+            padding: 8px 16px;
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 6px;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.8125em;
+            font-weight: 500;
+        }
+
+        .view-tab:hover {
+            border-color: var(--border);
+            color: var(--text-light);
+        }
+
+        .view-tab.active {
+            background: var(--card-bg);
+            border-color: var(--border);
+            color: var(--text-light);
+        }
+
+        .top-bar-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .layout-btn {
+            padding: 8px 14px;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 0.8125em;
+            transition: all 0.2s ease;
+        }
+
+        .layout-btn:hover {
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+        }
+
+        /* Dashboard Grid */
+        .dashboard {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+        }
+
+        .widgets-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
+        }
+
+        /* Widget Styles */
+        .widget {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: move;
+            transition: all 0.2s ease;
+        }
+
+        .widget:hover {
+            border-color: var(--divider);
+        }
+
+        .widget.dragging {
+            opacity: 0.5;
+        }
+
+        .widget-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: grab;
+        }
+
+        .widget-header:active {
+            cursor: grabbing;
+        }
+
+        .widget-title {
+            font-size: 0.875em;
+            font-weight: 600;
+            color: var(--text-light);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .widget-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .widget-btn {
+            width: 24px;
+            height: 24px;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            font-size: 0.875em;
+        }
+
+        .widget-btn:hover {
+            background: rgba(201, 169, 97, 0.1);
+            color: var(--accent-gold);
+        }
+
+        .widget-content {
+            padding: 20px;
+        }
+
+        /* Widget Specific Styles */
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .stat-row:last-child {
+            border-bottom: none;
+        }
+
+        .stat-label {
+            font-size: 0.8125em;
+            color: var(--text-muted);
+        }
+
+        .stat-value {
+            font-size: 1.125em;
+            font-weight: 600;
+            color: var(--text-light);
+        }
+
+        .progress-section {
+            margin-bottom: 16px;
+        }
+
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8125em;
+            margin-bottom: 8px;
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: var(--bg-dark);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--accent-gold);
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        .quick-action {
+            display: block;
+            width: 100%;
+            padding: 12px 16px;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-light);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.875em;
+            font-weight: 500;
+            text-align: left;
+            margin-bottom: 8px;
+        }
+
+        .quick-action:hover {
+            background: rgba(201, 169, 97, 0.08);
+            border-color: var(--accent-gold);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-muted);
+            font-size: 0.875em;
+        }
+
+        .empty-icon {
+            font-size: 2em;
+            margin-bottom: 12px;
+            opacity: 0.3;
+        }
+
+        .item-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 12px;
+            background: var(--bg-dark);
+            border-radius: 6px;
+            font-size: 0.8125em;
+        }
+
+        .list-item-label {
+            color: var(--text-light);
+        }
+
+        .list-item-value {
+            color: var(--text-muted);
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            background: rgba(82, 193, 134, 0.15);
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: 500;
+            color: var(--success);
+        }
+
+        .badge.warning {
+            background: rgba(232, 168, 124, 0.15);
+            color: var(--warning);
+        }
+
+        .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        /* Large Widget */
+        .widget.large {
+            grid-column: span 2;
+        }
+
+        /* Scene Grid */
+        .scene-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 8px;
+        }
+
+        .scene-card {
+            aspect-ratio: 1;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .scene-card:hover {
+            border-color: var(--accent-gold);
+        }
+
+        .scene-number {
+            font-size: 1.25em;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .scene-status {
+            font-size: 0.6875em;
+            color: var(--text-muted);
+        }
+
+        /* Character Avatars */
+        .character-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 12px;
+        }
+
+        .character-avatar {
+            text-align: center;
+        }
+
+        .avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: var(--bg-dark);
+            border: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 8px;
+            font-size: 1.5em;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .avatar:hover {
+            border-color: var(--accent-gold);
+        }
+
+        .character-name {
+            font-size: 0.75em;
+            color: var(--text-light);
+            margin-bottom: 2px;
+        }
+
+        .character-actor {
+            font-size: 0.6875em;
+            color: var(--text-muted);
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar {
+                width: 240px;
+            }
+
+            .widget.large {
+                grid-column: span 1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                left: -280px;
+                z-index: 100;
+                transition: left 0.3s ease;
+            }
+
+            .sidebar.open {
+                left: 0;
+            }
+
+            .widgets-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <a href="/" class="back-btn">← Back to Projects</a>
+                <div class="project-info">
+                    <h2>The Big Race</h2>
+                    <div class="project-code">TBR-01 • Feature Film</div>
+                </div>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">Overview</div>
+                <div class="nav-item active">
+                    <span class="nav-icon">◉</span>
+                    <span>Dashboard</span>
+                </div>
+                <div class="nav-item">
+                    <span class="nav-icon">📄</span>
+                    <span>Script</span>
+                </div>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">Breakdown</div>
+                <div class="nav-item">
+                    <span class="nav-icon">🎬</span>
+                    <span>Scenes</span>
+                </div>
+                <div class="nav-item">
+                    <span class="nav-icon">👤</span>
+                    <span>Characters</span>
+                </div>
+                <div class="nav-item">
+                    <span class="nav-icon">👥</span>
+                    <span>Cast Board</span>
+                </div>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">Design</div>
+                <div class="nav-item">
+                    <span class="nav-icon">🎨</span>
+                    <span>Design Board</span>
+                </div>
+                <div class="nav-item">
+                    <span class="nav-icon">📖</span>
+                    <span>Look Books</span>
+                </div>
+                <div class="nav-item">
+                    <span class="nav-icon">📸</span>
+                    <span>Continuity</span>
+                </div>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">Production</div>
+                <div class="nav-item">
+                    <span class="nav-icon">⏱</span>
+                    <span>Time in Chair</span>
+                </div>
+                <div class="nav-item">
+                    <span class="nav-icon">💄</span>
+                    <span>Products</span>
+                </div>
+                <div class="nav-item">
+                    <span class="nav-icon">💰</span>
+                    <span>Budget</span>
+                </div>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">Other</div>
+                <div class="nav-item">
+                    <span class="nav-icon">📝</span>
+                    <span>Notes</span>
+                </div>
+                <div class="nav-item">
+                    <span class="nav-icon">⚙</span>
+                    <span>Settings</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <div class="view-tabs">
+                    <button class="view-tab active">Dashboard</button>
+                    <button class="view-tab">Table View</button>
+                    <button class="view-tab">Timeline</button>
+                </div>
+                <div class="top-bar-actions">
+                    <button class="layout-btn" onclick="resetLayout()">Reset Layout</button>
+                    <button class="layout-btn" onclick="toggleEdit()">Customize</button>
+                </div>
+            </div>
+
+            <!-- Dashboard -->
+            <div class="dashboard">
+                <div class="widgets-grid" id="widgetsGrid">
+                    <!-- Script Status Widget -->
+                    <div class="widget" draggable="true">
+                        <div class="widget-header">
+                            <div class="widget-title">
+                                <span>📄</span>
+                                Script Status
+                            </div>
+                            <div class="widget-actions">
+                                <button class="widget-btn">↕</button>
+                                <button class="widget-btn">×</button>
+                            </div>
+                        </div>
+                        <div class="widget-content">
+                            <div class="stat-row">
+                                <span class="stat-label">Version</span>
+                                <span class="stat-value">Final Draft v3</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-label">Pages</span>
+                                <span class="stat-value">124</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-label">Last Updated</span>
+                                <span class="stat-value">2 days ago</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Progress Widget -->
+                    <div class="widget" draggable="true">
+                        <div class="widget-header">
+                            <div class="widget-title">
+                                <span>📊</span>
+                                Breakdown Progress
+                            </div>
+                            <div class="widget-actions">
+                                <button class="widget-btn">↕</button>
+                                <button class="widget-btn">×</button>
+                            </div>
+                        </div>
+                        <div class="widget-content">
+                            <div class="progress-section">
+                                <div class="progress-label">
+                                    <span class="stat-label">Scenes</span>
+                                    <span>68%</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: 68%"></div>
+                                </div>
+                            </div>
+                            <div class="progress-section">
+                                <div class="progress-label">
+                                    <span class="stat-label">Characters</span>
+                                    <span>82%</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: 82%"></div>
+                                </div>
+                            </div>
+                            <div class="progress-section">
+                                <div class="progress-label">
+                                    <span class="stat-label">Continuity Photos</span>
+                                    <span>45%</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: 45%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions Widget -->
+                    <div class="widget" draggable="true">
+                        <div class="widget-header">
+                            <div class="widget-title">
+                                <span>⚡</span>
+                                Quick Actions
+                            </div>
+                            <div class="widget-actions">
+                                <button class="widget-btn">↕</button>
+                                <button class="widget-btn">×</button>
+                            </div>
+                        </div>
+                        <div class="widget-content">
+                            <button class="quick-action">Upload Script Update</button>
+                            <button class="quick-action">Add New Character</button>
+                            <button class="quick-action">Create Look Book</button>
+                            <button class="quick-action">Export Breakdown</button>
+                        </div>
+                    </div>
+
+                    <!-- Continuity Alerts Widget -->
+                    <div class="widget" draggable="true">
+                        <div class="widget-header">
+                            <div class="widget-title">
+                                <span>⚠</span>
+                                Continuity Alerts
+                            </div>
+                            <div class="widget-actions">
+                                <button class="widget-btn">↕</button>
+                                <button class="widget-btn">×</button>
+                            </div>
+                        </div>
+                        <div class="widget-content">
+                            <div class="item-list">
+                                <div class="list-item">
+                                    <span class="list-item-label">Scene 42 - Hair mismatch</span>
+                                    <span class="badge warning"><span class="dot"></span> Review</span>
+                                </div>
+                                <div class="list-item">
+                                    <span class="list-item-label">Scene 18 - Missing photos</span>
+                                    <span class="badge warning"><span class="dot"></span> Action</span>
+                                </div>
+                                <div class="list-item">
+                                    <span class="list-item-label">Scene 55 - Approved</span>
+                                    <span class="badge"><span class="dot"></span> Clear</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Scenes Overview - Large Widget -->
+                    <div class="widget large" draggable="true">
+                        <div class="widget-header">
+                            <div class="widget-title">
+                                <span>🎬</span>
+                                Scenes Overview
+                            </div>
+                            <div class="widget-actions">
+                                <button class="widget-btn">⤢</button>
+                                <button class="widget-btn">↕</button>
+                                <button class="widget-btn">×</button>
+                            </div>
+                        </div>
+                        <div class="widget-content">
+                            <div class="scene-grid">
+                                <div class="scene-card">
+                                    <div class="scene-number">1</div>
+                                    <div class="scene-status">Done</div>
+                                </div>
+                                <div class="scene-card">
+                                    <div class="scene-number">2</div>
+                                    <div class="scene-status">Done</div>
+                                </div>
+                                <div class="scene-card">
+                                    <div class="scene-number">3</div>
+                                    <div class="scene-status">Review</div>
+                                </div>
+                                <div class="scene-card">
+                                    <div class="scene-number">4</div>
+                                    <div class="scene-status">Pending</div>
+                                </div>
+                                <div class="scene-card">
+                                    <div class="scene-number">5</div>
+                                    <div class="scene-status">Pending</div>
+                                </div>
+                                <div class="scene-card">
+                                    <div class="scene-number">6</div>
+                                    <div class="scene-status">Pending</div>
+                                </div>
+                                <div class="scene-card">
+                                    <div class="scene-number">7</div>
+                                    <div class="scene-status">Done</div>
+                                </div>
+                                <div class="scene-card">
+                                    <div class="scene-number">8</div>
+                                    <div class="scene-status">Pending</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Characters Widget -->
+                    <div class="widget large" draggable="true">
+                        <div class="widget-header">
+                            <div class="widget-title">
+                                <span>👤</span>
+                                Main Characters
+                            </div>
+                            <div class="widget-actions">
+                                <button class="widget-btn">⤢</button>
+                                <button class="widget-btn">↕</button>
+                                <button class="widget-btn">×</button>
+                            </div>
+                        </div>
+                        <div class="widget-content">
+                            <div class="character-grid">
+                                <div class="character-avatar">
+                                    <div class="avatar">JD</div>
+                                    <div class="character-name">Jane Doe</div>
+                                    <div class="character-actor">Lead</div>
+                                </div>
+                                <div class="character-avatar">
+                                    <div class="avatar">MS</div>
+                                    <div class="character-name">Mike Smith</div>
+                                    <div class="character-actor">Supporting</div>
+                                </div>
+                                <div class="character-avatar">
+                                    <div class="avatar">SJ</div>
+                                    <div class="character-name">Sarah Jones</div>
+                                    <div class="character-actor">Lead</div>
+                                </div>
+                                <div class="character-avatar">
+                                    <div class="avatar">TB</div>
+                                    <div class="character-name">Tom Brown</div>
+                                    <div class="character-actor">Supporting</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Budget Widget -->
+                    <div class="widget" draggable="true">
+                        <div class="widget-header">
+                            <div class="widget-title">
+                                <span>💰</span>
+                                Budget
+                            </div>
+                            <div class="widget-actions">
+                                <button class="widget-btn">↕</button>
+                                <button class="widget-btn">×</button>
+                            </div>
+                        </div>
+                        <div class="widget-content">
+                            <div class="stat-row">
+                                <span class="stat-label">Total Budget</span>
+                                <span class="stat-value">$45,000</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-label">Spent</span>
+                                <span class="stat-value">$18,200</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-label">Remaining</span>
+                                <span class="stat-value">$26,800</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Time in Chair Widget -->
+                    <div class="widget" draggable="true">
+                        <div class="widget-header">
+                            <div class="widget-title">
+                                <span>⏱</span>
+                                Time in Chair
+                            </div>
+                            <div class="widget-actions">
+                                <button class="widget-btn">↕</button>
+                                <button class="widget-btn">×</button>
+                            </div>
+                        </div>
+                        <div class="widget-content">
+                            <div class="stat-row">
+                                <span class="stat-label">Today's Total</span>
+                                <span class="stat-value">4h 30m</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-label">Avg per Character</span>
+                                <span class="stat-value">45m</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-label">Next Call</span>
+                                <span class="stat-value">6:00 AM</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Drag and Drop functionality
+        let draggedElement = null;
+
+        document.querySelectorAll('.widget').forEach(widget => {
+            widget.addEventListener('dragstart', handleDragStart);
+            widget.addEventListener('dragend', handleDragEnd);
+            widget.addEventListener('dragover', handleDragOver);
+            widget.addEventListener('drop', handleDrop);
+        });
+
+        function handleDragStart(e) {
+            draggedElement = this;
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        function handleDragEnd(e) {
+            this.classList.remove('dragging');
+            document.querySelectorAll('.widget').forEach(widget => {
+                widget.classList.remove('drag-over');
+            });
+        }
+
+        function handleDragOver(e) {
+            if (e.preventDefault) {
+                e.preventDefault();
+            }
+            e.dataTransfer.dropEffect = 'move';
+            return false;
+        }
+
+        function handleDrop(e) {
+            if (e.stopPropagation) {
+                e.stopPropagation();
+            }
+
+            if (draggedElement !== this) {
+                const grid = document.getElementById('widgetsGrid');
+                const allWidgets = [...grid.children];
+                const draggedIndex = allWidgets.indexOf(draggedElement);
+                const targetIndex = allWidgets.indexOf(this);
+
+                if (draggedIndex < targetIndex) {
+                    this.parentNode.insertBefore(draggedElement, this.nextSibling);
+                } else {
+                    this.parentNode.insertBefore(draggedElement, this);
+                }
+            }
+
+            return false;
+        }
+
+        // Close widget
+        document.querySelectorAll('.widget-btn').forEach(btn => {
+            if (btn.textContent === '×') {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    this.closest('.widget').style.display = 'none';
+                });
+            }
+        });
+
+        // Expand/Collapse widget
+        document.querySelectorAll('.widget-btn').forEach(btn => {
+            if (btn.textContent === '↕') {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const content = this.closest('.widget').querySelector('.widget-content');
+                    if (content.style.display === 'none') {
+                        content.style.display = 'block';
+                        this.textContent = '↕';
+                    } else {
+                        content.style.display = 'none';
+                        this.textContent = '↓';
+                    }
+                });
+            }
+        });
+
+        // Navigation
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', function() {
+                document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        // View tabs
+        document.querySelectorAll('.view-tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        function resetLayout() {
+            location.reload();
+        }
+
+        function toggleEdit() {
+            alert('Customize mode - you can now drag widgets to rearrange them!');
+        }
+    </script>
+</body>
+</html>
