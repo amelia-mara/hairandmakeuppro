@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checks Happy - Projects</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-dark: #1a1612;
+            --bg-darker: #0f0d0a;
+            --card-bg: #d4c4a8;
+            --card-dark: #2a2520;
+            --text-light: #f5f5f5;
+            --text-muted: #a89f8f;
+            --accent-gold: #d4af37;
+            --border: #3a3530;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-light);
+            min-height: 100vh;
+            padding: 40px;
+            background-image: 
+                radial-gradient(circle at 20% 50%, rgba(212, 175, 55, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 80% 50%, rgba(212, 196, 168, 0.03) 0%, transparent 50%);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            font-weight: 700;
+            color: var(--text-light);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .profile-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-gold) 0%, #b8932f 100%);
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 1em;
+            color: var(--bg-darker);
+            transition: all 0.3s ease;
+        }
+
+        .profile-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4);
+        }
+
+        .search-section {
+            margin-bottom: 30px;
+        }
+
+        .search-bar {
+            width: 100%;
+            max-width: 600px;
+            padding: 14px 22px;
+            background: var(--card-dark);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text-light);
+            font-size: 1em;
+            transition: all 0.3s ease;
+        }
+
+        .search-bar:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
+        }
+
+        .search-bar::placeholder {
+            color: var(--text-muted);
+        }
+
+        .filters {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 10px 22px;
+            background: var(--card-dark);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.95em;
+            font-weight: 500;
+        }
+
+        .filter-btn:hover {
+            background: rgba(212, 196, 168, 0.1);
+            border-color: var(--accent-gold);
+            color: var(--text-light);
+        }
+
+        .filter-btn.active {
+            background: linear-gradient(135deg, var(--accent-gold) 0%, #b8932f 100%);
+            border-color: var(--accent-gold);
+            color: var(--bg-darker);
+            font-weight: 600;
+        }
+
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 28px;
+        }
+
+        /* New Project Card */
+        .new-project-card {
+            background: var(--card-bg);
+            border-radius: 18px;
+            padding: 50px 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 380px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px dashed rgba(42, 37, 32, 0.3);
+        }
+
+        .new-project-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.5);
+            border-color: rgba(42, 37, 32, 0.6);
+        }
+
+        .new-project-icon {
+            width: 90px;
+            height: 90px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3.5em;
+            color: var(--card-dark);
+            margin-bottom: 20px;
+        }
+
+        .new-project-text {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: var(--card-dark);
+            margin-bottom: 8px;
+        }
+
+        .new-project-subtitle {
+            font-size: 0.95em;
+            color: #6d6250;
+        }
+
+        /* Project Card - Clapperboard Style */
+        .project-card {
+            background: var(--card-bg);
+            border-radius: 18px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .project-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.6);
+        }
+
+        .clapperboard {
+            position: relative;
+            background: var(--card-dark);
+            padding: 30px 20px;
+            aspect-ratio: 1.1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .clapper-top {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 55px;
+            background: linear-gradient(
+                135deg,
+                #f5f5f5 0%, #e0e0e0 24%,
+                #2a2520 24%, #1a1612 49%,
+                #f5f5f5 49%, #e0e0e0 74%,
+                #2a2520 74%, #1a1612 100%
+            );
+            background-size: 70px 100%;
+            border-bottom: 3px solid var(--card-dark);
+            transform: rotate(-5deg);
+            transform-origin: left top;
+        }
+
+        .clapper-title {
+            margin-top: 50px;
+            font-size: 1.6em;
+            font-weight: 700;
+            color: var(--text-light);
+            text-align: center;
+            z-index: 1;
+            line-height: 1.2;
+            padding: 0 10px;
+        }
+
+        .clapper-scene-bars {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            width: 85%;
+            margin-top: 30px;
+            z-index: 1;
+        }
+
+        .scene-bar {
+            height: 5px;
+            background: var(--text-light);
+            border-radius: 3px;
+            opacity: 0.8;
+        }
+
+        .project-info {
+            padding: 24px;
+            background: var(--card-bg);
+        }
+
+        .project-title {
+            font-size: 1.15em;
+            font-weight: 600;
+            color: var(--card-dark);
+            margin-bottom: 10px;
+        }
+
+        .project-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .meta-item {
+            font-size: 0.9em;
+            color: #6d6250;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .project-progress {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 2px solid rgba(42, 37, 32, 0.15);
+        }
+
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85em;
+            color: #6d6250;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(42, 37, 32, 0.15);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-gold) 0%, #b8932f 100%);
+            border-radius: 10px;
+            transition: width 0.3s ease;
+        }
+
+        .project-status {
+            position: absolute;
+            top: 18px;
+            right: 18px;
+            padding: 7px 14px;
+            background: rgba(26, 22, 18, 0.95);
+            backdrop-filter: blur(5px);
+            border-radius: 20px;
+            font-size: 0.75em;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            z-index: 10;
+            border: 1px solid var(--border);
+        }
+
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #52c186;
+        }
+
+        .status-dot.in-progress {
+            background: #f2a154;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--card-dark);
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .modal-header h2 {
+            font-size: 1.8em;
+            color: var(--text-light);
+        }
+
+        .close-btn {
+            font-size: 1.5em;
+            cursor: pointer;
+            color: var(--text-muted);
+            background: none;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-btn:hover {
+            background: rgba(212, 196, 168, 0.1);
+            color: var(--text-light);
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text-light);
+            font-size: 0.95em;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text-light);
+            font-size: 1em;
+            transition: all 0.3s ease;
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, var(--accent-gold) 0%, #b8932f 100%);
+            color: var(--bg-darker);
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4);
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 20px;
+            }
+
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .projects-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .modal-content {
+                padding: 30px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Projects</h1>
+        <div class="header-actions">
+            <button class="profile-btn" title="Profile">JD</button>
+        </div>
+    </div>
+
+    <div class="search-section">
+        <input type="text" class="search-bar" placeholder="🔍 Search projects..." id="searchBar">
+    </div>
+
+    <div class="filters">
+        <button class="filter-btn active">All</button>
+        <button class="filter-btn">Features</button>
+        <button class="filter-btn">Series</button>
+        <button class="filter-btn">Commercials</button>
+        <button class="filter-btn">Music Videos</button>
+        <button class="filter-btn">Recent</button>
+    </div>
+
+    <div class="projects-grid" id="projectsGrid">
+        <!-- New Project Card -->
+        <div class="new-project-card" onclick="openModal()">
+            <div class="new-project-icon">+</div>
+            <div class="new-project-text">New Project</div>
+            <div class="new-project-subtitle">Start a new production</div>
+        </div>
+
+        <!-- Project cards will be added here -->
+    </div>
+
+    <!-- Modal -->
+    <div class="modal" id="projectModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Create New Project</h2>
+                <button class="close-btn" onclick="closeModal()">×</button>
+            </div>
+            <form id="projectForm" onsubmit="saveProject(event)">
+                <div class="form-group">
+                    <label>Project Title *</label>
+                    <input type="text" id="projectTitle" placeholder="e.g., The Crown - Season 5" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Show Code</label>
+                    <input type="text" id="showCode" placeholder="e.g., CRN-S5">
+                </div>
+
+                <div class="form-group">
+                    <label>Project Type</label>
+                    <select id="projectType">
+                        <option>Feature Film</option>
+                        <option>TV Series</option>
+                        <option>Commercial</option>
+                        <option>Music Video</option>
+                        <option>Short Film</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="projectDesc" placeholder="Brief description..."></textarea>
+                </div>
+
+                <button type="submit" class="submit-btn">Create Project</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let projects = [];
+
+        const demoProjects = [
+            {
+                title: "The Big Race",
+                code: "TBR-01",
+                type: "Feature Film",
+                status: "active",
+                progress: 68,
+                lastModified: "2 hours ago",
+                scenes: 124,
+                characters: 28
+            },
+            {
+                title: "Haunted Hearts",
+                code: "HH-S1",
+                type: "TV Series",
+                status: "active",
+                progress: 42,
+                lastModified: "Yesterday",
+                scenes: 89,
+                characters: 15
+            },
+            {
+                title: "Hauntwood",
+                code: "HW-01",
+                type: "Feature Film",
+                status: "in-progress",
+                progress: 85,
+                lastModified: "3 days ago",
+                scenes: 156,
+                characters: 32
+            }
+        ];
+
+        function loadProjects() {
+            const saved = localStorage.getItem('checksHappyProjects');
+            if (saved) {
+                projects = JSON.parse(saved);
+            } else {
+                projects = demoProjects;
+                saveToStorage();
+            }
+            renderProjects();
+        }
+
+        function saveToStorage() {
+            localStorage.setItem('checksHappyProjects', JSON.stringify(projects));
+        }
+
+        function renderProjects() {
+            const grid = document.getElementById('projectsGrid');
+            const newProjectCard = grid.querySelector('.new-project-card');
+            grid.innerHTML = '';
+            grid.appendChild(newProjectCard);
+
+            projects.forEach((project, index) => {
+                const card = document.createElement('div');
+                card.className = 'project-card';
+                card.onclick = () => openProject(index);
+
+                const statusClass = project.status === 'active' ? '' : 'in-progress';
+                const statusText = project.status === 'active' ? 'Active' : 'In Progress';
+
+                card.innerHTML = `
+                    <div class="clapperboard">
+                        <div class="clapper-top"></div>
+                        <div class="project-status">
+                            <span class="status-dot ${statusClass}"></span>
+                            ${statusText}
+                        </div>
+                        <div class="clapper-title">${project.title}</div>
+                        <div class="clapper-scene-bars">
+                            <div class="scene-bar"></div>
+                            <div class="scene-bar"></div>
+                            <div class="scene-bar"></div>
+                        </div>
+                    </div>
+                    <div class="project-info">
+                        <div class="project-title">${project.code}</div>
+                        <div class="project-meta">
+                            <div class="meta-item">
+                                <span>🎬</span>
+                                <span>${project.scenes} scenes • ${project.characters} characters</span>
+                            </div>
+                            <div class="meta-item">
+                                <span>🎭</span>
+                                <span>${project.type}</span>
+                            </div>
+                            <div class="meta-item">
+                                <span>🕐</span>
+                                <span>Updated ${project.lastModified}</span>
+                            </div>
+                        </div>
+                        <div class="project-progress">
+                            <div class="progress-label">
+                                <span>Breakdown Complete</span>
+                                <span>${project.progress}%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${project.progress}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                grid.appendChild(card);
+            });
+        }
+
+        function openModal() {
+            document.getElementById('projectModal').classList.add('active');
+            document.getElementById('projectForm').reset();
+        }
+
+        function closeModal() {
+            document.getElementById('projectModal').classList.remove('active');
+        }
+
+        function saveProject(event) {
+            event.preventDefault();
+
+            const project = {
+                title: document.getElementById('projectTitle').value,
+                code: document.getElementById('showCode').value,
+                type: document.getElementById('projectType').value,
+                status: 'active',
+                progress: 0,
+                lastModified: 'Just now',
+                scenes: 0,
+                characters: 0
+            };
+
+            projects.unshift(project);
+            saveToStorage();
+            renderProjects();
+            closeModal();
+        }
+
+        function openProject(index) {
+            const project = projects[index];
+            alert(`Opening: ${project.title}\n\nNavigating to project dashboard...`);
+        }
+
+        // Search functionality
+        document.getElementById('searchBar').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const cards = document.querySelectorAll('.project-card');
+            
+            cards.forEach(card => {
+                const title = card.querySelector('.clapper-title').textContent.toLowerCase();
+                const code = card.querySelector('.project-title').textContent.toLowerCase();
+                
+                if (title.includes(searchTerm) || code.includes(searchTerm)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+
+        // Filter buttons
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                // Add filter logic here
+            });
+        });
+
+        document.getElementById('projectModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        loadProjects();
+    </script>
+</body>
+</html>
