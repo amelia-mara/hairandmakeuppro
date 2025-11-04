@@ -770,7 +770,7 @@
             <div class="top-bar-actions">
                 <button class="toggle-btn" id="toggleTags">🏷️ Tags</button>
                 <button class="toolbar-btn" onclick="document.getElementById('scriptUploadInput').click()">📤 Upload Script</button>
-                <input type="file" id="scriptUploadInput" accept=".txt,.fountain,.pdf" style="display: none;" onchange="handleScriptUploadInBreakdown(event)">
+                <input type="file" id="scriptUploadInput" accept=".txt,.fountain,.fdx,.pdf" style="display: none;" onchange="handleScriptUploadInBreakdown(event)">
                 <button class="toolbar-btn">🤖 AI Tools</button>
                 <button class="toolbar-btn primary">✨ Generate Breakdown</button>
             </div>
@@ -1249,25 +1249,53 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
 
         // Load project and script on page load
         function loadProjectScript() {
+            console.log('=== Loading Project Script ===');
             const projectData = localStorage.getItem('currentProject');
-            if (projectData) {
-                currentProject = JSON.parse(projectData);
+            
+            if (!projectData) {
+                console.log('No project data found in localStorage');
+                return;
+            }
+            
+            currentProject = JSON.parse(projectData);
+            console.log('Project loaded:', currentProject.title);
+            console.log('Project has scriptContent:', !!currentProject.scriptContent);
+            console.log('Project scriptName:', currentProject.scriptName);
+            
+            // Update page title
+            document.querySelector('.page-title').textContent = `Script Breakdown - ${currentProject.title}`;
+            
+            // If project has script content, parse and display it
+            if (currentProject.scriptContent) {
+                console.log('Script content found, length:', currentProject.scriptContent.length);
+                console.log('First 200 chars:', currentProject.scriptContent.substring(0, 200));
                 
-                // Update page title
-                document.querySelector('.page-title').textContent = `Script Breakdown - ${currentProject.title}`;
-                
-                // If project has script content, parse and display it
-                if (currentProject.scriptContent) {
+                try {
                     parseAndDisplayScript(currentProject.scriptContent);
-                } else {
-                    console.log('No script content found, showing demo script');
+                    console.log('Script parsed and displayed successfully');
+                } catch (error) {
+                    console.error('Error parsing script:', error);
+                    alert('Error displaying script. Check console for details.');
                 }
+            } else {
+                console.log('No script content found in project, showing demo script');
             }
         }
 
         // Parse plain text script into formatted HTML
         function parseAndDisplayScript(scriptText) {
+            console.log('=== Parsing Script ===');
+            console.log('Script length:', scriptText.length);
+            
+            if (!scriptText || scriptText.length === 0) {
+                console.error('Script text is empty');
+                alert('Script content is empty!');
+                return;
+            }
+            
             const lines = scriptText.split('\n');
+            console.log('Total lines:', lines.length);
+            
             let html = '';
             let sceneNumber = 0;
             let currentSceneHtml = '';
@@ -1290,7 +1318,7 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
                     currentSceneHtml = trimmed;
                     inScene = true;
                 }
-                // Detect character names (all caps, centered-ish)
+                // Detect character names (all caps, centered-ish, not too long)
                 else if (trimmed === trimmed.toUpperCase() && trimmed.length > 0 && trimmed.length < 30 && !trimmed.match(/^[A-Z\s]+:$/)) {
                     html += `<div class="script-character">${trimmed}</div>`;
                 }
@@ -1300,7 +1328,7 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
                 }
                 // Empty lines
                 else if (trimmed === '') {
-                    // Just space
+                    // Just space, do nothing
                 }
                 // Action/dialogue
                 else if (trimmed.length > 0) {
@@ -1318,16 +1346,29 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
                 html += `</div>`;
             }
             
+            console.log('Scenes found:', sceneNumber);
+            
+            if (sceneNumber === 0) {
+                console.error('No scenes detected in script!');
+                alert('No scenes found in script. Make sure scene headings start with INT. or EXT.');
+                return;
+            }
+            
             // Update script viewer
             const scriptContent = document.querySelector('.script-content');
-            if (scriptContent && sceneNumber > 0) {
+            if (scriptContent) {
                 scriptContent.innerHTML = html;
+                console.log('Script HTML updated');
                 
                 // Generate scene list
                 generateSceneList(sceneNumber);
+                console.log('Scene list generated');
                 
                 // Initialize scene tags
                 initializeSceneTags(sceneNumber);
+                console.log('Scene tags initialized');
+            } else {
+                console.error('Could not find .script-content element');
             }
         }
 
@@ -1726,10 +1767,19 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
             const file = event.target.files[0];
             if (!file) return;
             
-            if (file.type === 'text/plain' || file.name.endsWith('.txt') || file.name.endsWith('.fountain')) {
+            console.log('File selected in breakdown:', file.name, 'Type:', file.type);
+            
+            const isTextFile = file.type === 'text/plain' || 
+                               file.type === '' || 
+                               file.name.endsWith('.txt') || 
+                               file.name.endsWith('.fountain') ||
+                               file.name.endsWith('.fdx');
+            
+            if (isTextFile) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     const scriptContent = e.target.result;
+                    console.log('Script loaded in breakdown, length:', scriptContent.length);
                     
                     // Update current project with script
                     if (currentProject) {
@@ -1746,6 +1796,7 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
                             projects[projectIndex].scriptContent = scriptContent;
                             projects[projectIndex].scriptName = file.name;
                             localStorage.setItem('checksHappyProjects', JSON.stringify(projects));
+                            console.log('Project updated in storage');
                         }
                     }
                     
@@ -1754,9 +1805,13 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
                     
                     alert(`Script "${file.name}" uploaded successfully!`);
                 };
+                reader.onerror = function(e) {
+                    console.error('Error reading file:', e);
+                    alert('Error reading script file. Please try again.');
+                };
                 reader.readAsText(file);
             } else {
-                alert('Please upload a .txt or .fountain file. PDF parsing coming soon!');
+                alert('Please upload a .txt, .fountain, or .fdx file. PDF parsing coming soon!');
             }
         }
     </script>
