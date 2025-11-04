@@ -653,6 +653,19 @@
             flex-shrink: 0;
         }
 
+        .tag-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            font-size: 0.7em;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
+
         /* Floating Tag Toolbar */
         .tag-toolbar {
             position: fixed;
@@ -802,12 +815,12 @@
             </div>
 
             <div class="top-bar-actions">
-                <button class="toggle-btn" id="toggleTags">🏷️ Tags</button>
-                <button class="toolbar-btn" onclick="document.getElementById('scriptUploadInput').click()">📤 Upload Script</button>
+                <button class="toggle-btn" id="toggleTags">Tags</button>
+                <button class="toolbar-btn" onclick="document.getElementById('scriptUploadInput').click()">Upload Script</button>
                 <input type="file" id="scriptUploadInput" accept=".txt,.fountain,.fdx,.pdf" style="display: none;" onchange="handleScriptUploadInBreakdown(event)">
-                <button class="toolbar-btn" onclick="showAIToolsMenu()">🤖 AI Tools</button>
-                <button class="toolbar-btn" onclick="exportBreakdown()">📥 Export</button>
-                <button class="toolbar-btn primary" onclick="generateAIBreakdown()">✨ Generate Breakdown</button>
+                <button class="toolbar-btn" onclick="showAIToolsMenu()">AI Tools</button>
+                <button class="toolbar-btn" onclick="exportBreakdown()">Export</button>
+                <button class="toolbar-btn primary" onclick="generateAIBreakdown()">Generate Breakdown</button>
             </div>
         </div>
 
@@ -837,7 +850,7 @@
                             <div class="tag-items-list">
                                 <div class="tag-category">
                                     <div class="tag-category-title">
-                                        <span style="color: var(--tag-makeup)">💄</span> Makeup
+                                        <span class="tag-badge" style="background: var(--tag-makeup); color: white;">M</span> Makeup
                                     </div>
                                     <div class="tag-category-items">
                                         <div class="tag-item-entry">
@@ -848,7 +861,7 @@
                                 </div>
                                 <div class="tag-category">
                                     <div class="tag-category-title">
-                                        <span style="color: var(--tag-hair)">✂️</span> Hair
+                                        <span class="tag-badge" style="background: var(--tag-hair); color: white;">H</span> Hair
                                     </div>
                                     <div class="tag-category-items">
                                         <div class="tag-item-entry">
@@ -859,7 +872,7 @@
                                 </div>
                                 <div class="tag-category">
                                     <div class="tag-category-title">
-                                        <span style="color: var(--tag-sfx)">🩸</span> SFX
+                                        <span class="tag-badge" style="background: var(--tag-sfx); color: white;">S</span> SFX
                                     </div>
                                     <div class="tag-category-items">
                                         <div class="tag-item-entry">
@@ -870,7 +883,7 @@
                                 </div>
                                 <div class="tag-category">
                                     <div class="tag-category-title">
-                                        <span style="color: var(--tag-cast)">👤</span> Cast
+                                        <span class="tag-badge" style="background: var(--tag-cast); color: white;">C</span> Cast
                                     </div>
                                     <div class="tag-category-items">
                                         <div class="tag-item-entry">
@@ -900,7 +913,7 @@
                             <div class="tag-items-list">
                                 <div class="tag-category">
                                     <div class="tag-category-title">
-                                        <span style="color: var(--tag-makeup)">💄</span> Makeup
+                                        <span class="tag-badge" style="background: var(--tag-makeup); color: white;">M</span> Makeup
                                     </div>
                                     <div class="tag-category-items">
                                         <div class="tag-item-entry">
@@ -911,7 +924,7 @@
                                 </div>
                                 <div class="tag-category">
                                     <div class="tag-category-title">
-                                        <span style="color: var(--tag-wardrobe)">👔</span> Wardrobe
+                                        <span class="tag-badge" style="background: var(--tag-wardrobe); color: white;">W</span> Wardrobe
                                     </div>
                                     <div class="tag-category-items">
                                         <div class="tag-item-entry">
@@ -922,7 +935,7 @@
                                 </div>
                                 <div class="tag-category">
                                     <div class="tag-category-title">
-                                        <span style="color: var(--tag-cast)">👤</span> Cast
+                                        <span class="tag-badge" style="background: var(--tag-cast); color: white;">C</span> Cast
                                     </div>
                                     <div class="tag-category-items">
                                         <div class="tag-item-entry">
@@ -952,7 +965,7 @@
                             <div class="tag-items-list">
                                 <div class="tag-category">
                                     <div class="tag-category-title">
-                                        <span style="color: var(--tag-makeup)">💄</span> Makeup
+                                        <span class="tag-badge" style="background: var(--tag-makeup); color: white;">M</span> Makeup
                                     </div>
                                     <div class="tag-category-items">
                                         <div class="tag-item-entry">
@@ -963,7 +976,7 @@
                                 </div>
                                 <div class="tag-category">
                                     <div class="tag-category-title">
-                                        <span style="color: var(--tag-sfx)">🩸</span> SFX
+                                        <span class="tag-badge" style="background: var(--tag-sfx); color: white;">S</span> SFX
                                     </div>
                                     <div class="tag-category-items">
                                         <div class="tag-item-entry">
@@ -982,7 +995,7 @@
                                 </div>
                                 <div class="tag-category">
                                     <div class="tag-category-title">
-                                        <span style="color: var(--tag-props)">📦</span> Props
+                                        <span class="tag-badge" style="background: var(--tag-props); color: white;">P</span> Props
                                     </div>
                                     <div class="tag-category-items">
                                         <div class="tag-item-entry">
@@ -993,7 +1006,7 @@
                                 </div>
                                 <div class="tag-category">
                                     <div class="tag-category-title">
-                                        <span style="color: var(--tag-cast)">👤</span> Cast
+                                        <span class="tag-badge" style="background: var(--tag-cast); color: white;">C</span> Cast
                                     </div>
                                     <div class="tag-category-items">
                                         <div class="tag-item-entry">
@@ -1023,7 +1036,7 @@
                             <div class="tag-items-list">
                                 <div class="tag-category">
                                     <div class="tag-category-title">
-                                        <span style="color: var(--tag-makeup)">💄</span> Makeup
+                                        <span class="tag-badge" style="background: var(--tag-makeup); color: white;">M</span> Makeup
                                     </div>
                                     <div class="tag-category-items">
                                         <div class="tag-item-entry">
@@ -1034,7 +1047,7 @@
                                 </div>
                                 <div class="tag-category">
                                     <div class="tag-category-title">
-                                        <span style="color: var(--tag-hair)">✂️</span> Hair
+                                        <span class="tag-badge" style="background: var(--tag-hair); color: white;">H</span> Hair
                                     </div>
                                     <div class="tag-category-items">
                                         <div class="tag-item-entry">
@@ -1045,7 +1058,7 @@
                                 </div>
                                 <div class="tag-category">
                                     <div class="tag-category-title">
-                                        <span style="color: var(--tag-wardrobe)">👔</span> Wardrobe
+                                        <span class="tag-badge" style="background: var(--tag-wardrobe); color: white;">W</span> Wardrobe
                                     </div>
                                     <div class="tag-category-items">
                                         <div class="tag-item-entry">
@@ -1060,7 +1073,7 @@
                                 </div>
                                 <div class="tag-category">
                                     <div class="tag-category-title">
-                                        <span style="color: var(--tag-cast)">👤</span> Cast
+                                        <span class="tag-badge" style="background: var(--tag-cast); color: white;">C</span> Cast
                                     </div>
                                     <div class="tag-category-items">
                                         <div class="tag-item-entry">
@@ -1258,7 +1271,7 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
                 </div>
 
                 <div class="notes-footer">
-                    <button class="save-notes-btn" onclick="saveNotes()">💾 Save Notes</button>
+                    <button class="save-notes-btn" onclick="saveNotes()">Save Notes</button>
                     <div class="notes-timestamp">Last saved: Just now</div>
                 </div>
             </div>
@@ -1267,12 +1280,12 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
 
     <!-- Floating Tag Toolbar -->
     <div class="tag-toolbar" id="tagToolbar">
-        <button class="tag-toolbar-btn makeup" onclick="tagSelection('makeup', '💄')">💄 Makeup</button>
-        <button class="tag-toolbar-btn hair" onclick="tagSelection('hair', '✂️')">✂️ Hair</button>
-        <button class="tag-toolbar-btn sfx" onclick="tagSelection('sfx', '🩸')">🩸 SFX</button>
-        <button class="tag-toolbar-btn cast" onclick="tagSelection('cast', '👤')">👤 Cast</button>
-        <button class="tag-toolbar-btn wardrobe" onclick="tagSelection('wardrobe', '👔')">👔 Wardrobe</button>
-        <button class="tag-toolbar-btn props" onclick="tagSelection('props', '📦')">📦 Props</button>
+        <button class="tag-toolbar-btn makeup" onclick="tagSelection('makeup', 'M')">Makeup</button>
+        <button class="tag-toolbar-btn hair" onclick="tagSelection('hair', 'H')">Hair</button>
+        <button class="tag-toolbar-btn sfx" onclick="tagSelection('sfx', 'S')">SFX</button>
+        <button class="tag-toolbar-btn cast" onclick="tagSelection('cast', 'C')">Cast</button>
+        <button class="tag-toolbar-btn wardrobe" onclick="tagSelection('wardrobe', 'W')">Wardrobe</button>
+        <button class="tag-toolbar-btn props" onclick="tagSelection('props', 'P')">Props</button>
     </div>
 
     <script>
@@ -1392,7 +1405,8 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
             let inScene = false;
             
             // More flexible regex for scene headings
-            const sceneHeadingRegex = /^\s*(INT|EXT|INT\/EXT|I\/E)[\.\s]+/i;
+            // Handles: "INT.", "1 INT.", "1 1INT.", "EXT ", etc.
+            const sceneHeadingRegex = /^\s*\d*\s*\d*\s*(INT|EXT|INT\/EXT|I\/E)[\.\s]+/i;
             
             // Simple script parser
             lines.forEach((line, index) => {
@@ -1406,12 +1420,19 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
                     }
                     
                     sceneNumber++;
+                    
+                    // Clean up the heading - remove leading numbers and normalize spacing
+                    let cleanHeading = trimmed
+                        .replace(/^\s*\d+\s*\d*\s*/, '') // Remove leading numbers like "1 1" or "1 "
+                        .replace(/\s+/g, ' ')  // Normalize multiple spaces to single space
+                        .trim();
+                    
                     html += `<div class="script-scene" id="scene-${sceneNumber}">`;
-                    html += `<div class="script-scene-heading">${sceneNumber}. ${trimmed}</div>`;
+                    html += `<div class="script-scene-heading">${sceneNumber}. ${cleanHeading}</div>`;
                     currentSceneHtml = trimmed;
                     inScene = true;
                     
-                    console.log(`Found scene ${sceneNumber}: ${trimmed}`);
+                    console.log(`Found scene ${sceneNumber}: ${cleanHeading}`);
                 }
                 // Detect character names (all caps, not too long)
                 else if (trimmed === trimmed.toUpperCase() && 
@@ -1734,12 +1755,12 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
             
             // Build HTML
             const categoryIcons = {
-                makeup: { icon: '💄', name: 'Makeup', color: 'var(--tag-makeup)' },
-                hair: { icon: '✂️', name: 'Hair', color: 'var(--tag-hair)' },
-                sfx: { icon: '🩸', name: 'SFX', color: 'var(--tag-sfx)' },
-                cast: { icon: '👤', name: 'Cast', color: 'var(--tag-cast)' },
-                wardrobe: { icon: '👔', name: 'Wardrobe', color: 'var(--tag-wardrobe)' },
-                props: { icon: '📦', name: 'Props', color: 'var(--tag-props)' }
+                makeup: { icon: 'M', name: 'Makeup', color: 'var(--tag-makeup)' },
+                hair: { icon: 'H', name: 'Hair', color: 'var(--tag-hair)' },
+                sfx: { icon: 'S', name: 'SFX', color: 'var(--tag-sfx)' },
+                cast: { icon: 'C', name: 'Cast', color: 'var(--tag-cast)' },
+                wardrobe: { icon: 'W', name: 'Wardrobe', color: 'var(--tag-wardrobe)' },
+                props: { icon: 'P', name: 'Props', color: 'var(--tag-props)' }
             };
             
             let html = '';
@@ -1748,7 +1769,7 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
                 html += `
                     <div class="tag-category">
                         <div class="tag-category-title">
-                            <span style="color: ${info.color}">${info.icon}</span> ${info.name}
+                            <span class="tag-badge" style="background: ${info.color}; color: white;">${info.icon}</span> ${info.name}
                         </div>
                         <div class="tag-category-items">
                             ${grouped[category].map(desc => `
@@ -1872,7 +1893,7 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
             // Visual feedback
             const btn = document.querySelector('.save-notes-btn');
             const originalText = btn.textContent;
-            btn.textContent = '✓ Saved!';
+            btn.textContent = 'Saved';
             btn.style.background = '#52c186';
             setTimeout(() => {
                 btn.textContent = originalText;
@@ -2042,7 +2063,7 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
             URL.revokeObjectURL(url);
             
             // Visual feedback
-            alert(`✓ Exported: ${filename}`);
+            alert(`Exported: ${filename}`);
         }
         
         // ============================================
@@ -2173,11 +2194,11 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
             // Save all tags
             saveTags();
             
-            alert(`✨ AI Breakdown Complete!\n\nAdded ${tagsAdded} tags across all scenes.\n\nReview and edit tags as needed.`);
+            alert(`AI Breakdown Complete!\n\nAdded ${tagsAdded} tags across all scenes.\n\nReview and edit tags as needed.`);
         }
         
         function autoDetectChanges() {
-            alert('🔍 Analyzing script for makeup and hair changes...\n\n' +
+            alert('Analyzing script for makeup and hair changes...\n\n' +
                   'This will scan for:\n' +
                   '• Hair color/style mentions\n' +
                   '• Makeup application/removal\n' +
@@ -2212,9 +2233,9 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
             });
             
             if (issues.length === 0) {
-                alert('✓ No obvious continuity issues found!\n\nNote: This is a basic check. Always review scenes manually.');
+                alert('No obvious continuity issues found!\n\nNote: This is a basic check. Always review scenes manually.');
             } else {
-                alert(`⚠️ Potential Continuity Issues:\n\n${issues.join('\n')}\n\nReview these scenes carefully.`);
+                alert(`Potential Continuity Issues:\n\n${issues.join('\n')}\n\nReview these scenes carefully.`);
             }
         }
         
@@ -2233,7 +2254,7 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
                 return;
             }
             
-            let profile = '👤 CHARACTER PROFILES\n\n';
+            let profile = 'CHARACTER PROFILES\n\n';
             characters.forEach(char => {
                 profile += `${char}\n`;
                 profile += `${'─'.repeat(40)}\n`;
@@ -2255,7 +2276,7 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
         
         function estimateTimeInChair() {
             let total = 0;
-            let breakdown = '⏱️ TIME IN CHAIR ESTIMATES\n\n';
+            let breakdown = 'TIME IN CHAIR ESTIMATES\n\n';
             
             Object.entries(sceneTags).forEach(([sceneNum, tags]) => {
                 const makeup = tags.filter(t => t.category === 'makeup').length;
