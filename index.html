@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Projects - Checks Happy</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -30,6 +29,7 @@
             --text-muted: #666666;
             
             --accent-gold: #c9a961;
+            --accent-blue: #667eea;
             
             --glow-subtle: 0 0 20px rgba(201, 169, 97, 0.1);
             --glow-medium: 0 0 30px rgba(201, 169, 97, 0.15);
@@ -558,51 +558,103 @@
             color: var(--text-muted);
         }
 
-        .file-upload {
-            position: relative;
+        /* Import Options */
+        .import-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
         }
 
-        .file-upload-btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            width: 100%;
-            padding: 28px;
-            background: var(--bg-secondary);
-            backdrop-filter: blur(16px) saturate(180%);
-            -webkit-backdrop-filter: blur(16px) saturate(180%);
+        .import-btn {
+            padding: 20px;
+            background: rgba(201, 169, 97, 0.05);
             border: 2px dashed var(--border-subtle);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .import-btn:hover {
+            border-color: var(--accent-gold);
+            background: rgba(201, 169, 97, 0.1);
+            border-style: solid;
+        }
+
+        .import-icon {
+            font-size: 2em;
+            margin-bottom: 8px;
+        }
+
+        .import-text {
+            font-size: 0.875em;
+            color: var(--text-secondary);
+        }
+
+        /* Script Import Area */
+        .script-import-area {
+            display: none;
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            border: 1px solid var(--border-subtle);
+        }
+
+        .script-import-area.active {
+            display: block;
+        }
+
+        .script-paste {
+            width: 100%;
+            min-height: 200px;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-subtle);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-family: 'Courier New', monospace;
+            font-size: 0.875em;
+            resize: vertical;
+        }
+
+        .script-paste:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+        }
+
+        .import-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .action-btn {
+            padding: 8px 16px;
+            background: transparent;
+            border: 1px solid var(--border-subtle);
             border-radius: 6px;
             color: var(--text-secondary);
             cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 0.875em;
-            font-weight: 500;
-        }
-
-        .file-upload-btn:hover {
-            border-color: var(--border-medium);
-            border-style: solid;
-            color: var(--accent-gold);
-            background: var(--bg-tertiary);
-            box-shadow: var(--glow-subtle);
-        }
-
-        .file-upload input[type="file"] {
-            position: absolute;
-            opacity: 0;
-            width: 100%;
-            height: 100%;
-            cursor: pointer;
-        }
-
-        #fileName {
-            display: none;
-            margin-top: 7px;
             font-size: 0.8125em;
-            color: var(--accent-gold);
             font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .action-btn:hover {
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+        }
+
+        .action-btn.ai {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.2));
+            border-color: var(--accent-blue);
+            color: var(--accent-blue);
+        }
+
+        .action-btn.ai:hover {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.3), rgba(118, 75, 162, 0.3));
         }
 
         .submit-btn,
@@ -689,6 +741,32 @@
             box-shadow: var(--glow-subtle);
         }
 
+        /* Status Messages */
+        .status-message {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 6px;
+            font-size: 0.8125em;
+        }
+
+        .status-message.info {
+            background: rgba(102, 126, 234, 0.1);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            color: var(--accent-blue);
+        }
+
+        .status-message.success {
+            background: rgba(82, 193, 134, 0.1);
+            border: 1px solid rgba(82, 193, 134, 0.3);
+            color: #52c186;
+        }
+
+        .status-message.error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .header {
@@ -768,14 +846,49 @@
             </div>
             <form id="projectForm" onsubmit="saveProject(event)">
                 <div class="form-group">
-                    <label class="form-label">Upload Script (Optional)</label>
-                    <div class="file-upload">
-                        <label class="file-upload-btn">
-                            📄 Choose Script File
-                            <input type="file" accept=".txt,.fountain,.fdx,.pdf" onchange="handleScriptUpload(event)">
-                        </label>
+                    <label class="form-label">Import Script (Optional)</label>
+                    <div class="import-options">
+                        <div class="import-btn" onclick="selectImportMethod('file')">
+                            <div class="import-icon">📁</div>
+                            <div class="import-text">Upload File</div>
+                        </div>
+                        <div class="import-btn" onclick="selectImportMethod('paste')">
+                            <div class="import-icon">📋</div>
+                            <div class="import-text">Paste Text</div>
+                        </div>
+                        <div class="import-btn" onclick="selectImportMethod('wizard')">
+                            <div class="import-icon">🎬</div>
+                            <div class="import-text">Import Wizard</div>
+                        </div>
+                        <div class="import-btn" onclick="selectImportMethod('later')">
+                            <div class="import-icon">⏰</div>
+                            <div class="import-text">Add Later</div>
+                        </div>
                     </div>
-                    <span id="fileName"></span>
+                    
+                    <input type="file" id="fileInput" accept=".txt,.fountain,.fdx,.pdf" style="display: none;">
+                    
+                    <div class="script-import-area" id="pasteArea">
+                        <textarea class="script-paste" id="scriptPaste" placeholder="Paste your screenplay here...
+
+Format example:
+INT. COFFEE SHOP - DAY
+
+Character dialogue and action..."></textarea>
+                        <div class="import-actions">
+                            <button type="button" class="action-btn ai" onclick="cleanupScript()">
+                                🤖 AI Cleanup
+                            </button>
+                            <button type="button" class="action-btn" onclick="formatScript()">
+                                🎬 Auto-Format
+                            </button>
+                            <button type="button" class="action-btn" onclick="clearPaste()">
+                                🗑️ Clear
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="importStatus"></div>
                 </div>
 
                 <div class="form-group">
@@ -800,7 +913,7 @@
                     </select>
                 </div>
 
-                <button type="submit" class="submit-btn">Create Project</button>
+                <button type="submit" class="submit-btn" id="submitBtn">Create Project</button>
             </form>
         </div>
     </div>
@@ -842,12 +955,12 @@
         </div>
     </div>
 
+    <script src="script-processor.js"></script>
     <script>
         let projects = [];
         let editingIndex = null;
-        let uploadedScript = null;
-        let scriptLoading = false;
-        let scriptLoaded = false;
+        let selectedImportMethod = null;
+        let scriptContent = null;
 
         const demoProjects = [
             {
@@ -914,7 +1027,7 @@
 
                 const statusClass = project.status === 'active' ? '' : 'in-progress';
                 const statusText = project.status === 'active' ? 'Active' : 'In Progress';
-                const hasScript = project.scriptContent || project.scriptFile ? '📄 Script Uploaded' : '';
+                const hasScript = project.scriptContent ? '📄 Script Ready' : '';
 
                 card.innerHTML = `
                     <div class="clapperboard">
@@ -965,184 +1078,111 @@
             });
         }
 
-        // Initialize PDF.js worker
-        if (typeof pdfjsLib !== 'undefined') {
-            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-        }
-
-        // After PDF extraction, normalize the text
-        function normalizeScriptText(text) {
-            console.log('=== Before Normalization ===');
-            console.log(text.substring(0, 500));
+        function selectImportMethod(method) {
+            selectedImportMethod = method;
             
-            let normalized = text;
+            // Hide all areas first
+            document.getElementById('pasteArea').classList.remove('active');
+            document.getElementById('importStatus').innerHTML = '';
             
-            for (let i = 0; i < 10; i++) {
-                normalized = normalized.replace(/([a-zA-Z0-9\.\,\!\?\-\(\)\*\'\"])\s([a-zA-Z0-9\.\,\!\?\-\(\)\*\'\"])/g, '$1$2');
+            if (method === 'file') {
+                document.getElementById('fileInput').click();
+            } else if (method === 'paste') {
+                document.getElementById('pasteArea').classList.add('active');
+                document.getElementById('scriptPaste').focus();
+            } else if (method === 'wizard') {
+                // Save context and open wizard
+                localStorage.setItem('importContext', JSON.stringify({
+                    projectTitle: document.getElementById('projectTitle').value,
+                    projectCode: document.getElementById('showCode').value,
+                    projectType: document.getElementById('projectType').value
+                }));
+                window.open('script-import-wizard.html', '_blank');
+                showStatus('info', 'Opening Script Import Wizard in new tab...');
+            } else if (method === 'later') {
+                showStatus('info', 'You can add a script later from the Script Breakdown page');
+                scriptContent = null;
             }
-            
-            normalized = normalized.replace(/([a-z])([A-Z])/g, '$1 $2');
-            normalized = normalized.replace(/([\.!?])([A-Za-z])/g, '$1 $2');
-            normalized = normalized.replace(/(\))([A-Za-z])/g, '$1 $2');
-            normalized = normalized.replace(/(\n|^)\s*\d+\s*\d*\s*(INT\.|EXT\.|INT\/EXT\.|I\/E\.)/gi, '\n$2');
-            normalized = normalized.replace(/(\n|^)\s*\d+\s*\d*\s*(INT\s+|EXT\s+|INT\/EXT\s+|I\/E\s+)/gi, '\n$2');
-            
-            normalized = normalized
-                .replace(/\r\n/g, '\n')
-                .replace(/\r/g, '\n')
-                .replace(/\s+\n/g, '\n')
-                .replace(/\n\s+/g, '\n')
-                .replace(/\n\n\n+/g, '\n\n');
-            
-            console.log('=== After Normalization ===');
-            console.log(normalized.substring(0, 500));
-            
-            return normalized;
         }
 
-        async function parsePDF(file) {
+        function cleanupScript() {
+            const text = document.getElementById('scriptPaste').value;
+            if (!text) return;
+            
+            // Basic cleanup
+            let cleaned = text;
+            
+            // Fix scene headings
+            cleaned = cleaned.replace(/int\./gi, 'INT.');
+            cleaned = cleaned.replace(/ext\./gi, 'EXT.');
+            cleaned = cleaned.replace(/^(INT|EXT)([^.])/gm, '$1. $2');
+            
+            // Clean PDF artifacts
+            cleaned = cleaned.replace(/\s{2,}/g, ' ');
+            cleaned = cleaned.replace(/([a-z])([A-Z])/g, '$1 $2');
+            cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
+            
+            document.getElementById('scriptPaste').value = cleaned;
+            showStatus('success', 'Script cleaned up!');
+        }
+
+        function formatScript() {
+            const text = document.getElementById('scriptPaste').value;
+            if (!text) return;
+            
+            // Auto-format as screenplay
+            cleanupScript();
+            
+            // Additional formatting
+            const lines = text.split('\n');
+            const formatted = lines.map(line => {
+                const trimmed = line.trim();
+                
+                // Uppercase character names
+                if (trimmed && trimmed === trimmed.toUpperCase() && trimmed.length < 30) {
+                    return '\n' + trimmed + '\n';
+                }
+                
+                return line;
+            });
+            
+            document.getElementById('scriptPaste').value = formatted.join('\n');
+            showStatus('success', 'Script formatted!');
+        }
+
+        function clearPaste() {
+            document.getElementById('scriptPaste').value = '';
+        }
+
+        function showStatus(type, message) {
+            const status = document.getElementById('importStatus');
+            status.innerHTML = `<div class="status-message ${type}">${message}</div>`;
+            
+            setTimeout(() => {
+                status.innerHTML = '';
+            }, 3000);
+        }
+
+        // File input handler
+        document.getElementById('fileInput').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
             try {
-                const arrayBuffer = await file.arrayBuffer();
-                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-                
-                let fullText = '';
-                
-                for (let i = 1; i <= pdf.numPages; i++) {
-                    const page = await pdf.getPage(i);
-                    const textContent = await page.getTextContent();
-                    
-                    const lines = {};
-                    textContent.items.forEach(item => {
-                        const y = Math.round(item.transform[5]);
-                        if (!lines[y]) lines[y] = [];
-                        lines[y].push(item);
-                    });
-                    
-                    const sortedYPositions = Object.keys(lines).sort((a, b) => b - a);
-                    
-                    sortedYPositions.forEach(y => {
-                        const lineItems = lines[y].sort((a, b) => a.transform[4] - b.transform[4]);
-                        
-                        let lineText = '';
-                        for (let i = 0; i < lineItems.length; i++) {
-                            const item = lineItems[i];
-                            const nextItem = lineItems[i + 1];
-                            
-                            lineText += item.str;
-                            
-                            if (nextItem) {
-                                const currentX = item.transform[4];
-                                const currentWidth = item.width;
-                                const nextX = nextItem.transform[4];
-                                const gap = nextX - (currentX + currentWidth);
-                                
-                                if (gap > currentWidth * 0.3) {
-                                    lineText += ' ';
-                                }
-                            }
-                        }
-                        
-                        fullText += lineText.trim() + '\n';
-                    });
-                    
-                    fullText += '\n';
-                }
-                
-                fullText = normalizeScriptText(fullText);
-                return fullText;
+                const text = await file.text();
+                document.getElementById('pasteArea').classList.add('active');
+                document.getElementById('scriptPaste').value = text;
+                showStatus('success', 'File loaded! You can review and edit the text below.');
             } catch (error) {
-                console.error('Error parsing PDF:', error);
-                throw error;
+                showStatus('error', 'Error reading file. Try copy/paste instead.');
             }
-        }
-
-        function handleScriptUpload(event) {
-            const file = event.target.files[0];
-            if (file) {
-                uploadedScript = file;
-                scriptLoading = true;
-                scriptLoaded = false;
-                
-                const fileNameElement = document.getElementById('fileName');
-                fileNameElement.textContent = `📄 ${file.name} - Loading...`;
-                fileNameElement.style.display = 'inline-block';
-                fileNameElement.style.color = 'var(--accent-gold)';
-                
-                const titleWithoutExt = file.name.replace(/\.[^/.]+$/, "");
-                document.getElementById('projectTitle').value = titleWithoutExt;
-                
-                if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
-                    fileNameElement.textContent = `📄 ${file.name} - Extracting text from PDF...`;
-                    
-                    parsePDF(file)
-                        .then(scriptContent => {
-                            localStorage.setItem('uploadedScriptContent', scriptContent);
-                            localStorage.setItem('uploadedScriptName', file.name);
-                            
-                            scriptLoading = false;
-                            scriptLoaded = true;
-                            
-                            fileNameElement.textContent = `✓ ${file.name} - PDF parsed successfully!`;
-                            fileNameElement.style.color = '#52c186';
-                        })
-                        .catch(error => {
-                            scriptLoading = false;
-                            scriptLoaded = false;
-                            fileNameElement.textContent = `❌ ${file.name} - Error parsing PDF`;
-                            fileNameElement.style.color = '#ff6b6b';
-                            alert('Error parsing PDF. The file may be corrupted or password-protected.');
-                        });
-                    
-                    return;
-                }
-                
-                const isTextFile = file.type === 'text/plain' || 
-                                   file.type === '' ||
-                                   file.name.endsWith('.txt') || 
-                                   file.name.endsWith('.fountain') ||
-                                   file.name.endsWith('.fdx');
-                
-                if (isTextFile) {
-                    const reader = new FileReader();
-                    
-                    reader.onload = function(e) {
-                        const scriptContent = e.target.result;
-                        localStorage.setItem('uploadedScriptContent', scriptContent);
-                        localStorage.setItem('uploadedScriptName', file.name);
-                        
-                        scriptLoading = false;
-                        scriptLoaded = true;
-                        
-                        fileNameElement.textContent = `✓ ${file.name} - Ready!`;
-                        fileNameElement.style.color = '#52c186';
-                    };
-                    
-                    reader.onerror = function(e) {
-                        scriptLoading = false;
-                        scriptLoaded = false;
-                        fileNameElement.textContent = `❌ ${file.name} - Error reading file`;
-                        fileNameElement.style.color = '#ff6b6b';
-                        alert('Error reading script file. Please try again.');
-                    };
-                    
-                    reader.readAsText(file);
-                } else {
-                    scriptLoading = false;
-                    scriptLoaded = false;
-                    fileNameElement.textContent = `❌ ${file.name} - Unsupported format`;
-                    fileNameElement.style.color = '#ff6b6b';
-                    alert('Please upload a .txt, .fountain, .fdx, or .pdf script file.');
-                }
-            }
-        }
+        });
 
         function openModal() {
             document.getElementById('projectModal').classList.add('active');
             document.getElementById('projectForm').reset();
-            document.getElementById('fileName').style.display = 'none';
-            uploadedScript = null;
-            scriptLoading = false;
-            scriptLoaded = false;
+            selectedImportMethod = null;
+            scriptContent = null;
         }
 
         function closeModal() {
@@ -1194,14 +1234,34 @@
 
         function saveProject(event) {
             event.preventDefault();
-
-            if (scriptLoading) {
-                alert('Please wait for the script to finish loading...');
-                return;
+            
+            // Get script content if any
+            const pasteContent = document.getElementById('scriptPaste').value;
+            
+            if (pasteContent) {
+                scriptContent = pasteContent;
             }
 
-            const scriptContent = localStorage.getItem('uploadedScriptContent');
-            const scriptName = localStorage.getItem('uploadedScriptName');
+            // Parse script if we have content
+            let scenes = 0;
+            let characters = 0;
+            
+            if (scriptContent) {
+                // Basic scene detection
+                const sceneHeadings = scriptContent.match(/^(INT\.|EXT\.|INT\/EXT\.).*$/gm) || [];
+                scenes = sceneHeadings.length;
+                
+                // Basic character detection
+                const lines = scriptContent.split('\n');
+                const charSet = new Set();
+                lines.forEach(line => {
+                    const trimmed = line.trim();
+                    if (trimmed && trimmed === trimmed.toUpperCase() && trimmed.length < 30 && !trimmed.includes('.')) {
+                        charSet.add(trimmed.replace(/\(.*\)/, '').trim());
+                    }
+                });
+                characters = charSet.size;
+            }
 
             const project = {
                 title: document.getElementById('projectTitle').value,
@@ -1210,30 +1270,21 @@
                 status: 'active',
                 progress: 0,
                 lastModified: 'Just now',
-                scenes: uploadedScript ? Math.floor(Math.random() * 100) + 50 : 0,
-                characters: uploadedScript ? Math.floor(Math.random() * 30) + 10 : 0,
-                scriptFile: uploadedScript ? uploadedScript.name : null,
-                scriptContent: scriptContent || null,
-                scriptName: scriptName || null
+                scenes: scenes,
+                characters: characters,
+                scriptContent: scriptContent
             };
 
             projects.unshift(project);
             saveToStorage();
             renderProjects();
             closeModal();
-            
-            localStorage.removeItem('uploadedScriptContent');
-            localStorage.removeItem('uploadedScriptName');
-            localStorage.removeItem('uploadedScriptType');
-            
-            scriptLoading = false;
-            scriptLoaded = false;
         }
 
         function openProject(index) {
             const project = projects[index];
             localStorage.setItem('currentProject', JSON.stringify(project));
-            
+
             if (project.scriptContent) {
                 window.location.href = 'script-breakdown.html';
             } else {
@@ -1241,6 +1292,7 @@
             }
         }
 
+        // Search functionality
         document.getElementById('searchBar').addEventListener('input', function(e) {
             const searchTerm = e.target.value.toLowerCase();
             const cards = document.querySelectorAll('.project-card');
@@ -1257,6 +1309,7 @@
             });
         });
 
+        // Filter functionality
         document.querySelectorAll('.filter-btn').forEach(btn => {
             btn.addEventListener('click', function() {
                 document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -1264,6 +1317,7 @@
             });
         });
 
+        // Modal click-outside close
         document.getElementById('projectModal').addEventListener('click', function(e) {
             if (e.target === this) closeModal();
         });
@@ -1272,6 +1326,7 @@
             if (e.target === this) closeEditModal();
         });
 
+        // Initialize
         loadProjects();
     </script>
 </body>
