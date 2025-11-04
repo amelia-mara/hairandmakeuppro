@@ -14,20 +14,47 @@
 
         :root {
             --bg-dark: #0d0b0a;
-            --bg-medium: #1a1612;
-            --card-bg: #242019;
+            --bg-medium: rgba(26, 22, 18, 0.7);
+            --card-bg: rgba(36, 32, 25, 0.6);
             --text-light: #e8e6e3;
             --text-muted: #8a7f73;
             --accent-gold: #c9a961;
-            --border: #2d2925;
-            --divider: #363330;
+            --border: rgba(45, 41, 37, 0.5);
+            --divider: rgba(54, 51, 48, 0.5);
             --success: #52c186;
             --warning: #e8a87c;
+            --glass-border: rgba(255, 255, 255, 0.08);
+        }
+
+        /* Custom Dark Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(13, 11, 10, 0.4);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(138, 127, 115, 0.3);
+            border-radius: 4px;
+            transition: background 0.2s ease;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(138, 127, 115, 0.5);
+        }
+
+        /* Firefox scrollbar */
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(138, 127, 115, 0.3) rgba(13, 11, 10, 0.4);
         }
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--bg-dark);
+            background: linear-gradient(135deg, #0d0b0a 0%, #1a1612 50%, #0d0b0a 100%);
             color: var(--text-light);
             min-height: 100vh;
             font-weight: 400;
@@ -40,11 +67,13 @@
             height: 100vh;
         }
 
-        /* Sidebar */
+        /* Sidebar - Glassmorphism */
         .sidebar {
             width: 280px;
             background: var(--bg-medium);
-            border-right: 1px solid var(--border);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-right: 1px solid var(--glass-border);
             display: flex;
             flex-direction: column;
             overflow-y: auto;
@@ -52,7 +81,7 @@
 
         .sidebar-header {
             padding: 24px;
-            border-bottom: 1px solid var(--border);
+            border-bottom: 1px solid var(--glass-border);
         }
 
         .back-btn {
@@ -84,7 +113,7 @@
 
         .nav-section {
             padding: 24px 16px;
-            border-bottom: 1px solid var(--border);
+            border-bottom: 1px solid var(--glass-border);
         }
 
         .nav-section-title {
@@ -134,11 +163,13 @@
             overflow: hidden;
         }
 
-        /* Top Bar */
+        /* Top Bar - Glassmorphism */
         .top-bar {
             height: 60px;
             background: var(--bg-medium);
-            border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--glass-border);
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -163,13 +194,15 @@
         }
 
         .view-tab:hover {
-            border-color: var(--border);
+            border-color: var(--glass-border);
             color: var(--text-light);
         }
 
         .view-tab.active {
             background: var(--card-bg);
-            border-color: var(--border);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-color: var(--glass-border);
             color: var(--text-light);
         }
 
@@ -193,6 +226,7 @@
         .layout-btn:hover {
             border-color: var(--accent-gold);
             color: var(--accent-gold);
+            background: rgba(201, 169, 97, 0.05);
         }
 
         /* Dashboard Grid */
@@ -208,18 +242,22 @@
             gap: 20px;
         }
 
-        /* Widget Styles */
+        /* Widget Styles - Glassmorphism */
         .widget {
             background: var(--card-bg);
-            border: 1px solid var(--border);
-            border-radius: 8px;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
             overflow: hidden;
             cursor: move;
             transition: all 0.2s ease;
         }
 
         .widget:hover {
-            border-color: var(--divider);
+            border-color: rgba(201, 169, 97, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transform: translateY(-2px);
         }
 
         .widget.dragging {
@@ -228,11 +266,12 @@
 
         .widget-header {
             padding: 16px 20px;
-            border-bottom: 1px solid var(--border);
+            border-bottom: 1px solid var(--glass-border);
             display: flex;
             justify-content: space-between;
             align-items: center;
             cursor: grab;
+            background: rgba(26, 22, 18, 0.3);
         }
 
         .widget-header:active {
@@ -240,47 +279,54 @@
         }
 
         .widget-title {
-            font-size: 0.875em;
-            font-weight: 600;
-            color: var(--text-light);
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
+            font-size: 0.9375em;
+            font-weight: 500;
+        }
+
+        .widget-title span {
+            font-size: 1.2em;
         }
 
         .widget-actions {
             display: flex;
-            gap: 8px;
+            gap: 4px;
         }
 
         .widget-btn {
-            width: 24px;
-            height: 24px;
+            width: 28px;
+            height: 28px;
             background: transparent;
-            border: none;
+            border: 1px solid var(--border);
+            border-radius: 4px;
             color: var(--text-muted);
             cursor: pointer;
-            border-radius: 4px;
+            font-size: 0.75em;
             transition: all 0.2s ease;
-            font-size: 0.875em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .widget-btn:hover {
-            background: rgba(201, 169, 97, 0.1);
+            border-color: var(--accent-gold);
             color: var(--accent-gold);
+            background: rgba(201, 169, 97, 0.08);
         }
 
         .widget-content {
             padding: 20px;
         }
 
-        /* Widget Specific Styles */
+        /* Stat Rows */
         .stat-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding: 12px 0;
-            border-bottom: 1px solid var(--border);
+            border-bottom: 1px solid var(--glass-border);
         }
 
         .stat-row:last-child {
@@ -288,168 +334,128 @@
         }
 
         .stat-label {
-            font-size: 0.8125em;
+            font-size: 0.875em;
             color: var(--text-muted);
         }
 
         .stat-value {
-            font-size: 1.125em;
+            font-size: 0.9375em;
             font-weight: 600;
             color: var(--text-light);
         }
 
+        /* Progress Bars */
         .progress-section {
-            margin-bottom: 16px;
+            margin-top: 12px;
         }
 
         .progress-label {
             display: flex;
             justify-content: space-between;
-            font-size: 0.8125em;
             margin-bottom: 8px;
+            font-size: 0.8125em;
+        }
+
+        .progress-label span:first-child {
+            color: var(--text-muted);
+        }
+
+        .progress-label span:last-child {
+            color: var(--text-light);
+            font-weight: 600;
         }
 
         .progress-bar {
             height: 6px;
-            background: var(--bg-dark);
+            background: rgba(13, 11, 10, 0.5);
             border-radius: 3px;
             overflow: hidden;
         }
 
         .progress-fill {
             height: 100%;
-            background: var(--accent-gold);
+            background: linear-gradient(90deg, var(--accent-gold), #d4b16d);
             border-radius: 3px;
             transition: width 0.3s ease;
         }
 
-        .quick-action {
-            display: block;
+        .progress-fill.success {
+            background: linear-gradient(90deg, var(--success), #6dd19f);
+        }
+
+        .progress-fill.warning {
+            background: linear-gradient(90deg, var(--warning), #f0b890);
+        }
+
+        /* Scene Table */
+        .scene-table {
             width: 100%;
-            padding: 12px 16px;
-            background: transparent;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            color: var(--text-light);
-            cursor: pointer;
-            transition: all 0.2s ease;
             font-size: 0.875em;
-            font-weight: 500;
+        }
+
+        .scene-table thead {
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .scene-table th {
             text-align: left;
-            margin-bottom: 8px;
-        }
-
-        .quick-action:hover {
-            background: rgba(201, 169, 97, 0.08);
-            border-color: var(--accent-gold);
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 40px 20px;
-            color: var(--text-muted);
-            font-size: 0.875em;
-        }
-
-        .empty-icon {
-            font-size: 2em;
-            margin-bottom: 12px;
-            opacity: 0.3;
-        }
-
-        .item-list {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .list-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
             padding: 10px 12px;
-            background: var(--bg-dark);
-            border-radius: 6px;
+            font-weight: 600;
+            color: var(--text-muted);
             font-size: 0.8125em;
         }
 
-        .list-item-label {
-            color: var(--text-light);
+        .scene-table td {
+            padding: 12px;
+            border-bottom: 1px solid var(--glass-border);
         }
 
-        .list-item-value {
-            color: var(--text-muted);
-        }
-
-        .badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 4px 10px;
-            background: rgba(82, 193, 134, 0.15);
-            border-radius: 12px;
-            font-size: 0.75em;
-            font-weight: 500;
-            color: var(--success);
-        }
-
-        .badge.warning {
-            background: rgba(232, 168, 124, 0.15);
-            color: var(--warning);
-        }
-
-        .dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: currentColor;
-        }
-
-        /* Large Widget */
-        .widget.large {
-            grid-column: span 2;
-        }
-
-        /* Scene Grid */
-        .scene-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-            gap: 8px;
-        }
-
-        .scene-card {
-            aspect-ratio: 1;
-            background: var(--bg-dark);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .scene-card:hover {
-            border-color: var(--accent-gold);
+        .scene-table tr:last-child td {
+            border-bottom: none;
         }
 
         .scene-number {
-            font-size: 1.25em;
             font-weight: 600;
-            margin-bottom: 4px;
+            color: var(--text-light);
+        }
+
+        .scene-location {
+            color: var(--text-light);
+        }
+
+        .scene-time {
+            color: var(--text-muted);
+            font-size: 0.875em;
         }
 
         .scene-status {
-            font-size: 0.6875em;
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: 500;
+        }
+
+        .scene-status.shot {
+            background: rgba(82, 193, 134, 0.15);
+            color: var(--success);
+        }
+
+        .scene-status.ready {
+            background: rgba(201, 169, 97, 0.15);
+            color: var(--accent-gold);
+        }
+
+        .scene-status.pending {
+            background: rgba(138, 127, 115, 0.15);
             color: var(--text-muted);
         }
 
-        /* Character Avatars */
+        /* Character Grid */
         .character-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-            gap: 12px;
+            gap: 16px;
         }
 
         .character-avatar {
@@ -457,43 +463,82 @@
         }
 
         .avatar {
-            width: 60px;
-            height: 60px;
+            width: 64px;
+            height: 64px;
             border-radius: 50%;
-            background: var(--bg-dark);
-            border: 2px solid var(--border);
+            background: linear-gradient(135deg, var(--accent-gold), #d4b16d);
             display: flex;
             align-items: center;
             justify-content: center;
+            font-weight: 600;
+            font-size: 1.25em;
+            color: var(--bg-dark);
             margin: 0 auto 8px;
-            font-size: 1.5em;
+            border: 2px solid var(--glass-border);
+        }
+
+        .character-name {
+            font-size: 0.875em;
+            font-weight: 500;
+            margin-bottom: 2px;
+            color: var(--text-light);
+        }
+
+        .character-actor {
+            font-size: 0.75em;
             color: var(--text-muted);
+        }
+
+        /* Tasks */
+        .task-item {
+            padding: 12px 0;
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .task-item:last-child {
+            border-bottom: none;
+        }
+
+        .task-checkbox {
+            width: 18px;
+            height: 18px;
+            border: 2px solid var(--border);
+            border-radius: 4px;
             cursor: pointer;
             transition: all 0.2s ease;
         }
 
-        .avatar:hover {
+        .task-checkbox:hover {
             border-color: var(--accent-gold);
         }
 
-        .character-name {
-            font-size: 0.75em;
-            color: var(--text-light);
-            margin-bottom: 2px;
+        .task-checkbox.checked {
+            background: var(--accent-gold);
+            border-color: var(--accent-gold);
         }
 
-        .character-actor {
-            font-size: 0.6875em;
+        .task-text {
+            flex: 1;
+            font-size: 0.875em;
+            color: var(--text-light);
+        }
+
+        .task-text.completed {
+            text-decoration: line-through;
             color: var(--text-muted);
         }
 
+        /* Responsive */
         @media (max-width: 1024px) {
             .sidebar {
                 width: 240px;
             }
 
-            .widget.large {
-                grid-column: span 1;
+            .widgets-grid {
+                grid-template-columns: 1fr;
             }
         }
 
@@ -505,12 +550,8 @@
                 transition: left 0.3s ease;
             }
 
-            .sidebar.open {
+            .sidebar.mobile-open {
                 left: 0;
-            }
-
-            .widgets-grid {
-                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -520,82 +561,62 @@
         <!-- Sidebar -->
         <div class="sidebar">
             <div class="sidebar-header">
-                <a href="/" class="back-btn">← Back to Projects</a>
+                <a href="index.html" class="back-btn">← All Projects</a>
                 <div class="project-info">
                     <h2>The Big Race</h2>
-                    <div class="project-code">TBR-01 • Feature Film</div>
+                    <p class="project-code">TBR-01 • Feature Film</p>
                 </div>
             </div>
 
             <div class="nav-section">
-                <div class="nav-section-title">Overview</div>
+                <div class="nav-section-title">Workspace</div>
                 <div class="nav-item active">
-                    <span class="nav-icon">◉</span>
-                    <span>Dashboard</span>
+                    <span class="nav-icon">📊</span>
+                    Dashboard
                 </div>
                 <div class="nav-item">
-                    <span class="nav-icon">📄</span>
-                    <span>Script</span>
-                </div>
-            </div>
-
-            <div class="nav-section">
-                <div class="nav-section-title">Breakdown</div>
-                <div class="nav-item">
-                    <span class="nav-icon">🎬</span>
-                    <span>Scenes</span>
-                </div>
-                <div class="nav-item">
-                    <span class="nav-icon">👤</span>
-                    <span>Characters</span>
+                    <span class="nav-icon">📝</span>
+                    Script Breakdown
                 </div>
                 <div class="nav-item">
                     <span class="nav-icon">👥</span>
-                    <span>Cast Board</span>
-                </div>
-            </div>
-
-            <div class="nav-section">
-                <div class="nav-section-title">Design</div>
-                <div class="nav-item">
-                    <span class="nav-icon">🎨</span>
-                    <span>Design Board</span>
+                    Characters
                 </div>
                 <div class="nav-item">
-                    <span class="nav-icon">📖</span>
-                    <span>Look Books</span>
-                </div>
-                <div class="nav-item">
-                    <span class="nav-icon">📸</span>
-                    <span>Continuity</span>
+                    <span class="nav-icon">🎬</span>
+                    Scenes
                 </div>
             </div>
 
             <div class="nav-section">
                 <div class="nav-section-title">Production</div>
                 <div class="nav-item">
+                    <span class="nav-icon">📸</span>
+                    Continuity
+                </div>
+                <div class="nav-item">
+                    <span class="nav-icon">📅</span>
+                    Call Sheets
+                </div>
+                <div class="nav-item">
                     <span class="nav-icon">⏱</span>
-                    <span>Time in Chair</span>
-                </div>
-                <div class="nav-item">
-                    <span class="nav-icon">💄</span>
-                    <span>Products</span>
-                </div>
-                <div class="nav-item">
-                    <span class="nav-icon">💰</span>
-                    <span>Budget</span>
+                    Time Tracking
                 </div>
             </div>
 
             <div class="nav-section">
-                <div class="nav-section-title">Other</div>
+                <div class="nav-section-title">Resources</div>
                 <div class="nav-item">
-                    <span class="nav-icon">📝</span>
-                    <span>Notes</span>
+                    <span class="nav-icon">💰</span>
+                    Budget
                 </div>
                 <div class="nav-item">
-                    <span class="nav-icon">⚙</span>
-                    <span>Settings</span>
+                    <span class="nav-icon">📦</span>
+                    Kit Inventory
+                </div>
+                <div class="nav-item">
+                    <span class="nav-icon">🔧</span>
+                    Settings
                 </div>
             </div>
         </div>
@@ -605,13 +626,13 @@
             <!-- Top Bar -->
             <div class="top-bar">
                 <div class="view-tabs">
-                    <button class="view-tab active">Dashboard</button>
-                    <button class="view-tab">Table View</button>
-                    <button class="view-tab">Timeline</button>
+                    <button class="view-tab active">Overview</button>
+                    <button class="view-tab">Breakdown</button>
+                    <button class="view-tab">Schedule</button>
                 </div>
                 <div class="top-bar-actions">
-                    <button class="layout-btn" onclick="resetLayout()">Reset Layout</button>
-                    <button class="layout-btn" onclick="toggleEdit()">Customize</button>
+                    <button class="layout-btn" onclick="toggleEdit()">✏️ Edit</button>
+                    <button class="layout-btn" onclick="resetLayout()">🔄 Reset</button>
                 </div>
             </div>
 
@@ -626,125 +647,42 @@
                                 Script Status
                             </div>
                             <div class="widget-actions">
+                                <button class="widget-btn">⤢</button>
                                 <button class="widget-btn">↕</button>
                                 <button class="widget-btn">×</button>
                             </div>
                         </div>
                         <div class="widget-content">
                             <div class="stat-row">
-                                <span class="stat-label">Version</span>
-                                <span class="stat-value">Final Draft v3</span>
+                                <span class="stat-label">Total Pages</span>
+                                <span class="stat-value">120</span>
                             </div>
                             <div class="stat-row">
-                                <span class="stat-label">Pages</span>
+                                <span class="stat-label">Scenes</span>
                                 <span class="stat-value">124</span>
                             </div>
                             <div class="stat-row">
-                                <span class="stat-label">Last Updated</span>
-                                <span class="stat-value">2 days ago</span>
+                                <span class="stat-label">Shot</span>
+                                <span class="stat-value">85 / 124</span>
                             </div>
-                        </div>
-                    </div>
-
-                    <!-- Progress Widget -->
-                    <div class="widget" draggable="true">
-                        <div class="widget-header">
-                            <div class="widget-title">
-                                <span>📊</span>
-                                Breakdown Progress
-                            </div>
-                            <div class="widget-actions">
-                                <button class="widget-btn">↕</button>
-                                <button class="widget-btn">×</button>
-                            </div>
-                        </div>
-                        <div class="widget-content">
                             <div class="progress-section">
                                 <div class="progress-label">
-                                    <span class="stat-label">Scenes</span>
+                                    <span>Breakdown Complete</span>
                                     <span>68%</span>
                                 </div>
                                 <div class="progress-bar">
                                     <div class="progress-fill" style="width: 68%"></div>
                                 </div>
                             </div>
-                            <div class="progress-section">
-                                <div class="progress-label">
-                                    <span class="stat-label">Characters</span>
-                                    <span>82%</span>
-                                </div>
-                                <div class="progress-bar">
-                                    <div class="progress-fill" style="width: 82%"></div>
-                                </div>
-                            </div>
-                            <div class="progress-section">
-                                <div class="progress-label">
-                                    <span class="stat-label">Continuity Photos</span>
-                                    <span>45%</span>
-                                </div>
-                                <div class="progress-bar">
-                                    <div class="progress-fill" style="width: 45%"></div>
-                                </div>
-                            </div>
                         </div>
                     </div>
 
-                    <!-- Quick Actions Widget -->
+                    <!-- Scenes Widget -->
                     <div class="widget" draggable="true">
-                        <div class="widget-header">
-                            <div class="widget-title">
-                                <span>⚡</span>
-                                Quick Actions
-                            </div>
-                            <div class="widget-actions">
-                                <button class="widget-btn">↕</button>
-                                <button class="widget-btn">×</button>
-                            </div>
-                        </div>
-                        <div class="widget-content">
-                            <button class="quick-action">Upload Script Update</button>
-                            <button class="quick-action">Add New Character</button>
-                            <button class="quick-action">Create Look Book</button>
-                            <button class="quick-action">Export Breakdown</button>
-                        </div>
-                    </div>
-
-                    <!-- Continuity Alerts Widget -->
-                    <div class="widget" draggable="true">
-                        <div class="widget-header">
-                            <div class="widget-title">
-                                <span>⚠</span>
-                                Continuity Alerts
-                            </div>
-                            <div class="widget-actions">
-                                <button class="widget-btn">↕</button>
-                                <button class="widget-btn">×</button>
-                            </div>
-                        </div>
-                        <div class="widget-content">
-                            <div class="item-list">
-                                <div class="list-item">
-                                    <span class="list-item-label">Scene 42 - Hair mismatch</span>
-                                    <span class="badge warning"><span class="dot"></span> Review</span>
-                                </div>
-                                <div class="list-item">
-                                    <span class="list-item-label">Scene 18 - Missing photos</span>
-                                    <span class="badge warning"><span class="dot"></span> Action</span>
-                                </div>
-                                <div class="list-item">
-                                    <span class="list-item-label">Scene 55 - Approved</span>
-                                    <span class="badge"><span class="dot"></span> Clear</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Scenes Overview - Large Widget -->
-                    <div class="widget large" draggable="true">
                         <div class="widget-header">
                             <div class="widget-title">
                                 <span>🎬</span>
-                                Scenes Overview
+                                Upcoming Scenes
                             </div>
                             <div class="widget-actions">
                                 <button class="widget-btn">⤢</button>
@@ -753,49 +691,83 @@
                             </div>
                         </div>
                         <div class="widget-content">
-                            <div class="scene-grid">
-                                <div class="scene-card">
-                                    <div class="scene-number">1</div>
-                                    <div class="scene-status">Done</div>
-                                </div>
-                                <div class="scene-card">
-                                    <div class="scene-number">2</div>
-                                    <div class="scene-status">Done</div>
-                                </div>
-                                <div class="scene-card">
-                                    <div class="scene-number">3</div>
-                                    <div class="scene-status">Review</div>
-                                </div>
-                                <div class="scene-card">
-                                    <div class="scene-number">4</div>
-                                    <div class="scene-status">Pending</div>
-                                </div>
-                                <div class="scene-card">
-                                    <div class="scene-number">5</div>
-                                    <div class="scene-status">Pending</div>
-                                </div>
-                                <div class="scene-card">
-                                    <div class="scene-number">6</div>
-                                    <div class="scene-status">Pending</div>
-                                </div>
-                                <div class="scene-card">
-                                    <div class="scene-number">7</div>
-                                    <div class="scene-status">Done</div>
-                                </div>
-                                <div class="scene-card">
-                                    <div class="scene-number">8</div>
-                                    <div class="scene-status">Pending</div>
-                                </div>
+                            <table class="scene-table">
+                                <thead>
+                                    <tr>
+                                        <th>Scene</th>
+                                        <th>Location</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>
+                                            <div class="scene-number">12</div>
+                                            <div class="scene-time">INT. DAY</div>
+                                        </td>
+                                        <td class="scene-location">Living Room</td>
+                                        <td><span class="scene-status ready">Ready</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <div class="scene-number">13</div>
+                                            <div class="scene-time">EXT. NIGHT</div>
+                                        </td>
+                                        <td class="scene-location">Street</td>
+                                        <td><span class="scene-status pending">Pending</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <div class="scene-number">14</div>
+                                            <div class="scene-time">INT. DAY</div>
+                                        </td>
+                                        <td class="scene-location">Office</td>
+                                        <td><span class="scene-status shot">Shot</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Today's Tasks Widget -->
+                    <div class="widget" draggable="true">
+                        <div class="widget-header">
+                            <div class="widget-title">
+                                <span>✓</span>
+                                Today's Tasks
+                            </div>
+                            <div class="widget-actions">
+                                <button class="widget-btn">+</button>
+                                <button class="widget-btn">↕</button>
+                                <button class="widget-btn">×</button>
+                            </div>
+                        </div>
+                        <div class="widget-content">
+                            <div class="task-item">
+                                <div class="task-checkbox checked"></div>
+                                <div class="task-text completed">Prep wigs for Scene 12</div>
+                            </div>
+                            <div class="task-item">
+                                <div class="task-checkbox"></div>
+                                <div class="task-text">Check continuity photos</div>
+                            </div>
+                            <div class="task-item">
+                                <div class="task-checkbox"></div>
+                                <div class="task-text">Order special FX makeup</div>
+                            </div>
+                            <div class="task-item">
+                                <div class="task-checkbox"></div>
+                                <div class="task-text">Update call sheet</div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Characters Widget -->
-                    <div class="widget large" draggable="true">
+                    <!-- Character Progress Widget -->
+                    <div class="widget" draggable="true">
                         <div class="widget-header">
                             <div class="widget-title">
                                 <span>👤</span>
-                                Main Characters
+                                Characters
                             </div>
                             <div class="widget-actions">
                                 <button class="widget-btn">⤢</button>
@@ -890,6 +862,39 @@
     </div>
 
     <script>
+        // Load project data
+        let currentProject = null;
+        
+        function loadProjectData() {
+            const projectData = localStorage.getItem('currentProject');
+            if (projectData) {
+                currentProject = JSON.parse(projectData);
+                updateDashboard();
+            } else {
+                // No project selected, redirect to home
+                window.location.href = 'index.html';
+            }
+        }
+
+        function updateDashboard() {
+            // Update sidebar header
+            document.querySelector('.project-info h2').textContent = currentProject.title;
+            document.querySelector('.project-code').textContent = `${currentProject.code} • ${currentProject.type}`;
+            
+            // Update page title
+            document.title = `${currentProject.title} - Project Dashboard`;
+            
+            // Update script status widget
+            const scriptPages = document.querySelectorAll('.stat-row .stat-value');
+            if (scriptPages.length >= 2) {
+                scriptPages[1].textContent = currentProject.scenes || '0';
+            }
+            
+            // Update progress bars
+            const progressFills = document.querySelectorAll('.progress-fill');
+            if (progressFills[0]) progressFills[0].style.width = `${currentProject.progress || 0}%`;
+        }
+
         // Drag and Drop functionality
         let draggedElement = null;
 
@@ -992,6 +997,9 @@
         function toggleEdit() {
             alert('Customize mode - you can now drag widgets to rearrange them!');
         }
+
+        // Initialize dashboard on page load
+        loadProjectData();
     </script>
 </body>
 </html>
