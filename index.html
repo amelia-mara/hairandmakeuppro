@@ -592,6 +592,49 @@
             transform: translateY(-1px);
         }
 
+        .button-row {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .delete-btn {
+            flex: 1;
+            padding: 12px;
+            background: rgba(220, 38, 38, 0.2);
+            border: 1px solid rgba(220, 38, 38, 0.4);
+            border-radius: 6px;
+            color: #ef4444;
+            font-weight: 600;
+            font-size: 0.9375em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .delete-btn:hover {
+            background: rgba(220, 38, 38, 0.3);
+            border-color: #ef4444;
+            transform: translateY(-1px);
+        }
+
+        .save-btn {
+            flex: 2;
+            padding: 12px;
+            background: var(--accent-gold);
+            border: none;
+            border-radius: 6px;
+            color: var(--bg-dark);
+            font-weight: 600;
+            font-size: 0.9375em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .save-btn:hover {
+            background: #d4b16d;
+            transform: translateY(-1px);
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .header {
@@ -690,8 +733,8 @@
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Show Code</label>
-                    <input type="text" class="form-input" id="showCode" placeholder="e.g. TBR-01" required>
+                    <label class="form-label">Genre</label>
+                    <input type="text" class="form-input" id="showCode" placeholder="e.g. Thriller, Comedy, Drama" required>
                 </div>
 
                 <div class="form-group">
@@ -725,7 +768,7 @@
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Show Code</label>
+                    <label class="form-label">Genre</label>
                     <input type="text" class="form-input" id="editCode" required>
                 </div>
 
@@ -740,7 +783,10 @@
                     </select>
                 </div>
 
-                <button type="submit" class="submit-btn">Save Changes</button>
+                <div class="button-row">
+                    <button type="button" class="delete-btn" onclick="deleteProject()">Delete Project</button>
+                    <button type="submit" class="save-btn">Save Changes</button>
+                </div>
             </form>
         </div>
     </div>
@@ -755,7 +801,7 @@
         const demoProjects = [
             {
                 title: "The Big Race",
-                code: "TBR-01",
+                code: "Action / Thriller",
                 type: "Feature Film",
                 status: "active",
                 progress: 68,
@@ -765,7 +811,7 @@
             },
             {
                 title: "Haunted Hearts",
-                code: "HH-S1",
+                code: "Horror / Romance",
                 type: "TV Series",
                 status: "active",
                 progress: 42,
@@ -775,7 +821,7 @@
             },
             {
                 title: "Hauntwood",
-                code: "HW-01",
+                code: "Mystery / Drama",
                 type: "Feature Film",
                 status: "in-progress",
                 progress: 85,
@@ -1074,6 +1120,18 @@
                 saveToStorage();
                 renderProjects();
                 closeEditModal();
+            }
+        }
+
+        function deleteProject() {
+            if (editingIndex !== null) {
+                const project = projects[editingIndex];
+                if (confirm(`Are you sure you want to delete "${project.title}"? This action cannot be undone.`)) {
+                    projects.splice(editingIndex, 1);
+                    saveToStorage();
+                    renderProjects();
+                    closeEditModal();
+                }
             }
         }
 
