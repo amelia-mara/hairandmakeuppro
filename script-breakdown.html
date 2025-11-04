@@ -328,7 +328,8 @@
         }
         .error-icon { font-size: 4em; margin-bottom: 20px; }
         .error-message { font-size: 1.125em; font-weight: 600; margin-bottom: 8px; }
-        .error-hint { font-size: 0.875em; color: var(--text-muted); margin-bottom: 20px; }
+        .error-hint { font-size: 0.875em; color: var(--text-muted); margin-bottom: 20px; line-height: 1.6; max-width: 600px; }
+        .error-state .toolbar-btn { display: inline-block; }
     </style>
 </head>
 <body>
@@ -487,8 +488,7 @@
                 <div class="error-state">
                     <div class="error-icon">⚠️</div>
                     <div class="error-message">${title}</div>
-                    <div class="error-hint">${message}</div>
-                    <button class="toolbar-btn primary" onclick="goBack()" style="margin-top: 20px;">← Back to Projects</button>
+                    <div class="error-hint" style="white-space: pre-line;">${message}</div>
                 </div>
             `;
             document.getElementById('sceneList').innerHTML = `
@@ -504,37 +504,82 @@
             const lines = text.split('\n');
             scenes = [];
             
-            // Pattern to detect scene headings
+            // Multiple patterns to detect scene headings - from strict to flexible
             const patterns = [
-                /^\s*(?:\d+\s+)?(?:\d+\s+)?(INT\.?|EXT\.?|INT\/EXT|I\/E)\s+/i,
+                // Standard format with optional periods: INT. or INT or EXT. or EXT
+                { regex: /^\s*(?:\d+\s+)?(?:\d+\s+)?(INT\.?|EXT\.?|INT\/EXT\.?|I\/E\.?)\s+/i, priority: 1 },
+                // Full words: INTERIOR or EXTERIOR
+                { regex: /^\s*(?:\d+\s+)?(INTERIOR|EXTERIOR)\s+/i, priority: 2 },
+                // Looser match - just needs to start with INT or EXT
+                { regex: /^\s*(?:\d+\s+)?(INT|EXT)\s+/i, priority: 3 },
+                // Scene numbers before INT/EXT
+                { regex: /^\s*\d+\s+[A-Z]?\s*(INT|EXT|INTERIOR|EXTERIOR)/i, priority: 1 }
             ];
             
             lines.forEach((line, index) => {
                 const trimmed = line.trim();
-                if (!trimmed) return;
+                if (!trimmed || trimmed.length < 5) return;
                 
                 for (let pattern of patterns) {
-                    if (pattern.test(trimmed)) {
+                    if (pattern.regex.test(trimmed)) {
+                        // Check if it looks like a scene heading
                         const upperRatio = (trimmed.match(/[A-Z]/g) || []).length / trimmed.replace(/\s/g, '').length;
-                        if (upperRatio > 0.5 && trimmed.length < 150) {
-                            let cleanHeading = trimmed.replace(/^\s*(?:\d+\s+)?/, '').trim();
-                            scenes.push({
-                                id: Date.now() + index,
-                                lineIndex: index,
-                                heading: cleanHeading
-                            });
-                            console.log('🎬 Found scene:', cleanHeading);
+                        const hasCommonWords = /\b(DAY|NIGHT|MORNING|AFTERNOON|EVENING|DUSK|DAWN|CONTINUOUS|LATER|SAME)\b/i.test(trimmed);
+                        
+                        // More flexible criteria
+                        const isLikelyScene = (
+                            (upperRatio > 0.4 && trimmed.length < 200) || // Relaxed from 0.5 to 0.4
+                            (upperRatio > 0.6 && trimmed.length < 100) ||
+                            hasCommonWords
+                        );
+                        
+                        if (isLikelyScene) {
+                            // Clean up the heading
+                            let cleanHeading = trimmed
+                                .replace(/^\s*\d+\s+/, '')  // Remove leading scene numbers
+                                .replace(/^\s*[A-Z]\s+/, '') // Remove single letter prefix
+                                .trim();
+                            
+                            // Avoid duplicates
+                            const isDuplicate = scenes.some(s => 
+                                s.heading === cleanHeading && Math.abs(s.lineIndex - index) < 3
+                            );
+                            
+                            if (!isDuplicate) {
+                                scenes.push({
+                                    id: Date.now() + index,
+                                    lineIndex: index,
+                                    heading: cleanHeading,
+                                    priority: pattern.priority
+                                });
+                                console.log('🎬 Found scene:', cleanHeading);
+                            }
                             break;
                         }
                     }
                 }
             });
             
+            // Sort by line index to maintain order
+            scenes.sort((a, b) => a.lineIndex - b.lineIndex);
+            
             console.log('✅ Found', scenes.length, 'scenes');
             document.getElementById('sceneCount').textContent = scenes.length;
             
             if (scenes.length === 0) {
-                showError('No scenes detected', 'The script parser couldn\'t find any scene headings. Make sure your script uses standard INT. or EXT. scene headings.');
+                showError(
+                    'No scenes detected', 
+                    `The script parser couldn't find any scene headings. Please make sure your script uses one of these formats:\n\n` +
+                    `• INT. LOCATION - TIME\n` +
+                    `• EXT. LOCATION - TIME\n` +
+                    `• INTERIOR. LOCATION - TIME\n` +
+                    `• EXTERIOR. LOCATION - TIME\n\n` +
+                    `Examples:\n` +
+                    `• INT. COFFEE SHOP - DAY\n` +
+                    `• EXT. CITY STREET - NIGHT\n` +
+                    `• INT. OFFICE - MORNING\n\n` +
+                    `<button class="toolbar-btn primary" onclick="window.location.href='script-breakdown-debug.html'" style="margin-top: 20px;">🔍 Open Debugger</button>`
+                );
                 return;
             }
             
