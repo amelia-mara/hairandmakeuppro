@@ -748,6 +748,8 @@
         let projects = [];
         let editingIndex = null;
         let uploadedScript = null;
+        let scriptLoading = false;
+        let scriptLoaded = false;
 
         const demoProjects = [
             {
@@ -869,14 +871,31 @@
             const file = event.target.files[0];
             if (file) {
                 uploadedScript = file;
-                document.getElementById('fileName').textContent = file.name;
-                document.getElementById('fileName').style.display = 'inline-block';
+                scriptLoading = true;
+                scriptLoaded = false;
+                
+                const fileNameElement = document.getElementById('fileName');
+                fileNameElement.textContent = `📄 ${file.name} - Loading...`;
+                fileNameElement.style.display = 'inline-block';
+                fileNameElement.style.color = 'var(--accent-gold)';
                 
                 // Auto-fill project title from filename (remove extension)
                 const titleWithoutExt = file.name.replace(/\.[^/.]+$/, "");
                 document.getElementById('projectTitle').value = titleWithoutExt;
                 
                 console.log('File selected:', file.name, 'Type:', file.type, 'Size:', file.size);
+                
+                // Check if it's a PDF
+                if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+                    scriptLoading = false;
+                    scriptLoaded = false;
+                    fileNameElement.textContent = `⚠️ ${file.name} - PDF not supported yet`;
+                    fileNameElement.style.color = '#e8a87c';
+                    alert('PDF scripts cannot be parsed yet.\n\nPlease convert your script to .txt or .fountain format:\n\n1. Open PDF\n2. Select All text (Ctrl/Cmd + A)\n3. Copy (Ctrl/Cmd + C)\n4. Paste into a new text file\n5. Save as .txt\n\nThen upload the .txt file instead.');
+                    document.querySelector('input[type="file"]').value = '';
+                    uploadedScript = null;
+                    return;
+                }
                 
                 // Read script content - support various text file types
                 const isTextFile = file.type === 'text/plain' || 
@@ -887,28 +906,40 @@
                 
                 if (isTextFile) {
                     const reader = new FileReader();
+                    
                     reader.onload = function(e) {
                         const scriptContent = e.target.result;
-                        console.log('Script content loaded, length:', scriptContent.length);
+                        console.log('✓ Script content loaded, length:', scriptContent.length);
                         console.log('First 200 chars:', scriptContent.substring(0, 200));
                         
                         // Store script content in localStorage
                         localStorage.setItem('uploadedScriptContent', scriptContent);
                         localStorage.setItem('uploadedScriptName', file.name);
-                        console.log('Script stored in localStorage');
+                        
+                        scriptLoading = false;
+                        scriptLoaded = true;
+                        
+                        fileNameElement.textContent = `✓ ${file.name} - Ready!`;
+                        fileNameElement.style.color = '#52c186';
+                        
+                        console.log('✓ Script stored in localStorage');
                     };
+                    
                     reader.onerror = function(e) {
                         console.error('Error reading file:', e);
+                        scriptLoading = false;
+                        scriptLoaded = false;
+                        fileNameElement.textContent = `❌ ${file.name} - Error reading file`;
+                        fileNameElement.style.color = '#ff6b6b';
                         alert('Error reading script file. Please try again.');
                     };
+                    
                     reader.readAsText(file);
-                } else if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
-                    // For PDF, just store the file info for now
-                    localStorage.setItem('uploadedScriptName', file.name);
-                    localStorage.setItem('uploadedScriptType', 'pdf');
-                    console.log('PDF script uploaded - will need parsing');
-                    alert('PDF uploaded! Note: PDF parsing is not yet implemented. Please use .txt or .fountain format for now.');
                 } else {
+                    scriptLoading = false;
+                    scriptLoaded = false;
+                    fileNameElement.textContent = `❌ ${file.name} - Unsupported format`;
+                    fileNameElement.style.color = '#ff6b6b';
                     console.log('Unsupported file type:', file.type);
                     alert('Please upload a .txt, .fountain, or .fdx script file.');
                 }
@@ -920,6 +951,8 @@
             document.getElementById('projectForm').reset();
             document.getElementById('fileName').style.display = 'none';
             uploadedScript = null;
+            scriptLoading = false;
+            scriptLoaded = false;
         }
 
         function closeModal() {
@@ -960,13 +993,24 @@
         function saveProject(event) {
             event.preventDefault();
 
+            // Check if script is still loading
+            if (scriptLoading) {
+                alert('Please wait for the script to finish loading...');
+                return;
+            }
+
             const scriptContent = localStorage.getItem('uploadedScriptContent');
             const scriptName = localStorage.getItem('uploadedScriptName');
             
-            console.log('Creating project with script:', scriptName);
+            console.log('=== Creating Project ===');
+            console.log('Project title:', document.getElementById('projectTitle').value);
+            console.log('Script uploaded:', !!uploadedScript);
+            console.log('Script loaded:', scriptLoaded);
+            console.log('Script name:', scriptName);
             console.log('Script content exists:', !!scriptContent);
             if (scriptContent) {
                 console.log('Script content length:', scriptContent.length);
+                console.log('First 100 chars:', scriptContent.substring(0, 100));
             }
 
             const project = {
@@ -983,14 +1027,20 @@
                 scriptName: scriptName || null
             };
 
-            console.log('Project object created:', {
+            console.log('Project object:', {
                 title: project.title,
+                code: project.code,
                 hasScriptContent: !!project.scriptContent,
+                scriptContentLength: project.scriptContent ? project.scriptContent.length : 0,
                 scriptName: project.scriptName
             });
 
             projects.unshift(project);
             saveToStorage();
+            
+            console.log('✓ Project saved to projects array');
+            console.log('✓ Saved to localStorage');
+            
             renderProjects();
             closeModal();
             
@@ -999,7 +1049,12 @@
             localStorage.removeItem('uploadedScriptName');
             localStorage.removeItem('uploadedScriptType');
             
-            console.log('Project saved and temp storage cleared');
+            // Reset state
+            scriptLoading = false;
+            scriptLoaded = false;
+            
+            console.log('✓ Temp storage cleared');
+            console.log('=== Project Creation Complete ===');
         }
 
         function openProject(index) {
