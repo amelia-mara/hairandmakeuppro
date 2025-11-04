@@ -881,14 +881,33 @@
                 
                 let fullText = '';
                 
-                // Extract text from each page
+                // Extract text from each page with better formatting
                 for (let i = 1; i <= pdf.numPages; i++) {
                     const page = await pdf.getPage(i);
                     const textContent = await page.getTextContent();
-                    const pageText = textContent.items.map(item => item.str).join(' ');
-                    fullText += pageText + '\n';
+                    
+                    // Group text items by their vertical position (y coordinate)
+                    const lines = {};
+                    textContent.items.forEach(item => {
+                        const y = Math.round(item.transform[5]); // Y coordinate
+                        if (!lines[y]) lines[y] = [];
+                        lines[y].push(item);
+                    });
+                    
+                    // Sort lines by Y position (top to bottom) and build text
+                    const sortedYPositions = Object.keys(lines).sort((a, b) => b - a);
+                    
+                    sortedYPositions.forEach(y => {
+                        // Sort items in line by X position (left to right)
+                        const lineItems = lines[y].sort((a, b) => a.transform[4] - b.transform[4]);
+                        const lineText = lineItems.map(item => item.str).join('');
+                        fullText += lineText.trim() + '\n';
+                    });
+                    
+                    fullText += '\n'; // Add extra line break between pages
                 }
                 
+                console.log('PDF extraction complete, first 500 chars:', fullText.substring(0, 500));
                 return fullText;
             } catch (error) {
                 console.error('Error parsing PDF:', error);
