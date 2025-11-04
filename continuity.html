@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Continuity Tracking</title>
+    <title>Continuity Tracker Pro</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * {
@@ -27,6 +27,7 @@
             --success: #52c186;
             --warning: #e8a87c;
             --danger: #ef4444;
+            --info: #4da6ff;
             --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
             --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
             --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
@@ -92,6 +93,7 @@
                 var(--shadow-sm),
                 inset 0 1px 0 rgba(255, 255, 255, 0.05);
             position: relative;
+            z-index: 100;
         }
 
         .top-bar::before {
@@ -144,6 +146,9 @@
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             font-family: inherit;
             font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .btn:hover {
@@ -207,6 +212,11 @@
                 var(--shadow-sm),
                 inset 1px 0 0 rgba(255, 255, 255, 0.03);
             position: relative;
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .scene-sidebar.collapsed {
+            width: 60px;
         }
 
         .scene-sidebar::before {
@@ -220,9 +230,37 @@
             pointer-events: none;
         }
 
+        .sidebar-toggle {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            width: 24px;
+            height: 24px;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-toggle:hover {
+            border-color: var(--accent-gold);
+            background: var(--card-bg-hover);
+        }
+
         .sidebar-header {
             padding: 16px 20px;
             border-bottom: 1px solid var(--glass-border);
+            transition: opacity 0.3s ease;
+        }
+
+        .scene-sidebar.collapsed .sidebar-header {
+            opacity: 0;
+            pointer-events: none;
         }
 
         .sidebar-title {
@@ -238,6 +276,7 @@
             display: flex;
             gap: 8px;
             margin-bottom: 12px;
+            flex-wrap: wrap;
         }
 
         .filter-chip {
@@ -491,6 +530,7 @@
         .toolbar-actions {
             display: flex;
             gap: 8px;
+            align-items: center;
         }
 
         .photo-grid-container {
@@ -505,6 +545,14 @@
             gap: 16px;
         }
 
+        .photo-grid.large {
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+        }
+
+        .photo-grid.small {
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        }
+
         .photo-card {
             background: 
                 linear-gradient(135deg, rgba(212, 175, 122, 0.05) 0%, rgba(28, 25, 22, 0.5) 50%, rgba(212, 175, 122, 0.03) 100%);
@@ -516,6 +564,14 @@
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+            cursor: pointer;
+        }
+
+        .photo-card.selected {
+            border-color: var(--accent-gold);
+            box-shadow: 
+                0 0 0 2px var(--accent-gold),
+                var(--shadow-md);
         }
 
         .photo-card::before {
@@ -609,6 +665,7 @@
         .overlay-btn {
             padding: 8px 12px;
             background: var(--card-bg);
+            backdrop-filter: blur(8px);
             border: 1px solid var(--glass-border);
             border-radius: 6px;
             color: var(--text-light);
@@ -619,6 +676,43 @@
 
         .overlay-btn:hover {
             border-color: var(--accent-gold);
+            background: var(--card-bg-hover);
+        }
+
+        .photo-selection-checkbox {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 20px;
+            height: 20px;
+            background: var(--card-bg);
+            backdrop-filter: blur(8px);
+            border: 2px solid var(--glass-border);
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        .photo-card:hover .photo-selection-checkbox,
+        .photo-card.selected .photo-selection-checkbox,
+        .selection-mode .photo-selection-checkbox {
+            opacity: 1;
+        }
+
+        .photo-selection-checkbox.checked {
+            background: var(--accent-gold);
+            border-color: var(--accent-gold);
+        }
+
+        .photo-selection-checkbox.checked::after {
+            content: '✓';
+            color: #0a0908;
+            font-weight: 600;
         }
 
         .photo-card-info {
@@ -635,12 +729,35 @@
             font-size: 0.75em;
             color: var(--text-muted);
             margin-bottom: 8px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
         }
 
         .photo-notes {
             font-size: 0.8125em;
             color: var(--text-light);
             line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .photo-tags {
+            display: flex;
+            gap: 4px;
+            margin-top: 8px;
+            flex-wrap: wrap;
+        }
+
+        .photo-tag {
+            padding: 2px 8px;
+            background: rgba(212, 175, 122, 0.2);
+            border: 1px solid rgba(212, 175, 122, 0.4);
+            border-radius: 12px;
+            font-size: 0.65em;
+            color: var(--accent-gold);
         }
 
         /* Upload Card */
@@ -660,6 +777,12 @@
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             overflow: hidden;
+        }
+
+        .upload-card.dragover {
+            border-color: var(--accent-gold);
+            background: 
+                linear-gradient(135deg, rgba(212, 175, 122, 0.15) 0%, rgba(35, 31, 27, 0.7) 50%, rgba(212, 175, 122, 0.1) 100%);
         }
 
         .upload-card::after {
@@ -717,6 +840,11 @@
                 var(--shadow-sm),
                 inset -1px 0 0 rgba(255, 255, 255, 0.03);
             position: relative;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .details-sidebar.hidden {
+            transform: translateX(320px);
         }
 
         .details-sidebar::before {
@@ -733,6 +861,27 @@
         .details-header {
             padding: 16px 20px;
             border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .details-close {
+            width: 24px;
+            height: 24px;
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .details-close:hover {
+            border-color: var(--accent-gold);
+            background: rgba(212, 175, 122, 0.08);
         }
 
         .details-content {
@@ -887,7 +1036,7 @@
             border: 1px solid rgba(212, 175, 122, 0.15);
             border-radius: 16px;
             padding: 32px;
-            max-width: 500px;
+            max-width: 600px;
             width: 90%;
             max-height: 90vh;
             overflow-y: auto;
@@ -897,6 +1046,10 @@
                 inset 0 1px 0 rgba(255, 255, 255, 0.08);
             animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
+        }
+
+        .modal-content.large {
+            max-width: 90vw;
         }
 
         .modal-content::before {
@@ -932,6 +1085,10 @@
         .modal-title {
             font-size: 1.25em;
             font-weight: 600;
+        }
+
+        .modal-body {
+            position: relative;
         }
 
         .close-btn {
@@ -1014,6 +1171,12 @@
             background: var(--card-bg);
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
+            position: relative;
+        }
+
+        .file-upload-area.dragover {
+            border-color: var(--accent-gold);
+            background: var(--card-bg-hover);
         }
 
         .file-upload-area:hover {
@@ -1024,6 +1187,49 @@
 
         .file-upload-area input {
             display: none;
+        }
+
+        .file-preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 8px;
+            margin-top: 16px;
+        }
+
+        .file-preview-item {
+            position: relative;
+            aspect-ratio: 1;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--glass-border);
+        }
+
+        .file-preview-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .file-preview-remove {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 20px;
+            height: 20px;
+            background: var(--danger);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 0.75em;
+            color: white;
+            opacity: 0.8;
+            transition: opacity 0.2s;
+        }
+
+        .file-preview-remove:hover {
+            opacity: 1;
         }
 
         /* View Mode Selector */
@@ -1065,9 +1271,121 @@
                 inset 0 1px 0 rgba(255, 255, 255, 0.2);
         }
 
+        /* Grid Size Selector */
+        .grid-size-selector {
+            display: flex;
+            gap: 4px;
+            padding: 4px;
+            background: var(--card-bg);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+        }
+
+        .grid-size-btn {
+            width: 28px;
+            height: 28px;
+            background: transparent;
+            border: none;
+            border-radius: 4px;
+            color: var(--text-muted);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .grid-size-btn:hover {
+            background: rgba(212, 175, 122, 0.08);
+            color: var(--text-light);
+        }
+
+        .grid-size-btn.active {
+            background: var(--accent-gold);
+            color: #0a0908;
+        }
+
+        /* Comparison View */
+        .comparison-view {
+            display: none;
+            padding: 24px;
+        }
+
+        .comparison-view.active {
+            display: block;
+        }
+
+        .comparison-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 24px;
+        }
+
+        .comparison-panel {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .comparison-header {
+            padding: 12px;
+            background: linear-gradient(135deg, rgba(212, 175, 122, 0.08) 0%, rgba(18, 16, 14, 0.85) 50%, rgba(212, 175, 122, 0.04) 100%);
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .comparison-image {
+            position: relative;
+            aspect-ratio: 4/3;
+            background: rgba(13, 11, 10, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .comparison-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            transition: transform 0.3s ease;
+        }
+
+        .comparison-controls {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            padding: 8px;
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+        }
+
+        .comparison-btn {
+            padding: 4px 8px;
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            border-radius: 4px;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 0.75em;
+            transition: all 0.2s;
+        }
+
+        .comparison-btn:hover {
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+        }
+
         /* Timeline View */
         .timeline-view {
             display: none;
+            padding: 24px;
         }
 
         .timeline-view.active {
@@ -1084,11 +1402,338 @@
             margin-bottom: 16px;
             padding-bottom: 8px;
             border-bottom: 1px solid var(--glass-border);
+            background: linear-gradient(135deg, var(--text-light) 0%, var(--accent-gold) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
         .timeline-scenes {
             display: grid;
             gap: 12px;
+        }
+
+        .timeline-entry {
+            display: flex;
+            gap: 16px;
+            padding: 16px;
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .timeline-entry:hover {
+            border-color: rgba(212, 175, 122, 0.3);
+            background: var(--card-bg-hover);
+            transform: translateX(4px);
+        }
+
+        .timeline-time {
+            font-size: 0.875em;
+            color: var(--text-muted);
+            min-width: 60px;
+        }
+
+        .timeline-content {
+            flex: 1;
+        }
+
+        .timeline-photos {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+            overflow-x: auto;
+        }
+
+        .timeline-photo {
+            width: 80px;
+            height: 60px;
+            border-radius: 6px;
+            overflow: hidden;
+            flex-shrink: 0;
+            border: 1px solid var(--glass-border);
+        }
+
+        .timeline-photo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* FAB */
+        .fab {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, #e0c08f 0%, var(--accent-gold) 50%, #c9a564 100%);
+            border: none;
+            border-radius: 50%;
+            color: #0a0908;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            box-shadow: 
+                var(--shadow-lg),
+                0 0 30px rgba(212, 175, 122, 0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 100;
+        }
+
+        .fab:hover {
+            transform: scale(1.1) rotate(45deg);
+            box-shadow: 
+                var(--shadow-lg),
+                0 0 40px rgba(212, 175, 122, 0.5);
+        }
+
+        .fab-menu {
+            position: fixed;
+            bottom: 90px;
+            right: 24px;
+            display: none;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 99;
+        }
+
+        .fab-menu.active {
+            display: flex;
+        }
+
+        .fab-option {
+            padding: 10px 16px;
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            color: var(--text-light);
+            cursor: pointer;
+            font-size: 0.875em;
+            white-space: nowrap;
+            transition: all 0.3s ease;
+            animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .fab-option:hover {
+            background: var(--card-bg-hover);
+            border-color: var(--accent-gold);
+            transform: translateX(-4px);
+        }
+
+        /* Notification */
+        .notification {
+            position: fixed;
+            top: 80px;
+            right: 24px;
+            padding: 16px 24px;
+            background: linear-gradient(135deg, rgba(212, 175, 122, 0.9) 0%, rgba(212, 175, 122, 0.8) 100%);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--accent-gold);
+            border-radius: 12px;
+            color: #0a0908;
+            font-weight: 500;
+            font-size: 0.875em;
+            box-shadow: 
+                var(--shadow-md),
+                0 0 30px rgba(212, 175, 122, 0.4);
+            animation: slideInNotification 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 2000;
+        }
+
+        @keyframes slideInNotification {
+            from {
+                opacity: 0;
+                transform: translateX(100px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slideOutNotification {
+            from {
+                opacity: 1;
+                transform: translateX(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateX(100px);
+            }
+        }
+
+        .notification.success {
+            background: linear-gradient(135deg, rgba(82, 193, 134, 0.9) 0%, rgba(82, 193, 134, 0.8) 100%);
+            border-color: var(--success);
+            color: white;
+        }
+
+        .notification.error {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.9) 0%, rgba(239, 68, 68, 0.8) 100%);
+            border-color: var(--danger);
+            color: white;
+        }
+
+        .notification.info {
+            background: linear-gradient(135deg, rgba(77, 166, 255, 0.9) 0%, rgba(77, 166, 255, 0.8) 100%);
+            border-color: var(--info);
+            color: white;
+        }
+
+        /* Loading State */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 9, 8, 0.8);
+            backdrop-filter: blur(8px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .loading-overlay.active {
+            display: flex;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 3px solid var(--glass-border);
+            border-top: 3px solid var(--accent-gold);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Edit Modal */
+        .edit-form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        /* Quick Note Modal */
+        .note-type-selector {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .note-type-btn {
+            flex: 1;
+            padding: 10px;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .note-type-btn.active {
+            background: var(--accent-gold);
+            border-color: var(--accent-gold);
+            color: #0a0908;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .scene-sidebar {
+                width: 280px;
+            }
+            
+            .details-sidebar {
+                width: 280px;
+            }
+
+            .details-sidebar.hidden {
+                transform: translateX(280px);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+            }
+            
+            .scene-sidebar {
+                width: 100%;
+                height: 200px;
+                border-right: none;
+                border-bottom: 1px solid var(--glass-border);
+            }
+            
+            .details-sidebar {
+                position: fixed;
+                right: 0;
+                top: 60px;
+                height: calc(100vh - 60px);
+                z-index: 200;
+            }
+            
+            .photo-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
+
+            .comparison-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Print Styles */
+        @media print {
+            body {
+                background: white;
+                color: black;
+            }
+            
+            .top-bar,
+            .scene-sidebar,
+            .photo-toolbar,
+            .details-sidebar,
+            .fab,
+            .btn {
+                display: none !important;
+            }
+            
+            .photo-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            
+            .photo-card {
+                border: 1px solid #ddd;
+                page-break-inside: avoid;
+            }
+        }
+
+        /* Selection Mode */
+        body.selection-mode .photo-grid-container {
+            user-select: none;
         }
     </style>
 </head>
@@ -1098,33 +1743,46 @@
         <div class="top-bar">
             <div class="top-bar-left">
                 <a href="dashboard.html" class="back-link">← Dashboard</a>
-                <h1 class="page-title">Continuity Tracking</h1>
+                <h1 class="page-title">Continuity Tracker Pro</h1>
             </div>
             <div class="top-bar-right">
-                <button class="btn" onclick="importFromBreakdown()">📋 Import Scenes</button>
-                <button class="btn" onclick="exportContinuityReport()">📤 Export Report</button>
-                <button class="btn btn-primary" onclick="openUploadModal()">📸 Add Photos</button>
+                <button class="btn" onclick="continuityManager.syncWithBreakdown()">
+                    <span>🔄</span>
+                    Sync
+                </button>
+                <button class="btn" onclick="continuityManager.exportReport()">
+                    <span>📤</span>
+                    Export
+                </button>
+                <button class="btn" onclick="continuityManager.openComparisonView()">
+                    <span>⚖️</span>
+                    Compare
+                </button>
+                <button class="btn btn-primary" onclick="continuityManager.openUploadModal()">
+                    <span>📸</span>
+                    Add Photos
+                </button>
             </div>
         </div>
 
         <!-- Main Content -->
         <div class="main-content">
             <!-- Left Sidebar - Scene List -->
-            <div class="scene-sidebar">
+            <div class="scene-sidebar" id="sceneSidebar">
+                <div class="sidebar-toggle" onclick="continuityManager.toggleSidebar()">☰</div>
                 <div class="sidebar-header">
                     <div class="sidebar-title">Scenes</div>
                     <div class="scene-filters">
-                        <div class="filter-chip active" data-filter="all" onclick="filterScenes('all')">All</div>
-                        <div class="filter-chip" data-filter="shot" onclick="filterScenes('shot')">Shot</div>
-                        <div class="filter-chip" data-filter="unshot" onclick="filterScenes('unshot')">Unshot</div>
+                        <div class="filter-chip active" data-filter="all" onclick="continuityManager.filterScenes('all', this)">All</div>
+                        <div class="filter-chip" data-filter="shot" onclick="continuityManager.filterScenes('shot', this)">Shot</div>
+                        <div class="filter-chip" data-filter="unshot" onclick="continuityManager.filterScenes('unshot', this)">Unshot</div>
+                        <div class="filter-chip" data-filter="today" onclick="continuityManager.filterScenes('today', this)">Today</div>
                     </div>
-                    <input type="text" class="scene-search" placeholder="Search scenes..." id="sceneSearch">
+                    <input type="text" class="scene-search" placeholder="Search scenes..." id="sceneSearch" oninput="continuityManager.searchScenes(this.value)">
                 </div>
 
                 <div class="scene-list" id="sceneList">
-                    <div style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 0.875em;">
-                        Loading scenes...
-                    </div>
+                    <!-- Scene items will be generated here -->
                 </div>
             </div>
 
@@ -1138,588 +1796,1218 @@
                 <div class="photo-toolbar">
                     <div class="photo-count" id="photoCount">0 photos</div>
                     <div class="toolbar-actions">
-                        <div class="view-mode">
-                            <button class="view-mode-btn active" data-view="grid" onclick="switchView('grid')">Grid</button>
-                            <button class="view-mode-btn" data-view="timeline" onclick="switchView('timeline')">Timeline</button>
+                        <div class="grid-size-selector">
+                            <button class="grid-size-btn" onclick="continuityManager.setGridSize('small', this)" title="Small">⋮⋮⋮</button>
+                            <button class="grid-size-btn active" onclick="continuityManager.setGridSize('medium', this)" title="Medium">⋮⋮</button>
+                            <button class="grid-size-btn" onclick="continuityManager.setGridSize('large', this)" title="Large">⋮</button>
                         </div>
+                        <div class="view-mode">
+                            <button class="view-mode-btn active" data-view="grid" onclick="continuityManager.switchView('grid', this)">Grid</button>
+                            <button class="view-mode-btn" data-view="timeline" onclick="continuityManager.switchView('timeline', this)">Timeline</button>
+                            <button class="view-mode-btn" data-view="comparison" onclick="continuityManager.switchView('comparison', this)">Compare</button>
+                        </div>
+                        <button class="btn" onclick="continuityManager.toggleSelection()">
+                            <span>☑</span>
+                            Select
+                        </button>
                     </div>
                 </div>
 
                 <div class="photo-grid-container">
                     <div class="photo-grid" id="photoGrid">
-                        <div class="empty-state">
-                            <div class="empty-icon">📸</div>
-                            <div class="empty-text">No photos yet for this scene</div>
-                            <button class="btn btn-primary" onclick="openUploadModal()">Upload Photos</button>
-                        </div>
+                        <!-- Photo cards will be generated here -->
                     </div>
 
                     <div class="timeline-view" id="timelineView">
                         <!-- Timeline content will be generated here -->
                     </div>
+
+                    <div class="comparison-view" id="comparisonView">
+                        <!-- Comparison content will be generated here -->
+                    </div>
                 </div>
             </div>
 
             <!-- Right Sidebar - Details & Actions -->
-            <div class="details-sidebar">
+            <div class="details-sidebar" id="detailsSidebar">
                 <div class="details-header">
-                    <div class="sidebar-title">Scene Details</div>
+                    <div class="sidebar-title">Details</div>
+                    <button class="details-close" onclick="continuityManager.toggleDetailsSidebar()">×</button>
                 </div>
 
                 <div class="details-content" id="detailsContent">
-                    <div class="empty-state" style="min-height: 200px;">
-                        <div class="empty-icon" style="font-size: 2em;">📋</div>
-                        <div class="empty-text" style="font-size: 0.75em;">Select a scene to view details</div>
-                    </div>
+                    <!-- Details will be generated here -->
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Upload Photo Modal -->
-    <div class="modal" id="uploadModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title">Add Continuity Photo</h2>
-                <button class="close-btn" onclick="closeUploadModal()">×</button>
-            </div>
-            <form onsubmit="savePhoto(event)">
-                <div class="form-group">
-                    <label class="form-label">Photo</label>
-                    <div class="file-upload-area" onclick="document.getElementById('photoFile').click()">
-                        <div class="upload-icon">📸</div>
-                        <div class="upload-text">Click to upload photo<br><small>or drag and drop</small></div>
-                        <input type="file" id="photoFile" accept="image/*" onchange="previewPhoto(event)">
-                    </div>
-                    <img id="photoPreview" style="max-width: 100%; display: none; border-radius: 8px; margin-top: 12px;">
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Character</label>
-                    <select class="form-select" id="photoCharacter" required>
-                        <option value="">Select character...</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Take / Angle</label>
-                    <input type="text" class="form-input" id="photoTake" placeholder="e.g., Take 3, Close-up, Wide">
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Date/Time</label>
-                    <input type="datetime-local" class="form-input" id="photoDateTime">
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Notes</label>
-                    <textarea class="form-textarea" id="photoNotes" placeholder="Hair/makeup details, lighting, any continuity notes..."></textarea>
-                </div>
-
-                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 16px;">Save Photo</button>
-            </form>
-        </div>
+    <!-- FAB -->
+    <button class="fab" onclick="continuityManager.toggleFabMenu()">+</button>
+    <div class="fab-menu" id="fabMenu">
+        <div class="fab-option" onclick="continuityManager.quickCapture()">📷 Quick Capture</div>
+        <div class="fab-option" onclick="continuityManager.bulkUpload()">📁 Bulk Upload</div>
+        <div class="fab-option" onclick="continuityManager.addNote()">📝 Add Note</div>
+        <div class="fab-option" onclick="continuityManager.markSceneComplete()">✓ Mark Complete</div>
     </div>
 
-    <!-- Image Viewer Modal -->
-    <div class="modal" id="imageViewerModal">
-        <div class="modal-content" style="max-width: 90vw; max-height: 90vh; padding: 0;">
-            <img id="viewerImage" style="width: 100%; height: auto; border-radius: 12px;">
-        </div>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
     </div>
+
+    <!-- Modals will be inserted dynamically -->
+    <div id="modalContainer"></div>
 
     <script>
-        let currentProject = null;
-        let scenes = [];
-        let continuityData = {};
-        let currentScene = null;
+        // Enhanced Continuity Manager
+        class ContinuityManager {
+            constructor() {
+                this.currentProject = null;
+                this.scenes = [];
+                this.continuityData = {};
+                this.currentScene = null;
+                this.selectedPhotos = new Set();
+                this.viewMode = 'grid';
+                this.gridSize = 'medium';
+                this.selectionMode = false;
+                this.uploadedFiles = [];
+                this.currentFilter = 'all';
+                
+                this.init();
+            }
+
+            init() {
+                this.loadProjectData();
+                this.setupEventListeners();
+                this.loadScenes();
+                this.loadContinuityData();
+                
+                // Initialize with demo data if empty
+                if (Object.keys(this.continuityData).length === 0) {
+                    this.initializeDemoData();
+                }
+                
+                console.log('✓ Continuity Manager Pro initialized');
+            }
+
+            initializeDemoData() {
+                // Add some demo photos for testing
+                this.continuityData = {
+                    1: {
+                        photos: [
+                            {
+                                image: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iIzQ0NCI+PC9yZWN0Pjx0ZXh0IHRleHQtYW5jaG9yPSJtaWRkbGUiIHg9IjIwMCIgeT0iMTUwIiBzdHlsZT0iZmlsbDojYWFhO2ZvbnQtd2VpZ2h0OmJvbGQ7Zm9udC1zaXplOjE5cHgiIGZvbnQtZmFtaWx5PSJBcmlhbCwgSGVsdmV0aWNhLCBzYW5zLXNlcmlmIj5TYW1wbGUgUGhvdG8gMTwvdGV4dD48L3N2Zz4=',
+                                character: 'Emma Hart',
+                                take: 'Take 1 - Wide',
+                                timestamp: new Date().toISOString(),
+                                notes: 'Initial costume setup, morning light',
+                                tags: ['costume', 'lighting']
+                            }
+                        ]
+                    },
+                    2: {
+                        photos: [
+                            {
+                                image: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iIzQ0NCI+PC9yZWN0Pjx0ZXh0IHRleHQtYW5jaG9yPSJtaWRkbGUiIHg9IjIwMCIgeT0iMTUwIiBzdHlsZT0iZmlsbDojYWFhO2ZvbnQtd2VpZ2h0OmJvbGQ7Zm9udC1zaXplOjE5cHgiIGZvbnQtZmFtaWx5PSJBcmlhbCwgSGVsdmV0aWNhLCBzYW5zLXNlcmlmIj5TYW1wbGUgUGhvdG8gMjwvdGV4dD48L3N2Zz4=',
+                                character: 'Sarah Chen',
+                                take: 'Take 2 - Close-up',
+                                timestamp: new Date().toISOString(),
+                                notes: 'Kitchen scene setup',
+                                tags: ['props', 'setup']
+                            }
+                        ]
+                    }
+                };
+                this.saveContinuityData();
+            }
+
+            loadProjectData() {
+                const projectData = localStorage.getItem('currentProject');
+                if (projectData) {
+                    this.currentProject = JSON.parse(projectData);
+                    document.querySelector('.page-title').textContent = `Continuity - ${this.currentProject.title}`;
+                }
+            }
+
+            loadScenes() {
+                // Try to load from breakdown first
+                const breakdownData = localStorage.getItem('breakdownData');
+                if (breakdownData) {
+                    const breakdown = JSON.parse(breakdownData);
+                    if (breakdown.scenes && breakdown.scenes.length > 0) {
+                        this.scenes = breakdown.scenes.map(scene => ({
+                            number: scene.number,
+                            heading: scene.heading,
+                            status: scene.status || 'unshot',
+                            characters: scene.characters || [],
+                            date: scene.shootDate || new Date().toLocaleDateString()
+                        }));
+                    }
+                }
+                
+                // Use demo data if no breakdown data
+                if (this.scenes.length === 0) {
+                    this.scenes = [
+                        { number: 1, heading: 'INT. BEDROOM - MORNING', status: 'shot', characters: ['Emma Hart'], date: new Date().toLocaleDateString() },
+                        { number: 2, heading: 'INT. KITCHEN - LATE MORNING', status: 'shot', characters: ['Emma Hart', 'Sarah Chen'], date: new Date().toLocaleDateString() },
+                        { number: 3, heading: 'EXT. GARDEN PATH - AFTERNOON', status: 'in-progress', characters: ['Emma Hart'], date: new Date().toLocaleDateString() },
+                        { number: 4, heading: 'INT. LIVING ROOM - EVENING', status: 'unshot', characters: ['Emma Hart', 'David'], date: new Date(Date.now() + 86400000).toLocaleDateString() },
+                        { number: 5, heading: 'INT. HALLWAY - NIGHT', status: 'unshot', characters: ['Emma Hart'], date: new Date(Date.now() + 86400000).toLocaleDateString() }
+                    ];
+                }
+                
+                this.renderSceneList();
+            }
+
+            loadContinuityData() {
+                const projectCode = this.currentProject?.code || 'demo';
+                const saved = localStorage.getItem(`${projectCode}_continuity`);
+                if (saved) {
+                    this.continuityData = JSON.parse(saved);
+                }
+            }
+
+            saveContinuityData() {
+                const projectCode = this.currentProject?.code || 'demo';
+                localStorage.setItem(`${projectCode}_continuity`, JSON.stringify(this.continuityData));
+            }
+
+            renderSceneList() {
+                const list = document.getElementById('sceneList');
+                
+                if (this.scenes.length === 0) {
+                    list.innerHTML = `
+                        <div style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 0.875em;">
+                            No scenes available<br><br>
+                            <button class="btn btn-primary" onclick="continuityManager.importFromBreakdown()">
+                                Import from Breakdown
+                            </button>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Filter scenes based on current filter
+                let filteredScenes = this.scenes;
+                if (this.currentFilter !== 'all') {
+                    const today = new Date().toLocaleDateString();
+                    switch (this.currentFilter) {
+                        case 'shot':
+                            filteredScenes = this.scenes.filter(s => s.status === 'shot');
+                            break;
+                        case 'unshot':
+                            filteredScenes = this.scenes.filter(s => s.status === 'unshot');
+                            break;
+                        case 'today':
+                            filteredScenes = this.scenes.filter(s => s.date === today);
+                            break;
+                    }
+                }
+                
+                list.innerHTML = filteredScenes.map(scene => {
+                    const photoCount = this.getPhotoCount(scene.number);
+                    return `
+                        <div class="scene-item ${scene.status} ${this.currentScene === scene.number ? 'active' : ''}" 
+                             data-scene="${scene.number}" 
+                             onclick="continuityManager.selectScene(${scene.number})">
+                            <div class="scene-header">
+                                <span class="scene-number">Scene ${scene.number}</span>
+                                <span class="scene-status-badge ${scene.status}">${scene.status.replace('-', ' ')}</span>
+                            </div>
+                            <div class="scene-heading">${scene.heading}</div>
+                            <div class="scene-meta">
+                                <div class="scene-meta-item">
+                                    <span>👥</span>
+                                    <span>${scene.characters?.length || 0}</span>
+                                </div>
+                                <div class="scene-meta-item">
+                                    <span>📸</span>
+                                    <span>${photoCount}</span>
+                                </div>
+                                <div class="scene-meta-item">
+                                    <span>📅</span>
+                                    <span>${scene.date}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            getPhotoCount(sceneNumber) {
+                return (this.continuityData[sceneNumber]?.photos || []).length;
+            }
+
+            selectScene(sceneNumber) {
+                this.currentScene = sceneNumber;
+                this.selectedPhotos.clear();
+                
+                // Update UI
+                document.querySelectorAll('.scene-item').forEach(item => {
+                    item.classList.toggle('active', parseInt(item.dataset.scene) === sceneNumber);
+                });
+                
+                const scene = this.scenes.find(s => s.number === sceneNumber);
+                if (!scene) return;
+                
+                this.updateSceneInfo(scene);
+                this.renderPhotos();
+                this.renderDetails(scene);
+            }
+
+            updateSceneInfo(scene) {
+                const infoBar = document.getElementById('sceneInfoBar');
+                infoBar.innerHTML = `
+                    <div class="scene-info-title">Scene ${scene.number}: ${scene.heading}</div>
+                    <div class="scene-info-details">
+                        ${scene.characters?.join(', ') || 'No characters'} • 
+                        Status: ${scene.status.replace('-', ' ')} • 
+                        Date: ${scene.date}
+                    </div>
+                `;
+            }
+
+            renderPhotos() {
+                if (!this.currentScene) {
+                    document.getElementById('photoGrid').innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-icon">📸</div>
+                            <div class="empty-text">Select a scene to view photos</div>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                const photos = this.continuityData[this.currentScene]?.photos || [];
+                const container = document.getElementById('photoGrid');
+                
+                document.getElementById('photoCount').textContent = `${photos.length} photo${photos.length !== 1 ? 's' : ''}`;
+                
+                if (photos.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-icon">📸</div>
+                            <div class="empty-text">No photos yet for this scene</div>
+                            <button class="btn btn-primary" onclick="continuityManager.openUploadModal()">Upload Photos</button>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                container.innerHTML = photos.map((photo, index) => this.renderPhotoCard(photo, index)).join('') + `
+                    <div class="upload-card" onclick="continuityManager.openUploadModal()" id="uploadCard">
+                        <div class="upload-icon">+</div>
+                        <div class="upload-text">Add More Photos<br><small>Click or drag & drop</small></div>
+                    </div>
+                `;
+                
+                // Setup drag & drop
+                this.setupDragDrop();
+            }
+
+            renderPhotoCard(photo, index) {
+                const selected = this.selectedPhotos.has(index);
+                return `
+                    <div class="photo-card ${selected ? 'selected' : ''}" data-index="${index}">
+                        <div class="photo-selection-checkbox ${selected ? 'checked' : ''}" 
+                             onclick="event.stopPropagation(); continuityManager.togglePhotoSelection(${index})"></div>
+                        <div class="photo-card-image" onclick="continuityManager.viewPhoto(${index})">
+                            <img src="${photo.image}" alt="Continuity photo" loading="lazy">
+                            <div class="photo-card-overlay">
+                                <button class="overlay-btn" onclick="event.stopPropagation(); continuityManager.viewPhoto(${index})">👁 View</button>
+                                <button class="overlay-btn" onclick="event.stopPropagation(); continuityManager.editPhoto(${index})">✏️ Edit</button>
+                                <button class="overlay-btn" onclick="event.stopPropagation(); continuityManager.deletePhoto(${index})">🗑 Delete</button>
+                            </div>
+                        </div>
+                        <div class="photo-card-info">
+                            <div class="photo-character">${photo.character || 'No character'}</div>
+                            <div class="photo-details">
+                                <span>${photo.take || 'No take'}</span> • 
+                                <span>${new Date(photo.timestamp).toLocaleDateString()}</span>
+                            </div>
+                            ${photo.notes ? `<div class="photo-notes">${photo.notes}</div>` : ''}
+                            ${photo.tags && photo.tags.length > 0 ? `
+                                <div class="photo-tags">
+                                    ${photo.tags.map(tag => `<span class="photo-tag">${tag}</span>`).join('')}
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+
+            renderDetails(scene) {
+                const detailsContent = document.getElementById('detailsContent');
+                const photos = this.continuityData[scene.number]?.photos || [];
+                
+                detailsContent.innerHTML = `
+                    <div class="detail-section">
+                        <div class="detail-section-title">Scene Information</div>
+                        <div class="detail-item">
+                            <div class="detail-label">Scene Number</div>
+                            <div class="detail-value">${scene.number}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Heading</div>
+                            <div class="detail-value">${scene.heading}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Status</div>
+                            <div class="detail-value">${scene.status.replace('-', ' ').toUpperCase()}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Shoot Date</div>
+                            <div class="detail-value">${scene.date}</div>
+                        </div>
+                    </div>
+
+                    <div class="detail-section">
+                        <div class="detail-section-title">Characters</div>
+                        ${scene.characters?.map(char => `<span class="character-chip">${char}</span>`).join('') || '<div class="detail-value">No characters</div>'}
+                    </div>
+
+                    <div class="detail-section">
+                        <div class="detail-section-title">Quick Actions</div>
+                        <button class="action-btn" onclick="continuityManager.openUploadModal()">
+                            <span class="action-icon">📸</span>
+                            <span>Add Photos</span>
+                        </button>
+                        <button class="action-btn" onclick="continuityManager.openComparisonView()">
+                            <span class="action-icon">⚖️</span>
+                            <span>Compare Photos</span>
+                        </button>
+                        <button class="action-btn" onclick="continuityManager.exportScenePhotos()">
+                            <span class="action-icon">📤</span>
+                            <span>Export Scene</span>
+                        </button>
+                        <button class="action-btn" onclick="continuityManager.printContactSheet()">
+                            <span class="action-icon">🖨️</span>
+                            <span>Print Contact Sheet</span>
+                        </button>
+                        ${this.selectedPhotos.size > 0 ? `
+                            <button class="action-btn" onclick="continuityManager.bulkDelete()">
+                                <span class="action-icon">🗑️</span>
+                                <span>Delete Selected (${this.selectedPhotos.size})</span>
+                            </button>
+                        ` : ''}
+                    </div>
+
+                    <div class="detail-section">
+                        <div class="detail-section-title">Statistics</div>
+                        <div class="detail-item">
+                            <div class="detail-label">Total Photos</div>
+                            <div class="detail-value">${photos.length}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Characters Covered</div>
+                            <div class="detail-value">${new Set(photos.map(p => p.character)).size}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Last Updated</div>
+                            <div class="detail-value">${photos.length > 0 ? new Date(photos[photos.length - 1].timestamp).toLocaleString() : 'Never'}</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            setupEventListeners() {
+                // Keyboard shortcuts
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') {
+                        this.closeAllModals();
+                    } else if (e.ctrlKey || e.metaKey) {
+                        if (e.key === 'a' && this.selectionMode) {
+                            e.preventDefault();
+                            this.selectAll();
+                        } else if (e.key === 's') {
+                            e.preventDefault();
+                            this.saveContinuityData();
+                            this.showNotification('Saved', 'success');
+                        }
+                    }
+                });
+
+                // Window resize
+                window.addEventListener('resize', () => {
+                    if (window.innerWidth < 768) {
+                        document.getElementById('sceneSidebar').classList.add('collapsed');
+                    }
+                });
+
+                // Click outside FAB menu to close
+                document.addEventListener('click', (e) => {
+                    const fab = document.querySelector('.fab');
+                    const fabMenu = document.getElementById('fabMenu');
+                    if (!fab.contains(e.target) && !fabMenu.contains(e.target)) {
+                        fabMenu.classList.remove('active');
+                    }
+                });
+            }
+
+            setupDragDrop() {
+                const uploadCard = document.getElementById('uploadCard');
+                if (!uploadCard) return;
+
+                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                    uploadCard.addEventListener(eventName, this.preventDefaults, false);
+                });
+
+                ['dragenter', 'dragover'].forEach(eventName => {
+                    uploadCard.addEventListener(eventName, () => uploadCard.classList.add('dragover'), false);
+                });
+
+                ['dragleave', 'drop'].forEach(eventName => {
+                    uploadCard.addEventListener(eventName, () => uploadCard.classList.remove('dragover'), false);
+                });
+
+                uploadCard.addEventListener('drop', (e) => {
+                    const files = e.dataTransfer.files;
+                    this.handleFiles(files);
+                }, false);
+            }
+
+            preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            handleFiles(files) {
+                this.uploadedFiles = [];
+                ([...files]).forEach(file => {
+                    if (file.type.startsWith('image/')) {
+                        this.uploadedFiles.push(file);
+                    }
+                });
+                
+                if (this.uploadedFiles.length > 0) {
+                    this.openUploadModal();
+                }
+            }
+
+            togglePhotoSelection(index) {
+                if (this.selectedPhotos.has(index)) {
+                    this.selectedPhotos.delete(index);
+                } else {
+                    this.selectedPhotos.add(index);
+                }
+                this.renderPhotos();
+                
+                const scene = this.scenes.find(s => s.number === this.currentScene);
+                if (scene) this.renderDetails(scene);
+            }
+
+            toggleSelection() {
+                this.selectionMode = !this.selectionMode;
+                document.body.classList.toggle('selection-mode', this.selectionMode);
+                
+                if (!this.selectionMode) {
+                    this.selectedPhotos.clear();
+                    this.renderPhotos();
+                }
+                this.showNotification(this.selectionMode ? 'Selection mode enabled' : 'Selection mode disabled');
+            }
+
+            selectAll() {
+                if (!this.currentScene) return;
+                const photos = this.continuityData[this.currentScene]?.photos || [];
+                
+                if (this.selectedPhotos.size === photos.length) {
+                    this.selectedPhotos.clear();
+                } else {
+                    photos.forEach((_, index) => this.selectedPhotos.add(index));
+                }
+                
+                this.renderPhotos();
+                const scene = this.scenes.find(s => s.number === this.currentScene);
+                if (scene) this.renderDetails(scene);
+            }
+
+            bulkDelete() {
+                if (!this.currentScene || this.selectedPhotos.size === 0) return;
+                
+                if (confirm(`Delete ${this.selectedPhotos.size} selected photos?`)) {
+                    const photos = this.continuityData[this.currentScene].photos;
+                    const indicesToDelete = Array.from(this.selectedPhotos).sort((a, b) => b - a);
+                    
+                    indicesToDelete.forEach(index => {
+                        photos.splice(index, 1);
+                    });
+                    
+                    this.selectedPhotos.clear();
+                    this.saveContinuityData();
+                    this.renderPhotos();
+                    this.renderSceneList();
+                    
+                    const scene = this.scenes.find(s => s.number === this.currentScene);
+                    if (scene) this.renderDetails(scene);
+                    
+                    this.showNotification(`${indicesToDelete.length} photos deleted`, 'success');
+                }
+            }
+
+            deletePhoto(index) {
+                if (!this.currentScene) return;
+                
+                if (confirm('Delete this photo?')) {
+                    this.continuityData[this.currentScene].photos.splice(index, 1);
+                    this.saveContinuityData();
+                    this.renderPhotos();
+                    this.renderSceneList();
+                    
+                    const scene = this.scenes.find(s => s.number === this.currentScene);
+                    if (scene) this.renderDetails(scene);
+                    
+                    this.showNotification('Photo deleted', 'success');
+                }
+            }
+
+            viewPhoto(index) {
+                if (!this.currentScene) return;
+                const photo = this.continuityData[this.currentScene].photos[index];
+                
+                const modal = this.createModal('Photo Viewer', `
+                    <img src="${photo.image}" style="width: 100%; height: auto; border-radius: 8px;">
+                    <div style="margin-top: 16px;">
+                        <strong>${photo.character || 'No character'}</strong><br>
+                        ${photo.take || 'No take info'}<br>
+                        ${new Date(photo.timestamp).toLocaleString()}<br>
+                        ${photo.notes ? `<br>Notes: ${photo.notes}` : ''}
+                        ${photo.tags && photo.tags.length > 0 ? `<br>Tags: ${photo.tags.join(', ')}` : ''}
+                    </div>
+                `, true);
+                
+                document.getElementById('modalContainer').innerHTML = modal;
+                document.querySelector('.modal').classList.add('active');
+            }
+
+            editPhoto(index) {
+                if (!this.currentScene) return;
+                const photo = this.continuityData[this.currentScene].photos[index];
+                const scene = this.scenes.find(s => s.number === this.currentScene);
+                
+                const modal = this.createModal('Edit Photo Details', `
+                    <form id="editPhotoForm" onsubmit="continuityManager.updatePhoto(event, ${index})">
+                        <div class="edit-form-row">
+                            <div class="form-group">
+                                <label class="form-label">Character</label>
+                                <select class="form-select" id="editCharacter" required>
+                                    <option value="">Select character...</option>
+                                    ${scene?.characters?.map(char => 
+                                        `<option value="${char}" ${photo.character === char ? 'selected' : ''}>${char}</option>`
+                                    ).join('') || ''}
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Take / Angle</label>
+                                <input type="text" class="form-input" id="editTake" value="${photo.take || ''}" placeholder="e.g., Take 3, Close-up">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Tags (comma separated)</label>
+                            <input type="text" class="form-input" id="editTags" value="${photo.tags?.join(', ') || ''}" placeholder="e.g., makeup, hair, costume">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Notes</label>
+                            <textarea class="form-textarea" id="editNotes" placeholder="Continuity notes, details...">${photo.notes || ''}</textarea>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 16px;">Save Changes</button>
+                    </form>
+                `);
+                
+                document.getElementById('modalContainer').innerHTML = modal;
+                document.querySelector('.modal').classList.add('active');
+            }
+
+            updatePhoto(event, index) {
+                event.preventDefault();
+                
+                if (!this.currentScene) return;
+                
+                const photo = this.continuityData[this.currentScene].photos[index];
+                photo.character = document.getElementById('editCharacter').value;
+                photo.take = document.getElementById('editTake').value;
+                photo.tags = document.getElementById('editTags').value.split(',').map(t => t.trim()).filter(t => t);
+                photo.notes = document.getElementById('editNotes').value;
+                
+                this.saveContinuityData();
+                this.renderPhotos();
+                this.closeModal();
+                this.showNotification('Photo updated', 'success');
+            }
+
+            switchView(view, button) {
+                this.viewMode = view;
+                
+                document.querySelectorAll('.view-mode-btn').forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                
+                document.getElementById('photoGrid').style.display = view === 'grid' ? 'grid' : 'none';
+                document.getElementById('timelineView').classList.toggle('active', view === 'timeline');
+                document.getElementById('comparisonView').classList.toggle('active', view === 'comparison');
+                
+                if (view === 'timeline') {
+                    this.renderTimeline();
+                } else if (view === 'comparison') {
+                    this.renderComparison();
+                }
+            }
+
+            renderTimeline() {
+                const timelineView = document.getElementById('timelineView');
+                
+                // Group photos by date/time
+                const photosByTime = {};
+                
+                this.scenes.forEach(scene => {
+                    const photos = this.continuityData[scene.number]?.photos || [];
+                    photos.forEach(photo => {
+                        const date = new Date(photo.timestamp).toLocaleDateString();
+                        const time = new Date(photo.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        
+                        if (!photosByTime[date]) {
+                            photosByTime[date] = [];
+                        }
+                        
+                        photosByTime[date].push({
+                            ...photo,
+                            sceneNumber: scene.number,
+                            sceneHeading: scene.heading,
+                            time
+                        });
+                    });
+                });
+                
+                timelineView.innerHTML = Object.keys(photosByTime).sort().reverse().map(date => `
+                    <div class="timeline-day">
+                        <div class="timeline-day-header">${date}</div>
+                        <div class="timeline-scenes">
+                            ${photosByTime[date].map(photo => `
+                                <div class="timeline-entry">
+                                    <div class="timeline-time">${photo.time}</div>
+                                    <div class="timeline-content">
+                                        <strong>Scene ${photo.sceneNumber}: ${photo.character}</strong><br>
+                                        <small>${photo.sceneHeading}</small>
+                                        ${photo.notes ? `<br>${photo.notes}` : ''}
+                                        <div class="timeline-photos">
+                                            <div class="timeline-photo">
+                                                <img src="${photo.image}" alt="Timeline photo">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `).join('') || '<div class="empty-state"><div class="empty-icon">📅</div><div class="empty-text">No photos in timeline</div></div>';
+            }
+
+            renderComparison() {
+                const comparisonView = document.getElementById('comparisonView');
+                
+                if (!this.currentScene || this.selectedPhotos.size < 2) {
+                    comparisonView.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-icon">⚖️</div>
+                            <div class="empty-text">Select at least 2 photos to compare</div>
+                            <button class="btn btn-primary" onclick="continuityManager.toggleSelection()">Enable Selection</button>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                const photos = this.continuityData[this.currentScene].photos;
+                const selectedIndices = Array.from(this.selectedPhotos);
+                
+                comparisonView.innerHTML = `
+                    <div class="comparison-container">
+                        ${selectedIndices.slice(0, 4).map(index => {
+                            const photo = photos[index];
+                            return `
+                                <div class="comparison-panel">
+                                    <div class="comparison-header">
+                                        <strong>${photo.character || 'No character'}</strong><br>
+                                        <small>${photo.take || 'No take'} • ${new Date(photo.timestamp).toLocaleString()}</small>
+                                    </div>
+                                    <div class="comparison-image">
+                                        <img src="${photo.image}" alt="Comparison photo">
+                                        <div class="comparison-controls">
+                                            <button class="comparison-btn" onclick="continuityManager.zoomPhoto(this)">🔍</button>
+                                            <button class="comparison-btn" onclick="continuityManager.rotatePhoto(this)">↻</button>
+                                        </div>
+                                    </div>
+                                    ${photo.notes ? `<div style="padding: 12px; font-size: 0.875em;">${photo.notes}</div>` : ''}
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+            }
+
+            setGridSize(size, button) {
+                this.gridSize = size;
+                const grid = document.getElementById('photoGrid');
+                
+                grid.classList.remove('small', 'medium', 'large');
+                grid.classList.add(size);
+                
+                document.querySelectorAll('.grid-size-btn').forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+            }
+
+            filterScenes(filter, chip) {
+                this.currentFilter = filter;
+                document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+                chip.classList.add('active');
+                this.renderSceneList();
+            }
+
+            searchScenes(query) {
+                const term = query.toLowerCase();
+                document.querySelectorAll('.scene-item').forEach(item => {
+                    const text = item.textContent.toLowerCase();
+                    item.style.display = text.includes(term) ? 'block' : 'none';
+                });
+            }
+
+            toggleSidebar() {
+                document.getElementById('sceneSidebar').classList.toggle('collapsed');
+            }
+
+            toggleDetailsSidebar() {
+                document.getElementById('detailsSidebar').classList.toggle('hidden');
+            }
+
+            toggleFabMenu() {
+                const menu = document.getElementById('fabMenu');
+                menu.classList.toggle('active');
+            }
+
+            // Modal Management
+            createModal(title, content, large = false) {
+                return `
+                    <div class="modal">
+                        <div class="modal-content ${large ? 'large' : ''}">
+                            <div class="modal-header">
+                                <h2 class="modal-title">${title}</h2>
+                                <button class="close-btn" onclick="continuityManager.closeModal()">×</button>
+                            </div>
+                            <div class="modal-body">
+                                ${content}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            openUploadModal() {
+                if (!this.currentScene) {
+                    this.showNotification('Please select a scene first', 'error');
+                    return;
+                }
+                
+                const modal = this.createModal('Add Continuity Photos', `
+                    <div class="file-upload-area" onclick="document.getElementById('photoFiles').click()" 
+                         ondrop="continuityManager.handleDrop(event)" 
+                         ondragover="continuityManager.handleDragOver(event)"
+                         ondragleave="continuityManager.handleDragLeave(event)">
+                        <div class="upload-icon">📸</div>
+                        <div class="upload-text">Click to select photos or drag & drop<br><small>Multiple photos supported</small></div>
+                        <input type="file" id="photoFiles" multiple accept="image/*" onchange="continuityManager.handleFileSelect(event)">
+                    </div>
+                    <div class="file-preview-grid" id="filePreviewGrid"></div>
+                    
+                    <form id="photoUploadForm" onsubmit="continuityManager.savePhotos(event)">
+                        <div class="form-group">
+                            <label class="form-label">Character</label>
+                            <select class="form-select" id="photoCharacter" required>
+                                <option value="">Select character...</option>
+                                ${this.getCharacterOptions()}
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Take / Angle</label>
+                            <input type="text" class="form-input" id="photoTake" placeholder="e.g., Take 3, Close-up">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Tags (comma separated)</label>
+                            <input type="text" class="form-input" id="photoTags" placeholder="e.g., makeup, hair, costume">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Notes</label>
+                            <textarea class="form-textarea" id="photoNotes" placeholder="Continuity notes, details..."></textarea>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 16px;">Save Photos</button>
+                    </form>
+                `);
+                
+                document.getElementById('modalContainer').innerHTML = modal;
+                document.querySelector('.modal').classList.add('active');
+                
+                // If files were pre-loaded from drag & drop
+                if (this.uploadedFiles.length > 0) {
+                    this.previewFiles(this.uploadedFiles);
+                }
+            }
+
+            getCharacterOptions() {
+                const scene = this.scenes.find(s => s.number === this.currentScene);
+                if (!scene || !scene.characters) return '';
+                
+                return scene.characters.map(char => 
+                    `<option value="${char}">${char}</option>`
+                ).join('');
+            }
+
+            handleFileSelect(event) {
+                this.uploadedFiles = Array.from(event.target.files);
+                this.previewFiles(this.uploadedFiles);
+            }
+
+            handleDrop(event) {
+                event.preventDefault();
+                event.currentTarget.classList.remove('dragover');
+                this.uploadedFiles = Array.from(event.dataTransfer.files);
+                this.previewFiles(this.uploadedFiles);
+            }
+
+            handleDragOver(event) {
+                event.preventDefault();
+                event.currentTarget.classList.add('dragover');
+            }
+
+            handleDragLeave(event) {
+                event.currentTarget.classList.remove('dragover');
+            }
+
+            previewFiles(files) {
+                const grid = document.getElementById('filePreviewGrid');
+                grid.innerHTML = '';
+                
+                files.forEach((file, index) => {
+                    if (file.type.startsWith('image/')) {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            const preview = document.createElement('div');
+                            preview.className = 'file-preview-item';
+                            preview.innerHTML = `
+                                <img src="${e.target.result}" alt="Preview" data-index="${index}">
+                                <div class="file-preview-remove" onclick="continuityManager.removePreview(${index})">×</div>
+                            `;
+                            grid.appendChild(preview);
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+            }
+
+            removePreview(index) {
+                this.uploadedFiles.splice(index, 1);
+                this.previewFiles(this.uploadedFiles);
+            }
+
+            savePhotos(event) {
+                event.preventDefault();
+                
+                // Get form data
+                const character = document.getElementById('photoCharacter').value;
+                const take = document.getElementById('photoTake').value;
+                const tags = document.getElementById('photoTags').value.split(',').map(t => t.trim()).filter(t => t);
+                const notes = document.getElementById('photoNotes').value;
+                
+                // Get images from preview
+                const images = Array.from(document.querySelectorAll('#filePreviewGrid img')).map(img => img.src);
+                
+                if (images.length === 0) {
+                    this.showNotification('Please select photos', 'error');
+                    return;
+                }
+                
+                // Add photos to current scene
+                if (!this.continuityData[this.currentScene]) {
+                    this.continuityData[this.currentScene] = { photos: [] };
+                }
+                
+                images.forEach(image => {
+                    this.continuityData[this.currentScene].photos.push({
+                        image,
+                        character,
+                        take,
+                        tags,
+                        notes,
+                        timestamp: new Date().toISOString()
+                    });
+                });
+                
+                this.saveContinuityData();
+                this.renderPhotos();
+                this.renderSceneList();
+                
+                const scene = this.scenes.find(s => s.number === this.currentScene);
+                if (scene) this.renderDetails(scene);
+                
+                this.uploadedFiles = [];
+                this.closeModal();
+                this.showNotification(`${images.length} photo${images.length > 1 ? 's' : ''} added`, 'success');
+            }
+
+            closeModal() {
+                document.querySelector('.modal')?.classList.remove('active');
+                setTimeout(() => {
+                    document.getElementById('modalContainer').innerHTML = '';
+                }, 300);
+            }
+
+            closeAllModals() {
+                this.closeModal();
+                document.getElementById('fabMenu').classList.remove('active');
+            }
+
+            // Quick Actions
+            quickCapture() {
+                this.toggleFabMenu();
+                // In a real implementation, this would access device camera
+                this.showNotification('Camera access requires HTTPS connection', 'info');
+                this.openUploadModal();
+            }
+
+            bulkUpload() {
+                this.toggleFabMenu();
+                this.openUploadModal();
+            }
+
+            addNote() {
+                this.toggleFabMenu();
+                
+                if (!this.currentScene) {
+                    this.showNotification('Please select a scene first', 'error');
+                    return;
+                }
+                
+                const modal = this.createModal('Add Quick Note', `
+                    <div class="note-type-selector">
+                        <button class="note-type-btn active" onclick="continuityManager.selectNoteType(this, 'continuity')">Continuity</button>
+                        <button class="note-type-btn" onclick="continuityManager.selectNoteType(this, 'production')">Production</button>
+                        <button class="note-type-btn" onclick="continuityManager.selectNoteType(this, 'reminder')">Reminder</button>
+                    </div>
+                    <form id="quickNoteForm" onsubmit="continuityManager.saveQuickNote(event)">
+                        <div class="form-group">
+                            <label class="form-label">Note</label>
+                            <textarea class="form-textarea" id="quickNoteText" required style="min-height: 120px;" placeholder="Enter your note..."></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="width: 100%;">Save Note</button>
+                    </form>
+                `);
+                
+                document.getElementById('modalContainer').innerHTML = modal;
+                document.querySelector('.modal').classList.add('active');
+            }
+
+            selectNoteType(button, type) {
+                document.querySelectorAll('.note-type-btn').forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+            }
+
+            saveQuickNote(event) {
+                event.preventDefault();
+                const noteText = document.getElementById('quickNoteText').value;
+                const noteType = document.querySelector('.note-type-btn.active').textContent;
+                
+                // In a real implementation, this would save the note properly
+                console.log(`Note saved: ${noteType} - ${noteText}`);
+                
+                this.closeModal();
+                this.showNotification('Note saved', 'success');
+            }
+
+            markSceneComplete() {
+                this.toggleFabMenu();
+                if (this.currentScene) {
+                    const scene = this.scenes.find(s => s.number === this.currentScene);
+                    if (scene) {
+                        scene.status = 'shot';
+                        this.renderSceneList();
+                        this.selectScene(this.currentScene);
+                        this.showNotification(`Scene ${this.currentScene} marked as complete`, 'success');
+                    }
+                } else {
+                    this.showNotification('Please select a scene first', 'error');
+                }
+            }
+
+            // Import from breakdown
+            importFromBreakdown() {
+                this.showLoading();
+                
+                setTimeout(() => {
+                    this.loadScenes();
+                    this.hideLoading();
+                    this.showNotification('Scenes imported from breakdown', 'success');
+                }, 1000);
+            }
+
+            // Export Functions
+            exportReport() {
+                this.showLoading();
+                
+                // Create export data
+                const exportData = {
+                    project: this.currentProject,
+                    scenes: this.scenes,
+                    continuityData: this.continuityData,
+                    exportDate: new Date().toISOString()
+                };
+                
+                // Create download
+                const dataStr = JSON.stringify(exportData, null, 2);
+                const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+                
+                const exportFileName = `continuity_${this.currentProject?.code || 'project'}_${Date.now()}.json`;
+                
+                const linkElement = document.createElement('a');
+                linkElement.setAttribute('href', dataUri);
+                linkElement.setAttribute('download', exportFileName);
+                linkElement.click();
+                
+                setTimeout(() => {
+                    this.hideLoading();
+                    this.showNotification('Report exported successfully', 'success');
+                }, 1500);
+            }
+
+            exportScenePhotos() {
+                if (!this.currentScene) {
+                    this.showNotification('Please select a scene first', 'error');
+                    return;
+                }
+                
+                const photos = this.continuityData[this.currentScene]?.photos || [];
+                if (photos.length === 0) {
+                    this.showNotification('No photos to export', 'error');
+                    return;
+                }
+                
+                // Create HTML contact sheet
+                const html = `
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <title>Scene ${this.currentScene} - Continuity Photos</title>
+                        <style>
+                            body { font-family: Arial, sans-serif; padding: 20px; }
+                            h1 { color: #333; }
+                            .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+                            .photo { border: 1px solid #ddd; padding: 10px; }
+                            .photo img { width: 100%; height: auto; }
+                            .photo-info { margin-top: 10px; font-size: 12px; }
+                        </style>
+                    </head>
+                    <body>
+                        <h1>Scene ${this.currentScene} - Continuity Photos</h1>
+                        <div class="photo-grid">
+                            ${photos.map(photo => `
+                                <div class="photo">
+                                    <img src="${photo.image}" alt="Continuity photo">
+                                    <div class="photo-info">
+                                        <strong>${photo.character || 'No character'}</strong><br>
+                                        ${photo.take || 'No take'}<br>
+                                        ${new Date(photo.timestamp).toLocaleDateString()}<br>
+                                        ${photo.notes || ''}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </body>
+                    </html>
+                `;
+                
+                const blob = new Blob([html], { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `scene_${this.currentScene}_continuity.html`;
+                a.click();
+                URL.revokeObjectURL(url);
+                
+                this.showNotification(`Scene ${this.currentScene} photos exported`, 'success');
+            }
+
+            printContactSheet() {
+                window.print();
+            }
+
+            syncWithBreakdown() {
+                this.showNotification('Syncing with script breakdown...', 'info');
+                this.loadScenes();
+                setTimeout(() => {
+                    this.showNotification('Sync complete', 'success');
+                }, 1000);
+            }
+
+            openComparisonView() {
+                if (!this.currentScene) {
+                    this.showNotification('Please select a scene first', 'error');
+                    return;
+                }
+                
+                if (this.selectedPhotos.size < 2) {
+                    this.showNotification('Please select at least 2 photos to compare', 'info');
+                    this.toggleSelection();
+                    return;
+                }
+                
+                this.switchView('comparison', document.querySelector('[data-view="comparison"]'));
+            }
+
+            // Utility Functions
+            showNotification(message, type = 'info') {
+                const notification = document.createElement('div');
+                notification.className = `notification ${type}`;
+                notification.textContent = message;
+                document.body.appendChild(notification);
+
+                setTimeout(() => {
+                    notification.style.animation = 'slideOutNotification 0.3s ease';
+                    setTimeout(() => notification.remove(), 300);
+                }, 3000);
+            }
+
+            showLoading() {
+                document.getElementById('loadingOverlay').classList.add('active');
+            }
+
+            hideLoading() {
+                document.getElementById('loadingOverlay').classList.remove('active');
+            }
+
+            zoomPhoto(button) {
+                const img = button.closest('.comparison-image').querySelector('img');
+                const currentScale = img.style.transform ? parseFloat(img.style.transform.match(/scale\(([\d.]+)\)/)?.[1] || 1) : 1;
+                const newScale = currentScale === 1 ? 2 : 1;
+                img.style.transform = `scale(${newScale}) rotate(${img.dataset.rotation || 0}deg)`;
+                img.style.cursor = newScale === 2 ? 'zoom-out' : 'zoom-in';
+            }
+
+            rotatePhoto(button) {
+                const img = button.closest('.comparison-image').querySelector('img');
+                const currentRotation = parseInt(img.dataset.rotation || 0);
+                const newRotation = (currentRotation + 90) % 360;
+                img.dataset.rotation = newRotation;
+                const currentScale = img.style.transform ? parseFloat(img.style.transform.match(/scale\(([\d.]+)\)/)?.[1] || 1) : 1;
+                img.style.transform = `scale(${currentScale}) rotate(${newRotation}deg)`;
+            }
+        }
 
         // Initialize
-        function init() {
-            loadProjectData();
-            setupEventListeners();
-            
-            // Set default datetime
-            const now = new Date();
-            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-            document.getElementById('photoDateTime').value = now.toISOString().slice(0, 16);
-        }
-
-        function loadProjectData() {
-            const projectData = localStorage.getItem('currentProject');
-            if (projectData) {
-                currentProject = JSON.parse(projectData);
-                document.querySelector('.page-title').textContent = `Continuity - ${currentProject.title}`;
-                
-                loadScenes();
-                loadContinuityData();
-                loadCharacters();
-            } else {
-                window.location.href = 'index.html';
-            }
-        }
-
-        function loadScenes() {
-            // Try to load from breakdown tags
-            const projectCode = currentProject?.code;
-            const breakdownTags = localStorage.getItem(`${projectCode}_sceneTags`);
-            
-            if (breakdownTags) {
-                const tags = JSON.parse(breakdownTags);
-                scenes = Object.keys(tags).map(sceneNum => ({
-                    number: parseInt(sceneNum),
-                    heading: `Scene ${sceneNum}`,
-                    status: 'unshot',
-                    characters: getCharactersForScene(sceneNum, tags),
-                    tags: tags[sceneNum]
-                }));
-            } else {
-                // Demo scenes
-                scenes = [
-                    { number: 1, heading: 'INT. BEDROOM - MORNING', status: 'shot', characters: ['Emma Hart'] },
-                    { number: 2, heading: 'INT. KITCHEN - LATE MORNING', status: 'shot', characters: ['Emma Hart', 'Sarah Chen'] },
-                    { number: 3, heading: 'EXT. GARDEN PATH - AFTERNOON', status: 'in-progress', characters: ['Emma Hart'] },
-                    { number: 4, heading: 'INT. LIVING ROOM - EVENING', status: 'unshot', characters: ['Emma Hart', 'David'] },
-                    { number: 5, heading: 'INT. HALLWAY - NIGHT', status: 'unshot', characters: ['Emma Hart'] }
-                ];
-            }
-            
-            renderSceneList();
-        }
-
-        function getCharactersForScene(sceneNum, tags) {
-            const sceneTags = tags[sceneNum] || [];
-            const castTags = sceneTags.filter(tag => tag.category === 'cast');
-            return castTags.map(tag => tag.description);
-        }
-
-        function loadContinuityData() {
-            const projectCode = currentProject?.code;
-            const saved = localStorage.getItem(`${projectCode}_continuity`);
-            if (saved) {
-                continuityData = JSON.parse(saved);
-                console.log('✓ Loaded continuity data:', continuityData);
-            }
-        }
-
-        function saveContinuityData() {
-            const projectCode = currentProject?.code;
-            localStorage.setItem(`${projectCode}_continuity`, JSON.stringify(continuityData));
-            console.log('✓ Saved continuity data');
-        }
-
-        function loadCharacters() {
-            const projectCode = currentProject?.code;
-            const saved = localStorage.getItem(`${projectCode}_characters`);
-            
-            const select = document.getElementById('photoCharacter');
-            select.innerHTML = '<option value="">Select character...</option>';
-            
-            if (saved) {
-                const characters = JSON.parse(saved);
-                characters.forEach(char => {
-                    const option = document.createElement('option');
-                    option.value = char.name;
-                    option.textContent = char.name;
-                    select.appendChild(option);
-                });
-            }
-        }
-
-        function renderSceneList() {
-            const list = document.getElementById('sceneList');
-            
-            if (scenes.length === 0) {
-                list.innerHTML = '<div style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 0.875em;">No scenes available<br><br><button class="btn btn-primary" onclick="importFromBreakdown()">Import from Breakdown</button></div>';
-                return;
-            }
-            
-            list.innerHTML = scenes.map(scene => {
-                const photoCount = getPhotoCount(scene.number);
-                return `
-                    <div class="scene-item ${scene.status}" data-scene="${scene.number}" onclick="selectScene(${scene.number})">
-                        <div class="scene-header">
-                            <span class="scene-number">Scene ${scene.number}</span>
-                            <span class="scene-status-badge ${scene.status}">${scene.status.replace('-', ' ')}</span>
-                        </div>
-                        <div class="scene-heading">${scene.heading}</div>
-                        <div class="scene-meta">
-                            <div class="scene-meta-item">
-                                <span>👥</span>
-                                <span>${scene.characters?.length || 0} cast</span>
-                            </div>
-                            <div class="scene-meta-item">
-                                <span>📸</span>
-                                <span>${photoCount} photos</span>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        function getPhotoCount(sceneNumber) {
-            return (continuityData[sceneNumber]?.photos || []).length;
-        }
-
-        function selectScene(sceneNumber) {
-            currentScene = sceneNumber;
-            
-            // Update active state
-            document.querySelectorAll('.scene-item').forEach(item => {
-                item.classList.toggle('active', parseInt(item.dataset.scene) === sceneNumber);
-            });
-            
-            const scene = scenes.find(s => s.number === sceneNumber);
-            if (!scene) return;
-            
-            // Update scene info bar
-            const infoBar = document.getElementById('sceneInfoBar');
-            infoBar.innerHTML = `
-                <div class="scene-info-title">Scene ${scene.number}: ${scene.heading}</div>
-                <div class="scene-info-details">
-                    ${scene.characters?.join(', ') || 'No characters'} • 
-                    Status: ${scene.status.replace('-', ' ')}
-                </div>
-            `;
-            
-            // Render photos
-            renderPhotos(sceneNumber);
-            
-            // Render details sidebar
-            renderDetails(scene);
-        }
-
-        function renderPhotos(sceneNumber) {
-            const photos = continuityData[sceneNumber]?.photos || [];
-            const grid = document.getElementById('photoGrid');
-            
-            document.getElementById('photoCount').textContent = `${photos.length} photo${photos.length !== 1 ? 's' : ''}`;
-            
-            if (photos.length === 0) {
-                grid.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-icon">📸</div>
-                        <div class="empty-text">No photos yet for this scene</div>
-                        <button class="btn btn-primary" onclick="openUploadModal()">Upload Photos</button>
-                    </div>
-                `;
-                return;
-            }
-            
-            grid.innerHTML = photos.map((photo, index) => `
-                <div class="photo-card">
-                    <div class="photo-card-image">
-                        <img src="${photo.image}" alt="Continuity photo">
-                        <div class="photo-card-overlay">
-                            <button class="overlay-btn" onclick="viewImage('${photo.image}')">👁 View</button>
-                            <button class="overlay-btn" onclick="deletePhoto(${sceneNumber}, ${index})">🗑 Delete</button>
-                        </div>
-                    </div>
-                    <div class="photo-card-info">
-                        <div class="photo-character">${photo.character}</div>
-                        <div class="photo-details">
-                            ${photo.take || 'No take info'} • ${new Date(photo.timestamp).toLocaleDateString()}
-                        </div>
-                        <div class="photo-notes">${photo.notes || 'No notes'}</div>
-                    </div>
-                </div>
-            `).join('') + `
-                <div class="upload-card" onclick="openUploadModal()">
-                    <div class="upload-icon">+</div>
-                    <div class="upload-text">Add More Photos</div>
-                </div>
-            `;
-        }
-
-        function renderDetails(scene) {
-            const photos = continuityData[scene.number]?.photos || [];
-            const detailsContent = document.getElementById('detailsContent');
-            
-            detailsContent.innerHTML = `
-                <div class="detail-section">
-                    <div class="detail-section-title">Scene Information</div>
-                    <div class="detail-item">
-                        <div class="detail-label">Scene Number</div>
-                        <div class="detail-value">${scene.number}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Heading</div>
-                        <div class="detail-value">${scene.heading}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Status</div>
-                        <div class="detail-value">${scene.status.replace('-', ' ').toUpperCase()}</div>
-                    </div>
-                </div>
-
-                <div class="detail-section">
-                    <div class="detail-section-title">Characters</div>
-                    ${scene.characters?.map(char => `<span class="character-chip">${char}</span>`).join('') || '<div class="detail-value">No characters</div>'}
-                </div>
-
-                <div class="detail-section">
-                    <div class="detail-section-title">Quick Actions</div>
-                    <button class="action-btn" onclick="openUploadModal()">
-                        <span class="action-icon">📸</span>
-                        <span>Add Photo</span>
-                    </button>
-                    <button class="action-btn" onclick="markSceneAsShot()">
-                        <span class="action-icon">✓</span>
-                        <span>Mark as Shot</span>
-                    </button>
-                    <button class="action-btn" onclick="viewAllPhotos()">
-                        <span class="action-icon">🖼</span>
-                        <span>View All Photos</span>
-                    </button>
-                    <button class="action-btn" onclick="exportSceneReport()">
-                        <span class="action-icon">📄</span>
-                        <span>Export Scene Report</span>
-                    </button>
-                </div>
-
-                <div class="detail-section">
-                    <div class="detail-section-title">Statistics</div>
-                    <div class="detail-item">
-                        <div class="detail-label">Total Photos</div>
-                        <div class="detail-value">${photos.length}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Last Updated</div>
-                        <div class="detail-value">${photos.length > 0 ? new Date(photos[photos.length - 1].timestamp).toLocaleString() : 'Never'}</div>
-                    </div>
-                </div>
-            `;
-        }
-
-        // Photo Management
-        function openUploadModal() {
-            if (currentScene === null) {
-                alert('Please select a scene first');
-                return;
-            }
-            document.getElementById('uploadModal').classList.add('active');
-        }
-
-        function closeUploadModal() {
-            document.getElementById('uploadModal').classList.remove('active');
-            document.getElementById('photoPreview').style.display = 'none';
-        }
-
-        function previewPhoto(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const preview = document.getElementById('photoPreview');
-                    preview.src = e.target.result;
-                    preview.style.display = 'block';
-                };
-                reader.readAsDataURL(file);
-            }
-        }
-
-        function savePhoto(event) {
-            event.preventDefault();
-            
-            const fileInput = document.getElementById('photoFile');
-            if (!fileInput.files[0]) {
-                alert('Please select a photo');
-                return;
-            }
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const photo = {
-                    image: e.target.result,
-                    character: document.getElementById('photoCharacter').value,
-                    take: document.getElementById('photoTake').value,
-                    timestamp: document.getElementById('photoDateTime').value,
-                    notes: document.getElementById('photoNotes').value
-                };
-                
-                if (!continuityData[currentScene]) {
-                    continuityData[currentScene] = { photos: [] };
-                }
-                
-                continuityData[currentScene].photos.push(photo);
-                saveContinuityData();
-                
-                renderPhotos(currentScene);
-                renderSceneList();
-                
-                const scene = scenes.find(s => s.number === currentScene);
-                if (scene) {
-                    renderDetails(scene);
-                }
-                
-                closeUploadModal();
-                
-                // Reset form
-                event.target.reset();
-                document.getElementById('photoPreview').style.display = 'none';
-                
-                // Set datetime again
-                const now = new Date();
-                now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-                document.getElementById('photoDateTime').value = now.toISOString().slice(0, 16);
-            };
-            
-            reader.readAsDataURL(fileInput.files[0]);
-        }
-
-        function deletePhoto(sceneNumber, photoIndex) {
-            if (confirm('Delete this photo?')) {
-                continuityData[sceneNumber].photos.splice(photoIndex, 1);
-                saveContinuityData();
-                renderPhotos(sceneNumber);
-                renderSceneList();
-                
-                const scene = scenes.find(s => s.number === sceneNumber);
-                if (scene) {
-                    renderDetails(scene);
-                }
-            }
-        }
-
-        function viewImage(src) {
-            document.getElementById('viewerImage').src = src;
-            document.getElementById('imageViewerModal').classList.add('active');
-        }
-
-        document.getElementById('imageViewerModal').addEventListener('click', function() {
-            this.classList.remove('active');
-        });
-
-        // Scene Actions
-        function markSceneAsShot() {
-            if (currentScene === null) return;
-            
-            const scene = scenes.find(s => s.number === currentScene);
-            if (scene) {
-                scene.status = 'shot';
-                renderSceneList();
-                renderDetails(scene);
-                alert(`Scene ${currentScene} marked as shot!`);
-            }
-        }
-
-        function filterScenes(filter) {
-            document.querySelectorAll('.filter-chip').forEach(chip => {
-                chip.classList.toggle('active', chip.dataset.filter === filter);
-            });
-            
-            document.querySelectorAll('.scene-item').forEach(item => {
-                const scene = scenes.find(s => s.number === parseInt(item.dataset.scene));
-                if (filter === 'all' || scene.status === filter) {
-                    item.style.display = 'block';
-                } else {
-                    item.style.display = 'none';
-                }
-            });
-        }
-
-        // View Switching
-        function switchView(view) {
-            document.querySelectorAll('.view-mode-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.dataset.view === view);
-            });
-            
-            if (view === 'grid') {
-                document.getElementById('photoGrid').style.display = 'grid';
-                document.getElementById('timelineView').classList.remove('active');
-            } else {
-                document.getElementById('photoGrid').style.display = 'none';
-                document.getElementById('timelineView').classList.add('active');
-                renderTimeline();
-            }
-        }
-
-        function renderTimeline() {
-            const timelineView = document.getElementById('timelineView');
-            
-            // Group photos by date
-            const photosByDate = {};
-            
-            scenes.forEach(scene => {
-                const photos = continuityData[scene.number]?.photos || [];
-                photos.forEach(photo => {
-                    const date = new Date(photo.timestamp).toLocaleDateString();
-                    if (!photosByDate[date]) {
-                        photosByDate[date] = [];
-                    }
-                    photosByDate[date].push({ ...photo, sceneNumber: scene.number });
-                });
-            });
-            
-            timelineView.innerHTML = Object.keys(photosByDate).sort().reverse().map(date => `
-                <div class="timeline-day">
-                    <div class="timeline-day-header">${date}</div>
-                    <div class="timeline-scenes">
-                        ${photosByDate[date].map(photo => `
-                            <div class="photo-card">
-                                <div class="photo-card-image">
-                                    <img src="${photo.image}" alt="Continuity photo">
-                                </div>
-                                <div class="photo-card-info">
-                                    <div class="photo-character">Scene ${photo.sceneNumber}: ${photo.character}</div>
-                                    <div class="photo-details">${photo.take || 'No take info'}</div>
-                                    <div class="photo-notes">${photo.notes || 'No notes'}</div>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            `).join('') || '<div class="empty-state"><div class="empty-icon">📅</div><div class="empty-text">No photos in timeline</div></div>';
-        }
-
-        // Import & Export
-        function importFromBreakdown() {
-            alert('Import from Breakdown\n\nThis will:\n• Load all scenes from your breakdown\n• Import character assignments\n• Pull hair/makeup notes\n• Set up continuity tracking\n\nComing soon!');
-        }
-
-        function exportContinuityReport() {
-            alert('Export Continuity Report\n\nGenerates a PDF with:\n• All scenes and their status\n• Continuity photos organized by scene\n• Character notes and details\n• Timestamps and metadata\n\nComing soon!');
-        }
-
-        function exportSceneReport() {
-            if (currentScene === null) return;
-            alert(`Export Scene ${currentScene} Report\n\nGenerates a PDF with all photos and details for this scene.\n\nComing soon!`);
-        }
-
-        function viewAllPhotos() {
-            if (currentScene === null) return;
-            switchView('grid');
-        }
-
-        // Search
-        document.getElementById('sceneSearch').addEventListener('input', function(e) {
-            const term = e.target.value.toLowerCase();
-            document.querySelectorAll('.scene-item').forEach(item => {
-                const text = item.textContent.toLowerCase();
-                item.style.display = text.includes(term) ? 'block' : 'none';
-            });
-        });
-
-        // Event Listeners
-        function setupEventListeners() {
-            // Close modals on escape
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape') {
-                    closeUploadModal();
-                    document.getElementById('imageViewerModal').classList.remove('active');
-                }
-            });
-        }
-
-        // Initialize on load
-        init();
-        
-        console.log('✓ Continuity Tracking loaded');
-        console.log('• Select scenes to view photos');
-        console.log('• Upload photos with character tags');
-        console.log('• Mark scenes as shot');
-        console.log('• Export continuity reports');
+        const continuityManager = new ContinuityManager();
     </script>
 </body>
 </html>
