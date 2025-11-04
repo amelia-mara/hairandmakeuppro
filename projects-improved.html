@@ -1,0 +1,1241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Projects - Checks Happy</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="script-processor.js"></script>
+    <style>
+        /* Your existing styles - keeping them all the same */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #000000;
+            --bg-secondary: rgba(20, 18, 16, 0.4);
+            --bg-tertiary: rgba(26, 24, 22, 0.5);
+            
+            --border-subtle: rgba(201, 169, 97, 0.15);
+            --border-medium: rgba(201, 169, 97, 0.25);
+            --border-glow: rgba(201, 169, 97, 0.35);
+            
+            --card-bg: #c9a961;
+            --card-dark: #1a1816;
+            
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --text-muted: #666666;
+            
+            --accent-gold: #c9a961;
+            
+            --glow-subtle: 0 0 20px rgba(201, 169, 97, 0.1);
+            --glow-medium: 0 0 30px rgba(201, 169, 97, 0.15);
+            --glow-strong: 0 0 40px rgba(201, 169, 97, 0.25);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: radial-gradient(ellipse at top right, rgba(201, 169, 97, 0.03) 0%, transparent 50%),
+                        radial-gradient(ellipse at bottom left, rgba(201, 169, 97, 0.02) 0%, transparent 50%),
+                        #000000;
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 0;
+            font-weight: 400;
+            letter-spacing: -0.01em;
+        }
+
+        /* Header */
+        .header {
+            padding: 20px 40px;
+            border-bottom: 1px solid var(--border-subtle);
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            box-shadow: 0 1px 0 0 rgba(201, 169, 97, 0.08);
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            font-size: 1.875em;
+            font-weight: 600;
+            color: var(--text-primary);
+            letter-spacing: -0.02em;
+        }
+
+        .profile-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(201, 169, 97, 0.9) 0%, rgba(184, 150, 81, 0.9) 100%);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(201, 169, 97, 0.3);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.8125em;
+            color: var(--bg-primary);
+            transition: all 0.3s ease;
+            box-shadow: var(--glow-subtle),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .profile-btn:hover {
+            background: linear-gradient(135deg, rgba(201, 169, 97, 1) 0%, rgba(184, 150, 81, 1) 100%);
+            transform: scale(1.05);
+            box-shadow: var(--glow-medium),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.25);
+        }
+
+        /* Controls Row */
+        .controls-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .search-section {
+            flex: 0 0 360px;
+        }
+
+        .filters {
+            display: flex;
+            gap: 8px;
+            flex: 1;
+        }
+
+        .search-bar {
+            width: 100%;
+            padding: 9px 14px;
+            background: var(--bg-secondary);
+            backdrop-filter: blur(16px) saturate(180%);
+            -webkit-backdrop-filter: blur(16px) saturate(180%);
+            border: 1px solid var(--border-subtle);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 0.875em;
+            transition: all 0.3s ease;
+            font-weight: 400;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+
+        .search-bar:focus {
+            outline: none;
+            border-color: var(--border-glow);
+            background: var(--bg-tertiary);
+            box-shadow: 0 0 0 1px var(--border-medium),
+                        var(--glow-subtle),
+                        inset 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+
+        .search-bar::placeholder {
+            color: var(--text-muted);
+        }
+
+        .filter-btn {
+            padding: 9px 18px;
+            background: var(--bg-secondary);
+            backdrop-filter: blur(12px) saturate(180%);
+            -webkit-backdrop-filter: blur(12px) saturate(180%);
+            border: 1px solid var(--border-subtle);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.8125em;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .filter-btn:hover {
+            border-color: var(--border-medium);
+            color: var(--text-primary);
+            box-shadow: var(--glow-subtle);
+        }
+
+        .filter-btn.active {
+            background: linear-gradient(135deg, rgba(201, 169, 97, 0.9) 0%, rgba(184, 150, 81, 0.9) 100%);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-color: rgba(201, 169, 97, 0.4);
+            color: var(--bg-primary);
+            box-shadow: var(--glow-medium),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        /* Main Content */
+        .main-content {
+            padding: 32px 40px;
+        }
+
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 16px;
+            max-width: 1400px;
+        }
+
+        /* New Project Card */
+        .new-project-card {
+            background: var(--bg-secondary);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 40px 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 280px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: inset 0 1px 0 rgba(201, 169, 97, 0.05);
+        }
+
+        .new-project-card:hover {
+            border-color: var(--border-medium);
+            background: var(--bg-tertiary);
+            box-shadow: var(--glow-subtle),
+                        inset 0 1px 0 rgba(201, 169, 97, 0.1);
+        }
+
+        .new-project-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: transparent;
+            border: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25em;
+            color: var(--accent-gold);
+            margin-bottom: 12px;
+            font-weight: 300;
+            transition: all 0.3s ease;
+        }
+
+        .new-project-card:hover .new-project-icon {
+            border-color: var(--border-glow);
+            color: var(--accent-gold);
+            box-shadow: var(--glow-subtle);
+        }
+
+        .new-project-text {
+            font-size: 0.9375em;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        /* Project Card */
+        .project-card {
+            background: var(--bg-secondary);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: inset 0 1px 0 rgba(201, 169, 97, 0.05);
+        }
+
+        .project-card:hover {
+            border-color: var(--border-medium);
+            box-shadow: var(--glow-medium),
+                        inset 0 1px 0 rgba(201, 169, 97, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .clapperboard {
+            position: relative;
+            background: linear-gradient(135deg, rgba(26, 24, 22, 0.6) 0%, rgba(20, 18, 16, 0.6) 100%);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 32px 20px;
+            aspect-ratio: 1.4;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .clapper-top {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: linear-gradient(
+                135deg,
+                #f5f4f2 0%, #e0ddd9 24%,
+                #2a2520 24%, #1a1612 49%,
+                #f5f4f2 49%, #e0ddd9 74%,
+                #2a2520 74%, #1a1612 100%
+            );
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+        }
+
+        .project-card:hover .clapper-top {
+            box-shadow: 0 2px 12px rgba(201, 169, 97, 0.2);
+        }
+
+        .project-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 12px;
+            font-size: 0.6875em;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .status-dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: #52c186;
+            box-shadow: 0 0 6px rgba(82, 193, 134, 0.4);
+        }
+
+        .status-dot.in-progress {
+            background: #e8a87c;
+            box-shadow: 0 0 6px rgba(232, 168, 124, 0.4);
+        }
+
+        .clapper-title {
+            font-size: 1.375em;
+            font-weight: 600;
+            color: var(--text-primary);
+            text-align: center;
+            margin-bottom: 16px;
+            letter-spacing: -0.02em;
+        }
+
+        .clapper-scene-bars {
+            display: flex;
+            gap: 5px;
+            margin-top: auto;
+        }
+
+        .scene-bar {
+            width: 40px;
+            height: 2px;
+            background: rgba(201, 169, 97, 0.2);
+            border-radius: 1px;
+            transition: all 0.3s ease;
+        }
+
+        .project-card:hover .scene-bar {
+            background: rgba(201, 169, 97, 0.35);
+            box-shadow: 0 0 8px rgba(201, 169, 97, 0.2);
+        }
+
+        /* Project Info */
+        .project-info {
+            padding: 16px 20px;
+            background: linear-gradient(135deg, rgba(201, 169, 97, 0.95) 0%, rgba(184, 150, 81, 0.95) 100%);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(201, 169, 97, 0.3);
+        }
+
+        .project-meta-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+
+        .project-title {
+            font-size: 0.9375em;
+            font-weight: 600;
+            color: var(--card-dark);
+            margin-bottom: 3px;
+        }
+
+        .project-name {
+            font-size: 0.8125em;
+            color: rgba(26, 24, 22, 0.7);
+            font-weight: 500;
+        }
+
+        .edit-btn {
+            padding: 6px 14px;
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(26, 24, 22, 0.2);
+            border-radius: 5px;
+            color: var(--card-dark);
+            font-size: 0.75em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        }
+
+        .edit-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(26, 24, 22, 0.3);
+        }
+
+        .project-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            margin-bottom: 12px;
+            font-size: 0.8125em;
+            color: rgba(26, 24, 22, 0.7);
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .meta-dot {
+            width: 2px;
+            height: 2px;
+            border-radius: 50%;
+            background: rgba(26, 24, 22, 0.4);
+        }
+
+        .project-progress {
+            margin-top: 10px;
+        }
+
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75em;
+            margin-bottom: 6px;
+            color: rgba(26, 24, 22, 0.7);
+            font-weight: 600;
+        }
+
+        .progress-bar {
+            height: 3px;
+            background: rgba(26, 24, 22, 0.15);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--card-dark);
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--bg-tertiary);
+            backdrop-filter: blur(30px) saturate(180%);
+            -webkit-backdrop-filter: blur(30px) saturate(180%);
+            border: 1px solid var(--border-subtle);
+            border-radius: 10px;
+            padding: 28px;
+            max-width: 480px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: var(--glow-medium),
+                        inset 0 1px 0 rgba(201, 169, 97, 0.08);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .modal-title {
+            font-size: 1.375em;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 7px;
+            font-size: 0.875em;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .form-input,
+        .form-select {
+            width: 100%;
+            padding: 10px 12px;
+            background: var(--bg-secondary);
+            backdrop-filter: blur(12px) saturate(180%);
+            -webkit-backdrop-filter: blur(12px) saturate(180%);
+            border: 1px solid var(--border-subtle);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 0.875em;
+            transition: all 0.3s ease;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+
+        .form-input:focus,
+        .form-select:focus {
+            outline: none;
+            border-color: var(--border-glow);
+            background: rgba(26, 24, 22, 0.6);
+            box-shadow: 0 0 0 1px var(--border-medium),
+                        var(--glow-subtle),
+                        inset 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+
+        .form-select {
+            cursor: pointer;
+        }
+
+        .form-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .file-upload {
+            position: relative;
+        }
+
+        .file-upload-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 28px;
+            background: var(--bg-secondary);
+            backdrop-filter: blur(16px) saturate(180%);
+            -webkit-backdrop-filter: blur(16px) saturate(180%);
+            border: 2px dashed var(--border-subtle);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.875em;
+            font-weight: 500;
+        }
+
+        .file-upload-btn:hover {
+            border-color: var(--border-medium);
+            border-style: solid;
+            color: var(--accent-gold);
+            background: var(--bg-tertiary);
+            box-shadow: var(--glow-subtle);
+        }
+
+        .file-upload input[type="file"] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        #fileName {
+            display: none;
+            margin-top: 7px;
+            font-size: 0.8125em;
+            color: var(--accent-gold);
+            font-weight: 500;
+        }
+
+        .submit-btn,
+        .save-btn {
+            width: 100%;
+            padding: 11px;
+            background: linear-gradient(135deg, rgba(201, 169, 97, 0.9) 0%, rgba(184, 150, 81, 0.9) 100%);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(201, 169, 97, 0.4);
+            border-radius: 6px;
+            color: var(--bg-primary);
+            font-weight: 600;
+            font-size: 0.9375em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+            box-shadow: var(--glow-subtle),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .submit-btn:hover,
+        .save-btn:hover {
+            background: linear-gradient(135deg, rgba(201, 169, 97, 1) 0%, rgba(184, 150, 81, 1) 100%);
+            box-shadow: var(--glow-medium),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.25);
+            transform: translateY(-1px);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .button-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .delete-btn {
+            flex: 1;
+            padding: 11px;
+            background: rgba(239, 68, 68, 0.12);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 6px;
+            color: #ef4444;
+            font-weight: 600;
+            font-size: 0.9375em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .delete-btn:hover {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: rgba(239, 68, 68, 0.5);
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.15);
+        }
+
+        .save-btn {
+            flex: 2;
+            margin-top: 0;
+        }
+
+        .close-btn {
+            width: 30px;
+            height: 30px;
+            background: var(--bg-secondary);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-subtle);
+            border-radius: 5px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 1.125em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            font-weight: 300;
+        }
+
+        .close-btn:hover {
+            border-color: var(--border-medium);
+            color: var(--accent-gold);
+            background: var(--bg-tertiary);
+            box-shadow: var(--glow-subtle);
+        }
+
+        /* Script Processing Status */
+        .script-status {
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 6px;
+            font-size: 0.8125em;
+            display: none;
+        }
+
+        .script-status.processing {
+            display: block;
+            background: rgba(102, 126, 234, 0.1);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            color: #667eea;
+        }
+
+        .script-status.success {
+            display: block;
+            background: rgba(82, 193, 134, 0.1);
+            border: 1px solid rgba(82, 193, 134, 0.3);
+            color: #52c186;
+        }
+
+        .script-status.error {
+            display: block;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header {
+                padding: 16px 24px;
+            }
+
+            .header-top {
+                margin-bottom: 16px;
+            }
+
+            .controls-row {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .search-section {
+                flex: 1;
+                width: 100%;
+            }
+
+            .filters {
+                width: 100%;
+                overflow-x: auto;
+            }
+
+            .main-content {
+                padding: 24px;
+            }
+
+            .projects-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="header-top">
+            <h1>Projects</h1>
+            <button class="profile-btn">JD</button>
+        </div>
+
+        <!-- Controls Row -->
+        <div class="controls-row">
+            <div class="search-section">
+                <input type="text" class="search-bar" id="searchBar" placeholder="Search projects...">
+            </div>
+            
+            <div class="filters">
+                <button class="filter-btn active">All</button>
+                <button class="filter-btn">Features</button>
+                <button class="filter-btn">Series</button>
+                <button class="filter-btn">Commercials</button>
+                <button class="filter-btn">Music Videos</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="projects-grid" id="projectsGrid">
+            <!-- New Project Card -->
+            <div class="new-project-card" onclick="openModal()">
+                <div class="new-project-icon">+</div>
+                <div class="new-project-text">New Project</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Project Modal -->
+    <div class="modal" id="projectModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Create New Project</h2>
+                <button class="close-btn" onclick="closeModal()">×</button>
+            </div>
+            <form id="projectForm" onsubmit="saveProject(event)">
+                <div class="form-group">
+                    <label class="form-label">Upload Script (Optional)</label>
+                    <div class="file-upload">
+                        <label class="file-upload-btn">
+                            📄 Choose Script File
+                            <input type="file" id="scriptFileInput" accept=".txt,.fountain,.fdx,.pdf" onchange="handleScriptUpload(event)">
+                        </label>
+                    </div>
+                    <span id="fileName"></span>
+                    <div id="scriptStatus" class="script-status"></div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Project Title</label>
+                    <input type="text" class="form-input" id="projectTitle" placeholder="Enter project title" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Genre</label>
+                    <input type="text" class="form-input" id="showCode" placeholder="e.g. Thriller, Comedy, Drama" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Project Type</label>
+                    <select class="form-select" id="projectType" required>
+                        <option value="">Select type...</option>
+                        <option value="Feature Film">Feature Film</option>
+                        <option value="TV Series">TV Series</option>
+                        <option value="Commercial">Commercial</option>
+                        <option value="Music Video">Music Video</option>
+                        <option value="Short Film">Short Film</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="submit-btn" id="submitBtn">Create Project</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Project Modal -->
+    <div class="modal" id="editModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Edit Project</h2>
+                <button class="close-btn" onclick="closeEditModal()">×</button>
+            </div>
+            <form id="editForm" onsubmit="saveEdit(event)">
+                <div class="form-group">
+                    <label class="form-label">Project Title</label>
+                    <input type="text" class="form-input" id="editTitle" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Genre</label>
+                    <input type="text" class="form-input" id="editCode" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Project Type</label>
+                    <select class="form-select" id="editType" required>
+                        <option value="Feature Film">Feature Film</option>
+                        <option value="TV Series">TV Series</option>
+                        <option value="Commercial">Commercial</option>
+                        <option value="Music Video">Music Video</option>
+                        <option value="Short Film">Short Film</option>
+                    </select>
+                </div>
+
+                <div class="button-row">
+                    <button type="button" class="delete-btn" onclick="deleteProject()">Delete Project</button>
+                    <button type="submit" class="save-btn">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Initialize PDF.js
+        if (typeof pdfjsLib !== 'undefined') {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+
+        let projects = [];
+        let editingIndex = null;
+        let uploadedScript = null;
+        let scriptProcessor = null;
+        let processedScript = null;
+        let scriptLoading = false;
+
+        const demoProjects = [
+            {
+                title: "The Big Race",
+                code: "Action / Thriller",
+                type: "Feature Film",
+                status: "active",
+                progress: 68,
+                lastModified: "2 hours ago",
+                scenes: 124,
+                characters: 28
+            },
+            {
+                title: "Haunted Hearts",
+                code: "Horror / Romance",
+                type: "TV Series",
+                status: "active",
+                progress: 42,
+                lastModified: "Yesterday",
+                scenes: 89,
+                characters: 15
+            },
+            {
+                title: "Hauntwood",
+                code: "Mystery / Drama",
+                type: "Feature Film",
+                status: "in-progress",
+                progress: 85,
+                lastModified: "3 days ago",
+                scenes: 156,
+                characters: 32
+            }
+        ];
+
+        // Initialize script processor
+        function initScriptProcessor() {
+            if (window.ScriptProcessor) {
+                scriptProcessor = new ScriptProcessor();
+                console.log('✅ Script processor initialized');
+            } else {
+                console.error('❌ Script processor not found');
+            }
+        }
+
+        function loadProjects() {
+            const saved = localStorage.getItem('checksHappyProjects');
+            if (saved) {
+                projects = JSON.parse(saved);
+            } else {
+                projects = demoProjects;
+                saveToStorage();
+            }
+            renderProjects();
+        }
+
+        function saveToStorage() {
+            localStorage.setItem('checksHappyProjects', JSON.stringify(projects));
+        }
+
+        function renderProjects() {
+            const grid = document.getElementById('projectsGrid');
+            const newProjectCard = grid.querySelector('.new-project-card');
+            grid.innerHTML = '';
+            grid.appendChild(newProjectCard);
+
+            projects.forEach((project, index) => {
+                const card = document.createElement('div');
+                card.className = 'project-card';
+                card.onclick = (e) => {
+                    if (!e.target.closest('.edit-btn')) {
+                        openProject(index);
+                    }
+                };
+
+                const statusClass = project.status === 'active' ? '' : 'in-progress';
+                const statusText = project.status === 'active' ? 'Active' : 'In Progress';
+                const hasScript = project.scriptContent || project.scriptFile ? '📄 Script Ready' : '';
+
+                card.innerHTML = `
+                    <div class="clapperboard">
+                        <div class="clapper-top"></div>
+                        <div class="project-status">
+                            <span class="status-dot ${statusClass}"></span>
+                            ${statusText}
+                        </div>
+                        <div class="clapper-title">${project.title}</div>
+                        <div class="clapper-scene-bars">
+                            <div class="scene-bar"></div>
+                            <div class="scene-bar"></div>
+                            <div class="scene-bar"></div>
+                        </div>
+                    </div>
+                    <div class="project-info">
+                        <div class="project-meta-row">
+                            <div>
+                                <div class="project-title">${project.code}</div>
+                                <div class="project-name">${project.type}</div>
+                            </div>
+                            <button class="edit-btn" onclick="event.stopPropagation(); openEditModal(${index})">Edit</button>
+                        </div>
+                        <div class="project-meta">
+                            ${hasScript ? `<div class="meta-item"><span style="color: var(--card-dark); font-weight: 600;">${hasScript}</span></div>` : ''}
+                            <div class="meta-item">
+                                <span>${project.scenes} scenes</span>
+                                <span class="meta-dot"></span>
+                                <span>${project.characters} characters</span>
+                            </div>
+                            <div class="meta-item">
+                                <span>Updated ${project.lastModified}</span>
+                            </div>
+                        </div>
+                        <div class="project-progress">
+                            <div class="progress-label">
+                                <span>Breakdown</span>
+                                <span>${project.progress}%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${project.progress}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                grid.appendChild(card);
+            });
+        }
+
+        async function handleScriptUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            uploadedScript = file;
+            scriptLoading = true;
+            
+            const fileNameElement = document.getElementById('fileName');
+            const statusElement = document.getElementById('scriptStatus');
+            const submitBtn = document.getElementById('submitBtn');
+            
+            fileNameElement.textContent = `📄 ${file.name}`;
+            fileNameElement.style.display = 'inline-block';
+            
+            // Update title with filename
+            const titleWithoutExt = file.name.replace(/\.[^/.]+$/, "");
+            document.getElementById('projectTitle').value = titleWithoutExt;
+            
+            // Disable submit button during processing
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Processing Script...';
+            
+            // Show processing status
+            statusElement.className = 'script-status processing';
+            statusElement.textContent = '⏳ Processing script...';
+            
+            try {
+                let scriptContent = '';
+                
+                // Process based on file type
+                if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+                    statusElement.textContent = '📄 Extracting text from PDF...';
+                    scriptContent = await scriptProcessor.extractPDFText(file);
+                } else {
+                    statusElement.textContent = '📝 Reading text file...';
+                    scriptContent = await file.text();
+                }
+                
+                // Parse the screenplay
+                statusElement.textContent = '🎬 Analyzing screenplay format...';
+                processedScript = scriptProcessor.parseScreenplay(scriptContent);
+                
+                // Store the content
+                uploadedScript = {
+                    name: file.name,
+                    content: scriptContent,
+                    parsed: processedScript
+                };
+                
+                // Update status
+                statusElement.className = 'script-status success';
+                statusElement.innerHTML = `
+                    ✅ Script processed successfully!<br>
+                    📍 ${processedScript.scenes.length} scenes detected<br>
+                    👥 ${processedScript.metadata.characters.length} characters found
+                `;
+                
+                fileNameElement.style.color = '#52c186';
+                
+            } catch (error) {
+                console.error('Script processing error:', error);
+                statusElement.className = 'script-status error';
+                statusElement.textContent = '❌ Error: ' + error.message;
+                fileNameElement.style.color = '#ff6b6b';
+                uploadedScript = null;
+                processedScript = null;
+            } finally {
+                scriptLoading = false;
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Create Project';
+            }
+        }
+
+        function openModal() {
+            document.getElementById('projectModal').classList.add('active');
+            document.getElementById('projectForm').reset();
+            document.getElementById('fileName').style.display = 'none';
+            document.getElementById('scriptStatus').style.display = 'none';
+            uploadedScript = null;
+            processedScript = null;
+            scriptLoading = false;
+        }
+
+        function closeModal() {
+            document.getElementById('projectModal').classList.remove('active');
+        }
+
+        function openEditModal(index) {
+            editingIndex = index;
+            const project = projects[index];
+            
+            document.getElementById('editTitle').value = project.title;
+            document.getElementById('editCode').value = project.code;
+            document.getElementById('editType').value = project.type;
+            
+            document.getElementById('editModal').classList.add('active');
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.remove('active');
+            editingIndex = null;
+        }
+
+        function saveEdit(event) {
+            event.preventDefault();
+            
+            if (editingIndex !== null) {
+                projects[editingIndex].title = document.getElementById('editTitle').value;
+                projects[editingIndex].code = document.getElementById('editCode').value;
+                projects[editingIndex].type = document.getElementById('editType').value;
+                projects[editingIndex].lastModified = 'Just now';
+                
+                saveToStorage();
+                renderProjects();
+                closeEditModal();
+            }
+        }
+
+        function deleteProject() {
+            if (editingIndex !== null) {
+                const project = projects[editingIndex];
+                if (confirm(`Are you sure you want to delete "${project.title}"? This action cannot be undone.`)) {
+                    projects.splice(editingIndex, 1);
+                    saveToStorage();
+                    renderProjects();
+                    closeEditModal();
+                }
+            }
+        }
+
+        function saveProject(event) {
+            event.preventDefault();
+
+            if (scriptLoading) {
+                alert('Please wait for the script to finish processing...');
+                return;
+            }
+
+            const project = {
+                title: document.getElementById('projectTitle').value,
+                code: document.getElementById('showCode').value,
+                type: document.getElementById('projectType').value,
+                status: 'active',
+                progress: 0,
+                lastModified: 'Just now',
+                scenes: processedScript ? processedScript.scenes.length : 0,
+                characters: processedScript ? processedScript.metadata.characters.length : 0,
+                scriptFile: uploadedScript ? uploadedScript.name : null,
+                scriptContent: uploadedScript ? uploadedScript.content : null,
+                scriptName: uploadedScript ? uploadedScript.name : null
+            };
+
+            projects.unshift(project);
+            saveToStorage();
+            
+            // If script was processed, save the parsed version
+            if (processedScript) {
+                const projectId = project.title.replace(/\s+/g, '_').toLowerCase();
+                scriptProcessor.saveScriptData(projectId, processedScript);
+            }
+            
+            renderProjects();
+            closeModal();
+            
+            scriptLoading = false;
+        }
+
+        function openProject(index) {
+            const project = projects[index];
+            localStorage.setItem('currentProject', JSON.stringify(project));
+            
+            if (project.scriptContent) {
+                window.location.href = 'script-breakdown-improved.html';
+            } else {
+                window.location.href = 'dashboard.html';
+            }
+        }
+
+        // Search functionality
+        document.getElementById('searchBar').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const cards = document.querySelectorAll('.project-card');
+            
+            cards.forEach(card => {
+                const title = card.querySelector('.clapper-title')?.textContent.toLowerCase() || '';
+                const code = card.querySelector('.project-title')?.textContent.toLowerCase() || '';
+                
+                if (title.includes(searchTerm) || code.includes(searchTerm)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+
+        // Filter functionality
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        // Modal click-outside close
+        document.getElementById('projectModal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+
+        document.getElementById('editModal').addEventListener('click', function(e) {
+            if (e.target === this) closeEditModal();
+        });
+
+        // Initialize
+        initScriptProcessor();
+        loadProjects();
+        
+        console.log('✅ Projects page loaded with improved script processing');
+    </script>
+</body>
+</html>
