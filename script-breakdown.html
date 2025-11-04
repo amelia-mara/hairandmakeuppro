@@ -32,6 +32,11 @@
             --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
             --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
             
+            /* Parchment/Script colors */
+            --parchment-bg: #c9a961;
+            --parchment-text: #2d2416;
+            --parchment-border: #a08850;
+            
             /* Tag Colors */
             --tag-makeup: #ff6b9d;
             --tag-hair: #c084fc;
@@ -77,7 +82,7 @@
             flex-direction: column;
         }
 
-        /* Top Bar */
+        /* Top Bar - same liquid glass style */
         .top-bar {
             height: 60px;
             background: 
@@ -94,6 +99,7 @@
                 var(--shadow-sm),
                 inset 0 1px 0 rgba(255, 255, 255, 0.05);
             position: relative;
+            z-index: 100;
         }
 
         .top-bar::before {
@@ -231,155 +237,38 @@
         .view-mode-toggle {
             display: flex;
             gap: 4px;
-            background: rgba(13, 11, 10, 0.5);
+            background: var(--card-bg);
+            backdrop-filter: blur(8px);
             padding: 4px;
-            border-radius: 6px;
+            border-radius: 8px;
             border: 1px solid var(--glass-border);
         }
 
         .view-mode-btn {
-            padding: 6px 12px;
+            padding: 6px 14px;
             background: transparent;
             border: none;
-            border-radius: 4px;
+            border-radius: 6px;
             color: var(--text-muted);
             cursor: pointer;
-            font-size: 0.8125em;
-            transition: all 0.2s ease;
+            font-size: 0.75em;
+            font-weight: 500;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .view-mode-btn:hover:not(.active) {
             color: var(--text-light);
-            background: rgba(201, 169, 97, 0.05);
+            background: rgba(212, 175, 122, 0.08);
         }
 
         .view-mode-btn.active {
-            background: var(--accent-gold);
-            color: var(--bg-dark);
+            background: linear-gradient(135deg, #e0c08f 0%, var(--accent-gold) 50%, #c9a564 100%);
+            color: #0a0908;
             font-weight: 600;
-        }
-
-        /* Script Status Banner */
-        .script-status-banner {
-            background: linear-gradient(135deg, rgba(82, 193, 134, 0.15), rgba(52, 211, 153, 0.15));
-            border: 1px solid rgba(82, 193, 134, 0.3);
-            border-radius: 8px;
-            padding: 12px 16px;
-            margin: 16px 48px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-size: 0.875em;
-        }
-
-        .script-status-banner.error {
-            background: linear-gradient(135deg, rgba(255, 107, 107, 0.15), rgba(239, 68, 68, 0.15));
-            border-color: rgba(255, 107, 107, 0.3);
-        }
-
-        .script-status-banner .icon {
-            font-size: 1.5em;
-        }
-
-        .script-status-info {
-            flex: 1;
-        }
-
-        .script-status-title {
-            font-weight: 600;
-            color: var(--text-light);
-            margin-bottom: 2px;
-        }
-
-        .script-status-details {
-            color: var(--text-muted);
-            font-size: 0.9em;
-        }
-
-        /* PDF Viewer */
-        .pdf-viewer-container {
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            padding: 24px;
-            gap: 16px;
-            overflow-y: auto;
-        }
-
-        .pdf-viewer-container.active {
-            display: flex;
-        }
-
-        .pdf-controls {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-            padding: 12px 20px;
-            background: var(--card-bg);
-            border-radius: 8px;
-            border: 1px solid var(--glass-border);
-        }
-
-        .pdf-nav-btn {
-            padding: 6px 12px;
-            background: rgba(13, 11, 10, 0.5);
-            border: 1px solid var(--glass-border);
-            border-radius: 4px;
-            color: var(--text-light);
-            cursor: pointer;
-            font-size: 0.8125em;
-            transition: all 0.2s ease;
-        }
-
-        .pdf-nav-btn:hover:not(:disabled) {
-            border-color: var(--accent-gold);
-            color: var(--accent-gold);
-        }
-
-        .pdf-nav-btn:disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
-        }
-
-        .pdf-page-info {
-            color: var(--text-light);
-            font-size: 0.875em;
-            min-width: 100px;
-            text-align: center;
-        }
-
-        .pdf-canvas {
-            border: 1px solid var(--glass-border);
-            border-radius: 8px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            max-width: 100%;
-            height: auto;
-        }
-
-        /* Raw Script View */
-        .raw-script-container {
-            display: none;
-            padding: 32px 48px;
-            overflow-y: auto;
-        }
-
-        .raw-script-container.active {
-            display: block;
-        }
-
-        .raw-script-content {
-            background: var(--card-bg);
-            border: 1px solid var(--glass-border);
-            border-radius: 8px;
-            padding: 32px;
-            font-family: 'Courier Prime', monospace;
-            font-size: 12pt;
-            line-height: 1.8;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            color: var(--text-light);
-            max-width: 900px;
-            margin: 0 auto;
+            box-shadow: 
+                0 2px 8px rgba(212, 175, 122, 0.3),
+                0 0 15px rgba(212, 175, 122, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
         }
 
         /* Main Content */
@@ -389,7 +278,7 @@
             overflow: hidden;
         }
 
-        /* Left Sidebar - Scene Navigation */
+        /* Left Sidebar - liquid glass style */
         .left-sidebar {
             width: 300px;
             background: 
@@ -552,7 +441,7 @@
             margin-top: 4px;
         }
 
-        /* Center Panel */
+        /* Center Panel with PARCHMENT AESTHETIC */
         .center-panel {
             flex: 1;
             display: flex;
@@ -568,7 +457,7 @@
         }
 
         .scene-header-display {
-            margin-bottom: 32px;
+            margin-bottom: 24px;
         }
 
         .scene-number-large {
@@ -580,7 +469,7 @@
         }
 
         .scene-heading-large {
-            font-size: 1.75em;
+            font-size: 1.5em;
             font-weight: 700;
             color: var(--accent-gold);
             margin-bottom: 16px;
@@ -588,11 +477,12 @@
             text-shadow: 0 0 20px rgba(212, 175, 122, 0.3);
         }
 
+        /* PARCHMENT/AGED PAPER SCRIPT PANEL - matches reference image */
         .scene-script-content {
             background: 
-                linear-gradient(135deg, rgba(212, 175, 122, 0.04) 0%, rgba(28, 25, 22, 0.6) 50%, rgba(212, 175, 122, 0.02) 100%);
-            backdrop-filter: blur(12px);
-            border: 1px solid var(--glass-border);
+                linear-gradient(to bottom, rgba(210, 180, 110, 0.15) 0%, transparent 5%, transparent 95%, rgba(160, 130, 70, 0.15) 100%),
+                linear-gradient(135deg, #c9a961 0%, #d4b86f 50%, #c9a961 100%);
+            border: 2px solid var(--parchment-border);
             border-radius: 12px;
             padding: 48px 64px;
             font-family: 'Courier Prime', monospace;
@@ -600,27 +490,47 @@
             line-height: 2;
             max-width: 900px;
             margin: 0 auto;
+            color: var(--parchment-text);
             box-shadow: 
-                var(--shadow-md),
-                inset 0 1px 0 rgba(255, 255, 255, 0.05);
+                0 8px 32px rgba(0, 0, 0, 0.5),
+                inset 0 2px 4px rgba(255, 255, 255, 0.2),
+                inset 0 -2px 4px rgba(0, 0, 0, 0.1);
+            position: relative;
         }
 
-        /* Screenplay Formatting */
+        /* Aged paper vignette effect */
+        .scene-script-content::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(ellipse at center, transparent 40%, rgba(160, 130, 70, 0.2) 100%);
+            pointer-events: none;
+            border-radius: 10px;
+        }
+
+        /* Screenplay Formatting with colored highlights */
         .script-line {
             margin-bottom: 12px;
+            position: relative;
+            z-index: 1;
         }
 
         .script-scene-heading {
             font-weight: 700;
             text-transform: uppercase;
             margin: 24px 0 16px 0;
-            color: var(--accent-gold);
+            color: var(--parchment-text);
             font-size: 13pt;
+            letter-spacing: 0.5px;
         }
 
         .script-action {
             margin: 12px 0;
-            color: var(--text-light);
+            color: var(--parchment-text);
             line-height: 1.8;
         }
 
@@ -628,19 +538,23 @@
             font-weight: 700;
             text-transform: uppercase;
             margin: 16px 0 4px 200px;
-            color: var(--text-light);
+            color: var(--parchment-text);
+            background: rgba(255, 107, 157, 0.3);
+            padding: 2px 8px;
+            border-radius: 4px;
+            display: inline-block;
         }
 
         .script-parenthetical {
             font-style: italic;
             margin: 4px 0 4px 180px;
-            color: var(--text-muted);
+            color: rgba(45, 36, 22, 0.7);
         }
 
         .script-dialogue {
             margin: 4px 0 12px 150px;
             max-width: 350px;
-            color: var(--text-light);
+            color: var(--parchment-text);
             line-height: 1.7;
         }
 
@@ -648,7 +562,7 @@
             font-weight: 700;
             text-align: right;
             margin: 16px 0;
-            color: var(--text-muted);
+            color: rgba(45, 36, 22, 0.7);
         }
 
         .script-text-selectable {
@@ -657,20 +571,36 @@
         }
 
         .script-line:hover {
-            background: rgba(212, 175, 122, 0.05);
+            background: rgba(160, 130, 70, 0.15);
             border-radius: 4px;
             padding: 2px 8px;
             margin-left: -8px;
             margin-right: -8px;
         }
 
-        /* Text Selection Styling */
-        .scene-script-content ::selection {
-            background: rgba(212, 175, 122, 0.4);
-            color: #050404;
+        /* Highlight for SFX descriptions - blue background */
+        .script-action.sfx-highlight {
+            background: rgba(56, 189, 248, 0.25);
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin-left: -8px;
+            margin-right: -8px;
         }
 
-        /* Right Sidebar - Tagging Panel */
+        /* Highlight for wardrobe - green text */
+        .script-action.wardrobe-highlight,
+        .script-dialogue.wardrobe-highlight {
+            color: #2d8659;
+            font-weight: 600;
+        }
+
+        /* Text Selection on parchment */
+        .scene-script-content ::selection {
+            background: rgba(212, 175, 122, 0.5);
+            color: var(--parchment-text);
+        }
+
+        /* Right Sidebar - liquid glass style */
         .right-sidebar {
             width: 380px;
             background: 
@@ -913,7 +843,7 @@
             box-shadow: 0 0 0 3px rgba(212, 175, 122, 0.1);
         }
 
-        /* Modals */
+        /* Modals - liquid glass */
         .modal {
             display: none;
             position: fixed;
@@ -1013,7 +943,8 @@
         }
 
         .form-input,
-        .form-textarea {
+        .form-textarea,
+        select.form-input {
             width: 100%;
             padding: 10px 14px;
             background: rgba(10, 9, 8, 0.6);
@@ -1032,7 +963,8 @@
         }
 
         .form-input:focus,
-        .form-textarea:focus {
+        .form-textarea:focus,
+        select.form-input:focus {
             outline: none;
             border-color: var(--accent-gold);
             background: rgba(10, 9, 8, 0.8);
@@ -1155,6 +1087,32 @@
             color: var(--text-muted);
             font-size: 0.875em;
         }
+
+        /* Raw Script & PDF Views */
+        .raw-script-container,
+        .pdf-viewer-container {
+            display: none;
+        }
+
+        .raw-script-container.active,
+        .pdf-viewer-container.active {
+            display: block;
+        }
+
+        .raw-script-content {
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 32px;
+            font-family: 'Courier Prime', monospace;
+            font-size: 12pt;
+            line-height: 1.8;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            color: var(--text-light);
+            max-width: 900px;
+            margin: 0 auto;
+        }
     </style>
 </head>
 <body>
@@ -1195,9 +1153,6 @@
                 <button class="view-mode-btn" onclick="switchViewMode('raw')" id="viewModeRaw">
                     📄 Full Script
                 </button>
-                <button class="view-mode-btn" onclick="switchViewMode('pdf')" id="viewModePdf" style="display: none;">
-                    📕 PDF
-                </button>
             </div>
 
             <div class="top-bar-actions">
@@ -1232,9 +1187,6 @@
 
             <!-- Center Panel - Scene Content -->
             <div class="center-panel">
-                <!-- Script Status Banner -->
-                <div id="scriptStatusBanner" style="display: none;"></div>
-
                 <!-- Scene Display (default view) -->
                 <div class="scene-display" id="sceneDisplay">
                     <div class="empty-state">
@@ -1246,19 +1198,9 @@
 
                 <!-- Raw Script View -->
                 <div class="raw-script-container" id="rawScriptContainer">
-                    <div class="raw-script-content" id="rawScriptContent"></div>
-                </div>
-
-                <!-- PDF Viewer -->
-                <div class="pdf-viewer-container" id="pdfViewerContainer">
-                    <div class="pdf-controls">
-                        <button class="pdf-nav-btn" onclick="prevPDFPage()" id="pdfPrevBtn">← Previous</button>
-                        <div class="pdf-page-info">
-                            Page <span id="pdfPageNum">1</span> of <span id="pdfPageCount">0</span>
-                        </div>
-                        <button class="pdf-nav-btn" onclick="nextPDFPage()" id="pdfNextBtn">Next →</button>
+                    <div style="padding: 32px 48px; overflow-y: auto; height: 100%;">
+                        <div class="raw-script-content" id="rawScriptContent"></div>
                     </div>
-                    <canvas id="pdfCanvas" class="pdf-canvas"></canvas>
                 </div>
             </div>
 
@@ -1329,35 +1271,19 @@
     </div>
 
     <script>
-        // ============================================
-        // GLOBAL STATE
-        // ============================================
-
+        // Use the complete JavaScript from document 2
+        // Including: scene detection, AI analysis, tag management, view switching, etc.
+        
         let currentProject = null;
         let scriptText = '';
         let scenes = [];
         let currentSceneIndex = 0;
-        let sceneTags = {}; // { sceneNumber: [{ category, description, aiSuggested, accepted }] }
+        let sceneTags = {};
         let sceneNotes = {};
         let currentTagCategory = '';
         let aiProvider = 'openai';
         let apiKey = '';
-
-        // PDF viewing state
-        let currentViewMode = 'scenes'; // 'scenes', 'raw', or 'pdf'
-        let pdfDoc = null;
-        let pdfPageNum = 1;
-        let pdfScale = 1.5;
-        let pdfData = null;
-
-        // Initialize PDF.js worker
-        if (typeof pdfjsLib !== 'undefined') {
-            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-        }
-
-        // ============================================
-        // INITIALIZATION
-        // ============================================
+        let currentViewMode = 'scenes';
 
         function init() {
             loadSettings();
@@ -1372,575 +1298,223 @@
 
         function loadProjectScript() {
             currentProject = JSON.parse(localStorage.getItem('currentProject') || 'null');
-
-            if (!currentProject) {
-                showScriptStatusBanner('error', 'No Project Loaded', 'Please select a project from the dashboard.');
-                setTimeout(() => window.location.href = 'index.html', 2000);
+            if (!currentProject || !currentProject.scriptContent) {
+                alert('No project or script found');
+                setTimeout(() => window.location.href = 'index.html', 1000);
                 return;
             }
-
-            if (!currentProject.scriptContent) {
-                showScriptStatusBanner('error', 'No Script Found', 'This project does not have a script. Please upload a script first.');
-                console.error('No script content in project');
-                return;
-            }
-
             scriptText = currentProject.scriptContent;
-
-            // Show script loaded status
-            const scriptLength = scriptText.length;
-            const scriptName = currentProject.scriptName || 'Script';
-            showScriptStatusBanner('success', 'Script Loaded Successfully',
-                `${scriptName} • ${scriptLength.toLocaleString()} characters • ${Math.ceil(scriptLength / 250)} estimated pages`);
-
-            // Check if this was a PDF and if we have the original PDF data
-            const isPDF = currentProject.scriptName && currentProject.scriptName.toLowerCase().endsWith('.pdf');
-            if (isPDF) {
-                // Try to load PDF from localStorage or project
-                const pdfDataStored = localStorage.getItem(`${currentProject.code}_pdfData`);
-                if (pdfDataStored) {
-                    pdfData = pdfDataStored;
-                    document.getElementById('viewModePdf').style.display = 'inline-block';
-                    console.log('✓ PDF data available for viewing');
-                }
-            }
-
-            // Show view mode toggle
             document.getElementById('viewModeToggle').style.display = 'flex';
-
-            // Load existing data if available
             scenes = currentProject.scenes || [];
             sceneTags = currentProject.sceneTags || {};
             sceneNotes = currentProject.sceneNotes || {};
-
-            // If no scenes detected yet, detect them
-            if (scenes.length === 0) {
-                console.log('No scenes detected, running detection...');
-                detectScenes();
-            }
-
-            // Always show raw script content
+            if (scenes.length === 0) detectScenes();
             displayRawScript();
-
             renderSceneNavigation();
-
-            // Auto-select first scene if scenes exist
-            if (scenes.length > 0) {
-                selectScene(0);
-            } else {
-                console.warn('No scenes detected in script. You can still view the full script.');
-                showScriptStatusBanner('warning', 'No Scenes Detected',
-                    'Could not detect scene headings. Use "Full Script" view to see the raw text, or check if the script format is correct (should have INT./EXT. scene headings).');
-            }
-
-            // Check if AI has been run
-            const hasAITags = Object.values(sceneTags).some(tags =>
-                tags.some(tag => tag.aiSuggested)
-            );
-
-            if (hasAITags) {
-                updateWorkflowStep('review');
-            }
-
+            if (scenes.length > 0) selectScene(0);
+            const hasAITags = Object.values(sceneTags).some(tags => tags.some(tag => tag.aiSuggested));
+            if (hasAITags) updateWorkflowStep('review');
             updateGenerateButton();
-
-            console.log('✓ Project loaded:', currentProject.title);
-            console.log('✓ Script text length:', scriptText.length);
-            console.log('✓ Scenes detected:', scenes.length);
-        }
-
-        // ============================================
-        // VIEW MODE SWITCHING
-        // ============================================
-
-        function switchViewMode(mode) {
-            currentViewMode = mode;
-
-            // Update button states
-            document.getElementById('viewModeScenes').classList.remove('active');
-            document.getElementById('viewModeRaw').classList.remove('active');
-            document.getElementById('viewModePdf').classList.remove('active');
-
-            // Hide all views
-            document.getElementById('sceneDisplay').style.display = 'none';
-            document.getElementById('rawScriptContainer').classList.remove('active');
-            document.getElementById('pdfViewerContainer').classList.remove('active');
-
-            // Show selected view
-            if (mode === 'scenes') {
-                document.getElementById('viewModeScenes').classList.add('active');
-                document.getElementById('sceneDisplay').style.display = 'block';
-                if (scenes.length > 0 && currentSceneIndex >= 0) {
-                    displayScene(currentSceneIndex);
-                }
-            } else if (mode === 'raw') {
-                document.getElementById('viewModeRaw').classList.add('active');
-                document.getElementById('rawScriptContainer').classList.add('active');
-                displayRawScript();
-            } else if (mode === 'pdf') {
-                document.getElementById('viewModePdf').classList.add('active');
-                document.getElementById('pdfViewerContainer').classList.add('active');
-                loadAndRenderPDF();
-            }
-
-            console.log('Switched to view mode:', mode);
-        }
-
-        function displayRawScript() {
-            const container = document.getElementById('rawScriptContent');
-            if (scriptText) {
-                container.textContent = scriptText;
-            } else {
-                container.textContent = 'No script content available.';
-            }
-        }
-
-        // ============================================
-        // SCRIPT STATUS BANNER
-        // ============================================
-
-        function showScriptStatusBanner(type, title, details) {
-            const banner = document.getElementById('scriptStatusBanner');
-            const iconMap = {
-                success: '✓',
-                error: '⚠',
-                warning: '⚠'
-            };
-
-            const html = `
-                <div class="script-status-banner ${type === 'error' || type === 'warning' ? 'error' : ''}">
-                    <div class="icon">${iconMap[type] || '📄'}</div>
-                    <div class="script-status-info">
-                        <div class="script-status-title">${title}</div>
-                        <div class="script-status-details">${details}</div>
-                    </div>
-                </div>
-            `;
-
-            banner.innerHTML = html;
-            banner.style.display = 'block';
-
-            // Auto-hide success messages after 10 seconds
-            if (type === 'success') {
-                setTimeout(() => {
-                    banner.style.display = 'none';
-                }, 10000);
-            }
-        }
-
-        // ============================================
-        // PDF VIEWING
-        // ============================================
-
-        async function loadAndRenderPDF() {
-            if (pdfDoc) {
-                // Already loaded, just render current page
-                renderPDFPage(pdfPageNum);
-                return;
-            }
-
-            if (!pdfData) {
-                document.getElementById('pdfViewerContainer').innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-state-icon">📕</div>
-                        <h3>PDF Not Available</h3>
-                        <p>The original PDF file is not stored. You can view the extracted text in "Full Script" mode.</p>
-                    </div>
-                `;
-                return;
-            }
-
-            try {
-                showLoading('Loading PDF...', 'Please wait');
-
-                // Load PDF
-                const loadingTask = pdfjsLib.getDocument({ data: atob(pdfData) });
-                pdfDoc = await loadingTask.promise;
-
-                document.getElementById('pdfPageCount').textContent = pdfDoc.numPages;
-
-                hideLoading();
-                renderPDFPage(pdfPageNum);
-
-                console.log('✓ PDF loaded:', pdfDoc.numPages, 'pages');
-            } catch (error) {
-                hideLoading();
-                console.error('Error loading PDF:', error);
-                document.getElementById('pdfViewerContainer').innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-state-icon">⚠</div>
-                        <h3>Error Loading PDF</h3>
-                        <p>Could not load the PDF file. Please try viewing the "Full Script" instead.</p>
-                    </div>
-                `;
-            }
-        }
-
-        async function renderPDFPage(num) {
-            if (!pdfDoc) return;
-
-            try {
-                const page = await pdfDoc.getPage(num);
-                const canvas = document.getElementById('pdfCanvas');
-                const ctx = canvas.getContext('2d');
-
-                const viewport = page.getViewport({ scale: pdfScale });
-                canvas.height = viewport.height;
-                canvas.width = viewport.width;
-
-                const renderContext = {
-                    canvasContext: ctx,
-                    viewport: viewport
-                };
-
-                await page.render(renderContext).promise;
-
-                pdfPageNum = num;
-                document.getElementById('pdfPageNum').textContent = num;
-
-                // Update button states
-                document.getElementById('pdfPrevBtn').disabled = (num <= 1);
-                document.getElementById('pdfNextBtn').disabled = (num >= pdfDoc.numPages);
-
-                console.log('✓ Rendered PDF page:', num);
-            } catch (error) {
-                console.error('Error rendering PDF page:', error);
-            }
-        }
-
-        function prevPDFPage() {
-            if (pdfPageNum <= 1) return;
-            pdfPageNum--;
-            renderPDFPage(pdfPageNum);
-        }
-
-        function nextPDFPage() {
-            if (!pdfDoc || pdfPageNum >= pdfDoc.numPages) return;
-            pdfPageNum++;
-            renderPDFPage(pdfPageNum);
+            console.log('✓ Project loaded:', currentProject.title, '| Scenes:', scenes.length);
         }
 
         function setupEventListeners() {
             document.getElementById('sceneSearch').addEventListener('input', handleSceneSearch);
         }
 
-        // ============================================
-        // IMPROVED SCENE DETECTION
-        // ============================================
+        function switchViewMode(mode) {
+            currentViewMode = mode;
+            document.getElementById('viewModeScenes').classList.remove('active');
+            document.getElementById('viewModeRaw').classList.remove('active');
+            document.getElementById('sceneDisplay').style.display = 'none';
+            document.getElementById('rawScriptContainer').classList.remove('active');
+            if (mode === 'scenes') {
+                document.getElementById('viewModeScenes').classList.add('active');
+                document.getElementById('sceneDisplay').style.display = 'block';
+                if (scenes.length > 0 && currentSceneIndex >= 0) displayScene(currentSceneIndex);
+            } else if (mode === 'raw') {
+                document.getElementById('viewModeRaw').classList.add('active');
+                document.getElementById('rawScriptContainer').classList.add('active');
+                displayRawScript();
+            }
+        }
+
+        function displayRawScript() {
+            document.getElementById('rawScriptContent').textContent = scriptText || 'No script content available.';
+        }
 
         function detectScenes() {
             scenes = [];
             const lines = scriptText.split('\n');
-            
-            console.log('Detecting scenes from', lines.length, 'lines');
-            
-            // Comprehensive scene heading patterns
             const patterns = [
-                // Standard format: INT. or EXT.
                 /^\s*\d*\s*\d*\s*(INT|EXT|INT\/EXT|I\/E|INT\.|EXT\.)[\s\.]+/i,
-                // With scene numbers: 1 INT. or SCENE 1 INT.
                 /^\s*(?:SCENE\s+)?\d+\s*[\.\-\s]*(INT|EXT|INT\/EXT|I\/E)[\s\.]+/i,
-                // Without periods: INT KITCHEN or EXT STREET
                 /^\s*(INT|EXT|INT\/EXT|I\/E)\s+[A-Z]/i,
-                // All caps short lines that look like scene headings
                 /^\s*\d*\s*(INTERIOR|EXTERIOR)\s+/i
             ];
-            
             lines.forEach((line, index) => {
                 const trimmed = line.trim();
-                
-                // Skip empty lines
                 if (!trimmed) return;
-                
-                // Check if line matches any scene heading pattern
                 for (let pattern of patterns) {
                     if (pattern.test(trimmed)) {
-                        // Additional validation: should be mostly uppercase and reasonable length
                         const upperRatio = (trimmed.match(/[A-Z]/g) || []).length / trimmed.replace(/\s/g, '').length;
-                        
                         if (upperRatio > 0.6 && trimmed.length < 100) {
-                            let cleanHeading = trimmed
-                                .replace(/^\s*(?:SCENE\s+)?\d+\s*[\.\-\s]*/, '') // Remove scene numbers
-                                .replace(/\s+/g, ' ')
-                                .trim();
-                            
-                            // Avoid duplicates (sometimes scripts have duplicate headings)
-                            const isDuplicate = scenes.some(s => 
-                                s.heading === cleanHeading && Math.abs(s.lineIndex - index) < 3
-                            );
-                            
+                            let cleanHeading = trimmed.replace(/^\s*(?:SCENE\s+)?\d+\s*[\.\-\s]*/, '').replace(/\s+/g, ' ').trim();
+                            const isDuplicate = scenes.some(s => s.heading === cleanHeading && Math.abs(s.lineIndex - index) < 3);
                             if (!isDuplicate) {
-                                scenes.push({
-                                    id: Date.now() + index,
-                                    lineIndex: index,
-                                    heading: cleanHeading,
-                                    originalText: trimmed
-                                });
-                                
-                                console.log('✓ Scene detected:', cleanHeading);
+                                scenes.push({ id: Date.now() + index, lineIndex: index, heading: cleanHeading, originalText: trimmed });
+                                console.log('✓ Scene:', cleanHeading);
                             }
                             break;
                         }
                     }
                 }
             });
-            
-            console.log('✓ Total scenes detected:', scenes.length);
+            console.log('✓ Total scenes:', scenes.length);
             saveProjectData();
         }
 
-        // ============================================
-        // IMPROVED AI ANALYSIS
-        // ============================================
-
         async function runAIAnalysis() {
-            if (!apiKey) {
-                alert('Please configure your API key in Settings first.');
-                openSettings();
-                return;
-            }
-            
-            if (scenes.length === 0) {
-                alert('No scenes detected in the script.');
-                return;
-            }
-            
-            if (!confirm(`Run AI analysis on all ${scenes.length} scenes? This will use your API quota.`)) {
-                return;
-            }
-            
-            showLoading('Analyzing script with AI...', 'Processing all scenes');
-            
+            if (!apiKey) { alert('Please configure your API key in Settings.'); openSettings(); return; }
+            if (scenes.length === 0) { alert('No scenes detected.'); return; }
+            if (!confirm(`Run AI analysis on ${scenes.length} scenes?`)) return;
+            showLoading('Analyzing with AI...', 'Processing all scenes');
             try {
                 for (let i = 0; i < scenes.length; i++) {
                     updateLoadingText(`Analyzing scene ${i + 1} of ${scenes.length}...`);
                     await analyzeScene(i);
                 }
-                
                 hideLoading();
                 updateWorkflowStep('review');
                 saveProjectData();
-                
-                // Refresh current scene display
-                if (currentSceneIndex >= 0) {
-                    displayTaggingPanel(currentSceneIndex);
-                    renderSceneNavigation();
-                }
-                
-                alert('✓ AI analysis complete! Review and approve the suggested tags.');
-                
+                if (currentSceneIndex >= 0) { displayTaggingPanel(currentSceneIndex); renderSceneNavigation(); }
+                alert('✓ AI analysis complete!');
             } catch (error) {
                 hideLoading();
-                console.error('AI Analysis error:', error);
-                alert('Error during AI analysis: ' + error.message);
+                console.error('AI error:', error);
+                alert('Error: ' + error.message);
             }
         }
 
         async function analyzeScene(sceneIndex) {
             const scene = scenes[sceneIndex];
             const sceneNumber = sceneIndex + 1;
-            
-            // Get scene content
             const lines = scriptText.split('\n');
             const startLine = scene.lineIndex;
             let endLine = lines.length;
-            if (sceneIndex < scenes.length - 1) {
-                endLine = scenes[sceneIndex + 1].lineIndex;
-            }
-            
+            if (sceneIndex < scenes.length - 1) endLine = scenes[sceneIndex + 1].lineIndex;
             const sceneContent = lines.slice(startLine, endLine).join('\n');
-            
-            // Call AI API
             const suggestions = await callAIAPI(scene.heading, sceneContent);
-            
-            // Store AI suggestions
-            if (!sceneTags[sceneNumber]) {
-                sceneTags[sceneNumber] = [];
-            }
-            
-            // Add AI suggestions
+            if (!sceneTags[sceneNumber]) sceneTags[sceneNumber] = [];
             suggestions.forEach(suggestion => {
-                sceneTags[sceneNumber].push({
-                    category: suggestion.category,
-                    description: suggestion.description,
-                    aiSuggested: true,
-                    accepted: false
-                });
+                sceneTags[sceneNumber].push({ category: suggestion.category, description: suggestion.description, aiSuggested: true, accepted: false });
             });
         }
 
         async function callAIAPI(sceneHeading, sceneContent) {
-            const prompt = `You are a professional script breakdown assistant analyzing a film/TV script scene for production. Extract ALL production elements that would need to be tracked, prepared, or coordinated.
+            const prompt = `Professional script breakdown for production elements.
 
-Scene Heading: ${sceneHeading}
+Scene: ${sceneHeading}
+Content: ${sceneContent.substring(0, 3000)}
 
-Scene Content:
-${sceneContent.substring(0, 3000)}
+Extract production elements in these categories:
 
-Analyze and identify items in these categories:
+MAKEUP: Cosmetics, injuries, wounds, blood, bruises, aging, beauty makeup, prosthetics, character face descriptions
+Examples: "dark circles", "bruised cheek", "zombie makeup", "5 o'clock shadow"
 
-**MAKEUP**: Any cosmetics, special makeup effects, injuries, wounds, blood, bruises, aging effects, beauty makeup, character transformations, prosthetics mentions, or descriptions of how characters' faces should look.
-Examples: "dark circles under eyes", "bruised cheek", "glamorous red lipstick", "zombie makeup", "5 o'clock shadow"
+HAIR: Hairstyles, wigs, hair color, conditions, changes, character hair descriptions
+Examples: "disheveled bedhead", "blonde wig", "braided ponytail"
 
-**HAIR**: Hairstyles, wigs, hair color, hair conditions, hair changes, or any description of how characters' hair should look.
-Examples: "disheveled bedhead", "slicked back hair", "blonde wig", "braided ponytail", "shaved head"
+SFX: Special/visual effects, weather (rain/snow/fog), fire, smoke, blood splatter, explosions, magic, technical effects
+Examples: "blood spray", "flickering lights", "heavy fog", "ghost effect"
 
-**SFX/FX**: Special effects, practical effects, visual effects, weather effects (rain, snow, fog), fire, smoke, blood splatter, explosions, magical effects, or any technical effect mentions.
-Examples: "blood spray", "flickering lights", "heavy fog", "translucent ghost effect", "shattered glass"
+WARDROBE: Clothing, costumes, accessories, jewelry, shoes, costume changes
+Examples: "white dress", "leather jacket", "police uniform", "diamond necklace"
 
-**WARDROBE/COSTUME**: Clothing items, costumes, accessories, jewelry, shoes, costume changes, or specific descriptions of what characters wear.
-Examples: "white wedding dress", "leather jacket", "police uniform", "muddy boots", "diamond necklace"
+PROPS: Handheld items, important furniture, interactive objects
+Examples: "coffee mug", "car keys", "smartphone", "knife", "photograph"
 
-**PROPS**: Any object that actors interact with or that's important to the scene - handheld items, furniture mentioned specifically, set dressing that's action-critical.
-Examples: "coffee mug", "car keys", "smartphone", "bloodied knife", "old photograph", "typewriter"
+CAST: Character names, background performers with specifications
+Examples: "EMMA", "Detective Martinez", "crowd of 20 extras"
 
-**CAST**: Character names who appear or are mentioned, including background performers if specified (e.g., "crowd of protesters", "3 nurses").
-Examples: "EMMA", "Detective Martinez", "crowd of 20 extras", "the waitress"
-
-IMPORTANT RULES:
-- Return ONLY valid JSON array format
-- Be specific and descriptive
-- Only include items explicitly mentioned OR clearly implied by the scene
-- Avoid vague entries - be concrete
-- Each description should be brief but clear (3-10 words)
-- Don't duplicate across categories
-
-Return format:
+Return ONLY valid JSON array:
 [
-  {"category": "makeup", "description": "Dark circles under eyes, exhausted look"},
-  {"category": "hair", "description": "Disheveled morning bedhead"},
-  {"category": "wardrobe", "description": "White cotton nightgown"},
-  {"category": "sfx", "description": "Flickering overhead light"},
-  {"category": "props", "description": "Ceramic coffee mug"},
-  {"category": "cast", "description": "Emma Hart - lead character"}
+  {"category": "makeup", "description": "Dark circles, exhausted look"},
+  {"category": "hair", "description": "Disheveled bedhead"},
+  {"category": "wardrobe", "description": "White nightgown"},
+  {"category": "sfx", "description": "Flickering light"},
+  {"category": "props", "description": "Coffee mug"},
+  {"category": "cast", "description": "Emma - lead"}
 ]
 
-Categories must be EXACTLY: "makeup", "hair", "sfx", "wardrobe", "props", or "cast"`;
+Categories: "makeup", "hair", "sfx", "wardrobe", "props", "cast"`;
 
-            if (aiProvider === 'openai') {
-                return await callOpenAI(prompt);
-            } else {
-                return await callAnthropic(prompt);
-            }
+            if (aiProvider === 'openai') return await callOpenAI(prompt);
+            else return await callAnthropic(prompt);
         }
 
         async function callOpenAI(prompt) {
             const response = await fetch('https://api.openai.com/v1/chat/completions', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}`
-                },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
                 body: JSON.stringify({
                     model: 'gpt-4o-mini',
                     messages: [
-                        { role: 'system', content: 'You are a professional script breakdown assistant. Return ONLY valid JSON arrays with no additional text or explanation.' },
+                        { role: 'system', content: 'Return ONLY valid JSON arrays, no other text.' },
                         { role: 'user', content: prompt }
                     ],
                     temperature: 0.3
                 })
             });
-
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error?.message || 'API request failed');
-            }
-
+            if (!response.ok) throw new Error((await response.json()).error?.message || 'API failed');
             const data = await response.json();
             const content = data.choices[0].message.content;
-            
-            // Parse JSON response
-            let parsed;
             try {
-                // Try to extract JSON array from response
                 const jsonMatch = content.match(/\[[\s\S]*\]/);
-                if (jsonMatch) {
-                    parsed = JSON.parse(jsonMatch[0]);
-                } else {
-                    parsed = JSON.parse(content);
-                }
+                const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(content);
+                return Array.isArray(parsed) ? parsed : (parsed.items || parsed.tags || []);
             } catch (e) {
-                console.error('Failed to parse AI response:', content);
+                console.error('Parse error:', content);
                 return [];
             }
-            
-            return Array.isArray(parsed) ? parsed : (parsed.items || parsed.tags || []);
         }
 
         async function callAnthropic(prompt) {
             const response = await fetch('https://api.anthropic.com/v1/messages', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-api-key': apiKey,
-                    'anthropic-version': '2023-06-01'
-                },
-                body: JSON.stringify({
-                    model: 'claude-3-5-sonnet-20241022',
-                    max_tokens: 1024,
-                    messages: [
-                        { role: 'user', content: prompt }
-                    ]
-                })
+                headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+                body: JSON.stringify({ model: 'claude-3-5-sonnet-20241022', max_tokens: 1024, messages: [{ role: 'user', content: prompt }] })
             });
-
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error?.message || 'API request failed');
-            }
-
+            if (!response.ok) throw new Error((await response.json()).error?.message || 'API failed');
             const data = await response.json();
             const content = data.content[0].text;
-            
-            // Parse JSON response
-            let parsed;
             try {
                 const jsonMatch = content.match(/\[[\s\S]*\]/);
-                if (jsonMatch) {
-                    parsed = JSON.parse(jsonMatch[0]);
-                } else {
-                    parsed = JSON.parse(content);
-                }
+                const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(content);
+                return Array.isArray(parsed) ? parsed : (parsed.items || parsed.tags || []);
             } catch (e) {
-                console.error('Failed to parse AI response:', content);
+                console.error('Parse error:', content);
                 return [];
             }
-            
-            return Array.isArray(parsed) ? parsed : (parsed.items || parsed.tags || []);
         }
-
-        // ============================================
-        // UI RENDERING
-        // ============================================
 
         function renderSceneNavigation() {
             const navList = document.getElementById('sceneNavList');
             document.getElementById('sceneCountDisplay').textContent = scenes.length;
-            
             if (scenes.length === 0) {
                 navList.innerHTML = '<div class="empty-state"><p>No scenes detected</p></div>';
                 return;
             }
-            
             let html = '';
             scenes.forEach((scene, index) => {
                 const sceneNumber = index + 1;
                 const tags = sceneTags[sceneNumber] || [];
                 const hasAI = tags.some(t => t.aiSuggested && !t.accepted);
                 const confirmedTags = tags.filter(t => t.accepted || !t.aiSuggested);
-                
                 const tagsHtml = confirmedTags.map(tag => {
-                    const color = {
-                        'makeup': '#ff6b9d',
-                        'hair': '#c084fc',
-                        'sfx': '#38bdf8',
-                        'cast': '#fbbf24',
-                        'wardrobe': '#34d399',
-                        'props': '#fb923c'
-                    }[tag.category] || '#999';
+                    const color = { 'makeup': '#ff6b9d', 'hair': '#c084fc', 'sfx': '#38bdf8', 'cast': '#fbbf24', 'wardrobe': '#34d399', 'props': '#fb923c' }[tag.category] || '#999';
                     return `<div class="mini-tag" style="background: ${color}; color: ${color}"></div>`;
                 }).join('');
-                
                 html += `
                     <div class="scene-nav-item ${index === currentSceneIndex ? 'active' : ''}" onclick="selectScene(${index})">
                         <div class="scene-nav-number">Scene ${sceneNumber}</div>
@@ -1950,7 +1524,6 @@ Categories must be EXACTLY: "makeup", "hair", "sfx", "wardrobe", "props", or "ca
                     </div>
                 `;
             });
-            
             navList.innerHTML = html;
         }
 
@@ -1964,20 +1537,13 @@ Categories must be EXACTLY: "makeup", "hair", "sfx", "wardrobe", "props", or "ca
         function displayScene(index) {
             const scene = scenes[index];
             const sceneNumber = index + 1;
-
-            // Get scene content
             const lines = scriptText.split('\n');
             const startLine = scene.lineIndex;
             let endLine = lines.length;
-            if (index < scenes.length - 1) {
-                endLine = scenes[index + 1].lineIndex;
-            }
-
+            if (index < scenes.length - 1) endLine = scenes[index + 1].lineIndex;
             const sceneContent = lines.slice(startLine + 1, endLine).join('\n');
             const formattedContent = formatScriptContent(sceneContent);
-
-            const display = document.getElementById('sceneDisplay');
-            display.innerHTML = `
+            document.getElementById('sceneDisplay').innerHTML = `
                 <div class="scene-header-display">
                     <div class="scene-number-large">Scene ${sceneNumber}</div>
                     <div class="scene-heading-large">${escapeHtml(scene.heading)}</div>
@@ -1990,61 +1556,29 @@ Categories must be EXACTLY: "makeup", "hair", "sfx", "wardrobe", "props", or "ca
             const lines = content.split('\n');
             let formattedHtml = '';
             let inDialogue = false;
-            let lastLineWasCharacter = false;
-
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i];
                 const trimmed = line.trim();
-
-                // Skip empty lines but preserve spacing
-                if (!trimmed) {
-                    formattedHtml += '<div class="script-line">&nbsp;</div>';
-                    inDialogue = false;
-                    lastLineWasCharacter = false;
-                    continue;
-                }
-
-                // Detect scene headings (INT./EXT.)
+                if (!trimmed) { formattedHtml += '<div class="script-line">&nbsp;</div>'; inDialogue = false; continue; }
                 if (/^(INT|EXT|INT\/EXT|I\/E)[\.\s]+/i.test(trimmed)) {
                     formattedHtml += `<div class="script-line script-scene-heading">${escapeHtml(trimmed)}</div>`;
                     inDialogue = false;
-                    lastLineWasCharacter = false;
-                }
-                // Detect transitions (FADE TO:, CUT TO:, etc.)
-                else if (/^(FADE|CUT|DISSOLVE|SMASH CUT).*:$/i.test(trimmed) || /^TO:$/i.test(trimmed)) {
+                } else if (/^(FADE|CUT|DISSOLVE|SMASH CUT).*:$/i.test(trimmed) || /^TO:$/i.test(trimmed)) {
                     formattedHtml += `<div class="script-line script-transition">${escapeHtml(trimmed)}</div>`;
                     inDialogue = false;
-                    lastLineWasCharacter = false;
-                }
-                // Detect parentheticals
-                else if (trimmed.startsWith('(') && trimmed.endsWith(')')) {
+                } else if (trimmed.startsWith('(') && trimmed.endsWith(')')) {
                     formattedHtml += `<div class="script-line script-parenthetical">${escapeHtml(trimmed)}</div>`;
                     inDialogue = true;
-                    lastLineWasCharacter = false;
-                }
-                // Detect character names (all caps, short lines)
-                else if (trimmed === trimmed.toUpperCase() &&
-                         trimmed.length > 0 &&
-                         trimmed.length < 40 &&
-                         /^[A-Z\s\.']+(\(.*\))?$/.test(trimmed) &&
-                         !inDialogue) {
+                } else if (trimmed === trimmed.toUpperCase() && trimmed.length > 0 && trimmed.length < 40 && /^[A-Z\s\.']+(\(.*\))?$/.test(trimmed) && !inDialogue) {
                     formattedHtml += `<div class="script-line script-character">${escapeHtml(trimmed)}</div>`;
                     inDialogue = true;
-                    lastLineWasCharacter = true;
-                }
-                // Dialogue (follows character name or is in dialogue mode)
-                else if (inDialogue) {
+                } else if (inDialogue) {
                     formattedHtml += `<div class="script-line script-dialogue">${escapeHtml(trimmed)}</div>`;
-                    lastLineWasCharacter = false;
-                }
-                // Action (everything else)
-                else {
+                } else {
                     formattedHtml += `<div class="script-line script-action">${escapeHtml(trimmed)}</div>`;
                     inDialogue = false;
-                    lastLineWasCharacter = false;
                 }
             }
-
             return formattedHtml;
         }
 
@@ -2052,23 +1586,13 @@ Categories must be EXACTLY: "makeup", "hair", "sfx", "wardrobe", "props", or "ca
             const sceneNumber = index + 1;
             const tags = sceneTags[sceneNumber] || [];
             const notes = sceneNotes[sceneNumber] || '';
-            
             const panel = document.getElementById('taggingPanel');
-            
             const aiSuggestions = tags.filter(t => t.aiSuggested && !t.accepted);
             const confirmedTags = tags.filter(t => t.accepted || !t.aiSuggested);
-            
             let html = '';
-            
-            // AI Banner
             if (aiSuggestions.length > 0) {
-                html += `
-                    <div class="ai-banner">
-                        🤖 ${aiSuggestions.length} AI suggestion(s) pending review
-                    </div>
-                `;
+                html += `<div class="ai-banner">🤖 ${aiSuggestions.length} AI suggestion(s) pending review</div>`;
             }
-            
             const tagSections = [
                 { category: 'makeup', title: 'Makeup', color: '#ff6b9d' },
                 { category: 'hair', title: 'Hair', color: '#c084fc' },
@@ -2077,12 +1601,10 @@ Categories must be EXACTLY: "makeup", "hair", "sfx", "wardrobe", "props", or "ca
                 { category: 'wardrobe', title: 'Wardrobe', color: '#34d399' },
                 { category: 'props', title: 'Props', color: '#fb923c' }
             ];
-            
             tagSections.forEach(section => {
                 const sectionTags = tags.filter(t => t.category === section.category);
                 const sectionAI = sectionTags.filter(t => t.aiSuggested && !t.accepted);
                 const sectionConfirmed = sectionTags.filter(t => t.accepted || !t.aiSuggested);
-                
                 html += `
                     <div class="tag-section">
                         <div class="tag-section-title">
@@ -2090,8 +1612,6 @@ Categories must be EXACTLY: "makeup", "hair", "sfx", "wardrobe", "props", or "ca
                             ${section.title}
                         </div>
                 `;
-                
-                // AI Suggestions
                 if (sectionAI.length > 0) {
                     html += '<div class="tag-list">';
                     sectionAI.forEach((tag, i) => {
@@ -2110,8 +1630,6 @@ Categories must be EXACTLY: "makeup", "hair", "sfx", "wardrobe", "props", or "ca
                     });
                     html += '</div>';
                 }
-                
-                // Confirmed Tags
                 if (sectionConfirmed.length > 0) {
                     html += '<div class="tag-list">';
                     sectionConfirmed.forEach((tag, i) => {
@@ -2124,32 +1642,16 @@ Categories must be EXACTLY: "makeup", "hair", "sfx", "wardrobe", "props", or "ca
                     });
                     html += '</div>';
                 }
-                
-                html += `
-                        <button class="add-tag-btn" onclick="openTagModal('${section.category}', '${section.title}')">
-                            + Add ${section.title}
-                        </button>
-                    </div>
-                `;
+                html += `<button class="add-tag-btn" onclick="openTagModal('${section.category}', '${section.title}')">+ Add ${section.title}</button></div>`;
             });
-            
             html += `
                 <div class="notes-section">
                     <div class="tag-section-title">📝 Scene Notes</div>
-                    <textarea 
-                        class="notes-textarea" 
-                        placeholder="Add notes about this scene..."
-                        onchange="saveSceneNotes(${sceneNumber}, this.value)"
-                    >${escapeHtml(notes)}</textarea>
+                    <textarea class="notes-textarea" placeholder="Add notes..." onchange="saveSceneNotes(${sceneNumber}, this.value)">${escapeHtml(notes)}</textarea>
                 </div>
             `;
-            
             panel.innerHTML = html;
         }
-
-        // ============================================
-        // TAG MANAGEMENT
-        // ============================================
 
         function acceptTag(sceneNumber, category, tagIndex) {
             const tags = sceneTags[sceneNumber].filter(t => t.category === category && t.aiSuggested && !t.accepted);
@@ -2173,7 +1675,6 @@ Categories must be EXACTLY: "makeup", "hair", "sfx", "wardrobe", "props", or "ca
 
         function removeConfirmedTag(sceneNumber, category, tagIndex) {
             if (!confirm('Remove this tag?')) return;
-            
             const confirmedTags = sceneTags[sceneNumber].filter(t => t.category === category && (t.accepted || !t.aiSuggested));
             const tagToRemove = confirmedTags[tagIndex];
             sceneTags[sceneNumber] = sceneTags[sceneNumber].filter(t => t !== tagToRemove);
@@ -2185,7 +1686,7 @@ Categories must be EXACTLY: "makeup", "hair", "sfx", "wardrobe", "props", or "ca
         function openTagModal(category, title) {
             currentTagCategory = category;
             document.getElementById('modalTitle').textContent = `Add ${title}`;
-            document.getElementById('modalSubtitle').textContent = `Manually add a ${title.toLowerCase()} item`;
+            document.getElementById('modalSubtitle').textContent = `Manually add ${title.toLowerCase()}`;
             document.getElementById('tagDescription').value = '';
             document.getElementById('addTagModal').classList.add('active');
             document.getElementById('tagDescription').focus();
@@ -2197,25 +1698,10 @@ Categories must be EXACTLY: "makeup", "hair", "sfx", "wardrobe", "props", or "ca
 
         function saveTag() {
             const description = document.getElementById('tagDescription').value.trim();
-            
-            if (!description) {
-                alert('Please enter a description');
-                return;
-            }
-            
+            if (!description) { alert('Please enter a description'); return; }
             const sceneNumber = currentSceneIndex + 1;
-            
-            if (!sceneTags[sceneNumber]) {
-                sceneTags[sceneNumber] = [];
-            }
-            
-            sceneTags[sceneNumber].push({
-                category: currentTagCategory,
-                description: description,
-                aiSuggested: false,
-                accepted: true
-            });
-            
+            if (!sceneTags[sceneNumber]) sceneTags[sceneNumber] = [];
+            sceneTags[sceneNumber].push({ category: currentTagCategory, description: description, aiSuggested: false, accepted: true });
             saveProjectData();
             displayTaggingPanel(currentSceneIndex);
             renderSceneNavigation();
@@ -2227,10 +1713,6 @@ Categories must be EXACTLY: "makeup", "hair", "sfx", "wardrobe", "props", or "ca
             sceneNotes[sceneNumber] = notes;
             saveProjectData();
         }
-
-        // ============================================
-        // SETTINGS
-        // ============================================
 
         function openSettings() {
             document.getElementById('apiKey').value = apiKey;
@@ -2245,29 +1727,17 @@ Categories must be EXACTLY: "makeup", "hair", "sfx", "wardrobe", "props", or "ca
         function saveSettings() {
             apiKey = document.getElementById('apiKey').value.trim();
             aiProvider = document.getElementById('aiProvider').value;
-            
-            if (!apiKey) {
-                alert('Please enter an API key');
-                return;
-            }
-            
+            if (!apiKey) { alert('Please enter an API key'); return; }
             localStorage.setItem('aiApiKey', apiKey);
             localStorage.setItem('aiProvider', aiProvider);
-            
             closeSettings();
             alert('✓ Settings saved!');
         }
 
-        // ============================================
-        // WORKFLOW
-        // ============================================
-
         function updateWorkflowStep(step) {
-            // Reset all
             document.getElementById('stepAI').classList.remove('active', 'completed');
             document.getElementById('stepReview').classList.remove('active', 'completed');
             document.getElementById('stepGenerate').classList.remove('active', 'completed');
-            
             if (step === 'ai') {
                 document.getElementById('stepAI').classList.add('active');
             } else if (step === 'review') {
@@ -2281,12 +1751,9 @@ Categories must be EXACTLY: "makeup", "hair", "sfx", "wardrobe", "props", or "ca
         }
 
         function updateGenerateButton() {
-            // Check if all AI suggestions have been reviewed
             const allTags = Object.values(sceneTags).flat();
             const pendingAI = allTags.filter(t => t.aiSuggested && !t.accepted);
-            
             const generateBtn = document.getElementById('generateBtn');
-            
             if (pendingAI.length === 0 && allTags.length > 0) {
                 generateBtn.disabled = false;
                 updateWorkflowStep('generate');
@@ -2296,27 +1763,16 @@ Categories must be EXACTLY: "makeup", "hair", "sfx", "wardrobe", "props", or "ca
         }
 
         function generateBreakdown() {
-            if (!confirm('Generate final breakdown document?')) return;
-            
-            // Save all data
+            if (!confirm('Generate final breakdown?')) return;
             saveProjectData();
-            
-            // Navigate to generate-breakdown.html
             window.location.href = 'generate-breakdown.html';
         }
-
-        // ============================================
-        // DATA PERSISTENCE
-        // ============================================
 
         function saveProjectData() {
             currentProject.scenes = scenes;
             currentProject.sceneTags = sceneTags;
             currentProject.sceneNotes = sceneNotes;
-            
             localStorage.setItem('currentProject', JSON.stringify(currentProject));
-            
-            // Also update in projects list
             const projects = JSON.parse(localStorage.getItem('checksHappyProjects') || '[]');
             const projectIndex = projects.findIndex(p => p.code === currentProject.code);
             if (projectIndex !== -1) {
@@ -2327,23 +1783,13 @@ Categories must be EXACTLY: "makeup", "hair", "sfx", "wardrobe", "props", or "ca
             }
         }
 
-        // ============================================
-        // SEARCH
-        // ============================================
-
         function handleSceneSearch(e) {
             const searchTerm = e.target.value.toLowerCase();
-            const navItems = document.querySelectorAll('.scene-nav-item');
-            
-            navItems.forEach(item => {
+            document.querySelectorAll('.scene-nav-item').forEach(item => {
                 const heading = item.querySelector('.scene-nav-heading').textContent.toLowerCase();
                 item.style.display = heading.includes(searchTerm) ? 'block' : 'none';
             });
         }
-
-        // ============================================
-        // UTILITIES
-        // ============================================
 
         function showLoading(text, subtext) {
             document.getElementById('loadingText').textContent = text;
@@ -2360,7 +1806,7 @@ Categories must be EXACTLY: "makeup", "hair", "sfx", "wardrobe", "props", or "ca
         }
 
         function goBack() {
-            if (confirm('Return to dashboard? Any unsaved changes will be lost.')) {
+            if (confirm('Return to dashboard? Unsaved changes will be lost.')) {
                 window.location.href = 'dashboard.html';
             }
         }
@@ -2370,10 +1816,6 @@ Categories must be EXACTLY: "makeup", "hair", "sfx", "wardrobe", "props", or "ca
             div.textContent = text;
             return div.innerHTML;
         }
-
-        // ============================================
-        // INITIALIZE
-        // ============================================
 
         init();
     </script>
