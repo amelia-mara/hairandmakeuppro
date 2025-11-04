@@ -769,7 +769,8 @@
 
             <div class="top-bar-actions">
                 <button class="toggle-btn" id="toggleTags">🏷️ Tags</button>
-                <button class="toolbar-btn">📤 Upload Script</button>
+                <button class="toolbar-btn" onclick="document.getElementById('scriptUploadInput').click()">📤 Upload Script</button>
+                <input type="file" id="scriptUploadInput" accept=".txt,.fountain,.pdf" style="display: none;" onchange="handleScriptUploadInBreakdown(event)">
                 <button class="toolbar-btn">🤖 AI Tools</button>
                 <button class="toolbar-btn primary">✨ Generate Breakdown</button>
             </div>
@@ -1244,6 +1245,154 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
         let tagsVisible = true;
         let selectedText = null;
         let selectedRange = null;
+        let currentProject = null;
+
+        // Load project and script on page load
+        function loadProjectScript() {
+            const projectData = localStorage.getItem('currentProject');
+            if (projectData) {
+                currentProject = JSON.parse(projectData);
+                
+                // Update page title
+                document.querySelector('.page-title').textContent = `Script Breakdown - ${currentProject.title}`;
+                
+                // If project has script content, parse and display it
+                if (currentProject.scriptContent) {
+                    parseAndDisplayScript(currentProject.scriptContent);
+                } else {
+                    console.log('No script content found, showing demo script');
+                }
+            }
+        }
+
+        // Parse plain text script into formatted HTML
+        function parseAndDisplayScript(scriptText) {
+            const lines = scriptText.split('\n');
+            let html = '';
+            let sceneNumber = 0;
+            let currentSceneHtml = '';
+            let inScene = false;
+            
+            // Simple script parser
+            lines.forEach((line, index) => {
+                const trimmed = line.trim();
+                
+                // Detect scene headings (INT. or EXT. at start)
+                if (trimmed.match(/^(INT\.|EXT\.)/i)) {
+                    // Save previous scene if exists
+                    if (currentSceneHtml) {
+                        html += `</div>`; // Close previous scene
+                    }
+                    
+                    sceneNumber++;
+                    html += `<div class="script-scene" id="scene-${sceneNumber}">`;
+                    html += `<div class="script-scene-heading">${sceneNumber}. ${trimmed}</div>`;
+                    currentSceneHtml = trimmed;
+                    inScene = true;
+                }
+                // Detect character names (all caps, centered-ish)
+                else if (trimmed === trimmed.toUpperCase() && trimmed.length > 0 && trimmed.length < 30 && !trimmed.match(/^[A-Z\s]+:$/)) {
+                    html += `<div class="script-character">${trimmed}</div>`;
+                }
+                // Parentheticals
+                else if (trimmed.startsWith('(') && trimmed.endsWith(')')) {
+                    html += `<div class="script-parenthetical">${trimmed}</div>`;
+                }
+                // Empty lines
+                else if (trimmed === '') {
+                    // Just space
+                }
+                // Action/dialogue
+                else if (trimmed.length > 0) {
+                    // Check if previous element was character name (then this is dialogue)
+                    if (html.includes('script-character') && html.lastIndexOf('script-character') > html.lastIndexOf('script-action')) {
+                        html += `<div class="script-dialogue">${trimmed}</div>`;
+                    } else {
+                        html += `<div class="script-action">${trimmed}</div>`;
+                    }
+                }
+            });
+            
+            // Close last scene
+            if (currentSceneHtml) {
+                html += `</div>`;
+            }
+            
+            // Update script viewer
+            const scriptContent = document.querySelector('.script-content');
+            if (scriptContent && sceneNumber > 0) {
+                scriptContent.innerHTML = html;
+                
+                // Generate scene list
+                generateSceneList(sceneNumber);
+                
+                // Initialize scene tags
+                initializeSceneTags(sceneNumber);
+            }
+        }
+
+        // Generate scene list from parsed script
+        function generateSceneList(numScenes) {
+            const sceneList = document.getElementById('sceneList');
+            sceneList.innerHTML = '';
+            
+            for (let i = 1; i <= numScenes; i++) {
+                const sceneElement = document.getElementById(`scene-${i}`);
+                if (!sceneElement) continue;
+                
+                const heading = sceneElement.querySelector('.script-scene-heading')?.textContent || `Scene ${i}`;
+                const headingText = heading.replace(/^\d+\.\s*/, '');
+                
+                // Determine scene type
+                let sceneType = 'int-day';
+                if (headingText.match(/^EXT\./i)) {
+                    sceneType = headingText.match(/NIGHT/i) ? 'ext-night' : 'ext-day';
+                } else if (headingText.match(/^INT\./i)) {
+                    sceneType = headingText.match(/NIGHT/i) ? 'int-night' : 'int-day';
+                }
+                
+                const typeLabel = {
+                    'int-day': 'INT / Day',
+                    'int-night': 'INT / Night',
+                    'ext-day': 'EXT / Day',
+                    'ext-night': 'EXT / Night'
+                }[sceneType];
+                
+                const sceneItem = document.createElement('div');
+                sceneItem.className = `scene-item${i === 1 ? ' active expanded' : ''}`;
+                sceneItem.setAttribute('data-scene', i);
+                sceneItem.onclick = () => scrollToScene(i);
+                
+                sceneItem.innerHTML = `
+                    <div class="scene-header">
+                        <div class="scene-number">${i}</div>
+                        <div style="flex: 1;">
+                            <div class="scene-heading">${headingText}</div>
+                            <span class="scene-type ${sceneType}">${typeLabel}</span>
+                        </div>
+                    </div>
+                    <div class="scene-details">
+                        <div class="scene-synopsis">
+                            Click to add synopsis...
+                        </div>
+                        <div class="tag-items-list">
+                            <!-- Tags will be added here -->
+                        </div>
+                        <button class="breakdown-btn">Open Full Breakdown →</button>
+                    </div>
+                `;
+                
+                sceneList.appendChild(sceneItem);
+            }
+        }
+
+        // Initialize empty tags for new scenes
+        function initializeSceneTags(numScenes) {
+            sceneTags = {};
+            for (let i = 1; i <= numScenes; i++) {
+                sceneTags[i] = [];
+            }
+        }
 
         // Data structure to store all tags by scene
         let sceneTags = {
@@ -1568,6 +1717,48 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
 
         // Initialize - expand first scene
         document.querySelector('.scene-item').classList.add('expanded');
+        
+        // Load project script
+        loadProjectScript();
+
+        // Handle script upload directly in breakdown page
+        function handleScriptUploadInBreakdown(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            if (file.type === 'text/plain' || file.name.endsWith('.txt') || file.name.endsWith('.fountain')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const scriptContent = e.target.result;
+                    
+                    // Update current project with script
+                    if (currentProject) {
+                        currentProject.scriptContent = scriptContent;
+                        currentProject.scriptName = file.name;
+                        
+                        // Save to localStorage
+                        localStorage.setItem('currentProject', JSON.stringify(currentProject));
+                        
+                        // Update the projects list too
+                        const projects = JSON.parse(localStorage.getItem('checksHappyProjects') || '[]');
+                        const projectIndex = projects.findIndex(p => p.code === currentProject.code);
+                        if (projectIndex !== -1) {
+                            projects[projectIndex].scriptContent = scriptContent;
+                            projects[projectIndex].scriptName = file.name;
+                            localStorage.setItem('checksHappyProjects', JSON.stringify(projects));
+                        }
+                    }
+                    
+                    // Parse and display
+                    parseAndDisplayScript(scriptContent);
+                    
+                    alert(`Script "${file.name}" uploaded successfully!`);
+                };
+                reader.readAsText(file);
+            } else {
+                alert('Please upload a .txt or .fountain file. PDF parsing coming soon!');
+            }
+        }
     </script>
 </body>
 </html>
