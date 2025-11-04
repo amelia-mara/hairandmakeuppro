@@ -936,25 +936,25 @@
                         </div>
                         <div id="disposables-items">
                             <div class="input-row">
-                                <input type="text" class="form-input" placeholder="Item description" value="Mascara Wands (Pack of 100)">
-                                <input type="number" class="form-input" placeholder="Qty" value="3">
-                                <input type="number" class="form-input" placeholder="Unit Price (£)" value="8.00" step="0.01">
+                                <input type="text" class="form-input item-description" placeholder="Item description" value="Mascara Wands (Pack of 100)" data-category="disposables">
+                                <input type="number" class="form-input item-qty" placeholder="Qty" value="3" min="0">
+                                <input type="number" class="form-input item-price" placeholder="Unit Price (£)" value="8.00" step="0.01" min="0">
                                 <div class="calculated-value">£24.00</div>
-                                <button class="delete-btn">×</button>
+                                <button class="delete-btn" onclick="removeItem(this)">×</button>
                             </div>
                             <div class="input-row">
-                                <input type="text" class="form-input" placeholder="Item description" value="Cotton Pads (Pack of 200)">
-                                <input type="number" class="form-input" placeholder="Qty" value="4">
-                                <input type="number" class="form-input" placeholder="Unit Price (£)" value="4.50" step="0.01">
+                                <input type="text" class="form-input item-description" placeholder="Item description" value="Cotton Pads (Pack of 200)" data-category="disposables">
+                                <input type="number" class="form-input item-qty" placeholder="Qty" value="4" min="0">
+                                <input type="number" class="form-input item-price" placeholder="Unit Price (£)" value="4.50" step="0.01" min="0">
                                 <div class="calculated-value">£18.00</div>
-                                <button class="delete-btn">×</button>
+                                <button class="delete-btn" onclick="removeItem(this)">×</button>
                             </div>
                             <div class="input-row">
-                                <input type="text" class="form-input" placeholder="Item description" value="Disposable Makeup Sponges (Pack of 20)">
-                                <input type="number" class="form-input" placeholder="Qty" value="5">
-                                <input type="number" class="form-input" placeholder="Unit Price (£)" value="12.00" step="0.01">
+                                <input type="text" class="form-input item-description" placeholder="Item description" value="Disposable Makeup Sponges (Pack of 20)" data-category="disposables">
+                                <input type="number" class="form-input item-qty" placeholder="Qty" value="5" min="0">
+                                <input type="number" class="form-input item-price" placeholder="Unit Price (£)" value="12.00" step="0.01" min="0">
                                 <div class="calculated-value">£60.00</div>
-                                <button class="delete-btn">×</button>
+                                <button class="delete-btn" onclick="removeItem(this)">×</button>
                             </div>
                         </div>
                         <div class="category-total">
@@ -976,23 +976,56 @@
                         </div>
                         <div id="hygiene-items">
                             <div class="input-row">
-                                <input type="text" class="form-input" placeholder="Item description" value="Isopropyl Alcohol 99% (1L)">
-                                <input type="number" class="form-input" placeholder="Qty" value="3">
-                                <input type="number" class="form-input" placeholder="Unit Price (£)" value="12.00" step="0.01">
+                                <input type="text" class="form-input item-description" placeholder="Item description" value="Isopropyl Alcohol 99% (1L)" data-category="hygiene">
+                                <input type="number" class="form-input item-qty" placeholder="Qty" value="3" min="0">
+                                <input type="number" class="form-input item-price" placeholder="Unit Price (£)" value="12.00" step="0.01" min="0">
                                 <div class="calculated-value">£36.00</div>
-                                <button class="delete-btn">×</button>
+                                <button class="delete-btn" onclick="removeItem(this)">×</button>
                             </div>
                             <div class="input-row">
-                                <input type="text" class="form-input" placeholder="Item description" value="Brush Cleaner (250ml)">
-                                <input type="number" class="form-input" placeholder="Qty" value="2">
-                                <input type="number" class="form-input" placeholder="Unit Price (£)" value="15.00" step="0.01">
+                                <input type="text" class="form-input item-description" placeholder="Item description" value="Brush Cleaner (250ml)" data-category="hygiene">
+                                <input type="number" class="form-input item-qty" placeholder="Qty" value="2" min="0">
+                                <input type="number" class="form-input item-price" placeholder="Unit Price (£)" value="15.00" step="0.01" min="0">
                                 <div class="calculated-value">£30.00</div>
-                                <button class="delete-btn">×</button>
+                                <button class="delete-btn" onclick="removeItem(this)">×</button>
                             </div>
                         </div>
                         <div class="category-total">
                             <span class="total-label">Category Total</span>
                             <span class="total-value">£112.00</span>
+                        </div>
+                    </div>
+
+                    <!-- Everyday Consumables Category -->
+                    <div class="budget-section">
+                        <div class="budget-section-header">
+                            <div class="section-title">
+                                <span class="section-icon">🛍️</span>
+                                Everyday Consumables
+                            </div>
+                            <div class="section-actions">
+                                <button class="icon-btn" onclick="addItem('consumables')">+ Add Item</button>
+                            </div>
+                        </div>
+                        <div id="consumables-items">
+                            <div class="input-row">
+                                <input type="text" class="form-input item-description" placeholder="Item description" value="Makeup Remover Wipes (Pack of 25)" data-category="consumables">
+                                <input type="number" class="form-input item-qty" placeholder="Qty" value="6" min="0">
+                                <input type="number" class="form-input item-price" placeholder="Unit Price (£)" value="4.00" step="0.01" min="0">
+                                <div class="calculated-value">£24.00</div>
+                                <button class="delete-btn" onclick="removeItem(this)">×</button>
+                            </div>
+                            <div class="input-row">
+                                <input type="text" class="form-input item-description" placeholder="Item description" value="Setting Spray (100ml)" data-category="consumables">
+                                <input type="number" class="form-input item-qty" placeholder="Qty" value="3" min="0">
+                                <input type="number" class="form-input item-price" placeholder="Unit Price (£)" value="15.00" step="0.01" min="0">
+                                <div class="calculated-value">£45.00</div>
+                                <button class="delete-btn" onclick="removeItem(this)">×</button>
+                            </div>
+                        </div>
+                        <div class="category-total">
+                            <span class="total-label">Category Total</span>
+                            <span class="total-value">£171.00</span>
                         </div>
                     </div>
 
@@ -1218,9 +1251,86 @@
     </div>
 
     <script>
+        // Budget State Management
+        const budgetState = {
+            projectInfo: {
+                name: 'The Big Race',
+                designer: '',
+                type: 'Feature Film',
+                duration: '4 weeks'
+            },
+            categories: {
+                disposables: [],
+                hygiene: [],
+                consumables: [],
+                beauty: [],
+                sfx: [],
+                hair: [],
+                tools: [],
+                custom: []
+            },
+            expenses: []
+        };
+
+        // Category Configuration
+        const categoryConfig = {
+            disposables: { icon: '📦', name: 'Disposables' },
+            hygiene: { icon: '🧼', name: 'Hygiene & Sanitation' },
+            consumables: { icon: '🛍️', name: 'Everyday Consumables' },
+            beauty: { icon: '💄', name: 'Beauty Products' },
+            sfx: { icon: '🎭', name: 'Special Effects' },
+            hair: { icon: '✂️', name: 'Hair Products' },
+            tools: { icon: '🔧', name: 'Tools & Equipment' },
+            custom: { icon: '🛠️', name: 'Custom Builds / Fabrication' }
+        };
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadFromLocalStorage();
+            initializeExistingRows();
+            updateAllTotals();
+            setupEventListeners();
+        });
+
+        // Setup Event Listeners
+        function setupEventListeners() {
+            // Listen for input changes on all number inputs
+            document.addEventListener('input', function(e) {
+                if (e.target.classList.contains('form-input') && e.target.type === 'number') {
+                    updateRowTotal(e.target.closest('.input-row'));
+                    updateCategoryTotal(e.target.closest('.input-row').parentElement);
+                    updateGrandTotal();
+                    updateOverviewTab();
+                }
+                
+                // Save project info changes
+                if (e.target.closest('.budget-section') && e.target.closest('.budget-section').querySelector('.section-title')?.textContent.includes('Project Information')) {
+                    saveProjectInfo();
+                }
+            });
+
+            // Close modal when clicking outside
+            document.getElementById('templateModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeModal();
+                }
+            });
+        }
+
+        // Initialize existing rows
+        function initializeExistingRows() {
+            document.querySelectorAll('.input-row').forEach(row => {
+                updateRowTotal(row);
+            });
+            document.querySelectorAll('[id$="-items"]').forEach(container => {
+                if (container.querySelectorAll('.input-row').length > 0) {
+                    updateCategoryTotal(container);
+                }
+            });
+        }
+
         // Tab Switching
         function switchTab(tabName) {
-            // Hide all tabs
             document.querySelectorAll('.tab-content').forEach(tab => {
                 tab.classList.remove('active');
             });
@@ -1228,9 +1338,13 @@
                 tab.classList.remove('active');
             });
 
-            // Show selected tab
             document.getElementById(tabName + '-tab').classList.add('active');
             event.target.classList.add('active');
+
+            // Update overview when switching to it
+            if (tabName === 'overview') {
+                updateOverviewTab();
+            }
         }
 
         // Add Item to Category
@@ -1246,13 +1360,20 @@
             const newRow = document.createElement('div');
             newRow.className = 'input-row';
             newRow.innerHTML = `
-                <input type="text" class="form-input" placeholder="Item description">
-                <input type="number" class="form-input" placeholder="Qty" value="1" onchange="calculateTotal()">
-                <input type="number" class="form-input" placeholder="Unit Price (£)" value="0" step="0.01" onchange="calculateTotal()">
+                <input type="text" class="form-input item-description" placeholder="Item description" data-category="${category}">
+                <input type="number" class="form-input item-qty" placeholder="Qty" value="1" min="0">
+                <input type="number" class="form-input item-price" placeholder="Unit Price (£)" value="0.00" step="0.01" min="0">
                 <div class="calculated-value">£0.00</div>
                 <button class="delete-btn" onclick="removeItem(this)">×</button>
             `;
             container.appendChild(newRow);
+            
+            updateCategoryTotal(container);
+            updateGrandTotal();
+            saveBudgetData();
+            
+            // Focus on the description input
+            newRow.querySelector('.item-description').focus();
         }
 
         // Remove Item
@@ -1264,31 +1385,279 @@
             // Show empty state if no items left
             if (container.querySelectorAll('.input-row').length === 0) {
                 const categoryName = container.id.replace('-items', '');
-                const icons = {
-                    disposables: '📦',
-                    hygiene: '🧼',
-                    beauty: '💄',
-                    sfx: '🎭',
-                    hair: '✂️',
-                    tools: '🔧',
-                    custom: '🛠️'
-                };
+                const config = categoryConfig[categoryName];
+                const emptyDesc = categoryName === 'custom' 
+                    ? 'For prosthetics/fabrication, list materials as separate line items, then add labor costs'
+                    : 'Click "Add Item" to start building your budget';
+                
                 container.innerHTML = `
                     <div class="empty-state">
-                        <div class="empty-icon">${icons[categoryName] || '📦'}</div>
+                        <div class="empty-icon">${config.icon}</div>
                         <div class="empty-title">No items added yet</div>
-                        <div class="empty-desc">Click "Add Item" to start building your budget</div>
+                        <div class="empty-desc">${emptyDesc}</div>
                     </div>
                 `;
             }
 
-            calculateTotal();
+            updateCategoryTotal(container);
+            updateGrandTotal();
+            updateOverviewTab();
+            saveBudgetData();
         }
 
-        // Calculate Totals
-        function calculateTotal() {
-            // This would calculate all category totals and grand total
-            console.log('Calculating totals...');
+        // Update row total
+        function updateRowTotal(row) {
+            if (!row) return;
+            
+            const qtyInput = row.querySelector('.item-qty');
+            const priceInput = row.querySelector('.item-price');
+            const totalDisplay = row.querySelector('.calculated-value');
+            
+            if (qtyInput && priceInput && totalDisplay) {
+                const qty = parseFloat(qtyInput.value) || 0;
+                const price = parseFloat(priceInput.value) || 0;
+                const total = qty * price;
+                totalDisplay.textContent = '£' + total.toFixed(2);
+            }
+        }
+
+        // Update category total
+        function updateCategoryTotal(container) {
+            if (!container) return;
+            
+            let categoryTotal = 0;
+            container.querySelectorAll('.input-row').forEach(row => {
+                const qtyInput = row.querySelector('.item-qty');
+                const priceInput = row.querySelector('.item-price');
+                if (qtyInput && priceInput) {
+                    const qty = parseFloat(qtyInput.value) || 0;
+                    const price = parseFloat(priceInput.value) || 0;
+                    categoryTotal += qty * price;
+                }
+            });
+
+            // Update the category total display
+            const section = container.closest('.budget-section');
+            const totalDisplay = section?.querySelector('.category-total .total-value');
+            if (totalDisplay) {
+                totalDisplay.textContent = '£' + categoryTotal.toFixed(2);
+            }
+
+            return categoryTotal;
+        }
+
+        // Calculate all category totals and return object
+        function getAllCategoryTotals() {
+            const totals = {};
+            Object.keys(categoryConfig).forEach(category => {
+                const container = document.getElementById(category + '-items');
+                if (container) {
+                    totals[category] = updateCategoryTotal(container);
+                }
+            });
+            return totals;
+        }
+
+        // Update grand total
+        function updateGrandTotal() {
+            const totals = getAllCategoryTotals();
+            const grandTotal = Object.values(totals).reduce((sum, val) => sum + val, 0);
+            
+            const grandTotalDisplay = document.querySelector('.grand-total-value');
+            if (grandTotalDisplay) {
+                grandTotalDisplay.textContent = '£' + grandTotal.toFixed(2);
+            }
+
+            return grandTotal;
+        }
+
+        // Update Overview Tab
+        function updateOverviewTab() {
+            const categoryTotals = getAllCategoryTotals();
+            const totalBudget = Object.values(categoryTotals).reduce((sum, val) => sum + val, 0);
+            
+            // Calculate spent (mock data - in real app this would come from expenses)
+            const totalSpent = totalBudget * 0.267; // 26.7% spent
+            const remaining = totalBudget - totalSpent;
+
+            // Update stat cards
+            document.querySelector('.overview-grid .stat-card:nth-child(1) .stat-value').textContent = 
+                '£' + totalBudget.toFixed(2);
+            document.querySelector('.overview-grid .stat-card:nth-child(2) .stat-value').textContent = 
+                '£' + totalSpent.toFixed(2);
+            document.querySelector('.overview-grid .stat-card:nth-child(3) .stat-value').textContent = 
+                '£' + remaining.toFixed(2);
+
+            // Update percentages
+            const spentPercent = totalBudget > 0 ? (totalSpent / totalBudget * 100).toFixed(1) : 0;
+            const remainingPercent = totalBudget > 0 ? (remaining / totalBudget * 100).toFixed(1) : 0;
+            
+            document.querySelector('.overview-grid .stat-card:nth-child(2) .stat-change span:last-child').textContent = 
+                spentPercent + '% of budget';
+            document.querySelector('.overview-grid .stat-card:nth-child(3) .stat-change span:last-child').textContent = 
+                remainingPercent + '% available';
+
+            // Update progress bar
+            document.querySelector('.progress-value').textContent = spentPercent + '% Used';
+            const progressFill = document.querySelector('.progress-fill');
+            progressFill.style.width = spentPercent + '%';
+            
+            // Update progress bar color based on usage
+            progressFill.classList.remove('warning', 'danger');
+            if (spentPercent > 80) {
+                progressFill.classList.add('danger');
+            } else if (spentPercent > 60) {
+                progressFill.classList.add('warning');
+            }
+
+            // Update category breakdown table
+            updateCategoryBreakdownTable(categoryTotals, totalSpent);
+        }
+
+        // Update category breakdown table in overview
+        function updateCategoryBreakdownTable(categoryTotals, totalSpent) {
+            const tableBody = document.querySelector('#overview-tab .category-table tbody');
+            if (!tableBody) return;
+
+            const rows = tableBody.querySelectorAll('tr');
+            const categoryKeys = ['disposables', 'hygiene', 'consumables', 'beauty', 'sfx', 'hair', 'tools', 'custom'];
+            
+            rows.forEach((row, index) => {
+                if (index < categoryKeys.length) {
+                    const category = categoryKeys[index];
+                    const budgeted = categoryTotals[category] || 0;
+                    const spent = budgeted * 0.267; // Mock 26.7% spent
+                    const remaining = budgeted - spent;
+
+                    const cells = row.querySelectorAll('td');
+                    if (cells.length >= 4) {
+                        cells[1].textContent = '£' + budgeted.toFixed(2);
+                        cells[2].textContent = '£' + spent.toFixed(2);
+                        cells[3].textContent = '£' + remaining.toFixed(2);
+                    }
+                }
+            });
+        }
+
+        // Save budget data to localStorage
+        function saveBudgetData() {
+            const budgetData = {
+                projectInfo: getProjectInfo(),
+                categories: getAllCategoryData(),
+                timestamp: new Date().toISOString()
+            };
+            
+            localStorage.setItem('hmBudget', JSON.stringify(budgetData));
+        }
+
+        // Get project info
+        function getProjectInfo() {
+            const projectSection = document.querySelector('#proposal-tab .budget-section');
+            if (!projectSection) return budgetState.projectInfo;
+
+            const inputs = projectSection.querySelectorAll('.form-input, .form-select');
+            return {
+                name: inputs[0]?.value || '',
+                designer: inputs[1]?.value || '',
+                type: inputs[2]?.value || 'Feature Film',
+                duration: inputs[3]?.value || ''
+            };
+        }
+
+        // Save project info
+        function saveProjectInfo() {
+            saveBudgetData();
+        }
+
+        // Get all category data
+        function getAllCategoryData() {
+            const data = {};
+            
+            Object.keys(categoryConfig).forEach(category => {
+                const container = document.getElementById(category + '-items');
+                if (!container) return;
+
+                const items = [];
+                container.querySelectorAll('.input-row').forEach(row => {
+                    const description = row.querySelector('.item-description')?.value || '';
+                    const qty = parseFloat(row.querySelector('.item-qty')?.value) || 0;
+                    const price = parseFloat(row.querySelector('.item-price')?.value) || 0;
+                    
+                    if (description || qty || price) {
+                        items.push({ description, qty, price });
+                    }
+                });
+                
+                data[category] = items;
+            });
+
+            return data;
+        }
+
+        // Load from localStorage
+        function loadFromLocalStorage() {
+            const saved = localStorage.getItem('hmBudget');
+            if (!saved) return;
+
+            try {
+                const data = JSON.parse(saved);
+                
+                // Load project info
+                if (data.projectInfo) {
+                    loadProjectInfo(data.projectInfo);
+                }
+
+                // Load categories
+                if (data.categories) {
+                    loadCategoryData(data.categories);
+                }
+            } catch (e) {
+                console.error('Error loading saved data:', e);
+            }
+        }
+
+        // Load project info
+        function loadProjectInfo(info) {
+            const projectSection = document.querySelector('#proposal-tab .budget-section');
+            if (!projectSection) return;
+
+            const inputs = projectSection.querySelectorAll('.form-input, .form-select');
+            if (inputs[0]) inputs[0].value = info.name || '';
+            if (inputs[1]) inputs[1].value = info.designer || '';
+            if (inputs[2]) inputs[2].value = info.type || 'Feature Film';
+            if (inputs[3]) inputs[3].value = info.duration || '';
+        }
+
+        // Load category data
+        function loadCategoryData(categories) {
+            Object.keys(categories).forEach(category => {
+                const items = categories[category];
+                if (!items || items.length === 0) return;
+
+                const container = document.getElementById(category + '-items');
+                if (!container) return;
+
+                // Clear empty state
+                const emptyState = container.querySelector('.empty-state');
+                if (emptyState) emptyState.remove();
+
+                // Clear existing rows (except sample data)
+                container.innerHTML = '';
+
+                // Add items
+                items.forEach(item => {
+                    const newRow = document.createElement('div');
+                    newRow.className = 'input-row';
+                    newRow.innerHTML = `
+                        <input type="text" class="form-input item-description" placeholder="Item description" value="${item.description}" data-category="${category}">
+                        <input type="number" class="form-input item-qty" placeholder="Qty" value="${item.qty}" min="0">
+                        <input type="number" class="form-input item-price" placeholder="Unit Price (£)" value="${item.price.toFixed(2)}" step="0.01" min="0">
+                        <div class="calculated-value">£${(item.qty * item.price).toFixed(2)}</div>
+                        <button class="delete-btn" onclick="removeItem(this)">×</button>
+                    `;
+                    container.appendChild(newRow);
+                });
+            });
         }
 
         // Modal Functions
@@ -1301,43 +1670,132 @@
         }
 
         function loadTemplate() {
-            alert('Template loaded! Budget populated with default values.');
+            // Sample template data
+            const templateData = {
+                disposables: [
+                    { description: 'Mascara Wands (Pack of 100)', qty: 3, price: 8.00 },
+                    { description: 'Cotton Pads (Pack of 200)', qty: 4, price: 4.50 },
+                    { description: 'Cotton Buds (Pack of 200)', qty: 3, price: 3.00 },
+                    { description: 'Tissues (Box)', qty: 5, price: 2.50 },
+                    { description: 'Disposable Makeup Sponges (Pack of 20)', qty: 5, price: 12.00 }
+                ],
+                hygiene: [
+                    { description: 'Isopropyl Alcohol 99% (1L)', qty: 3, price: 12.00 },
+                    { description: 'Brush Cleaner (250ml)', qty: 2, price: 15.00 },
+                    { description: 'Hand Sanitizer (500ml)', qty: 3, price: 6.00 }
+                ],
+                consumables: [
+                    { description: 'Makeup Remover Wipes (Pack of 25)', qty: 6, price: 4.00 },
+                    { description: 'Setting Spray (100ml)', qty: 3, price: 15.00 },
+                    { description: 'Translucent Powder (30g)', qty: 2, price: 25.00 }
+                ]
+            };
+
+            loadCategoryData(templateData);
+            updateAllTotals();
+            
             closeModal();
+            
+            // Show success message
+            showNotification('Template loaded successfully!', 'success');
+        }
+
+        // Update all totals
+        function updateAllTotals() {
+            // Update all row totals
+            document.querySelectorAll('.input-row').forEach(row => {
+                updateRowTotal(row);
+            });
+
+            // Update all category totals
+            document.querySelectorAll('[id$="-items"]').forEach(container => {
+                updateCategoryTotal(container);
+            });
+
+            // Update grand total
+            updateGrandTotal();
+
+            // Update overview
+            updateOverviewTab();
         }
 
         // Save Budget
         function saveBudget() {
-            alert('Budget saved successfully!');
+            saveBudgetData();
+            showNotification('Budget saved successfully!', 'success');
         }
 
-        // Export Budget
+        // Export Budget to PDF
         function exportBudget() {
-            alert('Exporting budget to PDF...');
+            // In a real app, this would generate a PDF
+            showNotification('Export feature coming soon! Budget data ready for PDF generation.', 'info');
+            
+            // Log the data that would be exported
+            console.log('Exporting budget:', {
+                projectInfo: getProjectInfo(),
+                categories: getAllCategoryData(),
+                totals: getAllCategoryTotals(),
+                grandTotal: updateGrandTotal()
+            });
+        }
+
+        // Show notification
+        function showNotification(message, type = 'success') {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 80px;
+                right: 32px;
+                background: ${type === 'success' ? 'var(--success)' : type === 'danger' ? 'var(--danger)' : 'var(--accent-gold)'};
+                color: var(--bg-dark);
+                padding: 16px 24px;
+                border-radius: 8px;
+                font-weight: 500;
+                font-size: 0.875em;
+                z-index: 2000;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                animation: slideIn 0.3s ease;
+            `;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            // Remove after 3 seconds
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
         }
 
         // Add Expense (Tracking Tab)
         function addExpense() {
-            alert('Add Expense modal would open here');
+            showNotification('Add Expense feature coming soon!', 'info');
         }
 
-        // Auto-calculate line totals
+        // Auto-save on input (debounced)
+        let saveTimeout;
         document.addEventListener('input', function(e) {
-            if (e.target.type === 'number') {
-                const row = e.target.closest('.input-row');
-                if (row) {
-                    const inputs = row.querySelectorAll('input[type="number"]');
-                    if (inputs.length >= 2) {
-                        const qty = parseFloat(inputs[0].value) || 0;
-                        const price = parseFloat(inputs[1].value) || 0;
-                        const total = qty * price;
-                        const totalDisplay = row.querySelector('.calculated-value');
-                        if (totalDisplay) {
-                            totalDisplay.textContent = '£' + total.toFixed(2);
-                        }
-                    }
-                }
+            if (e.target.classList.contains('form-input')) {
+                clearTimeout(saveTimeout);
+                saveTimeout = setTimeout(() => {
+                    saveBudgetData();
+                }, 1000); // Save 1 second after user stops typing
             }
         });
+
+        // Add CSS animation for notifications
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(400px); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(400px); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
     </script>
 </body>
 </html>
