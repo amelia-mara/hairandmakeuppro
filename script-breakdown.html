@@ -335,6 +335,14 @@
             line-height: 1.8;
         }
 
+        .script-action strong {
+            color: var(--accent-gold);
+            font-weight: 600;
+            background: rgba(201, 169, 97, 0.1);
+            padding: 1px 3px;
+            border-radius: 2px;
+        }
+
         .script-character {
             font-weight: 700;
             text-transform: uppercase;
@@ -837,6 +845,9 @@
             </div>
 
             <div class="top-bar-actions">
+                <button class="toolbar-btn" onclick="redetectScenes()" title="Re-analyze script to detect scenes">
+                    🔄 Re-detect Scenes
+                </button>
                 <button class="toolbar-btn ai" onclick="runAIAnalysis()" id="aiBtn">
                     🤖 AI Auto-Tag All Scenes
                 </button>
@@ -1030,42 +1041,97 @@
         // SCENE DETECTION
         // ============================================
 
+        function redetectScenes() {
+            if (!confirm('Re-detect all scenes? This will refresh the scene list but preserve your tags.')) {
+                return;
+            }
+
+            console.log('Re-detecting scenes...');
+            const oldSceneCount = scenes.length;
+            detectScenes();
+
+            alert(`Scene detection complete!\n\nPrevious: ${oldSceneCount} scenes\nDetected: ${scenes.length} scenes\n\nYour tags have been preserved.`);
+
+            renderSceneNavigation();
+            if (scenes.length > 0) {
+                selectScene(0);
+            }
+        }
+
         function detectScenes() {
             scenes = [];
             const lines = scriptText.split('\n');
-            
+
             console.log('Detecting scenes from', lines.length, 'lines');
-            
+
+            // Enhanced patterns for scene detection
             const patterns = [
-                /^\s*\d*\s*\d*\s*(INT|EXT|INT\/EXT|I\/E)[\.\s]+/i,
-                /^(INT|EXT|INT\/EXT|I\/E)[\.\s]+/i,
-                /^\d+\s*\.\s*(INT|EXT)[.\s]+/i,
+                // Standard format: INT. LOCATION - TIME
+                /^\s*\d*\s*\d*\s*(INT\.?|EXT\.?|INT\.?\/EXT\.?|I\/E\.?)\s+[A-Z]/i,
+                // Without period: INT LOCATION - TIME
+                /^\s*\d*\s*\d*\s*(INT|EXT|INT\/EXT|I\/E)\s+[A-Z]/i,
+                // With scene number: 1. INT. LOCATION
+                /^\s*\d+\s*\.?\s*(INT\.?|EXT\.?|INT\.?\/EXT\.?|I\/E\.?)\s+/i,
+                // Numbered scenes: SCENE 1 - INT. LOCATION
+                /^\s*SCENE\s+\d+\s*[-:]?\s*(INT\.?|EXT\.?)/i,
+                // All caps line starting with INT/EXT
+                /^\s*(INT\.?|EXT\.?|INT\.?\/EXT\.?|I\/E\.?)\s+[A-Z\s\-]+/i
             ];
-            
+
             lines.forEach((line, index) => {
                 const trimmed = line.trim();
-                
+
+                // Skip empty lines and very short lines
+                if (!trimmed || trimmed.length < 5) return;
+
+                // Check if line matches any scene heading pattern
+                let isSceneHeading = false;
+
                 for (let pattern of patterns) {
                     if (pattern.test(trimmed)) {
-                        let cleanHeading = trimmed
-                            .replace(/^\s*\d+\s*\d*\s*/, '')
-                            .replace(/\s+/g, ' ')
-                            .trim();
-                        
+                        isSceneHeading = true;
+                        break;
+                    }
+                }
+
+                // Additional validation: Scene headings are typically all caps or mostly caps
+                const upperCaseRatio = (trimmed.match(/[A-Z]/g) || []).length / trimmed.length;
+                if (isSceneHeading || (upperCaseRatio > 0.7 && /^(INT|EXT|I\/E)/i.test(trimmed))) {
+                    // Clean the heading
+                    let cleanHeading = trimmed
+                        .replace(/^\s*SCENE\s+\d+\s*[-:]?\s*/i, '') // Remove "SCENE 1 -"
+                        .replace(/^\s*\d+\s*\d*\s*\.?\s*/, '') // Remove leading numbers
+                        .replace(/\s+/g, ' ') // Normalize whitespace
+                        .trim()
+                        .toUpperCase(); // Ensure all caps
+
+                    // Ensure it starts with INT/EXT
+                    if (/^(INT|EXT|I\/E)/i.test(cleanHeading)) {
                         scenes.push({
                             id: Date.now() + index,
                             lineIndex: index,
                             heading: cleanHeading,
                             originalText: trimmed
                         });
-                        
-                        console.log('Detected scene:', cleanHeading);
-                        break;
+
+                        console.log('✓ Detected scene:', cleanHeading);
                     }
                 }
             });
-            
+
+            // Remove duplicate consecutive scenes (sometimes detected twice)
+            scenes = scenes.filter((scene, index) => {
+                if (index === 0) return true;
+                return scenes[index - 1].heading !== scene.heading;
+            });
+
             console.log('✓ Total scenes detected:', scenes.length);
+
+            if (scenes.length === 0) {
+                console.warn('⚠️ No scenes detected. Script may not be in standard format.');
+                alert('No scenes detected in the script. Please ensure your script uses standard screenplay format with INT./EXT. scene headings.');
+            }
+
             saveProjectData();
         }
 
@@ -1150,25 +1216,80 @@
         }
 
         async function callAIAPI(sceneHeading, sceneContent) {
-            const prompt = `Analyze this film script scene and identify all hair, makeup, SFX/FX, wardrobe, props, and cast mentions.
+            const prompt = `You are a professional Hair & Makeup Department script breakdown specialist. Analyze this screenplay scene and identify all production elements needed for hair, makeup, special effects, wardrobe, props, and cast.
 
-Scene: ${sceneHeading}
+SCENE: ${sceneHeading}
 
-Content:
+CONTENT:
 ${sceneContent.substring(0, 3000)}
 
-Return ONLY a JSON array of objects with this exact format:
+ANALYSIS GUIDELINES:
+
+**MAKEUP** - Identify:
+- Character appearance descriptions (natural, glamorous, aged, weathered, tired, etc.)
+- Injury makeup (wounds, bruises, cuts, blood, scars)
+- Special conditions (crying/tears, sweating, dirt, mud, wet)
+- Aging or de-aging requirements
+- Character states (sick, healthy, drunk, exhausted)
+- Time period or style-specific makeup
+- Special occasions (wedding, funeral, formal event)
+- ANY physical change or condition affecting appearance
+
+**HAIR** - Identify:
+- Hairstyle descriptions (long, short, styled, messy, etc.)
+- Hair color mentions
+- Hair condition (wet, windblown, disheveled, neat, etc.)
+- Period-specific hairstyles
+- Changes in hair throughout scene (before/after)
+- Hair accessories or coverings
+- Character's hair being touched or interacted with
+
+**SFX/FX** - Identify:
+- Prosthetics or body modifications
+- Special effects makeup (creature, monster, fantasy)
+- Appliances (bald caps, latex, silicone)
+- Mechanical effects on characters
+- Transformation effects
+- Aging effects beyond standard makeup
+- Supernatural or fantastical character elements
+
+**WARDROBE** - Identify:
+- Clothing items described
+- Costume changes within scene
+- Specific garments mentioned
+- Style or period costumes
+- Character's dress for occasion
+- Clothing condition (torn, dirty, pristine)
+- Accessories (jewelry, watches, glasses, hats)
+
+**CAST** - Identify:
+- ALL character names who appear or speak
+- Number of background actors if specified
+- Character types (extras, featured extras)
+
+**PROPS** - Identify:
+- Objects characters interact with
+- Personal items characters carry
+- Items relevant to the scene action
+
+Return ONLY a valid JSON array with this exact structure:
 [
-  {"category": "makeup", "description": "Natural look with dark circles"},
-  {"category": "hair", "description": "Disheveled bedhead"},
-  {"category": "wardrobe", "description": "White cotton nightgown"},
-  {"category": "cast", "description": "Emma Hart - lead character"},
-  {"category": "sfx", "description": "Translucent shadow effect"},
-  {"category": "props", "description": "Coffee mug"}
+  {"category": "makeup", "description": "Specific item description"},
+  {"category": "hair", "description": "Specific item description"},
+  {"category": "wardrobe", "description": "Specific item description"},
+  {"category": "cast", "description": "Character name and role"},
+  {"category": "sfx", "description": "Specific effect description"},
+  {"category": "props", "description": "Specific prop description"}
 ]
 
-Categories must be exactly: "makeup", "hair", "sfx", "wardrobe", "props", or "cast"
-Be specific and concise. Only include items explicitly mentioned or clearly implied.`;
+IMPORTANT:
+- Categories MUST be exactly: "makeup", "hair", "sfx", "wardrobe", "props", or "cast"
+- Be SPECIFIC and DETAILED in descriptions
+- Include implied requirements (e.g., if character just woke up, note "disheveled hair" and "natural/no makeup look")
+- Look for context clues about character appearance
+- Note any continuity requirements
+- If nothing found for a category, omit it from the array
+- Return ONLY the JSON array, no other text`;
 
             if (aiProvider === 'openai') {
                 return await callOpenAI(prompt);
@@ -1345,28 +1466,34 @@ Be specific and concise. Only include items explicitly mentioned or clearly impl
             let formattedHtml = '';
             let inDialogue = false;
             let lastLineWasCharacter = false;
+            let consecutiveEmptyLines = 0;
 
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i];
                 const trimmed = line.trim();
 
-                // Skip empty lines but preserve spacing
+                // Skip empty lines but preserve spacing (limit to 2 consecutive)
                 if (!trimmed) {
-                    formattedHtml += '<div class="script-line">&nbsp;</div>';
+                    consecutiveEmptyLines++;
+                    if (consecutiveEmptyLines <= 2) {
+                        formattedHtml += '<div class="script-line">&nbsp;</div>';
+                    }
                     inDialogue = false;
                     lastLineWasCharacter = false;
                     continue;
                 }
 
+                consecutiveEmptyLines = 0;
+
                 // Detect scene headings (INT./EXT.)
-                if (/^(INT|EXT|INT\/EXT|I\/E)[\.\s]+/i.test(trimmed)) {
-                    formattedHtml += `<div class="script-line script-scene-heading">${escapeHtml(trimmed)}</div>`;
+                if (/^(INT\.?|EXT\.?|INT\.?\/EXT\.?|I\/E\.?)[\s]+/i.test(trimmed)) {
+                    formattedHtml += `<div class="script-line script-scene-heading">${escapeHtml(trimmed.toUpperCase())}</div>`;
                     inDialogue = false;
                     lastLineWasCharacter = false;
                 }
                 // Detect transitions (FADE TO:, CUT TO:, etc.)
-                else if (/^(FADE|CUT|DISSOLVE|SMASH CUT).*:$/i.test(trimmed) || /^TO:$/i.test(trimmed)) {
-                    formattedHtml += `<div class="script-line script-transition">${escapeHtml(trimmed)}</div>`;
+                else if (/^(FADE|CUT|DISSOLVE|SMASH CUT|MATCH CUT).*:$/i.test(trimmed) || /^TO:$/i.test(trimmed)) {
+                    formattedHtml += `<div class="script-line script-transition">${escapeHtml(trimmed.toUpperCase())}</div>`;
                     inDialogue = false;
                     lastLineWasCharacter = false;
                 }
@@ -1376,24 +1503,44 @@ Be specific and concise. Only include items explicitly mentioned or clearly impl
                     inDialogue = true;
                     lastLineWasCharacter = false;
                 }
-                // Detect character names (all caps, short lines)
+                // Detect character names (all caps, short lines, not mid-dialogue)
                 else if (trimmed === trimmed.toUpperCase() &&
                          trimmed.length > 0 &&
-                         trimmed.length < 40 &&
-                         /^[A-Z\s\.']+(\(.*\))?$/.test(trimmed) &&
-                         !inDialogue) {
+                         trimmed.length < 45 &&
+                         /^[A-Z0-9\s\.']+(\s*\(.*\))?$/.test(trimmed) &&
+                         !inDialogue &&
+                         !trimmed.includes('  ')) { // Avoid action lines that are all caps
                     formattedHtml += `<div class="script-line script-character">${escapeHtml(trimmed)}</div>`;
                     inDialogue = true;
                     lastLineWasCharacter = true;
                 }
                 // Dialogue (follows character name or is in dialogue mode)
                 else if (inDialogue) {
-                    formattedHtml += `<div class="script-line script-dialogue">${escapeHtml(trimmed)}</div>`;
-                    lastLineWasCharacter = false;
+                    // Check if this might be a new character (caps line after dialogue)
+                    if (trimmed === trimmed.toUpperCase() &&
+                        trimmed.length < 45 &&
+                        /^[A-Z\s\.']+$/.test(trimmed)) {
+                        // This is a new character
+                        formattedHtml += `<div class="script-line script-character">${escapeHtml(trimmed)}</div>`;
+                        lastLineWasCharacter = true;
+                    } else {
+                        formattedHtml += `<div class="script-line script-dialogue">${escapeHtml(trimmed)}</div>`;
+                        lastLineWasCharacter = false;
+                    }
                 }
                 // Action (everything else)
                 else {
-                    formattedHtml += `<div class="script-line script-action">${escapeHtml(trimmed)}</div>`;
+                    // Escape HTML first
+                    let escapedText = escapeHtml(trimmed);
+
+                    // Then highlight important action keywords related to hair/makeup
+                    const keywords = ['blood', 'wound', 'scar', 'bruise', 'dirt', 'wet', 'tears', 'sweat', 'aging', 'young', 'old', 'hair', 'makeup', 'face', 'eyes', 'lips'];
+                    keywords.forEach(keyword => {
+                        const regex = new RegExp(`\\b(${keyword}[a-z]*)\\b`, 'gi');
+                        escapedText = escapedText.replace(regex, '<strong>$1</strong>');
+                    });
+
+                    formattedHtml += `<div class="script-line script-action">${escapedText}</div>`;
                     inDialogue = false;
                     lastLineWasCharacter = false;
                 }
