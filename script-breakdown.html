@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Script Breakdown - The Big Race</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -1763,11 +1764,79 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
         loadProjectScript();
 
         // Handle script upload directly in breakdown page
+        // Initialize PDF.js worker
+        if (typeof pdfjsLib !== 'undefined') {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+
+        // Parse PDF and extract text
+        async function parsePDFInBreakdown(file) {
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                
+                let fullText = '';
+                
+                // Extract text from each page
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+                    const pageText = textContent.items.map(item => item.str).join(' ');
+                    fullText += pageText + '\n';
+                }
+                
+                return fullText;
+            } catch (error) {
+                console.error('Error parsing PDF:', error);
+                throw error;
+            }
+        }
+
         function handleScriptUploadInBreakdown(event) {
             const file = event.target.files[0];
             if (!file) return;
             
             console.log('File selected in breakdown:', file.name, 'Type:', file.type);
+            
+            // Handle PDF files
+            if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+                console.log('PDF detected, parsing...');
+                
+                parsePDFInBreakdown(file)
+                    .then(scriptContent => {
+                        console.log('✓ PDF parsed in breakdown, length:', scriptContent.length);
+                        
+                        // Update current project with script
+                        if (currentProject) {
+                            currentProject.scriptContent = scriptContent;
+                            currentProject.scriptName = file.name;
+                            
+                            // Save to localStorage
+                            localStorage.setItem('currentProject', JSON.stringify(currentProject));
+                            
+                            // Update the projects list too
+                            const projects = JSON.parse(localStorage.getItem('checksHappyProjects') || '[]');
+                            const projectIndex = projects.findIndex(p => p.code === currentProject.code);
+                            if (projectIndex !== -1) {
+                                projects[projectIndex].scriptContent = scriptContent;
+                                projects[projectIndex].scriptName = file.name;
+                                localStorage.setItem('checksHappyProjects', JSON.stringify(projects));
+                                console.log('✓ Project updated in storage');
+                            }
+                        }
+                        
+                        // Parse and display
+                        parseAndDisplayScript(scriptContent);
+                        
+                        alert(`PDF "${file.name}" uploaded and parsed successfully!`);
+                    })
+                    .catch(error => {
+                        console.error('PDF parsing error:', error);
+                        alert('Error parsing PDF. The file may be corrupted or password-protected. Try converting to .txt format.');
+                    });
+                
+                return;
+            }
             
             const isTextFile = file.type === 'text/plain' || 
                                file.type === '' || 
@@ -1811,7 +1880,7 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
                 };
                 reader.readAsText(file);
             } else {
-                alert('Please upload a .txt, .fountain, or .fdx file. PDF parsing coming soon!');
+                alert('Please upload a .txt, .fountain, .fdx, or .pdf file.');
             }
         }
     </script>
