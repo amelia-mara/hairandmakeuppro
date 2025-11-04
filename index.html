@@ -1263,16 +1263,11 @@
 
         function openProject(index) {
             const project = projects[index];
-            // Store project data in localStorage for the breakdown page to use
+            // Store project data in localStorage for the dashboard to use
             localStorage.setItem('currentProject', JSON.stringify(project));
-            
-            // If project has script content, go to integrated breakdown (which includes scene review)
-            if (project.scriptContent) {
-                window.location.href = 'script-breakdown.html';
-            } else {
-                // No script, go straight to dashboard
-                window.location.href = 'dashboard.html';
-            }
+
+            // Always go to dashboard first
+            window.location.href = 'dashboard.html';
         }
 
         document.getElementById('searchBar').addEventListener('input', function(e) {
