@@ -82,7 +82,7 @@
             flex-direction: column;
         }
 
-        /* Top Bar - same liquid glass style */
+        /* Top Bar - liquid glass style */
         .top-bar {
             height: 60px;
             background: 
@@ -477,7 +477,7 @@
             text-shadow: 0 0 20px rgba(212, 175, 122, 0.3);
         }
 
-        /* PARCHMENT/AGED PAPER SCRIPT PANEL - matches reference image */
+        /* PARCHMENT/AGED PAPER SCRIPT PANEL */
         .scene-script-content {
             background: 
                 linear-gradient(to bottom, rgba(210, 180, 110, 0.15) 0%, transparent 5%, transparent 95%, rgba(160, 130, 70, 0.15) 100%),
@@ -1088,30 +1088,51 @@
             font-size: 0.875em;
         }
 
-        /* Raw Script & PDF Views */
-        .raw-script-container,
-        .pdf-viewer-container {
+        /* Raw Script View - also parchment style */
+        .raw-script-container {
             display: none;
+            flex: 1;
+            overflow-y: auto;
+            padding: 32px 48px;
         }
 
-        .raw-script-container.active,
-        .pdf-viewer-container.active {
+        .raw-script-container.active {
             display: block;
         }
 
         .raw-script-content {
-            background: var(--card-bg);
-            border: 1px solid var(--glass-border);
+            background: 
+                linear-gradient(to bottom, rgba(210, 180, 110, 0.15) 0%, transparent 5%, transparent 95%, rgba(160, 130, 70, 0.15) 100%),
+                linear-gradient(135deg, #c9a961 0%, #d4b86f 50%, #c9a961 100%);
+            border: 2px solid var(--parchment-border);
             border-radius: 12px;
-            padding: 32px;
+            padding: 48px 64px;
             font-family: 'Courier Prime', monospace;
             font-size: 12pt;
             line-height: 1.8;
             white-space: pre-wrap;
             word-wrap: break-word;
-            color: var(--text-light);
+            color: var(--parchment-text);
             max-width: 900px;
             margin: 0 auto;
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.5),
+                inset 0 2px 4px rgba(255, 255, 255, 0.2),
+                inset 0 -2px 4px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        .raw-script-content::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(ellipse at center, transparent 40%, rgba(160, 130, 70, 0.2) 100%);
+            pointer-events: none;
+            border-radius: 10px;
         }
     </style>
 </head>
@@ -1198,9 +1219,7 @@
 
                 <!-- Raw Script View -->
                 <div class="raw-script-container" id="rawScriptContainer">
-                    <div style="padding: 32px 48px; overflow-y: auto; height: 100%;">
-                        <div class="raw-script-content" id="rawScriptContent"></div>
-                    </div>
+                    <div class="raw-script-content" id="rawScriptContent"></div>
                 </div>
             </div>
 
@@ -1271,9 +1290,6 @@
     </div>
 
     <script>
-        // Use the complete JavaScript from document 2
-        // Including: scene detection, AI analysis, tag management, view switching, etc.
-        
         let currentProject = null;
         let scriptText = '';
         let scenes = [];
@@ -1298,23 +1314,40 @@
 
         function loadProjectScript() {
             currentProject = JSON.parse(localStorage.getItem('currentProject') || 'null');
+            
             if (!currentProject || !currentProject.scriptContent) {
                 alert('No project or script found');
                 setTimeout(() => window.location.href = 'index.html', 1000);
                 return;
             }
+
             scriptText = currentProject.scriptContent;
             document.getElementById('viewModeToggle').style.display = 'flex';
+            
             scenes = currentProject.scenes || [];
             sceneTags = currentProject.sceneTags || {};
             sceneNotes = currentProject.sceneNotes || {};
-            if (scenes.length === 0) detectScenes();
+
+            if (scenes.length === 0) {
+                detectScenes();
+            }
+
             displayRawScript();
             renderSceneNavigation();
-            if (scenes.length > 0) selectScene(0);
-            const hasAITags = Object.values(sceneTags).some(tags => tags.some(tag => tag.aiSuggested));
-            if (hasAITags) updateWorkflowStep('review');
+            
+            if (scenes.length > 0) {
+                selectScene(0);
+            }
+
+            const hasAITags = Object.values(sceneTags).some(tags => 
+                tags.some(tag => tag.aiSuggested)
+            );
+            if (hasAITags) {
+                updateWorkflowStep('review');
+            }
+
             updateGenerateButton();
+            
             console.log('✓ Project loaded:', currentProject.title, '| Scenes:', scenes.length);
         }
 
@@ -1324,14 +1357,18 @@
 
         function switchViewMode(mode) {
             currentViewMode = mode;
+            
             document.getElementById('viewModeScenes').classList.remove('active');
             document.getElementById('viewModeRaw').classList.remove('active');
             document.getElementById('sceneDisplay').style.display = 'none';
             document.getElementById('rawScriptContainer').classList.remove('active');
+
             if (mode === 'scenes') {
                 document.getElementById('viewModeScenes').classList.add('active');
                 document.getElementById('sceneDisplay').style.display = 'block';
-                if (scenes.length > 0 && currentSceneIndex >= 0) displayScene(currentSceneIndex);
+                if (scenes.length > 0 && currentSceneIndex >= 0) {
+                    displayScene(currentSceneIndex);
+                }
             } else if (mode === 'raw') {
                 document.getElementById('viewModeRaw').classList.add('active');
                 document.getElementById('rawScriptContainer').classList.add('active');
@@ -1344,132 +1381,263 @@
         }
 
         function detectScenes() {
+            console.log('🔍 Starting scene detection...');
+            console.log('Script length:', scriptText.length, 'characters');
+            
             scenes = [];
             const lines = scriptText.split('\n');
+            
+            console.log('Total lines:', lines.length);
+
+            // IMPROVED PATTERNS - More flexible to catch various formats
             const patterns = [
-                /^\s*\d*\s*\d*\s*(INT|EXT|INT\/EXT|I\/E|INT\.|EXT\.)[\s\.]+/i,
-                /^\s*(?:SCENE\s+)?\d+\s*[\.\-\s]*(INT|EXT|INT\/EXT|I\/E)[\s\.]+/i,
-                /^\s*(INT|EXT|INT\/EXT|I\/E)\s+[A-Z]/i,
-                /^\s*\d*\s*(INTERIOR|EXTERIOR)\s+/i
+                // Matches: INT. ROOM - DAY, EXT. LOCATION - NIGHT
+                /^\s*(?:SCENE\s+\d+\s+)?(?:\d+\s+)?(?:\d+\s+)?(INT\.?|EXT\.?|INT\/EXT|I\/E|INTERIOR|EXTERIOR)\s+/i,
+                
+                // Matches scene numbers followed by INT/EXT
+                /^\s*\d+\s*[\.\-\s]+(INT\.?|EXT\.?|INT\/EXT|I\/E)\s+/i,
+                
+                // Matches standalone INT/EXT at beginning
+                /^(INT\.?|EXT\.?|INT\/EXT|I\/E|INTERIOR|EXTERIOR)[\s\.\-]+[A-Z]/i,
             ];
+
             lines.forEach((line, index) => {
                 const trimmed = line.trim();
+                
+                // Skip empty lines
                 if (!trimmed) return;
+                
+                // Try each pattern
                 for (let pattern of patterns) {
                     if (pattern.test(trimmed)) {
+                        // Additional validation: should be mostly uppercase and not too long
                         const upperRatio = (trimmed.match(/[A-Z]/g) || []).length / trimmed.replace(/\s/g, '').length;
-                        if (upperRatio > 0.6 && trimmed.length < 100) {
-                            let cleanHeading = trimmed.replace(/^\s*(?:SCENE\s+)?\d+\s*[\.\-\s]*/, '').replace(/\s+/g, ' ').trim();
-                            const isDuplicate = scenes.some(s => s.heading === cleanHeading && Math.abs(s.lineIndex - index) < 3);
+                        
+                        if (upperRatio > 0.5 && trimmed.length < 150) {
+                            // Clean up the heading
+                            let cleanHeading = trimmed
+                                .replace(/^\s*(?:SCENE\s+)?\d+\s*[\.\-\s]*/, '') // Remove scene numbers
+                                .replace(/\s+/g, ' ') // Normalize spaces
+                                .trim();
+                            
+                            // Avoid duplicates (scenes within 3 lines of each other with same heading)
+                            const isDuplicate = scenes.some(s => 
+                                s.heading === cleanHeading && 
+                                Math.abs(s.lineIndex - index) < 3
+                            );
+                            
                             if (!isDuplicate) {
-                                scenes.push({ id: Date.now() + index, lineIndex: index, heading: cleanHeading, originalText: trimmed });
-                                console.log('✓ Scene:', cleanHeading);
+                                scenes.push({
+                                    id: Date.now() + index,
+                                    lineIndex: index,
+                                    heading: cleanHeading,
+                                    originalText: trimmed
+                                });
+                                
+                                console.log(`✓ Scene ${scenes.length}:`, cleanHeading, `(line ${index})`);
                             }
+                            
                             break;
                         }
                     }
                 }
             });
-            console.log('✓ Total scenes:', scenes.length);
+
+            console.log('✓ Detection complete. Found', scenes.length, 'scenes');
+            
+            if (scenes.length === 0) {
+                console.warn('⚠️ No scenes detected. Script format may be non-standard.');
+                console.log('First 20 lines:', lines.slice(0, 20));
+            }
+            
             saveProjectData();
         }
 
         async function runAIAnalysis() {
-            if (!apiKey) { alert('Please configure your API key in Settings.'); openSettings(); return; }
-            if (scenes.length === 0) { alert('No scenes detected.'); return; }
+            if (!apiKey) {
+                alert('Please configure your API key in Settings.');
+                openSettings();
+                return;
+            }
+
+            if (scenes.length === 0) {
+                alert('No scenes detected. Please check your script format.');
+                return;
+            }
+
             if (!confirm(`Run AI analysis on ${scenes.length} scenes?`)) return;
+
             showLoading('Analyzing with AI...', 'Processing all scenes');
+
             try {
                 for (let i = 0; i < scenes.length; i++) {
                     updateLoadingText(`Analyzing scene ${i + 1} of ${scenes.length}...`);
                     await analyzeScene(i);
+                    // Small delay to avoid rate limits
+                    await new Promise(resolve => setTimeout(resolve, 500));
                 }
+
                 hideLoading();
                 updateWorkflowStep('review');
                 saveProjectData();
-                if (currentSceneIndex >= 0) { displayTaggingPanel(currentSceneIndex); renderSceneNavigation(); }
+                
+                if (currentSceneIndex >= 0) {
+                    displayTaggingPanel(currentSceneIndex);
+                    renderSceneNavigation();
+                }
+
                 alert('✓ AI analysis complete!');
             } catch (error) {
                 hideLoading();
                 console.error('AI error:', error);
-                alert('Error: ' + error.message);
+                alert('Error during AI analysis: ' + error.message);
             }
         }
 
         async function analyzeScene(sceneIndex) {
             const scene = scenes[sceneIndex];
             const sceneNumber = sceneIndex + 1;
+            
+            // Get scene content
             const lines = scriptText.split('\n');
             const startLine = scene.lineIndex;
             let endLine = lines.length;
-            if (sceneIndex < scenes.length - 1) endLine = scenes[sceneIndex + 1].lineIndex;
+            
+            if (sceneIndex < scenes.length - 1) {
+                endLine = scenes[sceneIndex + 1].lineIndex;
+            }
+            
             const sceneContent = lines.slice(startLine, endLine).join('\n');
+            
+            // Call AI
             const suggestions = await callAIAPI(scene.heading, sceneContent);
-            if (!sceneTags[sceneNumber]) sceneTags[sceneNumber] = [];
+            
+            // Store suggestions
+            if (!sceneTags[sceneNumber]) {
+                sceneTags[sceneNumber] = [];
+            }
+            
             suggestions.forEach(suggestion => {
-                sceneTags[sceneNumber].push({ category: suggestion.category, description: suggestion.description, aiSuggested: true, accepted: false });
+                sceneTags[sceneNumber].push({
+                    category: suggestion.category,
+                    description: suggestion.description,
+                    aiSuggested: true,
+                    accepted: false
+                });
             });
         }
 
         async function callAIAPI(sceneHeading, sceneContent) {
-            const prompt = `Professional script breakdown for production elements.
+            const prompt = `Professional script breakdown for production elements. Analyze this scene and extract ONLY elements that are explicitly present.
 
 Scene: ${sceneHeading}
-Content: ${sceneContent.substring(0, 3000)}
+Content:
+${sceneContent.substring(0, 3000)}
 
-Extract production elements in these categories:
+Categories and what to look for:
 
-MAKEUP: Cosmetics, injuries, wounds, blood, bruises, aging, beauty makeup, prosthetics, character face descriptions
-Examples: "dark circles", "bruised cheek", "zombie makeup", "5 o'clock shadow"
+MAKEUP: 
+- Visible injuries, wounds, blood, bruises, scars on characters
+- Special makeup effects (zombie, ghost, aging, burns)
+- Beauty makeup that's specifically mentioned
+- Sweat, dirt, tears if prominently mentioned
+- Face paint, tattoos, prosthetics
+Examples: "bruised cheek", "zombie makeup", "sweat bead", "5 o'clock shadow", "pale ghostly skin"
 
-HAIR: Hairstyles, wigs, hair color, conditions, changes, character hair descriptions
-Examples: "disheveled bedhead", "blonde wig", "braided ponytail"
+HAIR:
+- Specific hairstyles mentioned (ponytail, braids, buzzcut)
+- Hair color if stated
+- Hair conditions (wet, disheveled, styled)
+- Wigs, hairpieces
+- Facial hair (beard, mustache)
+Examples: "disheveled bedhead", "blonde wig", "slicked back", "shaved head", "bushy beard"
 
-SFX: Special/visual effects, weather (rain/snow/fog), fire, smoke, blood splatter, explosions, magic, technical effects
-Examples: "blood spray", "flickering lights", "heavy fog", "ghost effect"
+SFX (Special Effects):
+- Weather effects (rain, snow, fog, wind)
+- Fire, smoke, steam, explosions
+- Blood spray/splatter, gunshots, impacts
+- Lighting effects (flicker, glow, sparks)
+- Supernatural/magical effects
+- Reflections, shadows, ghosts
+Examples: "blood spray", "flickering lights", "heavy fog", "explosion", "blue-white figure appears"
 
-WARDROBE: Clothing, costumes, accessories, jewelry, shoes, costume changes
-Examples: "white dress", "leather jacket", "police uniform", "diamond necklace"
+WARDROBE:
+- Specific clothing items worn by characters
+- Costume descriptions
+- Accessories (jewelry, glasses, hats)
+- Shoes if mentioned
+- Costume changes
+Examples: "white nightgown", "leather jacket", "police uniform", "diamond necklace", "worn jeans"
 
-PROPS: Handheld items, important furniture, interactive objects
-Examples: "coffee mug", "car keys", "smartphone", "knife", "photograph"
+PROPS:
+- Objects held or used by characters
+- Interactive items
+- Significant furniture pieces
+- Vehicles if interacted with
+Examples: "coffee mug", "smartphone", "car keys", "knife", "photograph", "lipstick"
 
-CAST: Character names, background performers with specifications
-Examples: "EMMA", "Detective Martinez", "crowd of 20 extras"
+CAST:
+- Named characters who appear or speak
+- Specific background performers with descriptions
+- Number of extras if specified
+Examples: "RICHIE", "DISTANT VOICE (O.S.)", "crowd of 20 people", "bartender"
 
-Return ONLY valid JSON array:
+RULES:
+1. ONLY include elements explicitly mentioned in the scene
+2. Be specific but concise in descriptions
+3. Don't infer or assume elements not in the text
+4. Character names in pink/cast should be actual speaking/acting roles
+5. Combine related items (e.g., "sweat bead on forehead" not separate items)
+
+Return ONLY valid JSON array with NO additional text:
 [
-  {"category": "makeup", "description": "Dark circles, exhausted look"},
+  {"category": "makeup", "description": "Sweat bead on forehead"},
   {"category": "hair", "description": "Disheveled bedhead"},
   {"category": "wardrobe", "description": "White nightgown"},
-  {"category": "sfx", "description": "Flickering light"},
+  {"category": "sfx", "description": "Flickering fluorescent light"},
   {"category": "props", "description": "Coffee mug"},
-  {"category": "cast", "description": "Emma - lead"}
+  {"category": "cast", "description": "RICHIE - male lead"}
 ]
 
-Categories: "makeup", "hair", "sfx", "wardrobe", "props", "cast"`;
+Valid categories: "makeup", "hair", "sfx", "wardrobe", "props", "cast"`;
 
-            if (aiProvider === 'openai') return await callOpenAI(prompt);
-            else return await callAnthropic(prompt);
+            if (aiProvider === 'openai') {
+                return await callOpenAI(prompt);
+            } else {
+                return await callAnthropic(prompt);
+            }
         }
 
         async function callOpenAI(prompt) {
             const response = await fetch('https://api.openai.com/v1/chat/completions', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
                 body: JSON.stringify({
                     model: 'gpt-4o-mini',
                     messages: [
-                        { role: 'system', content: 'Return ONLY valid JSON arrays, no other text.' },
+                        { 
+                            role: 'system', 
+                            content: 'You are a professional script breakdown specialist. Return ONLY valid JSON arrays with no additional text, markdown, or explanations.' 
+                        },
                         { role: 'user', content: prompt }
                     ],
                     temperature: 0.3
                 })
             });
-            if (!response.ok) throw new Error((await response.json()).error?.message || 'API failed');
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error?.message || 'OpenAI API failed');
+            }
+
             const data = await response.json();
             const content = data.choices[0].message.content;
+            
             try {
+                // Try to extract JSON from markdown code blocks or other formatting
                 const jsonMatch = content.match(/\[[\s\S]*\]/);
                 const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(content);
                 return Array.isArray(parsed) ? parsed : (parsed.items || parsed.tags || []);
@@ -1482,12 +1650,29 @@ Categories: "makeup", "hair", "sfx", "wardrobe", "props", "cast"`;
         async function callAnthropic(prompt) {
             const response = await fetch('https://api.anthropic.com/v1/messages', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-                body: JSON.stringify({ model: 'claude-3-5-sonnet-20241022', max_tokens: 1024, messages: [{ role: 'user', content: prompt }] })
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-api-key': apiKey,
+                    'anthropic-version': '2023-06-01'
+                },
+                body: JSON.stringify({
+                    model: 'claude-3-5-sonnet-20241022',
+                    max_tokens: 1024,
+                    messages: [{
+                        role: 'user',
+                        content: prompt
+                    }]
+                })
             });
-            if (!response.ok) throw new Error((await response.json()).error?.message || 'API failed');
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error?.message || 'Anthropic API failed');
+            }
+
             const data = await response.json();
             const content = data.content[0].text;
+            
             try {
                 const jsonMatch = content.match(/\[[\s\S]*\]/);
                 const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(content);
@@ -1501,22 +1686,41 @@ Categories: "makeup", "hair", "sfx", "wardrobe", "props", "cast"`;
         function renderSceneNavigation() {
             const navList = document.getElementById('sceneNavList');
             document.getElementById('sceneCountDisplay').textContent = scenes.length;
+
             if (scenes.length === 0) {
-                navList.innerHTML = '<div class="empty-state"><p>No scenes detected</p></div>';
+                navList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📋</div>
+                        <h3>No Scenes Detected</h3>
+                        <p>Script format may be non-standard</p>
+                    </div>
+                `;
                 return;
             }
+
             let html = '';
             scenes.forEach((scene, index) => {
                 const sceneNumber = index + 1;
                 const tags = sceneTags[sceneNumber] || [];
                 const hasAI = tags.some(t => t.aiSuggested && !t.accepted);
                 const confirmedTags = tags.filter(t => t.accepted || !t.aiSuggested);
+                
                 const tagsHtml = confirmedTags.map(tag => {
-                    const color = { 'makeup': '#ff6b9d', 'hair': '#c084fc', 'sfx': '#38bdf8', 'cast': '#fbbf24', 'wardrobe': '#34d399', 'props': '#fb923c' }[tag.category] || '#999';
+                    const color = {
+                        'makeup': '#ff6b9d',
+                        'hair': '#c084fc',
+                        'sfx': '#38bdf8',
+                        'cast': '#fbbf24',
+                        'wardrobe': '#34d399',
+                        'props': '#fb923c'
+                    }[tag.category] || '#999';
+                    
                     return `<div class="mini-tag" style="background: ${color}; color: ${color}"></div>`;
                 }).join('');
+
                 html += `
-                    <div class="scene-nav-item ${index === currentSceneIndex ? 'active' : ''}" onclick="selectScene(${index})">
+                    <div class="scene-nav-item ${index === currentSceneIndex ? 'active' : ''}" 
+                         onclick="selectScene(${index})">
                         <div class="scene-nav-number">Scene ${sceneNumber}</div>
                         <div class="scene-nav-heading">${escapeHtml(scene.heading)}</div>
                         ${confirmedTags.length > 0 ? `<div class="scene-nav-tags">${tagsHtml}</div>` : ''}
@@ -1524,6 +1728,7 @@ Categories: "makeup", "hair", "sfx", "wardrobe", "props", "cast"`;
                     </div>
                 `;
             });
+
             navList.innerHTML = html;
         }
 
@@ -1537,12 +1742,19 @@ Categories: "makeup", "hair", "sfx", "wardrobe", "props", "cast"`;
         function displayScene(index) {
             const scene = scenes[index];
             const sceneNumber = index + 1;
+            
+            // Get scene content
             const lines = scriptText.split('\n');
             const startLine = scene.lineIndex;
             let endLine = lines.length;
-            if (index < scenes.length - 1) endLine = scenes[index + 1].lineIndex;
+            
+            if (index < scenes.length - 1) {
+                endLine = scenes[index + 1].lineIndex;
+            }
+            
             const sceneContent = lines.slice(startLine + 1, endLine).join('\n');
             const formattedContent = formatScriptContent(sceneContent);
+
             document.getElementById('sceneDisplay').innerHTML = `
                 <div class="scene-header-display">
                     <div class="scene-number-large">Scene ${sceneNumber}</div>
@@ -1556,29 +1768,52 @@ Categories: "makeup", "hair", "sfx", "wardrobe", "props", "cast"`;
             const lines = content.split('\n');
             let formattedHtml = '';
             let inDialogue = false;
+
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i];
                 const trimmed = line.trim();
-                if (!trimmed) { formattedHtml += '<div class="script-line">&nbsp;</div>'; inDialogue = false; continue; }
+
+                if (!trimmed) {
+                    formattedHtml += '<div class="script-line">&nbsp;</div>';
+                    inDialogue = false;
+                    continue;
+                }
+
+                // Scene heading
                 if (/^(INT|EXT|INT\/EXT|I\/E)[\.\s]+/i.test(trimmed)) {
                     formattedHtml += `<div class="script-line script-scene-heading">${escapeHtml(trimmed)}</div>`;
                     inDialogue = false;
-                } else if (/^(FADE|CUT|DISSOLVE|SMASH CUT).*:$/i.test(trimmed) || /^TO:$/i.test(trimmed)) {
+                }
+                // Transition
+                else if (/^(FADE|CUT|DISSOLVE|SMASH CUT).*:$/i.test(trimmed) || /^TO:$/i.test(trimmed)) {
                     formattedHtml += `<div class="script-line script-transition">${escapeHtml(trimmed)}</div>`;
                     inDialogue = false;
-                } else if (trimmed.startsWith('(') && trimmed.endsWith(')')) {
+                }
+                // Parenthetical
+                else if (trimmed.startsWith('(') && trimmed.endsWith(')')) {
                     formattedHtml += `<div class="script-line script-parenthetical">${escapeHtml(trimmed)}</div>`;
                     inDialogue = true;
-                } else if (trimmed === trimmed.toUpperCase() && trimmed.length > 0 && trimmed.length < 40 && /^[A-Z\s\.']+(\(.*\))?$/.test(trimmed) && !inDialogue) {
+                }
+                // Character name
+                else if (trimmed === trimmed.toUpperCase() && 
+                         trimmed.length > 0 && 
+                         trimmed.length < 40 && 
+                         /^[A-Z\s\.']+(\(.*\))?$/.test(trimmed) &&
+                         !inDialogue) {
                     formattedHtml += `<div class="script-line script-character">${escapeHtml(trimmed)}</div>`;
                     inDialogue = true;
-                } else if (inDialogue) {
+                }
+                // Dialogue
+                else if (inDialogue) {
                     formattedHtml += `<div class="script-line script-dialogue">${escapeHtml(trimmed)}</div>`;
-                } else {
+                }
+                // Action
+                else {
                     formattedHtml += `<div class="script-line script-action">${escapeHtml(trimmed)}</div>`;
                     inDialogue = false;
                 }
             }
+
             return formattedHtml;
         }
 
@@ -1587,12 +1822,16 @@ Categories: "makeup", "hair", "sfx", "wardrobe", "props", "cast"`;
             const tags = sceneTags[sceneNumber] || [];
             const notes = sceneNotes[sceneNumber] || '';
             const panel = document.getElementById('taggingPanel');
+
             const aiSuggestions = tags.filter(t => t.aiSuggested && !t.accepted);
             const confirmedTags = tags.filter(t => t.accepted || !t.aiSuggested);
+
             let html = '';
+
             if (aiSuggestions.length > 0) {
                 html += `<div class="ai-banner">🤖 ${aiSuggestions.length} AI suggestion(s) pending review</div>`;
             }
+
             const tagSections = [
                 { category: 'makeup', title: 'Makeup', color: '#ff6b9d' },
                 { category: 'hair', title: 'Hair', color: '#c084fc' },
@@ -1601,10 +1840,12 @@ Categories: "makeup", "hair", "sfx", "wardrobe", "props", "cast"`;
                 { category: 'wardrobe', title: 'Wardrobe', color: '#34d399' },
                 { category: 'props', title: 'Props', color: '#fb923c' }
             ];
+
             tagSections.forEach(section => {
                 const sectionTags = tags.filter(t => t.category === section.category);
                 const sectionAI = sectionTags.filter(t => t.aiSuggested && !t.accepted);
                 const sectionConfirmed = sectionTags.filter(t => t.accepted || !t.aiSuggested);
+
                 html += `
                     <div class="tag-section">
                         <div class="tag-section-title">
@@ -1612,9 +1853,12 @@ Categories: "makeup", "hair", "sfx", "wardrobe", "props", "cast"`;
                             ${section.title}
                         </div>
                 `;
+
+                // AI Suggestions
                 if (sectionAI.length > 0) {
                     html += '<div class="tag-list">';
                     sectionAI.forEach((tag, i) => {
+                        const tagIndex = tags.filter(t => t.category === section.category && t.aiSuggested && !t.accepted).indexOf(tag);
                         html += `
                             <div class="tag-item ai-suggested">
                                 <div class="tag-description">
@@ -1622,39 +1866,55 @@ Categories: "makeup", "hair", "sfx", "wardrobe", "props", "cast"`;
                                     ${escapeHtml(tag.description)}
                                 </div>
                                 <div class="tag-actions">
-                                    <button class="tag-action-btn accept" onclick="acceptTag(${sceneNumber}, '${section.category}', ${i})" title="Accept">✓</button>
-                                    <button class="tag-action-btn reject" onclick="rejectTag(${sceneNumber}, '${section.category}', ${i})" title="Reject">✕</button>
+                                    <button class="tag-action-btn accept" 
+                                            onclick="acceptTag(${sceneNumber}, '${section.category}', ${tagIndex})" 
+                                            title="Accept">✓</button>
+                                    <button class="tag-action-btn reject" 
+                                            onclick="rejectTag(${sceneNumber}, '${section.category}', ${tagIndex})" 
+                                            title="Reject">✕</button>
                                 </div>
                             </div>
                         `;
                     });
                     html += '</div>';
                 }
+
+                // Confirmed Tags
                 if (sectionConfirmed.length > 0) {
                     html += '<div class="tag-list">';
                     sectionConfirmed.forEach((tag, i) => {
+                        const tagIndex = tags.filter(t => t.category === section.category && (t.accepted || !t.aiSuggested)).indexOf(tag);
                         html += `
                             <div class="tag-item">
                                 <div class="tag-description">${escapeHtml(tag.description)}</div>
-                                <button class="tag-action-btn reject" onclick="removeConfirmedTag(${sceneNumber}, '${section.category}', ${i})">✕</button>
+                                <button class="tag-action-btn reject" 
+                                        onclick="removeConfirmedTag(${sceneNumber}, '${section.category}', ${tagIndex})">✕</button>
                             </div>
                         `;
                     });
                     html += '</div>';
                 }
+
                 html += `<button class="add-tag-btn" onclick="openTagModal('${section.category}', '${section.title}')">+ Add ${section.title}</button></div>`;
             });
+
             html += `
                 <div class="notes-section">
                     <div class="tag-section-title">📝 Scene Notes</div>
-                    <textarea class="notes-textarea" placeholder="Add notes..." onchange="saveSceneNotes(${sceneNumber}, this.value)">${escapeHtml(notes)}</textarea>
+                    <textarea class="notes-textarea" 
+                              placeholder="Add notes..." 
+                              onchange="saveSceneNotes(${sceneNumber}, this.value)">${escapeHtml(notes)}</textarea>
                 </div>
             `;
+
             panel.innerHTML = html;
         }
 
         function acceptTag(sceneNumber, category, tagIndex) {
-            const tags = sceneTags[sceneNumber].filter(t => t.category === category && t.aiSuggested && !t.accepted);
+            const tags = sceneTags[sceneNumber].filter(t => 
+                t.category === category && t.aiSuggested && !t.accepted
+            );
+            
             if (tags[tagIndex]) {
                 tags[tagIndex].accepted = true;
                 saveProjectData();
@@ -1665,8 +1925,11 @@ Categories: "makeup", "hair", "sfx", "wardrobe", "props", "cast"`;
         }
 
         function rejectTag(sceneNumber, category, tagIndex) {
-            const aiTags = sceneTags[sceneNumber].filter(t => t.category === category && t.aiSuggested && !t.accepted);
+            const aiTags = sceneTags[sceneNumber].filter(t => 
+                t.category === category && t.aiSuggested && !t.accepted
+            );
             const tagToRemove = aiTags[tagIndex];
+            
             sceneTags[sceneNumber] = sceneTags[sceneNumber].filter(t => t !== tagToRemove);
             saveProjectData();
             displayTaggingPanel(currentSceneIndex);
@@ -1675,8 +1938,12 @@ Categories: "makeup", "hair", "sfx", "wardrobe", "props", "cast"`;
 
         function removeConfirmedTag(sceneNumber, category, tagIndex) {
             if (!confirm('Remove this tag?')) return;
-            const confirmedTags = sceneTags[sceneNumber].filter(t => t.category === category && (t.accepted || !t.aiSuggested));
+            
+            const confirmedTags = sceneTags[sceneNumber].filter(t => 
+                t.category === category && (t.accepted || !t.aiSuggested)
+            );
             const tagToRemove = confirmedTags[tagIndex];
+            
             sceneTags[sceneNumber] = sceneTags[sceneNumber].filter(t => t !== tagToRemove);
             saveProjectData();
             displayTaggingPanel(currentSceneIndex);
@@ -1698,10 +1965,25 @@ Categories: "makeup", "hair", "sfx", "wardrobe", "props", "cast"`;
 
         function saveTag() {
             const description = document.getElementById('tagDescription').value.trim();
-            if (!description) { alert('Please enter a description'); return; }
+            
+            if (!description) {
+                alert('Please enter a description');
+                return;
+            }
+
             const sceneNumber = currentSceneIndex + 1;
-            if (!sceneTags[sceneNumber]) sceneTags[sceneNumber] = [];
-            sceneTags[sceneNumber].push({ category: currentTagCategory, description: description, aiSuggested: false, accepted: true });
+            
+            if (!sceneTags[sceneNumber]) {
+                sceneTags[sceneNumber] = [];
+            }
+
+            sceneTags[sceneNumber].push({
+                category: currentTagCategory,
+                description: description,
+                aiSuggested: false,
+                accepted: true
+            });
+
             saveProjectData();
             displayTaggingPanel(currentSceneIndex);
             renderSceneNavigation();
@@ -1727,7 +2009,12 @@ Categories: "makeup", "hair", "sfx", "wardrobe", "props", "cast"`;
         function saveSettings() {
             apiKey = document.getElementById('apiKey').value.trim();
             aiProvider = document.getElementById('aiProvider').value;
-            if (!apiKey) { alert('Please enter an API key'); return; }
+
+            if (!apiKey) {
+                alert('Please enter an API key');
+                return;
+            }
+
             localStorage.setItem('aiApiKey', apiKey);
             localStorage.setItem('aiProvider', aiProvider);
             closeSettings();
@@ -1738,6 +2025,7 @@ Categories: "makeup", "hair", "sfx", "wardrobe", "props", "cast"`;
             document.getElementById('stepAI').classList.remove('active', 'completed');
             document.getElementById('stepReview').classList.remove('active', 'completed');
             document.getElementById('stepGenerate').classList.remove('active', 'completed');
+
             if (step === 'ai') {
                 document.getElementById('stepAI').classList.add('active');
             } else if (step === 'review') {
@@ -1754,6 +2042,7 @@ Categories: "makeup", "hair", "sfx", "wardrobe", "props", "cast"`;
             const allTags = Object.values(sceneTags).flat();
             const pendingAI = allTags.filter(t => t.aiSuggested && !t.accepted);
             const generateBtn = document.getElementById('generateBtn');
+
             if (pendingAI.length === 0 && allTags.length > 0) {
                 generateBtn.disabled = false;
                 updateWorkflowStep('generate');
@@ -1764,6 +2053,7 @@ Categories: "makeup", "hair", "sfx", "wardrobe", "props", "cast"`;
 
         function generateBreakdown() {
             if (!confirm('Generate final breakdown?')) return;
+            
             saveProjectData();
             window.location.href = 'generate-breakdown.html';
         }
@@ -1772,9 +2062,13 @@ Categories: "makeup", "hair", "sfx", "wardrobe", "props", "cast"`;
             currentProject.scenes = scenes;
             currentProject.sceneTags = sceneTags;
             currentProject.sceneNotes = sceneNotes;
+            
             localStorage.setItem('currentProject', JSON.stringify(currentProject));
+
+            // Update in projects list
             const projects = JSON.parse(localStorage.getItem('checksHappyProjects') || '[]');
             const projectIndex = projects.findIndex(p => p.code === currentProject.code);
+            
             if (projectIndex !== -1) {
                 projects[projectIndex].scenes = scenes;
                 projects[projectIndex].sceneTags = sceneTags;
@@ -1817,6 +2111,7 @@ Categories: "makeup", "hair", "sfx", "wardrobe", "props", "cast"`;
             return div.innerHTML;
         }
 
+        // Initialize
         init();
     </script>
 </body>
