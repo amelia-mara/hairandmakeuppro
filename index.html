@@ -873,6 +873,18 @@
             pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
         }
 
+        // After PDF extraction, normalize the text
+        function normalizeScriptText(text) {
+            return text
+                .replace(/\r\n/g, '\n')  // Normalize line endings
+                .replace(/\r/g, '\n')    // Handle old Mac line endings
+                .replace(/([A-Z]) ([A-Z])/g, '$1$2') // Remove spaces between capital letters
+                .replace(/([A-Z]) ([A-Z])/g, '$1$2') // Run twice to catch overlaps
+                .replace(/([A-Z]) ([A-Z])/g, '$1$2') // Run third time
+                .replace(/\s+\n/g, '\n') // Remove trailing spaces
+                .replace(/\n\s+/g, '\n'); // Remove leading spaces
+        }
+
         // Parse PDF and extract text
         async function parsePDF(file) {
             try {
@@ -908,6 +920,11 @@
                 }
                 
                 console.log('PDF extraction complete, first 500 chars:', fullText.substring(0, 500));
+                
+                // Normalize the text to fix spacing issues
+                fullText = normalizeScriptText(fullText);
+                console.log('After normalization, first 500 chars:', fullText.substring(0, 500));
+                
                 return fullText;
             } catch (error) {
                 console.error('Error parsing PDF:', error);
