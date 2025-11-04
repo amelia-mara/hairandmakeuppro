@@ -763,6 +763,33 @@
                 transform: translateX(0);
             }
         }
+
+        /* Animations */
+        @keyframes tagAdded {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 0 0 rgba(201, 169, 97, 0.7);
+            }
+            50% {
+                transform: scale(1.05);
+                box-shadow: 0 0 20px rgba(201, 169, 97, 0.5);
+            }
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 rgba(201, 169, 97, 0);
+            }
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
     </style>
 </head>
 <body>
@@ -778,8 +805,9 @@
                 <button class="toggle-btn" id="toggleTags">🏷️ Tags</button>
                 <button class="toolbar-btn" onclick="document.getElementById('scriptUploadInput').click()">📤 Upload Script</button>
                 <input type="file" id="scriptUploadInput" accept=".txt,.fountain,.fdx,.pdf" style="display: none;" onchange="handleScriptUploadInBreakdown(event)">
-                <button class="toolbar-btn">🤖 AI Tools</button>
-                <button class="toolbar-btn primary">✨ Generate Breakdown</button>
+                <button class="toolbar-btn" onclick="showAIToolsMenu()">🤖 AI Tools</button>
+                <button class="toolbar-btn" onclick="exportBreakdown()">📥 Export</button>
+                <button class="toolbar-btn primary" onclick="generateAIBreakdown()">✨ Generate Breakdown</button>
             </div>
         </div>
 
@@ -1253,6 +1281,45 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
         let selectedText = null;
         let selectedRange = null;
         let currentProject = null;
+        let sceneTags = {}; // Store tags by scene
+        let sceneNotes = {}; // Store notes by scene
+
+        // Load saved tags and notes from localStorage
+        function loadSavedData() {
+            const projectCode = currentProject?.code;
+            if (!projectCode) return;
+            
+            const savedTags = localStorage.getItem(`${projectCode}_sceneTags`);
+            const savedNotes = localStorage.getItem(`${projectCode}_sceneNotes`);
+            
+            if (savedTags) {
+                sceneTags = JSON.parse(savedTags);
+                console.log('Loaded saved tags:', sceneTags);
+            }
+            
+            if (savedNotes) {
+                sceneNotes = JSON.parse(savedNotes);
+                console.log('Loaded saved notes:', sceneNotes);
+            }
+        }
+        
+        // Save tags to localStorage
+        function saveTags() {
+            const projectCode = currentProject?.code;
+            if (!projectCode) return;
+            
+            localStorage.setItem(`${projectCode}_sceneTags`, JSON.stringify(sceneTags));
+            console.log('Tags saved to localStorage');
+        }
+        
+        // Save notes to localStorage
+        function saveNotesToStorage() {
+            const projectCode = currentProject?.code;
+            if (!projectCode) return;
+            
+            localStorage.setItem(`${projectCode}_sceneNotes`, JSON.stringify(sceneNotes));
+            console.log('Notes saved to localStorage');
+        }
 
         // Load project and script on page load
         function loadProjectScript() {
@@ -1325,8 +1392,7 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
             let inScene = false;
             
             // More flexible regex for scene headings
-            // Handles: "INT.", "1 INT.", "1 1INT.", "EXT ", etc.
-            const sceneHeadingRegex = /^\s*\d*\s*\d*\s*(INT|EXT|INT\/EXT|I\/E)[\.\s]+/i;
+            const sceneHeadingRegex = /^\s*(INT|EXT|INT\/EXT|I\/E)[\.\s]+/i;
             
             // Simple script parser
             lines.forEach((line, index) => {
@@ -1340,19 +1406,12 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
                     }
                     
                     sceneNumber++;
-                    
-                    // Clean up the heading - remove leading numbers and normalize spacing
-                    let cleanHeading = trimmed
-                        .replace(/^\s*\d+\s*\d*\s*/, '') // Remove leading numbers like "1 1" or "1 "
-                        .replace(/\s+/g, ' ')  // Normalize multiple spaces to single space
-                        .trim();
-                    
                     html += `<div class="script-scene" id="scene-${sceneNumber}">`;
-                    html += `<div class="script-scene-heading">${sceneNumber}. ${cleanHeading}</div>`;
+                    html += `<div class="script-scene-heading">${sceneNumber}. ${trimmed}</div>`;
                     currentSceneHtml = trimmed;
                     inScene = true;
                     
-                    console.log(`Found scene ${sceneNumber}: ${cleanHeading}`);
+                    console.log(`Found scene ${sceneNumber}: ${trimmed}`);
                 }
                 // Detect character names (all caps, not too long)
                 else if (trimmed === trimmed.toUpperCase() && 
@@ -1411,9 +1470,33 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
                 // Initialize scene tags
                 initializeSceneTags(sceneNumber);
                 console.log('Scene tags initialized');
+                
+                // Load saved data (tags and notes)
+                loadSavedData();
+                
+                // Reapply saved tags to the script
+                reapplySavedTags();
+                
+                // Load notes for current scene
+                loadNotesForScene(currentScene);
+                
             } else {
                 console.error('Could not find .script-content element');
             }
+        }
+        
+        // Reapply saved tags to the script after loading
+        function reapplySavedTags() {
+            Object.keys(sceneTags).forEach(sceneNum => {
+                const tags = sceneTags[sceneNum];
+                tags.forEach(tag => {
+                    // Find the text in the scene and highlight it
+                    // This is a simplified version - in production you'd want more sophisticated text matching
+                    console.log(`Scene ${sceneNum} has tag:`, tag);
+                });
+                // Update the scene overview with existing tags
+                updateSceneOverview(parseInt(sceneNum));
+            });
         }
 
         // Generate scene list from parsed script
@@ -1572,6 +1655,9 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
                     description: description
                 });
                 
+                // Save to localStorage
+                saveTags();
+                
                 // Update scene overview
                 updateSceneOverview(currentScene);
                 
@@ -1586,6 +1672,9 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
                     e.stopPropagation();
                     removeTag(this);
                 });
+                
+                // Visual feedback
+                span.style.animation = 'tagAdded 0.3s ease';
                 
             } catch (error) {
                 alert('Cannot tag across element boundaries. Try selecting text within a single paragraph.');
@@ -1605,6 +1694,9 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
                     !(tag.text === text && tag.category === category)
                 );
             }
+            
+            // Save to localStorage
+            saveTags();
             
             // Unwrap the tag
             const parent = tagElement.parentNode;
@@ -1689,6 +1781,7 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
                 // Update current scene
                 currentScene = parseInt(this.dataset.scene);
                 updateNotesPanel();
+                loadNotesForScene(currentScene); // Load notes for this scene
             });
         });
 
@@ -1700,6 +1793,7 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
             }
             currentScene = sceneNum;
             updateNotesPanel();
+            loadNotesForScene(sceneNum); // Load notes for this scene
         }
 
         // Update notes panel
@@ -1762,18 +1856,36 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
         // Save notes
         function saveNotes() {
             const notesText = document.getElementById('notesTextarea').value;
-            // In real app, save to database/localStorage
-            console.log(`Saving notes for scene ${currentScene}:`, notesText);
+            
+            // Save to scene notes
+            sceneNotes[currentScene] = notesText;
+            
+            // Save to localStorage
+            saveNotesToStorage();
+            
+            console.log(`Saved notes for scene ${currentScene}:`, notesText);
             
             // Update timestamp
-            document.querySelector('.notes-timestamp').textContent = 'Last saved: Just now';
+            const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            document.querySelector('.notes-timestamp').textContent = `Last saved: ${timestamp}`;
             
             // Visual feedback
             const btn = document.querySelector('.save-notes-btn');
+            const originalText = btn.textContent;
             btn.textContent = '✓ Saved!';
+            btn.style.background = '#52c186';
             setTimeout(() => {
-                btn.textContent = '💾 Save Notes';
+                btn.textContent = originalText;
+                btn.style.background = '';
             }, 2000);
+        }
+        
+        // Update notes panel when switching scenes
+        function loadNotesForScene(sceneNum) {
+            const notesTextarea = document.getElementById('notesTextarea');
+            if (notesTextarea) {
+                notesTextarea.value = sceneNotes[sceneNum] || '';
+            }
         }
 
         // Sync scroll with scene list
@@ -1797,6 +1909,9 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
                         item.classList.remove('active');
                     }
                 });
+                
+                // Load notes for the new active scene
+                loadNotesForScene(activeScene);
             }
         });
 
@@ -1806,7 +1921,367 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
         // Load project script
         loadProjectScript();
 
-        // Handle script upload directly in breakdown page
+        // ============================================
+        // EXPORT FUNCTIONALITY
+        // ============================================
+        
+        function exportBreakdown() {
+            const options = [
+                '1. Export to CSV (Scene breakdown with tags)',
+                '2. Export to JSON (Complete data)',
+                '3. Export Scene List (Simple list)',
+                '4. Cancel'
+            ];
+            
+            const choice = prompt(options.join('\n\n') + '\n\nEnter your choice (1-4):');
+            
+            switch(choice) {
+                case '1':
+                    exportToCSV();
+                    break;
+                case '2':
+                    exportToJSON();
+                    break;
+                case '3':
+                    exportSceneList();
+                    break;
+                default:
+                    return;
+            }
+        }
+        
+        function exportToCSV() {
+            let csv = 'Scene,Heading,Type,Makeup,Hair,SFX,Cast,Wardrobe,Props,Notes\n';
+            
+            const sceneItems = document.querySelectorAll('.scene-item');
+            sceneItems.forEach(item => {
+                const sceneNum = item.dataset.scene;
+                const heading = item.querySelector('.scene-heading')?.textContent || '';
+                const type = item.querySelector('.scene-type')?.textContent || '';
+                
+                const tags = sceneTags[sceneNum] || [];
+                const notes = sceneNotes[sceneNum] || '';
+                
+                // Group tags by category
+                const makeup = tags.filter(t => t.category === 'makeup').map(t => t.description).join('; ');
+                const hair = tags.filter(t => t.category === 'hair').map(t => t.description).join('; ');
+                const sfx = tags.filter(t => t.category === 'sfx').map(t => t.description).join('; ');
+                const cast = tags.filter(t => t.category === 'cast').map(t => t.description).join('; ');
+                const wardrobe = tags.filter(t => t.category === 'wardrobe').map(t => t.description).join('; ');
+                const props = tags.filter(t => t.category === 'props').map(t => t.description).join('; ');
+                
+                csv += `"${sceneNum}","${heading}","${type}","${makeup}","${hair}","${sfx}","${cast}","${wardrobe}","${props}","${notes.replace(/"/g, '""')}"\n`;
+            });
+            
+            downloadFile(csv, `${currentProject?.code || 'script'}-breakdown.csv`, 'text/csv');
+        }
+        
+        function exportToJSON() {
+            const data = {
+                project: currentProject,
+                scenes: {},
+                tags: sceneTags,
+                notes: sceneNotes,
+                exportDate: new Date().toISOString()
+            };
+            
+            // Add scene details
+            document.querySelectorAll('.scene-item').forEach(item => {
+                const sceneNum = item.dataset.scene;
+                data.scenes[sceneNum] = {
+                    heading: item.querySelector('.scene-heading')?.textContent || '',
+                    type: item.querySelector('.scene-type')?.textContent || ''
+                };
+            });
+            
+            const json = JSON.stringify(data, null, 2);
+            downloadFile(json, `${currentProject?.code || 'script'}-breakdown.json`, 'application/json');
+        }
+        
+        function exportSceneList() {
+            let text = `${currentProject?.title || 'Script'} - Scene List\n`;
+            text += `Generated: ${new Date().toLocaleString()}\n`;
+            text += `${'='.repeat(60)}\n\n`;
+            
+            document.querySelectorAll('.scene-item').forEach(item => {
+                const sceneNum = item.dataset.scene;
+                const heading = item.querySelector('.scene-heading')?.textContent || '';
+                const type = item.querySelector('.scene-type')?.textContent || '';
+                
+                text += `Scene ${sceneNum}: ${heading}\n`;
+                text += `Type: ${type}\n`;
+                
+                const tags = sceneTags[sceneNum] || [];
+                if (tags.length > 0) {
+                    text += `Tags: ${tags.length}\n`;
+                    tags.forEach(tag => {
+                        text += `  • ${tag.category}: ${tag.description}\n`;
+                    });
+                }
+                
+                const notes = sceneNotes[sceneNum];
+                if (notes) {
+                    text += `Notes: ${notes}\n`;
+                }
+                
+                text += '\n';
+            });
+            
+            downloadFile(text, `${currentProject?.code || 'script'}-scenes.txt`, 'text/plain');
+        }
+        
+        function downloadFile(content, filename, mimeType) {
+            const blob = new Blob([content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            // Visual feedback
+            alert(`✓ Exported: ${filename}`);
+        }
+        
+        // ============================================
+        // AI TOOLS
+        // ============================================
+        
+        function showAIToolsMenu() {
+            const options = [
+                '1. Auto-detect makeup/hair changes',
+                '2. Find continuity issues',
+                '3. Generate character profiles',
+                '4. Suggest time in chair estimates',
+                '5. Cancel'
+            ];
+            
+            const choice = prompt(options.join('\n\n') + '\n\nEnter your choice (1-5):');
+            
+            switch(choice) {
+                case '1':
+                    autoDetectChanges();
+                    break;
+                case '2':
+                    findContinuityIssues();
+                    break;
+                case '3':
+                    generateCharacterProfiles();
+                    break;
+                case '4':
+                    estimateTimeInChair();
+                    break;
+                default:
+                    return;
+            }
+        }
+        
+        function generateAIBreakdown() {
+            if (!confirm('Generate AI breakdown? This will analyze the script and auto-tag makeup, hair, wardrobe, and cast mentions.')) {
+                return;
+            }
+            
+            let tagsAdded = 0;
+            
+            // Get all scenes
+            const scenes = document.querySelectorAll('.script-scene');
+            scenes.forEach((scene, index) => {
+                const sceneNum = index + 1;
+                const sceneText = scene.textContent.toLowerCase();
+                
+                // Initialize tags for this scene if not exists
+                if (!sceneTags[sceneNum]) {
+                    sceneTags[sceneNum] = [];
+                }
+                
+                // Makeup keywords
+                const makeupKeywords = [
+                    { word: 'mascara', desc: 'Mascara mentioned' },
+                    { word: 'lipstick', desc: 'Lipstick mentioned' },
+                    { word: 'makeup', desc: 'Makeup mentioned' },
+                    { word: 'smudged', desc: 'Smudged makeup' },
+                    { word: 'foundation', desc: 'Foundation mentioned' },
+                    { word: 'eyeliner', desc: 'Eyeliner mentioned' },
+                    { word: 'blush', desc: 'Blush mentioned' }
+                ];
+                
+                // Hair keywords
+                const hairKeywords = [
+                    { word: 'hair', desc: 'Hair mentioned' },
+                    { word: 'blonde', desc: 'Blonde hair' },
+                    { word: 'brunette', desc: 'Brunette hair' },
+                    { word: 'disheveled', desc: 'Disheveled hair' },
+                    { word: 'ponytail', desc: 'Hair in ponytail' },
+                    { word: 'tied back', desc: 'Hair tied back' },
+                    { word: 'messy', desc: 'Messy hair' },
+                    { word: 'neat', desc: 'Neat hair' }
+                ];
+                
+                // SFX keywords
+                const sfxKeywords = [
+                    { word: 'blood', desc: 'Blood effect needed' },
+                    { word: 'wound', desc: 'Wound prosthetic' },
+                    { word: 'bruise', desc: 'Bruise makeup' },
+                    { word: 'scar', desc: 'Scar prosthetic' },
+                    { word: 'cut', desc: 'Cut/laceration' },
+                    { word: 'dried blood', desc: 'Dried blood effect' }
+                ];
+                
+                // Wardrobe keywords
+                const wardrobeKeywords = [
+                    { word: 'jacket', desc: 'Jacket noted' },
+                    { word: 'dress', desc: 'Dress noted' },
+                    { word: 'shirt', desc: 'Shirt noted' },
+                    { word: 'jeans', desc: 'Jeans noted' },
+                    { word: 'torn', desc: 'Torn clothing' },
+                    { word: 'ripped', desc: 'Ripped clothing' },
+                    { word: 'same', desc: 'Same wardrobe as previous scene' }
+                ];
+                
+                // Check for keywords
+                [
+                    { keywords: makeupKeywords, category: 'makeup' },
+                    { keywords: hairKeywords, category: 'hair' },
+                    { keywords: sfxKeywords, category: 'sfx' },
+                    { keywords: wardrobeKeywords, category: 'wardrobe' }
+                ].forEach(({ keywords, category }) => {
+                    keywords.forEach(({ word, desc }) => {
+                        if (sceneText.includes(word)) {
+                            // Check if this tag already exists
+                            const exists = sceneTags[sceneNum].some(t => 
+                                t.category === category && t.description === desc
+                            );
+                            
+                            if (!exists) {
+                                sceneTags[sceneNum].push({
+                                    text: word,
+                                    category: category,
+                                    description: desc
+                                });
+                                tagsAdded++;
+                            }
+                        }
+                    });
+                });
+                
+                // Update scene overview
+                updateSceneOverview(sceneNum);
+            });
+            
+            // Save all tags
+            saveTags();
+            
+            alert(`✨ AI Breakdown Complete!\n\nAdded ${tagsAdded} tags across all scenes.\n\nReview and edit tags as needed.`);
+        }
+        
+        function autoDetectChanges() {
+            alert('🔍 Analyzing script for makeup and hair changes...\n\n' +
+                  'This will scan for:\n' +
+                  '• Hair color/style mentions\n' +
+                  '• Makeup application/removal\n' +
+                  '• Aging/injury effects\n' +
+                  '• Continuity notes\n\n' +
+                  'Running analysis...');
+            
+            generateAIBreakdown();
+        }
+        
+        function findContinuityIssues() {
+            let issues = [];
+            
+            // Check for wardrobe continuity
+            const scenes = document.querySelectorAll('.scene-item');
+            scenes.forEach((item, index) => {
+                const sceneNum = parseInt(item.dataset.scene);
+                const nextSceneNum = sceneNum + 1;
+                
+                const currentWardrobe = sceneTags[sceneNum]?.filter(t => t.category === 'wardrobe') || [];
+                const nextWardrobe = sceneTags[nextSceneNum]?.filter(t => t.category === 'wardrobe') || [];
+                
+                if (currentWardrobe.length > 0 && nextWardrobe.length > 0) {
+                    const different = currentWardrobe.some(cw => 
+                        !nextWardrobe.some(nw => nw.description === cw.description)
+                    );
+                    
+                    if (different) {
+                        issues.push(`Scene ${sceneNum} → ${nextSceneNum}: Wardrobe change detected`);
+                    }
+                }
+            });
+            
+            if (issues.length === 0) {
+                alert('✓ No obvious continuity issues found!\n\nNote: This is a basic check. Always review scenes manually.');
+            } else {
+                alert(`⚠️ Potential Continuity Issues:\n\n${issues.join('\n')}\n\nReview these scenes carefully.`);
+            }
+        }
+        
+        function generateCharacterProfiles() {
+            const characters = new Set();
+            
+            // Find all cast tags
+            Object.values(sceneTags).forEach(tags => {
+                tags.filter(t => t.category === 'cast').forEach(t => {
+                    characters.add(t.description);
+                });
+            });
+            
+            if (characters.size === 0) {
+                alert('No characters found. Tag character names first using the Cast tag.');
+                return;
+            }
+            
+            let profile = '👤 CHARACTER PROFILES\n\n';
+            characters.forEach(char => {
+                profile += `${char}\n`;
+                profile += `${'─'.repeat(40)}\n`;
+                
+                // Find scenes with this character
+                const charScenes = [];
+                Object.entries(sceneTags).forEach(([sceneNum, tags]) => {
+                    if (tags.some(t => t.category === 'cast' && t.description === char)) {
+                        charScenes.push(sceneNum);
+                    }
+                });
+                
+                profile += `Appears in scenes: ${charScenes.join(', ')}\n`;
+                profile += `Total scenes: ${charScenes.length}\n\n`;
+            });
+            
+            alert(profile);
+        }
+        
+        function estimateTimeInChair() {
+            let total = 0;
+            let breakdown = '⏱️ TIME IN CHAIR ESTIMATES\n\n';
+            
+            Object.entries(sceneTags).forEach(([sceneNum, tags]) => {
+                const makeup = tags.filter(t => t.category === 'makeup').length;
+                const hair = tags.filter(t => t.category === 'hair').length;
+                const sfx = tags.filter(t => t.category === 'sfx').length;
+                
+                // Rough estimates (in minutes)
+                const sceneTime = (makeup * 15) + (hair * 20) + (sfx * 30);
+                
+                if (sceneTime > 0) {
+                    total += sceneTime;
+                    breakdown += `Scene ${sceneNum}: ~${sceneTime} min\n`;
+                }
+            });
+            
+            breakdown += `\n${'═'.repeat(30)}\n`;
+            breakdown += `TOTAL: ~${total} minutes (${Math.round(total / 60)} hours)\n\n`;
+            breakdown += `* Estimates based on:\n`;
+            breakdown += `  Makeup: 15 min each\n`;
+            breakdown += `  Hair: 20 min each\n`;
+            breakdown += `  SFX: 30 min each\n\n`;
+            breakdown += `Adjust based on complexity!`;
+            
+            alert(breakdown);
+        }
+    </script>        // Handle script upload directly in breakdown page
         // Initialize PDF.js worker
         if (typeof pdfjsLib !== 'undefined') {
             pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
