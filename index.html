@@ -814,6 +814,7 @@
 
                 const statusClass = project.status === 'active' ? '' : 'in-progress';
                 const statusText = project.status === 'active' ? 'Active' : 'In Progress';
+                const hasScript = project.scriptContent || project.scriptFile ? '📄 Script Uploaded' : '';
 
                 card.innerHTML = `
                     <div class="clapperboard">
@@ -838,6 +839,7 @@
                             <button class="edit-btn" onclick="event.stopPropagation(); openEditModal(${index})">Edit</button>
                         </div>
                         <div class="project-meta">
+                            ${hasScript ? `<div class="meta-item"><span style="color: var(--accent-gold); font-weight: 500;">${hasScript}</span></div>` : ''}
                             <div class="meta-item">
                                 <span>${project.scenes} scenes</span>
                                 <span class="meta-dot"></span>
@@ -873,6 +875,27 @@
                 // Auto-fill project title from filename (remove extension)
                 const titleWithoutExt = file.name.replace(/\.[^/.]+$/, "");
                 document.getElementById('projectTitle').value = titleWithoutExt;
+                
+                // Read script content if it's a text file
+                if (file.type === 'text/plain' || file.name.endsWith('.txt') || file.name.endsWith('.fountain')) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const scriptContent = e.target.result;
+                        // Store script content in localStorage
+                        localStorage.setItem('uploadedScriptContent', scriptContent);
+                        localStorage.setItem('uploadedScriptName', file.name);
+                        console.log('Script content loaded and stored');
+                    };
+                    reader.readAsText(file);
+                } else if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+                    // For PDF, just store the file info for now
+                    localStorage.setItem('uploadedScriptName', file.name);
+                    localStorage.setItem('uploadedScriptType', 'pdf');
+                    console.log('PDF script uploaded - will need parsing');
+                } else {
+                    console.log('Script file uploaded:', file.name);
+                    localStorage.setItem('uploadedScriptName', file.name);
+                }
             }
         }
 
@@ -921,6 +944,9 @@
         function saveProject(event) {
             event.preventDefault();
 
+            const scriptContent = localStorage.getItem('uploadedScriptContent');
+            const scriptName = localStorage.getItem('uploadedScriptName');
+
             const project = {
                 title: document.getElementById('projectTitle').value,
                 code: document.getElementById('showCode').value,
@@ -930,13 +956,20 @@
                 lastModified: 'Just now',
                 scenes: uploadedScript ? Math.floor(Math.random() * 100) + 50 : 0,
                 characters: uploadedScript ? Math.floor(Math.random() * 30) + 10 : 0,
-                scriptFile: uploadedScript ? uploadedScript.name : null
+                scriptFile: uploadedScript ? uploadedScript.name : null,
+                scriptContent: scriptContent || null,
+                scriptName: scriptName || null
             };
 
             projects.unshift(project);
             saveToStorage();
             renderProjects();
             closeModal();
+            
+            // Clear uploaded script from temp storage
+            localStorage.removeItem('uploadedScriptContent');
+            localStorage.removeItem('uploadedScriptName');
+            localStorage.removeItem('uploadedScriptType');
         }
 
         function openProject(index) {
