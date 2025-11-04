@@ -982,32 +982,79 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
             const projectData = localStorage.getItem('currentProject');
             
             if (!projectData) {
-                console.log('No project data found in localStorage');
+                console.log('❌ No project data found in localStorage');
+                showNoScriptMessage();
                 return;
             }
             
             currentProject = JSON.parse(projectData);
-            console.log('Project loaded:', currentProject.title);
-            console.log('Project has scriptContent:', !!currentProject.scriptContent);
-            console.log('Project scriptName:', currentProject.scriptName);
+            console.log('✓ Project loaded:', currentProject.title);
+            console.log('  - Project code:', currentProject.code);
+            console.log('  - Script name:', currentProject.scriptName);
+            console.log('  - Has scriptContent:', !!currentProject.scriptContent);
+            console.log('  - scriptContent length:', currentProject.scriptContent ? currentProject.scriptContent.length : 0);
+            console.log('  - All keys:', Object.keys(currentProject));
             
             // Update page title
             document.querySelector('.page-title').textContent = `Script Breakdown - ${currentProject.title}`;
             
             // If project has script content, parse and display it
-            if (currentProject.scriptContent) {
-                console.log('Script content found, length:', currentProject.scriptContent.length);
-                console.log('First 200 chars:', currentProject.scriptContent.substring(0, 200));
+            if (currentProject.scriptContent && currentProject.scriptContent.length > 0) {
+                console.log('✓ Script content found, length:', currentProject.scriptContent.length);
+                console.log('  - First 200 chars:', currentProject.scriptContent.substring(0, 200));
                 
                 try {
                     parseAndDisplayScript(currentProject.scriptContent);
-                    console.log('Script parsed and displayed successfully');
+                    console.log('✓ Script parsed and displayed successfully');
                 } catch (error) {
-                    console.error('Error parsing script:', error);
-                    alert('Error displaying script. Check console for details.');
+                    console.error('❌ Error parsing script:', error);
+                    showScriptError('Error parsing script. Check browser console for details.');
                 }
             } else {
-                console.log('No script content found in project, showing demo script');
+                console.log('❌ No script content found in project');
+                console.log('  Troubleshooting:');
+                console.log('  1. Check if script was uploaded when creating project');
+                console.log('  2. Open browser DevTools → Application → Local Storage');
+                console.log('  3. Look for "currentProject" and "checksHappyProjects"');
+                showNoScriptMessage();
+            }
+        }
+        
+        // Show error message in script viewer
+        function showScriptError(message) {
+            const scriptContent = document.querySelector('.script-content');
+            if (scriptContent) {
+                scriptContent.innerHTML = `
+                    <div style="display: flex; align-items: center; justify-content: center; min-height: 400px; flex-direction: column; gap: 16px; color: var(--text-muted); text-align: center; padding: 24px;">
+                        <div style="font-size: 1.5em; color: var(--warning);">Error</div>
+                        <div style="font-size: 0.875em; max-width: 400px;">${message}</div>
+                        <button class="toolbar-btn" onclick="document.getElementById('scriptUploadInput').click()" style="margin-top: 16px;">Upload Script</button>
+                    </div>
+                `;
+            }
+            
+            const sceneList = document.getElementById('sceneList');
+            if (sceneList) {
+                sceneList.innerHTML = '<div style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 0.875em;">No scenes available</div>';
+            }
+        }
+        
+        // Show message when no script is uploaded
+        function showNoScriptMessage() {
+            const scriptContent = document.querySelector('.script-content');
+            if (scriptContent) {
+                scriptContent.innerHTML = `
+                    <div style="display: flex; align-items: center; justify-content: center; min-height: 400px; flex-direction: column; gap: 16px; color: var(--text-muted); text-align: center; padding: 24px;">
+                        <div style="font-size: 2em; opacity: 0.3; font-weight: 300;">NO SCRIPT</div>
+                        <div style="font-size: 0.875em; max-width: 400px;">No script has been uploaded for this project yet.</div>
+                        <button class="toolbar-btn primary" onclick="document.getElementById('scriptUploadInput').click()" style="margin-top: 16px;">Upload Script Now</button>
+                    </div>
+                `;
+            }
+            
+            const sceneList = document.getElementById('sceneList');
+            if (sceneList) {
+                sceneList.innerHTML = '<div style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 0.875em;">Upload a script to begin</div>';
             }
         }
 
@@ -1114,9 +1161,13 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
                 console.error('No scenes detected in script!');
                 console.error('Script preview (first 500 chars):', scriptText.substring(0, 500));
                 
-                // Show the user what we extracted
-                const preview = scriptText.substring(0, 500);
-                alert(`No scenes found in script. Make sure scene headings start with INT. or EXT.\n\nScript preview:\n${preview}\n\n...Check the console for full extracted text.`);
+                // Show detailed error with script preview
+                showScriptError(`
+                    No scenes found in script. Make sure scene headings start with INT. or EXT.<br><br>
+                    <strong>Script preview:</strong><br>
+                    <div style="font-family: monospace; font-size: 0.75em; text-align: left; background: rgba(0,0,0,0.3); padding: 12px; border-radius: 4px; max-width: 500px; margin: 16px auto; white-space: pre-wrap; max-height: 200px; overflow-y: auto;">${scriptText.substring(0, 500).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+                    Check the browser console for the full extracted text.
+                `);
                 return;
             }
             
