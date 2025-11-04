@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Script Breakdown - The Big Race</title>
+    <title>Script Breakdown</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <style>
@@ -323,54 +323,6 @@
             line-height: 1.5;
         }
 
-        .scene-tags {
-            display: flex;
-            gap: 6px;
-            flex-wrap: wrap;
-            margin-bottom: 10px;
-        }
-
-        .tag-icon {
-            width: 24px;
-            height: 24px;
-            border-radius: 4px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.7em;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .tag-icon:hover {
-            transform: scale(1.1);
-        }
-
-        .tag-icon.makeup { background: var(--tag-makeup); }
-        .tag-icon.hair { background: var(--tag-hair); }
-        .tag-icon.sfx { background: var(--tag-sfx); }
-        .tag-icon.cast { background: var(--tag-cast); }
-        .tag-icon.wardrobe { background: var(--tag-wardrobe); }
-        .tag-icon.props { background: var(--tag-props); }
-
-        .breakdown-btn {
-            width: 100%;
-            padding: 6px 12px;
-            background: transparent;
-            border: 1px solid var(--glass-border);
-            border-radius: 6px;
-            color: var(--text-light);
-            cursor: pointer;
-            font-size: 0.75em;
-            transition: all 0.2s ease;
-        }
-
-        .breakdown-btn:hover {
-            background: var(--accent-gold);
-            border-color: var(--accent-gold);
-            color: var(--bg-dark);
-        }
-
         /* Center Panel - Script Viewer */
         .center-panel {
             flex: 1;
@@ -632,6 +584,19 @@
             gap: 6px;
         }
 
+        .tag-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            font-size: 0.7em;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
+
         .tag-category-items {
             padding-left: 16px;
             color: var(--text-muted);
@@ -721,46 +686,37 @@
             border-color: var(--tag-props);
         }
 
-        /* Tag deletion */
-        .tagged {
-            position: relative;
-            user-select: none;
+        .breakdown-btn {
+            width: 100%;
+            padding: 6px 12px;
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-light);
+            cursor: pointer;
+            font-size: 0.75em;
+            transition: all 0.2s ease;
         }
 
-        /* Responsive */
-        @media (max-width: 1400px) {
-            .left-sidebar {
-                width: 260px;
-            }
-            .right-sidebar {
-                width: 280px;
-            }
+        .breakdown-btn:hover {
+            background: var(--accent-gold);
+            border-color: var(--accent-gold);
+            color: var(--bg-dark);
         }
-
-        @media (max-width: 1024px) {
-            .left-sidebar,
-            .right-sidebar {
-                position: fixed;
-                top: 60px;
-                height: calc(100vh - 60px);
-                z-index: 100;
-                transition: transform 0.3s ease;
+        
+        /* Animations */
+        @keyframes tagAdded {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 0 0 rgba(201, 169, 97, 0.7);
             }
-
-            .left-sidebar {
-                transform: translateX(-100%);
+            50% {
+                transform: scale(1.05);
+                box-shadow: 0 0 20px rgba(201, 169, 97, 0.5);
             }
-
-            .right-sidebar {
-                transform: translateX(100%);
-            }
-
-            .left-sidebar.open {
-                transform: translateX(0);
-            }
-
-            .right-sidebar.open {
-                transform: translateX(0);
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 rgba(201, 169, 97, 0);
             }
         }
     </style>
@@ -770,16 +726,17 @@
         <!-- Top Bar -->
         <div class="top-bar">
             <div style="display: flex; align-items: center; gap: 24px;">
-                <a href="dashboard.html" class="back-link">← Dashboard</a>
+                <a href="index.html" class="back-link">← Dashboard</a>
                 <h1 class="page-title">Script Breakdown</h1>
             </div>
 
             <div class="top-bar-actions">
-                <button class="toggle-btn" id="toggleTags">🏷️ Tags</button>
-                <button class="toolbar-btn" onclick="document.getElementById('scriptUploadInput').click()">📤 Upload Script</button>
+                <button class="toggle-btn" id="toggleTags">Tags</button>
+                <button class="toolbar-btn" onclick="document.getElementById('scriptUploadInput').click()">Upload Script</button>
                 <input type="file" id="scriptUploadInput" accept=".txt,.fountain,.fdx,.pdf" style="display: none;" onchange="handleScriptUploadInBreakdown(event)">
-                <button class="toolbar-btn">🤖 AI Tools</button>
-                <button class="toolbar-btn primary">✨ Generate Breakdown</button>
+                <button class="toolbar-btn" onclick="showAIToolsMenu()">AI Tools</button>
+                <button class="toolbar-btn" onclick="exportBreakdown()">Export</button>
+                <button class="toolbar-btn primary" onclick="generateAIBreakdown()">Generate Breakdown</button>
             </div>
         </div>
 
@@ -793,261 +750,8 @@
                 </div>
 
                 <div class="scene-list" id="sceneList">
-                    <!-- Scene 1 -->
-                    <div class="scene-item active" data-scene="1" onclick="scrollToScene(1)">
-                        <div class="scene-header">
-                            <div class="scene-number">1</div>
-                            <div style="flex: 1;">
-                                <div class="scene-heading">INT. MOTEL ROOM - NIGHT</div>
-                                <span class="scene-type int-night">INT / Night</span>
-                            </div>
-                        </div>
-                        <div class="scene-details">
-                            <div class="scene-synopsis">
-                                Jane wakes up disoriented in a dingy motel room. Blood on her hands, makeup smudged. No memory of how she got there.
-                            </div>
-                            <div class="tag-items-list">
-                                <div class="tag-category">
-                                    <div class="tag-category-title">
-                                        <span style="color: var(--tag-makeup)">💄</span> Makeup
-                                    </div>
-                                    <div class="tag-category-items">
-                                        <div class="tag-item-entry">
-                                            <div class="tag-item-dot"></div>
-                                            <span>Smudged mascara/lipstick</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="tag-category">
-                                    <div class="tag-category-title">
-                                        <span style="color: var(--tag-hair)">✂️</span> Hair
-                                    </div>
-                                    <div class="tag-category-items">
-                                        <div class="tag-item-entry">
-                                            <div class="tag-item-dot"></div>
-                                            <span>Disheveled blonde</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="tag-category">
-                                    <div class="tag-category-title">
-                                        <span style="color: var(--tag-sfx)">🩸</span> SFX
-                                    </div>
-                                    <div class="tag-category-items">
-                                        <div class="tag-item-entry">
-                                            <div class="tag-item-dot"></div>
-                                            <span>Blood on hands</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="tag-category">
-                                    <div class="tag-category-title">
-                                        <span style="color: var(--tag-cast)">👤</span> Cast
-                                    </div>
-                                    <div class="tag-category-items">
-                                        <div class="tag-item-entry">
-                                            <div class="tag-item-dot"></div>
-                                            <span>Jane Doe (Lead)</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <button class="breakdown-btn">Open Full Breakdown →</button>
-                        </div>
-                    </div>
-
-                    <!-- Scene 2 -->
-                    <div class="scene-item" data-scene="2" onclick="scrollToScene(2)">
-                        <div class="scene-header">
-                            <div class="scene-number">2</div>
-                            <div style="flex: 1;">
-                                <div class="scene-heading">EXT. PARKING LOT - NIGHT</div>
-                                <span class="scene-type ext-night">EXT / Night</span>
-                            </div>
-                        </div>
-                        <div class="scene-details">
-                            <div class="scene-synopsis">
-                                Jane stumbles outside. Neon lights reflect off wet pavement. She notices her torn jacket and searches for her car.
-                            </div>
-                            <div class="tag-items-list">
-                                <div class="tag-category">
-                                    <div class="tag-category-title">
-                                        <span style="color: var(--tag-makeup)">💄</span> Makeup
-                                    </div>
-                                    <div class="tag-category-items">
-                                        <div class="tag-item-entry">
-                                            <div class="tag-item-dot"></div>
-                                            <span>Continuity from Scene 1</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="tag-category">
-                                    <div class="tag-category-title">
-                                        <span style="color: var(--tag-wardrobe)">👔</span> Wardrobe
-                                    </div>
-                                    <div class="tag-category-items">
-                                        <div class="tag-item-entry">
-                                            <div class="tag-item-dot"></div>
-                                            <span>Torn leather jacket</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="tag-category">
-                                    <div class="tag-category-title">
-                                        <span style="color: var(--tag-cast)">👤</span> Cast
-                                    </div>
-                                    <div class="tag-category-items">
-                                        <div class="tag-item-entry">
-                                            <div class="tag-item-dot"></div>
-                                            <span>Jane Doe (Lead)</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <button class="breakdown-btn">Open Full Breakdown →</button>
-                        </div>
-                    </div>
-
-                    <!-- Scene 3 -->
-                    <div class="scene-item" data-scene="3" onclick="scrollToScene(3)">
-                        <div class="scene-header">
-                            <div class="scene-number">3</div>
-                            <div style="flex: 1;">
-                                <div class="scene-heading">INT. CAR - NIGHT</div>
-                                <span class="scene-type int-night">INT / Night</span>
-                            </div>
-                        </div>
-                        <div class="scene-details">
-                            <div class="scene-synopsis">
-                                Jane frantically wipes blood from her face using the rearview mirror. Discovers a cut on her forehead.
-                            </div>
-                            <div class="tag-items-list">
-                                <div class="tag-category">
-                                    <div class="tag-category-title">
-                                        <span style="color: var(--tag-makeup)">💄</span> Makeup
-                                    </div>
-                                    <div class="tag-category-items">
-                                        <div class="tag-item-entry">
-                                            <div class="tag-item-dot"></div>
-                                            <span>Removing smudged makeup</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="tag-category">
-                                    <div class="tag-category-title">
-                                        <span style="color: var(--tag-sfx)">🩸</span> SFX
-                                    </div>
-                                    <div class="tag-category-items">
-                                        <div class="tag-item-entry">
-                                            <div class="tag-item-dot"></div>
-                                            <span>Forehead wound</span>
-                                        </div>
-                                        <div class="tag-item-entry">
-                                            <div class="tag-item-dot"></div>
-                                            <span>Dried blood</span>
-                                        </div>
-                                        <div class="tag-item-entry">
-                                            <div class="tag-item-dot"></div>
-                                            <span>Blood on bat</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="tag-category">
-                                    <div class="tag-category-title">
-                                        <span style="color: var(--tag-props)">📦</span> Props
-                                    </div>
-                                    <div class="tag-category-items">
-                                        <div class="tag-item-entry">
-                                            <div class="tag-item-dot"></div>
-                                            <span>Baseball bat</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="tag-category">
-                                    <div class="tag-category-title">
-                                        <span style="color: var(--tag-cast)">👤</span> Cast
-                                    </div>
-                                    <div class="tag-category-items">
-                                        <div class="tag-item-entry">
-                                            <div class="tag-item-dot"></div>
-                                            <span>Jane Doe (Lead)</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <button class="breakdown-btn">Open Full Breakdown →</button>
-                        </div>
-                    </div>
-
-                    <!-- Scene 4 -->
-                    <div class="scene-item" data-scene="4" onclick="scrollToScene(4)">
-                        <div class="scene-header">
-                            <div class="scene-number">4</div>
-                            <div style="flex: 1;">
-                                <div class="scene-heading">EXT. CONVENIENCE STORE - DAY</div>
-                                <span class="scene-type ext-day">EXT / Day</span>
-                            </div>
-                        </div>
-                        <div class="scene-details">
-                            <div class="scene-synopsis">
-                                Next morning. Jane, now cleaned up with fresh makeup, enters a store. Still wearing yesterday's damaged clothes.
-                            </div>
-                            <div class="tag-items-list">
-                                <div class="tag-category">
-                                    <div class="tag-category-title">
-                                        <span style="color: var(--tag-makeup)">💄</span> Makeup
-                                    </div>
-                                    <div class="tag-category-items">
-                                        <div class="tag-item-entry">
-                                            <div class="tag-item-dot"></div>
-                                            <span>Fresh natural look</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="tag-category">
-                                    <div class="tag-category-title">
-                                        <span style="color: var(--tag-hair)">✂️</span> Hair
-                                    </div>
-                                    <div class="tag-category-items">
-                                        <div class="tag-item-entry">
-                                            <div class="tag-item-dot"></div>
-                                            <span>Tied back/neat</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="tag-category">
-                                    <div class="tag-category-title">
-                                        <span style="color: var(--tag-wardrobe)">👔</span> Wardrobe
-                                    </div>
-                                    <div class="tag-category-items">
-                                        <div class="tag-item-entry">
-                                            <div class="tag-item-dot"></div>
-                                            <span>Same damaged jacket</span>
-                                        </div>
-                                        <div class="tag-item-entry">
-                                            <div class="tag-item-dot"></div>
-                                            <span>Ripped jeans</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="tag-category">
-                                    <div class="tag-category-title">
-                                        <span style="color: var(--tag-cast)">👤</span> Cast
-                                    </div>
-                                    <div class="tag-category-items">
-                                        <div class="tag-item-entry">
-                                            <div class="tag-item-dot"></div>
-                                            <span>Jane Doe (Lead)</span>
-                                        </div>
-                                        <div class="tag-item-entry">
-                                            <div class="tag-item-dot"></div>
-                                            <span>Store Clerk (50s, Supporting)</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <button class="breakdown-btn">Open Full Breakdown →</button>
-                        </div>
+                    <div style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 0.875em;">
+                        Loading scenes...
                     </div>
                 </div>
             </div>
@@ -1086,120 +790,9 @@
                 <div class="script-viewer" id="scriptViewer">
                     <div class="script-container">
                         <div class="script-content">
-                            <!-- Scene 1 -->
-                            <div class="script-scene" id="scene-1">
-                                <div class="script-scene-heading">1. INT. MOTEL ROOM - NIGHT</div>
-                                
-                                <div class="script-action">
-                                    A thin ray of neon light cuts through dusty venetian blinds. The room is cheap, depressing.
-                                </div>
-
-                                <div class="script-action">
-                                    <span class="tagged cast" data-tag="Jane Doe - Lead Character">JANE DOE (28)<span class="tooltip">Tagged as: Cast — Jane Doe, Lead</span></span>, lies face-down on a stained bedspread. Her <span class="tagged hair" data-tag="Disheveled blonde hair">blonde hair is disheveled<span class="tooltip">Tagged as: Hair — Disheveled blonde</span></span>, tangled.
-                                </div>
-
-                                <div class="script-action">
-                                    She stirs. Opens her eyes slowly. Disoriented.
-                                </div>
-
-                                <div class="script-action">
-                                    She sits up, touches her face. Her <span class="tagged makeup" data-tag="Smudged mascara and lipstick">mascara is smudged, lipstick smeared<span class="tooltip">Tagged as: Makeup — Smudged mascara/lipstick</span></span> across her cheek.
-                                </div>
-
-                                <div class="script-action">
-                                    She looks down at her hands. <span class="tagged sfx" data-tag="Blood effect on hands">Dried blood cakes her fingers<span class="tooltip">Tagged as: SFX — Blood on hands</span></span>.
-                                </div>
-
-                                <div class="script-character">
-                                    JANE
-                                </div>
-
-                                <div class="script-parenthetical">
-                                    (panicked whisper)
-                                </div>
-
-                                <div class="script-dialogue">
-                                    What the hell...
-                                </div>
-
-                                <div class="script-action">
-                                    She scrambles off the bed, nearly trips. Rushes to the cracked mirror above the dresser.
-                                </div>
-                            </div>
-
-                            <!-- Scene 2 -->
-                            <div class="script-scene" id="scene-2">
-                                <div class="script-scene-heading">2. EXT. PARKING LOT - NIGHT</div>
-                                
-                                <div class="script-action">
-                                    Jane bursts through the motel door into the cold night. Neon signs flicker — "VACANCY" in hot pink.
-                                </div>
-
-                                <div class="script-action">
-                                    She's still wearing the same <span class="tagged wardrobe" data-tag="Torn leather jacket">torn leather jacket<span class="tooltip">Tagged as: Wardrobe — Torn leather jacket</span></span>, same <span class="tagged makeup" data-tag="Smudged makeup continues">smudged makeup<span class="tooltip">Tagged as: Makeup — Continuity from Scene 1</span></span>.
-                                </div>
-
-                                <div class="script-action">
-                                    She searches the parking lot frantically. Only three cars. None of them look familiar.
-                                </div>
-
-                                <div class="script-character">
-                                    JANE
-                                </div>
-
-                                <div class="script-dialogue">
-                                    Come on, come on...
-                                </div>
-
-                                <div class="script-action">
-                                    She presses her key fob. A beat-up Honda chirps twice.
-                                </div>
-                            </div>
-
-                            <!-- Scene 3 -->
-                            <div class="script-scene" id="scene-3">
-                                <div class="script-scene-heading">3. INT. CAR - NIGHT</div>
-                                
-                                <div class="script-action">
-                                    Jane slams into the driver's seat. Flips down the sun visor, revealing a small mirror.
-                                </div>
-
-                                <div class="script-action">
-                                    She stares at her reflection. The <span class="tagged sfx" data-tag="Cut on forehead">cut on her forehead<span class="tooltip">Tagged as: SFX — Forehead wound</span></span> has dried, leaving a dark streak of <span class="tagged sfx" data-tag="Dried blood">blood<span class="tooltip">Tagged as: SFX — Dried blood</span></span> down her temple.
-                                </div>
-
-                                <div class="script-action">
-                                    She uses the sleeve of her jacket to wipe away the <span class="tagged makeup" data-tag="Removing smudged makeup">ruined makeup<span class="tooltip">Tagged as: Makeup — Removing smudged makeup</span></span>. Winces at the pain.
-                                </div>
-
-                                <div class="script-action">
-                                    In the backseat: a <span class="tagged props" data-tag="Baseball bat">baseball bat<span class="tooltip">Tagged as: Props — Baseball bat</span></span>, also <span class="tagged sfx" data-tag="Blood on bat">stained with blood<span class="tooltip">Tagged as: SFX — Blood on bat</span></span>.
-                                </div>
-
-                                <div class="script-character">
-                                    JANE
-                                </div>
-
-                                <div class="script-dialogue">
-                                    Oh god. What did I do?
-                                </div>
-                            </div>
-
-                            <!-- Scene 4 -->
-                            <div class="script-scene" id="scene-4">
-                                <div class="script-scene-heading">4. EXT. CONVENIENCE STORE - DAY</div>
-                                
-                                <div class="script-action">
-                                    Morning light. Jane approaches a 7-Eleven. She's <span class="tagged makeup" data-tag="Fresh natural makeup">cleaned herself up — fresh, natural makeup<span class="tooltip">Tagged as: Makeup — Fresh natural look</span></span>, <span class="tagged hair" data-tag="Hair tied back">hair tied back<span class="tooltip">Tagged as: Hair — Tied back/neat</span></span> in a neat ponytail.
-                                </div>
-
-                                <div class="script-action">
-                                    But she's still wearing the same <span class="tagged wardrobe" data-tag="Same damaged jacket">damaged leather jacket<span class="tooltip">Tagged as: Wardrobe — Same jacket from night before</span></span> and <span class="tagged wardrobe" data-tag="Ripped jeans">ripped jeans<span class="tooltip">Tagged as: Wardrobe — Ripped jeans</span></span> from last night.
-                                </div>
-
-                                <div class="script-action">
-                                    She keeps her head down, avoiding eye contact with a <span class="tagged cast" data-tag="Store clerk - Supporting">STORE CLERK (50s)<span class="tooltip">Tagged as: Cast — Supporting role, 50s</span></span> who watches her suspiciously.
-                                </div>
+                            <div style="display: flex; align-items: center; justify-content: center; min-height: 400px; flex-direction: column; gap: 16px; color: var(--text-muted);">
+                                <div style="font-size: 2em; opacity: 0.3; font-weight: 300;">SCRIPT</div>
+                                <div style="font-size: 0.875em;">Loading script...</div>
                             </div>
                         </div>
                     </div>
@@ -1210,7 +803,7 @@
             <div class="right-sidebar">
                 <div class="notes-header">
                     <div class="notes-title">Scene Notes</div>
-                    <div class="notes-scene" id="notesSceneTitle">Scene 1: INT. MOTEL ROOM - NIGHT</div>
+                    <div class="notes-scene" id="notesSceneTitle">Select a scene</div>
                 </div>
 
                 <div class="notes-content">
@@ -1220,18 +813,12 @@
 • Hair/makeup details  
 • SFX requirements
 • Creative ideas
-• Production notes">Jane's makeup needs to look authentically messy — not "movie messy" but genuinely slept-in and smudged.
-
-Blood should be dried/dark brown, not fresh red.
-
-Hair: Focus on tangled, slept-on look. Blonde highlights catching the neon light.
-
-Wardrobe note: Leather jacket gets torn in this scene — need duplicate for continuity.</textarea>
+• Production notes"></textarea>
                 </div>
 
                 <div class="notes-footer">
-                    <button class="save-notes-btn" onclick="saveNotes()">💾 Save Notes</button>
-                    <div class="notes-timestamp">Last saved: Just now</div>
+                    <button class="save-notes-btn" onclick="saveNotes()">Save Notes</button>
+                    <div class="notes-timestamp">Not saved yet</div>
                 </div>
             </div>
         </div>
@@ -1239,99 +826,137 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
 
     <!-- Floating Tag Toolbar -->
     <div class="tag-toolbar" id="tagToolbar">
-        <button class="tag-toolbar-btn makeup" onclick="tagSelection('makeup', '💄')">💄 Makeup</button>
-        <button class="tag-toolbar-btn hair" onclick="tagSelection('hair', '✂️')">✂️ Hair</button>
-        <button class="tag-toolbar-btn sfx" onclick="tagSelection('sfx', '🩸')">🩸 SFX</button>
-        <button class="tag-toolbar-btn cast" onclick="tagSelection('cast', '👤')">👤 Cast</button>
-        <button class="tag-toolbar-btn wardrobe" onclick="tagSelection('wardrobe', '👔')">👔 Wardrobe</button>
-        <button class="tag-toolbar-btn props" onclick="tagSelection('props', '📦')">📦 Props</button>
+        <button class="tag-toolbar-btn makeup" onclick="tagSelection('makeup', 'M')">Makeup</button>
+        <button class="tag-toolbar-btn hair" onclick="tagSelection('hair', 'H')">Hair</button>
+        <button class="tag-toolbar-btn sfx" onclick="tagSelection('sfx', 'S')">SFX</button>
+        <button class="tag-toolbar-btn cast" onclick="tagSelection('cast', 'C')">Cast</button>
+        <button class="tag-toolbar-btn wardrobe" onclick="tagSelection('wardrobe', 'W')">Wardrobe</button>
+        <button class="tag-toolbar-btn props" onclick="tagSelection('props', 'P')">Props</button>
     </div>
 
     <script>
+        // Initialize PDF.js
+        if (typeof pdfjsLib !== 'undefined') {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+
         let currentScene = 1;
         let tagsVisible = true;
-        let selectedText = null;
-        let selectedRange = null;
         let currentProject = null;
+        let sceneTags = {}; // Store tags by scene
+        let sceneNotes = {}; // Store notes by scene
 
-        // Load project and script on page load
+        // ============================================
+        // LOAD PROJECT & SCRIPT
+        // ============================================
+
         function loadProjectScript() {
             console.log('=== Loading Project Script ===');
             const projectData = localStorage.getItem('currentProject');
             
             if (!projectData) {
-                console.log('No project data found in localStorage');
+                console.log('❌ No project data found in localStorage');
+                showNoScriptMessage();
                 return;
             }
             
             currentProject = JSON.parse(projectData);
-            console.log('Project loaded:', currentProject.title);
-            console.log('Project has scriptContent:', !!currentProject.scriptContent);
-            console.log('Project scriptName:', currentProject.scriptName);
+            console.log('✓ Project loaded:', currentProject.title);
+            console.log('  - Project code:', currentProject.code);
+            console.log('  - Script name:', currentProject.scriptName);
+            console.log('  - Has scriptContent:', !!currentProject.scriptContent);
+            console.log('  - scriptContent length:', currentProject.scriptContent ? currentProject.scriptContent.length : 0);
             
             // Update page title
-            document.querySelector('.page-title').textContent = `Script Breakdown - ${currentProject.title}`;
+            const pageTitle = document.querySelector('.page-title');
+            if (pageTitle) {
+                pageTitle.textContent = `Script Breakdown - ${currentProject.title}`;
+            }
             
             // If project has script content, parse and display it
-            if (currentProject.scriptContent) {
-                console.log('Script content found, length:', currentProject.scriptContent.length);
-                console.log('First 200 chars:', currentProject.scriptContent.substring(0, 200));
+            if (currentProject.scriptContent && currentProject.scriptContent.length > 0) {
+                console.log('✓ Script content found, length:', currentProject.scriptContent.length);
+                console.log('  - First 200 chars:', currentProject.scriptContent.substring(0, 200));
                 
                 try {
                     parseAndDisplayScript(currentProject.scriptContent);
-                    console.log('Script parsed and displayed successfully');
+                    console.log('✓ Script parsed and displayed successfully');
                 } catch (error) {
-                    console.error('Error parsing script:', error);
-                    alert('Error displaying script. Check console for details.');
+                    console.error('❌ Error parsing script:', error);
+                    showScriptError('Error parsing script. Check browser console for details.');
                 }
             } else {
-                console.log('No script content found in project, showing demo script');
+                console.log('❌ No script content found in project');
+                showNoScriptMessage();
             }
         }
 
-        // Parse plain text script into formatted HTML
+        function showNoScriptMessage() {
+            const scriptContent = document.querySelector('.script-content');
+            if (scriptContent) {
+                scriptContent.innerHTML = `
+                    <div style="display: flex; align-items: center; justify-content: center; min-height: 400px; flex-direction: column; gap: 16px; color: var(--text-muted); text-align: center; padding: 24px;">
+                        <div style="font-size: 2em; opacity: 0.3; font-weight: 300;">NO SCRIPT</div>
+                        <div style="font-size: 0.875em; max-width: 400px;">No script has been uploaded for this project yet.</div>
+                        <button class="toolbar-btn primary" onclick="document.getElementById('scriptUploadInput').click()" style="margin-top: 16px;">Upload Script Now</button>
+                    </div>
+                `;
+            }
+            
+            const sceneList = document.getElementById('sceneList');
+            if (sceneList) {
+                sceneList.innerHTML = '<div style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 0.875em;">Upload a script to begin</div>';
+            }
+        }
+
+        function showScriptError(message) {
+            const scriptContent = document.querySelector('.script-content');
+            if (scriptContent) {
+                scriptContent.innerHTML = `
+                    <div style="display: flex; align-items: center; justify-content: center; min-height: 400px; flex-direction: column; gap: 16px; color: var(--text-muted); text-align: center; padding: 24px;">
+                        <div style="font-size: 1.5em; color: #ff6b6b;">Error</div>
+                        <div style="font-size: 0.875em; max-width: 400px;">${message}</div>
+                        <button class="toolbar-btn" onclick="document.getElementById('scriptUploadInput').click()" style="margin-top: 16px;">Upload Script</button>
+                    </div>
+                `;
+            }
+            
+            const sceneList = document.getElementById('sceneList');
+            if (sceneList) {
+                sceneList.innerHTML = '<div style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 0.875em;">No scenes available</div>';
+            }
+        }
+
+        // ============================================
+        // SCRIPT PARSING
+        // ============================================
+
         function parseAndDisplayScript(scriptText) {
             console.log('=== Parsing Script ===');
             console.log('Script length:', scriptText.length);
             
             if (!scriptText || scriptText.length === 0) {
                 console.error('Script text is empty');
-                alert('Script content is empty!');
+                showScriptError('Script content is empty!');
                 return;
             }
             
-            // Clean up the text - handle PDF extraction issues
-            scriptText = scriptText
-                .replace(/\r\n/g, '\n')  // Normalize line endings
-                .replace(/\r/g, '\n')    // Handle old Mac line endings
-                .replace(/([A-Z]) ([A-Z])/g, '$1$2') // Remove spaces between capital letters (fixes "I N T ." -> "INT.")
-                .replace(/([A-Z]) ([A-Z])/g, '$1$2') // Run twice to catch overlaps
-                .replace(/([A-Z]) ([A-Z])/g, '$1$2') // Run third time for thorough cleanup
-                .replace(/\s+\n/g, '\n') // Remove trailing spaces before newlines
-                .replace(/\n\s+/g, '\n'); // Remove leading spaces after newlines
-            
             const lines = scriptText.split('\n');
             console.log('Total lines:', lines.length);
-            
-            // Log first 20 lines to debug
-            console.log('First 20 lines:');
-            lines.slice(0, 20).forEach((line, i) => {
-                console.log(`Line ${i}: "${line}"`);
-            });
             
             let html = '';
             let sceneNumber = 0;
             let currentSceneHtml = '';
             let inScene = false;
             
-            // More flexible regex for scene headings
-            const sceneHeadingRegex = /^\s*(INT|EXT|INT\/EXT|I\/E)[\.\s]+/i;
+            // Flexible regex for scene headings - handles "1 1INT." or "INT." or "1INT."
+            const sceneHeadingRegex = /^\s*\d*\s*\d*\s*(INT|EXT|INT\/EXT|I\/E)[\.\s]+/i;
             
-            // Simple script parser
+            // Parse script
             lines.forEach((line, index) => {
                 const trimmed = line.trim();
                 
-                // Detect scene headings - more flexible pattern
+                // Detect scene headings
                 if (sceneHeadingRegex.test(trimmed)) {
                     // Save previous scene if exists
                     if (currentSceneHtml) {
@@ -1339,19 +964,26 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
                     }
                     
                     sceneNumber++;
+                    
+                    // Clean up the heading - remove leading numbers
+                    let cleanHeading = trimmed
+                        .replace(/^\s*\d+\s*\d*\s*/, '') // Remove leading numbers
+                        .replace(/\s+/g, ' ')  // Normalize spaces
+                        .trim();
+                    
                     html += `<div class="script-scene" id="scene-${sceneNumber}">`;
-                    html += `<div class="script-scene-heading">${sceneNumber}. ${trimmed}</div>`;
+                    html += `<div class="script-scene-heading">${sceneNumber}. ${cleanHeading}</div>`;
                     currentSceneHtml = trimmed;
                     inScene = true;
                     
-                    console.log(`Found scene ${sceneNumber}: ${trimmed}`);
+                    console.log(`Found scene ${sceneNumber}: ${cleanHeading}`);
                 }
                 // Detect character names (all caps, not too long)
                 else if (trimmed === trimmed.toUpperCase() && 
                          trimmed.length > 0 && 
                          trimmed.length < 40 && 
                          !trimmed.match(/^[A-Z\s]+:$/) &&
-                         !trimmed.match(/^\d+\.?$/)) { // Not just numbers
+                         !trimmed.match(/^\d+\.?$/)) {
                     html += `<div class="script-character">${trimmed}</div>`;
                 }
                 // Parentheticals
@@ -1360,11 +992,11 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
                 }
                 // Empty lines
                 else if (trimmed === '') {
-                    // Just space, do nothing
+                    // Skip
                 }
                 // Action/dialogue
                 else if (trimmed.length > 0 && inScene) {
-                    // Check if previous element was character name (then this is dialogue)
+                    // Check if previous element was character name
                     if (html.includes('script-character') && html.lastIndexOf('script-character') > html.lastIndexOf('script-action')) {
                         html += `<div class="script-dialogue">${trimmed}</div>`;
                     } else {
@@ -1382,11 +1014,11 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
             
             if (sceneNumber === 0) {
                 console.error('No scenes detected in script!');
-                console.error('Script preview (first 500 chars):', scriptText.substring(0, 500));
-                
-                // Show the user what we extracted
-                const preview = scriptText.substring(0, 500);
-                alert(`No scenes found in script. Make sure scene headings start with INT. or EXT.\n\nScript preview:\n${preview}\n\n...Check the console for full extracted text.`);
+                showScriptError(`
+                    No scenes found in script. Make sure scene headings start with INT. or EXT.<br><br>
+                    <strong>Script preview:</strong><br>
+                    <div style="font-family: monospace; font-size: 0.75em; text-align: left; background: rgba(0,0,0,0.3); padding: 12px; border-radius: 4px; max-width: 500px; margin: 16px auto; white-space: pre-wrap; max-height: 200px; overflow-y: auto;">${scriptText.substring(0, 500).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+                `);
                 return;
             }
             
@@ -1394,21 +1026,24 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
             const scriptContent = document.querySelector('.script-content');
             if (scriptContent) {
                 scriptContent.innerHTML = html;
-                console.log('Script HTML updated');
+                console.log('✓ Script HTML updated');
                 
                 // Generate scene list
                 generateSceneList(sceneNumber);
-                console.log('Scene list generated');
+                console.log('✓ Scene list generated');
                 
                 // Initialize scene tags
                 initializeSceneTags(sceneNumber);
-                console.log('Scene tags initialized');
-            } else {
-                console.error('Could not find .script-content element');
+                console.log('✓ Scene tags initialized');
+                
+                // Load saved data
+                loadSavedData();
+                
+                // Load notes for current scene
+                loadNotesForScene(currentScene);
             }
         }
 
-        // Generate scene list from parsed script
         function generateSceneList(numScenes) {
             const sceneList = document.getElementById('sceneList');
             sceneList.innerHTML = '';
@@ -1450,12 +1085,12 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
                     </div>
                     <div class="scene-details">
                         <div class="scene-synopsis">
-                            Click to add synopsis...
+                            Select text in the script to add tags...
                         </div>
                         <div class="tag-items-list">
                             <!-- Tags will be added here -->
                         </div>
-                        <button class="breakdown-btn">Open Full Breakdown →</button>
+                        <button class="breakdown-btn">Expand Details</button>
                     </div>
                 `;
                 
@@ -1463,72 +1098,132 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
             }
         }
 
-        // Initialize empty tags for new scenes
         function initializeSceneTags(numScenes) {
-            sceneTags = {};
             for (let i = 1; i <= numScenes; i++) {
-                sceneTags[i] = [];
+                if (!sceneTags[i]) {
+                    sceneTags[i] = [];
+                }
             }
         }
 
-        // Data structure to store all tags by scene
-        let sceneTags = {
-            1: [
-                { text: 'JANE DOE (28)', category: 'cast', description: 'Jane Doe (Lead)' },
-                { text: 'blonde hair is disheveled', category: 'hair', description: 'Disheveled blonde' },
-                { text: 'mascara is smudged, lipstick smeared', category: 'makeup', description: 'Smudged mascara/lipstick' },
-                { text: 'Dried blood cakes her fingers', category: 'sfx', description: 'Blood on hands' }
-            ],
-            2: [
-                { text: 'torn leather jacket', category: 'wardrobe', description: 'Torn leather jacket' },
-                { text: 'smudged makeup', category: 'makeup', description: 'Continuity from Scene 1' }
-            ],
-            3: [
-                { text: 'cut on her forehead', category: 'sfx', description: 'Forehead wound' },
-                { text: 'blood', category: 'sfx', description: 'Dried blood' },
-                { text: 'ruined makeup', category: 'makeup', description: 'Removing smudged makeup' },
-                { text: 'baseball bat', category: 'props', description: 'Baseball bat' },
-                { text: 'stained with blood', category: 'sfx', description: 'Blood on bat' }
-            ],
-            4: [
-                { text: 'cleaned herself up — fresh, natural makeup', category: 'makeup', description: 'Fresh natural look' },
-                { text: 'hair tied back', category: 'hair', description: 'Tied back/neat' },
-                { text: 'damaged leather jacket', category: 'wardrobe', description: 'Same damaged jacket' },
-                { text: 'ripped jeans', category: 'wardrobe', description: 'Ripped jeans' },
-                { text: 'STORE CLERK (50s)', category: 'cast', description: 'Store Clerk (50s, Supporting)' }
-            ]
-        };
+        // ============================================
+        // PERSISTENCE
+        // ============================================
 
-        // Text selection handling
+        function loadSavedData() {
+            const projectCode = currentProject?.code;
+            if (!projectCode) return;
+            
+            const savedTags = localStorage.getItem(`${projectCode}_sceneTags`);
+            const savedNotes = localStorage.getItem(`${projectCode}_sceneNotes`);
+            
+            if (savedTags) {
+                sceneTags = JSON.parse(savedTags);
+                console.log('✓ Loaded saved tags:', sceneTags);
+                
+                // Update scene overviews
+                Object.keys(sceneTags).forEach(sceneNum => {
+                    updateSceneOverview(parseInt(sceneNum));
+                });
+            }
+            
+            if (savedNotes) {
+                sceneNotes = JSON.parse(savedNotes);
+                console.log('✓ Loaded saved notes:', sceneNotes);
+            }
+        }
+
+        function saveTags() {
+            const projectCode = currentProject?.code;
+            if (!projectCode) return;
+            
+            localStorage.setItem(`${projectCode}_sceneTags`, JSON.stringify(sceneTags));
+            console.log('✓ Tags saved');
+        }
+
+        function saveNotesToStorage() {
+            const projectCode = currentProject?.code;
+            if (!projectCode) return;
+            
+            localStorage.setItem(`${projectCode}_sceneNotes`, JSON.stringify(sceneNotes));
+            console.log('✓ Notes saved');
+        }
+
+        function saveNotes() {
+            const notesText = document.getElementById('notesTextarea').value;
+            
+            sceneNotes[currentScene] = notesText;
+            saveNotesToStorage();
+            
+            console.log(`Saved notes for scene ${currentScene}`);
+            
+            // Visual feedback
+            const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            const timestampElement = document.querySelector('.notes-timestamp');
+            if (timestampElement) {
+                timestampElement.textContent = `Last saved: ${timestamp}`;
+            }
+            
+            const btn = document.querySelector('.save-notes-btn');
+            if (btn) {
+                const originalText = btn.textContent;
+                btn.textContent = 'Saved';
+                btn.style.background = '#52c186';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = '';
+                }, 2000);
+            }
+        }
+
+        function loadNotesForScene(sceneNum) {
+            const notesTextarea = document.getElementById('notesTextarea');
+            if (notesTextarea) {
+                notesTextarea.value = sceneNotes[sceneNum] || '';
+            }
+            
+            const notesSceneTitle = document.getElementById('notesSceneTitle');
+            if (notesSceneTitle) {
+                const sceneElement = document.getElementById(`scene-${sceneNum}`);
+                if (sceneElement) {
+                    const heading = sceneElement.querySelector('.script-scene-heading');
+                    if (heading) {
+                        notesSceneTitle.textContent = heading.textContent;
+                    }
+                } else {
+                    notesSceneTitle.textContent = `Scene ${sceneNum}`;
+                }
+            }
+        }
+
+        // ============================================
+        // TAGGING
+        // ============================================
+
         document.addEventListener('mouseup', function(e) {
             const selection = window.getSelection();
             const selectedText = selection.toString().trim();
             
-            // Only show toolbar if text is selected within script content
             if (selectedText.length > 0 && e.target.closest('.script-content')) {
                 const range = selection.getRangeAt(0);
                 const rect = range.getBoundingClientRect();
                 
-                // Position toolbar above selection
                 const toolbar = document.getElementById('tagToolbar');
                 toolbar.style.left = rect.left + (rect.width / 2) - (toolbar.offsetWidth / 2) + 'px';
                 toolbar.style.top = (rect.top + window.scrollY - 50) + 'px';
                 toolbar.classList.add('active');
                 
-                // Store selection for tagging
                 window.currentSelection = {
                     text: selectedText,
                     range: range
                 };
             } else {
-                // Hide toolbar if clicking outside
                 if (!e.target.closest('.tag-toolbar')) {
                     document.getElementById('tagToolbar').classList.remove('active');
                 }
             }
         });
 
-        // Tag selected text
         function tagSelection(category, icon) {
             if (!window.currentSelection) return;
             
@@ -1537,23 +1232,19 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
             
             if (!description) return;
             
-            // Create span element
             const span = document.createElement('span');
             span.className = `tagged ${category}`;
             span.setAttribute('data-tag', description);
             span.setAttribute('data-category', category);
             
-            // Add tooltip
             const tooltip = document.createElement('span');
             tooltip.className = 'tooltip';
             tooltip.textContent = `Tagged as: ${category.charAt(0).toUpperCase() + category.slice(1)} — ${description}`;
             span.appendChild(tooltip);
             
-            // Wrap selection with span
             try {
                 range.surroundContents(span);
                 
-                // Add to scene tags
                 if (!sceneTags[currentScene]) {
                     sceneTags[currentScene] = [];
                 }
@@ -1564,66 +1255,52 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
                     description: description
                 });
                 
-                // Update scene overview
+                saveTags();
                 updateSceneOverview(currentScene);
                 
-                // Hide toolbar
                 document.getElementById('tagToolbar').classList.remove('active');
-                
-                // Clear selection
                 window.getSelection().removeAllRanges();
                 
-                // Add click handler to remove tag
                 span.addEventListener('click', function(e) {
                     e.stopPropagation();
                     removeTag(this);
                 });
+                
+                span.style.animation = 'tagAdded 0.3s ease';
                 
             } catch (error) {
                 alert('Cannot tag across element boundaries. Try selecting text within a single paragraph.');
             }
         }
 
-        // Remove tag
         function removeTag(tagElement) {
             if (!confirm('Remove this tag?')) return;
             
             const text = tagElement.childNodes[0].textContent;
             const category = tagElement.getAttribute('data-category');
             
-            // Remove from data structure
             if (sceneTags[currentScene]) {
                 sceneTags[currentScene] = sceneTags[currentScene].filter(tag => 
                     !(tag.text === text && tag.category === category)
                 );
             }
             
-            // Unwrap the tag
+            saveTags();
+            
             const parent = tagElement.parentNode;
             while (tagElement.firstChild && tagElement.firstChild.className !== 'tooltip') {
                 parent.insertBefore(tagElement.firstChild, tagElement);
             }
             parent.removeChild(tagElement);
             
-            // Update scene overview
             updateSceneOverview(currentScene);
         }
 
-        // Add click handlers to existing tags
-        document.querySelectorAll('.tagged').forEach(tag => {
-            tag.addEventListener('click', function(e) {
-                e.stopPropagation();
-                removeTag(this);
-            });
-        });
-
-        // Update scene overview with current tags
         function updateSceneOverview(sceneNum) {
             const tags = sceneTags[sceneNum] || [];
             const sceneItem = document.querySelector(`.scene-item[data-scene="${sceneNum}"]`);
             if (!sceneItem) return;
             
-            // Group tags by category
             const grouped = {};
             tags.forEach(tag => {
                 if (!grouped[tag.category]) {
@@ -1632,14 +1309,13 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
                 grouped[tag.category].push(tag.description);
             });
             
-            // Build HTML
             const categoryIcons = {
-                makeup: { icon: '💄', name: 'Makeup', color: 'var(--tag-makeup)' },
-                hair: { icon: '✂️', name: 'Hair', color: 'var(--tag-hair)' },
-                sfx: { icon: '🩸', name: 'SFX', color: 'var(--tag-sfx)' },
-                cast: { icon: '👤', name: 'Cast', color: 'var(--tag-cast)' },
-                wardrobe: { icon: '👔', name: 'Wardrobe', color: 'var(--tag-wardrobe)' },
-                props: { icon: '📦', name: 'Props', color: 'var(--tag-props)' }
+                makeup: { icon: 'M', name: 'Makeup', color: 'var(--tag-makeup)' },
+                hair: { icon: 'H', name: 'Hair', color: 'var(--tag-hair)' },
+                sfx: { icon: 'S', name: 'SFX', color: 'var(--tag-sfx)' },
+                cast: { icon: 'C', name: 'Cast', color: 'var(--tag-cast)' },
+                wardrobe: { icon: 'W', name: 'Wardrobe', color: 'var(--tag-wardrobe)' },
+                props: { icon: 'P', name: 'Props', color: 'var(--tag-props)' }
             };
             
             let html = '';
@@ -1648,7 +1324,7 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
                 html += `
                     <div class="tag-category">
                         <div class="tag-category-title">
-                            <span style="color: ${info.color}">${info.icon}</span> ${info.name}
+                            <span class="tag-badge" style="background: ${info.color}; color: white;">${info.icon}</span> ${info.name}
                         </div>
                         <div class="tag-category-items">
                             ${grouped[category].map(desc => `
@@ -1668,164 +1344,110 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
             }
         }
 
-        // Toggle scene expansion
-        document.querySelectorAll('.scene-item').forEach(item => {
-            item.addEventListener('click', function(e) {
-                // Don't toggle if clicking the breakdown button
-                if (e.target.closest('.breakdown-btn')) return;
-                
-                // Set active scene
-                document.querySelectorAll('.scene-item').forEach(i => i.classList.remove('active', 'expanded'));
-                this.classList.add('active', 'expanded');
-                
-                // Update current scene
-                currentScene = parseInt(this.dataset.scene);
-                updateNotesPanel();
-            });
-        });
+        // ============================================
+        // NAVIGATION
+        // ============================================
 
-        // Scroll to scene
         function scrollToScene(sceneNum) {
             const sceneElement = document.getElementById(`scene-${sceneNum}`);
             if (sceneElement) {
                 sceneElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
             currentScene = sceneNum;
-            updateNotesPanel();
-        }
-
-        // Update notes panel
-        function updateNotesPanel() {
-            const scenes = {
-                1: {
-                    title: "Scene 1: INT. MOTEL ROOM - NIGHT",
-                    notes: "Jane's makeup needs to look authentically messy — not \"movie messy\" but genuinely slept-in and smudged.\n\nBlood should be dried/dark brown, not fresh red.\n\nHair: Focus on tangled, slept-on look. Blonde highlights catching the neon light.\n\nWardrobe note: Leather jacket gets torn in this scene — need duplicate for continuity."
-                },
-                2: {
-                    title: "Scene 2: EXT. PARKING LOT - NIGHT",
-                    notes: "Continuity: Same makeup/hair from Scene 1 (smudged, disheveled).\n\nJacket should show the tear from previous scene.\n\nLighting: Neon reflections may affect makeup appearance on camera — test beforehand.\n\nWeather note: Cold night — breath visible? Cheeks/nose reddening?"
-                },
-                3: {
-                    title: "Scene 3: INT. CAR - NIGHT",
-                    notes: "SFX: Forehead cut needs to look fresh but partially dried.\n\nMakeup removal action: Jane wiping her face — use safe makeup remover, practice motion.\n\nBlood on bat in backseat needs to match blood on hands from Scene 1.\n\nMirror work: Make sure lighting shows detail clearly."
-                },
-                4: {
-                    title: "Scene 4: EXT. CONVENIENCE STORE - DAY",
-                    notes: "Makeup change: Fresh, natural day look — Jane cleaned herself up.\n\nHair: Neat ponytail, no more disheveled look.\n\nContinuity challenge: Still wearing same damaged jacket/jeans from night before.\n\nStore clerk is a new SA — needs basic neutral makeup, period-appropriate."
-                }
-            };
-
-            const scene = scenes[currentScene];
-            if (scene) {
-                document.getElementById('notesSceneTitle').textContent = scene.title;
-                document.getElementById('notesTextarea').value = scene.notes;
-            }
-        }
-
-        // Toggle tags visibility
-        document.getElementById('toggleTags').addEventListener('click', function() {
-            tagsVisible = !tagsVisible;
-            this.classList.toggle('active');
+            loadNotesForScene(sceneNum);
             
-            document.querySelectorAll('.tagged').forEach(tag => {
-                if (tagsVisible) {
-                    tag.style.background = '';
-                } else {
-                    tag.style.background = 'transparent';
-                }
-            });
-        });
-
-        // Scene search
-        document.getElementById('sceneSearch').addEventListener('input', function(e) {
-            const searchTerm = e.target.value.toLowerCase();
+            // Update active scene in sidebar
             document.querySelectorAll('.scene-item').forEach(item => {
-                const heading = item.querySelector('.scene-heading').textContent.toLowerCase();
-                const synopsis = item.querySelector('.scene-synopsis')?.textContent.toLowerCase() || '';
-                
-                if (heading.includes(searchTerm) || synopsis.includes(searchTerm)) {
-                    item.style.display = 'block';
+                if (parseInt(item.dataset.scene) === sceneNum) {
+                    item.classList.add('active');
                 } else {
-                    item.style.display = 'none';
+                    item.classList.remove('active');
                 }
             });
-        });
-
-        // Save notes
-        function saveNotes() {
-            const notesText = document.getElementById('notesTextarea').value;
-            // In real app, save to database/localStorage
-            console.log(`Saving notes for scene ${currentScene}:`, notesText);
-            
-            // Update timestamp
-            document.querySelector('.notes-timestamp').textContent = 'Last saved: Just now';
-            
-            // Visual feedback
-            const btn = document.querySelector('.save-notes-btn');
-            btn.textContent = '✓ Saved!';
-            setTimeout(() => {
-                btn.textContent = '💾 Save Notes';
-            }, 2000);
         }
 
-        // Sync scroll with scene list
-        document.getElementById('scriptViewer').addEventListener('scroll', function() {
-            const scenes = document.querySelectorAll('.script-scene');
-            let activeScene = 1;
-            
-            scenes.forEach(scene => {
-                const rect = scene.getBoundingClientRect();
-                if (rect.top <= 200 && rect.bottom >= 200) {
-                    activeScene = parseInt(scene.id.split('-')[1]);
-                }
-            });
-            
-            if (activeScene !== currentScene) {
-                currentScene = activeScene;
-                document.querySelectorAll('.scene-item').forEach(item => {
-                    if (parseInt(item.dataset.scene) === activeScene) {
-                        item.classList.add('active');
+        // ============================================
+        // EVENT LISTENERS
+        // ============================================
+
+        const toggleTagsBtn = document.getElementById('toggleTags');
+        if (toggleTagsBtn) {
+            toggleTagsBtn.addEventListener('click', function() {
+                tagsVisible = !tagsVisible;
+                this.classList.toggle('active');
+                
+                document.querySelectorAll('.tagged').forEach(tag => {
+                    if (tagsVisible) {
+                        tag.style.background = '';
                     } else {
-                        item.classList.remove('active');
+                        tag.style.background = 'transparent';
                     }
                 });
-            }
-        });
-
-        // Initialize - expand first scene
-        document.querySelector('.scene-item').classList.add('expanded');
-        
-        // Load project script
-        loadProjectScript();
-
-        // Handle script upload directly in breakdown page
-        // Initialize PDF.js worker
-        if (typeof pdfjsLib !== 'undefined') {
-            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+            });
         }
 
-        // Normalize script text to fix PDF extraction spacing issues
+        const sceneSearchInput = document.getElementById('sceneSearch');
+        if (sceneSearchInput) {
+            sceneSearchInput.addEventListener('input', function(e) {
+                const searchTerm = e.target.value.toLowerCase();
+                document.querySelectorAll('.scene-item').forEach(item => {
+                    const heading = item.querySelector('.scene-heading')?.textContent.toLowerCase() || '';
+                    const synopsis = item.querySelector('.scene-synopsis')?.textContent.toLowerCase() || '';
+                    
+                    if (heading.includes(searchTerm) || synopsis.includes(searchTerm)) {
+                        item.style.display = 'block';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+            });
+        }
+
+        const scriptViewer = document.getElementById('scriptViewer');
+        if (scriptViewer) {
+            scriptViewer.addEventListener('scroll', function() {
+                const scenes = document.querySelectorAll('.script-scene');
+                let activeScene = 1;
+                
+                scenes.forEach(scene => {
+                    const rect = scene.getBoundingClientRect();
+                    if (rect.top <= 200 && rect.bottom >= 200) {
+                        activeScene = parseInt(scene.id.split('-')[1]);
+                    }
+                });
+                
+                if (activeScene !== currentScene) {
+                    currentScene = activeScene;
+                    document.querySelectorAll('.scene-item').forEach(item => {
+                        if (parseInt(item.dataset.scene) === activeScene) {
+                            item.classList.add('active');
+                        } else {
+                            item.classList.remove('active');
+                        }
+                    });
+                    
+                    loadNotesForScene(activeScene);
+                }
+            });
+        }
+
+        // ============================================
+        // SCRIPT UPLOAD IN BREAKDOWN PAGE
+        // ============================================
+
         function normalizeScriptText(text) {
-            console.log('=== Before Normalization ===');
-            console.log(text.substring(0, 500));
+            console.log('Normalizing script text...');
             
-            // SIMPLE AGGRESSIVE FIX: Just remove single spaces between single characters
-            // Repeat multiple times to catch all patterns
             let normalized = text;
             
-            // Remove spaces between letters/numbers, run 10 times to catch all
+            // Remove spaces between single characters (run multiple times)
             for (let i = 0; i < 10; i++) {
-                // Match: letter/number/punctuation + space + letter/number/punctuation
                 normalized = normalized.replace(/([a-zA-Z0-9\.\,\!\?\-\(\)\*\'\"])\s([a-zA-Z0-9\.\,\!\?\-\(\)\*\'\"])/g, '$1$2');
             }
             
-            // Now add back proper spacing between words (capital letter after lowercase = new word)
+            // Add back proper spacing
             normalized = normalized.replace(/([a-z])([A-Z])/g, '$1 $2');
-            
-            // Add space after periods, question marks, exclamation points
             normalized = normalized.replace(/([\.!?])([A-Za-z])/g, '$1 $2');
-            
-            // Add space after closing parenthesis before letter
             normalized = normalized.replace(/(\))([A-Za-z])/g, '$1 $2');
             
             // Clean up line endings
@@ -1835,13 +1457,9 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
                 .replace(/\s+\n/g, '\n')
                 .replace(/\n\s+/g, '\n');
             
-            console.log('=== After Normalization ===');
-            console.log(normalized.substring(0, 500));
-            
             return normalized;
         }
 
-        // Parse PDF and extract text
         async function parsePDFInBreakdown(file) {
             try {
                 const arrayBuffer = await file.arrayBuffer();
@@ -1849,46 +1467,35 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
                 
                 let fullText = '';
                 
-                // Extract text from each page with better formatting
                 for (let i = 1; i <= pdf.numPages; i++) {
                     const page = await pdf.getPage(i);
                     const textContent = await page.getTextContent();
                     
-                    // Group text items by their vertical position (y coordinate)
                     const lines = {};
                     textContent.items.forEach(item => {
-                        const y = Math.round(item.transform[5]); // Y coordinate
+                        const y = Math.round(item.transform[5]);
                         if (!lines[y]) lines[y] = [];
                         lines[y].push(item);
                     });
                     
-                    // Sort lines by Y position (top to bottom) and build text
                     const sortedYPositions = Object.keys(lines).sort((a, b) => b - a);
                     
                     sortedYPositions.forEach(y => {
-                        // Sort items in line by X position (left to right)
                         const lineItems = lines[y].sort((a, b) => a.transform[4] - b.transform[4]);
                         
-                        // Build line text with intelligent spacing
                         let lineText = '';
                         for (let i = 0; i < lineItems.length; i++) {
                             const item = lineItems[i];
                             const nextItem = lineItems[i + 1];
                             
-                            // Add current item's text
                             lineText += item.str;
                             
-                            // Determine if we need a space before next item
                             if (nextItem) {
                                 const currentX = item.transform[4];
                                 const currentWidth = item.width;
                                 const nextX = nextItem.transform[4];
-                                
-                                // Calculate gap between this item and next
                                 const gap = nextX - (currentX + currentWidth);
                                 
-                                // If gap is significant (more than half the width of current item), add space
-                                // This threshold helps distinguish between character spacing and word spacing
                                 if (gap > currentWidth * 0.3) {
                                     lineText += ' ';
                                 }
@@ -1898,15 +1505,10 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
                         fullText += lineText.trim() + '\n';
                     });
                     
-                    fullText += '\n'; // Add extra line break between pages
+                    fullText += '\n';
                 }
                 
-                console.log('PDF extraction complete, first 500 chars:', fullText.substring(0, 500));
-                
-                // Normalize the text to fix spacing issues
                 fullText = normalizeScriptText(fullText);
-                console.log('After normalization, first 500 chars:', fullText.substring(0, 500));
-                
                 return fullText;
             } catch (error) {
                 console.error('Error parsing PDF:', error);
@@ -1918,43 +1520,36 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
             const file = event.target.files[0];
             if (!file) return;
             
-            console.log('File selected in breakdown:', file.name, 'Type:', file.type);
+            console.log('File selected:', file.name, 'Type:', file.type);
             
-            // Handle PDF files
             if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
                 console.log('PDF detected, parsing...');
                 
                 parsePDFInBreakdown(file)
                     .then(scriptContent => {
-                        console.log('✓ PDF parsed in breakdown, length:', scriptContent.length);
+                        console.log('✓ PDF parsed, length:', scriptContent.length);
                         
-                        // Update current project with script
                         if (currentProject) {
                             currentProject.scriptContent = scriptContent;
                             currentProject.scriptName = file.name;
                             
-                            // Save to localStorage
                             localStorage.setItem('currentProject', JSON.stringify(currentProject));
                             
-                            // Update the projects list too
                             const projects = JSON.parse(localStorage.getItem('checksHappyProjects') || '[]');
                             const projectIndex = projects.findIndex(p => p.code === currentProject.code);
                             if (projectIndex !== -1) {
                                 projects[projectIndex].scriptContent = scriptContent;
                                 projects[projectIndex].scriptName = file.name;
                                 localStorage.setItem('checksHappyProjects', JSON.stringify(projects));
-                                console.log('✓ Project updated in storage');
                             }
                         }
                         
-                        // Parse and display
                         parseAndDisplayScript(scriptContent);
-                        
-                        alert(`PDF "${file.name}" uploaded and parsed successfully!`);
+                        alert(`PDF "${file.name}" uploaded successfully!`);
                     })
                     .catch(error => {
                         console.error('PDF parsing error:', error);
-                        alert('Error parsing PDF. The file may be corrupted or password-protected. Try converting to .txt format.');
+                        alert('Error parsing PDF. Try converting to .txt format.');
                     });
                 
                 return;
@@ -1970,41 +1565,171 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     const scriptContent = e.target.result;
-                    console.log('Script loaded in breakdown, length:', scriptContent.length);
+                    console.log('✓ Script loaded, length:', scriptContent.length);
                     
-                    // Update current project with script
                     if (currentProject) {
                         currentProject.scriptContent = scriptContent;
                         currentProject.scriptName = file.name;
                         
-                        // Save to localStorage
                         localStorage.setItem('currentProject', JSON.stringify(currentProject));
                         
-                        // Update the projects list too
                         const projects = JSON.parse(localStorage.getItem('checksHappyProjects') || '[]');
                         const projectIndex = projects.findIndex(p => p.code === currentProject.code);
                         if (projectIndex !== -1) {
                             projects[projectIndex].scriptContent = scriptContent;
                             projects[projectIndex].scriptName = file.name;
                             localStorage.setItem('checksHappyProjects', JSON.stringify(projects));
-                            console.log('Project updated in storage');
                         }
                     }
                     
-                    // Parse and display
                     parseAndDisplayScript(scriptContent);
-                    
                     alert(`Script "${file.name}" uploaded successfully!`);
                 };
                 reader.onerror = function(e) {
                     console.error('Error reading file:', e);
-                    alert('Error reading script file. Please try again.');
+                    alert('Error reading script file.');
                 };
                 reader.readAsText(file);
             } else {
                 alert('Please upload a .txt, .fountain, .fdx, or .pdf file.');
             }
         }
+
+        // ============================================
+        // EXPORT FUNCTIONALITY  
+        // ============================================
+
+        function exportBreakdown() {
+            const options = [
+                '1. Export to CSV (Scene breakdown with tags)',
+                '2. Export to JSON (Complete data)',
+                '3. Export Scene List (Simple list)',
+                '4. Cancel'
+            ];
+            
+            const choice = prompt(options.join('\n\n') + '\n\nEnter your choice (1-4):');
+            
+            switch(choice) {
+                case '1':
+                    exportToCSV();
+                    break;
+                case '2':
+                    exportToJSON();
+                    break;
+                case '3':
+                    exportSceneList();
+                    break;
+            }
+        }
+
+        function exportToCSV() {
+            let csv = 'Scene,Heading,Type,Makeup,Hair,SFX,Cast,Wardrobe,Props,Notes\n';
+            
+            document.querySelectorAll('.scene-item').forEach(item => {
+                const sceneNum = item.dataset.scene;
+                const heading = item.querySelector('.scene-heading')?.textContent || '';
+                const type = item.querySelector('.scene-type')?.textContent || '';
+                
+                const tags = sceneTags[sceneNum] || [];
+                const notes = sceneNotes[sceneNum] || '';
+                
+                const makeup = tags.filter(t => t.category === 'makeup').map(t => t.description).join('; ');
+                const hair = tags.filter(t => t.category === 'hair').map(t => t.description).join('; ');
+                const sfx = tags.filter(t => t.category === 'sfx').map(t => t.description).join('; ');
+                const cast = tags.filter(t => t.category === 'cast').map(t => t.description).join('; ');
+                const wardrobe = tags.filter(t => t.category === 'wardrobe').map(t => t.description).join('; ');
+                const props = tags.filter(t => t.category === 'props').map(t => t.description).join('; ');
+                
+                csv += `"${sceneNum}","${heading}","${type}","${makeup}","${hair}","${sfx}","${cast}","${wardrobe}","${props}","${notes.replace(/"/g, '""')}"\n`;
+            });
+            
+            downloadFile(csv, `${currentProject?.code || 'script'}-breakdown.csv`, 'text/csv');
+        }
+
+        function exportToJSON() {
+            const data = {
+                project: currentProject,
+                scenes: {},
+                tags: sceneTags,
+                notes: sceneNotes,
+                exportDate: new Date().toISOString()
+            };
+            
+            document.querySelectorAll('.scene-item').forEach(item => {
+                const sceneNum = item.dataset.scene;
+                data.scenes[sceneNum] = {
+                    heading: item.querySelector('.scene-heading')?.textContent || '',
+                    type: item.querySelector('.scene-type')?.textContent || ''
+                };
+            });
+            
+            const json = JSON.stringify(data, null, 2);
+            downloadFile(json, `${currentProject?.code || 'script'}-breakdown.json`, 'application/json');
+        }
+
+        function exportSceneList() {
+            let text = `${currentProject?.title || 'Script'} - Scene List\n`;
+            text += `Generated: ${new Date().toLocaleString()}\n`;
+            text += `${'='.repeat(60)}\n\n`;
+            
+            document.querySelectorAll('.scene-item').forEach(item => {
+                const sceneNum = item.dataset.scene;
+                const heading = item.querySelector('.scene-heading')?.textContent || '';
+                const type = item.querySelector('.scene-type')?.textContent || '';
+                
+                text += `Scene ${sceneNum}: ${heading}\n`;
+                text += `Type: ${type}\n`;
+                
+                const tags = sceneTags[sceneNum] || [];
+                if (tags.length > 0) {
+                    text += `Tags: ${tags.length}\n`;
+                    tags.forEach(tag => {
+                        text += `  • ${tag.category}: ${tag.description}\n`;
+                    });
+                }
+                
+                const notes = sceneNotes[sceneNum];
+                if (notes) {
+                    text += `Notes: ${notes}\n`;
+                }
+                
+                text += '\n';
+            });
+            
+            downloadFile(text, `${currentProject?.code || 'script'}-scenes.txt`, 'text/plain');
+        }
+
+        function downloadFile(content, filename, mimeType) {
+            const blob = new Blob([content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            alert(`Exported: ${filename}`);
+        }
+
+        // ============================================
+        // AI TOOLS (PLACEHOLDER)
+        // ============================================
+
+        function showAIToolsMenu() {
+            alert('AI Tools coming soon:\n\n• Auto-detect makeup/hair changes\n• Find continuity issues\n• Generate character profiles\n• Time in chair estimates');
+        }
+
+        function generateAIBreakdown() {
+            alert('AI Breakdown feature coming soon!\n\nThis will automatically:\n• Tag makeup/hair mentions\n• Identify cast members\n• Note wardrobe items\n• Flag SFX requirements');
+        }
+
+        // ============================================
+        // INITIALIZE
+        // ============================================
+
+        loadProjectScript();
     </script>
 </body>
 </html>
