@@ -408,6 +408,9 @@
             font-size: 12pt;
             line-height: 1.5;
             color: #000;
+            user-select: text;
+            -webkit-user-select: text;
+            -moz-user-select: text;
         }
 
         .script-scene {
@@ -452,9 +455,10 @@
         .tagged {
             padding: 2px 4px;
             border-radius: 3px;
-            cursor: help;
+            cursor: pointer;
             position: relative;
             transition: all 0.2s ease;
+            user-select: none;
         }
 
         .tagged.makeup { background: rgba(255, 107, 157, 0.3); }
@@ -465,7 +469,8 @@
         .tagged.props { background: rgba(251, 146, 60, 0.3); }
 
         .tagged:hover {
-            filter: brightness(1.2);
+            filter: brightness(1.3);
+            box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
         }
 
         /* Tooltip */
@@ -601,6 +606,120 @@
             border-radius: 3px;
         }
 
+        /* Tag Items List */
+        .tag-items-list {
+            margin-top: 10px;
+            font-size: 0.75em;
+        }
+
+        .tag-category {
+            margin-bottom: 8px;
+        }
+
+        .tag-category-title {
+            font-weight: 600;
+            color: var(--text-light);
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .tag-category-items {
+            padding-left: 16px;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+
+        .tag-item-entry {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 2px;
+        }
+
+        .tag-item-dot {
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: var(--text-muted);
+            flex-shrink: 0;
+        }
+
+        /* Floating Tag Toolbar */
+        .tag-toolbar {
+            position: fixed;
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 8px;
+            display: none;
+            gap: 4px;
+            z-index: 1000;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        .tag-toolbar.active {
+            display: flex;
+        }
+
+        .tag-toolbar-btn {
+            padding: 6px 10px;
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.75em;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            white-space: nowrap;
+        }
+
+        .tag-toolbar-btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .tag-toolbar-btn.makeup { 
+            background: var(--tag-makeup);
+            color: white;
+            border-color: var(--tag-makeup);
+        }
+        .tag-toolbar-btn.hair { 
+            background: var(--tag-hair);
+            color: white;
+            border-color: var(--tag-hair);
+        }
+        .tag-toolbar-btn.sfx { 
+            background: var(--tag-sfx);
+            color: white;
+            border-color: var(--tag-sfx);
+        }
+        .tag-toolbar-btn.cast { 
+            background: var(--tag-cast);
+            color: #000;
+            border-color: var(--tag-cast);
+        }
+        .tag-toolbar-btn.wardrobe { 
+            background: var(--tag-wardrobe);
+            color: white;
+            border-color: var(--tag-wardrobe);
+        }
+        .tag-toolbar-btn.props { 
+            background: var(--tag-props);
+            color: white;
+            border-color: var(--tag-props);
+        }
+
+        /* Tag deletion */
+        .tagged {
+            position: relative;
+            user-select: none;
+        }
+
         /* Responsive */
         @media (max-width: 1400px) {
             .left-sidebar {
@@ -679,11 +798,51 @@
                             <div class="scene-synopsis">
                                 Jane wakes up disoriented in a dingy motel room. Blood on her hands, makeup smudged. No memory of how she got there.
                             </div>
-                            <div class="scene-tags">
-                                <div class="tag-icon makeup" title="Makeup">💄</div>
-                                <div class="tag-icon hair" title="Hair">✂️</div>
-                                <div class="tag-icon sfx" title="SFX">🩸</div>
-                                <div class="tag-icon cast" title="Cast">👤</div>
+                            <div class="tag-items-list">
+                                <div class="tag-category">
+                                    <div class="tag-category-title">
+                                        <span style="color: var(--tag-makeup)">💄</span> Makeup
+                                    </div>
+                                    <div class="tag-category-items">
+                                        <div class="tag-item-entry">
+                                            <div class="tag-item-dot"></div>
+                                            <span>Smudged mascara/lipstick</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="tag-category">
+                                    <div class="tag-category-title">
+                                        <span style="color: var(--tag-hair)">✂️</span> Hair
+                                    </div>
+                                    <div class="tag-category-items">
+                                        <div class="tag-item-entry">
+                                            <div class="tag-item-dot"></div>
+                                            <span>Disheveled blonde</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="tag-category">
+                                    <div class="tag-category-title">
+                                        <span style="color: var(--tag-sfx)">🩸</span> SFX
+                                    </div>
+                                    <div class="tag-category-items">
+                                        <div class="tag-item-entry">
+                                            <div class="tag-item-dot"></div>
+                                            <span>Blood on hands</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="tag-category">
+                                    <div class="tag-category-title">
+                                        <span style="color: var(--tag-cast)">👤</span> Cast
+                                    </div>
+                                    <div class="tag-category-items">
+                                        <div class="tag-item-entry">
+                                            <div class="tag-item-dot"></div>
+                                            <span>Jane Doe (Lead)</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                             <button class="breakdown-btn">Open Full Breakdown →</button>
                         </div>
@@ -702,10 +861,40 @@
                             <div class="scene-synopsis">
                                 Jane stumbles outside. Neon lights reflect off wet pavement. She notices her torn jacket and searches for her car.
                             </div>
-                            <div class="scene-tags">
-                                <div class="tag-icon makeup" title="Makeup">💄</div>
-                                <div class="tag-icon wardrobe" title="Wardrobe">👔</div>
-                                <div class="tag-icon cast" title="Cast">👤</div>
+                            <div class="tag-items-list">
+                                <div class="tag-category">
+                                    <div class="tag-category-title">
+                                        <span style="color: var(--tag-makeup)">💄</span> Makeup
+                                    </div>
+                                    <div class="tag-category-items">
+                                        <div class="tag-item-entry">
+                                            <div class="tag-item-dot"></div>
+                                            <span>Continuity from Scene 1</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="tag-category">
+                                    <div class="tag-category-title">
+                                        <span style="color: var(--tag-wardrobe)">👔</span> Wardrobe
+                                    </div>
+                                    <div class="tag-category-items">
+                                        <div class="tag-item-entry">
+                                            <div class="tag-item-dot"></div>
+                                            <span>Torn leather jacket</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="tag-category">
+                                    <div class="tag-category-title">
+                                        <span style="color: var(--tag-cast)">👤</span> Cast
+                                    </div>
+                                    <div class="tag-category-items">
+                                        <div class="tag-item-entry">
+                                            <div class="tag-item-dot"></div>
+                                            <span>Jane Doe (Lead)</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                             <button class="breakdown-btn">Open Full Breakdown →</button>
                         </div>
@@ -724,10 +913,59 @@
                             <div class="scene-synopsis">
                                 Jane frantically wipes blood from her face using the rearview mirror. Discovers a cut on her forehead.
                             </div>
-                            <div class="scene-tags">
-                                <div class="tag-icon makeup" title="Makeup">💄</div>
-                                <div class="tag-icon sfx" title="SFX">🩸</div>
-                                <div class="tag-icon props" title="Props">📦</div>
+                            <div class="tag-items-list">
+                                <div class="tag-category">
+                                    <div class="tag-category-title">
+                                        <span style="color: var(--tag-makeup)">💄</span> Makeup
+                                    </div>
+                                    <div class="tag-category-items">
+                                        <div class="tag-item-entry">
+                                            <div class="tag-item-dot"></div>
+                                            <span>Removing smudged makeup</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="tag-category">
+                                    <div class="tag-category-title">
+                                        <span style="color: var(--tag-sfx)">🩸</span> SFX
+                                    </div>
+                                    <div class="tag-category-items">
+                                        <div class="tag-item-entry">
+                                            <div class="tag-item-dot"></div>
+                                            <span>Forehead wound</span>
+                                        </div>
+                                        <div class="tag-item-entry">
+                                            <div class="tag-item-dot"></div>
+                                            <span>Dried blood</span>
+                                        </div>
+                                        <div class="tag-item-entry">
+                                            <div class="tag-item-dot"></div>
+                                            <span>Blood on bat</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="tag-category">
+                                    <div class="tag-category-title">
+                                        <span style="color: var(--tag-props)">📦</span> Props
+                                    </div>
+                                    <div class="tag-category-items">
+                                        <div class="tag-item-entry">
+                                            <div class="tag-item-dot"></div>
+                                            <span>Baseball bat</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="tag-category">
+                                    <div class="tag-category-title">
+                                        <span style="color: var(--tag-cast)">👤</span> Cast
+                                    </div>
+                                    <div class="tag-category-items">
+                                        <div class="tag-item-entry">
+                                            <div class="tag-item-dot"></div>
+                                            <span>Jane Doe (Lead)</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                             <button class="breakdown-btn">Open Full Breakdown →</button>
                         </div>
@@ -746,10 +984,59 @@
                             <div class="scene-synopsis">
                                 Next morning. Jane, now cleaned up with fresh makeup, enters a store. Still wearing yesterday's damaged clothes.
                             </div>
-                            <div class="scene-tags">
-                                <div class="tag-icon makeup" title="Makeup">💄</div>
-                                <div class="tag-icon hair" title="Hair">✂️</div>
-                                <div class="tag-icon wardrobe" title="Wardrobe">👔</div>
+                            <div class="tag-items-list">
+                                <div class="tag-category">
+                                    <div class="tag-category-title">
+                                        <span style="color: var(--tag-makeup)">💄</span> Makeup
+                                    </div>
+                                    <div class="tag-category-items">
+                                        <div class="tag-item-entry">
+                                            <div class="tag-item-dot"></div>
+                                            <span>Fresh natural look</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="tag-category">
+                                    <div class="tag-category-title">
+                                        <span style="color: var(--tag-hair)">✂️</span> Hair
+                                    </div>
+                                    <div class="tag-category-items">
+                                        <div class="tag-item-entry">
+                                            <div class="tag-item-dot"></div>
+                                            <span>Tied back/neat</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="tag-category">
+                                    <div class="tag-category-title">
+                                        <span style="color: var(--tag-wardrobe)">👔</span> Wardrobe
+                                    </div>
+                                    <div class="tag-category-items">
+                                        <div class="tag-item-entry">
+                                            <div class="tag-item-dot"></div>
+                                            <span>Same damaged jacket</span>
+                                        </div>
+                                        <div class="tag-item-entry">
+                                            <div class="tag-item-dot"></div>
+                                            <span>Ripped jeans</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="tag-category">
+                                    <div class="tag-category-title">
+                                        <span style="color: var(--tag-cast)">👤</span> Cast
+                                    </div>
+                                    <div class="tag-category-items">
+                                        <div class="tag-item-entry">
+                                            <div class="tag-item-dot"></div>
+                                            <span>Jane Doe (Lead)</span>
+                                        </div>
+                                        <div class="tag-item-entry">
+                                            <div class="tag-item-dot"></div>
+                                            <span>Store Clerk (50s, Supporting)</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                             <button class="breakdown-btn">Open Full Breakdown →</button>
                         </div>
@@ -942,9 +1229,218 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
         </div>
     </div>
 
+    <!-- Floating Tag Toolbar -->
+    <div class="tag-toolbar" id="tagToolbar">
+        <button class="tag-toolbar-btn makeup" onclick="tagSelection('makeup', '💄')">💄 Makeup</button>
+        <button class="tag-toolbar-btn hair" onclick="tagSelection('hair', '✂️')">✂️ Hair</button>
+        <button class="tag-toolbar-btn sfx" onclick="tagSelection('sfx', '🩸')">🩸 SFX</button>
+        <button class="tag-toolbar-btn cast" onclick="tagSelection('cast', '👤')">👤 Cast</button>
+        <button class="tag-toolbar-btn wardrobe" onclick="tagSelection('wardrobe', '👔')">👔 Wardrobe</button>
+        <button class="tag-toolbar-btn props" onclick="tagSelection('props', '📦')">📦 Props</button>
+    </div>
+
     <script>
         let currentScene = 1;
         let tagsVisible = true;
+        let selectedText = null;
+        let selectedRange = null;
+
+        // Data structure to store all tags by scene
+        let sceneTags = {
+            1: [
+                { text: 'JANE DOE (28)', category: 'cast', description: 'Jane Doe (Lead)' },
+                { text: 'blonde hair is disheveled', category: 'hair', description: 'Disheveled blonde' },
+                { text: 'mascara is smudged, lipstick smeared', category: 'makeup', description: 'Smudged mascara/lipstick' },
+                { text: 'Dried blood cakes her fingers', category: 'sfx', description: 'Blood on hands' }
+            ],
+            2: [
+                { text: 'torn leather jacket', category: 'wardrobe', description: 'Torn leather jacket' },
+                { text: 'smudged makeup', category: 'makeup', description: 'Continuity from Scene 1' }
+            ],
+            3: [
+                { text: 'cut on her forehead', category: 'sfx', description: 'Forehead wound' },
+                { text: 'blood', category: 'sfx', description: 'Dried blood' },
+                { text: 'ruined makeup', category: 'makeup', description: 'Removing smudged makeup' },
+                { text: 'baseball bat', category: 'props', description: 'Baseball bat' },
+                { text: 'stained with blood', category: 'sfx', description: 'Blood on bat' }
+            ],
+            4: [
+                { text: 'cleaned herself up — fresh, natural makeup', category: 'makeup', description: 'Fresh natural look' },
+                { text: 'hair tied back', category: 'hair', description: 'Tied back/neat' },
+                { text: 'damaged leather jacket', category: 'wardrobe', description: 'Same damaged jacket' },
+                { text: 'ripped jeans', category: 'wardrobe', description: 'Ripped jeans' },
+                { text: 'STORE CLERK (50s)', category: 'cast', description: 'Store Clerk (50s, Supporting)' }
+            ]
+        };
+
+        // Text selection handling
+        document.addEventListener('mouseup', function(e) {
+            const selection = window.getSelection();
+            const selectedText = selection.toString().trim();
+            
+            // Only show toolbar if text is selected within script content
+            if (selectedText.length > 0 && e.target.closest('.script-content')) {
+                const range = selection.getRangeAt(0);
+                const rect = range.getBoundingClientRect();
+                
+                // Position toolbar above selection
+                const toolbar = document.getElementById('tagToolbar');
+                toolbar.style.left = rect.left + (rect.width / 2) - (toolbar.offsetWidth / 2) + 'px';
+                toolbar.style.top = (rect.top + window.scrollY - 50) + 'px';
+                toolbar.classList.add('active');
+                
+                // Store selection for tagging
+                window.currentSelection = {
+                    text: selectedText,
+                    range: range
+                };
+            } else {
+                // Hide toolbar if clicking outside
+                if (!e.target.closest('.tag-toolbar')) {
+                    document.getElementById('tagToolbar').classList.remove('active');
+                }
+            }
+        });
+
+        // Tag selected text
+        function tagSelection(category, icon) {
+            if (!window.currentSelection) return;
+            
+            const { text, range } = window.currentSelection;
+            const description = prompt(`Add a description for this ${category} tag:`, text);
+            
+            if (!description) return;
+            
+            // Create span element
+            const span = document.createElement('span');
+            span.className = `tagged ${category}`;
+            span.setAttribute('data-tag', description);
+            span.setAttribute('data-category', category);
+            
+            // Add tooltip
+            const tooltip = document.createElement('span');
+            tooltip.className = 'tooltip';
+            tooltip.textContent = `Tagged as: ${category.charAt(0).toUpperCase() + category.slice(1)} — ${description}`;
+            span.appendChild(tooltip);
+            
+            // Wrap selection with span
+            try {
+                range.surroundContents(span);
+                
+                // Add to scene tags
+                if (!sceneTags[currentScene]) {
+                    sceneTags[currentScene] = [];
+                }
+                
+                sceneTags[currentScene].push({
+                    text: text,
+                    category: category,
+                    description: description
+                });
+                
+                // Update scene overview
+                updateSceneOverview(currentScene);
+                
+                // Hide toolbar
+                document.getElementById('tagToolbar').classList.remove('active');
+                
+                // Clear selection
+                window.getSelection().removeAllRanges();
+                
+                // Add click handler to remove tag
+                span.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    removeTag(this);
+                });
+                
+            } catch (error) {
+                alert('Cannot tag across element boundaries. Try selecting text within a single paragraph.');
+            }
+        }
+
+        // Remove tag
+        function removeTag(tagElement) {
+            if (!confirm('Remove this tag?')) return;
+            
+            const text = tagElement.childNodes[0].textContent;
+            const category = tagElement.getAttribute('data-category');
+            
+            // Remove from data structure
+            if (sceneTags[currentScene]) {
+                sceneTags[currentScene] = sceneTags[currentScene].filter(tag => 
+                    !(tag.text === text && tag.category === category)
+                );
+            }
+            
+            // Unwrap the tag
+            const parent = tagElement.parentNode;
+            while (tagElement.firstChild && tagElement.firstChild.className !== 'tooltip') {
+                parent.insertBefore(tagElement.firstChild, tagElement);
+            }
+            parent.removeChild(tagElement);
+            
+            // Update scene overview
+            updateSceneOverview(currentScene);
+        }
+
+        // Add click handlers to existing tags
+        document.querySelectorAll('.tagged').forEach(tag => {
+            tag.addEventListener('click', function(e) {
+                e.stopPropagation();
+                removeTag(this);
+            });
+        });
+
+        // Update scene overview with current tags
+        function updateSceneOverview(sceneNum) {
+            const tags = sceneTags[sceneNum] || [];
+            const sceneItem = document.querySelector(`.scene-item[data-scene="${sceneNum}"]`);
+            if (!sceneItem) return;
+            
+            // Group tags by category
+            const grouped = {};
+            tags.forEach(tag => {
+                if (!grouped[tag.category]) {
+                    grouped[tag.category] = [];
+                }
+                grouped[tag.category].push(tag.description);
+            });
+            
+            // Build HTML
+            const categoryIcons = {
+                makeup: { icon: '💄', name: 'Makeup', color: 'var(--tag-makeup)' },
+                hair: { icon: '✂️', name: 'Hair', color: 'var(--tag-hair)' },
+                sfx: { icon: '🩸', name: 'SFX', color: 'var(--tag-sfx)' },
+                cast: { icon: '👤', name: 'Cast', color: 'var(--tag-cast)' },
+                wardrobe: { icon: '👔', name: 'Wardrobe', color: 'var(--tag-wardrobe)' },
+                props: { icon: '📦', name: 'Props', color: 'var(--tag-props)' }
+            };
+            
+            let html = '';
+            Object.keys(grouped).forEach(category => {
+                const info = categoryIcons[category];
+                html += `
+                    <div class="tag-category">
+                        <div class="tag-category-title">
+                            <span style="color: ${info.color}">${info.icon}</span> ${info.name}
+                        </div>
+                        <div class="tag-category-items">
+                            ${grouped[category].map(desc => `
+                                <div class="tag-item-entry">
+                                    <div class="tag-item-dot"></div>
+                                    <span>${desc}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            const tagsList = sceneItem.querySelector('.tag-items-list');
+            if (tagsList) {
+                tagsList.innerHTML = html;
+            }
+        }
 
         // Toggle scene expansion
         document.querySelectorAll('.scene-item').forEach(item => {
