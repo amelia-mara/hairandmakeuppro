@@ -308,11 +308,89 @@
             background: var(--card-bg);
             border: 1px solid var(--glass-border);
             border-radius: 8px;
-            padding: 32px;
+            padding: 48px 64px;
             font-family: 'Courier Prime', monospace;
             font-size: 12pt;
+            line-height: 2;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        /* Screenplay Formatting */
+        .script-line {
+            margin-bottom: 12px;
+        }
+
+        .script-scene-heading {
+            font-weight: 700;
+            text-transform: uppercase;
+            margin: 24px 0 16px 0;
+            color: var(--accent-gold);
+            font-size: 13pt;
+        }
+
+        .script-action {
+            margin: 12px 0;
+            color: var(--text-light);
             line-height: 1.8;
-            white-space: pre-wrap;
+        }
+
+        .script-character {
+            font-weight: 700;
+            text-transform: uppercase;
+            margin: 16px 0 4px 200px;
+            color: var(--text-light);
+        }
+
+        .script-parenthetical {
+            font-style: italic;
+            margin: 4px 0 4px 180px;
+            color: var(--text-muted);
+        }
+
+        .script-dialogue {
+            margin: 4px 0 12px 150px;
+            max-width: 350px;
+            color: var(--text-light);
+            line-height: 1.7;
+        }
+
+        .script-transition {
+            font-weight: 700;
+            text-align: right;
+            margin: 16px 0;
+            color: var(--text-muted);
+        }
+
+        .script-text-selectable {
+            cursor: text;
+            user-select: text;
+        }
+
+        .script-line:hover {
+            background: rgba(201, 169, 97, 0.05);
+            border-radius: 4px;
+            padding: 2px 8px;
+            margin-left: -8px;
+            margin-right: -8px;
+        }
+
+        /* Text Selection Styling */
+        .scene-script-content ::selection {
+            background: rgba(201, 169, 97, 0.4);
+            color: var(--bg-dark);
+        }
+
+        .scene-script-content ::-moz-selection {
+            background: rgba(201, 169, 97, 0.4);
+            color: var(--bg-dark);
+        }
+
+        /* Smooth font rendering for better readability */
+        .scene-script-content {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
         }
 
         /* Right Sidebar - Tagging Panel */
@@ -680,6 +758,50 @@
         .empty-state p {
             color: var(--text-muted);
             font-size: 0.875em;
+        }
+
+        /* Responsive Script Formatting */
+        @media (max-width: 1024px) {
+            .scene-script-content {
+                padding: 32px 40px;
+            }
+
+            .script-character {
+                margin-left: 120px;
+            }
+
+            .script-parenthetical {
+                margin-left: 100px;
+            }
+
+            .script-dialogue {
+                margin-left: 80px;
+                max-width: 400px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .scene-script-content {
+                padding: 24px;
+                font-size: 11pt;
+            }
+
+            .script-character {
+                margin-left: 40px;
+            }
+
+            .script-parenthetical {
+                margin-left: 30px;
+            }
+
+            .script-dialogue {
+                margin-left: 20px;
+                max-width: 100%;
+            }
+
+            .script-scene-heading {
+                font-size: 12pt;
+            }
         }
     </style>
 </head>
@@ -1196,7 +1318,7 @@ Be specific and concise. Only include items explicitly mentioned or clearly impl
         function displayScene(index) {
             const scene = scenes[index];
             const sceneNumber = index + 1;
-            
+
             // Get scene content
             const lines = scriptText.split('\n');
             const startLine = scene.lineIndex;
@@ -1204,17 +1326,80 @@ Be specific and concise. Only include items explicitly mentioned or clearly impl
             if (index < scenes.length - 1) {
                 endLine = scenes[index + 1].lineIndex;
             }
-            
+
             const sceneContent = lines.slice(startLine + 1, endLine).join('\n');
-            
+            const formattedContent = formatScriptContent(sceneContent);
+
             const display = document.getElementById('sceneDisplay');
             display.innerHTML = `
                 <div class="scene-header-display">
                     <div class="scene-number-large">Scene ${sceneNumber}</div>
                     <div class="scene-heading-large">${escapeHtml(scene.heading)}</div>
                 </div>
-                <div class="scene-script-content">${escapeHtml(sceneContent)}</div>
+                <div class="scene-script-content script-text-selectable">${formattedContent}</div>
             `;
+        }
+
+        function formatScriptContent(content) {
+            const lines = content.split('\n');
+            let formattedHtml = '';
+            let inDialogue = false;
+            let lastLineWasCharacter = false;
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                const trimmed = line.trim();
+
+                // Skip empty lines but preserve spacing
+                if (!trimmed) {
+                    formattedHtml += '<div class="script-line">&nbsp;</div>';
+                    inDialogue = false;
+                    lastLineWasCharacter = false;
+                    continue;
+                }
+
+                // Detect scene headings (INT./EXT.)
+                if (/^(INT|EXT|INT\/EXT|I\/E)[\.\s]+/i.test(trimmed)) {
+                    formattedHtml += `<div class="script-line script-scene-heading">${escapeHtml(trimmed)}</div>`;
+                    inDialogue = false;
+                    lastLineWasCharacter = false;
+                }
+                // Detect transitions (FADE TO:, CUT TO:, etc.)
+                else if (/^(FADE|CUT|DISSOLVE|SMASH CUT).*:$/i.test(trimmed) || /^TO:$/i.test(trimmed)) {
+                    formattedHtml += `<div class="script-line script-transition">${escapeHtml(trimmed)}</div>`;
+                    inDialogue = false;
+                    lastLineWasCharacter = false;
+                }
+                // Detect parentheticals
+                else if (trimmed.startsWith('(') && trimmed.endsWith(')')) {
+                    formattedHtml += `<div class="script-line script-parenthetical">${escapeHtml(trimmed)}</div>`;
+                    inDialogue = true;
+                    lastLineWasCharacter = false;
+                }
+                // Detect character names (all caps, short lines)
+                else if (trimmed === trimmed.toUpperCase() &&
+                         trimmed.length > 0 &&
+                         trimmed.length < 40 &&
+                         /^[A-Z\s\.']+(\(.*\))?$/.test(trimmed) &&
+                         !inDialogue) {
+                    formattedHtml += `<div class="script-line script-character">${escapeHtml(trimmed)}</div>`;
+                    inDialogue = true;
+                    lastLineWasCharacter = true;
+                }
+                // Dialogue (follows character name or is in dialogue mode)
+                else if (inDialogue) {
+                    formattedHtml += `<div class="script-line script-dialogue">${escapeHtml(trimmed)}</div>`;
+                    lastLineWasCharacter = false;
+                }
+                // Action (everything else)
+                else {
+                    formattedHtml += `<div class="script-line script-action">${escapeHtml(trimmed)}</div>`;
+                    inDialogue = false;
+                    lastLineWasCharacter = false;
+                }
+            }
+
+            return formattedHtml;
         }
 
         function displayTaggingPanel(index) {
