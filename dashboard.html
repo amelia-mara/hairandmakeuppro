@@ -264,6 +264,10 @@
             opacity: 0.5;
         }
 
+        .widget.clickable {
+            cursor: pointer;
+        }
+
         .widget-header {
             padding: 16px 20px;
             border-bottom: 1px solid var(--glass-border);
@@ -460,6 +464,12 @@
 
         .character-avatar {
             text-align: center;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .character-avatar:hover {
+            transform: translateY(-4px);
         }
 
         .avatar {
@@ -531,6 +541,25 @@
             color: var(--text-muted);
         }
 
+        /* Widget Footer */
+        .widget-footer {
+            padding: 12px 20px;
+            border-top: 1px solid var(--glass-border);
+            display: flex;
+            justify-content: center;
+        }
+
+        .widget-link {
+            color: var(--accent-gold);
+            font-size: 0.8125em;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .widget-link:hover {
+            color: #d4b16d;
+        }
+
         /* Responsive */
         @media (max-width: 1024px) {
             .sidebar {
@@ -578,9 +607,9 @@
                     <span class="nav-icon">📝</span>
                     Script Breakdown
                 </div>
-                <div class="nav-item">
+                <div class="nav-item" onclick="window.location.href='characters.html'">
                     <span class="nav-icon">👥</span>
-                    Characters
+                    Character Design
                 </div>
                 <div class="nav-item">
                     <span class="nav-icon">🎬</span>
@@ -763,7 +792,7 @@
                     </div>
 
                     <!-- Character Progress Widget -->
-                    <div class="widget" draggable="true">
+                    <div class="widget clickable" draggable="true">
                         <div class="widget-header">
                             <div class="widget-title">
                                 <span>👤</span>
@@ -775,29 +804,32 @@
                                 <button class="widget-btn">×</button>
                             </div>
                         </div>
-                        <div class="widget-content">
+                        <div class="widget-content" id="characterWidget">
                             <div class="character-grid">
-                                <div class="character-avatar">
+                                <div class="character-avatar" onclick="event.stopPropagation(); window.location.href='characters.html'">
                                     <div class="avatar">JD</div>
                                     <div class="character-name">Jane Doe</div>
                                     <div class="character-actor">Lead</div>
                                 </div>
-                                <div class="character-avatar">
+                                <div class="character-avatar" onclick="event.stopPropagation(); window.location.href='characters.html'">
                                     <div class="avatar">MS</div>
                                     <div class="character-name">Mike Smith</div>
                                     <div class="character-actor">Supporting</div>
                                 </div>
-                                <div class="character-avatar">
+                                <div class="character-avatar" onclick="event.stopPropagation(); window.location.href='characters.html'">
                                     <div class="avatar">SJ</div>
                                     <div class="character-name">Sarah Jones</div>
                                     <div class="character-actor">Lead</div>
                                 </div>
-                                <div class="character-avatar">
+                                <div class="character-avatar" onclick="event.stopPropagation(); window.location.href='characters.html'">
                                     <div class="avatar">TB</div>
                                     <div class="character-name">Tom Brown</div>
                                     <div class="character-actor">Supporting</div>
                                 </div>
                             </div>
+                        </div>
+                        <div class="widget-footer">
+                            <a href="characters.html" class="widget-link">View All Characters →</a>
                         </div>
                     </div>
 
@@ -870,6 +902,7 @@
             if (projectData) {
                 currentProject = JSON.parse(projectData);
                 updateDashboard();
+                loadCharacterWidget();
             } else {
                 // No project selected, redirect to home
                 window.location.href = 'index.html';
@@ -893,6 +926,36 @@
             // Update progress bars
             const progressFills = document.querySelectorAll('.progress-fill');
             if (progressFills[0]) progressFills[0].style.width = `${currentProject.progress || 0}%`;
+        }
+
+        // Load character data into widget
+        function loadCharacterWidget() {
+            const projectCode = currentProject?.code;
+            if (!projectCode) return;
+            
+            const savedCharacters = localStorage.getItem(`${projectCode}_characters`);
+            if (savedCharacters) {
+                const characters = JSON.parse(savedCharacters);
+                
+                if (characters.length > 0) {
+                    const characterWidget = document.getElementById('characterWidget');
+                    const grid = characterWidget.querySelector('.character-grid');
+                    
+                    // Show first 4 characters
+                    const displayCharacters = characters.slice(0, 4);
+                    
+                    grid.innerHTML = displayCharacters.map(char => {
+                        const initials = char.name.split(' ').map(n => n[0]).join('').substring(0, 2);
+                        return `
+                            <div class="character-avatar" onclick="event.stopPropagation(); window.location.href='characters.html'">
+                                <div class="avatar">${char.photo ? `<img src="${char.photo}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">` : initials}</div>
+                                <div class="character-name">${char.name}</div>
+                                <div class="character-actor">${char.role || 'Character'}</div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            }
         }
 
         // Drag and Drop functionality
@@ -1000,6 +1063,9 @@
 
         // Initialize dashboard on page load
         loadProjectData();
+        
+        console.log('✓ Dashboard loaded');
+        console.log('✓ Character Design integration active');
     </script>
 </body>
 </html>
