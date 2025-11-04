@@ -1325,7 +1325,8 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
             let inScene = false;
             
             // More flexible regex for scene headings
-            const sceneHeadingRegex = /^\s*(INT|EXT|INT\/EXT|I\/E)[\.\s]+/i;
+            // Handles: "INT.", "1 INT.", "1 1INT.", "EXT ", etc.
+            const sceneHeadingRegex = /^\s*\d*\s*\d*\s*(INT|EXT|INT\/EXT|I\/E)[\.\s]+/i;
             
             // Simple script parser
             lines.forEach((line, index) => {
@@ -1339,12 +1340,19 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
                     }
                     
                     sceneNumber++;
+                    
+                    // Clean up the heading - remove leading numbers and normalize spacing
+                    let cleanHeading = trimmed
+                        .replace(/^\s*\d+\s*\d*\s*/, '') // Remove leading numbers like "1 1" or "1 "
+                        .replace(/\s+/g, ' ')  // Normalize multiple spaces to single space
+                        .trim();
+                    
                     html += `<div class="script-scene" id="scene-${sceneNumber}">`;
-                    html += `<div class="script-scene-heading">${sceneNumber}. ${trimmed}</div>`;
+                    html += `<div class="script-scene-heading">${sceneNumber}. ${cleanHeading}</div>`;
                     currentSceneHtml = trimmed;
                     inScene = true;
                     
-                    console.log(`Found scene ${sceneNumber}: ${trimmed}`);
+                    console.log(`Found scene ${sceneNumber}: ${cleanHeading}`);
                 }
                 // Detect character names (all caps, not too long)
                 else if (trimmed === trimmed.toUpperCase() && 
