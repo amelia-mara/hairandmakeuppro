@@ -1,0 +1,1447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Character Design - Ultimate Design</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-dark: #0d0b0a;
+            --bg-medium: rgba(26, 22, 18, 0.7);
+            --card-bg: rgba(36, 32, 25, 0.6);
+            --text-light: #e8e6e3;
+            --text-muted: #8a7f73;
+            --accent-gold: #c9a961;
+            --border: rgba(45, 41, 37, 0.5);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --success: #52c186;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(13, 11, 10, 0.4);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(138, 127, 115, 0.3);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(138, 127, 115, 0.5);
+        }
+
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(138, 127, 115, 0.3) rgba(13, 11, 10, 0.4);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0d0b0a 0%, #1a1612 50%, #0d0b0a 100%);
+            color: var(--text-light);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .app-layout {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* Top Bar */
+        .top-bar {
+            height: 60px;
+            background: var(--bg-medium);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+        }
+
+        .top-bar-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .back-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.875em;
+            transition: color 0.2s;
+        }
+
+        .back-link:hover {
+            color: var(--accent-gold);
+        }
+
+        .page-title {
+            font-size: 1.125em;
+            font-weight: 600;
+        }
+
+        .top-bar-right {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 0.8125em;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .btn:hover {
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+        }
+
+        .btn-primary {
+            background: var(--accent-gold);
+            border-color: var(--accent-gold);
+            color: var(--bg-dark);
+        }
+
+        .btn-primary:hover {
+            background: #d4b16d;
+        }
+
+        /* Main Layout */
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Left Sidebar - Character List */
+        .character-sidebar {
+            width: 280px;
+            background: var(--bg-medium);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid var(--glass-border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .sidebar-title {
+            font-size: 0.875em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+
+        .character-search {
+            width: 100%;
+            padding: 8px 12px;
+            background: rgba(13, 11, 10, 0.5);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-light);
+            font-size: 0.8125em;
+        }
+
+        .character-search:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+        }
+
+        .add-character-btn {
+            width: 100%;
+            padding: 10px;
+            margin-top: 12px;
+            background: transparent;
+            border: 1px dashed var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 0.8125em;
+            transition: all 0.2s;
+        }
+
+        .add-character-btn:hover {
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+            background: rgba(201, 169, 97, 0.05);
+        }
+
+        .character-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+
+        .character-item {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .character-item:hover {
+            border-color: var(--accent-gold);
+            transform: translateX(4px);
+        }
+
+        .character-item.active {
+            border-color: var(--accent-gold);
+            background: rgba(201, 169, 97, 0.15);
+        }
+
+        .character-avatar-small {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-gold), #d4b16d);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: var(--bg-dark);
+            flex-shrink: 0;
+            font-size: 1em;
+            overflow: hidden;
+        }
+
+        .character-avatar-small img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .character-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .character-name {
+            font-size: 0.875em;
+            font-weight: 600;
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .character-role {
+            font-size: 0.75em;
+            color: var(--text-muted);
+        }
+
+        .character-status {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-muted);
+            flex-shrink: 0;
+        }
+
+        .character-status.complete {
+            background: var(--success);
+        }
+
+        .character-status.in-progress {
+            background: var(--accent-gold);
+        }
+
+        /* Center Panel - Design Workspace */
+        .design-workspace {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .workspace-tabs {
+            display: flex;
+            gap: 4px;
+            padding: 12px 20px;
+            background: var(--bg-medium);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .workspace-tab {
+            padding: 8px 16px;
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 6px;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 0.8125em;
+            transition: all 0.2s;
+        }
+
+        .workspace-tab:hover {
+            border-color: var(--glass-border);
+            color: var(--text-light);
+        }
+
+        .workspace-tab.active {
+            background: var(--card-bg);
+            border-color: var(--glass-border);
+            color: var(--text-light);
+        }
+
+        .workspace-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+        }
+
+        /* Overview Tab */
+        .overview-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .info-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .info-card-title {
+            font-size: 0.75em;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+            font-weight: 600;
+        }
+
+        .actor-section {
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+        }
+
+        .actor-photo {
+            width: 120px;
+            height: 150px;
+            border-radius: 8px;
+            background: rgba(13, 11, 10, 0.5);
+            border: 1px dashed var(--glass-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .actor-photo:hover {
+            border-color: var(--accent-gold);
+        }
+
+        .actor-photo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .actor-photo-placeholder {
+            font-size: 2em;
+            opacity: 0.3;
+        }
+
+        .actor-details {
+            flex: 1;
+        }
+
+        .form-group {
+            margin-bottom: 12px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.75em;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 8px 12px;
+            background: rgba(13, 11, 10, 0.5);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-light);
+            font-size: 0.8125em;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+        }
+
+        .form-textarea {
+            width: 100%;
+            min-height: 100px;
+            padding: 10px 12px;
+            background: rgba(13, 11, 10, 0.5);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-light);
+            font-size: 0.8125em;
+            font-family: inherit;
+            resize: vertical;
+            line-height: 1.5;
+        }
+
+        .form-textarea:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+        }
+
+        /* Moodboard Tab */
+        .moodboard-toolbar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding: 16px;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+        }
+
+        .moodboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .moodboard-item {
+            aspect-ratio: 1;
+            border-radius: 8px;
+            background: rgba(13, 11, 10, 0.5);
+            border: 1px solid var(--glass-border);
+            overflow: hidden;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .moodboard-item:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        }
+
+        .moodboard-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .moodboard-item-add {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 8px;
+            border: 2px dashed var(--glass-border);
+            cursor: pointer;
+        }
+
+        .moodboard-item-add:hover {
+            border-color: var(--accent-gold);
+        }
+
+        .moodboard-item-add-icon {
+            font-size: 2em;
+            opacity: 0.3;
+        }
+
+        .moodboard-item-add-text {
+            font-size: 0.75em;
+            color: var(--text-muted);
+        }
+
+        .moodboard-item-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(13, 11, 10, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .moodboard-item:hover .moodboard-item-overlay {
+            opacity: 1;
+        }
+
+        .overlay-btn {
+            padding: 8px 12px;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-light);
+            cursor: pointer;
+            font-size: 0.75em;
+            transition: all 0.2s;
+        }
+
+        .overlay-btn:hover {
+            border-color: var(--accent-gold);
+            background: rgba(201, 169, 97, 0.2);
+        }
+
+        /* Design Specs Tab */
+        .specs-section {
+            margin-bottom: 24px;
+        }
+
+        .specs-title {
+            font-size: 1em;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .specs-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .color-palette {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .color-swatch {
+            width: 48px;
+            height: 48px;
+            border-radius: 8px;
+            border: 2px solid var(--glass-border);
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .color-swatch:hover {
+            transform: scale(1.1);
+            border-color: var(--accent-gold);
+        }
+
+        .color-swatch-add {
+            background: rgba(13, 11, 10, 0.5);
+            border: 2px dashed var(--glass-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2em;
+            color: var(--text-muted);
+        }
+
+        /* Scene Timeline Tab */
+        .timeline {
+            position: relative;
+        }
+
+        .timeline-item {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+            position: relative;
+        }
+
+        .timeline-marker {
+            width: 32px;
+            height: 32px;
+            background: var(--accent-gold);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75em;
+            font-weight: 600;
+            color: var(--bg-dark);
+            flex-shrink: 0;
+            z-index: 1;
+        }
+
+        .timeline-line {
+            position: absolute;
+            left: 16px;
+            top: 32px;
+            bottom: -24px;
+            width: 2px;
+            background: var(--border);
+        }
+
+        .timeline-item:last-child .timeline-line {
+            display: none;
+        }
+
+        .timeline-content {
+            flex: 1;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 16px;
+        }
+
+        .timeline-scene {
+            font-size: 0.875em;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .timeline-description {
+            font-size: 0.8125em;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        /* Right Sidebar - Quick Actions */
+        .actions-sidebar {
+            width: 280px;
+            background: var(--bg-medium);
+            backdrop-filter: blur(20px);
+            border-left: 1px solid var(--glass-border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .actions-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .actions-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .action-group {
+            margin-bottom: 24px;
+        }
+
+        .action-group-title {
+            font-size: 0.75em;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        .action-btn {
+            width: 100%;
+            padding: 12px;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-light);
+            cursor: pointer;
+            font-size: 0.8125em;
+            margin-bottom: 8px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .action-btn:hover {
+            border-color: var(--accent-gold);
+            background: rgba(201, 169, 97, 0.1);
+        }
+
+        .action-icon {
+            font-size: 1.2em;
+        }
+
+        /* Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .stat-box {
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: 600;
+            color: var(--accent-gold);
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 0.75em;
+            color: var(--text-muted);
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(13, 11, 10, 0.8);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--bg-medium);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 32px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .modal-title {
+            font-size: 1.25em;
+            font-weight: 600;
+        }
+
+        .close-btn {
+            width: 32px;
+            height: 32px;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 1.2em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .close-btn:hover {
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+        }
+
+        /* Empty State */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 400px;
+            text-align: center;
+            color: var(--text-muted);
+        }
+
+        .empty-icon {
+            font-size: 4em;
+            opacity: 0.2;
+            margin-bottom: 16px;
+        }
+
+        .empty-text {
+            font-size: 0.875em;
+            margin-bottom: 24px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Top Bar -->
+        <div class="top-bar">
+            <div class="top-bar-left">
+                <a href="dashboard.html" class="back-link">← Dashboard</a>
+                <h1 class="page-title">Character Design</h1>
+            </div>
+            <div class="top-bar-right">
+                <button class="btn" onclick="importFromBreakdown()">📋 Import from Breakdown</button>
+                <button class="btn" onclick="saveAllCharacters()">💾 Save</button>
+                <button class="btn btn-primary" onclick="generateLookbook()">📸 Generate Lookbook</button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Left Sidebar - Character List -->
+            <div class="character-sidebar">
+                <div class="sidebar-header">
+                    <div class="sidebar-title">Characters</div>
+                    <input type="text" class="character-search" placeholder="Search characters..." id="characterSearch">
+                    <button class="add-character-btn" onclick="openAddCharacterModal()">+ Add Character</button>
+                </div>
+                <div class="character-list" id="characterList">
+                    <!-- Characters will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Center Panel - Design Workspace -->
+            <div class="design-workspace">
+                <div class="workspace-tabs">
+                    <button class="workspace-tab active" data-tab="overview" onclick="switchTab('overview')">Overview</button>
+                    <button class="workspace-tab" data-tab="moodboard" onclick="switchTab('moodboard')">Moodboard</button>
+                    <button class="workspace-tab" data-tab="specs" onclick="switchTab('specs')">Design Specs</button>
+                    <button class="workspace-tab" data-tab="timeline" onclick="switchTab('timeline')">Scene Timeline</button>
+                </div>
+
+                <div class="workspace-content" id="workspaceContent">
+                    <!-- Overview Tab -->
+                    <div class="tab-content active" data-tab="overview">
+                        <div class="empty-state">
+                            <div class="empty-icon">👤</div>
+                            <div class="empty-text">Select a character to begin designing</div>
+                            <button class="btn btn-primary" onclick="openAddCharacterModal()">Create New Character</button>
+                        </div>
+                    </div>
+
+                    <!-- Moodboard Tab -->
+                    <div class="tab-content" data-tab="moodboard" style="display: none;">
+                        <div class="moodboard-toolbar">
+                            <button class="btn" onclick="uploadMoodboardImage()">📤 Upload Image</button>
+                            <button class="btn" onclick="addFromURL()">🔗 Add from URL</button>
+                            <button class="btn" onclick="generateAIMoodboard()">✨ AI Generate</button>
+                        </div>
+                        <div class="moodboard-grid" id="moodboardGrid">
+                            <div class="moodboard-item moodboard-item-add" onclick="uploadMoodboardImage()">
+                                <div class="moodboard-item-add-icon">+</div>
+                                <div class="moodboard-item-add-text">Add Image</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Design Specs Tab -->
+                    <div class="tab-content" data-tab="specs" style="display: none;">
+                        <div class="specs-section">
+                            <div class="specs-title">💄 Hair & Makeup Specs</div>
+                            <div class="specs-grid">
+                                <div class="form-group">
+                                    <label class="form-label">Hair Style</label>
+                                    <input type="text" class="form-input" id="hairStyle" placeholder="e.g., Long waves, side part">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Hair Color</label>
+                                    <input type="text" class="form-input" id="hairColor" placeholder="e.g., Auburn brown">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Makeup Style</label>
+                                    <input type="text" class="form-input" id="makeupStyle" placeholder="e.g., Natural, dewy">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Special Requirements</label>
+                                    <input type="text" class="form-input" id="specialReq" placeholder="e.g., Aging, prosthetics">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Application Notes</label>
+                                <textarea class="form-textarea" id="applicationNotes" placeholder="Detailed application instructions, products needed, time estimates..."></textarea>
+                            </div>
+                        </div>
+
+                        <div class="specs-section">
+                            <div class="specs-title">🎨 Color Palette</div>
+                            <div class="color-palette" id="colorPalette">
+                                <div class="color-swatch color-swatch-add" onclick="addColorSwatch()">+</div>
+                            </div>
+                        </div>
+
+                        <div class="specs-section">
+                            <div class="specs-title">👔 Wardrobe Notes</div>
+                            <textarea class="form-textarea" id="wardrobeNotes" placeholder="Key wardrobe pieces, changes throughout story..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Scene Timeline Tab -->
+                    <div class="tab-content" data-tab="timeline" style="display: none;">
+                        <div class="timeline" id="sceneTimeline">
+                            <div class="empty-state">
+                                <div class="empty-icon">🎬</div>
+                                <div class="empty-text">No scenes assigned yet</div>
+                                <button class="btn" onclick="importFromBreakdown()">Import from Breakdown</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Sidebar - Actions -->
+            <div class="actions-sidebar">
+                <div class="actions-header">
+                    <div class="sidebar-title">Quick Actions</div>
+                </div>
+                <div class="actions-content">
+                    <div class="stats-grid">
+                        <div class="stat-box">
+                            <div class="stat-value" id="totalScenes">0</div>
+                            <div class="stat-label">Scenes</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value" id="totalImages">0</div>
+                            <div class="stat-label">Images</div>
+                        </div>
+                    </div>
+
+                    <div class="action-group">
+                        <div class="action-group-title">Generate</div>
+                        <button class="action-btn" onclick="generateLookbook()">
+                            <span class="action-icon">📸</span>
+                            <span>Create Lookbook</span>
+                        </button>
+                        <button class="action-btn" onclick="generateCallSheet()">
+                            <span class="action-icon">📋</span>
+                            <span>Generate Call Sheet</span>
+                        </button>
+                        <button class="action-btn" onclick="exportCharacterPDF()">
+                            <span class="action-icon">📄</span>
+                            <span>Export as PDF</span>
+                        </button>
+                    </div>
+
+                    <div class="action-group">
+                        <div class="action-group-title">AI Tools</div>
+                        <button class="action-btn" onclick="generateAIDescription()">
+                            <span class="action-icon">✨</span>
+                            <span>AI Description</span>
+                        </button>
+                        <button class="action-btn" onclick="suggestProducts()">
+                            <span class="action-icon">💄</span>
+                            <span>Suggest Products</span>
+                        </button>
+                        <button class="action-btn" onclick="estimateTime()">
+                            <span class="action-icon">⏱</span>
+                            <span>Time Estimate</span>
+                        </button>
+                    </div>
+
+                    <div class="action-group">
+                        <div class="action-group-title">Share</div>
+                        <button class="action-btn" onclick="shareWithDirector()">
+                            <span class="action-icon">👥</span>
+                            <span>Share with Director</span>
+                        </button>
+                        <button class="action-btn" onclick="exportToNotion()">
+                            <span class="action-icon">📝</span>
+                            <span>Export to Notion</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Character Modal -->
+    <div class="modal" id="addCharacterModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Add New Character</h2>
+                <button class="close-btn" onclick="closeAddCharacterModal()">×</button>
+            </div>
+            <form onsubmit="saveNewCharacter(event)">
+                <div class="form-group">
+                    <label class="form-label">Character Name</label>
+                    <input type="text" class="form-input" id="newCharacterName" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Role Type</label>
+                    <select class="form-input" id="newCharacterRole">
+                        <option value="Lead">Lead</option>
+                        <option value="Supporting">Supporting</option>
+                        <option value="Day Player">Day Player</option>
+                        <option value="Background">Background</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Actor Name (Optional)</label>
+                    <input type="text" class="form-input" id="newActorName">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Character Description</label>
+                    <textarea class="form-textarea" id="newCharacterDesc" placeholder="Age, personality, story arc..."></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 16px;">Create Character</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let characters = [];
+        let currentCharacter = null;
+
+        // Load project and characters
+        function loadProjectData() {
+            const projectData = localStorage.getItem('currentProject');
+            if (projectData) {
+                const project = JSON.parse(projectData);
+                
+                // Update page title
+                document.querySelector('.page-title').textContent = `Character Design - ${project.title}`;
+                
+                // Load characters for this project
+                const savedCharacters = localStorage.getItem(`${project.code}_characters`);
+                if (savedCharacters) {
+                    characters = JSON.parse(savedCharacters);
+                    renderCharacterList();
+                }
+            }
+        }
+
+        // Render character list
+        function renderCharacterList() {
+            const list = document.getElementById('characterList');
+            
+            if (characters.length === 0) {
+                list.innerHTML = '<div style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 0.875em;">No characters yet</div>';
+                return;
+            }
+            
+            list.innerHTML = characters.map((char, index) => {
+                const statusClass = char.status || 'incomplete';
+                const initials = char.name.split(' ').map(n => n[0]).join('').substring(0, 2);
+                
+                return `
+                    <div class="character-item ${currentCharacter === index ? 'active' : ''}" onclick="selectCharacter(${index})">
+                        <div class="character-avatar-small">
+                            ${char.photo ? `<img src="${char.photo}" alt="${char.name}">` : initials}
+                        </div>
+                        <div class="character-info">
+                            <div class="character-name">${char.name}</div>
+                            <div class="character-role">${char.role || 'Role'}</div>
+                        </div>
+                        <div class="character-status ${statusClass}"></div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Select character
+        function selectCharacter(index) {
+            currentCharacter = index;
+            const char = characters[index];
+            
+            renderCharacterList();
+            renderOverviewTab(char);
+            renderMoodboardTab(char);
+            renderSpecsTab(char);
+            renderTimelineTab(char);
+            updateStats(char);
+        }
+
+        // Render Overview Tab
+        function renderOverviewTab(char) {
+            const overviewTab = document.querySelector('[data-tab="overview"]');
+            
+            overviewTab.innerHTML = `
+                <div class="overview-grid">
+                    <div class="info-card">
+                        <div class="info-card-title">Actor Information</div>
+                        <div class="actor-section">
+                            <div class="actor-photo" onclick="uploadActorPhoto()">
+                                ${char.photo ? `<img src="${char.photo}" alt="${char.name}">` : '<div class="actor-photo-placeholder">📷</div>'}
+                            </div>
+                            <div class="actor-details">
+                                <div class="form-group">
+                                    <label class="form-label">Actor Name</label>
+                                    <input type="text" class="form-input" value="${char.actorName || ''}" onchange="updateCharacterField('actorName', this.value)">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Contact</label>
+                                    <input type="text" class="form-input" value="${char.contact || ''}" placeholder="Email or phone" onchange="updateCharacterField('contact', this.value)">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="info-card">
+                        <div class="info-card-title">Character Details</div>
+                        <div class="form-group">
+                            <label class="form-label">Role Type</label>
+                            <select class="form-input" onchange="updateCharacterField('role', this.value)">
+                                <option ${char.role === 'Lead' ? 'selected' : ''}>Lead</option>
+                                <option ${char.role === 'Supporting' ? 'selected' : ''}>Supporting</option>
+                                <option ${char.role === 'Day Player' ? 'selected' : ''}>Day Player</option>
+                                <option ${char.role === 'Background' ? 'selected' : ''}>Background</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Status</label>
+                            <select class="form-input" onchange="updateCharacterField('status', this.value)">
+                                <option value="incomplete" ${char.status === 'incomplete' ? 'selected' : ''}>Not Started</option>
+                                <option value="in-progress" ${char.status === 'in-progress' ? 'selected' : ''}>In Progress</option>
+                                <option value="complete" ${char.status === 'complete' ? 'selected' : ''}>Complete</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="info-card">
+                    <div class="info-card-title">Character Description</div>
+                    <textarea class="form-textarea" onchange="updateCharacterField('description', this.value)">${char.description || ''}</textarea>
+                </div>
+                
+                <div class="info-card">
+                    <div class="info-card-title">Story Arc / Notes</div>
+                    <textarea class="form-textarea" onchange="updateCharacterField('notes', this.value)">${char.notes || ''}</textarea>
+                </div>
+            `;
+        }
+
+        // Render Moodboard Tab
+        function renderMoodboardTab(char) {
+            const grid = document.getElementById('moodboardGrid');
+            const images = char.moodboard || [];
+            
+            grid.innerHTML = images.map((img, index) => `
+                <div class="moodboard-item">
+                    <img src="${img}" alt="Moodboard ${index + 1}">
+                    <div class="moodboard-item-overlay">
+                        <button class="overlay-btn" onclick="enlargeImage('${img}')">👁 View</button>
+                        <button class="overlay-btn" onclick="deleteMoodboardImage(${index})">🗑 Delete</button>
+                    </div>
+                </div>
+            `).join('') + `
+                <div class="moodboard-item moodboard-item-add" onclick="uploadMoodboardImage()">
+                    <div class="moodboard-item-add-icon">+</div>
+                    <div class="moodboard-item-add-text">Add Image</div>
+                </div>
+            `;
+        }
+
+        // Render Specs Tab
+        function renderSpecsTab(char) {
+            const specs = char.specs || {};
+            
+            document.getElementById('hairStyle').value = specs.hairStyle || '';
+            document.getElementById('hairColor').value = specs.hairColor || '';
+            document.getElementById('makeupStyle').value = specs.makeupStyle || '';
+            document.getElementById('specialReq').value = specs.specialReq || '';
+            document.getElementById('applicationNotes').value = specs.applicationNotes || '';
+            document.getElementById('wardrobeNotes').value = specs.wardrobeNotes || '';
+            
+            // Color palette
+            const palette = document.getElementById('colorPalette');
+            const colors = specs.colors || [];
+            
+            palette.innerHTML = colors.map((color, index) => `
+                <div class="color-swatch" style="background: ${color};" onclick="removeColor(${index})" title="Click to remove"></div>
+            `).join('') + '<div class="color-swatch color-swatch-add" onclick="addColorSwatch()">+</div>';
+            
+            // Add change listeners
+            ['hairStyle', 'hairColor', 'makeupStyle', 'specialReq', 'applicationNotes', 'wardrobeNotes'].forEach(id => {
+                document.getElementById(id).onchange = function() {
+                    updateCharacterSpecs(id, this.value);
+                };
+            });
+        }
+
+        // Render Timeline Tab
+        function renderTimelineTab(char) {
+            const timeline = document.getElementById('sceneTimeline');
+            const scenes = char.scenes || [];
+            
+            if (scenes.length === 0) {
+                timeline.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">🎬</div>
+                        <div class="empty-text">No scenes assigned yet</div>
+                        <button class="btn" onclick="importFromBreakdown()">Import from Breakdown</button>
+                    </div>
+                `;
+                return;
+            }
+            
+            timeline.innerHTML = scenes.map((scene, index) => `
+                <div class="timeline-item">
+                    <div class="timeline-marker">${scene.number || index + 1}</div>
+                    <div class="timeline-line"></div>
+                    <div class="timeline-content">
+                        <div class="timeline-scene">${scene.heading || `Scene ${scene.number}`}</div>
+                        <div class="timeline-description">${scene.notes || 'No notes'}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Update character field
+        function updateCharacterField(field, value) {
+            if (currentCharacter !== null) {
+                characters[currentCharacter][field] = value;
+                saveCharacters();
+                renderCharacterList();
+            }
+        }
+
+        // Update character specs
+        function updateCharacterSpecs(field, value) {
+            if (currentCharacter !== null) {
+                if (!characters[currentCharacter].specs) {
+                    characters[currentCharacter].specs = {};
+                }
+                characters[currentCharacter].specs[field] = value;
+                saveCharacters();
+            }
+        }
+
+        // Update stats
+        function updateStats(char) {
+            document.getElementById('totalScenes').textContent = (char.scenes || []).length;
+            document.getElementById('totalImages').textContent = (char.moodboard || []).length;
+        }
+
+        // Tab switching
+        function switchTab(tabName) {
+            document.querySelectorAll('.workspace-tab').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.tab === tabName);
+            });
+            
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.style.display = content.dataset.tab === tabName ? 'block' : 'none';
+            });
+        }
+
+        // Modal functions
+        function openAddCharacterModal() {
+            document.getElementById('addCharacterModal').classList.add('active');
+        }
+
+        function closeAddCharacterModal() {
+            document.getElementById('addCharacterModal').classList.remove('active');
+        }
+
+        function saveNewCharacter(event) {
+            event.preventDefault();
+            
+            const newChar = {
+                name: document.getElementById('newCharacterName').value,
+                role: document.getElementById('newCharacterRole').value,
+                actorName: document.getElementById('newActorName').value,
+                description: document.getElementById('newCharacterDesc').value,
+                status: 'incomplete',
+                moodboard: [],
+                scenes: [],
+                specs: {}
+            };
+            
+            characters.push(newChar);
+            saveCharacters();
+            renderCharacterList();
+            selectCharacter(characters.length - 1);
+            closeAddCharacterModal();
+            
+            event.target.reset();
+        }
+
+        // Save characters
+        function saveCharacters() {
+            const projectData = localStorage.getItem('currentProject');
+            if (projectData) {
+                const project = JSON.parse(projectData);
+                localStorage.setItem(`${project.code}_characters`, JSON.stringify(characters));
+            }
+        }
+
+        function saveAllCharacters() {
+            saveCharacters();
+            alert('All characters saved!');
+        }
+
+        // Image uploads (placeholders)
+        function uploadActorPhoto() {
+            alert('Photo upload coming soon!\n\nFor now, you can:\n• Take a photo during casting\n• Import from casting database\n• Add via URL');
+        }
+
+        function uploadMoodboardImage() {
+            alert('Image upload coming soon!\n\nYou can add images from:\n• Local files\n• URLs\n• Pinterest boards\n• AI generation');
+        }
+
+        function addFromURL() {
+            const url = prompt('Enter image URL:');
+            if (url && currentCharacter !== null) {
+                if (!characters[currentCharacter].moodboard) {
+                    characters[currentCharacter].moodboard = [];
+                }
+                characters[currentCharacter].moodboard.push(url);
+                saveCharacters();
+                renderMoodboardTab(characters[currentCharacter]);
+                updateStats(characters[currentCharacter]);
+            }
+        }
+
+        function deleteMoodboardImage(index) {
+            if (confirm('Delete this image?') && currentCharacter !== null) {
+                characters[currentCharacter].moodboard.splice(index, 1);
+                saveCharacters();
+                renderMoodboardTab(characters[currentCharacter]);
+                updateStats(characters[currentCharacter]);
+            }
+        }
+
+        function enlargeImage(src) {
+            window.open(src, '_blank');
+        }
+
+        // Color palette
+        function addColorSwatch() {
+            const color = prompt('Enter color (hex, rgb, or name):', '#c9a961');
+            if (color && currentCharacter !== null) {
+                if (!characters[currentCharacter].specs) {
+                    characters[currentCharacter].specs = {};
+                }
+                if (!characters[currentCharacter].specs.colors) {
+                    characters[currentCharacter].specs.colors = [];
+                }
+                characters[currentCharacter].specs.colors.push(color);
+                saveCharacters();
+                renderSpecsTab(characters[currentCharacter]);
+            }
+        }
+
+        function removeColor(index) {
+            if (currentCharacter !== null) {
+                characters[currentCharacter].specs.colors.splice(index, 1);
+                saveCharacters();
+                renderSpecsTab(characters[currentCharacter]);
+            }
+        }
+
+        // Import from breakdown
+        function importFromBreakdown() {
+            alert('Import from Breakdown\n\nThis will:\n• Pull character names from your tagged script\n• Import scene assignments\n• Add hair/makeup notes\n• Link to breakdown sheets\n\nComing soon!');
+        }
+
+        // Export/Generate functions
+        function generateLookbook() {
+            if (currentCharacter === null) {
+                alert('Please select a character first');
+                return;
+            }
+            
+            alert('Generate Lookbook\n\nThis will create a PDF with:\n• Character overview\n• Actor photo\n• Moodboard images\n• Design specs\n• Scene timeline\n• Application notes\n\nComing soon!');
+        }
+
+        function generateCallSheet() {
+            alert('Generate Call Sheet\n\nPulls character info into call sheet format with:\n• Call time estimates\n• Scene schedule\n• Makeup requirements\n• Contact info\n\nComing soon!');
+        }
+
+        function exportCharacterPDF() {
+            alert('Export as PDF coming soon!');
+        }
+
+        // AI Tools (placeholders)
+        function generateAIDescription() {
+            alert('AI Description\n\nGenerates detailed character description based on:\n• Script analysis\n• Your notes\n• Reference images\n• Period/genre context');
+        }
+
+        function generateAIMoodboard() {
+            alert('AI Moodboard Generator\n\nCreates reference images based on:\n• Character description\n• Time period\n• Style preferences\n• Existing moodboard');
+        }
+
+        function suggestProducts() {
+            alert('AI Product Suggestions\n\nRecommends specific products:\n• Foundation matches\n• Hair products\n• Color palettes\n• Special FX supplies');
+        }
+
+        function estimateTime() {
+            alert('Time Estimate\n\nCalculates:\n• Chair time per scene\n• Setup requirements\n• Touch-up frequency\n• Total daily commitment');
+        }
+
+        // Share functions
+        function shareWithDirector() {
+            alert('Share with Director\n\nGenerate shareable link with:\n• View-only access\n• Comment capability\n• Approval workflow\n• Version history');
+        }
+
+        function exportToNotion() {
+            alert('Export to Notion\n\nSyncs character database to Notion with:\n• All character details\n• Embedded images\n• Task lists\n• Timeline');
+        }
+
+        // Search
+        document.getElementById('characterSearch').addEventListener('input', function(e) {
+            const term = e.target.value.toLowerCase();
+            document.querySelectorAll('.character-item').forEach(item => {
+                const name = item.querySelector('.character-name').textContent.toLowerCase();
+                const role = item.querySelector('.character-role').textContent.toLowerCase();
+                item.style.display = (name.includes(term) || role.includes(term)) ? 'flex' : 'none';
+            });
+        });
+
+        // Initialize
+        loadProjectData();
+        
+        console.log('✓ Character Design page loaded');
+        console.log('• Add characters manually or import from breakdown');
+        console.log('• Build moodboards with images');
+        console.log('• Define specs for hair, makeup, wardrobe');
+        console.log('• Track changes across scenes');
+    </script>
+</body>
+</html>
