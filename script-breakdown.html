@@ -1294,20 +1294,36 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
                 return;
             }
             
+            // Clean up the text - handle PDF extraction issues
+            scriptText = scriptText
+                .replace(/\r\n/g, '\n')  // Normalize line endings
+                .replace(/\r/g, '\n')    // Handle old Mac line endings
+                .replace(/\s+\n/g, '\n') // Remove trailing spaces before newlines
+                .replace(/\n\s+/g, '\n'); // Remove leading spaces after newlines
+            
             const lines = scriptText.split('\n');
             console.log('Total lines:', lines.length);
+            
+            // Log first 20 lines to debug
+            console.log('First 20 lines:');
+            lines.slice(0, 20).forEach((line, i) => {
+                console.log(`Line ${i}: "${line}"`);
+            });
             
             let html = '';
             let sceneNumber = 0;
             let currentSceneHtml = '';
             let inScene = false;
             
+            // More flexible regex for scene headings
+            const sceneHeadingRegex = /^\s*(INT|EXT|INT\/EXT|I\/E)[\.\s]+/i;
+            
             // Simple script parser
             lines.forEach((line, index) => {
                 const trimmed = line.trim();
                 
-                // Detect scene headings (INT. or EXT. at start)
-                if (trimmed.match(/^(INT\.|EXT\.)/i)) {
+                // Detect scene headings - more flexible pattern
+                if (sceneHeadingRegex.test(trimmed)) {
                     // Save previous scene if exists
                     if (currentSceneHtml) {
                         html += `</div>`; // Close previous scene
@@ -1318,9 +1334,15 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
                     html += `<div class="script-scene-heading">${sceneNumber}. ${trimmed}</div>`;
                     currentSceneHtml = trimmed;
                     inScene = true;
+                    
+                    console.log(`Found scene ${sceneNumber}: ${trimmed}`);
                 }
-                // Detect character names (all caps, centered-ish, not too long)
-                else if (trimmed === trimmed.toUpperCase() && trimmed.length > 0 && trimmed.length < 30 && !trimmed.match(/^[A-Z\s]+:$/)) {
+                // Detect character names (all caps, not too long)
+                else if (trimmed === trimmed.toUpperCase() && 
+                         trimmed.length > 0 && 
+                         trimmed.length < 40 && 
+                         !trimmed.match(/^[A-Z\s]+:$/) &&
+                         !trimmed.match(/^\d+\.?$/)) { // Not just numbers
                     html += `<div class="script-character">${trimmed}</div>`;
                 }
                 // Parentheticals
@@ -1332,7 +1354,7 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
                     // Just space, do nothing
                 }
                 // Action/dialogue
-                else if (trimmed.length > 0) {
+                else if (trimmed.length > 0 && inScene) {
                     // Check if previous element was character name (then this is dialogue)
                     if (html.includes('script-character') && html.lastIndexOf('script-character') > html.lastIndexOf('script-action')) {
                         html += `<div class="script-dialogue">${trimmed}</div>`;
@@ -1351,7 +1373,11 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
             
             if (sceneNumber === 0) {
                 console.error('No scenes detected in script!');
-                alert('No scenes found in script. Make sure scene headings start with INT. or EXT.');
+                console.error('Script preview (first 500 chars):', scriptText.substring(0, 500));
+                
+                // Show the user what we extracted
+                const preview = scriptText.substring(0, 500);
+                alert(`No scenes found in script. Make sure scene headings start with INT. or EXT.\n\nScript preview:\n${preview}\n\n...Check the console for full extracted text.`);
                 return;
             }
             
@@ -1777,14 +1803,33 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
                 
                 let fullText = '';
                 
-                // Extract text from each page
+                // Extract text from each page with better formatting
                 for (let i = 1; i <= pdf.numPages; i++) {
                     const page = await pdf.getPage(i);
                     const textContent = await page.getTextContent();
-                    const pageText = textContent.items.map(item => item.str).join(' ');
-                    fullText += pageText + '\n';
+                    
+                    // Group text items by their vertical position (y coordinate)
+                    const lines = {};
+                    textContent.items.forEach(item => {
+                        const y = Math.round(item.transform[5]); // Y coordinate
+                        if (!lines[y]) lines[y] = [];
+                        lines[y].push(item);
+                    });
+                    
+                    // Sort lines by Y position (top to bottom) and build text
+                    const sortedYPositions = Object.keys(lines).sort((a, b) => b - a);
+                    
+                    sortedYPositions.forEach(y => {
+                        // Sort items in line by X position (left to right)
+                        const lineItems = lines[y].sort((a, b) => a.transform[4] - b.transform[4]);
+                        const lineText = lineItems.map(item => item.str).join('');
+                        fullText += lineText.trim() + '\n';
+                    });
+                    
+                    fullText += '\n'; // Add extra line break between pages
                 }
                 
+                console.log('PDF extraction complete, first 500 chars:', fullText.substring(0, 500));
                 return fullText;
             } catch (error) {
                 console.error('Error parsing PDF:', error);
