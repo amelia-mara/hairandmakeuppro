@@ -14,116 +14,119 @@
         }
 
         :root {
-            --bg-dark: #0d0b0a;
-            --bg-medium: rgba(26, 22, 18, 0.7);
-            --card-bg: #d4c4a8;
-            --card-dark: #2a2520;
-            --text-light: #e8e6e3;
-            --text-muted: #8a7f73;
+            --bg-primary: #000000;
+            --bg-secondary: rgba(20, 18, 16, 0.4);
+            --bg-tertiary: rgba(26, 24, 22, 0.5);
+            
+            --border-subtle: rgba(201, 169, 97, 0.15);
+            --border-medium: rgba(201, 169, 97, 0.25);
+            --border-glow: rgba(201, 169, 97, 0.35);
+            
+            --card-bg: #c9a961;
+            --card-dark: #1a1816;
+            
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --text-muted: #666666;
+            
             --accent-gold: #c9a961;
-            --border: rgba(45, 41, 37, 0.5);
-            --divider: rgba(54, 51, 48, 0.5);
-            --glass-border: rgba(255, 255, 255, 0.08);
+            
+            --glow-subtle: 0 0 20px rgba(201, 169, 97, 0.1);
+            --glow-medium: 0 0 30px rgba(201, 169, 97, 0.15);
+            --glow-strong: 0 0 40px rgba(201, 169, 97, 0.25);
         }
 
-        /* Custom Dark Scrollbar */
+        /* Custom Scrollbar */
         ::-webkit-scrollbar {
             width: 8px;
             height: 8px;
         }
 
         ::-webkit-scrollbar-track {
-            background: rgba(13, 11, 10, 0.4);
+            background: var(--bg-primary);
         }
 
         ::-webkit-scrollbar-thumb {
-            background: rgba(138, 127, 115, 0.3);
+            background: rgba(255, 255, 255, 0.1);
             border-radius: 4px;
-            transition: background 0.2s ease;
         }
 
         ::-webkit-scrollbar-thumb:hover {
-            background: rgba(138, 127, 115, 0.5);
-        }
-
-        /* Firefox scrollbar */
-        * {
-            scrollbar-width: thin;
-            scrollbar-color: rgba(138, 127, 115, 0.3) rgba(13, 11, 10, 0.4);
+            background: rgba(255, 255, 255, 0.15);
         }
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, #0d0b0a 0%, #1a1612 50%, #0d0b0a 100%);
-            color: var(--text-light);
+            background: radial-gradient(ellipse at top right, rgba(201, 169, 97, 0.03) 0%, transparent 50%),
+                        radial-gradient(ellipse at bottom left, rgba(201, 169, 97, 0.02) 0%, transparent 50%),
+                        #000000;
+            color: var(--text-primary);
             min-height: 100vh;
             padding: 0;
             font-weight: 400;
             letter-spacing: -0.01em;
         }
 
-        /* Header - Glassmorphism */
+        /* Header */
         .header {
-            padding: 32px 48px;
-            border-bottom: 1px solid var(--glass-border);
-            background: var(--bg-medium);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
+            padding: 20px 40px;
+            border-bottom: 1px solid var(--border-subtle);
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            box-shadow: 0 1px 0 0 rgba(201, 169, 97, 0.08);
         }
 
         .header-top {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 32px;
+            margin-bottom: 20px;
         }
 
         .header h1 {
-            font-size: 1.75em;
+            font-size: 1.875em;
             font-weight: 600;
-            color: var(--text-light);
+            color: var(--text-primary);
             letter-spacing: -0.02em;
         }
 
         .profile-btn {
-            width: 36px;
-            height: 36px;
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
-            background: var(--accent-gold);
-            border: none;
+            background: linear-gradient(135deg, rgba(201, 169, 97, 0.9) 0%, rgba(184, 150, 81, 0.9) 100%);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(201, 169, 97, 0.3);
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 600;
-            font-size: 0.8em;
-            color: var(--bg-dark);
-            transition: all 0.2s ease;
-            letter-spacing: 0;
+            font-size: 0.8125em;
+            color: var(--bg-primary);
+            transition: all 0.3s ease;
+            box-shadow: var(--glow-subtle),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.2);
         }
 
         .profile-btn:hover {
+            background: linear-gradient(135deg, rgba(201, 169, 97, 1) 0%, rgba(184, 150, 81, 1) 100%);
             transform: scale(1.05);
-            background: #d4b16d;
+            box-shadow: var(--glow-medium),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.25);
         }
 
-        /* Controls Row with Dividers */
+        /* Controls Row */
         .controls-row {
             display: flex;
             align-items: center;
-            gap: 0;
+            gap: 16px;
         }
 
         .search-section {
-            flex: 0 0 320px;
-            padding-right: 24px;
-        }
-
-        .vertical-divider {
-            width: 1px;
-            height: 32px;
-            background: var(--divider);
-            margin: 0 24px;
+            flex: 0 0 360px;
         }
 
         .filters {
@@ -134,22 +137,26 @@
 
         .search-bar {
             width: 100%;
-            padding: 10px 16px;
-            background: rgba(13, 11, 10, 0.5);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid var(--glass-border);
+            padding: 9px 14px;
+            background: var(--bg-secondary);
+            backdrop-filter: blur(16px) saturate(180%);
+            -webkit-backdrop-filter: blur(16px) saturate(180%);
+            border: 1px solid var(--border-subtle);
             border-radius: 6px;
-            color: var(--text-light);
+            color: var(--text-primary);
             font-size: 0.875em;
-            transition: all 0.2s ease;
+            transition: all 0.3s ease;
             font-weight: 400;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
         }
 
         .search-bar:focus {
             outline: none;
-            border-color: var(--accent-gold);
-            background: rgba(26, 22, 18, 0.6);
+            border-color: var(--border-glow);
+            background: var(--bg-tertiary);
+            box-shadow: 0 0 0 1px var(--border-medium),
+                        var(--glow-subtle),
+                        inset 0 1px 3px rgba(0, 0, 0, 0.3);
         }
 
         .search-bar::placeholder {
@@ -157,110 +164,128 @@
         }
 
         .filter-btn {
-            padding: 8px 16px;
-            background: transparent;
-            border: 1px solid var(--glass-border);
+            padding: 9px 18px;
+            background: var(--bg-secondary);
+            backdrop-filter: blur(12px) saturate(180%);
+            -webkit-backdrop-filter: blur(12px) saturate(180%);
+            border: 1px solid var(--border-subtle);
             border-radius: 6px;
-            color: var(--text-muted);
+            color: var(--text-secondary);
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.3s ease;
             font-size: 0.8125em;
             font-weight: 500;
             white-space: nowrap;
-            letter-spacing: -0.01em;
         }
 
         .filter-btn:hover {
-            border-color: var(--accent-gold);
-            color: var(--text-light);
-            background: rgba(201, 169, 97, 0.05);
+            border-color: var(--border-medium);
+            color: var(--text-primary);
+            box-shadow: var(--glow-subtle);
         }
 
         .filter-btn.active {
-            background: var(--accent-gold);
-            border-color: var(--accent-gold);
-            color: var(--bg-dark);
+            background: linear-gradient(135deg, rgba(201, 169, 97, 0.9) 0%, rgba(184, 150, 81, 0.9) 100%);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-color: rgba(201, 169, 97, 0.4);
+            color: var(--bg-primary);
+            box-shadow: var(--glow-medium),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.2);
         }
 
         /* Main Content */
         .main-content {
-            padding: 40px 48px;
+            padding: 32px 40px;
         }
 
         .projects-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 24px;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 16px;
+            max-width: 1400px;
         }
 
-        /* New Project Card - Glassmorphism */
+        /* New Project Card */
         .new-project-card {
-            background: rgba(36, 32, 25, 0.3);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px dashed var(--glass-border);
+            background: var(--bg-secondary);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid var(--border-subtle);
             border-radius: 8px;
-            padding: 48px 24px;
+            padding: 40px 24px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: 340px;
+            min-height: 280px;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.3s ease;
+            box-shadow: inset 0 1px 0 rgba(201, 169, 97, 0.05);
         }
 
         .new-project-card:hover {
-            border-color: var(--accent-gold);
-            background: rgba(201, 169, 97, 0.08);
-            transform: translateY(-2px);
+            border-color: var(--border-medium);
+            background: var(--bg-tertiary);
+            box-shadow: var(--glow-subtle),
+                        inset 0 1px 0 rgba(201, 169, 97, 0.1);
         }
 
         .new-project-icon {
             width: 48px;
             height: 48px;
             border-radius: 50%;
-            background: rgba(26, 22, 18, 0.5);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid var(--glass-border);
+            background: transparent;
+            border: 1px solid var(--border-subtle);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.5em;
-            color: var(--text-muted);
-            margin-bottom: 16px;
+            font-size: 1.25em;
+            color: var(--accent-gold);
+            margin-bottom: 12px;
             font-weight: 300;
+            transition: all 0.3s ease;
+        }
+
+        .new-project-card:hover .new-project-icon {
+            border-color: var(--border-glow);
+            color: var(--accent-gold);
+            box-shadow: var(--glow-subtle);
         }
 
         .new-project-text {
             font-size: 0.9375em;
             font-weight: 500;
-            color: var(--text-light);
-            letter-spacing: -0.01em;
+            color: var(--text-primary);
         }
 
         /* Project Card */
         .project-card {
-            background: var(--card-bg);
+            background: var(--bg-secondary);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid var(--border-subtle);
             border-radius: 8px;
             overflow: hidden;
             cursor: pointer;
-            transition: all 0.2s ease;
-            position: relative;
-            border: 1px solid rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            box-shadow: inset 0 1px 0 rgba(201, 169, 97, 0.05);
         }
 
         .project-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+            border-color: var(--border-medium);
+            box-shadow: var(--glow-medium),
+                        inset 0 1px 0 rgba(201, 169, 97, 0.1);
+            transform: translateY(-2px);
         }
 
         .clapperboard {
             position: relative;
-            background: var(--card-dark);
+            background: linear-gradient(135deg, rgba(26, 24, 22, 0.6) 0%, rgba(20, 18, 16, 0.6) 100%);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
             padding: 32px 20px;
-            aspect-ratio: 1.1;
+            aspect-ratio: 1.4;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -272,15 +297,19 @@
             top: 0;
             left: 0;
             right: 0;
-            height: 48px;
+            height: 40px;
             background: linear-gradient(
                 135deg,
-                #e8e6e3 0%, #d4d2cf 24%,
+                #f5f4f2 0%, #e0ddd9 24%,
                 #2a2520 24%, #1a1612 49%,
-                #e8e6e3 49%, #d4d2cf 74%,
+                #f5f4f2 49%, #e0ddd9 74%,
                 #2a2520 74%, #1a1612 100%
             );
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+        }
+
+        .project-card:hover .clapper-top {
+            box-shadow: 0 2px 12px rgba(201, 169, 97, 0.2);
         }
 
         .project-status {
@@ -288,28 +317,30 @@
             align-items: center;
             gap: 6px;
             margin-bottom: 12px;
-            font-size: 0.75em;
+            font-size: 0.6875em;
             text-transform: uppercase;
             letter-spacing: 0.05em;
             font-weight: 500;
-            color: var(--text-muted);
+            color: var(--text-secondary);
         }
 
         .status-dot {
-            width: 6px;
-            height: 6px;
+            width: 5px;
+            height: 5px;
             border-radius: 50%;
             background: #52c186;
+            box-shadow: 0 0 6px rgba(82, 193, 134, 0.4);
         }
 
         .status-dot.in-progress {
             background: #e8a87c;
+            box-shadow: 0 0 6px rgba(232, 168, 124, 0.4);
         }
 
         .clapper-title {
-            font-size: 1.5em;
+            font-size: 1.375em;
             font-weight: 600;
-            color: var(--text-light);
+            color: var(--text-primary);
             text-align: center;
             margin-bottom: 16px;
             letter-spacing: -0.02em;
@@ -317,69 +348,79 @@
 
         .clapper-scene-bars {
             display: flex;
-            gap: 4px;
+            gap: 5px;
             margin-top: auto;
         }
 
         .scene-bar {
-            width: 48px;
-            height: 3px;
-            background: rgba(232, 230, 227, 0.3);
-            border-radius: 2px;
+            width: 40px;
+            height: 2px;
+            background: rgba(201, 169, 97, 0.2);
+            border-radius: 1px;
+            transition: all 0.3s ease;
         }
 
-        /* Project Info - Glassmorphism */
+        .project-card:hover .scene-bar {
+            background: rgba(201, 169, 97, 0.35);
+            box-shadow: 0 0 8px rgba(201, 169, 97, 0.2);
+        }
+
+        /* Project Info */
         .project-info {
             padding: 16px 20px;
-            background: rgba(212, 196, 168, 0.95);
+            background: linear-gradient(135deg, rgba(201, 169, 97, 0.95) 0%, rgba(184, 150, 81, 0.95) 100%);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(201, 169, 97, 0.3);
         }
 
         .project-meta-row {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
         }
 
         .project-title {
             font-size: 0.9375em;
             font-weight: 600;
             color: var(--card-dark);
-            margin-bottom: 2px;
-            letter-spacing: -0.01em;
+            margin-bottom: 3px;
         }
 
         .project-name {
             font-size: 0.8125em;
-            color: rgba(42, 37, 32, 0.7);
+            color: rgba(26, 24, 22, 0.7);
+            font-weight: 500;
         }
 
         .edit-btn {
-            padding: 6px 12px;
-            background: transparent;
-            border: 1px solid rgba(42, 37, 32, 0.2);
-            border-radius: 4px;
+            padding: 6px 14px;
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(26, 24, 22, 0.2);
+            border-radius: 5px;
             color: var(--card-dark);
             font-size: 0.75em;
-            font-weight: 500;
+            font-weight: 600;
             cursor: pointer;
             transition: all 0.2s ease;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15);
         }
 
         .edit-btn:hover {
-            background: rgba(42, 37, 32, 0.1);
-            border-color: var(--card-dark);
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(26, 24, 22, 0.3);
         }
 
         .project-meta {
             display: flex;
             flex-direction: column;
-            gap: 6px;
+            gap: 5px;
             margin-bottom: 12px;
             font-size: 0.8125em;
-            color: rgba(42, 37, 32, 0.7);
+            color: rgba(26, 24, 22, 0.7);
         }
 
         .meta-item {
@@ -389,14 +430,14 @@
         }
 
         .meta-dot {
-            width: 3px;
-            height: 3px;
+            width: 2px;
+            height: 2px;
             border-radius: 50%;
-            background: rgba(42, 37, 32, 0.4);
+            background: rgba(26, 24, 22, 0.4);
         }
 
         .project-progress {
-            margin-top: 12px;
+            margin-top: 10px;
         }
 
         .progress-label {
@@ -404,25 +445,25 @@
             justify-content: space-between;
             font-size: 0.75em;
             margin-bottom: 6px;
-            color: rgba(42, 37, 32, 0.7);
-            font-weight: 500;
+            color: rgba(26, 24, 22, 0.7);
+            font-weight: 600;
         }
 
         .progress-bar {
-            height: 4px;
-            background: rgba(42, 37, 32, 0.15);
+            height: 3px;
+            background: rgba(26, 24, 22, 0.15);
             border-radius: 2px;
             overflow: hidden;
         }
 
         .progress-fill {
             height: 100%;
-            background: linear-gradient(90deg, var(--card-dark), #3a3229);
+            background: var(--card-dark);
             border-radius: 2px;
             transition: width 0.3s ease;
         }
 
-        /* Modal - Glassmorphism */
+        /* Modal */
         .modal {
             display: none;
             position: fixed;
@@ -430,7 +471,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(13, 11, 10, 0.7);
+            background: rgba(0, 0, 0, 0.8);
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
             z-index: 1000;
@@ -443,16 +484,18 @@
         }
 
         .modal-content {
-            background: var(--bg-medium);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--glass-border);
-            border-radius: 12px;
-            padding: 32px;
-            max-width: 500px;
+            background: var(--bg-tertiary);
+            backdrop-filter: blur(30px) saturate(180%);
+            -webkit-backdrop-filter: blur(30px) saturate(180%);
+            border: 1px solid var(--border-subtle);
+            border-radius: 10px;
+            padding: 28px;
+            max-width: 480px;
             width: 90%;
             max-height: 90vh;
             overflow-y: auto;
+            box-shadow: var(--glow-medium),
+                        inset 0 1px 0 rgba(201, 169, 97, 0.08);
         }
 
         .modal-header {
@@ -460,66 +503,51 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-subtle);
         }
 
         .modal-title {
-            font-size: 1.5em;
+            font-size: 1.375em;
             font-weight: 600;
             letter-spacing: -0.02em;
         }
 
-        .close-btn {
-            width: 32px;
-            height: 32px;
-            background: transparent;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            color: var(--text-muted);
-            cursor: pointer;
-            font-size: 1.2em;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s ease;
-        }
-
-        .close-btn:hover {
-            border-color: var(--accent-gold);
-            color: var(--accent-gold);
-            background: rgba(201, 169, 97, 0.08);
-        }
-
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 18px;
         }
 
         .form-label {
             display: block;
-            margin-bottom: 8px;
+            margin-bottom: 7px;
             font-size: 0.875em;
             font-weight: 500;
-            color: var(--text-light);
+            color: var(--text-primary);
         }
 
         .form-input,
         .form-select {
             width: 100%;
-            padding: 10px 14px;
-            background: rgba(13, 11, 10, 0.5);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid var(--glass-border);
+            padding: 10px 12px;
+            background: var(--bg-secondary);
+            backdrop-filter: blur(12px) saturate(180%);
+            -webkit-backdrop-filter: blur(12px) saturate(180%);
+            border: 1px solid var(--border-subtle);
             border-radius: 6px;
-            color: var(--text-light);
+            color: var(--text-primary);
             font-size: 0.875em;
-            transition: all 0.2s ease;
+            transition: all 0.3s ease;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
         }
 
         .form-input:focus,
         .form-select:focus {
             outline: none;
-            border-color: var(--accent-gold);
-            background: rgba(26, 22, 18, 0.6);
+            border-color: var(--border-glow);
+            background: rgba(26, 24, 22, 0.6);
+            box-shadow: 0 0 0 1px var(--border-medium),
+                        var(--glow-subtle),
+                        inset 0 1px 3px rgba(0, 0, 0, 0.3);
         }
 
         .form-select {
@@ -540,22 +568,25 @@
             justify-content: center;
             gap: 8px;
             width: 100%;
-            padding: 32px;
-            background: rgba(36, 32, 25, 0.3);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 2px dashed var(--glass-border);
-            border-radius: 8px;
-            color: var(--text-muted);
+            padding: 28px;
+            background: var(--bg-secondary);
+            backdrop-filter: blur(16px) saturate(180%);
+            -webkit-backdrop-filter: blur(16px) saturate(180%);
+            border: 2px dashed var(--border-subtle);
+            border-radius: 6px;
+            color: var(--text-secondary);
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.3s ease;
             font-size: 0.875em;
+            font-weight: 500;
         }
 
         .file-upload-btn:hover {
-            border-color: var(--accent-gold);
+            border-color: var(--border-medium);
+            border-style: solid;
             color: var(--accent-gold);
-            background: rgba(201, 169, 97, 0.08);
+            background: var(--bg-tertiary);
+            box-shadow: var(--glow-subtle);
         }
 
         .file-upload input[type="file"] {
@@ -568,92 +599,114 @@
 
         #fileName {
             display: none;
-            margin-top: 8px;
+            margin-top: 7px;
             font-size: 0.8125em;
             color: var(--accent-gold);
+            font-weight: 500;
         }
 
-        .submit-btn {
+        .submit-btn,
+        .save-btn {
             width: 100%;
-            padding: 12px;
-            background: var(--accent-gold);
-            border: none;
+            padding: 11px;
+            background: linear-gradient(135deg, rgba(201, 169, 97, 0.9) 0%, rgba(184, 150, 81, 0.9) 100%);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(201, 169, 97, 0.4);
             border-radius: 6px;
-            color: var(--bg-dark);
+            color: var(--bg-primary);
             font-weight: 600;
             font-size: 0.9375em;
             cursor: pointer;
-            transition: all 0.2s ease;
-            margin-top: 24px;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+            box-shadow: var(--glow-subtle),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.2);
         }
 
-        .submit-btn:hover {
-            background: #d4b16d;
+        .submit-btn:hover,
+        .save-btn:hover {
+            background: linear-gradient(135deg, rgba(201, 169, 97, 1) 0%, rgba(184, 150, 81, 1) 100%);
+            box-shadow: var(--glow-medium),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.25);
             transform: translateY(-1px);
         }
 
         .button-row {
             display: flex;
-            gap: 12px;
-            margin-top: 24px;
+            gap: 10px;
+            margin-top: 20px;
         }
 
         .delete-btn {
             flex: 1;
-            padding: 12px;
-            background: rgba(220, 38, 38, 0.2);
-            border: 1px solid rgba(220, 38, 38, 0.4);
+            padding: 11px;
+            background: rgba(239, 68, 68, 0.12);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(239, 68, 68, 0.3);
             border-radius: 6px;
             color: #ef4444;
             font-weight: 600;
             font-size: 0.9375em;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.3s ease;
         }
 
         .delete-btn:hover {
-            background: rgba(220, 38, 38, 0.3);
-            border-color: #ef4444;
-            transform: translateY(-1px);
+            background: rgba(239, 68, 68, 0.2);
+            border-color: rgba(239, 68, 68, 0.5);
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.15);
         }
 
         .save-btn {
             flex: 2;
-            padding: 12px;
-            background: var(--accent-gold);
-            border: none;
-            border-radius: 6px;
-            color: var(--bg-dark);
-            font-weight: 600;
-            font-size: 0.9375em;
-            cursor: pointer;
-            transition: all 0.2s ease;
+            margin-top: 0;
         }
 
-        .save-btn:hover {
-            background: #d4b16d;
-            transform: translateY(-1px);
+        .close-btn {
+            width: 30px;
+            height: 30px;
+            background: var(--bg-secondary);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-subtle);
+            border-radius: 5px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 1.125em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            font-weight: 300;
+        }
+
+        .close-btn:hover {
+            border-color: var(--border-medium);
+            color: var(--accent-gold);
+            background: var(--bg-tertiary);
+            box-shadow: var(--glow-subtle);
         }
 
         /* Responsive */
         @media (max-width: 768px) {
             .header {
-                padding: 24px;
+                padding: 16px 24px;
+            }
+
+            .header-top {
+                margin-bottom: 16px;
             }
 
             .controls-row {
                 flex-direction: column;
-                gap: 16px;
+                gap: 12px;
             }
 
             .search-section {
                 flex: 1;
                 width: 100%;
-                padding-right: 0;
-            }
-
-            .vertical-divider {
-                display: none;
             }
 
             .filters {
@@ -684,8 +737,6 @@
             <div class="search-section">
                 <input type="text" class="search-bar" id="searchBar" placeholder="Search projects...">
             </div>
-            
-            <div class="vertical-divider"></div>
             
             <div class="filters">
                 <button class="filter-btn active">All</button>
@@ -888,7 +939,7 @@
                             <button class="edit-btn" onclick="event.stopPropagation(); openEditModal(${index})">Edit</button>
                         </div>
                         <div class="project-meta">
-                            ${hasScript ? `<div class="meta-item"><span style="color: var(--accent-gold); font-weight: 500;">${hasScript}</span></div>` : ''}
+                            ${hasScript ? `<div class="meta-item"><span style="color: var(--card-dark); font-weight: 600;">${hasScript}</span></div>` : ''}
                             <div class="meta-item">
                                 <span>${project.scenes} scenes</span>
                                 <span class="meta-dot"></span>
@@ -924,39 +975,24 @@
             console.log('=== Before Normalization ===');
             console.log(text.substring(0, 500));
             
-            // SIMPLE AGGRESSIVE FIX: Just remove single spaces between single characters
-            // Repeat multiple times to catch all patterns
             let normalized = text;
             
-            // Remove spaces between letters/numbers, run 10 times to catch all
             for (let i = 0; i < 10; i++) {
-                // Match: letter/number/punctuation + space + letter/number/punctuation
                 normalized = normalized.replace(/([a-zA-Z0-9\.\,\!\?\-\(\)\*\'\"])\s([a-zA-Z0-9\.\,\!\?\-\(\)\*\'\"])/g, '$1$2');
             }
             
-            // Now add back proper spacing between words (capital letter after lowercase = new word)
             normalized = normalized.replace(/([a-z])([A-Z])/g, '$1 $2');
-            
-            // Add space after periods, question marks, exclamation points
             normalized = normalized.replace(/([\.!?])([A-Za-z])/g, '$1 $2');
-            
-            // Add space after closing parenthesis before letter
             normalized = normalized.replace(/(\))([A-Za-z])/g, '$1 $2');
-            
-            // TARGETED FIX: Clean up scene headings specifically
-            // Fix patterns like "1 1INT." or "1INT." by removing numbers before INT/EXT
             normalized = normalized.replace(/(\n|^)\s*\d+\s*\d*\s*(INT\.|EXT\.|INT\/EXT\.|I\/E\.)/gi, '\n$2');
-            
-            // Also fix patterns without periods: "1 1INT " or "1INT "
             normalized = normalized.replace(/(\n|^)\s*\d+\s*\d*\s*(INT\s+|EXT\s+|INT\/EXT\s+|I\/E\s+)/gi, '\n$2');
             
-            // Clean up line endings
             normalized = normalized
                 .replace(/\r\n/g, '\n')
                 .replace(/\r/g, '\n')
                 .replace(/\s+\n/g, '\n')
                 .replace(/\n\s+/g, '\n')
-                .replace(/\n\n\n+/g, '\n\n'); // Replace triple+ line breaks with double
+                .replace(/\n\n\n+/g, '\n\n');
             
             console.log('=== After Normalization ===');
             console.log(normalized.substring(0, 500));
@@ -964,7 +1000,6 @@
             return normalized;
         }
 
-        // Parse PDF and extract text
         async function parsePDF(file) {
             try {
                 const arrayBuffer = await file.arrayBuffer();
@@ -972,46 +1007,35 @@
                 
                 let fullText = '';
                 
-                // Extract text from each page with better formatting
                 for (let i = 1; i <= pdf.numPages; i++) {
                     const page = await pdf.getPage(i);
                     const textContent = await page.getTextContent();
                     
-                    // Group text items by their vertical position (y coordinate)
                     const lines = {};
                     textContent.items.forEach(item => {
-                        const y = Math.round(item.transform[5]); // Y coordinate
+                        const y = Math.round(item.transform[5]);
                         if (!lines[y]) lines[y] = [];
                         lines[y].push(item);
                     });
                     
-                    // Sort lines by Y position (top to bottom) and build text
                     const sortedYPositions = Object.keys(lines).sort((a, b) => b - a);
                     
                     sortedYPositions.forEach(y => {
-                        // Sort items in line by X position (left to right)
                         const lineItems = lines[y].sort((a, b) => a.transform[4] - b.transform[4]);
                         
-                        // Build line text with intelligent spacing
                         let lineText = '';
                         for (let i = 0; i < lineItems.length; i++) {
                             const item = lineItems[i];
                             const nextItem = lineItems[i + 1];
                             
-                            // Add current item's text
                             lineText += item.str;
                             
-                            // Determine if we need a space before next item
                             if (nextItem) {
                                 const currentX = item.transform[4];
                                 const currentWidth = item.width;
                                 const nextX = nextItem.transform[4];
-                                
-                                // Calculate gap between this item and next
                                 const gap = nextX - (currentX + currentWidth);
                                 
-                                // If gap is significant (more than half the width of current item), add space
-                                // This threshold helps distinguish between character spacing and word spacing
                                 if (gap > currentWidth * 0.3) {
                                     lineText += ' ';
                                 }
@@ -1021,15 +1045,10 @@
                         fullText += lineText.trim() + '\n';
                     });
                     
-                    fullText += '\n'; // Add extra line break between pages
+                    fullText += '\n';
                 }
                 
-                console.log('PDF extraction complete, first 500 chars:', fullText.substring(0, 500));
-                
-                // Normalize the text to fix spacing issues
                 fullText = normalizeScriptText(fullText);
-                console.log('After normalization, first 500 chars:', fullText.substring(0, 500));
-                
                 return fullText;
             } catch (error) {
                 console.error('Error parsing PDF:', error);
@@ -1049,23 +1068,14 @@
                 fileNameElement.style.display = 'inline-block';
                 fileNameElement.style.color = 'var(--accent-gold)';
                 
-                // Auto-fill project title from filename (remove extension)
                 const titleWithoutExt = file.name.replace(/\.[^/.]+$/, "");
                 document.getElementById('projectTitle').value = titleWithoutExt;
                 
-                console.log('File selected:', file.name, 'Type:', file.type, 'Size:', file.size);
-                
-                // Handle PDF files
                 if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
-                    console.log('PDF detected, parsing...');
                     fileNameElement.textContent = `📄 ${file.name} - Extracting text from PDF...`;
                     
                     parsePDF(file)
                         .then(scriptContent => {
-                            console.log('✓ PDF parsed, length:', scriptContent.length);
-                            console.log('First 200 chars:', scriptContent.substring(0, 200));
-                            
-                            // Store script content in localStorage
                             localStorage.setItem('uploadedScriptContent', scriptContent);
                             localStorage.setItem('uploadedScriptName', file.name);
                             
@@ -1074,24 +1084,20 @@
                             
                             fileNameElement.textContent = `✓ ${file.name} - PDF parsed successfully!`;
                             fileNameElement.style.color = '#52c186';
-                            
-                            console.log('✓ PDF script stored in localStorage');
                         })
                         .catch(error => {
                             scriptLoading = false;
                             scriptLoaded = false;
                             fileNameElement.textContent = `❌ ${file.name} - Error parsing PDF`;
                             fileNameElement.style.color = '#ff6b6b';
-                            console.error('PDF parsing error:', error);
-                            alert('Error parsing PDF. The file may be corrupted or password-protected. Try saving as a new PDF or converting to .txt format.');
+                            alert('Error parsing PDF. The file may be corrupted or password-protected.');
                         });
                     
                     return;
                 }
                 
-                // Read text files (txt, fountain, fdx)
                 const isTextFile = file.type === 'text/plain' || 
-                                   file.type === '' || // Some text files have no mime type
+                                   file.type === '' ||
                                    file.name.endsWith('.txt') || 
                                    file.name.endsWith('.fountain') ||
                                    file.name.endsWith('.fdx');
@@ -1101,10 +1107,6 @@
                     
                     reader.onload = function(e) {
                         const scriptContent = e.target.result;
-                        console.log('✓ Script content loaded, length:', scriptContent.length);
-                        console.log('First 200 chars:', scriptContent.substring(0, 200));
-                        
-                        // Store script content in localStorage
                         localStorage.setItem('uploadedScriptContent', scriptContent);
                         localStorage.setItem('uploadedScriptName', file.name);
                         
@@ -1113,12 +1115,9 @@
                         
                         fileNameElement.textContent = `✓ ${file.name} - Ready!`;
                         fileNameElement.style.color = '#52c186';
-                        
-                        console.log('✓ Script stored in localStorage');
                     };
                     
                     reader.onerror = function(e) {
-                        console.error('Error reading file:', e);
                         scriptLoading = false;
                         scriptLoaded = false;
                         fileNameElement.textContent = `❌ ${file.name} - Error reading file`;
@@ -1132,7 +1131,6 @@
                     scriptLoaded = false;
                     fileNameElement.textContent = `❌ ${file.name} - Unsupported format`;
                     fileNameElement.style.color = '#ff6b6b';
-                    console.log('Unsupported file type:', file.type);
                     alert('Please upload a .txt, .fountain, .fdx, or .pdf script file.');
                 }
             }
@@ -1197,7 +1195,6 @@
         function saveProject(event) {
             event.preventDefault();
 
-            // Check if script is still loading
             if (scriptLoading) {
                 alert('Please wait for the script to finish loading...');
                 return;
@@ -1205,17 +1202,6 @@
 
             const scriptContent = localStorage.getItem('uploadedScriptContent');
             const scriptName = localStorage.getItem('uploadedScriptName');
-            
-            console.log('=== Creating Project ===');
-            console.log('Project title:', document.getElementById('projectTitle').value);
-            console.log('Script uploaded:', !!uploadedScript);
-            console.log('Script loaded:', scriptLoaded);
-            console.log('Script name:', scriptName);
-            console.log('Script content exists:', !!scriptContent);
-            if (scriptContent) {
-                console.log('Script content length:', scriptContent.length);
-                console.log('First 100 chars:', scriptContent.substring(0, 100));
-            }
 
             const project = {
                 title: document.getElementById('projectTitle').value,
@@ -1231,46 +1217,26 @@
                 scriptName: scriptName || null
             };
 
-            console.log('Project object:', {
-                title: project.title,
-                code: project.code,
-                hasScriptContent: !!project.scriptContent,
-                scriptContentLength: project.scriptContent ? project.scriptContent.length : 0,
-                scriptName: project.scriptName
-            });
-
             projects.unshift(project);
             saveToStorage();
-            
-            console.log('✓ Project saved to projects array');
-            console.log('✓ Saved to localStorage');
-            
             renderProjects();
             closeModal();
             
-            // Clear uploaded script from temp storage
             localStorage.removeItem('uploadedScriptContent');
             localStorage.removeItem('uploadedScriptName');
             localStorage.removeItem('uploadedScriptType');
             
-            // Reset state
             scriptLoading = false;
             scriptLoaded = false;
-            
-            console.log('✓ Temp storage cleared');
-            console.log('=== Project Creation Complete ===');
         }
 
         function openProject(index) {
             const project = projects[index];
-            // Store project data in localStorage for the breakdown page to use
             localStorage.setItem('currentProject', JSON.stringify(project));
             
-            // If project has script content, go to integrated breakdown (which includes scene review)
             if (project.scriptContent) {
                 window.location.href = 'script-breakdown.html';
             } else {
-                // No script, go straight to dashboard
                 window.location.href = 'dashboard.html';
             }
         }
