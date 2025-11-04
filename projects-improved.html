@@ -1189,9 +1189,9 @@
         function openProject(index) {
             const project = projects[index];
             localStorage.setItem('currentProject', JSON.stringify(project));
-            
+
             if (project.scriptContent) {
-                window.location.href = 'script-breakdown-improved.html';
+                window.location.href = 'script-breakdown.html';
             } else {
                 window.location.href = 'dashboard.html';
             }
