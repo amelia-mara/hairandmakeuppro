@@ -943,12 +943,20 @@
             // Add space after closing parenthesis before letter
             normalized = normalized.replace(/(\))([A-Za-z])/g, '$1 $2');
             
+            // TARGETED FIX: Clean up scene headings specifically
+            // Fix patterns like "1 1INT." or "1INT." by removing numbers before INT/EXT
+            normalized = normalized.replace(/(\n|^)\s*\d+\s*\d*\s*(INT\.|EXT\.|INT\/EXT\.|I\/E\.)/gi, '\n$2');
+            
+            // Also fix patterns without periods: "1 1INT " or "1INT "
+            normalized = normalized.replace(/(\n|^)\s*\d+\s*\d*\s*(INT\s+|EXT\s+|INT\/EXT\s+|I\/E\s+)/gi, '\n$2');
+            
             // Clean up line endings
             normalized = normalized
                 .replace(/\r\n/g, '\n')
                 .replace(/\r/g, '\n')
                 .replace(/\s+\n/g, '\n')
-                .replace(/\n\s+/g, '\n');
+                .replace(/\n\s+/g, '\n')
+                .replace(/\n\n\n+/g, '\n\n'); // Replace triple+ line breaks with double
             
             console.log('=== After Normalization ===');
             console.log(normalized.substring(0, 500));
