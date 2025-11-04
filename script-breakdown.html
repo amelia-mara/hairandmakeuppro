@@ -13,16 +13,23 @@
         }
 
         :root {
-            --bg-dark: #0d0b0a;
-            --bg-medium: rgba(26, 22, 18, 0.7);
-            --card-bg: rgba(36, 32, 25, 0.6);
+            --bg-dark: #0a0908;
+            --bg-medium: rgba(18, 16, 14, 0.85);
+            --card-bg: rgba(28, 25, 22, 0.5);
+            --card-bg-hover: rgba(35, 31, 27, 0.65);
             --text-light: #e8e6e3;
-            --text-muted: #8a7f73;
-            --accent-gold: #c9a961;
-            --glass-border: rgba(255, 255, 255, 0.08);
+            --text-muted: #9a8f7f;
+            --accent-gold: #d4af7a;
+            --accent-gold-hover: #e0c08f;
+            --border: rgba(60, 55, 48, 0.3);
+            --glass-border: rgba(255, 255, 255, 0.06);
+            --glass-highlight: rgba(255, 255, 255, 0.03);
             --success: #52c186;
             --error: #ff6b6b;
             --warning: #fbbf24;
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+            --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
             
             /* Tag Colors */
             --tag-makeup: #ff6b9d;
@@ -46,12 +53,21 @@
             border-radius: 4px;
         }
 
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(138, 127, 115, 0.5);
+        }
+
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, #0d0b0a 0%, #1a1612 50%, #0d0b0a 100%);
+            background: 
+                radial-gradient(ellipse at 20% 50%, rgba(45, 35, 25, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 50%, rgba(45, 35, 25, 0.15) 0%, transparent 50%),
+                linear-gradient(135deg, #050404 0%, #0f0d0c 50%, #050404 100%);
             color: var(--text-light);
             height: 100vh;
             overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
 
         .app-layout {
@@ -63,13 +79,32 @@
         /* Top Bar */
         .top-bar {
             height: 60px;
-            background: var(--bg-medium);
-            backdrop-filter: blur(20px);
+            background: 
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 0%, transparent 100%),
+                linear-gradient(135deg, rgba(212, 175, 122, 0.08) 0%, rgba(18, 16, 14, 0.85) 50%, rgba(212, 175, 122, 0.05) 100%);
+            backdrop-filter: blur(24px) saturate(180%);
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
             border-bottom: 1px solid var(--glass-border);
             display: flex;
             align-items: center;
             justify-content: space-between;
             padding: 0 24px;
+            box-shadow: 
+                var(--shadow-sm),
+                inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            position: relative;
+        }
+
+        .top-bar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 50% 0%, rgba(212, 175, 122, 0.1) 0%, transparent 70%);
+            pointer-events: none;
+            opacity: 0.5;
         }
 
         .back-link {
@@ -80,10 +115,14 @@
             text-decoration: none;
             font-size: 0.875em;
             cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            z-index: 1;
         }
 
         .back-link:hover {
             color: var(--accent-gold);
+            transform: translateX(-2px);
         }
 
         .workflow-indicator {
@@ -91,6 +130,8 @@
             align-items: center;
             gap: 12px;
             font-size: 0.8125em;
+            position: relative;
+            z-index: 1;
         }
 
         .workflow-step {
@@ -99,13 +140,16 @@
             gap: 6px;
             color: var(--text-muted);
             padding: 6px 12px;
-            border-radius: 6px;
+            border-radius: 8px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .workflow-step.active {
             color: var(--accent-gold);
-            background: rgba(201, 169, 97, 0.1);
+            background: 
+                linear-gradient(135deg, rgba(212, 175, 122, 0.15) 0%, rgba(212, 175, 122, 0.08) 100%);
             font-weight: 600;
+            box-shadow: 0 0 20px rgba(212, 175, 122, 0.15);
         }
 
         .workflow-step.completed {
@@ -120,17 +164,20 @@
         .top-bar-actions {
             display: flex;
             gap: 8px;
+            position: relative;
+            z-index: 1;
         }
 
         .toolbar-btn {
-            padding: 8px 14px;
+            padding: 8px 16px;
             background: transparent;
             border: 1px solid var(--glass-border);
-            border-radius: 6px;
+            border-radius: 8px;
             color: var(--text-muted);
             cursor: pointer;
             font-size: 0.8125em;
-            transition: all 0.2s ease;
+            font-weight: 500;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             align-items: center;
             gap: 6px;
@@ -139,7 +186,8 @@
         .toolbar-btn:hover:not(:disabled) {
             border-color: var(--accent-gold);
             color: var(--accent-gold);
-            background: rgba(201, 169, 97, 0.05);
+            background: rgba(212, 175, 122, 0.08);
+            transform: translateY(-1px);
         }
 
         .toolbar-btn:disabled {
@@ -148,23 +196,34 @@
         }
 
         .toolbar-btn.primary {
-            background: var(--accent-gold);
+            background: linear-gradient(135deg, #e0c08f 0%, var(--accent-gold) 50%, #c9a564 100%);
             border-color: var(--accent-gold);
-            color: var(--bg-dark);
+            color: #0a0908;
+            font-weight: 600;
+            box-shadow: 
+                0 2px 8px rgba(212, 175, 122, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
         }
 
         .toolbar-btn.primary:hover:not(:disabled) {
-            background: #d4b16d;
+            background: linear-gradient(135deg, #e8ccA0 0%, var(--accent-gold-hover) 50%, #d4af7a 100%);
+            box-shadow: 
+                0 4px 16px rgba(212, 175, 122, 0.4),
+                0 0 30px rgba(212, 175, 122, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3);
         }
 
         .toolbar-btn.ai {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border-color: #667eea;
             color: white;
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
         }
 
         .toolbar-btn.ai:hover:not(:disabled) {
             background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
         }
 
         /* Main Content */
@@ -177,12 +236,30 @@
         /* Left Sidebar - Scene Navigation */
         .left-sidebar {
             width: 300px;
-            background: var(--bg-medium);
-            backdrop-filter: blur(20px);
+            background: 
+                linear-gradient(to right, rgba(255, 255, 255, 0.02) 0%, transparent 100%),
+                linear-gradient(135deg, rgba(212, 175, 122, 0.06) 0%, rgba(18, 16, 14, 0.85) 50%, rgba(212, 175, 122, 0.03) 100%);
+            backdrop-filter: blur(24px) saturate(180%);
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
             border-right: 1px solid var(--glass-border);
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            box-shadow: 
+                var(--shadow-sm),
+                inset 1px 0 0 rgba(255, 255, 255, 0.03);
+            position: relative;
+        }
+
+        .left-sidebar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 1px;
+            background: linear-gradient(to bottom, transparent, rgba(212, 175, 122, 0.15) 50%, transparent);
+            pointer-events: none;
         }
 
         .sidebar-header {
@@ -201,12 +278,25 @@
 
         .scene-search {
             width: 100%;
-            padding: 8px 12px;
-            background: rgba(13, 11, 10, 0.5);
+            padding: 10px 14px;
+            background: rgba(10, 9, 8, 0.6);
+            backdrop-filter: blur(8px);
             border: 1px solid var(--glass-border);
-            border-radius: 6px;
+            border-radius: 8px;
             color: var(--text-light);
             font-size: 0.8125em;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .scene-search:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+            background: rgba(10, 9, 8, 0.8);
+            box-shadow: 0 0 0 3px rgba(212, 175, 122, 0.1);
+        }
+
+        .scene-search::placeholder {
+            color: var(--text-muted);
         }
 
         .scene-nav-list {
@@ -216,23 +306,58 @@
         }
 
         .scene-nav-item {
-            padding: 12px;
+            padding: 14px;
             margin-bottom: 8px;
-            background: rgba(36, 32, 25, 0.4);
+            background: 
+                linear-gradient(135deg, rgba(212, 175, 122, 0.04) 0%, rgba(28, 25, 22, 0.5) 50%, rgba(212, 175, 122, 0.02) 100%);
+            backdrop-filter: blur(12px);
             border: 1px solid var(--glass-border);
-            border-radius: 6px;
+            border-radius: 10px;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+        }
+
+        .scene-nav-item::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(212, 175, 122, 0.15) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            pointer-events: none;
         }
 
         .scene-nav-item:hover {
             border-color: var(--accent-gold);
-            background: rgba(201, 169, 97, 0.1);
+            background: 
+                linear-gradient(135deg, rgba(212, 175, 122, 0.12) 0%, rgba(35, 31, 27, 0.65) 50%, rgba(212, 175, 122, 0.08) 100%);
+            transform: translateX(4px);
+            box-shadow: 
+                var(--shadow-sm),
+                0 0 20px rgba(212, 175, 122, 0.15);
+        }
+
+        .scene-nav-item:hover::after {
+            opacity: 1;
         }
 
         .scene-nav-item.active {
             border-color: var(--accent-gold);
-            background: rgba(201, 169, 97, 0.15);
+            background: 
+                linear-gradient(135deg, rgba(212, 175, 122, 0.15) 0%, rgba(35, 31, 27, 0.7) 50%, rgba(212, 175, 122, 0.1) 100%);
+            box-shadow: 
+                var(--shadow-md),
+                0 0 25px rgba(212, 175, 122, 0.2);
+        }
+
+        .scene-nav-item.active::after {
+            opacity: 0.8;
         }
 
         .scene-nav-number {
@@ -259,6 +384,7 @@
             width: 8px;
             height: 8px;
             border-radius: 50%;
+            box-shadow: 0 0 8px currentColor;
         }
 
         .ai-status {
@@ -276,6 +402,7 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            background: rgba(12, 10, 9, 0.4);
         }
 
         .scene-display {
@@ -302,18 +429,24 @@
             color: var(--accent-gold);
             margin-bottom: 16px;
             line-height: 1.2;
+            text-shadow: 0 0 20px rgba(212, 175, 122, 0.3);
         }
 
         .scene-script-content {
-            background: var(--card-bg);
+            background: 
+                linear-gradient(135deg, rgba(212, 175, 122, 0.04) 0%, rgba(28, 25, 22, 0.6) 50%, rgba(212, 175, 122, 0.02) 100%);
+            backdrop-filter: blur(12px);
             border: 1px solid var(--glass-border);
-            border-radius: 8px;
+            border-radius: 12px;
             padding: 48px 64px;
             font-family: 'Courier Prime', monospace;
             font-size: 12pt;
             line-height: 2;
             max-width: 900px;
             margin: 0 auto;
+            box-shadow: 
+                var(--shadow-md),
+                inset 0 1px 0 rgba(255, 255, 255, 0.05);
         }
 
         /* Screenplay Formatting */
@@ -368,7 +501,7 @@
         }
 
         .script-line:hover {
-            background: rgba(201, 169, 97, 0.05);
+            background: rgba(212, 175, 122, 0.05);
             border-radius: 4px;
             padding: 2px 8px;
             margin-left: -8px;
@@ -377,31 +510,37 @@
 
         /* Text Selection Styling */
         .scene-script-content ::selection {
-            background: rgba(201, 169, 97, 0.4);
-            color: var(--bg-dark);
-        }
-
-        .scene-script-content ::-moz-selection {
-            background: rgba(201, 169, 97, 0.4);
-            color: var(--bg-dark);
-        }
-
-        /* Smooth font rendering for better readability */
-        .scene-script-content {
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-            text-rendering: optimizeLegibility;
+            background: rgba(212, 175, 122, 0.4);
+            color: #050404;
         }
 
         /* Right Sidebar - Tagging Panel */
         .right-sidebar {
             width: 380px;
-            background: var(--bg-medium);
-            backdrop-filter: blur(20px);
+            background: 
+                linear-gradient(to left, rgba(255, 255, 255, 0.02) 0%, transparent 100%),
+                linear-gradient(135deg, rgba(212, 175, 122, 0.06) 0%, rgba(18, 16, 14, 0.85) 50%, rgba(212, 175, 122, 0.03) 100%);
+            backdrop-filter: blur(24px) saturate(180%);
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
             border-left: 1px solid var(--glass-border);
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            box-shadow: 
+                var(--shadow-sm),
+                inset -1px 0 0 rgba(255, 255, 255, 0.03);
+            position: relative;
+        }
+
+        .right-sidebar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 1px;
+            background: linear-gradient(to bottom, transparent, rgba(212, 175, 122, 0.15) 50%, transparent);
+            pointer-events: none;
         }
 
         .tagging-panel {
@@ -413,18 +552,20 @@
         .ai-banner {
             background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(118, 75, 162, 0.15));
             border: 1px solid rgba(102, 126, 234, 0.3);
-            border-radius: 8px;
+            border-radius: 10px;
             padding: 12px;
             margin-bottom: 20px;
             display: flex;
             align-items: center;
             gap: 10px;
             font-size: 0.8125em;
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.2);
         }
 
         .ai-banner.success {
             background: linear-gradient(135deg, rgba(82, 193, 134, 0.15), rgba(52, 211, 153, 0.15));
             border-color: rgba(82, 193, 134, 0.3);
+            box-shadow: 0 0 20px rgba(82, 193, 134, 0.2);
         }
 
         .tag-section {
@@ -447,6 +588,7 @@
             width: 12px;
             height: 12px;
             border-radius: 3px;
+            box-shadow: 0 0 10px currentColor;
         }
 
         .tag-list {
@@ -457,23 +599,44 @@
         }
 
         .tag-item {
-            background: rgba(36, 32, 25, 0.6);
+            background: 
+                linear-gradient(135deg, rgba(212, 175, 122, 0.04) 0%, rgba(28, 25, 22, 0.6) 50%, rgba(212, 175, 122, 0.02) 100%);
+            backdrop-filter: blur(8px);
             border: 1px solid var(--glass-border);
-            border-radius: 6px;
+            border-radius: 8px;
             padding: 10px 12px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            transition: all 0.2s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tag-item::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(212, 175, 122, 0.1), transparent);
+            transition: left 0.5s ease;
         }
 
         .tag-item.ai-suggested {
             border-color: rgba(102, 126, 234, 0.5);
-            background: rgba(102, 126, 234, 0.1);
+            background: 
+                linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
         }
 
         .tag-item:hover {
             border-color: var(--accent-gold);
+            box-shadow: 0 0 20px rgba(212, 175, 122, 0.15);
+        }
+
+        .tag-item:hover::after {
+            left: 100%;
         }
 
         .tag-description {
@@ -484,11 +647,12 @@
 
         .tag-badge {
             font-size: 0.65em;
-            padding: 2px 6px;
-            border-radius: 3px;
+            padding: 3px 8px;
+            border-radius: 4px;
             background: rgba(102, 126, 234, 0.2);
             color: #667eea;
             margin-right: 8px;
+            font-weight: 600;
         }
 
         .tag-actions {
@@ -501,19 +665,20 @@
             height: 24px;
             background: transparent;
             border: 1px solid var(--glass-border);
-            border-radius: 4px;
+            border-radius: 6px;
             color: var(--text-muted);
             cursor: pointer;
             font-size: 0.75em;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.2s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .tag-action-btn:hover {
             border-color: var(--accent-gold);
             color: var(--accent-gold);
+            transform: scale(1.1);
         }
 
         .tag-action-btn.accept {
@@ -524,6 +689,7 @@
         .tag-action-btn.accept:hover {
             background: var(--success);
             color: white;
+            box-shadow: 0 0 15px rgba(82, 193, 134, 0.4);
         }
 
         .tag-action-btn.reject {
@@ -534,18 +700,20 @@
         .tag-action-btn.reject:hover {
             background: var(--error);
             color: white;
+            box-shadow: 0 0 15px rgba(255, 107, 107, 0.4);
         }
 
         .add-tag-btn {
             width: 100%;
             padding: 10px;
-            background: rgba(201, 169, 97, 0.1);
+            background: 
+                linear-gradient(135deg, rgba(212, 175, 122, 0.06) 0%, rgba(28, 25, 22, 0.4) 100%);
             border: 1px dashed var(--glass-border);
-            border-radius: 6px;
+            border-radius: 8px;
             color: var(--text-muted);
             cursor: pointer;
             font-size: 0.8125em;
-            transition: all 0.2s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -555,7 +723,10 @@
         .add-tag-btn:hover {
             border-color: var(--accent-gold);
             color: var(--accent-gold);
-            background: rgba(201, 169, 97, 0.15);
+            background: 
+                linear-gradient(135deg, rgba(212, 175, 122, 0.12) 0%, rgba(35, 31, 27, 0.6) 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 0 20px rgba(212, 175, 122, 0.15);
         }
 
         .notes-section {
@@ -568,13 +739,22 @@
             width: 100%;
             min-height: 120px;
             padding: 12px;
-            background: rgba(13, 11, 10, 0.5);
+            background: rgba(10, 9, 8, 0.6);
+            backdrop-filter: blur(8px);
             border: 1px solid var(--glass-border);
-            border-radius: 6px;
+            border-radius: 8px;
             color: var(--text-light);
             font-size: 0.8125em;
             font-family: 'Inter', sans-serif;
             resize: vertical;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .notes-textarea:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+            background: rgba(10, 9, 8, 0.8);
+            box-shadow: 0 0 0 3px rgba(212, 175, 122, 0.1);
         }
 
         /* Modals */
@@ -585,11 +765,18 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(13, 11, 10, 0.8);
-            backdrop-filter: blur(10px);
+            background: rgba(10, 9, 8, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             z-index: 1000;
             align-items: center;
             justify-content: center;
+            animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
 
         .modal.active {
@@ -597,17 +784,51 @@
         }
 
         .modal-content {
-            background: var(--bg-medium);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--glass-border);
-            border-radius: 12px;
+            background: 
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 0%, transparent 100%),
+                linear-gradient(135deg, rgba(212, 175, 122, 0.08) 0%, rgba(18, 16, 14, 0.95) 50%, rgba(212, 175, 122, 0.05) 100%);
+            backdrop-filter: blur(24px) saturate(180%);
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
+            border: 1px solid rgba(212, 175, 122, 0.15);
+            border-radius: 16px;
             padding: 32px;
             max-width: 500px;
             width: 90%;
+            box-shadow: 
+                var(--shadow-lg),
+                0 0 60px rgba(212, 175, 122, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.08);
+            animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .modal-content::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 50% 0%, rgba(212, 175, 122, 0.12) 0%, transparent 60%);
+            pointer-events: none;
+            border-radius: 16px;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .modal-header {
             margin-bottom: 24px;
+            position: relative;
+            z-index: 1;
         }
 
         .modal-title {
@@ -623,6 +844,8 @@
 
         .form-group {
             margin-bottom: 20px;
+            position: relative;
+            z-index: 1;
         }
 
         .form-label {
@@ -636,13 +859,15 @@
         .form-input,
         .form-textarea {
             width: 100%;
-            padding: 10px 12px;
-            background: rgba(13, 11, 10, 0.5);
+            padding: 10px 14px;
+            background: rgba(10, 9, 8, 0.6);
+            backdrop-filter: blur(8px);
             border: 1px solid var(--glass-border);
-            border-radius: 6px;
+            border-radius: 8px;
             color: var(--text-light);
             font-size: 0.875em;
             font-family: 'Inter', sans-serif;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .form-textarea {
@@ -654,6 +879,8 @@
         .form-textarea:focus {
             outline: none;
             border-color: var(--accent-gold);
+            background: rgba(10, 9, 8, 0.8);
+            box-shadow: 0 0 0 3px rgba(212, 175, 122, 0.1);
         }
 
         .modal-actions {
@@ -661,32 +888,43 @@
             gap: 12px;
             justify-content: flex-end;
             margin-top: 24px;
+            position: relative;
+            z-index: 1;
         }
 
         .modal-btn {
             padding: 10px 20px;
             background: transparent;
             border: 1px solid var(--glass-border);
-            border-radius: 6px;
+            border-radius: 8px;
             color: var(--text-light);
             cursor: pointer;
             font-size: 0.875em;
-            transition: all 0.2s ease;
+            font-weight: 500;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .modal-btn:hover {
             border-color: var(--accent-gold);
             color: var(--accent-gold);
+            background: rgba(212, 175, 122, 0.08);
         }
 
         .modal-btn.primary {
-            background: var(--accent-gold);
+            background: linear-gradient(135deg, #e0c08f 0%, var(--accent-gold) 50%, #c9a564 100%);
             border-color: var(--accent-gold);
-            color: var(--bg-dark);
+            color: #0a0908;
+            font-weight: 600;
+            box-shadow: 
+                0 2px 8px rgba(212, 175, 122, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
         }
 
         .modal-btn.primary:hover {
-            background: #d4b16d;
+            background: linear-gradient(135deg, #e8ccA0 0%, var(--accent-gold-hover) 50%, #d4af7a 100%);
+            box-shadow: 
+                0 4px 16px rgba(212, 175, 122, 0.4),
+                0 0 30px rgba(212, 175, 122, 0.3);
         }
 
         /* Loading Overlay */
@@ -697,8 +935,8 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(13, 11, 10, 0.9);
-            backdrop-filter: blur(10px);
+            background: rgba(10, 9, 8, 0.9);
+            backdrop-filter: blur(12px);
             z-index: 2000;
             align-items: center;
             justify-content: center;
@@ -713,10 +951,11 @@
         .loading-spinner {
             width: 50px;
             height: 50px;
-            border: 4px solid rgba(201, 169, 97, 0.2);
+            border: 4px solid rgba(212, 175, 122, 0.2);
             border-top-color: var(--accent-gold);
             border-radius: 50%;
             animation: spin 1s linear infinite;
+            box-shadow: 0 0 30px rgba(212, 175, 122, 0.3);
         }
 
         @keyframes spin {
@@ -726,6 +965,7 @@
         .loading-text {
             color: var(--text-light);
             font-size: 1.125em;
+            font-weight: 600;
         }
 
         .loading-subtext {
@@ -758,50 +998,6 @@
         .empty-state p {
             color: var(--text-muted);
             font-size: 0.875em;
-        }
-
-        /* Responsive Script Formatting */
-        @media (max-width: 1024px) {
-            .scene-script-content {
-                padding: 32px 40px;
-            }
-
-            .script-character {
-                margin-left: 120px;
-            }
-
-            .script-parenthetical {
-                margin-left: 100px;
-            }
-
-            .script-dialogue {
-                margin-left: 80px;
-                max-width: 400px;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .scene-script-content {
-                padding: 24px;
-                font-size: 11pt;
-            }
-
-            .script-character {
-                margin-left: 40px;
-            }
-
-            .script-parenthetical {
-                margin-left: 30px;
-            }
-
-            .script-dialogue {
-                margin-left: 20px;
-                max-width: 100%;
-            }
-
-            .script-scene-heading {
-                font-size: 12pt;
-            }
         }
     </style>
 </head>
@@ -1027,7 +1223,7 @@
         }
 
         // ============================================
-        // SCENE DETECTION
+        // IMPROVED SCENE DETECTION
         // ============================================
 
         function detectScenes() {
@@ -1036,31 +1232,53 @@
             
             console.log('Detecting scenes from', lines.length, 'lines');
             
+            // Comprehensive scene heading patterns
             const patterns = [
-                /^\s*\d*\s*\d*\s*(INT|EXT|INT\/EXT|I\/E)[\.\s]+/i,
-                /^(INT|EXT|INT\/EXT|I\/E)[\.\s]+/i,
-                /^\d+\s*\.\s*(INT|EXT)[.\s]+/i,
+                // Standard format: INT. or EXT.
+                /^\s*\d*\s*\d*\s*(INT|EXT|INT\/EXT|I\/E|INT\.|EXT\.)[\s\.]+/i,
+                // With scene numbers: 1 INT. or SCENE 1 INT.
+                /^\s*(?:SCENE\s+)?\d+\s*[\.\-\s]*(INT|EXT|INT\/EXT|I\/E)[\s\.]+/i,
+                // Without periods: INT KITCHEN or EXT STREET
+                /^\s*(INT|EXT|INT\/EXT|I\/E)\s+[A-Z]/i,
+                // All caps short lines that look like scene headings
+                /^\s*\d*\s*(INTERIOR|EXTERIOR)\s+/i
             ];
             
             lines.forEach((line, index) => {
                 const trimmed = line.trim();
                 
+                // Skip empty lines
+                if (!trimmed) return;
+                
+                // Check if line matches any scene heading pattern
                 for (let pattern of patterns) {
                     if (pattern.test(trimmed)) {
-                        let cleanHeading = trimmed
-                            .replace(/^\s*\d+\s*\d*\s*/, '')
-                            .replace(/\s+/g, ' ')
-                            .trim();
+                        // Additional validation: should be mostly uppercase and reasonable length
+                        const upperRatio = (trimmed.match(/[A-Z]/g) || []).length / trimmed.replace(/\s/g, '').length;
                         
-                        scenes.push({
-                            id: Date.now() + index,
-                            lineIndex: index,
-                            heading: cleanHeading,
-                            originalText: trimmed
-                        });
-                        
-                        console.log('Detected scene:', cleanHeading);
-                        break;
+                        if (upperRatio > 0.6 && trimmed.length < 100) {
+                            let cleanHeading = trimmed
+                                .replace(/^\s*(?:SCENE\s+)?\d+\s*[\.\-\s]*/, '') // Remove scene numbers
+                                .replace(/\s+/g, ' ')
+                                .trim();
+                            
+                            // Avoid duplicates (sometimes scripts have duplicate headings)
+                            const isDuplicate = scenes.some(s => 
+                                s.heading === cleanHeading && Math.abs(s.lineIndex - index) < 3
+                            );
+                            
+                            if (!isDuplicate) {
+                                scenes.push({
+                                    id: Date.now() + index,
+                                    lineIndex: index,
+                                    heading: cleanHeading,
+                                    originalText: trimmed
+                                });
+                                
+                                console.log('✓ Scene detected:', cleanHeading);
+                            }
+                            break;
+                        }
                     }
                 }
             });
@@ -1070,7 +1288,7 @@
         }
 
         // ============================================
-        // AI ANALYSIS
+        // IMPROVED AI ANALYSIS
         // ============================================
 
         async function runAIAnalysis() {
@@ -1150,25 +1368,52 @@
         }
 
         async function callAIAPI(sceneHeading, sceneContent) {
-            const prompt = `Analyze this film script scene and identify all hair, makeup, SFX/FX, wardrobe, props, and cast mentions.
+            const prompt = `You are a professional script breakdown assistant analyzing a film/TV script scene for production. Extract ALL production elements that would need to be tracked, prepared, or coordinated.
 
-Scene: ${sceneHeading}
+Scene Heading: ${sceneHeading}
 
-Content:
+Scene Content:
 ${sceneContent.substring(0, 3000)}
 
-Return ONLY a JSON array of objects with this exact format:
+Analyze and identify items in these categories:
+
+**MAKEUP**: Any cosmetics, special makeup effects, injuries, wounds, blood, bruises, aging effects, beauty makeup, character transformations, prosthetics mentions, or descriptions of how characters' faces should look.
+Examples: "dark circles under eyes", "bruised cheek", "glamorous red lipstick", "zombie makeup", "5 o'clock shadow"
+
+**HAIR**: Hairstyles, wigs, hair color, hair conditions, hair changes, or any description of how characters' hair should look.
+Examples: "disheveled bedhead", "slicked back hair", "blonde wig", "braided ponytail", "shaved head"
+
+**SFX/FX**: Special effects, practical effects, visual effects, weather effects (rain, snow, fog), fire, smoke, blood splatter, explosions, magical effects, or any technical effect mentions.
+Examples: "blood spray", "flickering lights", "heavy fog", "translucent ghost effect", "shattered glass"
+
+**WARDROBE/COSTUME**: Clothing items, costumes, accessories, jewelry, shoes, costume changes, or specific descriptions of what characters wear.
+Examples: "white wedding dress", "leather jacket", "police uniform", "muddy boots", "diamond necklace"
+
+**PROPS**: Any object that actors interact with or that's important to the scene - handheld items, furniture mentioned specifically, set dressing that's action-critical.
+Examples: "coffee mug", "car keys", "smartphone", "bloodied knife", "old photograph", "typewriter"
+
+**CAST**: Character names who appear or are mentioned, including background performers if specified (e.g., "crowd of protesters", "3 nurses").
+Examples: "EMMA", "Detective Martinez", "crowd of 20 extras", "the waitress"
+
+IMPORTANT RULES:
+- Return ONLY valid JSON array format
+- Be specific and descriptive
+- Only include items explicitly mentioned OR clearly implied by the scene
+- Avoid vague entries - be concrete
+- Each description should be brief but clear (3-10 words)
+- Don't duplicate across categories
+
+Return format:
 [
-  {"category": "makeup", "description": "Natural look with dark circles"},
-  {"category": "hair", "description": "Disheveled bedhead"},
+  {"category": "makeup", "description": "Dark circles under eyes, exhausted look"},
+  {"category": "hair", "description": "Disheveled morning bedhead"},
   {"category": "wardrobe", "description": "White cotton nightgown"},
-  {"category": "cast", "description": "Emma Hart - lead character"},
-  {"category": "sfx", "description": "Translucent shadow effect"},
-  {"category": "props", "description": "Coffee mug"}
+  {"category": "sfx", "description": "Flickering overhead light"},
+  {"category": "props", "description": "Ceramic coffee mug"},
+  {"category": "cast", "description": "Emma Hart - lead character"}
 ]
 
-Categories must be exactly: "makeup", "hair", "sfx", "wardrobe", "props", or "cast"
-Be specific and concise. Only include items explicitly mentioned or clearly implied.`;
+Categories must be EXACTLY: "makeup", "hair", "sfx", "wardrobe", "props", or "cast"`;
 
             if (aiProvider === 'openai') {
                 return await callOpenAI(prompt);
@@ -1187,11 +1432,10 @@ Be specific and concise. Only include items explicitly mentioned or clearly impl
                 body: JSON.stringify({
                     model: 'gpt-4o-mini',
                     messages: [
-                        { role: 'system', content: 'You are a professional script breakdown assistant. You analyze scripts and extract production elements.' },
+                        { role: 'system', content: 'You are a professional script breakdown assistant. Return ONLY valid JSON arrays with no additional text or explanation.' },
                         { role: 'user', content: prompt }
                     ],
-                    temperature: 0.3,
-                    response_format: { type: "json_object" }
+                    temperature: 0.3
                 })
             });
 
@@ -1206,7 +1450,7 @@ Be specific and concise. Only include items explicitly mentioned or clearly impl
             // Parse JSON response
             let parsed;
             try {
-                // Try to extract JSON from response
+                // Try to extract JSON array from response
                 const jsonMatch = content.match(/\[[\s\S]*\]/);
                 if (jsonMatch) {
                     parsed = JSON.parse(jsonMatch[0]);
@@ -1292,7 +1536,7 @@ Be specific and concise. Only include items explicitly mentioned or clearly impl
                         'wardrobe': '#34d399',
                         'props': '#fb923c'
                     }[tag.category] || '#999';
-                    return `<div class="mini-tag" style="background: ${color}"></div>`;
+                    return `<div class="mini-tag" style="background: ${color}; color: ${color}"></div>`;
                 }).join('');
                 
                 html += `
@@ -1440,7 +1684,7 @@ Be specific and concise. Only include items explicitly mentioned or clearly impl
                 html += `
                     <div class="tag-section">
                         <div class="tag-section-title">
-                            <div class="tag-color-indicator" style="background: ${section.color}"></div>
+                            <div class="tag-color-indicator" style="background: ${section.color}; color: ${section.color}"></div>
                             ${section.title}
                         </div>
                 `;
