@@ -405,6 +405,24 @@
             opacity: 0.8;
         }
 
+        .scene-nav-item.expanded .scene-details {
+            display: block;
+        }
+
+        .scene-details {
+            display: none;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--glass-border);
+            font-size: 0.75em;
+        }
+
+        .scene-synopsis {
+            color: var(--text-muted);
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+
         .scene-nav-number {
             font-size: 0.75em;
             color: var(--text-muted);
@@ -453,7 +471,8 @@
         .scene-display {
             flex: 1;
             overflow-y: auto;
-            padding: 32px 48px;
+            padding: 40px;
+            background: rgba(232, 230, 227, 0.03);
         }
 
         .scene-header-display {
@@ -477,28 +496,23 @@
             text-shadow: 0 0 20px rgba(212, 175, 122, 0.3);
         }
 
-        /* SOFT PARCHMENT/AGED PAPER SCRIPT PANEL */
+        /* CLEAN WHITE SCRIPT PANEL - More readable */
         .scene-script-content {
-            background: 
-                radial-gradient(ellipse at center, transparent 30%, rgba(210, 180, 140, 0.06) 100%),
-                linear-gradient(to bottom, rgba(160, 136, 80, 0.04) 0%, transparent 3%, transparent 97%, rgba(160, 136, 80, 0.04) 100%),
-                #f8f6f0;
-            border: 1px solid rgba(160, 136, 80, 0.15);
-            border-radius: 12px;
-            padding: 48px 64px;
+            background: rgba(248, 246, 240, 0.98);
+            border: 1px solid rgba(160, 136, 80, 0.12);
+            border-radius: 8px;
+            padding: 60px 80px;
             font-family: 'Courier Prime', monospace;
             font-size: 12pt;
-            line-height: 2;
-            max-width: 900px;
+            line-height: 1.5;
+            max-width: 800px;
             margin: 0 auto;
-            color: var(--parchment-text);
-            box-shadow: 
-                0 4px 24px rgba(0, 0, 0, 0.15),
-                inset 0 1px 0 rgba(255, 255, 255, 0.4);
+            color: #000;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
             position: relative;
         }
 
-        /* Subtle aged paper vignette effect */
+        /* Subtle vignette effect */
         .scene-script-content::before {
             content: '';
             position: absolute;
@@ -507,12 +521,12 @@
             right: 0;
             bottom: 0;
             background: 
-                radial-gradient(ellipse at 50% 50%, transparent 40%, rgba(160, 136, 80, 0.03) 70%, rgba(160, 136, 80, 0.08) 100%);
+                radial-gradient(ellipse at 50% 50%, transparent 60%, rgba(160, 136, 80, 0.02) 100%);
             pointer-events: none;
-            border-radius: 11px;
+            border-radius: 7px;
         }
 
-        /* Screenplay Formatting with colored highlights */
+        /* Screenplay Formatting - Traditional layout */
         .script-line {
             margin-bottom: 12px;
             position: relative;
@@ -522,47 +536,49 @@
         .script-scene-heading {
             font-weight: 700;
             text-transform: uppercase;
-            margin: 24px 0 16px 0;
-            color: var(--parchment-text);
-            font-size: 13pt;
-            letter-spacing: 0.5px;
+            margin: 24px 0 12px 0;
+            color: #000;
+            font-size: 12pt;
+            letter-spacing: 0.03em;
         }
 
         .script-action {
-            margin: 12px 0;
-            color: var(--parchment-text);
-            line-height: 1.8;
+            margin-bottom: 12px;
+            text-align: left;
+            color: #000;
+            line-height: 1.5;
         }
 
         .script-character {
-            font-weight: 700;
+            margin-top: 12px;
+            margin-bottom: 4px;
+            text-align: center;
+            font-weight: 400;
             text-transform: uppercase;
-            margin: 16px 0 4px 200px;
-            color: var(--parchment-text);
-            background: rgba(255, 107, 157, 0.12);
-            padding: 2px 8px;
-            border-radius: 4px;
-            display: inline-block;
+            color: #000;
         }
 
         .script-parenthetical {
-            font-style: italic;
-            margin: 4px 0 4px 180px;
-            color: rgba(45, 36, 22, 0.7);
+            margin-bottom: 4px;
+            width: 60%;
+            margin-left: 20%;
+            font-style: normal;
+            color: #000;
         }
 
         .script-dialogue {
-            margin: 4px 0 12px 150px;
-            max-width: 350px;
-            color: var(--parchment-text);
-            line-height: 1.7;
+            margin-bottom: 12px;
+            width: 70%;
+            margin-left: 15%;
+            color: #000;
+            line-height: 1.5;
         }
 
         .script-transition {
             font-weight: 700;
             text-align: right;
             margin: 16px 0;
-            color: rgba(45, 36, 22, 0.7);
+            color: #000;
         }
 
         .script-text-selectable {
@@ -571,33 +587,36 @@
         }
 
         .script-line:hover {
-            background: rgba(210, 180, 140, 0.08);
-            border-radius: 4px;
-            padding: 2px 8px;
-            margin-left: -8px;
-            margin-right: -8px;
+            background: rgba(210, 180, 140, 0.05);
+            border-radius: 3px;
         }
 
-        /* Highlight for SFX descriptions - subtle blue background */
-        .script-action.sfx-highlight {
-            background: rgba(56, 189, 248, 0.1);
-            padding: 4px 8px;
-            border-radius: 4px;
-            margin-left: -8px;
-            margin-right: -8px;
+        /* Tagged Text - Subtle highlights */
+        .tagged {
+            padding: 2px 4px;
+            border-radius: 3px;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s ease;
+            user-select: none;
         }
 
-        /* Highlight for wardrobe - subtle green text */
-        .script-action.wardrobe-highlight,
-        .script-dialogue.wardrobe-highlight {
-            color: #3a9e6f;
-            font-weight: 500;
+        .tagged.makeup { background: rgba(255, 107, 157, 0.2); }
+        .tagged.hair { background: rgba(192, 132, 252, 0.2); }
+        .tagged.sfx { background: rgba(56, 189, 248, 0.2); }
+        .tagged.cast { background: rgba(251, 191, 36, 0.2); }
+        .tagged.wardrobe { background: rgba(52, 211, 153, 0.2); }
+        .tagged.props { background: rgba(251, 146, 60, 0.2); }
+
+        .tagged:hover {
+            filter: brightness(1.2);
+            box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
         }
 
-        /* Text Selection on parchment */
+        /* Text Selection */
         .scene-script-content ::selection {
-            background: rgba(212, 175, 122, 0.25);
-            color: var(--parchment-text);
+            background: rgba(212, 175, 122, 0.3);
+            color: #000;
         }
 
         /* Right Sidebar - liquid glass style */
@@ -1101,24 +1120,19 @@
         }
 
         .raw-script-content {
-            background: 
-                radial-gradient(ellipse at center, transparent 30%, rgba(210, 180, 140, 0.06) 100%),
-                linear-gradient(to bottom, rgba(160, 136, 80, 0.04) 0%, transparent 3%, transparent 97%, rgba(160, 136, 80, 0.04) 100%),
-                #f8f6f0;
-            border: 1px solid rgba(160, 136, 80, 0.15);
-            border-radius: 12px;
-            padding: 48px 64px;
+            background: rgba(248, 246, 240, 0.98);
+            border: 1px solid rgba(160, 136, 80, 0.12);
+            border-radius: 8px;
+            padding: 60px 80px;
             font-family: 'Courier Prime', monospace;
             font-size: 12pt;
-            line-height: 1.8;
+            line-height: 1.5;
             white-space: pre-wrap;
             word-wrap: break-word;
-            color: var(--parchment-text);
-            max-width: 900px;
+            color: #000;
+            max-width: 800px;
             margin: 0 auto;
-            box-shadow: 
-                0 4px 24px rgba(0, 0, 0, 0.15),
-                inset 0 1px 0 rgba(255, 255, 255, 0.4);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
             position: relative;
         }
 
@@ -1130,9 +1144,9 @@
             right: 0;
             bottom: 0;
             background: 
-                radial-gradient(ellipse at 50% 50%, transparent 40%, rgba(160, 136, 80, 0.03) 70%, rgba(160, 136, 80, 0.08) 100%);
+                radial-gradient(ellipse at 50% 50%, transparent 60%, rgba(160, 136, 80, 0.02) 100%);
             pointer-events: none;
-            border-radius: 11px;
+            border-radius: 7px;
         }
     </style>
 </head>
@@ -1718,13 +1732,56 @@ Valid categories: "makeup", "hair", "sfx", "wardrobe", "props", "cast"`;
                     return `<div class="mini-tag" style="background: ${color}; color: ${color}"></div>`;
                 }).join('');
 
+                // Build tag details for expanded view
+                const tagsByCategory = {};
+                confirmedTags.forEach(tag => {
+                    if (!tagsByCategory[tag.category]) {
+                        tagsByCategory[tag.category] = [];
+                    }
+                    tagsByCategory[tag.category].push(tag.description);
+                });
+
+                let tagDetailsHtml = '';
+                Object.keys(tagsByCategory).forEach(category => {
+                    const icons = {
+                        'makeup': { icon: '💄', name: 'Makeup', color: '#ff6b9d' },
+                        'hair': { icon: '✂️', name: 'Hair', color: '#c084fc' },
+                        'sfx': { icon: '🩸', name: 'SFX', color: '#38bdf8' },
+                        'cast': { icon: '👤', name: 'Cast', color: '#fbbf24' },
+                        'wardrobe': { icon: '👔', name: 'Wardrobe', color: '#34d399' },
+                        'props': { icon: '📦', name: 'Props', color: '#fb923c' }
+                    };
+                    const info = icons[category];
+                    
+                    tagDetailsHtml += `
+                        <div style="margin-bottom: 8px;">
+                            <div style="font-weight: 600; color: var(--text-light); margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+                                <span style="color: ${info.color}">${info.icon}</span> ${info.name}
+                            </div>
+                            <div style="padding-left: 22px; color: var(--text-muted); line-height: 1.6;">
+                                ${tagsByCategory[category].map(desc => `
+                                    <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 2px;">
+                                        <div style="width: 4px; height: 4px; border-radius: 50%; background: var(--text-muted); flex-shrink: 0;"></div>
+                                        <span>${escapeHtml(desc)}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                });
+
                 html += `
-                    <div class="scene-nav-item ${index === currentSceneIndex ? 'active' : ''}" 
+                    <div class="scene-nav-item ${index === currentSceneIndex ? 'active' : ''} ${index === 0 ? 'expanded' : ''}" 
                          onclick="selectScene(${index})">
                         <div class="scene-nav-number">Scene ${sceneNumber}</div>
                         <div class="scene-nav-heading">${escapeHtml(scene.heading)}</div>
                         ${confirmedTags.length > 0 ? `<div class="scene-nav-tags">${tagsHtml}</div>` : ''}
                         ${hasAI ? '<div class="ai-status">🤖 AI Suggestions</div>' : ''}
+                        
+                        <div class="scene-details">
+                            <div class="scene-synopsis">Click to add synopsis for this scene...</div>
+                            ${tagDetailsHtml ? `<div style="margin-top: 10px; font-size: 0.95em;">${tagDetailsHtml}</div>` : ''}
+                        </div>
                     </div>
                 `;
             });
@@ -1734,7 +1791,18 @@ Valid categories: "makeup", "hair", "sfx", "wardrobe", "props", "cast"`;
 
         function selectScene(index) {
             currentSceneIndex = index;
-            renderSceneNavigation();
+            
+            // Update active state and expand/collapse
+            document.querySelectorAll('.scene-nav-item').forEach((item, i) => {
+                if (i === index) {
+                    item.classList.add('active');
+                    item.classList.toggle('expanded'); // Toggle expansion on click
+                } else {
+                    item.classList.remove('active');
+                    // Keep other scenes collapsed when selecting a new one
+                }
+            });
+            
             displayScene(index);
             displayTaggingPanel(index);
         }
