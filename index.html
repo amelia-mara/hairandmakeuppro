@@ -921,14 +921,42 @@
 
         // After PDF extraction, normalize the text
         function normalizeScriptText(text) {
-            return text
+            console.log('=== Before Normalization ===');
+            console.log(text.substring(0, 500));
+            
+            let normalized = text;
+            
+            // AGGRESSIVE FIX: Remove spaces between individual characters
+            // This handles "I N T . R O O M" -> "INT. ROOM"
+            // Pattern: match any single char followed by 1-2 spaces, then another single char
+            normalized = normalized.replace(/(\S)\s{1,2}(?=\S)/g, (match, char1, offset, string) => {
+                const nextChar = string[offset + match.length];
+                // If both characters are letters/numbers/punctuation, remove the space
+                if (/[\w\.\,\!\?\-\'\"]/.test(char1) && /[\w\.\,\!\?\-\'\"]/.test(nextChar)) {
+                    return char1;
+                }
+                return match;
+            });
+            
+            // Now intelligently add back spaces between words
+            // Add space before capital letters that start new words (after punctuation or lowercase)
+            normalized = normalized.replace(/([a-z\.\!\?])([A-Z])/g, '$1 $2');
+            
+            // Add space after punctuation if not already there
+            normalized = normalized.replace(/([\.!\?])([A-Za-z])/g, '$1 $2');
+            
+            // Clean up
+            normalized = normalized
                 .replace(/\r\n/g, '\n')  // Normalize line endings
                 .replace(/\r/g, '\n')    // Handle old Mac line endings
-                .replace(/([A-Z]) ([A-Z])/g, '$1$2') // Remove spaces between capital letters
-                .replace(/([A-Z]) ([A-Z])/g, '$1$2') // Run twice to catch overlaps
-                .replace(/([A-Z]) ([A-Z])/g, '$1$2') // Run third time
                 .replace(/\s+\n/g, '\n') // Remove trailing spaces
-                .replace(/\n\s+/g, '\n'); // Remove leading spaces
+                .replace(/\n\s+/g, '\n') // Remove leading spaces  
+                .replace(/\s{3,}/g, '  '); // Collapse 3+ spaces to 2 (preserve some formatting)
+            
+            console.log('=== After Normalization ===');
+            console.log(normalized.substring(0, 500));
+            
+            return normalized;
         }
 
         // Parse PDF and extract text
