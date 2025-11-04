@@ -924,34 +924,31 @@
             console.log('=== Before Normalization ===');
             console.log(text.substring(0, 500));
             
+            // SIMPLE AGGRESSIVE FIX: Just remove single spaces between single characters
+            // Repeat multiple times to catch all patterns
             let normalized = text;
             
-            // AGGRESSIVE FIX: Remove spaces between individual characters
-            // This handles "I N T . R O O M" -> "INT. ROOM"
-            // Pattern: match any single char followed by 1-2 spaces, then another single char
-            normalized = normalized.replace(/(\S)\s{1,2}(?=\S)/g, (match, char1, offset, string) => {
-                const nextChar = string[offset + match.length];
-                // If both characters are letters/numbers/punctuation, remove the space
-                if (/[\w\.\,\!\?\-\'\"]/.test(char1) && /[\w\.\,\!\?\-\'\"]/.test(nextChar)) {
-                    return char1;
-                }
-                return match;
-            });
+            // Remove spaces between letters/numbers, run 10 times to catch all
+            for (let i = 0; i < 10; i++) {
+                // Match: letter/number/punctuation + space + letter/number/punctuation
+                normalized = normalized.replace(/([a-zA-Z0-9\.\,\!\?\-\(\)\*\'\"])\s([a-zA-Z0-9\.\,\!\?\-\(\)\*\'\"])/g, '$1$2');
+            }
             
-            // Now intelligently add back spaces between words
-            // Add space before capital letters that start new words (after punctuation or lowercase)
-            normalized = normalized.replace(/([a-z\.\!\?])([A-Z])/g, '$1 $2');
+            // Now add back proper spacing between words (capital letter after lowercase = new word)
+            normalized = normalized.replace(/([a-z])([A-Z])/g, '$1 $2');
             
-            // Add space after punctuation if not already there
-            normalized = normalized.replace(/([\.!\?])([A-Za-z])/g, '$1 $2');
+            // Add space after periods, question marks, exclamation points
+            normalized = normalized.replace(/([\.!?])([A-Za-z])/g, '$1 $2');
             
-            // Clean up
+            // Add space after closing parenthesis before letter
+            normalized = normalized.replace(/(\))([A-Za-z])/g, '$1 $2');
+            
+            // Clean up line endings
             normalized = normalized
-                .replace(/\r\n/g, '\n')  // Normalize line endings
-                .replace(/\r/g, '\n')    // Handle old Mac line endings
-                .replace(/\s+\n/g, '\n') // Remove trailing spaces
-                .replace(/\n\s+/g, '\n') // Remove leading spaces  
-                .replace(/\s{3,}/g, '  '); // Collapse 3+ spaces to 2 (preserve some formatting)
+                .replace(/\r\n/g, '\n')
+                .replace(/\r/g, '\n')
+                .replace(/\s+\n/g, '\n')
+                .replace(/\n\s+/g, '\n');
             
             console.log('=== After Normalization ===');
             console.log(normalized.substring(0, 500));
@@ -986,7 +983,33 @@
                     sortedYPositions.forEach(y => {
                         // Sort items in line by X position (left to right)
                         const lineItems = lines[y].sort((a, b) => a.transform[4] - b.transform[4]);
-                        const lineText = lineItems.map(item => item.str).join('');
+                        
+                        // Build line text with intelligent spacing
+                        let lineText = '';
+                        for (let i = 0; i < lineItems.length; i++) {
+                            const item = lineItems[i];
+                            const nextItem = lineItems[i + 1];
+                            
+                            // Add current item's text
+                            lineText += item.str;
+                            
+                            // Determine if we need a space before next item
+                            if (nextItem) {
+                                const currentX = item.transform[4];
+                                const currentWidth = item.width;
+                                const nextX = nextItem.transform[4];
+                                
+                                // Calculate gap between this item and next
+                                const gap = nextX - (currentX + currentWidth);
+                                
+                                // If gap is significant (more than half the width of current item), add space
+                                // This threshold helps distinguish between character spacing and word spacing
+                                if (gap > currentWidth * 0.3) {
+                                    lineText += ' ';
+                                }
+                            }
+                        }
+                        
                         fullText += lineText.trim() + '\n';
                     });
                     
