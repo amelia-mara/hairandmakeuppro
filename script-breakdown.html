@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Script Breakdown - AI Enhanced</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -165,6 +166,161 @@
 
         .toolbar-btn.ai:hover:not(:disabled) {
             background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+        }
+
+        /* View Mode Toggle */
+        .view-mode-toggle {
+            display: flex;
+            gap: 4px;
+            background: rgba(13, 11, 10, 0.5);
+            padding: 4px;
+            border-radius: 6px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .view-mode-btn {
+            padding: 6px 12px;
+            background: transparent;
+            border: none;
+            border-radius: 4px;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 0.8125em;
+            transition: all 0.2s ease;
+        }
+
+        .view-mode-btn:hover:not(.active) {
+            color: var(--text-light);
+            background: rgba(201, 169, 97, 0.05);
+        }
+
+        .view-mode-btn.active {
+            background: var(--accent-gold);
+            color: var(--bg-dark);
+            font-weight: 600;
+        }
+
+        /* Script Status Banner */
+        .script-status-banner {
+            background: linear-gradient(135deg, rgba(82, 193, 134, 0.15), rgba(52, 211, 153, 0.15));
+            border: 1px solid rgba(82, 193, 134, 0.3);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin: 16px 48px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.875em;
+        }
+
+        .script-status-banner.error {
+            background: linear-gradient(135deg, rgba(255, 107, 107, 0.15), rgba(239, 68, 68, 0.15));
+            border-color: rgba(255, 107, 107, 0.3);
+        }
+
+        .script-status-banner .icon {
+            font-size: 1.5em;
+        }
+
+        .script-status-info {
+            flex: 1;
+        }
+
+        .script-status-title {
+            font-weight: 600;
+            color: var(--text-light);
+            margin-bottom: 2px;
+        }
+
+        .script-status-details {
+            color: var(--text-muted);
+            font-size: 0.9em;
+        }
+
+        /* PDF Viewer */
+        .pdf-viewer-container {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            padding: 24px;
+            gap: 16px;
+            overflow-y: auto;
+        }
+
+        .pdf-viewer-container.active {
+            display: flex;
+        }
+
+        .pdf-controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            padding: 12px 20px;
+            background: var(--card-bg);
+            border-radius: 8px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .pdf-nav-btn {
+            padding: 6px 12px;
+            background: rgba(13, 11, 10, 0.5);
+            border: 1px solid var(--glass-border);
+            border-radius: 4px;
+            color: var(--text-light);
+            cursor: pointer;
+            font-size: 0.8125em;
+            transition: all 0.2s ease;
+        }
+
+        .pdf-nav-btn:hover:not(:disabled) {
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+        }
+
+        .pdf-nav-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .pdf-page-info {
+            color: var(--text-light);
+            font-size: 0.875em;
+            min-width: 100px;
+            text-align: center;
+        }
+
+        .pdf-canvas {
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            max-width: 100%;
+            height: auto;
+        }
+
+        /* Raw Script View */
+        .raw-script-container {
+            display: none;
+            padding: 32px 48px;
+            overflow-y: auto;
+        }
+
+        .raw-script-container.active {
+            display: block;
+        }
+
+        .raw-script-content {
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 32px;
+            font-family: 'Courier Prime', monospace;
+            font-size: 12pt;
+            line-height: 1.8;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            color: var(--text-light);
+            max-width: 900px;
+            margin: 0 auto;
         }
 
         /* Main Content */
@@ -836,6 +992,18 @@
                 </div>
             </div>
 
+            <div class="view-mode-toggle" id="viewModeToggle" style="display: none;">
+                <button class="view-mode-btn active" onclick="switchViewMode('scenes')" id="viewModeScenes">
+                    📋 Scenes
+                </button>
+                <button class="view-mode-btn" onclick="switchViewMode('raw')" id="viewModeRaw">
+                    📄 Full Script
+                </button>
+                <button class="view-mode-btn" onclick="switchViewMode('pdf')" id="viewModePdf" style="display: none;">
+                    📕 PDF
+                </button>
+            </div>
+
             <div class="top-bar-actions">
                 <button class="toolbar-btn ai" onclick="runAIAnalysis()" id="aiBtn">
                     🤖 AI Auto-Tag All Scenes
@@ -868,12 +1036,33 @@
 
             <!-- Center Panel - Scene Content -->
             <div class="center-panel">
+                <!-- Script Status Banner -->
+                <div id="scriptStatusBanner" style="display: none;"></div>
+
+                <!-- Scene Display (default view) -->
                 <div class="scene-display" id="sceneDisplay">
                     <div class="empty-state">
                         <div class="empty-state-icon">🎬</div>
                         <h3>Select a Scene</h3>
                         <p>Choose a scene from the left sidebar to start tagging</p>
                     </div>
+                </div>
+
+                <!-- Raw Script View -->
+                <div class="raw-script-container" id="rawScriptContainer">
+                    <div class="raw-script-content" id="rawScriptContent"></div>
+                </div>
+
+                <!-- PDF Viewer -->
+                <div class="pdf-viewer-container" id="pdfViewerContainer">
+                    <div class="pdf-controls">
+                        <button class="pdf-nav-btn" onclick="prevPDFPage()" id="pdfPrevBtn">← Previous</button>
+                        <div class="pdf-page-info">
+                            Page <span id="pdfPageNum">1</span> of <span id="pdfPageCount">0</span>
+                        </div>
+                        <button class="pdf-nav-btn" onclick="nextPDFPage()" id="pdfNextBtn">Next →</button>
+                    </div>
+                    <canvas id="pdfCanvas" class="pdf-canvas"></canvas>
                 </div>
             </div>
 
@@ -958,6 +1147,18 @@
         let aiProvider = 'openai';
         let apiKey = '';
 
+        // PDF viewing state
+        let currentViewMode = 'scenes'; // 'scenes', 'raw', or 'pdf'
+        let pdfDoc = null;
+        let pdfPageNum = 1;
+        let pdfScale = 1.5;
+        let pdfData = null;
+
+        // Initialize PDF.js worker
+        if (typeof pdfjsLib !== 'undefined') {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+
         // ============================================
         // INITIALIZATION
         // ============================================
@@ -975,51 +1176,252 @@
 
         function loadProjectScript() {
             currentProject = JSON.parse(localStorage.getItem('currentProject') || 'null');
-            
+
             if (!currentProject) {
-                alert('No project loaded');
-                window.location.href = 'index.html';
+                showScriptStatusBanner('error', 'No Project Loaded', 'Please select a project from the dashboard.');
+                setTimeout(() => window.location.href = 'index.html', 2000);
                 return;
             }
 
             if (!currentProject.scriptContent) {
-                alert('No script content found in project');
-                window.location.href = 'dashboard.html';
+                showScriptStatusBanner('error', 'No Script Found', 'This project does not have a script. Please upload a script first.');
+                console.error('No script content in project');
                 return;
             }
 
             scriptText = currentProject.scriptContent;
-            
+
+            // Show script loaded status
+            const scriptLength = scriptText.length;
+            const scriptName = currentProject.scriptName || 'Script';
+            showScriptStatusBanner('success', 'Script Loaded Successfully',
+                `${scriptName} • ${scriptLength.toLocaleString()} characters • ${Math.ceil(scriptLength / 250)} estimated pages`);
+
+            // Check if this was a PDF and if we have the original PDF data
+            const isPDF = currentProject.scriptName && currentProject.scriptName.toLowerCase().endsWith('.pdf');
+            if (isPDF) {
+                // Try to load PDF from localStorage or project
+                const pdfDataStored = localStorage.getItem(`${currentProject.code}_pdfData`);
+                if (pdfDataStored) {
+                    pdfData = pdfDataStored;
+                    document.getElementById('viewModePdf').style.display = 'inline-block';
+                    console.log('✓ PDF data available for viewing');
+                }
+            }
+
+            // Show view mode toggle
+            document.getElementById('viewModeToggle').style.display = 'flex';
+
             // Load existing data if available
             scenes = currentProject.scenes || [];
             sceneTags = currentProject.sceneTags || {};
             sceneNotes = currentProject.sceneNotes || {};
-            
+
             // If no scenes detected yet, detect them
             if (scenes.length === 0) {
+                console.log('No scenes detected, running detection...');
                 detectScenes();
             }
-            
+
+            // Always show raw script content
+            displayRawScript();
+
             renderSceneNavigation();
-            
-            // Auto-select first scene
+
+            // Auto-select first scene if scenes exist
             if (scenes.length > 0) {
                 selectScene(0);
+            } else {
+                console.warn('No scenes detected in script. You can still view the full script.');
+                showScriptStatusBanner('warning', 'No Scenes Detected',
+                    'Could not detect scene headings. Use "Full Script" view to see the raw text, or check if the script format is correct (should have INT./EXT. scene headings).');
             }
-            
+
             // Check if AI has been run
-            const hasAITags = Object.values(sceneTags).some(tags => 
+            const hasAITags = Object.values(sceneTags).some(tags =>
                 tags.some(tag => tag.aiSuggested)
             );
-            
+
             if (hasAITags) {
                 updateWorkflowStep('review');
             }
-            
+
             updateGenerateButton();
-            
+
             console.log('✓ Project loaded:', currentProject.title);
-            console.log('✓ Scenes:', scenes.length);
+            console.log('✓ Script text length:', scriptText.length);
+            console.log('✓ Scenes detected:', scenes.length);
+        }
+
+        // ============================================
+        // VIEW MODE SWITCHING
+        // ============================================
+
+        function switchViewMode(mode) {
+            currentViewMode = mode;
+
+            // Update button states
+            document.getElementById('viewModeScenes').classList.remove('active');
+            document.getElementById('viewModeRaw').classList.remove('active');
+            document.getElementById('viewModePdf').classList.remove('active');
+
+            // Hide all views
+            document.getElementById('sceneDisplay').style.display = 'none';
+            document.getElementById('rawScriptContainer').classList.remove('active');
+            document.getElementById('pdfViewerContainer').classList.remove('active');
+
+            // Show selected view
+            if (mode === 'scenes') {
+                document.getElementById('viewModeScenes').classList.add('active');
+                document.getElementById('sceneDisplay').style.display = 'block';
+                if (scenes.length > 0 && currentSceneIndex >= 0) {
+                    displayScene(currentSceneIndex);
+                }
+            } else if (mode === 'raw') {
+                document.getElementById('viewModeRaw').classList.add('active');
+                document.getElementById('rawScriptContainer').classList.add('active');
+                displayRawScript();
+            } else if (mode === 'pdf') {
+                document.getElementById('viewModePdf').classList.add('active');
+                document.getElementById('pdfViewerContainer').classList.add('active');
+                loadAndRenderPDF();
+            }
+
+            console.log('Switched to view mode:', mode);
+        }
+
+        function displayRawScript() {
+            const container = document.getElementById('rawScriptContent');
+            if (scriptText) {
+                container.textContent = scriptText;
+            } else {
+                container.textContent = 'No script content available.';
+            }
+        }
+
+        // ============================================
+        // SCRIPT STATUS BANNER
+        // ============================================
+
+        function showScriptStatusBanner(type, title, details) {
+            const banner = document.getElementById('scriptStatusBanner');
+            const iconMap = {
+                success: '✓',
+                error: '⚠',
+                warning: '⚠'
+            };
+
+            const html = `
+                <div class="script-status-banner ${type === 'error' || type === 'warning' ? 'error' : ''}">
+                    <div class="icon">${iconMap[type] || '📄'}</div>
+                    <div class="script-status-info">
+                        <div class="script-status-title">${title}</div>
+                        <div class="script-status-details">${details}</div>
+                    </div>
+                </div>
+            `;
+
+            banner.innerHTML = html;
+            banner.style.display = 'block';
+
+            // Auto-hide success messages after 10 seconds
+            if (type === 'success') {
+                setTimeout(() => {
+                    banner.style.display = 'none';
+                }, 10000);
+            }
+        }
+
+        // ============================================
+        // PDF VIEWING
+        // ============================================
+
+        async function loadAndRenderPDF() {
+            if (pdfDoc) {
+                // Already loaded, just render current page
+                renderPDFPage(pdfPageNum);
+                return;
+            }
+
+            if (!pdfData) {
+                document.getElementById('pdfViewerContainer').innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📕</div>
+                        <h3>PDF Not Available</h3>
+                        <p>The original PDF file is not stored. You can view the extracted text in "Full Script" mode.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            try {
+                showLoading('Loading PDF...', 'Please wait');
+
+                // Load PDF
+                const loadingTask = pdfjsLib.getDocument({ data: atob(pdfData) });
+                pdfDoc = await loadingTask.promise;
+
+                document.getElementById('pdfPageCount').textContent = pdfDoc.numPages;
+
+                hideLoading();
+                renderPDFPage(pdfPageNum);
+
+                console.log('✓ PDF loaded:', pdfDoc.numPages, 'pages');
+            } catch (error) {
+                hideLoading();
+                console.error('Error loading PDF:', error);
+                document.getElementById('pdfViewerContainer').innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">⚠</div>
+                        <h3>Error Loading PDF</h3>
+                        <p>Could not load the PDF file. Please try viewing the "Full Script" instead.</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function renderPDFPage(num) {
+            if (!pdfDoc) return;
+
+            try {
+                const page = await pdfDoc.getPage(num);
+                const canvas = document.getElementById('pdfCanvas');
+                const ctx = canvas.getContext('2d');
+
+                const viewport = page.getViewport({ scale: pdfScale });
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+
+                const renderContext = {
+                    canvasContext: ctx,
+                    viewport: viewport
+                };
+
+                await page.render(renderContext).promise;
+
+                pdfPageNum = num;
+                document.getElementById('pdfPageNum').textContent = num;
+
+                // Update button states
+                document.getElementById('pdfPrevBtn').disabled = (num <= 1);
+                document.getElementById('pdfNextBtn').disabled = (num >= pdfDoc.numPages);
+
+                console.log('✓ Rendered PDF page:', num);
+            } catch (error) {
+                console.error('Error rendering PDF page:', error);
+            }
+        }
+
+        function prevPDFPage() {
+            if (pdfPageNum <= 1) return;
+            pdfPageNum--;
+            renderPDFPage(pdfPageNum);
+        }
+
+        function nextPDFPage() {
+            if (!pdfDoc || pdfPageNum >= pdfDoc.numPages) return;
+            pdfPageNum++;
+            renderPDFPage(pdfPageNum);
         }
 
         function setupEventListeners() {
