@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Projects - Checks Happy</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -867,6 +868,34 @@
             });
         }
 
+        // Initialize PDF.js worker
+        if (typeof pdfjsLib !== 'undefined') {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+
+        // Parse PDF and extract text
+        async function parsePDF(file) {
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                
+                let fullText = '';
+                
+                // Extract text from each page
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+                    const pageText = textContent.items.map(item => item.str).join(' ');
+                    fullText += pageText + '\n';
+                }
+                
+                return fullText;
+            } catch (error) {
+                console.error('Error parsing PDF:', error);
+                throw error;
+            }
+        }
+
         function handleScriptUpload(event) {
             const file = event.target.files[0];
             if (file) {
@@ -885,19 +914,41 @@
                 
                 console.log('File selected:', file.name, 'Type:', file.type, 'Size:', file.size);
                 
-                // Check if it's a PDF
+                // Handle PDF files
                 if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
-                    scriptLoading = false;
-                    scriptLoaded = false;
-                    fileNameElement.textContent = `⚠️ ${file.name} - PDF not supported yet`;
-                    fileNameElement.style.color = '#e8a87c';
-                    alert('PDF scripts cannot be parsed yet.\n\nPlease convert your script to .txt or .fountain format:\n\n1. Open PDF\n2. Select All text (Ctrl/Cmd + A)\n3. Copy (Ctrl/Cmd + C)\n4. Paste into a new text file\n5. Save as .txt\n\nThen upload the .txt file instead.');
-                    document.querySelector('input[type="file"]').value = '';
-                    uploadedScript = null;
+                    console.log('PDF detected, parsing...');
+                    fileNameElement.textContent = `📄 ${file.name} - Extracting text from PDF...`;
+                    
+                    parsePDF(file)
+                        .then(scriptContent => {
+                            console.log('✓ PDF parsed, length:', scriptContent.length);
+                            console.log('First 200 chars:', scriptContent.substring(0, 200));
+                            
+                            // Store script content in localStorage
+                            localStorage.setItem('uploadedScriptContent', scriptContent);
+                            localStorage.setItem('uploadedScriptName', file.name);
+                            
+                            scriptLoading = false;
+                            scriptLoaded = true;
+                            
+                            fileNameElement.textContent = `✓ ${file.name} - PDF parsed successfully!`;
+                            fileNameElement.style.color = '#52c186';
+                            
+                            console.log('✓ PDF script stored in localStorage');
+                        })
+                        .catch(error => {
+                            scriptLoading = false;
+                            scriptLoaded = false;
+                            fileNameElement.textContent = `❌ ${file.name} - Error parsing PDF`;
+                            fileNameElement.style.color = '#ff6b6b';
+                            console.error('PDF parsing error:', error);
+                            alert('Error parsing PDF. The file may be corrupted or password-protected. Try saving as a new PDF or converting to .txt format.');
+                        });
+                    
                     return;
                 }
                 
-                // Read script content - support various text file types
+                // Read text files (txt, fountain, fdx)
                 const isTextFile = file.type === 'text/plain' || 
                                    file.type === '' || // Some text files have no mime type
                                    file.name.endsWith('.txt') || 
@@ -941,7 +992,7 @@
                     fileNameElement.textContent = `❌ ${file.name} - Unsupported format`;
                     fileNameElement.style.color = '#ff6b6b';
                     console.log('Unsupported file type:', file.type);
-                    alert('Please upload a .txt, .fountain, or .fdx script file.');
+                    alert('Please upload a .txt, .fountain, .fdx, or .pdf script file.');
                 }
             }
         }
