@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Breakdown: Haunted Hearts - Generate</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Courier+Prime:wght@400&display=swap" rel="stylesheet">
+    <title>Script Breakdown - Haunted Hearts</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -15,24 +15,206 @@
         :root {
             --bg-dark: #0d0b0a;
             --bg-medium: rgba(26, 22, 18, 0.7);
-            --card-bg: rgba(36, 32, 25, 0.6);
+            --card-bg: #242019;
             --text-light: #e8e6e3;
             --text-muted: #8a7f73;
             --accent-gold: #c9a961;
             --border: rgba(45, 41, 37, 0.5);
-            --divider: rgba(54, 51, 48, 0.5);
             --glass-border: rgba(255, 255, 255, 0.08);
-            
-            /* Department Colors */
-            --col-hair: rgba(255, 193, 7, 0.15);
-            --col-makeup: rgba(255, 107, 157, 0.15);
-            --col-sfx: rgba(239, 68, 68, 0.15);
-            --col-wardrobe: rgba(52, 211, 153, 0.15);
-            
-            /* Status Colors */
-            --success: #52c186;
-            --warning: #e8a87c;
-            --error: #ef4444;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0d0b0a 0%, #1a1612 50%, #0d0b0a 100%);
+            color: var(--text-light);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* Top Bar */
+        .top-bar {
+            height: 60px;
+            background: var(--bg-medium);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+        }
+
+        .top-bar-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .back-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.875em;
+            transition: color 0.2s;
+        }
+
+        .back-link:hover {
+            color: var(--accent-gold);
+        }
+
+        .page-title {
+            font-size: 1.125em;
+            font-weight: 600;
+        }
+
+        .top-bar-right {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 0.8125em;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+        }
+
+        .btn-primary {
+            background: var(--accent-gold);
+            border-color: var(--accent-gold);
+            color: var(--bg-dark);
+        }
+
+        .btn-primary:hover {
+            background: #d4b16d;
+        }
+
+        /* Sheet Container */
+        .sheet-container {
+            flex: 1;
+            overflow: auto;
+            background: var(--card-bg);
+        }
+
+        /* Spreadsheet Table */
+        .breakdown-sheet {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8125em;
+            table-layout: fixed;
+        }
+
+        .breakdown-sheet th,
+        .breakdown-sheet td {
+            border: 1px solid var(--border);
+            padding: 8px 10px;
+            text-align: left;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .breakdown-sheet th {
+            background: var(--bg-medium);
+            backdrop-filter: blur(20px);
+            font-weight: 600;
+            font-size: 0.75em;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        /* Column widths */
+        .col-scene { width: 60px; }
+        .col-character { width: 130px; }
+        .col-day { width: 90px; }
+        .col-time { width: 80px; }
+        .col-int-ext { width: 70px; }
+        .col-location { width: 150px; }
+        .col-synopsis { width: 250px; }
+        .col-hair { width: 180px; background: rgba(201, 169, 97, 0.05); }
+        .col-makeup { width: 180px; background: rgba(255, 107, 157, 0.05); }
+        .col-sfx { width: 180px; background: rgba(239, 68, 68, 0.05); }
+        .col-wardrobe { width: 180px; background: rgba(52, 211, 153, 0.05); }
+        .col-notes { width: 200px; }
+
+        /* Editable cells */
+        .breakdown-sheet td {
+            background: var(--card-bg);
+        }
+
+        .breakdown-sheet td[contenteditable="true"] {
+            cursor: text;
+        }
+
+        .breakdown-sheet td[contenteditable="true"]:hover {
+            background: rgba(201, 169, 97, 0.05);
+        }
+
+        .breakdown-sheet td[contenteditable="true"]:focus {
+            outline: 2px solid var(--accent-gold);
+            background: rgba(201, 169, 97, 0.08);
+        }
+
+        /* Scene grouping */
+        tr.scene-header {
+            background: rgba(201, 169, 97, 0.1);
+        }
+
+        tr.scene-header td {
+            font-weight: 600;
+            background: rgba(201, 169, 97, 0.1);
+        }
+
+        /* Empty placeholder */
+        .empty-cell {
+            color: var(--text-muted);
+            font-style: italic;
+            opacity: 0.5;
+        }
+
+        /* Scene badge */
+        .scene-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7em;
+            font-weight: 600;
+        }
+
+        .int-day {
+            background: rgba(255, 193, 7, 0.2);
+            color: #fbbf24;
+        }
+
+        .int-night {
+            background: rgba(63, 81, 181, 0.2);
+            color: #5c6bc0;
+        }
+
+        .ext-day {
+            background: rgba(76, 175, 80, 0.2);
+            color: #66bb6a;
+        }
+
+        .ext-night {
+            background: rgba(103, 58, 183, 0.2);
+            color: #9575cd;
         }
 
         /* Scrollbar */
@@ -49,1245 +231,356 @@
             background: rgba(138, 127, 115, 0.4);
             border-radius: 5px;
         }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: rgba(138, 127, 115, 0.6);
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, #0d0b0a 0%, #1a1612 50%, #0d0b0a 100%);
-            color: var(--text-light);
-            height: 100vh;
-            overflow: hidden;
-        }
-
-        /* Layout */
-        .app-layout {
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-        }
-
-        /* Top Bar */
-        .top-bar {
-            height: 64px;
-            background: var(--bg-medium);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-bottom: 1px solid var(--glass-border);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 24px;
-            flex-shrink: 0;
-            z-index: 100;
-        }
-
-        .top-bar-left {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-        }
-
-        .back-link {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: var(--text-muted);
-            text-decoration: none;
-            font-size: 0.875em;
-            transition: color 0.2s ease;
-        }
-
-        .back-link:hover {
-            color: var(--accent-gold);
-        }
-
-        .page-title {
-            font-size: 1.25em;
-            font-weight: 600;
-            letter-spacing: -0.02em;
-        }
-
-        .title-separator {
-            width: 1px;
-            height: 24px;
-            background: var(--divider);
-        }
-
-        .project-code {
-            font-size: 0.875em;
-            color: var(--text-muted);
-        }
-
-        .top-bar-actions {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-        }
-
-        .toolbar-btn {
-            padding: 8px 16px;
-            background: transparent;
-            border: 1px solid var(--glass-border);
-            border-radius: 6px;
-            color: var(--text-muted);
-            cursor: pointer;
-            font-size: 0.8125em;
-            font-weight: 500;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .toolbar-btn:hover {
-            border-color: var(--accent-gold);
-            color: var(--accent-gold);
-            background: rgba(201, 169, 97, 0.05);
-        }
-
-        .toolbar-btn.primary {
-            background: var(--accent-gold);
-            border-color: var(--accent-gold);
-            color: var(--bg-dark);
-        }
-
-        .toolbar-btn.primary:hover {
-            background: #d4b16d;
-        }
-
-        .toolbar-btn.danger {
-            border-color: var(--error);
-            color: var(--error);
-        }
-
-        .toolbar-btn.danger:hover {
-            background: rgba(239, 68, 68, 0.1);
-        }
-
-        /* Secondary Toolbar */
-        .secondary-toolbar {
-            height: 52px;
-            background: var(--card-bg);
-            backdrop-filter: blur(20px);
-            border-bottom: 1px solid var(--glass-border);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 24px;
-            flex-shrink: 0;
-        }
-
-        .toolbar-left {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-        }
-
-        .filter-group {
-            display: flex;
-            gap: 4px;
-            align-items: center;
-        }
-
-        .filter-label {
-            font-size: 0.75em;
-            color: var(--text-muted);
-            margin-right: 4px;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            font-weight: 600;
-        }
-
-        .filter-btn {
-            padding: 6px 12px;
-            background: transparent;
-            border: 1px solid var(--glass-border);
-            border-radius: 6px;
-            color: var(--text-muted);
-            cursor: pointer;
-            font-size: 0.75em;
-            transition: all 0.2s ease;
-            font-weight: 500;
-        }
-
-        .filter-btn:hover {
-            border-color: var(--accent-gold);
-            color: var(--text-light);
-        }
-
-        .filter-btn.active {
-            background: var(--accent-gold);
-            border-color: var(--accent-gold);
-            color: var(--bg-dark);
-        }
-
-        .search-box {
-            padding: 6px 12px;
-            background: rgba(13, 11, 10, 0.5);
-            border: 1px solid var(--glass-border);
-            border-radius: 6px;
-            color: var(--text-light);
-            font-size: 0.8125em;
-            width: 200px;
-            transition: all 0.2s ease;
-        }
-
-        .search-box:focus {
-            outline: none;
-            border-color: var(--accent-gold);
-            width: 280px;
-        }
-
-        .view-options {
-            display: flex;
-            gap: 8px;
-        }
-
-        .icon-btn {
-            width: 32px;
-            height: 32px;
-            background: transparent;
-            border: 1px solid var(--glass-border);
-            border-radius: 6px;
-            color: var(--text-muted);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s ease;
-        }
-
-        .icon-btn:hover {
-            border-color: var(--accent-gold);
-            color: var(--accent-gold);
-        }
-
-        .icon-btn.active {
-            background: var(--accent-gold);
-            border-color: var(--accent-gold);
-            color: var(--bg-dark);
-        }
-
-        /* Main Content Area */
-        .main-content {
-            display: flex;
-            flex: 1;
-            overflow: hidden;
-        }
-
-        /* Table Container */
-        .table-container {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            background: rgba(232, 230, 227, 0.02);
-        }
-
-        .table-wrapper {
-            flex: 1;
-            overflow: auto;
-            position: relative;
-        }
-
-        /* Breakdown Table */
-        .breakdown-table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-            font-size: 0.8125em;
-        }
-
-        .breakdown-table thead {
-            position: sticky;
-            top: 0;
-            z-index: 10;
-            background: var(--bg-medium);
-            backdrop-filter: blur(20px);
-        }
-
-        .breakdown-table th {
-            padding: 12px 16px;
-            text-align: left;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            font-size: 0.75em;
-            color: var(--text-muted);
-            border-bottom: 2px solid var(--glass-border);
-            white-space: nowrap;
-            position: relative;
-        }
-
-        .breakdown-table th:first-child,
-        .breakdown-table th:nth-child(2) {
-            position: sticky;
-            left: 0;
-            z-index: 11;
-            background: var(--bg-medium);
-        }
-
-        .breakdown-table th:nth-child(2) {
-            left: 80px;
-        }
-
-        /* Column specific styles */
-        .col-scene {
-            width: 80px;
-            min-width: 80px;
-        }
-
-        .col-character {
-            width: 140px;
-            min-width: 140px;
-        }
-
-        .col-story-day {
-            width: 120px;
-            min-width: 120px;
-        }
-
-        .col-location {
-            width: 180px;
-            min-width: 180px;
-        }
-
-        .col-synopsis {
-            width: 300px;
-            min-width: 300px;
-        }
-
-        .col-hair {
-            width: 200px;
-            min-width: 200px;
-            background: var(--col-hair);
-        }
-
-        .col-makeup {
-            width: 200px;
-            min-width: 200px;
-            background: var(--col-makeup);
-        }
-
-        .col-sfx {
-            width: 200px;
-            min-width: 200px;
-            background: var(--col-sfx);
-        }
-
-        .col-wardrobe {
-            width: 200px;
-            min-width: 200px;
-            background: var(--col-wardrobe);
-        }
-
-        /* Table Body */
-        .breakdown-table tbody tr {
-            border-bottom: 1px solid var(--glass-border);
-            transition: background 0.15s ease;
-        }
-
-        .breakdown-table tbody tr:hover {
-            background: rgba(201, 169, 97, 0.05);
-        }
-
-        .breakdown-table tbody tr.scene-group-start {
-            background: rgba(212, 196, 168, 0.08);
-        }
-
-        .breakdown-table tbody tr.scene-group-start:hover {
-            background: rgba(212, 196, 168, 0.12);
-        }
-
-        .breakdown-table td {
-            padding: 12px 16px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-            vertical-align: top;
-            position: relative;
-        }
-
-        .breakdown-table td:first-child,
-        .breakdown-table td:nth-child(2) {
-            position: sticky;
-            left: 0;
-            background: inherit;
-            z-index: 5;
-        }
-
-        .breakdown-table td:nth-child(2) {
-            left: 80px;
-        }
-
-        .breakdown-table tbody tr:hover td:first-child,
-        .breakdown-table tbody tr:hover td:nth-child(2) {
-            background: rgba(201, 169, 97, 0.05);
-        }
-
-        .breakdown-table tbody tr.scene-group-start:hover td:first-child,
-        .breakdown-table tbody tr.scene-group-start:hover td:nth-child(2) {
-            background: rgba(212, 196, 168, 0.12);
-        }
-
-        /* Scene Number Cell */
-        .scene-number-cell {
-            text-align: center;
-            font-weight: 600;
-            color: var(--accent-gold);
-        }
-
-        .scene-collapse-btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 20px;
-            height: 20px;
-            background: var(--accent-gold);
-            color: var(--bg-dark);
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.9em;
-            transition: all 0.2s ease;
-            border: none;
-        }
-
-        .scene-collapse-btn:hover {
-            background: #d4b16d;
-            transform: scale(1.1);
-        }
-
-        /* Editable Cell */
-        .editable-cell {
-            min-height: 20px;
-            padding: 4px;
-            border-radius: 4px;
-            cursor: text;
-            transition: all 0.15s ease;
-            position: relative;
-        }
-
-        .editable-cell:hover {
-            background: rgba(255, 255, 255, 0.05);
-            outline: 1px solid var(--glass-border);
-        }
-
-        .editable-cell:focus {
-            outline: 2px solid var(--accent-gold);
-            background: rgba(201, 169, 97, 0.08);
-        }
-
-        .editable-cell[contenteditable="true"]:empty:before {
-            content: attr(data-placeholder);
-            color: var(--text-muted);
-            font-style: italic;
-            opacity: 0.5;
-        }
-
-        /* AI Source Indicator */
-        .ai-source {
-            position: absolute;
-            top: 4px;
-            right: 4px;
-            width: 6px;
-            height: 6px;
-            background: var(--accent-gold);
-            border-radius: 50%;
-            opacity: 0;
-            transition: opacity 0.2s ease;
-            cursor: help;
-        }
-
-        .editable-cell:hover .ai-source {
-            opacity: 0.6;
-        }
-
-        .ai-source.high-confidence {
-            background: var(--success);
-        }
-
-        .ai-source.medium-confidence {
-            background: var(--warning);
-        }
-
-        .ai-source.low-confidence {
-            background: var(--error);
-        }
-
-        /* Tooltip */
-        .tooltip {
-            position: absolute;
-            bottom: 100%;
-            left: 50%;
-            transform: translateX(-50%) translateY(-8px);
-            background: var(--bg-medium);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--glass-border);
-            border-radius: 8px;
-            padding: 12px 16px;
-            font-size: 0.75em;
-            white-space: nowrap;
-            z-index: 1000;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.2s ease;
-            max-width: 300px;
-            white-space: normal;
-        }
-
-        .ai-source:hover + .tooltip {
-            opacity: 1;
-        }
-
-        .tooltip-title {
-            font-weight: 600;
-            margin-bottom: 4px;
-            color: var(--accent-gold);
-        }
-
-        .tooltip-text {
-            color: var(--text-muted);
-            line-height: 1.4;
-        }
-
-        .tooltip-confidence {
-            margin-top: 8px;
-            padding-top: 8px;
-            border-top: 1px solid var(--glass-border);
-            font-size: 0.9em;
-        }
-
-        /* Scene Type Badge */
-        .scene-type-badge {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 0.75em;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .scene-type-badge.int-day {
-            background: rgba(255, 193, 7, 0.2);
-            color: #fbbf24;
-        }
-
-        .scene-type-badge.int-night {
-            background: rgba(63, 81, 181, 0.2);
-            color: #5c6bc0;
-        }
-
-        .scene-type-badge.ext-day {
-            background: rgba(76, 175, 80, 0.2);
-            color: #66bb6a;
-        }
-
-        .scene-type-badge.ext-night {
-            background: rgba(103, 58, 183, 0.2);
-            color: #9575cd;
-        }
-
-        /* Continuity Warning */
-        .continuity-warning {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            padding: 2px 6px;
-            background: rgba(239, 68, 68, 0.15);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-            border-radius: 4px;
-            color: var(--error);
-            font-size: 0.7em;
-            margin-left: 8px;
-            cursor: help;
-        }
-
-        /* Right Sidebar - AI Tools */
-        .right-sidebar {
-            width: 320px;
-            background: var(--bg-medium);
-            backdrop-filter: blur(20px);
-            border-left: 1px solid var(--glass-border);
-            display: flex;
-            flex-direction: column;
-            overflow-y: auto;
-            transition: width 0.3s ease;
-        }
-
-        .right-sidebar.collapsed {
-            width: 0;
-            overflow: hidden;
-        }
-
-        .sidebar-section {
-            padding: 20px;
-            border-bottom: 1px solid var(--glass-border);
-        }
-
-        .sidebar-title {
-            font-size: 0.875em;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: var(--text-muted);
-            margin-bottom: 16px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .sidebar-btn {
-            width: 100%;
-            padding: 10px 14px;
-            background: var(--card-bg);
-            border: 1px solid var(--glass-border);
-            border-radius: 6px;
-            color: var(--text-light);
-            cursor: pointer;
-            font-size: 0.8125em;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 8px;
-            text-align: left;
-        }
-
-        .sidebar-btn:hover {
-            border-color: var(--accent-gold);
-            background: rgba(201, 169, 97, 0.08);
-        }
-
-        .sidebar-btn:active {
-            transform: scale(0.98);
-        }
-
-        .sidebar-stat {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 0;
-            font-size: 0.8125em;
-        }
-
-        .sidebar-stat-label {
-            color: var(--text-muted);
-        }
-
-        .sidebar-stat-value {
-            font-weight: 600;
-            color: var(--text-light);
-        }
-
-        .chair-time-estimate {
-            background: rgba(201, 169, 97, 0.1);
-            border: 1px solid var(--accent-gold);
-            border-radius: 6px;
-            padding: 12px;
-            margin-top: 12px;
-        }
-
-        .chair-time-title {
-            font-size: 0.75em;
-            color: var(--text-muted);
-            margin-bottom: 8px;
-        }
-
-        .chair-time-value {
-            font-size: 1.5em;
-            font-weight: 600;
-            color: var(--accent-gold);
-        }
-
-        /* Bottom Toolbar */
-        .bottom-toolbar {
-            height: 56px;
-            background: var(--bg-medium);
-            backdrop-filter: blur(20px);
-            border-top: 1px solid var(--glass-border);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 24px;
-            flex-shrink: 0;
-        }
-
-        .toolbar-stats {
-            display: flex;
-            gap: 32px;
-        }
-
-        .stat-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 0.8125em;
-        }
-
-        .stat-label {
-            color: var(--text-muted);
-        }
-
-        .stat-value {
-            font-weight: 600;
-            color: var(--text-light);
-        }
-
-        /* Modal */
-        .modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(13, 11, 10, 0.9);
-            backdrop-filter: blur(10px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s ease;
-        }
-
-        .modal.active {
-            opacity: 1;
-            pointer-events: all;
-        }
-
-        .modal-content {
-            background: var(--bg-medium);
-            border: 1px solid var(--glass-border);
-            border-radius: 12px;
-            padding: 32px;
-            max-width: 500px;
-            width: 90%;
-            transform: scale(0.9);
-            transition: transform 0.3s ease;
-        }
-
-        .modal.active .modal-content {
-            transform: scale(1);
-        }
-
-        .modal-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 24px;
-        }
-
-        .modal-title {
-            font-size: 1.25em;
-            font-weight: 600;
-        }
-
-        .modal-close {
-            width: 32px;
-            height: 32px;
-            background: transparent;
-            border: 1px solid var(--glass-border);
-            border-radius: 6px;
-            color: var(--text-muted);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s ease;
-        }
-
-        .modal-close:hover {
-            border-color: var(--error);
-            color: var(--error);
-        }
-
-        .modal-body {
-            margin-bottom: 24px;
-        }
-
-        .modal-text {
-            color: var(--text-muted);
-            line-height: 1.6;
-            margin-bottom: 16px;
-        }
-
-        .modal-stats {
-            background: var(--card-bg);
-            border-radius: 8px;
-            padding: 16px;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-        }
-
-        .modal-stat {
-            text-align: center;
-        }
-
-        .modal-stat-value {
-            font-size: 2em;
-            font-weight: 600;
-            color: var(--accent-gold);
-            margin-bottom: 4px;
-        }
-
-        .modal-stat-label {
-            font-size: 0.75em;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .modal-actions {
-            display: flex;
-            gap: 12px;
-        }
-
-        .modal-btn {
-            flex: 1;
-            padding: 12px 24px;
-            border: 1px solid var(--glass-border);
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.875em;
-            font-weight: 500;
-            transition: all 0.2s ease;
-        }
-
-        .modal-btn.secondary {
-            background: transparent;
-            color: var(--text-muted);
-        }
-
-        .modal-btn.secondary:hover {
-            border-color: var(--accent-gold);
-            color: var(--text-light);
-        }
-
-        .modal-btn.primary {
-            background: var(--accent-gold);
-            border-color: var(--accent-gold);
-            color: var(--bg-dark);
-        }
-
-        .modal-btn.primary:hover {
-            background: #d4b16d;
-        }
-
-        /* Loading State */
-        .loading-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(13, 11, 10, 0.8);
-            backdrop-filter: blur(5px);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 999;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s ease;
-        }
-
-        .loading-overlay.active {
-            opacity: 1;
-            pointer-events: all;
-        }
-
-        .loading-spinner {
-            width: 48px;
-            height: 48px;
-            border: 3px solid rgba(201, 169, 97, 0.2);
-            border-top-color: var(--accent-gold);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .loading-text {
-            margin-top: 16px;
-            font-size: 0.875em;
-            color: var(--text-muted);
-        }
-
-        /* Dropdown Menu */
-        .dropdown {
-            position: relative;
-        }
-
-        .dropdown-menu {
-            position: absolute;
-            top: 100%;
-            right: 0;
-            margin-top: 8px;
-            background: var(--bg-medium);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--glass-border);
-            border-radius: 8px;
-            padding: 8px;
-            min-width: 200px;
-            opacity: 0;
-            pointer-events: none;
-            transform: translateY(-10px);
-            transition: all 0.2s ease;
-            z-index: 100;
-        }
-
-        .dropdown.active .dropdown-menu {
-            opacity: 1;
-            pointer-events: all;
-            transform: translateY(0);
-        }
-
-        .dropdown-item {
-            padding: 8px 12px;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            font-size: 0.8125em;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: var(--text-light);
-        }
-
-        .dropdown-item:hover {
-            background: rgba(201, 169, 97, 0.1);
-        }
-
-        .dropdown-divider {
-            height: 1px;
-            background: var(--glass-border);
-            margin: 8px 0;
-        }
-
-        /* Responsive */
-        @media (max-width: 1400px) {
-            .right-sidebar {
-                width: 280px;
-            }
-        }
-
-        @media (max-width: 1200px) {
-            .secondary-toolbar {
-                flex-wrap: wrap;
-                height: auto;
-                padding: 12px 24px;
-            }
-            
-            .toolbar-left {
-                width: 100%;
-                margin-bottom: 8px;
-            }
-        }
     </style>
 </head>
 <body>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+    <div class="container">
+        <!-- Top Bar -->
+        <div class="top-bar">
+            <div class="top-bar-left">
+                <a href="script-breakdown.html" class="back-link">← Back to Script</a>
+                <h1 class="page-title">Breakdown Sheet: Haunted Hearts</h1>
+            </div>
+            <div class="top-bar-right">
+                <button class="btn" onclick="addRow()">+ Add Row</button>
+                <button class="btn" onclick="saveBreakdown()">💾 Save</button>
+                <button class="btn btn-primary" onclick="exportBreakdown()">📤 Export</button>
+            </div>
+        </div>
+
+        <!-- Spreadsheet -->
+        <div class="sheet-container">
+            <table class="breakdown-sheet">
+                <thead>
+                    <tr>
+                        <th class="col-scene">Scene</th>
+                        <th class="col-character">Character</th>
+                        <th class="col-day">Story Day</th>
+                        <th class="col-time">Time</th>
+                        <th class="col-int-ext">INT/EXT</th>
+                        <th class="col-location">Location</th>
+                        <th class="col-synopsis">Synopsis</th>
+                        <th class="col-hair">Hair</th>
+                        <th class="col-makeup">Makeup</th>
+                        <th class="col-sfx">SFX/FX</th>
+                        <th class="col-wardrobe">Wardrobe</th>
+                        <th class="col-notes">Notes</th>
+                    </tr>
+                </thead>
+                <tbody id="breakdownBody">
+                    <!-- Scene 1 -->
+                    <tr class="scene-header">
+                        <td>1</td>
+                        <td colspan="11"><strong>INT. EMMA'S BEDROOM - MORNING</strong></td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td>Emma Hart</td>
+                        <td>Day 1</td>
+                        <td>Morning</td>
+                        <td><span class="scene-badge int-day">INT DAY</span></td>
+                        <td>Emma's Bedroom</td>
+                        <td contenteditable="true">Emma wakes up disoriented, memories flooding back</td>
+                        <td contenteditable="true">Disheveled, bedhead look</td>
+                        <td contenteditable="true">Natural, minimal. Dark circles under eyes</td>
+                        <td contenteditable="true" class="empty-cell">—</td>
+                        <td contenteditable="true">White cotton nightgown</td>
+                        <td contenteditable="true">First appearance, establish grief</td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td>David (Flashback)</td>
+                        <td>Day 1</td>
+                        <td>Morning</td>
+                        <td><span class="scene-badge int-day">INT DAY</span></td>
+                        <td>Emma's Bedroom</td>
+                        <td contenteditable="true">Quick flashback - David's final moment</td>
+                        <td contenteditable="true">1940s style, slicked back</td>
+                        <td contenteditable="true">Period makeup, healthy glow</td>
+                        <td contenteditable="true" class="empty-cell">—</td>
+                        <td contenteditable="true">WWII military uniform, pristine</td>
+                        <td contenteditable="true">Flashback - young, vibrant</td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td>The Ghost</td>
+                        <td>Day 1</td>
+                        <td>Morning</td>
+                        <td><span class="scene-badge int-day">INT DAY</span></td>
+                        <td>Emma's Bedroom</td>
+                        <td contenteditable="true">Shadowy figure in mirror</td>
+                        <td contenteditable="true">N/A - obscured</td>
+                        <td contenteditable="true">N/A - not visible</td>
+                        <td contenteditable="true">Translucent shadow effect</td>
+                        <td contenteditable="true">N/A - silhouette only</td>
+                        <td contenteditable="true">First ghost appearance</td>
+                    </tr>
+
+                    <!-- Scene 2 -->
+                    <tr class="scene-header">
+                        <td>2</td>
+                        <td colspan="11"><strong>INT. KITCHEN - LATE MORNING</strong></td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td>Emma Hart</td>
+                        <td>Day 1</td>
+                        <td>Late Morning</td>
+                        <td><span class="scene-badge int-day">INT DAY</span></td>
+                        <td>Kitchen</td>
+                        <td contenteditable="true">Emma makes coffee, tries to act normal</td>
+                        <td contenteditable="true">Tied back in loose bun</td>
+                        <td contenteditable="true">Still minimal, slight concealer</td>
+                        <td contenteditable="true" class="empty-cell">—</td>
+                        <td contenteditable="true">Blue robe over nightgown</td>
+                        <td contenteditable="true">Hair change from Sc.1</td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td>Sarah Chen</td>
+                        <td>Day 1</td>
+                        <td>Late Morning</td>
+                        <td><span class="scene-badge int-day">INT DAY</span></td>
+                        <td>Kitchen</td>
+                        <td contenteditable="true">Sarah arrives to check on Emma</td>
+                        <td contenteditable="true">Short pixie cut, professional</td>
+                        <td contenteditable="true">Full daily makeup, polished</td>
+                        <td contenteditable="true" class="empty-cell">—</td>
+                        <td contenteditable="true">Business casual - blazer, jeans</td>
+                        <td contenteditable="true">First appearance</td>
+                    </tr>
+
+                    <!-- Scene 3 -->
+                    <tr class="scene-header">
+                        <td>3</td>
+                        <td colspan="11"><strong>EXT. GARDEN PATH - AFTERNOON</strong></td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td>Emma Hart</td>
+                        <td>Day 1</td>
+                        <td>Afternoon</td>
+                        <td><span class="scene-badge ext-day">EXT DAY</span></td>
+                        <td>Garden Path</td>
+                        <td contenteditable="true">Emma walks through overgrown garden</td>
+                        <td contenteditable="true">Bun loosening, windswept</td>
+                        <td contenteditable="true">Same as Sc.2, natural light</td>
+                        <td contenteditable="true" class="empty-cell">—</td>
+                        <td contenteditable="true">Long cardigan, comfortable pants</td>
+                        <td contenteditable="true">Wardrobe change</td>
+                    </tr>
+
+                    <!-- Scene 4 -->
+                    <tr class="scene-header">
+                        <td>4</td>
+                        <td colspan="11"><strong>INT. LIVING ROOM - EVENING</strong></td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td>Emma Hart</td>
+                        <td>Day 1</td>
+                        <td>Evening</td>
+                        <td><span class="scene-badge int-night">INT NIGHT</span></td>
+                        <td>Living Room</td>
+                        <td contenteditable="true">Emma researches house history</td>
+                        <td contenteditable="true">Bun removed, hair down</td>
+                        <td contenteditable="true">Worn off from day, tired</td>
+                        <td contenteditable="true" class="empty-cell">—</td>
+                        <td contenteditable="true">Same as Sc.3</td>
+                        <td contenteditable="true">Laptop, dimly lit</td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td>David (Ghost)</td>
+                        <td>Day 1</td>
+                        <td>Evening</td>
+                        <td><span class="scene-badge int-night">INT NIGHT</span></td>
+                        <td>Living Room</td>
+                        <td contenteditable="true">Ghost fully manifests - David revealed</td>
+                        <td contenteditable="true">1940s slicked back, period accurate</td>
+                        <td contenteditable="true">Pale, ethereal. Subtle shimmer</td>
+                        <td contenteditable="true">Full ghost effect, blue-white glow</td>
+                        <td contenteditable="true">1940s military uniform, weathered</td>
+                        <td contenteditable="true">Major SFX - full ghost look</td>
+                    </tr>
+
+                    <!-- Scene 5 -->
+                    <tr class="scene-header">
+                        <td>5</td>
+                        <td colspan="11"><strong>INT. EMMA'S BEDROOM - NIGHT</strong></td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td>Emma Hart</td>
+                        <td>Day 1</td>
+                        <td>Night</td>
+                        <td><span class="scene-badge int-night">INT NIGHT</span></td>
+                        <td>Emma's Bedroom</td>
+                        <td contenteditable="true">Emma can't sleep, processes encounter</td>
+                        <td contenteditable="true">Hair down, natural</td>
+                        <td contenteditable="true">Makeup removed, bare face</td>
+                        <td contenteditable="true" class="empty-cell">—</td>
+                        <td contenteditable="true">White nightgown (same as Sc.1)</td>
+                        <td contenteditable="true">Bookend to Sc.1</td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td>David (Ghost)</td>
+                        <td>Day 1</td>
+                        <td>Night</td>
+                        <td><span class="scene-badge int-night">INT NIGHT</span></td>
+                        <td>Emma's Bedroom</td>
+                        <td contenteditable="true">David sits at edge of bed, watching</td>
+                        <td contenteditable="true">Same as Sc.4</td>
+                        <td contenteditable="true">Same as Sc.4 - ethereal pale</td>
+                        <td contenteditable="true">Ghost effect, softer glow</td>
+                        <td contenteditable="true">Same as Sc.4</td>
+                        <td contenteditable="true">Continuity with Sc.4</td>
+                    </tr>
+
+                    <!-- Scene 6 -->
+                    <tr class="scene-header">
+                        <td>6</td>
+                        <td colspan="11"><strong>INT. KITCHEN - MORNING (DAY 2)</strong></td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td>Emma Hart</td>
+                        <td>Day 2</td>
+                        <td>Morning</td>
+                        <td><span class="scene-badge int-day">INT DAY</span></td>
+                        <td>Kitchen</td>
+                        <td contenteditable="true">Emma makes breakfast, David appears</td>
+                        <td contenteditable="true">Messy from sleep, not styled</td>
+                        <td contenteditable="true">No makeup, natural exhausted look</td>
+                        <td contenteditable="true" class="empty-cell">—</td>
+                        <td contenteditable="true">Robe, pajamas underneath</td>
+                        <td contenteditable="true">Day 2 begins</td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td>David (Ghost)</td>
+                        <td>Day 2</td>
+                        <td>Morning</td>
+                        <td><span class="scene-badge int-day">INT DAY</span></td>
+                        <td>Kitchen</td>
+                        <td contenteditable="true">David attempts communication</td>
+                        <td contenteditable="true">Same as Sc.4-5</td>
+                        <td contenteditable="true">Ghost makeup, daylight visible</td>
+                        <td contenteditable="true">Ghost effect in bright light</td>
+                        <td contenteditable="true">Same uniform</td>
+                        <td contenteditable="true">SFX challenge - daylight ghost</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
     <script>
-        // Initialize
-        let isLocked = false;
-        let aiSourcesVisible = true;
-        let currentFilter = 'all';
-
-        // Show generate modal on load (simulate AI completion)
-        window.addEventListener('load', function() {
-            setTimeout(() => {
-                document.getElementById('generateModal').classList.add('active');
-            }, 1500);
-        });
-
-        function closeGenerateModal() {
-            document.getElementById('generateModal').classList.remove('active');
-        }
-
-        function viewTable() {
-            closeGenerateModal();
-        }
-
-        // Scene Collapse/Expand
-        function toggleScene(sceneNum) {
-            const rows = document.querySelectorAll(`tr[data-scene="${sceneNum}"]`);
-            const btn = event.target;
-            
-            rows.forEach(row => {
-                if (row.style.display === 'none') {
-                    row.style.display = '';
-                    btn.textContent = '−';
-                } else {
-                    row.style.display = 'none';
-                    btn.textContent = '+';
-                }
-            });
-        }
-
-        function expandAll() {
-            document.querySelectorAll('.breakdown-table tbody tr').forEach(row => {
-                row.style.display = '';
-            });
-            document.querySelectorAll('.scene-collapse-btn').forEach(btn => {
-                btn.textContent = '−';
-            });
-        }
-
-        function collapseAll() {
-            document.querySelectorAll('.breakdown-table tbody tr:not(.scene-group-start)').forEach(row => {
-                row.style.display = 'none';
-            });
-            document.querySelectorAll('.scene-collapse-btn').forEach(btn => {
-                btn.textContent = '+';
-            });
-        }
-
-        // Sidebar Toggle
-        function toggleSidebar() {
-            const sidebar = document.getElementById('rightSidebar');
-            sidebar.classList.toggle('collapsed');
-        }
-
-        // Filter Functions
-        function filterAll() {
-            currentFilter = 'all';
-            updateFilterButtons();
-            document.querySelectorAll('.breakdown-table tbody tr').forEach(row => {
-                row.style.display = '';
-            });
-        }
-
-        function filterDept(dept) {
-            currentFilter = dept;
-            updateFilterButtons();
-            
-            document.querySelectorAll('.breakdown-table tbody tr').forEach(row => {
-                const cell = row.querySelector(`.col-${dept} .editable-cell`);
-                if (cell && cell.textContent.trim() !== '') {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
-            });
-        }
-
-        function updateFilterButtons() {
-            document.querySelectorAll('.filter-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            event.target.classList.add('active');
-        }
-
-        // Search Function
-        function searchTable(event) {
-            const searchTerm = event.target.value.toLowerCase();
-            const rows = document.querySelectorAll('.breakdown-table tbody tr');
-            
-            rows.forEach(row => {
-                const text = row.textContent.toLowerCase();
-                if (text.includes(searchTerm)) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
-            });
-        }
-
-        // Export Functions
-        function toggleExportMenu() {
-            document.querySelector('.dropdown').classList.toggle('active');
-        }
-
-        function exportAs(format) {
-            console.log(`Exporting as ${format}...`);
-            alert(`Export as ${format.toUpperCase()} - This would download the breakdown in ${format} format.`);
-            document.querySelector('.dropdown').classList.remove('active');
-        }
-
-        // AI Tools
-        function regenerateScene() {
-            const loadingOverlay = document.getElementById('loadingOverlay');
-            loadingOverlay.classList.add('active');
-            
-            setTimeout(() => {
-                loadingOverlay.classList.remove('active');
-                alert('Selected scene has been regenerated with updated AI analysis!');
-            }, 2000);
-        }
-
-        function compareNotes() {
-            alert('Comparing breakdown with original script notes and tags...\n\nThis would show a side-by-side comparison view.');
-        }
-
-        function checkContinuity() {
-            alert('Continuity Check Results:\n\n✓ 2 scenes checked successfully\n⚠️ 1 potential continuity issue found (Scene 2 - Hair change)\n\nClick the warning icon in the table to see details.');
-        }
-
-        function estimateChairTime() {
-            alert('Recalculating chair time estimates...\n\nNew estimate: 4h 30m\n\nBreakdown:\n- Emma: 1h 45m\n- David/Ghost: 2h 00m\n- Sarah: 45m');
-        }
-
-        function toggleAISources() {
-            aiSourcesVisible = !aiSourcesVisible;
-            document.querySelectorAll('.ai-source').forEach(source => {
-                source.style.display = aiSourcesVisible ? 'block' : 'none';
-            });
-            alert(`AI source indicators ${aiSourcesVisible ? 'enabled' : 'disabled'}`);
-        }
-
-        // Save & Lock Functions
+        // Save breakdown
         function saveBreakdown() {
-            if (isLocked) {
-                alert('⚠️ Breakdown is locked! Unlock it first to make changes.');
-                return;
-            }
+            const data = [];
+            const rows = document.querySelectorAll('#breakdownBody tr:not(.scene-header)');
             
-            alert('✓ Breakdown saved successfully!\n\nAll changes have been saved to the project.');
-        }
-
-        function lockBreakdown() {
-            isLocked = !isLocked;
-            
-            document.querySelectorAll('.editable-cell').forEach(cell => {
-                cell.contentEditable = !isLocked;
-                cell.style.cursor = isLocked ? 'default' : 'text';
-            });
-            
-            event.target.innerHTML = isLocked ? '🔓 Unlock Breakdown' : '🔒 Lock Breakdown';
-            event.target.classList.toggle('danger');
-            
-            alert(isLocked ? 
-                '🔒 Breakdown locked! All cells are now read-only and ready for export.' : 
-                '🔓 Breakdown unlocked! You can now edit all cells.');
-        }
-
-        function resetBreakdown() {
-            if (!confirm('⚠️ Re-run AI Breakdown?\n\nThis will regenerate the entire breakdown using the latest AI analysis. Any manual edits will be overwritten.\n\nAre you sure?')) {
-                return;
-            }
-            
-            const loadingOverlay = document.getElementById('loadingOverlay');
-            loadingOverlay.querySelector('.loading-text').textContent = 'Regenerating AI Breakdown...';
-            loadingOverlay.classList.add('active');
-            
-            setTimeout(() => {
-                loadingOverlay.classList.remove('active');
-                alert('✓ Breakdown regenerated successfully!\n\nAll data has been updated with fresh AI analysis.');
-            }, 3000);
-        }
-
-        // Close dropdowns when clicking outside
-        document.addEventListener('click', function(event) {
-            if (!event.target.closest('.dropdown')) {
-                document.querySelectorAll('.dropdown').forEach(dropdown => {
-                    dropdown.classList.remove('active');
-                });
-            }
-        });
-
-        // Track edits for undo/redo (basic implementation)
-        let editHistory = [];
-        let historyIndex = -1;
-
-        document.querySelectorAll('.editable-cell').forEach(cell => {
-            let originalContent = cell.innerHTML;
-            
-            cell.addEventListener('blur', function() {
-                if (cell.innerHTML !== originalContent) {
-                    // Save to history
-                    editHistory.push({
-                        cell: cell,
-                        oldContent: originalContent,
-                        newContent: cell.innerHTML
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length > 0) {
+                    data.push({
+                        scene: cells[0].textContent,
+                        character: cells[1].textContent,
+                        day: cells[2].textContent,
+                        time: cells[3].textContent,
+                        intExt: cells[4].textContent,
+                        location: cells[5].textContent,
+                        synopsis: cells[6].textContent,
+                        hair: cells[7].textContent,
+                        makeup: cells[8].textContent,
+                        sfx: cells[9].textContent,
+                        wardrobe: cells[10].textContent,
+                        notes: cells[11].textContent
                     });
-                    historyIndex = editHistory.length - 1;
-                    originalContent = cell.innerHTML;
                 }
             });
-        });
+            
+            localStorage.setItem('breakdownData', JSON.stringify(data));
+            alert('✓ Breakdown saved!');
+        }
+
+        // Export to CSV
+        function exportBreakdown() {
+            const rows = [];
+            
+            // Headers
+            rows.push([
+                'Scene', 'Character', 'Story Day', 'Time', 'INT/EXT', 
+                'Location', 'Synopsis', 'Hair', 'Makeup', 'SFX/FX', 
+                'Wardrobe', 'Notes'
+            ]);
+            
+            // Data
+            document.querySelectorAll('#breakdownBody tr:not(.scene-header)').forEach(row => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length > 0) {
+                    const rowData = [];
+                    cells.forEach(cell => {
+                        let text = cell.textContent.trim();
+                        // Remove badges
+                        text = text.replace(/INT DAY|INT NIGHT|EXT DAY|EXT NIGHT/g, '').trim();
+                        rowData.push(text);
+                    });
+                    rows.push(rowData);
+                }
+            });
+            
+            // Convert to CSV
+            const csv = rows.map(row => 
+                row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(',')
+            ).join('\n');
+            
+            // Download
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'breakdown_haunted_hearts.csv';
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            alert('✓ Breakdown exported to CSV!');
+        }
+
+        // Add new row
+        function addRow() {
+            const tbody = document.getElementById('breakdownBody');
+            const newRow = document.createElement('tr');
+            newRow.innerHTML = `
+                <td></td>
+                <td contenteditable="true"></td>
+                <td contenteditable="true">Day 1</td>
+                <td contenteditable="true"></td>
+                <td contenteditable="true"></td>
+                <td contenteditable="true"></td>
+                <td contenteditable="true"></td>
+                <td contenteditable="true"></td>
+                <td contenteditable="true"></td>
+                <td contenteditable="true"></td>
+                <td contenteditable="true"></td>
+                <td contenteditable="true"></td>
+            `;
+            tbody.appendChild(newRow);
+        }
 
         // Keyboard shortcuts
         document.addEventListener('keydown', function(e) {
-            // Ctrl/Cmd + S to save
             if ((e.ctrlKey || e.metaKey) && e.key === 's') {
                 e.preventDefault();
                 saveBreakdown();
             }
-            
-            // Ctrl/Cmd + Z to undo (basic implementation)
-            if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
-                e.preventDefault();
-                // Undo functionality would go here
-                console.log('Undo triggered');
-            }
-            
-            // Ctrl/Cmd + Shift + Z to redo
-            if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'z') {
-                e.preventDefault();
-                // Redo functionality would go here
-                console.log('Redo triggered');
-            }
         });
 
-        console.log('✓ Breakdown page initialized');
+        console.log('✓ Breakdown sheet loaded');
         console.log('• Click cells to edit');
-        console.log('• Hover over colored dots to see AI sources');
-        console.log('• Use Ctrl/Cmd+S to save');
+        console.log('• Press Ctrl/Cmd+S to save');
     </script>
 </body>
 </html>
-                                      <div class="ai-source medium-confidence"></div>
-                                    </div>
-                                </td>
-                                <td class="col-sfx">
-                                    <div class="editable-cell" contenteditable="true" data-placeholder="Add SFX notes..."></div>
-                                </td>
-                                <td class="col-wardrobe">
-                                    <div class="editable-cell" contenteditable="true" data-placeholder="Add wardrobe notes...">Blue robe over nightgown
-                                        <div class="ai-source high-confidence"></div>
-                                    </div>
-                                </td>
-                            </tr>
-                            <tr data-scene="2">
-                                <td>Sarah Chen</td>
-                                <td>Day 1 / Late Morning</td>
-                                <td>
-                                    <span class="scene-type-badge int-day">INT DAY</span>
-                                </td>
-                                <td>Kitchen</td>
-                                <td>Sarah arrives unexpectedly to check on Emma</td>
-                                <td class="col-hair">
-                                    <div class="editable-cell" contenteditable="true" data-placeholder="Add hair notes...">Short pixie cut, professional style
-                                        <div class="ai-source high-confidence"></div>
-                                    </div>
-                                </td>
-                                <td class="col-makeup">
-                                    <div class="editable-cell" contenteditable="true" data-placeholder="Add makeup notes...">Full daily makeup, polished
-                                        <div class="ai-source low-confidence"></div>
-                                        <div class="tooltip">
-                                            <div class="tooltip-title">AI Source</div>
-                                            <div class="tooltip-text">Inferred from character description</div>
-                                            <div class="tooltip-confidence">Confidence: Low (62%)</div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="col-sfx">
-                                    <div class="editable-cell" contenteditable="true" data-placeholder="Add SFX notes..."></div>
-                                </td>
-                                <td class="col-wardrobe">
-                                    <div class="editable-cell" contenteditable="true" data-placeholder="Add wardrobe notes...">Business casual - blazer, jeans
-                                        <div class="ai-source high-confidence"></div>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
