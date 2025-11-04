@@ -677,7 +677,7 @@
                     <div class="file-upload">
                         <label class="file-upload-btn">
                             📄 Choose Script File
-                            <input type="file" accept=".pdf,.fdx,.fountain,.txt" onchange="handleScriptUpload(event)">
+                            <input type="file" accept=".txt,.fountain,.fdx,.pdf" onchange="handleScriptUpload(event)">
                         </label>
                     </div>
                     <span id="fileName"></span>
@@ -876,15 +876,30 @@
                 const titleWithoutExt = file.name.replace(/\.[^/.]+$/, "");
                 document.getElementById('projectTitle').value = titleWithoutExt;
                 
-                // Read script content if it's a text file
-                if (file.type === 'text/plain' || file.name.endsWith('.txt') || file.name.endsWith('.fountain')) {
+                console.log('File selected:', file.name, 'Type:', file.type, 'Size:', file.size);
+                
+                // Read script content - support various text file types
+                const isTextFile = file.type === 'text/plain' || 
+                                   file.type === '' || // Some text files have no mime type
+                                   file.name.endsWith('.txt') || 
+                                   file.name.endsWith('.fountain') ||
+                                   file.name.endsWith('.fdx');
+                
+                if (isTextFile) {
                     const reader = new FileReader();
                     reader.onload = function(e) {
                         const scriptContent = e.target.result;
+                        console.log('Script content loaded, length:', scriptContent.length);
+                        console.log('First 200 chars:', scriptContent.substring(0, 200));
+                        
                         // Store script content in localStorage
                         localStorage.setItem('uploadedScriptContent', scriptContent);
                         localStorage.setItem('uploadedScriptName', file.name);
-                        console.log('Script content loaded and stored');
+                        console.log('Script stored in localStorage');
+                    };
+                    reader.onerror = function(e) {
+                        console.error('Error reading file:', e);
+                        alert('Error reading script file. Please try again.');
                     };
                     reader.readAsText(file);
                 } else if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
@@ -892,9 +907,10 @@
                     localStorage.setItem('uploadedScriptName', file.name);
                     localStorage.setItem('uploadedScriptType', 'pdf');
                     console.log('PDF script uploaded - will need parsing');
+                    alert('PDF uploaded! Note: PDF parsing is not yet implemented. Please use .txt or .fountain format for now.');
                 } else {
-                    console.log('Script file uploaded:', file.name);
-                    localStorage.setItem('uploadedScriptName', file.name);
+                    console.log('Unsupported file type:', file.type);
+                    alert('Please upload a .txt, .fountain, or .fdx script file.');
                 }
             }
         }
@@ -946,6 +962,12 @@
 
             const scriptContent = localStorage.getItem('uploadedScriptContent');
             const scriptName = localStorage.getItem('uploadedScriptName');
+            
+            console.log('Creating project with script:', scriptName);
+            console.log('Script content exists:', !!scriptContent);
+            if (scriptContent) {
+                console.log('Script content length:', scriptContent.length);
+            }
 
             const project = {
                 title: document.getElementById('projectTitle').value,
@@ -961,6 +983,12 @@
                 scriptName: scriptName || null
             };
 
+            console.log('Project object created:', {
+                title: project.title,
+                hasScriptContent: !!project.scriptContent,
+                scriptName: project.scriptName
+            });
+
             projects.unshift(project);
             saveToStorage();
             renderProjects();
@@ -970,6 +998,8 @@
             localStorage.removeItem('uploadedScriptContent');
             localStorage.removeItem('uploadedScriptName');
             localStorage.removeItem('uploadedScriptType');
+            
+            console.log('Project saved and temp storage cleared');
         }
 
         function openProject(index) {
