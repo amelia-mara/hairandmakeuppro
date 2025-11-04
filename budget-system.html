@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Budget System - Hair & Makeup</title>
+    <title>Budget System Pro - Hair & Makeup</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * {
@@ -385,7 +385,7 @@
         /* Input Fields */
         .input-row {
             display: grid;
-            grid-template-columns: 1fr 100px 120px 120px 40px;
+            grid-template-columns: 2.5fr 80px 100px 100px 120px 200px 150px 40px;
             gap: 12px;
             padding: 16px 24px;
             border-bottom: 1px solid var(--border);
@@ -421,6 +421,7 @@
             color: var(--accent-gold);
             font-weight: 600;
             font-size: 0.875em;
+            text-align: right;
         }
 
         .delete-btn {
@@ -682,6 +683,280 @@
         .tab-content.active {
             display: block;
         }
+
+        /* Notification */
+        .notification {
+            position: fixed;
+            top: 80px;
+            right: 32px;
+            padding: 16px 24px;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 0.875em;
+            z-index: 2000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            animation: slideIn 0.3s ease;
+        }
+
+        .notification.success {
+            background: var(--success);
+            color: white;
+        }
+
+        .notification.warning {
+            background: var(--warning);
+            color: var(--bg-dark);
+        }
+
+        .notification.danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .notification.info {
+            background: var(--accent-gold);
+            color: var(--bg-dark);
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(400px); opacity: 0; }
+        }
+
+        /* Search & Filter Bar */
+        .search-bar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 10px 16px;
+            background: var(--bg-medium);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-light);
+            font-size: 0.875em;
+        }
+
+        .filter-btn {
+            padding: 10px 16px;
+            background: var(--bg-medium);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 0.875em;
+            transition: all 0.2s ease;
+        }
+
+        .filter-btn:hover {
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+        }
+
+        /* Variance Indicator */
+        .variance {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.75em;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .variance.positive {
+            color: var(--success);
+            background: rgba(82, 193, 134, 0.1);
+        }
+
+        .variance.negative {
+            color: var(--danger);
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .variance.neutral {
+            color: var(--text-muted);
+            background: rgba(138, 127, 115, 0.1);
+        }
+
+        /* Supplier Management */
+        .supplier-select {
+            width: 100%;
+            padding: 8px 12px;
+            background: var(--bg-medium);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-light);
+            font-size: 0.875em;
+            cursor: pointer;
+        }
+
+        /* Notes Field */
+        .notes-input {
+            width: 100%;
+            padding: 8px 12px;
+            background: var(--bg-medium);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-light);
+            font-size: 0.75em;
+            resize: vertical;
+            min-height: 32px;
+        }
+
+        /* Quick Actions Menu */
+        .quick-actions {
+            position: fixed;
+            bottom: 32px;
+            right: 32px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            align-items: flex-end;
+        }
+
+        .fab {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: var(--accent-gold);
+            border: none;
+            color: var(--bg-dark);
+            cursor: pointer;
+            font-size: 1.5em;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            transition: all 0.2s ease;
+        }
+
+        .fab:hover {
+            transform: scale(1.1);
+            background: #d4b16d;
+        }
+
+        .fab-menu {
+            display: none;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .fab-menu.active {
+            display: flex;
+        }
+
+        .fab-item {
+            padding: 8px 16px;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-light);
+            cursor: pointer;
+            font-size: 0.875em;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+        }
+
+        .fab-item:hover {
+            background: var(--bg-medium);
+            border-color: var(--accent-gold);
+        }
+
+        /* Comparison View */
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .comparison-table th {
+            padding: 12px;
+            text-align: left;
+            font-size: 0.75em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            background: rgba(201, 169, 97, 0.05);
+            border-bottom: 2px solid var(--border);
+        }
+
+        .comparison-table td {
+            padding: 12px;
+            font-size: 0.875em;
+            border-bottom: 1px solid var(--border);
+        }
+
+        /* Print Styles */
+        @media print {
+            .sidebar, .top-bar, .tabs, .btn, .icon-btn, .delete-btn, .fab {
+                display: none !important;
+            }
+            
+            .app-layout {
+                display: block;
+            }
+            
+            .main-content {
+                width: 100%;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+            
+            body {
+                background: white;
+                color: black;
+            }
+            
+            .budget-section, .stat-card {
+                border: 1px solid #ddd;
+                break-inside: avoid;
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                display: none;
+            }
+            
+            .input-row {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+            
+            .overview-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Loading State */
+        .loading {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .spinner {
+            border: 3px solid var(--border);
+            border-top: 3px solid var(--accent-gold);
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -691,48 +966,46 @@
             <div class="sidebar-header">
                 <a href="#" class="back-btn">← Back to Dashboard</a>
                 <div class="project-info">
-                    <h2>The Big Race</h2>
-                    <div class="project-code">HM-2025-001</div>
+                    <h2 id="project-name-display">The Big Race</h2>
+                    <div class="project-code" id="project-code-display">HM-2025-001</div>
                 </div>
             </div>
 
             <div class="nav-section">
                 <div class="nav-section-title">Budget Tools</div>
-                <div class="nav-item active">
+                <div class="nav-item active" onclick="switchTab('overview')">
                     <span class="nav-icon">💰</span>
                     Budget Overview
                 </div>
-                <div class="nav-item">
+                <div class="nav-item" onclick="switchTab('proposal')">
                     <span class="nav-icon">📝</span>
-                    New Proposal
+                    Budget Proposal
                 </div>
-                <div class="nav-item">
+                <div class="nav-item" onclick="switchTab('tracking')">
                     <span class="nav-icon">📊</span>
-                    Reports
+                    Spend Tracking
                 </div>
-                <div class="nav-item">
-                    <span class="nav-icon">📋</span>
-                    Templates
+                <div class="nav-item" onclick="switchTab('comparison')">
+                    <span class="nav-icon">⚖️</span>
+                    Budget vs Actual
                 </div>
             </div>
 
             <div class="nav-section">
-                <div class="nav-section-title">Project Nav</div>
-                <div class="nav-item">
-                    <span class="nav-icon">🎬</span>
-                    Dashboard
-                </div>
-                <div class="nav-item">
-                    <span class="nav-icon">📄</span>
-                    Script Breakdown
-                </div>
-                <div class="nav-item">
-                    <span class="nav-icon">⏱</span>
-                    Timesheets
-                </div>
-                <div class="nav-item">
-                    <span class="nav-icon">👥</span>
-                    Call Sheets
+                <div class="nav-section-title">Quick Stats</div>
+                <div style="padding: 0 16px; font-size: 0.875em;">
+                    <div style="margin-bottom: 12px;">
+                        <div style="color: var(--text-muted); margin-bottom: 4px;">Total Budget</div>
+                        <div style="color: var(--accent-gold); font-weight: 600;" id="sidebar-total">£0.00</div>
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <div style="color: var(--text-muted); margin-bottom: 4px;">Items</div>
+                        <div style="color: var(--text-light); font-weight: 600;" id="sidebar-items">0</div>
+                    </div>
+                    <div>
+                        <div style="color: var(--text-muted); margin-bottom: 4px;">Last Saved</div>
+                        <div style="color: var(--text-light); font-size: 0.875em;" id="sidebar-saved">Never</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -741,19 +1014,23 @@
         <div class="main-content">
             <!-- Top Bar -->
             <div class="top-bar">
-                <div class="page-title">Budget System</div>
+                <div class="page-title">Budget System Pro</div>
                 <div class="top-bar-actions">
+                    <button class="btn" onclick="importData()">
+                        <span>📥</span>
+                        Import CSV
+                    </button>
                     <button class="btn" onclick="exportBudget()">
                         <span>📤</span>
-                        Export PDF
+                        Export
                     </button>
                     <button class="btn" onclick="openTemplateModal()">
                         <span>📋</span>
-                        Load Template
+                        Templates
                     </button>
                     <button class="btn primary" onclick="saveBudget()">
                         <span>💾</span>
-                        Save Budget
+                        Save
                     </button>
                 </div>
             </div>
@@ -765,6 +1042,7 @@
                     <button class="tab active" onclick="switchTab('overview')">Overview</button>
                     <button class="tab" onclick="switchTab('proposal')">Budget Proposal</button>
                     <button class="tab" onclick="switchTab('tracking')">Spend Tracking</button>
+                    <button class="tab" onclick="switchTab('comparison')">Budget vs Actual</button>
                 </div>
 
                 <!-- Overview Tab -->
@@ -773,33 +1051,33 @@
                     <div class="overview-grid">
                         <div class="stat-card">
                             <div class="stat-label">Total Budget</div>
-                            <div class="stat-value">£15,850</div>
+                            <div class="stat-value" id="overview-total-budget">£0.00</div>
                             <div class="stat-change positive">
-                                <span>↑</span> From template
+                                <span id="overview-budget-change">Ready to build</span>
                             </div>
                         </div>
 
                         <div class="stat-card">
                             <div class="stat-label">Spent To Date</div>
-                            <div class="stat-value">£4,230</div>
+                            <div class="stat-value" id="overview-spent">£0.00</div>
                             <div class="stat-change positive">
-                                <span>26.7%</span> of budget
+                                <span id="overview-spent-percent">0%</span> of budget
                             </div>
                         </div>
 
                         <div class="stat-card">
                             <div class="stat-label">Remaining</div>
-                            <div class="stat-value">£11,620</div>
+                            <div class="stat-value" id="overview-remaining">£0.00</div>
                             <div class="stat-change positive">
-                                <span>73.3%</span> available
+                                <span id="overview-remaining-percent">100%</span> available
                             </div>
                         </div>
 
                         <div class="stat-card">
-                            <div class="stat-label">Estimated Days</div>
-                            <div class="stat-value">28 days</div>
-                            <div class="stat-change">
-                                <span>4 weeks</span> shoot
+                            <div class="stat-label">Cost Variance</div>
+                            <div class="stat-value" id="overview-variance">£0.00</div>
+                            <div class="stat-change" id="overview-variance-status">
+                                <span>On budget</span>
                             </div>
                         </div>
                     </div>
@@ -808,10 +1086,10 @@
                     <div class="progress-section">
                         <div class="progress-header">
                             <span class="progress-label">Budget Utilization</span>
-                            <span class="progress-value">26.7% Used</span>
+                            <span class="progress-value" id="progress-percent">0% Used</span>
                         </div>
                         <div class="progress-bar">
-                            <div class="progress-fill" style="width: 26.7%"></div>
+                            <div class="progress-fill" id="progress-bar" style="width: 0%"></div>
                         </div>
                     </div>
 
@@ -822,6 +1100,9 @@
                                 <span class="section-icon">📦</span>
                                 Category Breakdown
                             </div>
+                            <div class="section-actions">
+                                <button class="icon-btn" onclick="refreshOverview()">🔄 Refresh</button>
+                            </div>
                         </div>
                         <table class="category-table">
                             <thead>
@@ -830,57 +1111,11 @@
                                     <th>Budgeted</th>
                                     <th>Spent</th>
                                     <th>Remaining</th>
+                                    <th>Variance</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <tr>
-                                    <td>Disposables</td>
-                                    <td>£184.50</td>
-                                    <td>£92.25</td>
-                                    <td>£92.25</td>
-                                </tr>
-                                <tr>
-                                    <td>Hygiene & Sanitation</td>
-                                    <td>£112.00</td>
-                                    <td>£56.00</td>
-                                    <td>£56.00</td>
-                                </tr>
-                                <tr>
-                                    <td>Everyday Consumables</td>
-                                    <td>£171.00</td>
-                                    <td>£85.50</td>
-                                    <td>£85.50</td>
-                                </tr>
-                                <tr>
-                                    <td>Beauty Products</td>
-                                    <td>£2,500.00</td>
-                                    <td>£625.00</td>
-                                    <td>£1,875.00</td>
-                                </tr>
-                                <tr>
-                                    <td>Special Effects</td>
-                                    <td>£4,800.00</td>
-                                    <td>£1,200.00</td>
-                                    <td>£3,600.00</td>
-                                </tr>
-                                <tr>
-                                    <td>Hair Products</td>
-                                    <td>£1,800.00</td>
-                                    <td>£450.00</td>
-                                    <td>£1,350.00</td>
-                                </tr>
-                                <tr>
-                                    <td>Tools & Equipment</td>
-                                    <td>£3,200.00</td>
-                                    <td>£800.00</td>
-                                    <td>£2,400.00</td>
-                                </tr>
-                                <tr>
-                                    <td>Custom Builds / Fabrication</td>
-                                    <td>£3,082.50</td>
-                                    <td>£920.75</td>
-                                    <td>£2,161.75</td>
-                                </tr>
+                            <tbody id="overview-categories">
+                                <!-- Dynamic content -->
                             </tbody>
                         </table>
                     </div>
@@ -888,6 +1123,13 @@
 
                 <!-- Budget Proposal Tab -->
                 <div id="proposal-tab" class="tab-content">
+                    <!-- Search Bar -->
+                    <div class="search-bar">
+                        <input type="text" class="search-input" placeholder="Search items..." id="search-items" onkeyup="searchItems()">
+                        <button class="filter-btn" onclick="filterByCategory()">🔽 Filter Category</button>
+                        <button class="filter-btn" onclick="sortItems()">↕️ Sort</button>
+                    </div>
+
                     <!-- Project Info -->
                     <div class="budget-section" style="margin-bottom: 24px;">
                         <div class="budget-section-header">
@@ -900,264 +1142,60 @@
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                                 <div class="form-group">
                                     <label class="form-label">Production Name</label>
-                                    <input type="text" class="form-input" value="The Big Race" placeholder="Enter production name">
+                                    <input type="text" class="form-input" id="project-name" value="The Big Race" placeholder="Enter production name">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Project Code</label>
+                                    <input type="text" class="form-input" id="project-code" value="HM-2025-001" placeholder="e.g., HM-2025-001">
                                 </div>
                                 <div class="form-group">
                                     <label class="form-label">Makeup Designer</label>
-                                    <input type="text" class="form-input" placeholder="Enter designer name">
+                                    <input type="text" class="form-input" id="designer-name" placeholder="Enter designer name">
                                 </div>
                                 <div class="form-group">
                                     <label class="form-label">Project Type</label>
-                                    <select class="form-select">
+                                    <select class="form-select" id="project-type">
                                         <option>Feature Film</option>
                                         <option>TV Series</option>
                                         <option>Commercial</option>
                                         <option>Short Film</option>
+                                        <option>Documentary</option>
+                                        <option>Music Video</option>
                                     </select>
                                 </div>
                                 <div class="form-group">
                                     <label class="form-label">Duration</label>
-                                    <input type="text" class="form-input" value="4 weeks" placeholder="e.g., 4 weeks">
+                                    <input type="text" class="form-input" id="project-duration" value="4 weeks" placeholder="e.g., 4 weeks">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Budget Limit</label>
+                                    <input type="number" class="form-input" id="budget-limit" placeholder="Maximum budget (£)" step="100">
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Disposables Category -->
-                    <div class="budget-section">
-                        <div class="budget-section-header">
-                            <div class="section-title">
-                                <span class="section-icon">📦</span>
-                                Disposables
-                            </div>
-                            <div class="section-actions">
-                                <button class="icon-btn" onclick="addItem('disposables')">+ Add Item</button>
-                            </div>
-                        </div>
-                        <div id="disposables-items">
-                            <div class="input-row">
-                                <input type="text" class="form-input item-description" placeholder="Item description" value="Mascara Wands (Pack of 100)" data-category="disposables">
-                                <input type="number" class="form-input item-qty" placeholder="Qty" value="3" min="0">
-                                <input type="number" class="form-input item-price" placeholder="Unit Price (£)" value="8.00" step="0.01" min="0">
-                                <div class="calculated-value">£24.00</div>
-                                <button class="delete-btn" onclick="removeItem(this)">×</button>
-                            </div>
-                            <div class="input-row">
-                                <input type="text" class="form-input item-description" placeholder="Item description" value="Cotton Pads (Pack of 200)" data-category="disposables">
-                                <input type="number" class="form-input item-qty" placeholder="Qty" value="4" min="0">
-                                <input type="number" class="form-input item-price" placeholder="Unit Price (£)" value="4.50" step="0.01" min="0">
-                                <div class="calculated-value">£18.00</div>
-                                <button class="delete-btn" onclick="removeItem(this)">×</button>
-                            </div>
-                            <div class="input-row">
-                                <input type="text" class="form-input item-description" placeholder="Item description" value="Disposable Makeup Sponges (Pack of 20)" data-category="disposables">
-                                <input type="number" class="form-input item-qty" placeholder="Qty" value="5" min="0">
-                                <input type="number" class="form-input item-price" placeholder="Unit Price (£)" value="12.00" step="0.01" min="0">
-                                <div class="calculated-value">£60.00</div>
-                                <button class="delete-btn" onclick="removeItem(this)">×</button>
-                            </div>
-                        </div>
-                        <div class="category-total">
-                            <span class="total-label">Category Total</span>
-                            <span class="total-value">£184.50</span>
-                        </div>
-                    </div>
-
-                    <!-- Hygiene & Sanitation Category -->
-                    <div class="budget-section">
-                        <div class="budget-section-header">
-                            <div class="section-title">
-                                <span class="section-icon">🧼</span>
-                                Hygiene & Sanitation
-                            </div>
-                            <div class="section-actions">
-                                <button class="icon-btn" onclick="addItem('hygiene')">+ Add Item</button>
-                            </div>
-                        </div>
-                        <div id="hygiene-items">
-                            <div class="input-row">
-                                <input type="text" class="form-input item-description" placeholder="Item description" value="Isopropyl Alcohol 99% (1L)" data-category="hygiene">
-                                <input type="number" class="form-input item-qty" placeholder="Qty" value="3" min="0">
-                                <input type="number" class="form-input item-price" placeholder="Unit Price (£)" value="12.00" step="0.01" min="0">
-                                <div class="calculated-value">£36.00</div>
-                                <button class="delete-btn" onclick="removeItem(this)">×</button>
-                            </div>
-                            <div class="input-row">
-                                <input type="text" class="form-input item-description" placeholder="Item description" value="Brush Cleaner (250ml)" data-category="hygiene">
-                                <input type="number" class="form-input item-qty" placeholder="Qty" value="2" min="0">
-                                <input type="number" class="form-input item-price" placeholder="Unit Price (£)" value="15.00" step="0.01" min="0">
-                                <div class="calculated-value">£30.00</div>
-                                <button class="delete-btn" onclick="removeItem(this)">×</button>
-                            </div>
-                        </div>
-                        <div class="category-total">
-                            <span class="total-label">Category Total</span>
-                            <span class="total-value">£112.00</span>
-                        </div>
-                    </div>
-
-                    <!-- Everyday Consumables Category -->
-                    <div class="budget-section">
-                        <div class="budget-section-header">
-                            <div class="section-title">
-                                <span class="section-icon">🛍️</span>
-                                Everyday Consumables
-                            </div>
-                            <div class="section-actions">
-                                <button class="icon-btn" onclick="addItem('consumables')">+ Add Item</button>
-                            </div>
-                        </div>
-                        <div id="consumables-items">
-                            <div class="input-row">
-                                <input type="text" class="form-input item-description" placeholder="Item description" value="Makeup Remover Wipes (Pack of 25)" data-category="consumables">
-                                <input type="number" class="form-input item-qty" placeholder="Qty" value="6" min="0">
-                                <input type="number" class="form-input item-price" placeholder="Unit Price (£)" value="4.00" step="0.01" min="0">
-                                <div class="calculated-value">£24.00</div>
-                                <button class="delete-btn" onclick="removeItem(this)">×</button>
-                            </div>
-                            <div class="input-row">
-                                <input type="text" class="form-input item-description" placeholder="Item description" value="Setting Spray (100ml)" data-category="consumables">
-                                <input type="number" class="form-input item-qty" placeholder="Qty" value="3" min="0">
-                                <input type="number" class="form-input item-price" placeholder="Unit Price (£)" value="15.00" step="0.01" min="0">
-                                <div class="calculated-value">£45.00</div>
-                                <button class="delete-btn" onclick="removeItem(this)">×</button>
-                            </div>
-                        </div>
-                        <div class="category-total">
-                            <span class="total-label">Category Total</span>
-                            <span class="total-value">£171.00</span>
-                        </div>
-                    </div>
-
-                    <!-- Beauty Products Category -->
-                    <div class="budget-section">
-                        <div class="budget-section-header">
-                            <div class="section-title">
-                                <span class="section-icon">💄</span>
-                                Beauty Products
-                            </div>
-                            <div class="section-actions">
-                                <button class="icon-btn" onclick="addItem('beauty')">+ Add Item</button>
-                            </div>
-                        </div>
-                        <div id="beauty-items">
-                            <div class="empty-state">
-                                <div class="empty-icon">💄</div>
-                                <div class="empty-title">No items added yet</div>
-                                <div class="empty-desc">Click "Add Item" to start building your budget</div>
-                            </div>
-                        </div>
-                        <div class="category-total">
-                            <span class="total-label">Category Total</span>
-                            <span class="total-value">£0.00</span>
-                        </div>
-                    </div>
-
-                    <!-- Special Effects Category -->
-                    <div class="budget-section">
-                        <div class="budget-section-header">
-                            <div class="section-title">
-                                <span class="section-icon">🎭</span>
-                                Special Effects
-                            </div>
-                            <div class="section-actions">
-                                <button class="icon-btn" onclick="addItem('sfx')">+ Add Item</button>
-                            </div>
-                        </div>
-                        <div id="sfx-items">
-                            <div class="empty-state">
-                                <div class="empty-icon">🎭</div>
-                                <div class="empty-title">No items added yet</div>
-                                <div class="empty-desc">Click "Add Item" to start building your budget</div>
-                            </div>
-                        </div>
-                        <div class="category-total">
-                            <span class="total-label">Category Total</span>
-                            <span class="total-value">£0.00</span>
-                        </div>
-                    </div>
-
-                    <!-- Hair Products Category -->
-                    <div class="budget-section">
-                        <div class="budget-section-header">
-                            <div class="section-title">
-                                <span class="section-icon">✂️</span>
-                                Hair Products
-                            </div>
-                            <div class="section-actions">
-                                <button class="icon-btn" onclick="addItem('hair')">+ Add Item</button>
-                            </div>
-                        </div>
-                        <div id="hair-items">
-                            <div class="empty-state">
-                                <div class="empty-icon">✂️</div>
-                                <div class="empty-title">No items added yet</div>
-                                <div class="empty-desc">Click "Add Item" to start building your budget</div>
-                            </div>
-                        </div>
-                        <div class="category-total">
-                            <span class="total-label">Category Total</span>
-                            <span class="total-value">£0.00</span>
-                        </div>
-                    </div>
-
-                    <!-- Tools & Equipment Category -->
-                    <div class="budget-section">
-                        <div class="budget-section-header">
-                            <div class="section-title">
-                                <span class="section-icon">🔧</span>
-                                Tools & Equipment
-                            </div>
-                            <div class="section-actions">
-                                <button class="icon-btn" onclick="addItem('tools')">+ Add Item</button>
-                            </div>
-                        </div>
-                        <div id="tools-items">
-                            <div class="empty-state">
-                                <div class="empty-icon">🔧</div>
-                                <div class="empty-title">No items added yet</div>
-                                <div class="empty-desc">Click "Add Item" to start building your budget</div>
-                            </div>
-                        </div>
-                        <div class="category-total">
-                            <span class="total-label">Category Total</span>
-                            <span class="total-value">£0.00</span>
-                        </div>
-                    </div>
-
-                    <!-- Custom Builds Category -->
-                    <div class="budget-section">
-                        <div class="budget-section-header">
-                            <div class="section-title">
-                                <span class="section-icon">🛠️</span>
-                                Custom Builds / Fabrication
-                            </div>
-                            <div class="section-actions">
-                                <button class="icon-btn" onclick="addItem('custom')">+ Add Item</button>
-                            </div>
-                        </div>
-                        <div id="custom-items">
-                            <div class="empty-state">
-                                <div class="empty-icon">🛠️</div>
-                                <div class="empty-title">No items added yet</div>
-                                <div class="empty-desc">For prosthetics/fabrication, list materials as separate line items, then add labor costs</div>
-                            </div>
-                        </div>
-                        <div class="category-total">
-                            <span class="total-label">Category Total</span>
-                            <span class="total-value">£0.00</span>
-                        </div>
+                    <!-- Dynamic Category Sections -->
+                    <div id="category-sections">
+                        <!-- Categories will be generated here -->
                     </div>
 
                     <!-- Grand Total -->
                     <div class="grand-total">
                         <div class="grand-total-label">💰 TOTAL ESTIMATED BUDGET</div>
-                        <div class="grand-total-value">£467.50</div>
+                        <div class="grand-total-value" id="grand-total">£0.00</div>
                     </div>
                 </div>
 
                 <!-- Spend Tracking Tab -->
                 <div id="tracking-tab" class="tab-content">
+                    <!-- Search Bar -->
+                    <div class="search-bar">
+                        <input type="text" class="search-input" placeholder="Search expenses..." id="search-expenses" onkeyup="searchExpenses()">
+                        <input type="date" class="form-input" id="expense-date-filter" style="width: 200px;">
+                        <button class="filter-btn" onclick="filterExpenses()">🔽 Filter</button>
+                    </div>
+
                     <div class="budget-section">
                         <div class="budget-section-header">
                             <div class="section-title">
@@ -1165,7 +1203,8 @@
                                 Expense Tracking
                             </div>
                             <div class="section-actions">
-                                <button class="icon-btn" onclick="addExpense()">+ Add Expense</button>
+                                <button class="icon-btn" onclick="openExpenseModal()">+ Add Expense</button>
+                                <button class="icon-btn" onclick="importReceipts()">📷 Import Receipt</button>
                             </div>
                         </div>
                         <table class="category-table">
@@ -1175,42 +1214,74 @@
                                     <th>Item</th>
                                     <th>Category</th>
                                     <th>Supplier</th>
+                                    <th>Receipt</th>
                                     <th>Amount</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <tr>
-                                    <td>30/10/2025</td>
-                                    <td>
-                                        <div class="item-name">Mascara Wands</div>
-                                        <div class="item-desc">Pack of 100 × 3</div>
-                                    </td>
-                                    <td>Disposables</td>
-                                    <td><span class="supplier-tag">Amazon</span></td>
-                                    <td>£24.00</td>
-                                </tr>
-                                <tr>
-                                    <td>30/10/2025</td>
-                                    <td>
-                                        <div class="item-name">Isopropyl Alcohol</div>
-                                        <div class="item-desc">99% (1L) × 3</div>
-                                    </td>
-                                    <td>Hygiene & Sanitation</td>
-                                    <td><span class="supplier-tag">Pharmacy</span></td>
-                                    <td>£36.00</td>
-                                </tr>
-                                <tr>
-                                    <td>29/10/2025</td>
-                                    <td>
-                                        <div class="item-name">Setting Spray</div>
-                                        <div class="item-desc">100ml × 3</div>
-                                    </td>
-                                    <td>Everyday Consumables</td>
-                                    <td><span class="supplier-tag">MAC</span></td>
-                                    <td>£45.00</td>
-                                </tr>
+                            <tbody id="expense-list">
+                                <!-- Dynamic content -->
                             </tbody>
                         </table>
+                        <div class="category-total">
+                            <span class="total-label">Total Expenses</span>
+                            <span class="total-value" id="total-expenses">£0.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Budget vs Actual Comparison Tab -->
+                <div id="comparison-tab" class="tab-content">
+                    <div class="budget-section">
+                        <div class="budget-section-header">
+                            <div class="section-title">
+                                <span class="section-icon">⚖️</span>
+                                Budget vs Actual Comparison
+                            </div>
+                            <div class="section-actions">
+                                <button class="icon-btn" onclick="exportComparison()">📤 Export Report</button>
+                            </div>
+                        </div>
+                        <table class="comparison-table">
+                            <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th>Budgeted</th>
+                                    <th>Actual Spent</th>
+                                    <th>Variance (£)</th>
+                                    <th>Variance (%)</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="comparison-table-body">
+                                <!-- Dynamic content -->
+                            </tbody>
+                            <tfoot style="background: rgba(201, 169, 97, 0.05); font-weight: 600;">
+                                <tr>
+                                    <td style="padding: 16px 12px;">TOTAL</td>
+                                    <td id="comp-total-budget">£0.00</td>
+                                    <td id="comp-total-actual">£0.00</td>
+                                    <td id="comp-total-variance">£0.00</td>
+                                    <td id="comp-total-variance-percent">0%</td>
+                                    <td id="comp-total-status">-</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+
+                    <!-- Variance Analysis -->
+                    <div class="budget-section">
+                        <div class="budget-section-header">
+                            <div class="section-title">
+                                <span class="section-icon">📈</span>
+                                Variance Analysis
+                            </div>
+                        </div>
+                        <div style="padding: 24px;">
+                            <div id="variance-analysis">
+                                <!-- Dynamic analysis content -->
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1222,114 +1293,852 @@
         <div class="modal-content">
             <div class="modal-header">
                 <div class="modal-title">Load Budget Template</div>
-                <button class="modal-close" onclick="closeModal()">&times;</button>
+                <button class="modal-close" onclick="closeModal('templateModal')">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="form-group">
                     <label class="form-label">Select Template</label>
-                    <select class="form-select">
-                        <option>Basic Feature Film (4 weeks)</option>
-                        <option>TV Series Episode Budget</option>
-                        <option>Commercial Shoot (1-3 days)</option>
-                        <option>Period Drama Budget</option>
-                        <option>Horror/SFX Heavy Budget</option>
-                        <option>Low Budget Indie Film</option>
+                    <select class="form-select" id="template-select">
+                        <option value="feature">Basic Feature Film (4 weeks)</option>
+                        <option value="tv">TV Series Episode Budget</option>
+                        <option value="commercial">Commercial Shoot (1-3 days)</option>
+                        <option value="period">Period Drama Budget</option>
+                        <option value="horror">Horror/SFX Heavy Budget</option>
+                        <option value="indie">Low Budget Indie Film</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Description</label>
-                    <p style="color: var(--text-muted); font-size: 0.875em; line-height: 1.5;">
+                    <p style="color: var(--text-muted); font-size: 0.875em; line-height: 1.5;" id="template-description">
                         Standard feature film budget template for a 4-week shoot. Includes basic disposables, hygiene supplies, and common beauty products. Customize as needed for your specific production requirements.
                     </p>
                 </div>
+                <div class="form-group">
+                    <label class="form-label">
+                        <input type="checkbox" id="merge-template"> Merge with existing budget (don't replace)
+                    </label>
+                </div>
             </div>
             <div class="modal-footer">
-                <button class="btn" onclick="closeModal()">Cancel</button>
+                <button class="btn" onclick="closeModal('templateModal')">Cancel</button>
                 <button class="btn primary" onclick="loadTemplate()">Load Template</button>
             </div>
         </div>
     </div>
 
+    <!-- Expense Modal -->
+    <div id="expenseModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Add Expense</div>
+                <button class="modal-close" onclick="closeModal('expenseModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Date</label>
+                    <input type="date" class="form-input" id="expense-date" value="">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Item Description</label>
+                    <input type="text" class="form-input" id="expense-item" placeholder="Enter item description">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Category</label>
+                    <select class="form-select" id="expense-category">
+                        <option value="disposables">Disposables</option>
+                        <option value="hygiene">Hygiene & Sanitation</option>
+                        <option value="consumables">Everyday Consumables</option>
+                        <option value="beauty">Beauty Products</option>
+                        <option value="sfx">Special Effects</option>
+                        <option value="hair">Hair Products</option>
+                        <option value="tools">Tools & Equipment</option>
+                        <option value="custom">Custom Builds / Fabrication</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Supplier</label>
+                    <input type="text" class="form-input" id="expense-supplier" placeholder="Enter supplier name" list="supplier-list">
+                    <datalist id="supplier-list">
+                        <option value="Amazon">
+                        <option value="Boots">
+                        <option value="MAC">
+                        <option value="Superdrug">
+                        <option value="Sally's">
+                        <option value="Charles Fox">
+                        <option value="Screenface">
+                        <option value="Kryolan">
+                        <option value="Pharmacy">
+                    </datalist>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Amount (£)</label>
+                    <input type="number" class="form-input" id="expense-amount" placeholder="0.00" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Receipt Number</label>
+                    <input type="text" class="form-input" id="expense-receipt" placeholder="Optional receipt/invoice number">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Notes</label>
+                    <textarea class="notes-input" id="expense-notes" placeholder="Additional notes..." rows="3"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeModal('expenseModal')">Cancel</button>
+                <button class="btn primary" onclick="saveExpense()">Add Expense</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions FAB -->
+    <div class="quick-actions">
+        <div class="fab-menu" id="fab-menu">
+            <div class="fab-item" onclick="quickAddItem()">➕ Quick Add Item</div>
+            <div class="fab-item" onclick="quickAddExpense()">💳 Quick Expense</div>
+            <div class="fab-item" onclick="duplicateLastItem()">📑 Duplicate Last</div>
+            <div class="fab-item" onclick="clearAll()">🗑️ Clear All</div>
+        </div>
+        <button class="fab" onclick="toggleFab()">+</button>
+    </div>
+
     <script>
-        // Budget State Management
-        const budgetState = {
-            projectInfo: {
-                name: 'The Big Race',
-                designer: '',
-                type: 'Feature Film',
-                duration: '4 weeks'
-            },
-            categories: {
-                disposables: [],
-                hygiene: [],
-                consumables: [],
-                beauty: [],
-                sfx: [],
-                hair: [],
-                tools: [],
-                custom: []
-            },
-            expenses: []
-        };
+        // Enhanced Budget Management System
+        class BudgetManager {
+            constructor() {
+                this.data = {
+                    projectInfo: {
+                        name: 'The Big Race',
+                        code: 'HM-2025-001',
+                        designer: '',
+                        type: 'Feature Film',
+                        duration: '4 weeks',
+                        budgetLimit: 0
+                    },
+                    categories: {
+                        disposables: { icon: '📦', name: 'Disposables', items: [] },
+                        hygiene: { icon: '🧼', name: 'Hygiene & Sanitation', items: [] },
+                        consumables: { icon: '🛍️', name: 'Everyday Consumables', items: [] },
+                        beauty: { icon: '💄', name: 'Beauty Products', items: [] },
+                        sfx: { icon: '🎭', name: 'Special Effects', items: [] },
+                        hair: { icon: '✂️', name: 'Hair Products', items: [] },
+                        tools: { icon: '🔧', name: 'Tools & Equipment', items: [] },
+                        custom: { icon: '🛠️', name: 'Custom Builds / Fabrication', items: [] }
+                    },
+                    expenses: [],
+                    templates: {},
+                    history: [],
+                    lastSaved: null
+                };
+                
+                this.init();
+            }
 
-        // Category Configuration
-        const categoryConfig = {
-            disposables: { icon: '📦', name: 'Disposables' },
-            hygiene: { icon: '🧼', name: 'Hygiene & Sanitation' },
-            consumables: { icon: '🛍️', name: 'Everyday Consumables' },
-            beauty: { icon: '💄', name: 'Beauty Products' },
-            sfx: { icon: '🎭', name: 'Special Effects' },
-            hair: { icon: '✂️', name: 'Hair Products' },
-            tools: { icon: '🔧', name: 'Tools & Equipment' },
-            custom: { icon: '🛠️', name: 'Custom Builds / Fabrication' }
-        };
+            init() {
+                this.loadFromStorage();
+                this.setupEventListeners();
+                this.renderCategories();
+                this.updateAllCalculations();
+                this.setTodayDate();
+            }
 
-        // Initialize on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            loadFromLocalStorage();
-            initializeExistingRows();
-            updateAllTotals();
-            setupEventListeners();
-        });
+            setupEventListeners() {
+                // Project info changes
+                ['project-name', 'project-code', 'designer-name', 'project-type', 'project-duration', 'budget-limit'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.addEventListener('change', () => this.saveProjectInfo());
+                    }
+                });
 
-        // Setup Event Listeners
-        function setupEventListeners() {
-            // Listen for input changes on all number inputs
-            document.addEventListener('input', function(e) {
-                if (e.target.classList.contains('form-input') && e.target.type === 'number') {
-                    updateRowTotal(e.target.closest('.input-row'));
-                    updateCategoryTotal(e.target.closest('.input-row').parentElement);
-                    updateGrandTotal();
-                    updateOverviewTab();
+                // Keyboard shortcuts
+                document.addEventListener('keydown', (e) => {
+                    if (e.ctrlKey || e.metaKey) {
+                        switch(e.key) {
+                            case 's':
+                                e.preventDefault();
+                                this.save();
+                                break;
+                            case 'z':
+                                e.preventDefault();
+                                this.undo();
+                                break;
+                            case 'y':
+                                e.preventDefault();
+                                this.redo();
+                                break;
+                        }
+                    }
+                });
+
+                // Auto-save every 30 seconds
+                setInterval(() => this.autoSave(), 30000);
+            }
+
+            renderCategories() {
+                const container = document.getElementById('category-sections');
+                if (!container) return;
+
+                container.innerHTML = '';
+                
+                Object.keys(this.data.categories).forEach(key => {
+                    const category = this.data.categories[key];
+                    const section = this.createCategorySection(key, category);
+                    container.appendChild(section);
+                });
+            }
+
+            createCategorySection(key, category) {
+                const section = document.createElement('div');
+                section.className = 'budget-section';
+                section.innerHTML = `
+                    <div class="budget-section-header">
+                        <div class="section-title">
+                            <span class="section-icon">${category.icon}</span>
+                            ${category.name}
+                        </div>
+                        <div class="section-actions">
+                            <button class="icon-btn" onclick="budgetManager.addItem('${key}')">+ Add Item</button>
+                            <button class="icon-btn" onclick="budgetManager.clearCategory('${key}')">Clear</button>
+                        </div>
+                    </div>
+                    <div id="${key}-items">
+                        ${category.items.length === 0 ? this.getEmptyState(category) : ''}
+                    </div>
+                    <div class="category-total">
+                        <span class="total-label">Category Total</span>
+                        <span class="total-value" id="${key}-total">£0.00</span>
+                    </div>
+                `;
+
+                // Render existing items
+                if (category.items.length > 0) {
+                    const itemsContainer = section.querySelector(`#${key}-items`);
+                    category.items.forEach((item, index) => {
+                        itemsContainer.appendChild(this.createItemRow(key, item, index));
+                    });
+                }
+
+                return section;
+            }
+
+            createItemRow(categoryKey, item = {}, index) {
+                const row = document.createElement('div');
+                row.className = 'input-row';
+                row.dataset.category = categoryKey;
+                row.dataset.index = index;
+                
+                row.innerHTML = `
+                    <input type="text" class="form-input item-description" 
+                           placeholder="Item description" 
+                           value="${item.description || ''}"
+                           onchange="budgetManager.updateItem('${categoryKey}', ${index}, 'description', this.value)">
+                    <input type="number" class="form-input item-qty" 
+                           placeholder="Qty" 
+                           value="${item.qty || 1}" 
+                           min="0"
+                           onchange="budgetManager.updateItem('${categoryKey}', ${index}, 'qty', this.value)">
+                    <input type="number" class="form-input item-price" 
+                           placeholder="Unit Price" 
+                           value="${item.price || 0}" 
+                           step="0.01" 
+                           min="0"
+                           onchange="budgetManager.updateItem('${categoryKey}', ${index}, 'price', this.value)">
+                    <input type="number" class="form-input item-markup" 
+                           placeholder="Markup %" 
+                           value="${item.markup || 0}" 
+                           step="1" 
+                           min="0"
+                           onchange="budgetManager.updateItem('${categoryKey}', ${index}, 'markup', this.value)">
+                    <div class="calculated-value">${this.formatCurrency(this.calculateItemTotal(item))}</div>
+                    <select class="supplier-select"
+                            onchange="budgetManager.updateItem('${categoryKey}', ${index}, 'supplier', this.value)">
+                        <option value="">Select Supplier</option>
+                        <option value="Amazon" ${item.supplier === 'Amazon' ? 'selected' : ''}>Amazon</option>
+                        <option value="Boots" ${item.supplier === 'Boots' ? 'selected' : ''}>Boots</option>
+                        <option value="MAC" ${item.supplier === 'MAC' ? 'selected' : ''}>MAC</option>
+                        <option value="Superdrug" ${item.supplier === 'Superdrug' ? 'selected' : ''}>Superdrug</option>
+                        <option value="Sally's" ${item.supplier === "Sally's" ? 'selected' : ''}>Sally's</option>
+                        <option value="Charles Fox" ${item.supplier === 'Charles Fox' ? 'selected' : ''}>Charles Fox</option>
+                        <option value="Other" ${item.supplier === 'Other' ? 'selected' : ''}>Other</option>
+                    </select>
+                    <input type="text" class="notes-input" 
+                           placeholder="Notes..." 
+                           value="${item.notes || ''}"
+                           onchange="budgetManager.updateItem('${categoryKey}', ${index}, 'notes', this.value)">
+                    <button class="delete-btn" onclick="budgetManager.removeItem('${categoryKey}', ${index})">×</button>
+                `;
+
+                return row;
+            }
+
+            getEmptyState(category) {
+                return `
+                    <div class="empty-state">
+                        <div class="empty-icon">${category.icon}</div>
+                        <div class="empty-title">No items added yet</div>
+                        <div class="empty-desc">Click "Add Item" to start building your budget</div>
+                    </div>
+                `;
+            }
+
+            addItem(categoryKey) {
+                const category = this.data.categories[categoryKey];
+                if (!category) return;
+
+                const newItem = {
+                    description: '',
+                    qty: 1,
+                    price: 0,
+                    markup: 0,
+                    supplier: '',
+                    notes: '',
+                    id: Date.now()
+                };
+
+                category.items.push(newItem);
+
+                // Remove empty state if exists
+                const container = document.getElementById(`${categoryKey}-items`);
+                const emptyState = container.querySelector('.empty-state');
+                if (emptyState) emptyState.remove();
+
+                // Add new row
+                const newRow = this.createItemRow(categoryKey, newItem, category.items.length - 1);
+                container.appendChild(newRow);
+
+                // Focus on description
+                newRow.querySelector('.item-description').focus();
+
+                this.updateCategoryTotal(categoryKey);
+                this.updateGrandTotal();
+                this.save();
+            }
+
+            updateItem(categoryKey, index, field, value) {
+                const category = this.data.categories[categoryKey];
+                if (!category || !category.items[index]) return;
+
+                // Convert values to appropriate types
+                if (field === 'qty' || field === 'price' || field === 'markup') {
+                    value = parseFloat(value) || 0;
+                }
+
+                category.items[index][field] = value;
+
+                // Update row total
+                const row = document.querySelector(`[data-category="${categoryKey}"][data-index="${index}"]`);
+                if (row) {
+                    const totalEl = row.querySelector('.calculated-value');
+                    if (totalEl) {
+                        totalEl.textContent = this.formatCurrency(this.calculateItemTotal(category.items[index]));
+                    }
+                }
+
+                this.updateCategoryTotal(categoryKey);
+                this.updateGrandTotal();
+                this.save();
+            }
+
+            removeItem(categoryKey, index) {
+                const category = this.data.categories[categoryKey];
+                if (!category || !category.items[index]) return;
+
+                if (confirm('Are you sure you want to remove this item?')) {
+                    category.items.splice(index, 1);
+                    this.renderCategories();
+                    this.updateAllCalculations();
+                    this.save();
+                }
+            }
+
+            clearCategory(categoryKey) {
+                if (confirm(`Clear all items in ${this.data.categories[categoryKey].name}?`)) {
+                    this.data.categories[categoryKey].items = [];
+                    this.renderCategories();
+                    this.updateAllCalculations();
+                    this.save();
+                }
+            }
+
+            calculateItemTotal(item) {
+                if (!item) return 0;
+                const baseTotal = (item.qty || 0) * (item.price || 0);
+                const markupAmount = baseTotal * ((item.markup || 0) / 100);
+                return baseTotal + markupAmount;
+            }
+
+            updateCategoryTotal(categoryKey) {
+                const category = this.data.categories[categoryKey];
+                if (!category) return 0;
+
+                const total = category.items.reduce((sum, item) => sum + this.calculateItemTotal(item), 0);
+                
+                const totalEl = document.getElementById(`${categoryKey}-total`);
+                if (totalEl) {
+                    totalEl.textContent = this.formatCurrency(total);
+                }
+
+                return total;
+            }
+
+            updateGrandTotal() {
+                let grandTotal = 0;
+                Object.keys(this.data.categories).forEach(key => {
+                    grandTotal += this.updateCategoryTotal(key);
+                });
+
+                document.getElementById('grand-total').textContent = this.formatCurrency(grandTotal);
+                document.getElementById('sidebar-total').textContent = this.formatCurrency(grandTotal);
+                
+                return grandTotal;
+            }
+
+            updateAllCalculations() {
+                const grandTotal = this.updateGrandTotal();
+                const totalExpenses = this.calculateTotalExpenses();
+                const remaining = grandTotal - totalExpenses;
+                
+                // Update overview
+                this.updateOverview(grandTotal, totalExpenses, remaining);
+                
+                // Update comparison
+                this.updateComparison();
+                
+                // Update item count
+                let itemCount = 0;
+                Object.values(this.data.categories).forEach(cat => {
+                    itemCount += cat.items.length;
+                });
+                document.getElementById('sidebar-items').textContent = itemCount;
+            }
+
+            updateOverview(budget, spent, remaining) {
+                document.getElementById('overview-total-budget').textContent = this.formatCurrency(budget);
+                document.getElementById('overview-spent').textContent = this.formatCurrency(spent);
+                document.getElementById('overview-remaining').textContent = this.formatCurrency(remaining);
+                
+                const spentPercent = budget > 0 ? (spent / budget * 100).toFixed(1) : 0;
+                const remainingPercent = budget > 0 ? (remaining / budget * 100).toFixed(1) : 0;
+                
+                document.getElementById('overview-spent-percent').textContent = spentPercent + '%';
+                document.getElementById('overview-remaining-percent').textContent = remainingPercent + '%';
+                
+                // Update progress bar
+                document.getElementById('progress-percent').textContent = spentPercent + '% Used';
+                const progressBar = document.getElementById('progress-bar');
+                progressBar.style.width = spentPercent + '%';
+                
+                // Update progress bar color
+                progressBar.classList.remove('warning', 'danger');
+                if (spentPercent > 90) {
+                    progressBar.classList.add('danger');
+                } else if (spentPercent > 75) {
+                    progressBar.classList.add('warning');
+                }
+
+                // Update variance
+                const variance = spent - budget;
+                document.getElementById('overview-variance').textContent = this.formatCurrency(Math.abs(variance));
+                
+                const varianceStatus = document.getElementById('overview-variance-status');
+                if (variance > 0) {
+                    varianceStatus.innerHTML = '<span style="color: var(--danger)">Over budget</span>';
+                    varianceStatus.className = 'stat-change negative';
+                } else if (variance < 0) {
+                    varianceStatus.innerHTML = '<span style="color: var(--success)">Under budget</span>';
+                    varianceStatus.className = 'stat-change positive';
+                } else {
+                    varianceStatus.innerHTML = '<span>On budget</span>';
+                    varianceStatus.className = 'stat-change';
+                }
+
+                // Update category breakdown
+                this.updateCategoryBreakdown();
+            }
+
+            updateCategoryBreakdown() {
+                const tbody = document.getElementById('overview-categories');
+                if (!tbody) return;
+
+                tbody.innerHTML = '';
+                
+                Object.keys(this.data.categories).forEach(key => {
+                    const category = this.data.categories[key];
+                    const budgeted = category.items.reduce((sum, item) => sum + this.calculateItemTotal(item), 0);
+                    const spent = this.getCategoryExpenses(key);
+                    const remaining = budgeted - spent;
+                    const variance = spent - budgeted;
+                    
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span>${category.icon}</span>
+                                <span>${category.name}</span>
+                            </div>
+                        </td>
+                        <td>${this.formatCurrency(budgeted)}</td>
+                        <td>${this.formatCurrency(spent)}</td>
+                        <td>${this.formatCurrency(remaining)}</td>
+                        <td>
+                            ${this.getVarianceBadge(variance)}
+                        </td>
+                    `;
+                    
+                    tbody.appendChild(row);
+                });
+            }
+
+            getCategoryExpenses(categoryKey) {
+                return this.data.expenses
+                    .filter(exp => exp.category === categoryKey)
+                    .reduce((sum, exp) => sum + (parseFloat(exp.amount) || 0), 0);
+            }
+
+            getVarianceBadge(variance) {
+                if (variance > 0) {
+                    return `<span class="variance negative">+${this.formatCurrency(variance)}</span>`;
+                } else if (variance < 0) {
+                    return `<span class="variance positive">${this.formatCurrency(variance)}</span>`;
+                } else {
+                    return `<span class="variance neutral">£0.00</span>`;
+                }
+            }
+
+            updateComparison() {
+                const tbody = document.getElementById('comparison-table-body');
+                if (!tbody) return;
+
+                tbody.innerHTML = '';
+                let totalBudget = 0;
+                let totalActual = 0;
+                
+                Object.keys(this.data.categories).forEach(key => {
+                    const category = this.data.categories[key];
+                    const budgeted = category.items.reduce((sum, item) => sum + this.calculateItemTotal(item), 0);
+                    const actual = this.getCategoryExpenses(key);
+                    const variance = actual - budgeted;
+                    const variancePercent = budgeted > 0 ? (variance / budgeted * 100) : 0;
+                    
+                    totalBudget += budgeted;
+                    totalActual += actual;
+                    
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span>${category.icon}</span>
+                                <span>${category.name}</span>
+                            </div>
+                        </td>
+                        <td>${this.formatCurrency(budgeted)}</td>
+                        <td>${this.formatCurrency(actual)}</td>
+                        <td>${this.formatCurrency(variance)}</td>
+                        <td>${variancePercent.toFixed(1)}%</td>
+                        <td>${this.getStatusBadge(variance, budgeted)}</td>
+                    `;
+                    
+                    tbody.appendChild(row);
+                });
+
+                // Update totals
+                const totalVariance = totalActual - totalBudget;
+                const totalVariancePercent = totalBudget > 0 ? (totalVariance / totalBudget * 100) : 0;
+                
+                document.getElementById('comp-total-budget').textContent = this.formatCurrency(totalBudget);
+                document.getElementById('comp-total-actual').textContent = this.formatCurrency(totalActual);
+                document.getElementById('comp-total-variance').textContent = this.formatCurrency(totalVariance);
+                document.getElementById('comp-total-variance-percent').textContent = totalVariancePercent.toFixed(1) + '%';
+                document.getElementById('comp-total-status').innerHTML = this.getStatusBadge(totalVariance, totalBudget);
+
+                // Update variance analysis
+                this.updateVarianceAnalysis(totalBudget, totalActual, totalVariance);
+            }
+
+            updateVarianceAnalysis(budget, actual, variance) {
+                const container = document.getElementById('variance-analysis');
+                if (!container) return;
+
+                const percentSpent = budget > 0 ? (actual / budget * 100).toFixed(1) : 0;
+                const status = variance > 0 ? 'over budget' : variance < 0 ? 'under budget' : 'on budget';
+                
+                container.innerHTML = `
+                    <div style="display: grid; gap: 16px;">
+                        <div>
+                            <strong>Summary:</strong> The project is currently ${status} by ${this.formatCurrency(Math.abs(variance))} 
+                            (${Math.abs((variance / budget * 100).toFixed(1))}%).
+                        </div>
+                        <div>
+                            <strong>Budget Utilization:</strong> ${percentSpent}% of the total budget has been spent.
+                        </div>
+                        <div>
+                            <strong>Top Variance Categories:</strong>
+                            <ul style="margin-top: 8px; padding-left: 20px;">
+                                ${this.getTopVariances()}
+                            </ul>
+                        </div>
+                        <div>
+                            <strong>Recommendations:</strong>
+                            <ul style="margin-top: 8px; padding-left: 20px;">
+                                ${this.getRecommendations(variance, budget)}
+                            </ul>
+                        </div>
+                    </div>
+                `;
+            }
+
+            getTopVariances() {
+                const variances = [];
+                Object.keys(this.data.categories).forEach(key => {
+                    const category = this.data.categories[key];
+                    const budgeted = category.items.reduce((sum, item) => sum + this.calculateItemTotal(item), 0);
+                    const actual = this.getCategoryExpenses(key);
+                    const variance = actual - budgeted;
+                    
+                    if (Math.abs(variance) > 0) {
+                        variances.push({ name: category.name, variance, budgeted });
+                    }
+                });
+
+                variances.sort((a, b) => Math.abs(b.variance) - Math.abs(a.variance));
+                
+                return variances.slice(0, 3)
+                    .map(v => `<li>${v.name}: ${v.variance > 0 ? 'Over' : 'Under'} by ${this.formatCurrency(Math.abs(v.variance))}</li>`)
+                    .join('');
+            }
+
+            getRecommendations(variance, budget) {
+                const recommendations = [];
+                
+                if (variance > budget * 0.1) {
+                    recommendations.push('Review and reduce non-essential expenses immediately');
+                    recommendations.push('Consider renegotiating supplier contracts');
+                } else if (variance > 0) {
+                    recommendations.push('Monitor spending closely to prevent further overruns');
+                    recommendations.push('Identify areas for cost optimization');
+                } else if (variance < -budget * 0.2) {
+                    recommendations.push('Consider reallocating unused budget to quality improvements');
+                    recommendations.push('Review if all necessary items have been accounted for');
+                } else {
+                    recommendations.push('Continue current spending patterns');
+                    recommendations.push('Maintain regular budget reviews');
                 }
                 
-                // Save project info changes
-                if (e.target.closest('.budget-section') && e.target.closest('.budget-section').querySelector('.section-title')?.textContent.includes('Project Information')) {
-                    saveProjectInfo();
-                }
-            });
+                return recommendations.map(r => `<li>${r}</li>`).join('');
+            }
 
-            // Close modal when clicking outside
-            document.getElementById('templateModal').addEventListener('click', function(e) {
-                if (e.target === this) {
-                    closeModal();
+            getStatusBadge(variance, budget) {
+                const percent = budget > 0 ? Math.abs(variance / budget * 100) : 0;
+                
+                if (variance > budget * 0.1) {
+                    return '<span class="variance negative">⚠️ Over</span>';
+                } else if (variance > 0) {
+                    return '<span class="variance warning">⚠ Slightly Over</span>';
+                } else if (variance < -budget * 0.2) {
+                    return '<span class="variance positive">✓ Under</span>';
+                } else {
+                    return '<span class="variance neutral">✓ On Track</span>';
                 }
-            });
+            }
+
+            saveProjectInfo() {
+                this.data.projectInfo.name = document.getElementById('project-name').value;
+                this.data.projectInfo.code = document.getElementById('project-code').value;
+                this.data.projectInfo.designer = document.getElementById('designer-name').value;
+                this.data.projectInfo.type = document.getElementById('project-type').value;
+                this.data.projectInfo.duration = document.getElementById('project-duration').value;
+                this.data.projectInfo.budgetLimit = parseFloat(document.getElementById('budget-limit').value) || 0;
+
+                // Update display
+                document.getElementById('project-name-display').textContent = this.data.projectInfo.name;
+                document.getElementById('project-code-display').textContent = this.data.projectInfo.code;
+
+                this.save();
+            }
+
+            addExpense(expense) {
+                expense.id = Date.now();
+                expense.date = expense.date || new Date().toISOString().split('T')[0];
+                this.data.expenses.push(expense);
+                this.renderExpenses();
+                this.updateAllCalculations();
+                this.save();
+            }
+
+            renderExpenses() {
+                const tbody = document.getElementById('expense-list');
+                if (!tbody) return;
+
+                tbody.innerHTML = '';
+                
+                const sortedExpenses = [...this.data.expenses].sort((a, b) => 
+                    new Date(b.date) - new Date(a.date)
+                );
+
+                sortedExpenses.forEach(expense => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${expense.date}</td>
+                        <td>
+                            <div class="item-name">${expense.item}</div>
+                            ${expense.notes ? `<div class="item-desc">${expense.notes}</div>` : ''}
+                        </td>
+                        <td>${this.data.categories[expense.category]?.name || expense.category}</td>
+                        <td><span class="supplier-tag">${expense.supplier || '-'}</span></td>
+                        <td>${expense.receipt || '-'}</td>
+                        <td>${this.formatCurrency(expense.amount)}</td>
+                        <td>
+                            <button class="delete-btn" onclick="budgetManager.deleteExpense(${expense.id})">×</button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+
+                document.getElementById('total-expenses').textContent = 
+                    this.formatCurrency(this.calculateTotalExpenses());
+            }
+
+            deleteExpense(id) {
+                if (confirm('Delete this expense?')) {
+                    this.data.expenses = this.data.expenses.filter(e => e.id !== id);
+                    this.renderExpenses();
+                    this.updateAllCalculations();
+                    this.save();
+                }
+            }
+
+            calculateTotalExpenses() {
+                return this.data.expenses.reduce((sum, exp) => sum + (parseFloat(exp.amount) || 0), 0);
+            }
+
+            formatCurrency(amount) {
+                return '£' + (parseFloat(amount) || 0).toFixed(2);
+            }
+
+            save() {
+                this.data.lastSaved = new Date().toISOString();
+                localStorage.setItem('hmBudgetPro', JSON.stringify(this.data));
+                
+                // Update last saved display
+                const now = new Date();
+                document.getElementById('sidebar-saved').textContent = 
+                    `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
+                
+                this.showNotification('Budget saved', 'success');
+            }
+
+            autoSave() {
+                if (this.hasChanges()) {
+                    this.save();
+                }
+            }
+
+            hasChanges() {
+                const current = JSON.stringify(this.data);
+                const saved = localStorage.getItem('hmBudgetPro');
+                return current !== saved;
+            }
+
+            loadFromStorage() {
+                const saved = localStorage.getItem('hmBudgetPro');
+                if (saved) {
+                    try {
+                        const data = JSON.parse(saved);
+                        this.data = { ...this.data, ...data };
+                        
+                        // Restore project info
+                        if (this.data.projectInfo) {
+                            document.getElementById('project-name').value = this.data.projectInfo.name || '';
+                            document.getElementById('project-code').value = this.data.projectInfo.code || '';
+                            document.getElementById('designer-name').value = this.data.projectInfo.designer || '';
+                            document.getElementById('project-type').value = this.data.projectInfo.type || '';
+                            document.getElementById('project-duration').value = this.data.projectInfo.duration || '';
+                            document.getElementById('budget-limit').value = this.data.projectInfo.budgetLimit || '';
+                            
+                            document.getElementById('project-name-display').textContent = this.data.projectInfo.name;
+                            document.getElementById('project-code-display').textContent = this.data.projectInfo.code;
+                        }
+
+                        // Update last saved
+                        if (this.data.lastSaved) {
+                            const saved = new Date(this.data.lastSaved);
+                            document.getElementById('sidebar-saved').textContent = 
+                                `${saved.toLocaleDateString()} ${saved.toLocaleTimeString()}`;
+                        }
+
+                        this.renderExpenses();
+                    } catch (e) {
+                        console.error('Error loading data:', e);
+                    }
+                }
+            }
+
+            exportData(format = 'json') {
+                const data = {
+                    projectInfo: this.data.projectInfo,
+                    categories: this.data.categories,
+                    expenses: this.data.expenses,
+                    exported: new Date().toISOString()
+                };
+
+                if (format === 'json') {
+                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                    this.downloadFile(blob, `budget_${this.data.projectInfo.code}_${Date.now()}.json`);
+                } else if (format === 'csv') {
+                    const csv = this.convertToCSV(data);
+                    const blob = new Blob([csv], { type: 'text/csv' });
+                    this.downloadFile(blob, `budget_${this.data.projectInfo.code}_${Date.now()}.csv`);
+                }
+
+                this.showNotification('Budget exported successfully', 'success');
+            }
+
+            convertToCSV(data) {
+                let csv = 'Category,Item,Quantity,Unit Price,Markup %,Total,Supplier,Notes\n';
+                
+                Object.keys(data.categories).forEach(key => {
+                    const category = data.categories[key];
+                    category.items.forEach(item => {
+                        csv += `"${category.name}","${item.description}",${item.qty},${item.price},${item.markup},${this.calculateItemTotal(item)},"${item.supplier || ''}","${item.notes || ''}"\n`;
+                    });
+                });
+
+                return csv;
+            }
+
+            downloadFile(blob, filename) {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+
+            showNotification(message, type = 'info') {
+                const notification = document.createElement('div');
+                notification.className = `notification ${type}`;
+                notification.textContent = message;
+                document.body.appendChild(notification);
+
+                setTimeout(() => {
+                    notification.style.animation = 'slideOut 0.3s ease';
+                    setTimeout(() => notification.remove(), 300);
+                }, 3000);
+            }
+
+            setTodayDate() {
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('expense-date').value = today;
+            }
         }
 
-        // Initialize existing rows
-        function initializeExistingRows() {
-            document.querySelectorAll('.input-row').forEach(row => {
-                updateRowTotal(row);
-            });
-            document.querySelectorAll('[id$="-items"]').forEach(container => {
-                if (container.querySelectorAll('.input-row').length > 0) {
-                    updateCategoryTotal(container);
-                }
-            });
-        }
+        // Initialize Budget Manager
+        const budgetManager = new BudgetManager();
 
-        // Tab Switching
+        // Global functions
         function switchTab(tabName) {
             document.querySelectorAll('.tab-content').forEach(tab => {
                 tab.classList.remove('active');
@@ -1341,461 +2150,263 @@
             document.getElementById(tabName + '-tab').classList.add('active');
             event.target.classList.add('active');
 
-            // Update overview when switching to it
-            if (tabName === 'overview') {
-                updateOverviewTab();
+            // Update calculations when switching tabs
+            budgetManager.updateAllCalculations();
+        }
+
+        function saveBudget() {
+            budgetManager.save();
+        }
+
+        function exportBudget() {
+            const format = prompt('Export format: json or csv?', 'json');
+            if (format) {
+                budgetManager.exportData(format.toLowerCase());
             }
         }
 
-        // Add Item to Category
-        function addItem(category) {
-            const container = document.getElementById(category + '-items');
-            
-            // Remove empty state if exists
-            const emptyState = container.querySelector('.empty-state');
-            if (emptyState) {
-                emptyState.remove();
-            }
-
-            const newRow = document.createElement('div');
-            newRow.className = 'input-row';
-            newRow.innerHTML = `
-                <input type="text" class="form-input item-description" placeholder="Item description" data-category="${category}">
-                <input type="number" class="form-input item-qty" placeholder="Qty" value="1" min="0">
-                <input type="number" class="form-input item-price" placeholder="Unit Price (£)" value="0.00" step="0.01" min="0">
-                <div class="calculated-value">£0.00</div>
-                <button class="delete-btn" onclick="removeItem(this)">×</button>
-            `;
-            container.appendChild(newRow);
-            
-            updateCategoryTotal(container);
-            updateGrandTotal();
-            saveBudgetData();
-            
-            // Focus on the description input
-            newRow.querySelector('.item-description').focus();
-        }
-
-        // Remove Item
-        function removeItem(button) {
-            const row = button.closest('.input-row');
-            const container = row.parentElement;
-            row.remove();
-
-            // Show empty state if no items left
-            if (container.querySelectorAll('.input-row').length === 0) {
-                const categoryName = container.id.replace('-items', '');
-                const config = categoryConfig[categoryName];
-                const emptyDesc = categoryName === 'custom' 
-                    ? 'For prosthetics/fabrication, list materials as separate line items, then add labor costs'
-                    : 'Click "Add Item" to start building your budget';
-                
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-icon">${config.icon}</div>
-                        <div class="empty-title">No items added yet</div>
-                        <div class="empty-desc">${emptyDesc}</div>
-                    </div>
-                `;
-            }
-
-            updateCategoryTotal(container);
-            updateGrandTotal();
-            updateOverviewTab();
-            saveBudgetData();
-        }
-
-        // Update row total
-        function updateRowTotal(row) {
-            if (!row) return;
-            
-            const qtyInput = row.querySelector('.item-qty');
-            const priceInput = row.querySelector('.item-price');
-            const totalDisplay = row.querySelector('.calculated-value');
-            
-            if (qtyInput && priceInput && totalDisplay) {
-                const qty = parseFloat(qtyInput.value) || 0;
-                const price = parseFloat(priceInput.value) || 0;
-                const total = qty * price;
-                totalDisplay.textContent = '£' + total.toFixed(2);
-            }
-        }
-
-        // Update category total
-        function updateCategoryTotal(container) {
-            if (!container) return;
-            
-            let categoryTotal = 0;
-            container.querySelectorAll('.input-row').forEach(row => {
-                const qtyInput = row.querySelector('.item-qty');
-                const priceInput = row.querySelector('.item-price');
-                if (qtyInput && priceInput) {
-                    const qty = parseFloat(qtyInput.value) || 0;
-                    const price = parseFloat(priceInput.value) || 0;
-                    categoryTotal += qty * price;
-                }
-            });
-
-            // Update the category total display
-            const section = container.closest('.budget-section');
-            const totalDisplay = section?.querySelector('.category-total .total-value');
-            if (totalDisplay) {
-                totalDisplay.textContent = '£' + categoryTotal.toFixed(2);
-            }
-
-            return categoryTotal;
-        }
-
-        // Calculate all category totals and return object
-        function getAllCategoryTotals() {
-            const totals = {};
-            Object.keys(categoryConfig).forEach(category => {
-                const container = document.getElementById(category + '-items');
-                if (container) {
-                    totals[category] = updateCategoryTotal(container);
-                }
-            });
-            return totals;
-        }
-
-        // Update grand total
-        function updateGrandTotal() {
-            const totals = getAllCategoryTotals();
-            const grandTotal = Object.values(totals).reduce((sum, val) => sum + val, 0);
-            
-            const grandTotalDisplay = document.querySelector('.grand-total-value');
-            if (grandTotalDisplay) {
-                grandTotalDisplay.textContent = '£' + grandTotal.toFixed(2);
-            }
-
-            return grandTotal;
-        }
-
-        // Update Overview Tab
-        function updateOverviewTab() {
-            const categoryTotals = getAllCategoryTotals();
-            const totalBudget = Object.values(categoryTotals).reduce((sum, val) => sum + val, 0);
-            
-            // Calculate spent (mock data - in real app this would come from expenses)
-            const totalSpent = totalBudget * 0.267; // 26.7% spent
-            const remaining = totalBudget - totalSpent;
-
-            // Update stat cards
-            document.querySelector('.overview-grid .stat-card:nth-child(1) .stat-value').textContent = 
-                '£' + totalBudget.toFixed(2);
-            document.querySelector('.overview-grid .stat-card:nth-child(2) .stat-value').textContent = 
-                '£' + totalSpent.toFixed(2);
-            document.querySelector('.overview-grid .stat-card:nth-child(3) .stat-value').textContent = 
-                '£' + remaining.toFixed(2);
-
-            // Update percentages
-            const spentPercent = totalBudget > 0 ? (totalSpent / totalBudget * 100).toFixed(1) : 0;
-            const remainingPercent = totalBudget > 0 ? (remaining / totalBudget * 100).toFixed(1) : 0;
-            
-            document.querySelector('.overview-grid .stat-card:nth-child(2) .stat-change span:last-child').textContent = 
-                spentPercent + '% of budget';
-            document.querySelector('.overview-grid .stat-card:nth-child(3) .stat-change span:last-child').textContent = 
-                remainingPercent + '% available';
-
-            // Update progress bar
-            document.querySelector('.progress-value').textContent = spentPercent + '% Used';
-            const progressFill = document.querySelector('.progress-fill');
-            progressFill.style.width = spentPercent + '%';
-            
-            // Update progress bar color based on usage
-            progressFill.classList.remove('warning', 'danger');
-            if (spentPercent > 80) {
-                progressFill.classList.add('danger');
-            } else if (spentPercent > 60) {
-                progressFill.classList.add('warning');
-            }
-
-            // Update category breakdown table
-            updateCategoryBreakdownTable(categoryTotals, totalSpent);
-        }
-
-        // Update category breakdown table in overview
-        function updateCategoryBreakdownTable(categoryTotals, totalSpent) {
-            const tableBody = document.querySelector('#overview-tab .category-table tbody');
-            if (!tableBody) return;
-
-            const rows = tableBody.querySelectorAll('tr');
-            const categoryKeys = ['disposables', 'hygiene', 'consumables', 'beauty', 'sfx', 'hair', 'tools', 'custom'];
-            
-            rows.forEach((row, index) => {
-                if (index < categoryKeys.length) {
-                    const category = categoryKeys[index];
-                    const budgeted = categoryTotals[category] || 0;
-                    const spent = budgeted * 0.267; // Mock 26.7% spent
-                    const remaining = budgeted - spent;
-
-                    const cells = row.querySelectorAll('td');
-                    if (cells.length >= 4) {
-                        cells[1].textContent = '£' + budgeted.toFixed(2);
-                        cells[2].textContent = '£' + spent.toFixed(2);
-                        cells[3].textContent = '£' + remaining.toFixed(2);
+        function importData() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json,.csv';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const data = JSON.parse(event.target.result);
+                        if (confirm('This will replace your current budget. Continue?')) {
+                            budgetManager.data = { ...budgetManager.data, ...data };
+                            budgetManager.renderCategories();
+                            budgetManager.renderExpenses();
+                            budgetManager.updateAllCalculations();
+                            budgetManager.save();
+                            budgetManager.showNotification('Data imported successfully', 'success');
+                        }
+                    } catch (e) {
+                        budgetManager.showNotification('Error importing data', 'danger');
                     }
-                }
-            });
-        }
-
-        // Save budget data to localStorage
-        function saveBudgetData() {
-            const budgetData = {
-                projectInfo: getProjectInfo(),
-                categories: getAllCategoryData(),
-                timestamp: new Date().toISOString()
+                };
+                reader.readAsText(file);
             };
-            
-            localStorage.setItem('hmBudget', JSON.stringify(budgetData));
+            input.click();
         }
 
-        // Get project info
-        function getProjectInfo() {
-            const projectSection = document.querySelector('#proposal-tab .budget-section');
-            if (!projectSection) return budgetState.projectInfo;
-
-            const inputs = projectSection.querySelectorAll('.form-input, .form-select');
-            return {
-                name: inputs[0]?.value || '',
-                designer: inputs[1]?.value || '',
-                type: inputs[2]?.value || 'Feature Film',
-                duration: inputs[3]?.value || ''
-            };
-        }
-
-        // Save project info
-        function saveProjectInfo() {
-            saveBudgetData();
-        }
-
-        // Get all category data
-        function getAllCategoryData() {
-            const data = {};
-            
-            Object.keys(categoryConfig).forEach(category => {
-                const container = document.getElementById(category + '-items');
-                if (!container) return;
-
-                const items = [];
-                container.querySelectorAll('.input-row').forEach(row => {
-                    const description = row.querySelector('.item-description')?.value || '';
-                    const qty = parseFloat(row.querySelector('.item-qty')?.value) || 0;
-                    const price = parseFloat(row.querySelector('.item-price')?.value) || 0;
-                    
-                    if (description || qty || price) {
-                        items.push({ description, qty, price });
-                    }
-                });
-                
-                data[category] = items;
-            });
-
-            return data;
-        }
-
-        // Load from localStorage
-        function loadFromLocalStorage() {
-            const saved = localStorage.getItem('hmBudget');
-            if (!saved) return;
-
-            try {
-                const data = JSON.parse(saved);
-                
-                // Load project info
-                if (data.projectInfo) {
-                    loadProjectInfo(data.projectInfo);
-                }
-
-                // Load categories
-                if (data.categories) {
-                    loadCategoryData(data.categories);
-                }
-            } catch (e) {
-                console.error('Error loading saved data:', e);
-            }
-        }
-
-        // Load project info
-        function loadProjectInfo(info) {
-            const projectSection = document.querySelector('#proposal-tab .budget-section');
-            if (!projectSection) return;
-
-            const inputs = projectSection.querySelectorAll('.form-input, .form-select');
-            if (inputs[0]) inputs[0].value = info.name || '';
-            if (inputs[1]) inputs[1].value = info.designer || '';
-            if (inputs[2]) inputs[2].value = info.type || 'Feature Film';
-            if (inputs[3]) inputs[3].value = info.duration || '';
-        }
-
-        // Load category data
-        function loadCategoryData(categories) {
-            Object.keys(categories).forEach(category => {
-                const items = categories[category];
-                if (!items || items.length === 0) return;
-
-                const container = document.getElementById(category + '-items');
-                if (!container) return;
-
-                // Clear empty state
-                const emptyState = container.querySelector('.empty-state');
-                if (emptyState) emptyState.remove();
-
-                // Clear existing rows (except sample data)
-                container.innerHTML = '';
-
-                // Add items
-                items.forEach(item => {
-                    const newRow = document.createElement('div');
-                    newRow.className = 'input-row';
-                    newRow.innerHTML = `
-                        <input type="text" class="form-input item-description" placeholder="Item description" value="${item.description}" data-category="${category}">
-                        <input type="number" class="form-input item-qty" placeholder="Qty" value="${item.qty}" min="0">
-                        <input type="number" class="form-input item-price" placeholder="Unit Price (£)" value="${item.price.toFixed(2)}" step="0.01" min="0">
-                        <div class="calculated-value">£${(item.qty * item.price).toFixed(2)}</div>
-                        <button class="delete-btn" onclick="removeItem(this)">×</button>
-                    `;
-                    container.appendChild(newRow);
-                });
-            });
-        }
-
-        // Modal Functions
         function openTemplateModal() {
             document.getElementById('templateModal').classList.add('active');
         }
 
-        function closeModal() {
-            document.getElementById('templateModal').classList.remove('active');
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
         }
 
         function loadTemplate() {
-            // Sample template data
-            const templateData = {
-                disposables: [
-                    { description: 'Mascara Wands (Pack of 100)', qty: 3, price: 8.00 },
-                    { description: 'Cotton Pads (Pack of 200)', qty: 4, price: 4.50 },
-                    { description: 'Cotton Buds (Pack of 200)', qty: 3, price: 3.00 },
-                    { description: 'Tissues (Box)', qty: 5, price: 2.50 },
-                    { description: 'Disposable Makeup Sponges (Pack of 20)', qty: 5, price: 12.00 }
-                ],
-                hygiene: [
-                    { description: 'Isopropyl Alcohol 99% (1L)', qty: 3, price: 12.00 },
-                    { description: 'Brush Cleaner (250ml)', qty: 2, price: 15.00 },
-                    { description: 'Hand Sanitizer (500ml)', qty: 3, price: 6.00 }
-                ],
-                consumables: [
-                    { description: 'Makeup Remover Wipes (Pack of 25)', qty: 6, price: 4.00 },
-                    { description: 'Setting Spray (100ml)', qty: 3, price: 15.00 },
-                    { description: 'Translucent Powder (30g)', qty: 2, price: 25.00 }
-                ]
+            const templateType = document.getElementById('template-select').value;
+            const merge = document.getElementById('merge-template').checked;
+
+            const templates = {
+                feature: {
+                    disposables: [
+                        { description: 'Mascara Wands (Pack of 100)', qty: 3, price: 8.00, supplier: 'Amazon' },
+                        { description: 'Cotton Pads (Pack of 200)', qty: 4, price: 4.50, supplier: 'Boots' },
+                        { description: 'Cotton Buds (Pack of 200)', qty: 3, price: 3.00, supplier: 'Boots' },
+                        { description: 'Tissues (Box)', qty: 5, price: 2.50, supplier: 'Superdrug' }
+                    ],
+                    hygiene: [
+                        { description: 'Isopropyl Alcohol 99% (1L)', qty: 3, price: 12.00, supplier: 'Pharmacy' },
+                        { description: 'Brush Cleaner (250ml)', qty: 2, price: 15.00, supplier: 'MAC' }
+                    ],
+                    beauty: [
+                        { description: 'Foundation Set (Various Shades)', qty: 1, price: 250.00, supplier: 'MAC' },
+                        { description: 'Concealer Palette', qty: 2, price: 45.00, supplier: 'Charles Fox' },
+                        { description: 'Powder Set', qty: 1, price: 85.00, supplier: 'Kryolan' }
+                    ]
+                },
+                horror: {
+                    sfx: [
+                        { description: 'Liquid Latex (1L)', qty: 3, price: 25.00, supplier: 'Screenface' },
+                        { description: 'Scar Wax', qty: 5, price: 12.00, supplier: 'Kryolan' },
+                        { description: 'Stage Blood (1L)', qty: 2, price: 18.00, supplier: 'Charles Fox' },
+                        { description: 'Gelatin (1kg)', qty: 2, price: 35.00, supplier: 'Screenface' }
+                    ]
+                }
             };
 
-            loadCategoryData(templateData);
-            updateAllTotals();
-            
-            closeModal();
-            
-            // Show success message
-            showNotification('Template loaded successfully!', 'success');
+            const selectedTemplate = templates[templateType] || templates.feature;
+
+            if (!merge) {
+                // Clear existing items
+                Object.keys(budgetManager.data.categories).forEach(key => {
+                    budgetManager.data.categories[key].items = [];
+                });
+            }
+
+            // Add template items
+            Object.keys(selectedTemplate).forEach(categoryKey => {
+                if (budgetManager.data.categories[categoryKey]) {
+                    selectedTemplate[categoryKey].forEach(item => {
+                        budgetManager.data.categories[categoryKey].items.push({
+                            ...item,
+                            markup: 0,
+                            notes: '',
+                            id: Date.now() + Math.random()
+                        });
+                    });
+                }
+            });
+
+            budgetManager.renderCategories();
+            budgetManager.updateAllCalculations();
+            budgetManager.save();
+            closeModal('templateModal');
+            budgetManager.showNotification('Template loaded successfully', 'success');
         }
 
-        // Update all totals
-        function updateAllTotals() {
-            // Update all row totals
+        function openExpenseModal() {
+            document.getElementById('expenseModal').classList.add('active');
+        }
+
+        function saveExpense() {
+            const expense = {
+                date: document.getElementById('expense-date').value,
+                item: document.getElementById('expense-item').value,
+                category: document.getElementById('expense-category').value,
+                supplier: document.getElementById('expense-supplier').value,
+                amount: parseFloat(document.getElementById('expense-amount').value) || 0,
+                receipt: document.getElementById('expense-receipt').value,
+                notes: document.getElementById('expense-notes').value
+            };
+
+            if (!expense.item || !expense.amount) {
+                budgetManager.showNotification('Please fill in required fields', 'warning');
+                return;
+            }
+
+            budgetManager.addExpense(expense);
+            closeModal('expenseModal');
+
+            // Clear form
+            document.getElementById('expense-item').value = '';
+            document.getElementById('expense-amount').value = '';
+            document.getElementById('expense-supplier').value = '';
+            document.getElementById('expense-receipt').value = '';
+            document.getElementById('expense-notes').value = '';
+        }
+
+        function searchItems() {
+            const query = document.getElementById('search-items').value.toLowerCase();
+            
             document.querySelectorAll('.input-row').forEach(row => {
-                updateRowTotal(row);
+                const description = row.querySelector('.item-description')?.value.toLowerCase() || '';
+                const notes = row.querySelector('.notes-input')?.value.toLowerCase() || '';
+                
+                if (description.includes(query) || notes.includes(query)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
             });
-
-            // Update all category totals
-            document.querySelectorAll('[id$="-items"]').forEach(container => {
-                updateCategoryTotal(container);
-            });
-
-            // Update grand total
-            updateGrandTotal();
-
-            // Update overview
-            updateOverviewTab();
         }
 
-        // Save Budget
-        function saveBudget() {
-            saveBudgetData();
-            showNotification('Budget saved successfully!', 'success');
-        }
-
-        // Export Budget to PDF
-        function exportBudget() {
-            // In a real app, this would generate a PDF
-            showNotification('Export feature coming soon! Budget data ready for PDF generation.', 'info');
+        function searchExpenses() {
+            const query = document.getElementById('search-expenses').value.toLowerCase();
             
-            // Log the data that would be exported
-            console.log('Exporting budget:', {
-                projectInfo: getProjectInfo(),
-                categories: getAllCategoryData(),
-                totals: getAllCategoryTotals(),
-                grandTotal: updateGrandTotal()
+            document.querySelectorAll('#expense-list tr').forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(query) ? '' : 'none';
             });
         }
 
-        // Show notification
-        function showNotification(message, type = 'success') {
-            // Create notification element
-            const notification = document.createElement('div');
-            notification.style.cssText = `
-                position: fixed;
-                top: 80px;
-                right: 32px;
-                background: ${type === 'success' ? 'var(--success)' : type === 'danger' ? 'var(--danger)' : 'var(--accent-gold)'};
-                color: var(--bg-dark);
-                padding: 16px 24px;
-                border-radius: 8px;
-                font-weight: 500;
-                font-size: 0.875em;
-                z-index: 2000;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-                animation: slideIn 0.3s ease;
-            `;
-            notification.textContent = message;
-            document.body.appendChild(notification);
-
-            // Remove after 3 seconds
-            setTimeout(() => {
-                notification.style.animation = 'slideOut 0.3s ease';
-                setTimeout(() => notification.remove(), 300);
-            }, 3000);
+        function toggleFab() {
+            document.getElementById('fab-menu').classList.toggle('active');
         }
 
-        // Add Expense (Tracking Tab)
-        function addExpense() {
-            showNotification('Add Expense feature coming soon!', 'info');
+        function quickAddItem() {
+            const category = prompt('Enter category key (disposables, hygiene, consumables, beauty, sfx, hair, tools, custom):');
+            if (category && budgetManager.data.categories[category]) {
+                budgetManager.addItem(category);
+                toggleFab();
+            }
         }
 
-        // Auto-save on input (debounced)
-        let saveTimeout;
-        document.addEventListener('input', function(e) {
-            if (e.target.classList.contains('form-input')) {
-                clearTimeout(saveTimeout);
-                saveTimeout = setTimeout(() => {
-                    saveBudgetData();
-                }, 1000); // Save 1 second after user stops typing
-            }
-        });
+        function quickAddExpense() {
+            openExpenseModal();
+            toggleFab();
+        }
 
-        // Add CSS animation for notifications
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes slideIn {
-                from { transform: translateX(400px); opacity: 0; }
-                to { transform: translateX(0); opacity: 1; }
+        function duplicateLastItem() {
+            // Find the last added item
+            let lastItem = null;
+            let lastCategory = null;
+            
+            Object.keys(budgetManager.data.categories).forEach(key => {
+                const items = budgetManager.data.categories[key].items;
+                if (items.length > 0) {
+                    lastItem = items[items.length - 1];
+                    lastCategory = key;
+                }
+            });
+
+            if (lastItem && lastCategory) {
+                const duplicate = { ...lastItem, id: Date.now() };
+                budgetManager.data.categories[lastCategory].items.push(duplicate);
+                budgetManager.renderCategories();
+                budgetManager.updateAllCalculations();
+                budgetManager.save();
+                budgetManager.showNotification('Item duplicated', 'success');
             }
-            @keyframes slideOut {
-                from { transform: translateX(0); opacity: 1; }
-                to { transform: translateX(400px); opacity: 0; }
+            
+            toggleFab();
+        }
+
+        function clearAll() {
+            if (confirm('This will clear ALL budget data. Are you sure?')) {
+                Object.keys(budgetManager.data.categories).forEach(key => {
+                    budgetManager.data.categories[key].items = [];
+                });
+                budgetManager.data.expenses = [];
+                budgetManager.renderCategories();
+                budgetManager.renderExpenses();
+                budgetManager.updateAllCalculations();
+                budgetManager.save();
+                budgetManager.showNotification('All data cleared', 'info');
             }
-        `;
-        document.head.appendChild(style);
+            toggleFab();
+        }
+
+        function refreshOverview() {
+            budgetManager.updateAllCalculations();
+            budgetManager.showNotification('Overview refreshed', 'success');
+        }
+
+        function exportComparison() {
+            budgetManager.exportData('csv');
+        }
+
+        function importReceipts() {
+            budgetManager.showNotification('Receipt import feature coming soon!', 'info');
+        }
+
+        function filterExpenses() {
+            const dateFilter = document.getElementById('expense-date-filter').value;
+            
+            document.querySelectorAll('#expense-list tr').forEach(row => {
+                const date = row.cells[0].textContent;
+                if (!dateFilter || date === dateFilter) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        function filterByCategory() {
+            budgetManager.showNotification('Category filter coming soon!', 'info');
+        }
+
+        function sortItems() {
+            budgetManager.showNotification('Sort feature coming soon!', 'info');
+        }
     </script>
 </body>
 </html>
