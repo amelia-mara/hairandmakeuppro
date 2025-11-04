@@ -1,4 +1,4 @@
-// Script Processor Module - Handles PDF conversion and screenplay parsing
+// Enhanced Script Processor with Better Scene Detection and AI Support
 class ScriptProcessor {
     constructor() {
         this.scriptTypes = {
@@ -9,9 +9,25 @@ class ScriptProcessor {
             ACTION: 'action',
             TRANSITION: 'transition'
         };
+        
+        // More comprehensive scene heading patterns
+        this.scenePatterns = [
+            // Standard format: INT. LOCATION - TIME
+            /^(?:\d+[\.\s]+)?(?:INT\.?|EXT\.?|INT\.?\/EXT\.?|I\/E\.?)\s+.+(?:\s*[-–]\s*.+)?$/i,
+            // With scene numbers: 1. INT. LOCATION
+            /^\d+[\.\s]+(?:INT\.?|EXT\.?)\s+.+/i,
+            // INTERIOR/EXTERIOR spelled out
+            /^(?:INTERIOR|EXTERIOR)\s+.+/i,
+            // More flexible - just INT/EXT at start
+            /^(?:INT|EXT)[\.\s]+\w+/i,
+            // With parenthetical additions
+            /^(?:INT\.?|EXT\.?).*?\([^)]+\)/i,
+            // Continuous scenes
+            /^(?:INT\.?|EXT\.?).*?(?:CONTINUOUS|CONT'D|SAME|LATER|MOMENTS LATER)/i
+        ];
     }
 
-    // Enhanced PDF text extraction with better formatting preservation
+    // Enhanced PDF text extraction
     async extractPDFText(file) {
         try {
             const arrayBuffer = await file.arrayBuffer();
@@ -25,7 +41,7 @@ class ScriptProcessor {
                 const page = await pdf.getPage(pageNum);
                 const textContent = await page.getTextContent();
                 
-                // Group text items by Y position (line detection)
+                // Group text items by Y position
                 const lines = {};
                 textContent.items.forEach(item => {
                     const y = Math.round(item.transform[5]);
@@ -51,24 +67,21 @@ class ScriptProcessor {
                     let lastX = 0;
                     
                     lineItems.forEach((item, i) => {
-                        // Add space if there's a gap
                         if (i > 0) {
                             const gap = item.x - lastX;
-                            // Adjust threshold based on average character width
                             const avgCharWidth = item.width / (item.text.length || 1);
                             if (gap > avgCharWidth * 0.5) {
                                 lineText += ' ';
                             }
                         }
                         
-                        lineText += item.text;
+                        lineText += item.str;
                         lastX = item.x + item.width;
                     });
                     
                     fullText += lineText.trim() + '\n';
                 });
                 
-                // Add page break
                 if (pageNum < pdf.numPages) {
                     fullText += '\n';
                 }
@@ -78,223 +91,230 @@ class ScriptProcessor {
             
         } catch (error) {
             console.error('PDF extraction error:', error);
-            throw new Error(`Failed to extract PDF text: ${error.message}`);
+            throw error;
         }
     }
 
-    // Advanced text normalization
+    // Improved text normalization
     normalizeScriptText(text) {
         console.log('🔧 Normalizing script text...');
         
         let normalized = text;
         
-        // Fix common PDF extraction issues
+        // Fix split INT/EXT
+        normalized = normalized.replace(/I\s+NT\s*\./gi, 'INT.');
+        normalized = normalized.replace(/E\s+XT\s*\./gi, 'EXT.');
+        normalized = normalized.replace(/I\s+N\s+T\s*\./gi, 'INT.');
+        normalized = normalized.replace(/E\s+X\s+T\s*\./gi, 'EXT.');
         
-        // 1. Fix split words (e.g. "I NT." -> "INT.")
-        normalized = normalized.replace(/I\s+NT\./gi, 'INT.');
-        normalized = normalized.replace(/E\s+XT\./gi, 'EXT.');
-        normalized = normalized.replace(/I\s+NT\s+\//gi, 'INT/');
-        normalized = normalized.replace(/E\s+XT\s+\//gi, 'EXT/');
+        // Fix CONTINUOUS split
+        normalized = normalized.replace(/C\s+O\s+N\s+T\s+I\s+N\s+U\s+O\s+U\s+S/gi, 'CONTINUOUS');
+        normalized = normalized.replace(/CONTIN\s+UOUS/gi, 'CONTINUOUS');
         
-        // 2. Fix character names split across spaces
-        normalized = normalized.replace(/([A-Z])\s+([A-Z])\s+([A-Z])/g, (match, p1, p2, p3) => {
-            // Check if this looks like a split character name
-            if (p1.length === 1 && p2.length === 1) {
-                return p1 + p2 + p3;
-            }
-            return match;
-        });
-        
-        // 3. Remove excessive spaces while preserving script structure
+        // Fix character names that might be split
         const lines = normalized.split('\n');
         normalized = lines.map(line => {
-            // Preserve indentation at start of line
-            const indent = line.match(/^\s*/)[0];
-            const content = line.trim();
-            
-            // Fix spacing within the content
-            const fixed = content
-                // Remove spaces between single characters that form words
-                .replace(/\b(\w)\s+(\w)\s+(\w)\s+(\w)\b/g, '$1$2$3$4')
-                .replace(/\b(\w)\s+(\w)\s+(\w)\b/g, '$1$2$3')
-                .replace(/\b(\w)\s+(\w)\b/g, (match, p1, p2) => {
-                    // Keep space if both are actual words
-                    if (p1.length > 1 && p2.length > 1) return match;
-                    // Otherwise remove space
-                    return p1 + p2;
-                })
-                // Fix punctuation spacing
-                .replace(/\s+([.,!?;:])/g, '$1')
-                .replace(/([.,!?;:])\s*([a-zA-Z])/g, '$1 $2')
-                // Normalize multiple spaces to single
-                .replace(/\s+/g, ' ');
-            
-            return indent + fixed;
+            // If line has mostly single characters with spaces, try to merge them
+            if (/^(?:\s*\w\s+){3,}/.test(line)) {
+                // This line might be split characters
+                const cleaned = line.replace(/(\w)\s+(?=\w\s)/g, '$1');
+                return cleaned;
+            }
+            return line;
         }).join('\n');
         
-        // 4. Clean up line breaks
-        normalized = normalized
-            .replace(/\n\n\n+/g, '\n\n')  // Max 2 consecutive line breaks
-            .replace(/\n\s+\n/g, '\n\n');  // Remove whitespace-only lines
+        // Clean up excessive line breaks
+        normalized = normalized.replace(/\n{4,}/g, '\n\n\n');
         
         console.log('✅ Normalization complete');
         return normalized;
     }
 
-    // Parse script into structured format
+    // Enhanced screenplay parser with better scene detection
     parseScreenplay(scriptText) {
         console.log('🎬 Parsing screenplay...');
         
         const lines = scriptText.split('\n');
-        const elements = [];
         const scenes = [];
-        
-        let currentElement = null;
         let currentScene = null;
         let inDialogue = false;
+        let lastWasEmpty = false;
+        
+        // First pass: identify all scene headings
+        const sceneIndices = [];
         
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
             const trimmed = line.trim();
-            const upperTrimmed = trimmed.toUpperCase();
-            const indent = line.search(/\S/);
             
-            // Skip empty lines
             if (!trimmed) {
-                inDialogue = false;
+                lastWasEmpty = true;
                 continue;
             }
             
-            // Scene Heading Detection - Multiple patterns
-            const scenePatterns = [
-                /^(INT\.?|EXT\.?|INT\.?\/EXT\.?|I\/E\.?)\s+.+/i,
-                /^(INTERIOR|EXTERIOR)\s+.+/i,
-                /^\d+\s+(INT\.?|EXT\.?|INT\.?\/EXT\.?)\s+.+/i,
-                /^SCENE\s+\d+.*?(INT\.?|EXT\.?)/i
-            ];
+            // Check if this is a scene heading
+            let isScene = false;
             
-            const isSceneHeading = scenePatterns.some(pattern => pattern.test(trimmed));
+            // Method 1: Pattern matching
+            for (let pattern of this.scenePatterns) {
+                if (pattern.test(trimmed)) {
+                    isScene = true;
+                    break;
+                }
+            }
             
-            if (isSceneHeading) {
-                // Clean up the scene heading
-                let cleanHeading = trimmed
-                    .replace(/^SCENE\s+\d+\s*/i, '')
-                    .replace(/^\d+\s+/, '')
-                    .replace(/^(\w)\s+/, '$1');
+            // Method 2: Heuristic checks
+            if (!isScene) {
+                const upperTrimmed = trimmed.toUpperCase();
+                const hasINT = upperTrimmed.includes('INT.') || upperTrimmed.startsWith('INT ');
+                const hasEXT = upperTrimmed.includes('EXT.') || upperTrimmed.startsWith('EXT ');
+                const hasTimeOfDay = /\b(DAY|NIGHT|MORNING|AFTERNOON|EVENING|DUSK|DAWN|CONTINUOUS|LATER|SAME)\b/i.test(trimmed);
+                const isMostlyUpper = (trimmed.match(/[A-Z]/g) || []).length / trimmed.replace(/\s/g, '').length > 0.6;
+                const hasLocationKeywords = /\b(KITCHEN|BEDROOM|OFFICE|STREET|HOUSE|ROOM|HALLWAY|BATHROOM|CAR|RESTAURANT|BAR|HOSPITAL|SCHOOL)\b/i.test(trimmed);
                 
-                currentScene = {
-                    type: this.scriptTypes.SCENE_HEADING,
-                    text: cleanHeading,
-                    lineNumber: i,
-                    elements: []
-                };
-                
-                scenes.push(currentScene);
-                inDialogue = false;
-                
-                console.log(`  📍 Found scene: ${cleanHeading}`);
-            }
-            // Character Name Detection
-            else if (this.isCharacterName(trimmed, indent, inDialogue)) {
-                currentElement = {
-                    type: this.scriptTypes.CHARACTER,
-                    text: trimmed,
-                    lineNumber: i
-                };
-                
-                if (currentScene) {
-                    currentScene.elements.push(currentElement);
-                }
-                
-                inDialogue = true;
-            }
-            // Parenthetical Detection
-            else if (trimmed.startsWith('(') && trimmed.endsWith(')')) {
-                currentElement = {
-                    type: this.scriptTypes.PARENTHETICAL,
-                    text: trimmed,
-                    lineNumber: i
-                };
-                
-                if (currentScene) {
-                    currentScene.elements.push(currentElement);
+                if ((hasINT || hasEXT) && (hasTimeOfDay || hasLocationKeywords || isMostlyUpper)) {
+                    isScene = true;
                 }
             }
-            // Dialogue Detection
-            else if (inDialogue && indent > 10) {
-                currentElement = {
-                    type: this.scriptTypes.DIALOGUE,
-                    text: trimmed,
-                    lineNumber: i
-                };
-                
-                if (currentScene) {
-                    currentScene.elements.push(currentElement);
+            
+            // Method 3: Scene numbering
+            if (!isScene && /^\d+[\.\s]/.test(trimmed)) {
+                const afterNumber = trimmed.replace(/^\d+[\.\s]+/, '');
+                if (/^(INT|EXT|INTERIOR|EXTERIOR)/i.test(afterNumber)) {
+                    isScene = true;
                 }
             }
-            // Transition Detection
-            else if (this.isTransition(trimmed)) {
-                currentElement = {
-                    type: this.scriptTypes.TRANSITION,
-                    text: trimmed,
-                    lineNumber: i
-                };
-                
-                if (currentScene) {
-                    currentScene.elements.push(currentElement);
-                }
-                
-                inDialogue = false;
-            }
-            // Action/Description
-            else {
-                currentElement = {
-                    type: this.scriptTypes.ACTION,
-                    text: trimmed,
-                    lineNumber: i
-                };
-                
-                if (currentScene) {
-                    currentScene.elements.push(currentElement);
-                }
-                
-                inDialogue = false;
+            
+            if (isScene) {
+                sceneIndices.push({
+                    index: i,
+                    heading: trimmed
+                });
+                console.log(`  📍 Found scene at line ${i}: ${trimmed.substring(0, 50)}...`);
             }
         }
         
+        // If no scenes found, treat the whole script as one scene
+        if (sceneIndices.length === 0) {
+            console.log('⚠️ No scene headings detected, treating as single scene');
+            sceneIndices.push({
+                index: 0,
+                heading: 'FULL SCRIPT'
+            });
+        }
+        
+        // Second pass: parse content for each scene
+        sceneIndices.forEach((sceneInfo, idx) => {
+            const startLine = sceneInfo.index;
+            const endLine = idx < sceneIndices.length - 1 ? sceneIndices[idx + 1].index : lines.length;
+            
+            const scene = {
+                type: this.scriptTypes.SCENE_HEADING,
+                text: this.cleanSceneHeading(sceneInfo.heading),
+                lineNumber: startLine,
+                elements: [],
+                rawText: lines.slice(startLine, endLine).join('\n')
+            };
+            
+            // Parse elements within this scene
+            let inDialogue = false;
+            
+            for (let i = startLine + 1; i < endLine; i++) {
+                const line = lines[i];
+                const trimmed = line.trim();
+                const indent = line.search(/\S/);
+                
+                if (!trimmed) {
+                    inDialogue = false;
+                    continue;
+                }
+                
+                // Character name detection
+                if (this.isCharacterName(trimmed, indent, inDialogue)) {
+                    scene.elements.push({
+                        type: this.scriptTypes.CHARACTER,
+                        text: trimmed,
+                        lineNumber: i
+                    });
+                    inDialogue = true;
+                }
+                // Parenthetical
+                else if (trimmed.startsWith('(') && trimmed.endsWith(')')) {
+                    scene.elements.push({
+                        type: this.scriptTypes.PARENTHETICAL,
+                        text: trimmed,
+                        lineNumber: i
+                    });
+                }
+                // Dialogue
+                else if (inDialogue && indent > 10) {
+                    scene.elements.push({
+                        type: this.scriptTypes.DIALOGUE,
+                        text: trimmed,
+                        lineNumber: i
+                    });
+                }
+                // Transition
+                else if (this.isTransition(trimmed)) {
+                    scene.elements.push({
+                        type: this.scriptTypes.TRANSITION,
+                        text: trimmed,
+                        lineNumber: i
+                    });
+                    inDialogue = false;
+                }
+                // Action
+                else {
+                    scene.elements.push({
+                        type: this.scriptTypes.ACTION,
+                        text: trimmed,
+                        lineNumber: i
+                    });
+                    inDialogue = false;
+                }
+            }
+            
+            scenes.push(scene);
+        });
+        
         console.log(`✅ Parsed ${scenes.length} scenes`);
+        
+        // Extract metadata
+        const characters = this.extractCharacters(scenes);
         
         return {
             scenes: scenes,
             metadata: {
                 totalScenes: scenes.length,
                 totalLines: lines.length,
-                characters: this.extractCharacters(scenes)
+                characters: characters
             }
         };
     }
 
-    // Helper: Detect character names
-    isCharacterName(text, indent, wasInDialogue) {
-        // Character names are usually:
-        // - ALL CAPS
-        // - Centered (indented around 20-40 chars)
-        // - Not too long (< 35 chars)
-        // - May have extensions like (CONT'D) or (O.S.)
-        
-        if (text.length > 35) return false;
-        if (indent < 15) return false;
-        
-        // Remove extensions
-        const cleanText = text.replace(/\s*\([^)]+\)$/, '').trim();
-        
-        // Check if mostly uppercase
-        const upperRatio = (cleanText.match(/[A-Z]/g) || []).length / cleanText.length;
-        
-        return upperRatio > 0.7 && cleanText.length > 0;
+    // Clean up scene headings
+    cleanSceneHeading(heading) {
+        return heading
+            .replace(/^\d+[\.\s]+/, '') // Remove scene numbers
+            .replace(/^SCENE\s+\d+\s*/i, '') // Remove "SCENE X"
+            .trim();
     }
 
-    // Helper: Detect transitions
+    // Character name detection
+    isCharacterName(text, indent, wasInDialogue) {
+        if (text.length > 35) return false;
+        if (indent < 10 && !wasInDialogue) return false;
+        
+        const cleanText = text.replace(/\s*\([^)]+\)$/, '').trim();
+        
+        // Check if it's mostly uppercase
+        const upperRatio = (cleanText.match(/[A-Z]/g) || []).length / cleanText.replace(/\s/g, '').length;
+        
+        // Character names are usually centered and uppercase
+        return upperRatio > 0.7 && cleanText.length > 0 && indent > 15;
+    }
+
+    // Transition detection
     isTransition(text) {
         const transitions = [
             'CUT TO:', 'FADE IN:', 'FADE OUT:', 'FADE TO:',
@@ -305,16 +325,17 @@ class ScriptProcessor {
         return transitions.some(t => text.toUpperCase().includes(t));
     }
 
-    // Extract character list from scenes
+    // Extract characters
     extractCharacters(scenes) {
         const characters = new Set();
         
         scenes.forEach(scene => {
             scene.elements.forEach(element => {
                 if (element.type === this.scriptTypes.CHARACTER) {
-                    // Remove extensions like (CONT'D)
                     const name = element.text.replace(/\s*\([^)]+\)$/, '').trim();
-                    characters.add(name);
+                    if (name && name !== name.toLowerCase()) {
+                        characters.add(name);
+                    }
                 }
             });
         });
@@ -322,12 +343,12 @@ class ScriptProcessor {
         return Array.from(characters).sort();
     }
 
-    // Convert parsed script back to formatted HTML
+    // Format to HTML
     formatScriptHTML(parsedScript) {
         let html = '';
         
         parsedScript.scenes.forEach((scene, index) => {
-            html += `<div class="script-scene" id="scene-${index + 1}">`;
+            html += `<div class="script-scene" id="scene-${index + 1}" data-scene-index="${index}">`;
             html += `<div class="script-scene-heading">${index + 1}. ${scene.text}</div>`;
             
             scene.elements.forEach(element => {
@@ -356,13 +377,105 @@ class ScriptProcessor {
         return html;
     }
 
-    // Save processed script to storage
+    // AI Analysis for tagging
+    async analyzeSceneForTags(sceneText, apiKey, provider = 'openai') {
+        const prompt = `Analyze this film scene and identify production elements. Return ONLY a valid JSON array.
+
+Scene content:
+${sceneText.substring(0, 2000)}
+
+Identify elements in these categories:
+- makeup: Special makeup effects, wounds, aging, etc.
+- hair: Specific hairstyles, wigs, hair changes
+- sfx: Special effects, blood, prosthetics, stunts
+- cast: Character appearances (just names)
+- wardrobe: Specific costumes, clothing changes
+- props: Important props mentioned
+
+Example response format:
+[
+  {"category": "makeup", "description": "bruised cheek on character"},
+  {"category": "hair", "description": "disheveled hair after fight"},
+  {"category": "props", "description": "vintage camera"},
+  {"category": "wardrobe", "description": "police uniform"}
+]
+
+Return ONLY the JSON array, no other text.`;
+
+        try {
+            let response;
+            
+            if (provider === 'openai') {
+                response = await fetch('https://api.openai.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: 'gpt-4o-mini',
+                        messages: [{role: 'user', content: prompt}],
+                        temperature: 0.3,
+                        max_tokens: 500
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`OpenAI API error: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                const content = data.choices[0].message.content;
+                
+                // Extract JSON from response
+                const jsonMatch = content.match(/\[[\s\S]*\]/);
+                if (jsonMatch) {
+                    return JSON.parse(jsonMatch[0]);
+                } else {
+                    return JSON.parse(content);
+                }
+            } else {
+                // Anthropic Claude
+                response = await fetch('https://api.anthropic.com/v1/messages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-api-key': apiKey,
+                        'anthropic-version': '2023-06-01'
+                    },
+                    body: JSON.stringify({
+                        model: 'claude-3-5-sonnet-20241022',
+                        max_tokens: 500,
+                        messages: [{role: 'user', content: prompt}]
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Anthropic API error: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                const content = data.content[0].text;
+                
+                const jsonMatch = content.match(/\[[\s\S]*\]/);
+                if (jsonMatch) {
+                    return JSON.parse(jsonMatch[0]);
+                } else {
+                    return JSON.parse(content);
+                }
+            }
+        } catch (error) {
+            console.error('AI Analysis error:', error);
+            throw error;
+        }
+    }
+
+    // Save/Load functions
     saveScriptData(projectId, scriptData) {
         try {
-            // Store in chunks if too large
             const dataStr = JSON.stringify(scriptData);
             
-            if (dataStr.length > 1000000) { // 1MB chunks
+            if (dataStr.length > 1000000) {
                 const chunks = [];
                 const chunkSize = 1000000;
                 
@@ -385,10 +498,8 @@ class ScriptProcessor {
         }
     }
 
-    // Load processed script from storage
     loadScriptData(projectId) {
         try {
-            // Check for chunked data first
             const chunkCount = localStorage.getItem(`${projectId}_script_chunks`);
             
             if (chunkCount) {
@@ -408,5 +519,5 @@ class ScriptProcessor {
     }
 }
 
-// Export for use in other scripts
+// Export for use
 window.ScriptProcessor = ScriptProcessor;
