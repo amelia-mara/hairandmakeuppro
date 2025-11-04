@@ -1298,6 +1298,9 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
             scriptText = scriptText
                 .replace(/\r\n/g, '\n')  // Normalize line endings
                 .replace(/\r/g, '\n')    // Handle old Mac line endings
+                .replace(/([A-Z]) ([A-Z])/g, '$1$2') // Remove spaces between capital letters (fixes "I N T ." -> "INT.")
+                .replace(/([A-Z]) ([A-Z])/g, '$1$2') // Run twice to catch overlaps
+                .replace(/([A-Z]) ([A-Z])/g, '$1$2') // Run third time for thorough cleanup
                 .replace(/\s+\n/g, '\n') // Remove trailing spaces before newlines
                 .replace(/\n\s+/g, '\n'); // Remove leading spaces after newlines
             
@@ -1795,6 +1798,18 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
             pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
         }
 
+        // Normalize script text to fix PDF extraction spacing issues
+        function normalizeScriptText(text) {
+            return text
+                .replace(/\r\n/g, '\n')  // Normalize line endings
+                .replace(/\r/g, '\n')    // Handle old Mac line endings
+                .replace(/([A-Z]) ([A-Z])/g, '$1$2') // Remove spaces between capital letters
+                .replace(/([A-Z]) ([A-Z])/g, '$1$2') // Run twice to catch overlaps
+                .replace(/([A-Z]) ([A-Z])/g, '$1$2') // Run third time
+                .replace(/\s+\n/g, '\n') // Remove trailing spaces
+                .replace(/\n\s+/g, '\n'); // Remove leading spaces
+        }
+
         // Parse PDF and extract text
         async function parsePDFInBreakdown(file) {
             try {
@@ -1830,6 +1845,11 @@ Wardrobe note: Leather jacket gets torn in this scene — need duplicate for con
                 }
                 
                 console.log('PDF extraction complete, first 500 chars:', fullText.substring(0, 500));
+                
+                // Normalize the text to fix spacing issues
+                fullText = normalizeScriptText(fullText);
+                console.log('After normalization, first 500 chars:', fullText.substring(0, 500));
+                
                 return fullText;
             } catch (error) {
                 console.error('Error parsing PDF:', error);
