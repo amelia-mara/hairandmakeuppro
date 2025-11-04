@@ -23,6 +23,9 @@
             --border: rgba(45, 41, 37, 0.5);
             --divider: rgba(54, 51, 48, 0.5);
             --glass-border: rgba(255, 255, 255, 0.08);
+            --success: #52c186;
+            --warning: #fbbf24;
+            --error: #ff6b6b;
             
             /* Tag Colors */
             --tag-makeup: #ff6b9d;
@@ -31,12 +34,6 @@
             --tag-cast: #fbbf24;
             --tag-wardrobe: #34d399;
             --tag-props: #fb923c;
-            
-            /* Scene Colors */
-            --int-day: rgba(255, 193, 7, 0.2);
-            --int-night: rgba(63, 81, 181, 0.2);
-            --ext-day: rgba(76, 175, 80, 0.2);
-            --ext-night: rgba(103, 58, 183, 0.2);
         }
 
         /* Scrollbar */
@@ -83,7 +80,6 @@
             height: 60px;
             background: var(--bg-medium);
             backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
             border-bottom: 1px solid var(--glass-border);
             display: flex;
             align-items: center;
@@ -100,6 +96,7 @@
             text-decoration: none;
             font-size: 0.875em;
             transition: color 0.2s ease;
+            cursor: pointer;
         }
 
         .back-link:hover {
@@ -110,6 +107,37 @@
             font-size: 1.125em;
             font-weight: 600;
             letter-spacing: -0.01em;
+        }
+
+        .workflow-indicator {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 16px;
+            background: rgba(36, 32, 25, 0.4);
+            border-radius: 8px;
+            font-size: 0.8125em;
+        }
+
+        .workflow-step {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-muted);
+        }
+
+        .workflow-step.active {
+            color: var(--accent-gold);
+            font-weight: 600;
+        }
+
+        .workflow-step.completed {
+            color: var(--success);
+        }
+
+        .workflow-arrow {
+            color: var(--text-muted);
+            opacity: 0.3;
         }
 
         .top-bar-actions {
@@ -139,30 +167,24 @@
             background: rgba(201, 169, 97, 0.05);
         }
 
+        .toolbar-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
         .toolbar-btn.primary {
             background: var(--accent-gold);
             border-color: var(--accent-gold);
             color: var(--bg-dark);
         }
 
-        .toolbar-btn.primary:hover {
+        .toolbar-btn.primary:hover:not(:disabled) {
             background: #d4b16d;
         }
 
-        .toggle-btn {
-            padding: 6px 12px;
-            background: transparent;
-            border: 1px solid var(--glass-border);
-            border-radius: 6px;
-            color: var(--text-muted);
-            cursor: pointer;
-            font-size: 0.75em;
-            transition: all 0.2s ease;
-        }
-
-        .toggle-btn.active {
-            background: var(--accent-gold);
-            border-color: var(--accent-gold);
+        .toolbar-btn.success {
+            background: var(--success);
+            border-color: var(--success);
             color: var(--bg-dark);
         }
 
@@ -173,12 +195,261 @@
             overflow: hidden;
         }
 
+        /* ============================================ */
+        /* SCENE REVIEW MODE STYLES */
+        /* ============================================ */
+
+        .review-layout {
+            display: flex;
+            width: 100%;
+            gap: 24px;
+            padding: 24px;
+            overflow: hidden;
+        }
+
+        .review-sidebar {
+            width: 350px;
+            background: var(--bg-medium);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .review-sidebar h2 {
+            font-size: 1.125em;
+            margin-bottom: 8px;
+        }
+
+        .review-stats {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .review-stat {
+            text-align: center;
+        }
+
+        .review-stat-number {
+            font-size: 2em;
+            font-weight: 700;
+            color: var(--accent-gold);
+        }
+
+        .review-stat-label {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .scene-list-container {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 16px;
+        }
+
+        .scene-list-item {
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .scene-list-item:hover {
+            border-color: var(--accent-gold);
+            transform: translateX(4px);
+        }
+
+        .scene-list-item.active {
+            border-color: var(--accent-gold);
+            background: rgba(201, 169, 97, 0.15);
+        }
+
+        .scene-number {
+            display: inline-block;
+            width: 32px;
+            height: 32px;
+            background: var(--accent-gold);
+            color: var(--bg-dark);
+            border-radius: 6px;
+            text-align: center;
+            line-height: 32px;
+            font-weight: 700;
+            margin-right: 8px;
+            font-size: 0.875em;
+        }
+
+        .scene-heading-preview {
+            font-size: 0.875em;
+            color: var(--text-light);
+            font-weight: 500;
+        }
+
+        .review-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .script-viewer {
+            flex: 1;
+            background: var(--bg-medium);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 40px;
+            overflow-y: auto;
+        }
+
+        .script-content {
+            background: rgba(232, 230, 227, 0.95);
+            padding: 60px 80px;
+            border-radius: 8px;
+            font-family: 'Courier Prime', 'Courier New', monospace;
+            font-size: 12pt;
+            line-height: 1.6;
+            color: #000;
+            min-height: 100%;
+        }
+
+        .script-line {
+            margin-bottom: 12px;
+            position: relative;
+            padding-left: 40px;
+        }
+
+        .script-line:hover .add-scene-btn {
+            opacity: 1;
+        }
+
+        .add-scene-btn {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 32px;
+            height: 32px;
+            background: var(--accent-gold);
+            border: none;
+            border-radius: 4px;
+            color: var(--bg-dark);
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            font-size: 1.2em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .add-scene-btn:hover {
+            background: #d4b16d;
+        }
+
+        .detected-scene {
+            background: rgba(201, 169, 97, 0.2);
+            border-left: 4px solid var(--accent-gold);
+            padding: 16px 16px 16px 36px;
+            margin: 24px 0;
+            border-radius: 4px;
+            position: relative;
+        }
+
+        .scene-badge {
+            position: absolute;
+            left: -16px;
+            top: 12px;
+            width: 32px;
+            height: 32px;
+            background: var(--accent-gold);
+            color: var(--bg-dark);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.875em;
+        }
+
+        .scene-heading-input {
+            width: 100%;
+            padding: 8px 12px;
+            background: white;
+            border: 2px solid var(--accent-gold);
+            border-radius: 6px;
+            font-family: 'Courier Prime', monospace;
+            font-size: 12pt;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            color: #000;
+        }
+
+        .scene-heading-input:focus {
+            outline: none;
+            border-color: #d4b16d;
+        }
+
+        .scene-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .scene-action-btn {
+            padding: 6px 12px;
+            background: rgba(201, 169, 97, 0.2);
+            border: 1px solid var(--accent-gold);
+            border-radius: 4px;
+            color: #000;
+            cursor: pointer;
+            font-size: 0.75em;
+            transition: all 0.2s ease;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .scene-action-btn:hover {
+            background: var(--accent-gold);
+        }
+
+        .scene-action-btn.delete {
+            background: rgba(255, 107, 107, 0.2);
+            border-color: var(--error);
+        }
+
+        .scene-action-btn.delete:hover {
+            background: var(--error);
+            color: white;
+        }
+
+        /* ============================================ */
+        /* BREAKDOWN MODE STYLES */
+        /* ============================================ */
+
+        .breakdown-layout {
+            display: none; /* Hidden until scenes are confirmed */
+            width: 100%;
+            height: 100%;
+        }
+
+        .breakdown-layout.active {
+            display: flex;
+        }
+
         /* Left Sidebar - Scene Navigation */
         .left-sidebar {
             width: 300px;
             background: var(--bg-medium);
             backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
             border-right: 1px solid var(--glass-border);
             display: flex;
             flex-direction: column;
@@ -203,7 +474,6 @@
             width: 100%;
             padding: 8px 12px;
             background: rgba(13, 11, 10, 0.5);
-            backdrop-filter: blur(10px);
             border: 1px solid var(--glass-border);
             border-radius: 6px;
             color: var(--text-light);
@@ -215,298 +485,229 @@
             border-color: var(--accent-gold);
         }
 
-        .scene-list {
+        .scene-nav-list {
             flex: 1;
             overflow-y: auto;
-            padding: 8px;
+            padding: 12px;
         }
 
-        .scene-item {
-            background: var(--card-bg);
-            backdrop-filter: blur(10px);
-            border: 1px solid var(--glass-border);
-            border-radius: 8px;
+        .scene-nav-item {
             padding: 12px;
             margin-bottom: 8px;
+            background: rgba(36, 32, 25, 0.4);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
             cursor: pointer;
             transition: all 0.2s ease;
         }
 
-        .scene-item:hover {
+        .scene-nav-item:hover {
             border-color: var(--accent-gold);
-            transform: translateX(4px);
+            background: rgba(201, 169, 97, 0.1);
         }
 
-        .scene-item.active {
+        .scene-nav-item.active {
             border-color: var(--accent-gold);
             background: rgba(201, 169, 97, 0.15);
-            box-shadow: 0 0 20px rgba(201, 169, 97, 0.2);
         }
 
-        .scene-header {
-            display: flex;
-            align-items: center;
-            gap: 10px;
+        .scene-nav-number {
+            font-size: 0.75em;
+            color: var(--text-muted);
             margin-bottom: 4px;
         }
 
-        .scene-number {
-            width: 28px;
-            height: 28px;
-            background: var(--accent-gold);
-            color: var(--bg-dark);
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 600;
-            font-size: 0.8125em;
-            flex-shrink: 0;
-        }
-
-        .scene-heading {
+        .scene-nav-heading {
             font-size: 0.8125em;
             font-weight: 600;
             color: var(--text-light);
-            flex: 1;
             line-height: 1.3;
-            white-space: normal;
-            word-break: break-word;
-            overflow-wrap: break-word;
         }
 
-        .scene-type {
-            display: inline-block;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 0.65em;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.03em;
+        .scene-nav-tags {
+            display: flex;
+            gap: 4px;
+            margin-top: 6px;
+            flex-wrap: wrap;
         }
 
-        .scene-type.int-day {
-            background: var(--int-day);
-            color: #fbbf24;
+        .mini-tag {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
         }
 
-        .scene-type.int-night {
-            background: var(--int-night);
-            color: #3f51b5;
-        }
-
-        .scene-type.ext-day {
-            background: var(--ext-day);
-            color: #4caf50;
-        }
-
-        .scene-type.ext-night {
-            background: var(--ext-night);
-            color: #673ab7;
-        }
-
-        .scene-details {
-            display: none;
-            margin-top: 12px;
-            padding-top: 12px;
-            border-top: 1px solid var(--glass-border);
-        }
-
-        .scene-item.expanded .scene-details {
-            display: block;
-        }
-
-        .scene-synopsis {
-            font-size: 0.75em;
-            color: var(--text-muted);
-            margin-bottom: 10px;
-            line-height: 1.5;
-        }
-
-        /* Center Panel - Script Viewer */
+        /* Center Panel - Scene Viewer */
         .center-panel {
             flex: 1;
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            background: var(--bg-dark);
         }
 
-        .script-toolbar {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 12px 20px;
-            background: var(--bg-medium);
-            backdrop-filter: blur(20px);
-            border-bottom: 1px solid var(--glass-border);
-        }
-
-        .script-viewer {
+        .scene-display {
             flex: 1;
             overflow-y: auto;
-            padding: 40px;
-            background: rgba(232, 230, 227, 0.03);
+            padding: 32px 48px;
         }
 
-        .script-container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: rgba(232, 230, 227, 0.95);
-            backdrop-filter: blur(10px);
-            padding: 60px 80px;
-            border-radius: 8px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        .scene-header-display {
+            margin-bottom: 32px;
         }
 
-        .script-content {
-            font-family: 'Courier Prime', 'Courier New', monospace;
-            font-size: 12pt;
-            line-height: 1.5;
-            color: #000;
-            user-select: text;
-            -webkit-user-select: text;
-            -moz-user-select: text;
-            white-space: pre-wrap;
-            word-break: normal;
-            overflow-wrap: break-word;
+        .scene-number-large {
+            font-size: 0.875em;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
         }
 
-        .script-scene {
-            margin-bottom: 24px;
-            scroll-margin-top: 40px;
-        }
-
-        .script-scene-heading {
+        .scene-heading-large {
+            font-size: 1.75em;
             font-weight: 700;
-            text-transform: uppercase;
-            margin-bottom: 12px;
-            letter-spacing: 0.03em;
+            color: var(--accent-gold);
+            margin-bottom: 16px;
+            line-height: 1.2;
         }
 
-        .script-action {
-            margin-bottom: 12px;
-            text-align: left;
-        }
-
-        .script-character {
-            margin-top: 12px;
-            margin-bottom: 4px;
-            text-align: center;
-            font-weight: 400;
-            text-transform: uppercase;
-        }
-
-        .script-dialogue {
-            margin-bottom: 12px;
-            width: 70%;
-            margin-left: 15%;
-        }
-
-        .script-parenthetical {
-            margin-bottom: 4px;
-            width: 60%;
-            margin-left: 20%;
-            font-style: normal;
-        }
-
-        /* Tagged Text */
-        .tagged {
-            padding: 2px 4px;
-            border-radius: 3px;
-            cursor: pointer;
-            position: relative;
-            transition: all 0.2s ease;
-            user-select: none;
-        }
-
-        .tagged.makeup { background: rgba(255, 107, 157, 0.3); }
-        .tagged.hair { background: rgba(192, 132, 252, 0.3); }
-        .tagged.sfx { background: rgba(56, 189, 248, 0.3); }
-        .tagged.cast { background: rgba(251, 191, 36, 0.3); }
-        .tagged.wardrobe { background: rgba(52, 211, 153, 0.3); }
-        .tagged.props { background: rgba(251, 146, 60, 0.3); }
-
-        .tagged:hover {
-            filter: brightness(1.3);
-            box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
-        }
-
-        /* Tooltip */
-        .tooltip {
-            display: none;
-            position: absolute;
-            bottom: 100%;
-            left: 50%;
-            transform: translateX(-50%);
-            padding: 8px 12px;
+        .scene-script-content {
             background: var(--card-bg);
-            backdrop-filter: blur(20px);
             border: 1px solid var(--glass-border);
-            border-radius: 6px;
-            color: var(--text-light);
-            font-size: 0.75em;
-            white-space: nowrap;
-            z-index: 1000;
-            margin-bottom: 4px;
-            font-family: 'Inter', sans-serif;
+            border-radius: 8px;
+            padding: 32px;
+            font-family: 'Courier Prime', monospace;
+            font-size: 12pt;
+            line-height: 1.8;
+            white-space: pre-wrap;
         }
 
-        .tagged:hover .tooltip {
-            display: block;
-        }
-
-        /* Right Sidebar - Notes Panel */
+        /* Right Sidebar - Tagging Panel */
         .right-sidebar {
-            width: 320px;
+            width: 380px;
             background: var(--bg-medium);
             backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
             border-left: 1px solid var(--glass-border);
             display: flex;
             flex-direction: column;
             overflow: hidden;
         }
 
-        .notes-header {
-            padding: 16px 20px;
-            border-bottom: 1px solid var(--glass-border);
+        .tagging-panel {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
         }
 
-        .notes-title {
+        .tag-section {
+            margin-bottom: 24px;
+        }
+
+        .tag-section-title {
             font-size: 0.875em;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.05em;
             color: var(--text-muted);
-            margin-bottom: 4px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
-        .notes-scene {
-            font-size: 0.9375em;
-            font-weight: 600;
+        .tag-color-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+        }
+
+        .add-tag-btn {
+            width: 100%;
+            padding: 10px;
+            background: rgba(201, 169, 97, 0.1);
+            border: 1px dashed var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 0.8125em;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .add-tag-btn:hover {
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+            background: rgba(201, 169, 97, 0.15);
+        }
+
+        .tag-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .tag-item {
+            background: rgba(36, 32, 25, 0.6);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            padding: 10px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s ease;
+        }
+
+        .tag-item:hover {
+            border-color: var(--accent-gold);
+        }
+
+        .tag-description {
+            font-size: 0.8125em;
             color: var(--text-light);
+            flex: 1;
         }
 
-        .notes-content {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
+        .tag-remove-btn {
+            width: 24px;
+            height: 24px;
+            background: rgba(255, 107, 107, 0.2);
+            border: 1px solid var(--error);
+            border-radius: 4px;
+            color: var(--error);
+            cursor: pointer;
+            font-size: 0.875em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .tag-remove-btn:hover {
+            background: var(--error);
+            color: white;
+        }
+
+        .notes-section {
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid var(--glass-border);
         }
 
         .notes-textarea {
             width: 100%;
-            min-height: 200px;
+            min-height: 120px;
             padding: 12px;
             background: rgba(13, 11, 10, 0.5);
-            backdrop-filter: blur(10px);
             border: 1px solid var(--glass-border);
             border-radius: 6px;
             color: var(--text-light);
-            font-size: 0.875em;
+            font-size: 0.8125em;
             font-family: 'Inter', sans-serif;
             resize: vertical;
-            line-height: 1.6;
         }
 
         .notes-textarea:focus {
@@ -514,210 +715,149 @@
             border-color: var(--accent-gold);
         }
 
-        .notes-footer {
-            padding: 16px 20px;
-            border-top: 1px solid var(--glass-border);
-        }
-
-        .save-notes-btn {
-            width: 100%;
-            padding: 10px;
-            background: var(--accent-gold);
-            border: none;
-            border-radius: 6px;
-            color: var(--bg-dark);
-            font-weight: 600;
-            font-size: 0.875em;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .save-notes-btn:hover {
-            background: #d4b16d;
-            transform: translateY(-1px);
-        }
-
-        .notes-timestamp {
-            margin-top: 8px;
-            font-size: 0.6875em;
-            color: var(--text-muted);
+        /* Empty State */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
             text-align: center;
+            padding: 48px;
         }
 
-        /* Tag Legend */
-        .tag-legend {
-            display: flex;
-            gap: 16px;
-            align-items: center;
+        .empty-state-icon {
+            font-size: 4em;
+            margin-bottom: 16px;
+            opacity: 0.3;
         }
 
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 0.75em;
+        .empty-state h3 {
+            font-size: 1.25em;
+            margin-bottom: 8px;
+            color: var(--text-light);
+        }
+
+        .empty-state p {
             color: var(--text-muted);
+            font-size: 0.875em;
         }
 
-        .legend-color {
-            width: 12px;
-            height: 12px;
-            border-radius: 3px;
+        /* Modals */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(13, 11, 10, 0.8);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
         }
 
-        /* Tag Items List */
-        .tag-items-list {
-            margin-top: 10px;
-            font-size: 0.75em;
+        .modal.active {
+            display: flex;
         }
 
-        .tag-category {
+        .modal-content {
+            background: var(--bg-medium);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 32px;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .modal-header {
+            margin-bottom: 24px;
+        }
+
+        .modal-title {
+            font-size: 1.25em;
+            font-weight: 600;
             margin-bottom: 8px;
         }
 
-        .tag-category-title {
-            font-weight: 600;
-            color: var(--text-light);
-            margin-bottom: 4px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .tag-badge {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 20px;
-            height: 20px;
-            border-radius: 4px;
-            font-size: 0.7em;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.02em;
-        }
-
-        .tag-category-items {
-            padding-left: 16px;
+        .modal-subtitle {
+            font-size: 0.875em;
             color: var(--text-muted);
-            line-height: 1.6;
         }
 
-        .tag-item-entry {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            margin-bottom: 2px;
+        .form-group {
+            margin-bottom: 20px;
         }
 
-        .tag-item-dot {
-            width: 4px;
-            height: 4px;
-            border-radius: 50%;
-            background: var(--text-muted);
-            flex-shrink: 0;
+        .form-label {
+            display: block;
+            font-size: 0.875em;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-bottom: 8px;
         }
 
-        /* Floating Tag Toolbar */
-        .tag-toolbar {
-            position: fixed;
-            background: var(--card-bg);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--glass-border);
-            border-radius: 8px;
-            padding: 8px;
-            display: none;
-            gap: 4px;
-            z-index: 1000;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-        }
-
-        .tag-toolbar.active {
-            display: flex;
-        }
-
-        .tag-toolbar-btn {
-            padding: 6px 10px;
-            background: transparent;
+        .form-input,
+        .form-textarea {
+            width: 100%;
+            padding: 10px 12px;
+            background: rgba(13, 11, 10, 0.5);
             border: 1px solid var(--glass-border);
             border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.75em;
-            transition: all 0.2s ease;
+            color: var(--text-light);
+            font-size: 0.875em;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .form-textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        .form-input:focus,
+        .form-textarea:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+        }
+
+        .modal-actions {
             display: flex;
-            align-items: center;
-            gap: 4px;
-            white-space: nowrap;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 24px;
         }
 
-        .tag-toolbar-btn:hover {
-            transform: translateY(-1px);
-        }
-
-        .tag-toolbar-btn.makeup { 
-            background: var(--tag-makeup);
-            color: white;
-            border-color: var(--tag-makeup);
-        }
-        .tag-toolbar-btn.hair { 
-            background: var(--tag-hair);
-            color: white;
-            border-color: var(--tag-hair);
-        }
-        .tag-toolbar-btn.sfx { 
-            background: var(--tag-sfx);
-            color: white;
-            border-color: var(--tag-sfx);
-        }
-        .tag-toolbar-btn.cast { 
-            background: var(--tag-cast);
-            color: #000;
-            border-color: var(--tag-cast);
-        }
-        .tag-toolbar-btn.wardrobe { 
-            background: var(--tag-wardrobe);
-            color: white;
-            border-color: var(--tag-wardrobe);
-        }
-        .tag-toolbar-btn.props { 
-            background: var(--tag-props);
-            color: white;
-            border-color: var(--tag-props);
-        }
-
-        .breakdown-btn {
-            width: 100%;
-            padding: 6px 12px;
+        .modal-btn {
+            padding: 10px 20px;
             background: transparent;
             border: 1px solid var(--glass-border);
             border-radius: 6px;
             color: var(--text-light);
             cursor: pointer;
-            font-size: 0.75em;
+            font-size: 0.875em;
             transition: all 0.2s ease;
         }
 
-        .breakdown-btn:hover {
+        .modal-btn:hover {
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+        }
+
+        .modal-btn.primary {
             background: var(--accent-gold);
             border-color: var(--accent-gold);
             color: var(--bg-dark);
         }
-        
-        /* Animations */
-        @keyframes tagAdded {
-            0% {
-                transform: scale(1);
-                box-shadow: 0 0 0 rgba(201, 169, 97, 0.7);
-            }
-            50% {
-                transform: scale(1.05);
-                box-shadow: 0 0 20px rgba(201, 169, 97, 0.5);
-            }
-            100% {
-                transform: scale(1);
-                box-shadow: 0 0 0 rgba(201, 169, 97, 0);
-            }
+
+        .modal-btn.primary:hover {
+            background: #d4b16d;
+        }
+
+        /* Utility */
+        .hidden {
+            display: none !important;
         }
     </style>
 </head>
@@ -725,878 +865,729 @@
     <div class="app-layout">
         <!-- Top Bar -->
         <div class="top-bar">
-            <div style="display: flex; align-items: center; gap: 24px;">
-                <a href="index.html" class="back-link">← Dashboard</a>
-                <h1 class="page-title">Script Breakdown</h1>
+            <div onclick="goBack()" class="back-link">
+                <span>←</span>
+                <span>Back to Projects</span>
+            </div>
+
+            <div class="workflow-indicator">
+                <div class="workflow-step" id="stepReview">
+                    <span>1</span>
+                    <span>Review Scenes</span>
+                </div>
+                <span class="workflow-arrow">→</span>
+                <div class="workflow-step" id="stepBreakdown">
+                    <span>2</span>
+                    <span>Breakdown & Tag</span>
+                </div>
             </div>
 
             <div class="top-bar-actions">
-                <button class="toggle-btn" id="toggleTags">Tags</button>
-                <button class="toolbar-btn" onclick="document.getElementById('scriptUploadInput').click()">Upload Script</button>
-                <input type="file" id="scriptUploadInput" accept=".txt,.fountain,.fdx,.pdf" style="display: none;" onchange="handleScriptUploadInBreakdown(event)">
-                <button class="toolbar-btn" onclick="showAIToolsMenu()">AI Tools</button>
-                <button class="toolbar-btn" onclick="exportBreakdown()">Export</button>
-                <button class="toolbar-btn primary" onclick="generateAIBreakdown()">Generate Breakdown</button>
+                <button class="toolbar-btn" onclick="redetectScenes()" id="redetectBtn">
+                    🔄 Re-detect Scenes
+                </button>
+                <button class="toolbar-btn primary" onclick="confirmScenesAndContinue()" id="confirmBtn" disabled>
+                    ✓ Confirm Scenes & Continue
+                </button>
+                <button class="toolbar-btn hidden" onclick="backToReview()" id="backToReviewBtn">
+                    ← Back to Scene Review
+                </button>
+                <button class="toolbar-btn primary hidden" onclick="exportBreakdown()" id="exportBtn">
+                    ⬇ Export
+                </button>
             </div>
         </div>
 
         <!-- Main Content -->
         <div class="main-content">
-            <!-- Left Sidebar - Scene Navigation -->
-            <div class="left-sidebar">
-                <div class="sidebar-header">
-                    <div class="sidebar-title">Scene Navigation</div>
-                    <input type="text" class="scene-search" placeholder="Search scenes..." id="sceneSearch">
+            <!-- SCENE REVIEW MODE -->
+            <div class="review-layout" id="reviewMode">
+                <!-- Sidebar with Scene List -->
+                <div class="review-sidebar">
+                    <h2>Detected Scenes</h2>
+                    <p style="color: var(--text-muted); font-size: 0.875em; margin-bottom: 16px;">
+                        Review and edit scene headings before continuing to breakdown.
+                    </p>
+
+                    <div class="review-stats">
+                        <div class="review-stat">
+                            <div class="review-stat-number" id="reviewSceneCount">0</div>
+                            <div class="review-stat-label">Scenes</div>
+                        </div>
+                        <div class="review-stat">
+                            <div class="review-stat-number" id="reviewLineCount">0</div>
+                            <div class="review-stat-label">Lines</div>
+                        </div>
+                    </div>
+
+                    <div class="scene-list-container" id="reviewSceneList">
+                        <p style="color: var(--text-muted); font-size: 0.875em;">
+                            Loading scenes...
+                        </p>
+                    </div>
+
+                    <div class="review-actions">
+                        <button class="toolbar-btn" onclick="redetectScenes()" style="width: 100%;">
+                            🔄 Re-detect All Scenes
+                        </button>
+                    </div>
                 </div>
 
-                <div class="scene-list" id="sceneList">
-                    <div style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 0.875em;">
-                        Loading scenes...
+                <!-- Script Viewer -->
+                <div class="script-viewer">
+                    <div class="script-content" id="reviewScriptContent">
+                        <p style="text-align: center; color: #666;">Loading script...</p>
                     </div>
                 </div>
             </div>
 
-            <!-- Center Panel - Script Viewer -->
-            <div class="center-panel">
-                <div class="script-toolbar">
-                    <div class="tag-legend">
-                        <div class="legend-item">
-                            <div class="legend-color" style="background: var(--tag-makeup)"></div>
-                            Makeup
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-color" style="background: var(--tag-hair)"></div>
-                            Hair
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-color" style="background: var(--tag-sfx)"></div>
-                            SFX
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-color" style="background: var(--tag-cast)"></div>
-                            Cast
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-color" style="background: var(--tag-wardrobe)"></div>
-                            Wardrobe
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-color" style="background: var(--tag-props)"></div>
-                            Props
+            <!-- BREAKDOWN MODE -->
+            <div class="breakdown-layout" id="breakdownMode">
+                <!-- Left Sidebar - Scene Navigation -->
+                <div class="left-sidebar">
+                    <div class="sidebar-header">
+                        <div class="sidebar-title">Scenes</div>
+                        <input type="text" class="scene-search" placeholder="Search scenes..." id="sceneSearch">
+                    </div>
+                    <div class="scene-nav-list" id="sceneNavList">
+                        <!-- Scene navigation items will be inserted here -->
+                    </div>
+                </div>
+
+                <!-- Center Panel - Scene Content -->
+                <div class="center-panel">
+                    <div class="scene-display" id="sceneDisplay">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">🎬</div>
+                            <h3>Select a Scene</h3>
+                            <p>Choose a scene from the left sidebar to start tagging</p>
                         </div>
                     </div>
                 </div>
 
-                <div class="script-viewer" id="scriptViewer">
-                    <div class="script-container">
-                        <div class="script-content">
-                            <div style="display: flex; align-items: center; justify-content: center; min-height: 400px; flex-direction: column; gap: 16px; color: var(--text-muted);">
-                                <div style="font-size: 2em; opacity: 0.3; font-weight: 300;">SCRIPT</div>
-                                <div style="font-size: 0.875em;">Loading script...</div>
-                            </div>
+                <!-- Right Sidebar - Tagging Panel -->
+                <div class="right-sidebar">
+                    <div class="tagging-panel" id="taggingPanel">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">🏷️</div>
+                            <h3>No Scene Selected</h3>
+                            <p>Select a scene to add tags</p>
                         </div>
                     </div>
-                </div>
-            </div>
-
-            <!-- Right Sidebar - Notes Panel -->
-            <div class="right-sidebar">
-                <div class="notes-header">
-                    <div class="notes-title">Scene Notes</div>
-                    <div class="notes-scene" id="notesSceneTitle">Select a scene</div>
-                </div>
-
-                <div class="notes-content">
-                    <textarea class="notes-textarea" id="notesTextarea" placeholder="Enter notes for this scene...
-
-• Continuity concerns
-• Hair/makeup details  
-• SFX requirements
-• Creative ideas
-• Production notes"></textarea>
-                </div>
-
-                <div class="notes-footer">
-                    <button class="save-notes-btn" onclick="saveNotes()">Save Notes</button>
-                    <div class="notes-timestamp">Not saved yet</div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Floating Tag Toolbar -->
-    <div class="tag-toolbar" id="tagToolbar">
-        <button class="tag-toolbar-btn makeup" onclick="tagSelection('makeup', 'M')">Makeup</button>
-        <button class="tag-toolbar-btn hair" onclick="tagSelection('hair', 'H')">Hair</button>
-        <button class="tag-toolbar-btn sfx" onclick="tagSelection('sfx', 'S')">SFX</button>
-        <button class="tag-toolbar-btn cast" onclick="tagSelection('cast', 'C')">Cast</button>
-        <button class="tag-toolbar-btn wardrobe" onclick="tagSelection('wardrobe', 'W')">Wardrobe</button>
-        <button class="tag-toolbar-btn props" onclick="tagSelection('props', 'P')">Props</button>
+    <!-- Add Tag Modal -->
+    <div class="modal" id="addTagModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title" id="modalTitle">Add Tag</div>
+                <div class="modal-subtitle" id="modalSubtitle">Add a new item to this scene</div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Description</label>
+                <textarea class="form-textarea" id="tagDescription" placeholder="Describe the item..."></textarea>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn" onclick="closeTagModal()">Cancel</button>
+                <button class="modal-btn primary" onclick="saveTag()">Add Tag</button>
+            </div>
+        </div>
     </div>
 
     <script>
-        // Initialize PDF.js
-        if (typeof pdfjsLib !== 'undefined') {
-            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-        }
+        // ============================================
+        // GLOBAL STATE
+        // ============================================
 
-        let currentScene = 1;
-        let tagsVisible = true;
         let currentProject = null;
-        let sceneTags = {}; // Store tags by scene
-        let sceneNotes = {}; // Store notes by scene
+        let scriptText = '';
+        let scenes = [];
+        let currentSceneIndex = 0;
+        let sceneTags = {}; // { sceneNumber: [{ category, description }] }
+        let sceneNotes = {}; // { sceneNumber: 'notes' }
+        let currentMode = 'review'; // 'review' or 'breakdown'
+        let currentTagCategory = '';
 
         // ============================================
-        // LOAD PROJECT & SCRIPT
+        // INITIALIZATION
         // ============================================
 
         function loadProjectScript() {
-            console.log('=== Loading Project Script ===');
-            const projectData = localStorage.getItem('currentProject');
+            currentProject = JSON.parse(localStorage.getItem('currentProject') || 'null');
             
-            if (!projectData) {
-                console.log('❌ No project data found in localStorage');
-                showNoScriptMessage();
+            if (!currentProject) {
+                alert('No project loaded');
+                window.location.href = 'index.html';
                 return;
             }
-            
-            currentProject = JSON.parse(projectData);
-            console.log('✓ Project loaded:', currentProject.title);
-            console.log('  - Project code:', currentProject.code);
-            console.log('  - Script name:', currentProject.scriptName);
-            console.log('  - Has scriptContent:', !!currentProject.scriptContent);
-            console.log('  - scriptContent length:', currentProject.scriptContent ? currentProject.scriptContent.length : 0);
-            
-            // Update page title
-            const pageTitle = document.querySelector('.page-title');
-            if (pageTitle) {
-                pageTitle.textContent = `Script Breakdown - ${currentProject.title}`;
+
+            if (!currentProject.scriptContent) {
+                alert('No script content found in project');
+                window.location.href = 'index.html';
+                return;
             }
+
+            scriptText = currentProject.scriptContent;
             
-            // If project has script content, parse and display it
-            if (currentProject.scriptContent && currentProject.scriptContent.length > 0) {
-                console.log('✓ Script content found, length:', currentProject.scriptContent.length);
-                console.log('  - First 200 chars:', currentProject.scriptContent.substring(0, 200));
-                
-                try {
-                    parseAndDisplayScript(currentProject.scriptContent);
-                    console.log('✓ Script parsed and displayed successfully');
-                } catch (error) {
-                    console.error('❌ Error parsing script:', error);
-                    showScriptError('Error parsing script. Check browser console for details.');
-                }
+            // Check if scenes were already confirmed
+            if (currentProject.scenes && currentProject.scenesConfirmed) {
+                scenes = currentProject.scenes;
+                sceneTags = currentProject.sceneTags || {};
+                sceneNotes = currentProject.sceneNotes || {};
+                switchToBreakdownMode();
+            } else if (currentProject.scenes) {
+                // Scenes exist but not confirmed yet
+                scenes = currentProject.scenes;
+                startReviewMode();
             } else {
-                console.log('❌ No script content found in project');
-                showNoScriptMessage();
+                // No scenes yet, detect them
+                detectScenes();
+                startReviewMode();
             }
-        }
 
-        function showNoScriptMessage() {
-            const scriptContent = document.querySelector('.script-content');
-            if (scriptContent) {
-                scriptContent.innerHTML = `
-                    <div style="display: flex; align-items: center; justify-content: center; min-height: 400px; flex-direction: column; gap: 16px; color: var(--text-muted); text-align: center; padding: 24px;">
-                        <div style="font-size: 2em; opacity: 0.3; font-weight: 300;">NO SCRIPT</div>
-                        <div style="font-size: 0.875em; max-width: 400px;">No script has been uploaded for this project yet.</div>
-                        <button class="toolbar-btn primary" onclick="document.getElementById('scriptUploadInput').click()" style="margin-top: 16px;">Upload Script Now</button>
-                    </div>
-                `;
-            }
-            
-            const sceneList = document.getElementById('sceneList');
-            if (sceneList) {
-                sceneList.innerHTML = '<div style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 0.875em;">Upload a script to begin</div>';
-            }
-        }
-
-        function showScriptError(message) {
-            const scriptContent = document.querySelector('.script-content');
-            if (scriptContent) {
-                scriptContent.innerHTML = `
-                    <div style="display: flex; align-items: center; justify-content: center; min-height: 400px; flex-direction: column; gap: 16px; color: var(--text-muted); text-align: center; padding: 24px;">
-                        <div style="font-size: 1.5em; color: #ff6b6b;">Error</div>
-                        <div style="font-size: 0.875em; max-width: 400px;">${message}</div>
-                        <button class="toolbar-btn" onclick="document.getElementById('scriptUploadInput').click()" style="margin-top: 16px;">Upload Script</button>
-                    </div>
-                `;
-            }
-            
-            const sceneList = document.getElementById('sceneList');
-            if (sceneList) {
-                sceneList.innerHTML = '<div style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 0.875em;">No scenes available</div>';
-            }
-        }
-
-        // ============================================
-        // SCRIPT PARSING
-        // ============================================
-
-        function parseAndDisplayScript(scriptText) {
-            console.log('=== Parsing Script ===');
+            console.log('Loaded project:', currentProject.title);
             console.log('Script length:', scriptText.length);
-            
-            if (!scriptText || scriptText.length === 0) {
-                console.error('Script text is empty');
-                showScriptError('Script content is empty!');
-                return;
-            }
-            
+            console.log('Scenes:', scenes.length);
+        }
+
+        // ============================================
+        // SCENE DETECTION
+        // ============================================
+
+        function detectScenes() {
+            scenes = [];
             const lines = scriptText.split('\n');
-            console.log('Total lines:', lines.length);
             
-            let html = '';
-            let sceneNumber = 0;
-            let currentSceneHtml = '';
-            let inScene = false;
+            console.log('Detecting scenes from', lines.length, 'lines');
             
-            // Flexible regex for scene headings - handles "1 1INT." or "INT." or "1INT."
-            const sceneHeadingRegex = /^\s*\d*\s*\d*\s*(INT|EXT|INT\/EXT|I\/E)[\.\s]+/i;
+            // Multiple detection patterns
+            const patterns = [
+                /^\s*\d*\s*\d*\s*(INT|EXT|INT\/EXT|I\/E)[\.\s]+/i,  // Standard with optional numbers
+                /^(INT|EXT|INT\/EXT|I\/E)[\.\s]+/i,                  // Clean format
+                /^\d+\s*\.\s*(INT|EXT)[.\s]+/i,                      // Numbered scenes
+            ];
             
-            // Parse script
             lines.forEach((line, index) => {
                 const trimmed = line.trim();
                 
-                // Detect scene headings
-                if (sceneHeadingRegex.test(trimmed)) {
-                    // Save previous scene if exists
-                    if (currentSceneHtml) {
-                        html += `</div>`; // Close previous scene
-                    }
-                    
-                    sceneNumber++;
-                    
-                    // Clean up the heading - remove leading numbers
-                    let cleanHeading = trimmed
-                        .replace(/^\s*\d+\s*\d*\s*/, '') // Remove leading numbers
-                        .replace(/\s+/g, ' ')  // Normalize spaces
-                        .trim();
-                    
-                    html += `<div class="script-scene" id="scene-${sceneNumber}">`;
-                    html += `<div class="script-scene-heading">${sceneNumber}. ${cleanHeading}</div>`;
-                    currentSceneHtml = trimmed;
-                    inScene = true;
-                    
-                    console.log(`Found scene ${sceneNumber}: ${cleanHeading}`);
-                }
-                // Detect character names (all caps, not too long)
-                else if (trimmed === trimmed.toUpperCase() && 
-                         trimmed.length > 0 && 
-                         trimmed.length < 40 && 
-                         !trimmed.match(/^[A-Z\s]+:$/) &&
-                         !trimmed.match(/^\d+\.?$/)) {
-                    html += `<div class="script-character">${trimmed}</div>`;
-                }
-                // Parentheticals
-                else if (trimmed.startsWith('(') && trimmed.endsWith(')')) {
-                    html += `<div class="script-parenthetical">${trimmed}</div>`;
-                }
-                // Empty lines
-                else if (trimmed === '') {
-                    // Skip
-                }
-                // Action/dialogue
-                else if (trimmed.length > 0 && inScene) {
-                    // Check if previous element was character name
-                    if (html.includes('script-character') && html.lastIndexOf('script-character') > html.lastIndexOf('script-action')) {
-                        html += `<div class="script-dialogue">${trimmed}</div>`;
-                    } else {
-                        html += `<div class="script-action">${trimmed}</div>`;
+                // Check each pattern
+                for (let pattern of patterns) {
+                    if (pattern.test(trimmed)) {
+                        // Clean up the heading
+                        let cleanHeading = trimmed
+                            .replace(/^\s*\d+\s*\d*\s*/, '')  // Remove leading numbers
+                            .replace(/\s+/g, ' ')              // Normalize spaces
+                            .trim();
+                        
+                        scenes.push({
+                            id: Date.now() + index,
+                            lineIndex: index,
+                            heading: cleanHeading,
+                            originalText: trimmed
+                        });
+                        
+                        console.log('Detected scene:', cleanHeading);
+                        break;
                     }
                 }
             });
             
-            // Close last scene
-            if (currentSceneHtml) {
-                html += `</div>`;
-            }
+            console.log('Total scenes detected:', scenes.length);
+        }
+
+        function redetectScenes() {
+            if (!confirm('This will reset all manual scene edits. Continue?')) return;
             
-            console.log('Scenes found:', sceneNumber);
+            detectScenes();
+            startReviewMode();
+        }
+
+        // ============================================
+        // REVIEW MODE
+        // ============================================
+
+        function startReviewMode() {
+            currentMode = 'review';
             
-            if (sceneNumber === 0) {
-                console.error('No scenes detected in script!');
-                showScriptError(`
-                    No scenes found in script. Make sure scene headings start with INT. or EXT.<br><br>
-                    <strong>Script preview:</strong><br>
-                    <div style="font-family: monospace; font-size: 0.75em; text-align: left; background: rgba(0,0,0,0.3); padding: 12px; border-radius: 4px; max-width: 500px; margin: 16px auto; white-space: pre-wrap; max-height: 200px; overflow-y: auto;">${scriptText.substring(0, 500).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
-                `);
+            // Show review mode, hide breakdown mode
+            document.getElementById('reviewMode').style.display = 'flex';
+            document.getElementById('breakdownMode').classList.remove('active');
+            
+            // Update workflow indicator
+            document.getElementById('stepReview').classList.add('active');
+            document.getElementById('stepReview').classList.remove('completed');
+            document.getElementById('stepBreakdown').classList.remove('active');
+            
+            // Update buttons
+            document.getElementById('confirmBtn').classList.remove('hidden');
+            document.getElementById('confirmBtn').disabled = scenes.length === 0;
+            document.getElementById('redetectBtn').classList.remove('hidden');
+            document.getElementById('backToReviewBtn').classList.add('hidden');
+            document.getElementById('exportBtn').classList.add('hidden');
+            
+            // Render review content
+            renderReviewSidebar();
+            renderReviewScript();
+            updateReviewStats();
+        }
+
+        function renderReviewSidebar() {
+            const sidebar = document.getElementById('reviewSceneList');
+            
+            if (scenes.length === 0) {
+                sidebar.innerHTML = '<p style="color: var(--text-muted); font-size: 0.875em;">No scenes detected. Upload a script or adjust detection settings.</p>';
                 return;
             }
             
-            // Update script viewer
-            const scriptContent = document.querySelector('.script-content');
-            if (scriptContent) {
-                scriptContent.innerHTML = html;
-                console.log('✓ Script HTML updated');
-                
-                // Generate scene list
-                generateSceneList(sceneNumber);
-                console.log('✓ Scene list generated');
-                
-                // Initialize scene tags
-                initializeSceneTags(sceneNumber);
-                console.log('✓ Scene tags initialized');
-                
-                // Load saved data
-                loadSavedData();
-                
-                // Load notes for current scene
-                loadNotesForScene(currentScene);
-            }
-        }
-
-        function generateSceneList(numScenes) {
-            const sceneList = document.getElementById('sceneList');
-            sceneList.innerHTML = '';
-            
-            for (let i = 1; i <= numScenes; i++) {
-                const sceneElement = document.getElementById(`scene-${i}`);
-                if (!sceneElement) continue;
-                
-                const heading = sceneElement.querySelector('.script-scene-heading')?.textContent || `Scene ${i}`;
-                const headingText = heading.replace(/^\d+\.\s*/, '');
-                
-                // Determine scene type
-                let sceneType = 'int-day';
-                if (headingText.match(/^EXT\./i)) {
-                    sceneType = headingText.match(/NIGHT/i) ? 'ext-night' : 'ext-day';
-                } else if (headingText.match(/^INT\./i)) {
-                    sceneType = headingText.match(/NIGHT/i) ? 'int-night' : 'int-day';
-                }
-                
-                const typeLabel = {
-                    'int-day': 'INT / Day',
-                    'int-night': 'INT / Night',
-                    'ext-day': 'EXT / Day',
-                    'ext-night': 'EXT / Night'
-                }[sceneType];
-                
-                const sceneItem = document.createElement('div');
-                sceneItem.className = `scene-item${i === 1 ? ' active expanded' : ''}`;
-                sceneItem.setAttribute('data-scene', i);
-                sceneItem.onclick = () => scrollToScene(i);
-                
-                sceneItem.innerHTML = `
-                    <div class="scene-header">
-                        <div class="scene-number">${i}</div>
-                        <div style="flex: 1;">
-                            <div class="scene-heading">${headingText}</div>
-                            <span class="scene-type ${sceneType}">${typeLabel}</span>
-                        </div>
-                    </div>
-                    <div class="scene-details">
-                        <div class="scene-synopsis">
-                            Select text in the script to add tags...
-                        </div>
-                        <div class="tag-items-list">
-                            <!-- Tags will be added here -->
-                        </div>
-                        <button class="breakdown-btn">Expand Details</button>
+            let html = '';
+            scenes.forEach((scene, index) => {
+                html += `
+                    <div class="scene-list-item" onclick="scrollToReviewScene(${scene.id})">
+                        <span class="scene-number">${index + 1}</span>
+                        <span class="scene-heading-preview">${scene.heading}</span>
                     </div>
                 `;
-                
-                sceneList.appendChild(sceneItem);
-            }
+            });
+            
+            sidebar.innerHTML = html;
         }
 
-        function initializeSceneTags(numScenes) {
-            for (let i = 1; i <= numScenes; i++) {
-                if (!sceneTags[i]) {
-                    sceneTags[i] = [];
+        function renderReviewScript() {
+            const lines = scriptText.split('\n');
+            const scriptContent = document.getElementById('reviewScriptContent');
+            
+            let html = '';
+            
+            lines.forEach((line, lineIndex) => {
+                const trimmed = line.trim();
+                
+                // Check if this line is a scene
+                const sceneMatch = scenes.find(s => s.lineIndex === lineIndex);
+                
+                if (sceneMatch) {
+                    const sceneNumber = scenes.indexOf(sceneMatch) + 1;
+                    html += `
+                        <div class="detected-scene" data-scene-id="${sceneMatch.id}">
+                            <div class="scene-badge">${sceneNumber}</div>
+                            <input 
+                                type="text" 
+                                class="scene-heading-input" 
+                                value="${escapeHtml(sceneMatch.heading)}"
+                                onchange="updateSceneHeading(${sceneMatch.id}, this.value)"
+                            />
+                            <div class="scene-actions">
+                                <button class="scene-action-btn" onclick="scrollToReviewSceneInList(${sceneNumber})">Jump to Scene</button>
+                                <button class="scene-action-btn delete" onclick="deleteScene(${sceneMatch.id})">Delete Scene</button>
+                            </div>
+                        </div>
+                    `;
+                } else if (trimmed) {
+                    // Regular line with add scene button
+                    html += `
+                        <div class="script-line" data-line-index="${lineIndex}">
+                            <button class="add-scene-btn" onclick="addSceneAtLine(${lineIndex})" title="Mark as scene">+</button>
+                            ${escapeHtml(line)}
+                        </div>
+                    `;
                 }
-            }
+            });
+            
+            scriptContent.innerHTML = html;
         }
 
-        // ============================================
-        // PERSISTENCE
-        // ============================================
-
-        function loadSavedData() {
-            const projectCode = currentProject?.code;
-            if (!projectCode) return;
-            
-            const savedTags = localStorage.getItem(`${projectCode}_sceneTags`);
-            const savedNotes = localStorage.getItem(`${projectCode}_sceneNotes`);
-            
-            if (savedTags) {
-                sceneTags = JSON.parse(savedTags);
-                console.log('✓ Loaded saved tags:', sceneTags);
-                
-                // Update scene overviews
-                Object.keys(sceneTags).forEach(sceneNum => {
-                    updateSceneOverview(parseInt(sceneNum));
-                });
-            }
-            
-            if (savedNotes) {
-                sceneNotes = JSON.parse(savedNotes);
-                console.log('✓ Loaded saved notes:', sceneNotes);
-            }
+        function updateReviewStats() {
+            document.getElementById('reviewSceneCount').textContent = scenes.length;
+            document.getElementById('reviewLineCount').textContent = scriptText.split('\n').filter(l => l.trim()).length;
         }
 
-        function saveTags() {
-            const projectCode = currentProject?.code;
-            if (!projectCode) return;
-            
-            localStorage.setItem(`${projectCode}_sceneTags`, JSON.stringify(sceneTags));
-            console.log('✓ Tags saved');
-        }
-
-        function saveNotesToStorage() {
-            const projectCode = currentProject?.code;
-            if (!projectCode) return;
-            
-            localStorage.setItem(`${projectCode}_sceneNotes`, JSON.stringify(sceneNotes));
-            console.log('✓ Notes saved');
-        }
-
-        function saveNotes() {
-            const notesText = document.getElementById('notesTextarea').value;
-            
-            sceneNotes[currentScene] = notesText;
-            saveNotesToStorage();
-            
-            console.log(`Saved notes for scene ${currentScene}`);
-            
-            // Visual feedback
-            const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-            const timestampElement = document.querySelector('.notes-timestamp');
-            if (timestampElement) {
-                timestampElement.textContent = `Last saved: ${timestamp}`;
-            }
-            
-            const btn = document.querySelector('.save-notes-btn');
-            if (btn) {
-                const originalText = btn.textContent;
-                btn.textContent = 'Saved';
-                btn.style.background = '#52c186';
+        function scrollToReviewScene(sceneId) {
+            const sceneElement = document.querySelector(`[data-scene-id="${sceneId}"]`);
+            if (sceneElement) {
+                sceneElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                sceneElement.style.boxShadow = '0 0 20px rgba(201, 169, 97, 0.5)';
                 setTimeout(() => {
-                    btn.textContent = originalText;
-                    btn.style.background = '';
+                    sceneElement.style.boxShadow = '';
                 }, 2000);
             }
         }
 
-        function loadNotesForScene(sceneNum) {
-            const notesTextarea = document.getElementById('notesTextarea');
-            if (notesTextarea) {
-                notesTextarea.value = sceneNotes[sceneNum] || '';
-            }
-            
-            const notesSceneTitle = document.getElementById('notesSceneTitle');
-            if (notesSceneTitle) {
-                const sceneElement = document.getElementById(`scene-${sceneNum}`);
-                if (sceneElement) {
-                    const heading = sceneElement.querySelector('.script-scene-heading');
-                    if (heading) {
-                        notesSceneTitle.textContent = heading.textContent;
-                    }
-                } else {
-                    notesSceneTitle.textContent = `Scene ${sceneNum}`;
-                }
+        function scrollToReviewSceneInList(sceneNumber) {
+            const listItems = document.querySelectorAll('.scene-list-item');
+            if (listItems[sceneNumber - 1]) {
+                listItems[sceneNumber - 1].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }
         }
 
-        // ============================================
-        // TAGGING
-        // ============================================
-
-        document.addEventListener('mouseup', function(e) {
-            const selection = window.getSelection();
-            const selectedText = selection.toString().trim();
+        function addSceneAtLine(lineIndex) {
+            const lines = scriptText.split('\n');
+            const lineText = lines[lineIndex].trim();
             
-            if (selectedText.length > 0 && e.target.closest('.script-content')) {
-                const range = selection.getRangeAt(0);
-                const rect = range.getBoundingClientRect();
-                
-                const toolbar = document.getElementById('tagToolbar');
-                toolbar.style.left = rect.left + (rect.width / 2) - (toolbar.offsetWidth / 2) + 'px';
-                toolbar.style.top = (rect.top + window.scrollY - 50) + 'px';
-                toolbar.classList.add('active');
-                
-                window.currentSelection = {
-                    text: selectedText,
-                    range: range
-                };
-            } else {
-                if (!e.target.closest('.tag-toolbar')) {
-                    document.getElementById('tagToolbar').classList.remove('active');
-                }
-            }
-        });
-
-        function tagSelection(category, icon) {
-            if (!window.currentSelection) return;
+            const heading = prompt('Enter scene heading (e.g., INT. KITCHEN - DAY):', lineText);
             
-            const { text, range } = window.currentSelection;
-            const description = prompt(`Add a description for this ${category} tag:`, text);
+            if (!heading) return;
             
-            if (!description) return;
-            
-            const span = document.createElement('span');
-            span.className = `tagged ${category}`;
-            span.setAttribute('data-tag', description);
-            span.setAttribute('data-category', category);
-            
-            const tooltip = document.createElement('span');
-            tooltip.className = 'tooltip';
-            tooltip.textContent = `Tagged as: ${category.charAt(0).toUpperCase() + category.slice(1)} — ${description}`;
-            span.appendChild(tooltip);
-            
-            try {
-                range.surroundContents(span);
-                
-                if (!sceneTags[currentScene]) {
-                    sceneTags[currentScene] = [];
-                }
-                
-                sceneTags[currentScene].push({
-                    text: text,
-                    category: category,
-                    description: description
-                });
-                
-                saveTags();
-                updateSceneOverview(currentScene);
-                
-                document.getElementById('tagToolbar').classList.remove('active');
-                window.getSelection().removeAllRanges();
-                
-                span.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    removeTag(this);
-                });
-                
-                span.style.animation = 'tagAdded 0.3s ease';
-                
-            } catch (error) {
-                alert('Cannot tag across element boundaries. Try selecting text within a single paragraph.');
-            }
-        }
-
-        function removeTag(tagElement) {
-            if (!confirm('Remove this tag?')) return;
-            
-            const text = tagElement.childNodes[0].textContent;
-            const category = tagElement.getAttribute('data-category');
-            
-            if (sceneTags[currentScene]) {
-                sceneTags[currentScene] = sceneTags[currentScene].filter(tag => 
-                    !(tag.text === text && tag.category === category)
-                );
-            }
-            
-            saveTags();
-            
-            const parent = tagElement.parentNode;
-            while (tagElement.firstChild && tagElement.firstChild.className !== 'tooltip') {
-                parent.insertBefore(tagElement.firstChild, tagElement);
-            }
-            parent.removeChild(tagElement);
-            
-            updateSceneOverview(currentScene);
-        }
-
-        function updateSceneOverview(sceneNum) {
-            const tags = sceneTags[sceneNum] || [];
-            const sceneItem = document.querySelector(`.scene-item[data-scene="${sceneNum}"]`);
-            if (!sceneItem) return;
-            
-            const grouped = {};
-            tags.forEach(tag => {
-                if (!grouped[tag.category]) {
-                    grouped[tag.category] = [];
-                }
-                grouped[tag.category].push(tag.description);
-            });
-            
-            const categoryIcons = {
-                makeup: { icon: 'M', name: 'Makeup', color: 'var(--tag-makeup)' },
-                hair: { icon: 'H', name: 'Hair', color: 'var(--tag-hair)' },
-                sfx: { icon: 'S', name: 'SFX', color: 'var(--tag-sfx)' },
-                cast: { icon: 'C', name: 'Cast', color: 'var(--tag-cast)' },
-                wardrobe: { icon: 'W', name: 'Wardrobe', color: 'var(--tag-wardrobe)' },
-                props: { icon: 'P', name: 'Props', color: 'var(--tag-props)' }
+            const newScene = {
+                id: Date.now(),
+                lineIndex: lineIndex,
+                heading: heading.toUpperCase(),
+                originalText: lineText
             };
             
+            scenes.push(newScene);
+            
+            // Sort scenes by line index
+            scenes.sort((a, b) => a.lineIndex - b.lineIndex);
+            
+            renderReviewScript();
+            renderReviewSidebar();
+            updateReviewStats();
+            
+            // Enable confirm button
+            document.getElementById('confirmBtn').disabled = false;
+            
+            console.log('Added scene:', heading);
+        }
+
+        function updateSceneHeading(sceneId, newHeading) {
+            const scene = scenes.find(s => s.id === sceneId);
+            if (scene) {
+                scene.heading = newHeading.toUpperCase();
+                renderReviewSidebar();
+                console.log('Updated scene heading:', newHeading);
+            }
+        }
+
+        function deleteScene(sceneId) {
+            if (!confirm('Delete this scene?')) return;
+            
+            scenes = scenes.filter(s => s.id !== sceneId);
+            
+            renderReviewScript();
+            renderReviewSidebar();
+            updateReviewStats();
+            
+            // Disable confirm button if no scenes
+            document.getElementById('confirmBtn').disabled = scenes.length === 0;
+            
+            console.log('Deleted scene');
+        }
+
+        function confirmScenesAndContinue() {
+            if (scenes.length === 0) {
+                alert('Please add at least one scene before continuing.');
+                return;
+            }
+            
+            // Mark scenes as confirmed
+            currentProject.scenes = scenes;
+            currentProject.sceneCount = scenes.length;
+            currentProject.scenesConfirmed = true;
+            
+            localStorage.setItem('currentProject', JSON.stringify(currentProject));
+            
+            // Also update in projects list
+            const projects = JSON.parse(localStorage.getItem('checksHappyProjects') || '[]');
+            const projectIndex = projects.findIndex(p => p.code === currentProject.code);
+            if (projectIndex !== -1) {
+                projects[projectIndex].scenes = scenes;
+                projects[projectIndex].sceneCount = scenes.length;
+                projects[projectIndex].scenesConfirmed = true;
+                localStorage.setItem('checksHappyProjects', JSON.stringify(projects));
+            }
+            
+            console.log('Confirmed', scenes.length, 'scenes');
+            
+            // Switch to breakdown mode
+            switchToBreakdownMode();
+        }
+
+        // ============================================
+        // BREAKDOWN MODE
+        // ============================================
+
+        function switchToBreakdownMode() {
+            currentMode = 'breakdown';
+            
+            // Hide review mode, show breakdown mode
+            document.getElementById('reviewMode').style.display = 'none';
+            document.getElementById('breakdownMode').classList.add('active');
+            
+            // Update workflow indicator
+            document.getElementById('stepReview').classList.remove('active');
+            document.getElementById('stepReview').classList.add('completed');
+            document.getElementById('stepBreakdown').classList.add('active');
+            
+            // Update buttons
+            document.getElementById('confirmBtn').classList.add('hidden');
+            document.getElementById('redetectBtn').classList.add('hidden');
+            document.getElementById('backToReviewBtn').classList.remove('hidden');
+            document.getElementById('exportBtn').classList.remove('hidden');
+            
+            // Render breakdown content
+            renderSceneNavigation();
+            
+            // Load first scene
+            if (scenes.length > 0) {
+                selectScene(0);
+            }
+        }
+
+        function backToReview() {
+            if (!confirm('Return to scene review? Any unsaved changes will be kept.')) return;
+            
+            // Don't unmark as confirmed, just go back to review mode
+            startReviewMode();
+        }
+
+        function renderSceneNavigation() {
+            const navList = document.getElementById('sceneNavList');
+            
+            if (scenes.length === 0) {
+                navList.innerHTML = '<p style="color: var(--text-muted); padding: 20px; text-align: center;">No scenes</p>';
+                return;
+            }
+            
             let html = '';
-            Object.keys(grouped).forEach(category => {
-                const info = categoryIcons[category];
+            scenes.forEach((scene, index) => {
+                const tags = sceneTags[index + 1] || [];
+                const tagsHtml = tags.map(tag => {
+                    const color = {
+                        'makeup': '#ff6b9d',
+                        'hair': '#c084fc',
+                        'sfx': '#38bdf8',
+                        'cast': '#fbbf24',
+                        'wardrobe': '#34d399',
+                        'props': '#fb923c'
+                    }[tag.category] || '#999';
+                    return `<div class="mini-tag" style="background: ${color}"></div>`;
+                }).join('');
+                
                 html += `
-                    <div class="tag-category">
-                        <div class="tag-category-title">
-                            <span class="tag-badge" style="background: ${info.color}; color: white;">${info.icon}</span> ${info.name}
-                        </div>
-                        <div class="tag-category-items">
-                            ${grouped[category].map(desc => `
-                                <div class="tag-item-entry">
-                                    <div class="tag-item-dot"></div>
-                                    <span>${desc}</span>
-                                </div>
-                            `).join('')}
-                        </div>
+                    <div class="scene-nav-item ${index === currentSceneIndex ? 'active' : ''}" onclick="selectScene(${index})">
+                        <div class="scene-nav-number">Scene ${index + 1}</div>
+                        <div class="scene-nav-heading">${scene.heading}</div>
+                        ${tags.length > 0 ? `<div class="scene-nav-tags">${tagsHtml}</div>` : ''}
                     </div>
                 `;
             });
             
-            const tagsList = sceneItem.querySelector('.tag-items-list');
-            if (tagsList) {
-                tagsList.innerHTML = html;
-            }
+            navList.innerHTML = html;
         }
 
-        // ============================================
-        // NAVIGATION
-        // ============================================
-
-        function scrollToScene(sceneNum) {
-            const sceneElement = document.getElementById(`scene-${sceneNum}`);
-            if (sceneElement) {
-                sceneElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-            currentScene = sceneNum;
-            loadNotesForScene(sceneNum);
+        function selectScene(index) {
+            currentSceneIndex = index;
             
-            // Update active scene in sidebar
-            document.querySelectorAll('.scene-item').forEach(item => {
-                if (parseInt(item.dataset.scene) === sceneNum) {
-                    item.classList.add('active');
-                } else {
-                    item.classList.remove('active');
-                }
-            });
-        }
-
-        // ============================================
-        // EVENT LISTENERS
-        // ============================================
-
-        const toggleTagsBtn = document.getElementById('toggleTags');
-        if (toggleTagsBtn) {
-            toggleTagsBtn.addEventListener('click', function() {
-                tagsVisible = !tagsVisible;
-                this.classList.toggle('active');
-                
-                document.querySelectorAll('.tagged').forEach(tag => {
-                    if (tagsVisible) {
-                        tag.style.background = '';
-                    } else {
-                        tag.style.background = 'transparent';
-                    }
-                });
-            });
-        }
-
-        const sceneSearchInput = document.getElementById('sceneSearch');
-        if (sceneSearchInput) {
-            sceneSearchInput.addEventListener('input', function(e) {
-                const searchTerm = e.target.value.toLowerCase();
-                document.querySelectorAll('.scene-item').forEach(item => {
-                    const heading = item.querySelector('.scene-heading')?.textContent.toLowerCase() || '';
-                    const synopsis = item.querySelector('.scene-synopsis')?.textContent.toLowerCase() || '';
-                    
-                    if (heading.includes(searchTerm) || synopsis.includes(searchTerm)) {
-                        item.style.display = 'block';
-                    } else {
-                        item.style.display = 'none';
-                    }
-                });
-            });
-        }
-
-        const scriptViewer = document.getElementById('scriptViewer');
-        if (scriptViewer) {
-            scriptViewer.addEventListener('scroll', function() {
-                const scenes = document.querySelectorAll('.script-scene');
-                let activeScene = 1;
-                
-                scenes.forEach(scene => {
-                    const rect = scene.getBoundingClientRect();
-                    if (rect.top <= 200 && rect.bottom >= 200) {
-                        activeScene = parseInt(scene.id.split('-')[1]);
-                    }
-                });
-                
-                if (activeScene !== currentScene) {
-                    currentScene = activeScene;
-                    document.querySelectorAll('.scene-item').forEach(item => {
-                        if (parseInt(item.dataset.scene) === activeScene) {
-                            item.classList.add('active');
-                        } else {
-                            item.classList.remove('active');
-                        }
-                    });
-                    
-                    loadNotesForScene(activeScene);
-                }
-            });
-        }
-
-        // ============================================
-        // SCRIPT UPLOAD IN BREAKDOWN PAGE
-        // ============================================
-
-        function normalizeScriptText(text) {
-            console.log('Normalizing script text...');
+            // Update navigation
+            renderSceneNavigation();
             
-            let normalized = text;
+            // Display scene
+            displayScene(index);
             
-            // Remove spaces between single characters (run multiple times)
-            for (let i = 0; i < 10; i++) {
-                normalized = normalized.replace(/([a-zA-Z0-9\.\,\!\?\-\(\)\*\'\"])\s([a-zA-Z0-9\.\,\!\?\-\(\)\*\'\"])/g, '$1$2');
+            // Update tagging panel
+            displayTaggingPanel(index);
+        }
+
+        function displayScene(index) {
+            const scene = scenes[index];
+            const sceneNumber = index + 1;
+            
+            // Get script content for this scene
+            const lines = scriptText.split('\n');
+            const startLine = scene.lineIndex;
+            
+            // Find end line (next scene or end of script)
+            let endLine = lines.length;
+            if (index < scenes.length - 1) {
+                endLine = scenes[index + 1].lineIndex;
             }
             
-            // Add back proper spacing
-            normalized = normalized.replace(/([a-z])([A-Z])/g, '$1 $2');
-            normalized = normalized.replace(/([\.!?])([A-Za-z])/g, '$1 $2');
-            normalized = normalized.replace(/(\))([A-Za-z])/g, '$1 $2');
+            const sceneContent = lines.slice(startLine + 1, endLine).join('\n');
             
-            // Clean up line endings
-            normalized = normalized
-                .replace(/\r\n/g, '\n')
-                .replace(/\r/g, '\n')
-                .replace(/\s+\n/g, '\n')
-                .replace(/\n\s+/g, '\n');
-            
-            return normalized;
+            const display = document.getElementById('sceneDisplay');
+            display.innerHTML = `
+                <div class="scene-header-display">
+                    <div class="scene-number-large">Scene ${sceneNumber}</div>
+                    <div class="scene-heading-large">${scene.heading}</div>
+                </div>
+                <div class="scene-script-content">${escapeHtml(sceneContent)}</div>
+            `;
         }
 
-        async function parsePDFInBreakdown(file) {
-            try {
-                const arrayBuffer = await file.arrayBuffer();
-                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        function displayTaggingPanel(index) {
+            const sceneNumber = index + 1;
+            const tags = sceneTags[sceneNumber] || [];
+            const notes = sceneNotes[sceneNumber] || '';
+            
+            const panel = document.getElementById('taggingPanel');
+            
+            const tagSections = [
+                { category: 'makeup', title: 'Makeup', color: '#ff6b9d' },
+                { category: 'hair', title: 'Hair', color: '#c084fc' },
+                { category: 'sfx', title: 'SFX', color: '#38bdf8' },
+                { category: 'cast', title: 'Cast', color: '#fbbf24' },
+                { category: 'wardrobe', title: 'Wardrobe', color: '#34d399' },
+                { category: 'props', title: 'Props', color: '#fb923c' }
+            ];
+            
+            let html = '';
+            
+            tagSections.forEach(section => {
+                const categoryTags = tags.filter(t => t.category === section.category);
                 
-                let fullText = '';
-                
-                for (let i = 1; i <= pdf.numPages; i++) {
-                    const page = await pdf.getPage(i);
-                    const textContent = await page.getTextContent();
-                    
-                    const lines = {};
-                    textContent.items.forEach(item => {
-                        const y = Math.round(item.transform[5]);
-                        if (!lines[y]) lines[y] = [];
-                        lines[y].push(item);
-                    });
-                    
-                    const sortedYPositions = Object.keys(lines).sort((a, b) => b - a);
-                    
-                    sortedYPositions.forEach(y => {
-                        const lineItems = lines[y].sort((a, b) => a.transform[4] - b.transform[4]);
-                        
-                        let lineText = '';
-                        for (let i = 0; i < lineItems.length; i++) {
-                            const item = lineItems[i];
-                            const nextItem = lineItems[i + 1];
-                            
-                            lineText += item.str;
-                            
-                            if (nextItem) {
-                                const currentX = item.transform[4];
-                                const currentWidth = item.width;
-                                const nextX = nextItem.transform[4];
-                                const gap = nextX - (currentX + currentWidth);
-                                
-                                if (gap > currentWidth * 0.3) {
-                                    lineText += ' ';
-                                }
-                            }
-                        }
-                        
-                        fullText += lineText.trim() + '\n';
-                    });
-                    
-                    fullText += '\n';
-                }
-                
-                fullText = normalizeScriptText(fullText);
-                return fullText;
-            } catch (error) {
-                console.error('Error parsing PDF:', error);
-                throw error;
-            }
+                html += `
+                    <div class="tag-section">
+                        <div class="tag-section-title">
+                            <div class="tag-color-indicator" style="background: ${section.color}"></div>
+                            ${section.title}
+                        </div>
+                        ${categoryTags.length > 0 ? `
+                            <div class="tag-list">
+                                ${categoryTags.map((tag, i) => `
+                                    <div class="tag-item">
+                                        <div class="tag-description">${tag.description}</div>
+                                        <button class="tag-remove-btn" onclick="removeTag(${sceneNumber}, '${section.category}', ${i})">×</button>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                        <button class="add-tag-btn" onclick="openTagModal('${section.category}', '${section.title}')">
+                            + Add ${section.title}
+                        </button>
+                    </div>
+                `;
+            });
+            
+            html += `
+                <div class="notes-section">
+                    <div class="tag-section-title">📝 Scene Notes</div>
+                    <textarea 
+                        class="notes-textarea" 
+                        placeholder="Add notes about this scene..."
+                        onchange="saveSceneNotes(${sceneNumber}, this.value)"
+                    >${escapeHtml(notes)}</textarea>
+                </div>
+            `;
+            
+            panel.innerHTML = html;
         }
 
-        function handleScriptUploadInBreakdown(event) {
-            const file = event.target.files[0];
-            if (!file) return;
+        // ============================================
+        // TAGGING FUNCTIONALITY
+        // ============================================
+
+        function openTagModal(category, title) {
+            currentTagCategory = category;
+            document.getElementById('modalTitle').textContent = `Add ${title}`;
+            document.getElementById('modalSubtitle').textContent = `Add a ${title.toLowerCase()} item to this scene`;
+            document.getElementById('tagDescription').value = '';
+            document.getElementById('addTagModal').classList.add('active');
+            document.getElementById('tagDescription').focus();
+        }
+
+        function closeTagModal() {
+            document.getElementById('addTagModal').classList.remove('active');
+            currentTagCategory = '';
+        }
+
+        function saveTag() {
+            const description = document.getElementById('tagDescription').value.trim();
             
-            console.log('File selected:', file.name, 'Type:', file.type);
-            
-            if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
-                console.log('PDF detected, parsing...');
-                
-                parsePDFInBreakdown(file)
-                    .then(scriptContent => {
-                        console.log('✓ PDF parsed, length:', scriptContent.length);
-                        
-                        if (currentProject) {
-                            currentProject.scriptContent = scriptContent;
-                            currentProject.scriptName = file.name;
-                            
-                            localStorage.setItem('currentProject', JSON.stringify(currentProject));
-                            
-                            const projects = JSON.parse(localStorage.getItem('checksHappyProjects') || '[]');
-                            const projectIndex = projects.findIndex(p => p.code === currentProject.code);
-                            if (projectIndex !== -1) {
-                                projects[projectIndex].scriptContent = scriptContent;
-                                projects[projectIndex].scriptName = file.name;
-                                localStorage.setItem('checksHappyProjects', JSON.stringify(projects));
-                            }
-                        }
-                        
-                        parseAndDisplayScript(scriptContent);
-                        alert(`PDF "${file.name}" uploaded successfully!`);
-                    })
-                    .catch(error => {
-                        console.error('PDF parsing error:', error);
-                        alert('Error parsing PDF. Try converting to .txt format.');
-                    });
-                
+            if (!description) {
+                alert('Please enter a description');
                 return;
             }
             
-            const isTextFile = file.type === 'text/plain' || 
-                               file.type === '' || 
-                               file.name.endsWith('.txt') || 
-                               file.name.endsWith('.fountain') ||
-                               file.name.endsWith('.fdx');
+            const sceneNumber = currentSceneIndex + 1;
             
-            if (isTextFile) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const scriptContent = e.target.result;
-                    console.log('✓ Script loaded, length:', scriptContent.length);
-                    
-                    if (currentProject) {
-                        currentProject.scriptContent = scriptContent;
-                        currentProject.scriptName = file.name;
-                        
-                        localStorage.setItem('currentProject', JSON.stringify(currentProject));
-                        
-                        const projects = JSON.parse(localStorage.getItem('checksHappyProjects') || '[]');
-                        const projectIndex = projects.findIndex(p => p.code === currentProject.code);
-                        if (projectIndex !== -1) {
-                            projects[projectIndex].scriptContent = scriptContent;
-                            projects[projectIndex].scriptName = file.name;
-                            localStorage.setItem('checksHappyProjects', JSON.stringify(projects));
-                        }
-                    }
-                    
-                    parseAndDisplayScript(scriptContent);
-                    alert(`Script "${file.name}" uploaded successfully!`);
-                };
-                reader.onerror = function(e) {
-                    console.error('Error reading file:', e);
-                    alert('Error reading script file.');
-                };
-                reader.readAsText(file);
-            } else {
-                alert('Please upload a .txt, .fountain, .fdx, or .pdf file.');
+            if (!sceneTags[sceneNumber]) {
+                sceneTags[sceneNumber] = [];
+            }
+            
+            sceneTags[sceneNumber].push({
+                category: currentTagCategory,
+                description: description
+            });
+            
+            // Save to project
+            saveProjectData();
+            
+            // Update UI
+            displayTaggingPanel(currentSceneIndex);
+            renderSceneNavigation();
+            
+            closeTagModal();
+            
+            console.log('Added tag:', currentTagCategory, description);
+        }
+
+        function removeTag(sceneNumber, category, tagIndex) {
+            if (!confirm('Remove this tag?')) return;
+            
+            const categoryTags = sceneTags[sceneNumber].filter(t => t.category === category);
+            const tagToRemove = categoryTags[tagIndex];
+            
+            sceneTags[sceneNumber] = sceneTags[sceneNumber].filter(t => t !== tagToRemove);
+            
+            // Save to project
+            saveProjectData();
+            
+            // Update UI
+            displayTaggingPanel(currentSceneIndex);
+            renderSceneNavigation();
+            
+            console.log('Removed tag');
+        }
+
+        function saveSceneNotes(sceneNumber, notes) {
+            sceneNotes[sceneNumber] = notes;
+            saveProjectData();
+            console.log('Saved notes for scene', sceneNumber);
+        }
+
+        function saveProjectData() {
+            currentProject.sceneTags = sceneTags;
+            currentProject.sceneNotes = sceneNotes;
+            
+            localStorage.setItem('currentProject', JSON.stringify(currentProject));
+            
+            // Also update in projects list
+            const projects = JSON.parse(localStorage.getItem('checksHappyProjects') || '[]');
+            const projectIndex = projects.findIndex(p => p.code === currentProject.code);
+            if (projectIndex !== -1) {
+                projects[projectIndex].sceneTags = sceneTags;
+                projects[projectIndex].sceneNotes = sceneNotes;
+                localStorage.setItem('checksHappyProjects', JSON.stringify(projects));
             }
         }
 
         // ============================================
-        // EXPORT FUNCTIONALITY  
+        // SEARCH FUNCTIONALITY
+        // ============================================
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('sceneSearch');
+            if (searchInput) {
+                searchInput.addEventListener('input', function(e) {
+                    const searchTerm = e.target.value.toLowerCase();
+                    const navItems = document.querySelectorAll('.scene-nav-item');
+                    
+                    navItems.forEach(item => {
+                        const heading = item.querySelector('.scene-nav-heading').textContent.toLowerCase();
+                        if (heading.includes(searchTerm)) {
+                            item.style.display = 'block';
+                        } else {
+                            item.style.display = 'none';
+                        }
+                    });
+                });
+            }
+        });
+
+        // ============================================
+        // EXPORT FUNCTIONALITY
         // ============================================
 
         function exportBreakdown() {
@@ -1623,13 +1614,10 @@
         }
 
         function exportToCSV() {
-            let csv = 'Scene,Heading,Type,Makeup,Hair,SFX,Cast,Wardrobe,Props,Notes\n';
+            let csv = 'Scene,Heading,Makeup,Hair,SFX,Cast,Wardrobe,Props,Notes\n';
             
-            document.querySelectorAll('.scene-item').forEach(item => {
-                const sceneNum = item.dataset.scene;
-                const heading = item.querySelector('.scene-heading')?.textContent || '';
-                const type = item.querySelector('.scene-type')?.textContent || '';
-                
+            scenes.forEach((scene, index) => {
+                const sceneNum = index + 1;
                 const tags = sceneTags[sceneNum] || [];
                 const notes = sceneNotes[sceneNum] || '';
                 
@@ -1640,7 +1628,7 @@
                 const wardrobe = tags.filter(t => t.category === 'wardrobe').map(t => t.description).join('; ');
                 const props = tags.filter(t => t.category === 'props').map(t => t.description).join('; ');
                 
-                csv += `"${sceneNum}","${heading}","${type}","${makeup}","${hair}","${sfx}","${cast}","${wardrobe}","${props}","${notes.replace(/"/g, '""')}"\n`;
+                csv += `"${sceneNum}","${scene.heading}","${makeup}","${hair}","${sfx}","${cast}","${wardrobe}","${props}","${notes.replace(/"/g, '""')}"\n`;
             });
             
             downloadFile(csv, `${currentProject?.code || 'script'}-breakdown.csv`, 'text/csv');
@@ -1649,19 +1637,11 @@
         function exportToJSON() {
             const data = {
                 project: currentProject,
-                scenes: {},
+                scenes: scenes,
                 tags: sceneTags,
                 notes: sceneNotes,
                 exportDate: new Date().toISOString()
             };
-            
-            document.querySelectorAll('.scene-item').forEach(item => {
-                const sceneNum = item.dataset.scene;
-                data.scenes[sceneNum] = {
-                    heading: item.querySelector('.scene-heading')?.textContent || '',
-                    type: item.querySelector('.scene-type')?.textContent || ''
-                };
-            });
             
             const json = JSON.stringify(data, null, 2);
             downloadFile(json, `${currentProject?.code || 'script'}-breakdown.json`, 'application/json');
@@ -1672,15 +1652,13 @@
             text += `Generated: ${new Date().toLocaleString()}\n`;
             text += `${'='.repeat(60)}\n\n`;
             
-            document.querySelectorAll('.scene-item').forEach(item => {
-                const sceneNum = item.dataset.scene;
-                const heading = item.querySelector('.scene-heading')?.textContent || '';
-                const type = item.querySelector('.scene-type')?.textContent || '';
-                
-                text += `Scene ${sceneNum}: ${heading}\n`;
-                text += `Type: ${type}\n`;
-                
+            scenes.forEach((scene, index) => {
+                const sceneNum = index + 1;
                 const tags = sceneTags[sceneNum] || [];
+                const notes = sceneNotes[sceneNum];
+                
+                text += `Scene ${sceneNum}: ${scene.heading}\n`;
+                
                 if (tags.length > 0) {
                     text += `Tags: ${tags.length}\n`;
                     tags.forEach(tag => {
@@ -1688,7 +1666,6 @@
                     });
                 }
                 
-                const notes = sceneNotes[sceneNum];
                 if (notes) {
                     text += `Notes: ${notes}\n`;
                 }
@@ -1714,15 +1691,19 @@
         }
 
         // ============================================
-        // AI TOOLS (PLACEHOLDER)
+        // UTILITY FUNCTIONS
         // ============================================
 
-        function showAIToolsMenu() {
-            alert('AI Tools coming soon:\n\n• Auto-detect makeup/hair changes\n• Find continuity issues\n• Generate character profiles\n• Time in chair estimates');
+        function goBack() {
+            if (confirm('Are you sure? Any unsaved changes will be lost.')) {
+                window.location.href = 'index.html';
+            }
         }
 
-        function generateAIBreakdown() {
-            alert('AI Breakdown feature coming soon!\n\nThis will automatically:\n• Tag makeup/hair mentions\n• Identify cast members\n• Note wardrobe items\n• Flag SFX requirements');
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
 
         // ============================================
