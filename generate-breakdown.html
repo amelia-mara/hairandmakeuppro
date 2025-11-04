@@ -47,6 +47,7 @@
             align-items: center;
             justify-content: space-between;
             padding: 0 24px;
+            z-index: 100;
         }
 
         .top-bar-left {
@@ -85,11 +86,17 @@
             cursor: pointer;
             font-size: 0.8125em;
             transition: all 0.2s;
+            font-family: inherit;
         }
 
         .btn:hover {
             border-color: var(--accent-gold);
             color: var(--accent-gold);
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
         }
 
         .btn-primary {
@@ -102,11 +109,30 @@
             background: #d4b16d;
         }
 
+        /* Toolbar */
+        .toolbar {
+            height: 48px;
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            gap: 8px;
+        }
+
+        .toolbar-separator {
+            width: 1px;
+            height: 24px;
+            background: var(--border);
+            margin: 0 8px;
+        }
+
         /* Sheet Container */
         .sheet-container {
             flex: 1;
             overflow: auto;
             background: var(--card-bg);
+            position: relative;
         }
 
         /* Spreadsheet Table */
@@ -137,6 +163,21 @@
             position: sticky;
             top: 0;
             z-index: 10;
+        }
+
+        /* Row number column */
+        .row-num {
+            width: 40px;
+            background: var(--bg-medium);
+            text-align: center;
+            cursor: pointer;
+            user-select: none;
+            color: var(--text-muted);
+            font-size: 0.75em;
+        }
+
+        .row-num:hover {
+            background: rgba(201, 169, 97, 0.2);
         }
 
         /* Column widths */
@@ -181,6 +222,15 @@
             background: rgba(201, 169, 97, 0.1);
         }
 
+        /* Selected rows */
+        tr.selected {
+            background: rgba(201, 169, 97, 0.2) !important;
+        }
+
+        tr.selected td {
+            background: rgba(201, 169, 97, 0.2) !important;
+        }
+
         /* Empty placeholder */
         .empty-cell {
             color: var(--text-muted);
@@ -217,6 +267,69 @@
             color: #9575cd;
         }
 
+        /* Context Menu */
+        .context-menu {
+            position: fixed;
+            background: var(--bg-medium);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 4px;
+            min-width: 180px;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .context-menu.active {
+            display: block;
+        }
+
+        .context-menu-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 0.8125em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .context-menu-item:hover {
+            background: rgba(201, 169, 97, 0.15);
+        }
+
+        .context-menu-item.disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .context-menu-separator {
+            height: 1px;
+            background: var(--border);
+            margin: 4px 0;
+        }
+
+        .context-menu-item .shortcut {
+            margin-left: auto;
+            color: var(--text-muted);
+            font-size: 0.75em;
+        }
+
+        /* Status bar */
+        .status-bar {
+            height: 32px;
+            background: var(--bg-medium);
+            border-top: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            font-size: 0.75em;
+            color: var(--text-muted);
+            gap: 16px;
+        }
+
         /* Scrollbar */
         ::-webkit-scrollbar {
             width: 10px;
@@ -242,10 +355,22 @@
                 <h1 class="page-title">Breakdown Sheet: Haunted Hearts</h1>
             </div>
             <div class="top-bar-right">
-                <button class="btn" onclick="addRow()">+ Add Row</button>
+                <button class="btn" onclick="undo()" id="undoBtn" disabled>↶ Undo</button>
+                <button class="btn" onclick="redo()" id="redoBtn" disabled>↷ Redo</button>
                 <button class="btn" onclick="saveBreakdown()">💾 Save</button>
                 <button class="btn btn-primary" onclick="exportBreakdown()">📤 Export</button>
             </div>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <button class="btn" onclick="insertRowAbove()" id="insertAboveBtn" disabled>⬆ Insert Above</button>
+            <button class="btn" onclick="insertRowBelow()" id="insertBelowBtn" disabled>⬇ Insert Below</button>
+            <button class="btn" onclick="duplicateRow()" id="duplicateBtn" disabled>📋 Duplicate</button>
+            <div class="toolbar-separator"></div>
+            <button class="btn" onclick="deleteSelectedRows()" id="deleteBtn" disabled>🗑 Delete</button>
+            <div class="toolbar-separator"></div>
+            <button class="btn" onclick="clearSelection()">✕ Clear Selection</button>
         </div>
 
         <!-- Spreadsheet -->
@@ -253,6 +378,7 @@
             <table class="breakdown-sheet">
                 <thead>
                     <tr>
+                        <th class="row-num">#</th>
                         <th class="col-scene">Scene</th>
                         <th class="col-character">Character</th>
                         <th class="col-day">Story Day</th>
@@ -270,16 +396,18 @@
                 <tbody id="breakdownBody">
                     <!-- Scene 1 -->
                     <tr class="scene-header">
+                        <td class="row-num">1</td>
                         <td>1</td>
                         <td colspan="11"><strong>INT. EMMA'S BEDROOM - MORNING</strong></td>
                     </tr>
-                    <tr>
+                    <tr data-row="2">
+                        <td class="row-num">2</td>
                         <td></td>
-                        <td>Emma Hart</td>
-                        <td>Day 1</td>
-                        <td>Morning</td>
+                        <td contenteditable="true">Emma Hart</td>
+                        <td contenteditable="true">Day 1</td>
+                        <td contenteditable="true">Morning</td>
                         <td><span class="scene-badge int-day">INT DAY</span></td>
-                        <td>Emma's Bedroom</td>
+                        <td contenteditable="true">Emma's Bedroom</td>
                         <td contenteditable="true">Emma wakes up disoriented, memories flooding back</td>
                         <td contenteditable="true">Disheveled, bedhead look</td>
                         <td contenteditable="true">Natural, minimal. Dark circles under eyes</td>
@@ -287,13 +415,14 @@
                         <td contenteditable="true">White cotton nightgown</td>
                         <td contenteditable="true">First appearance, establish grief</td>
                     </tr>
-                    <tr>
+                    <tr data-row="3">
+                        <td class="row-num">3</td>
                         <td></td>
-                        <td>David (Flashback)</td>
-                        <td>Day 1</td>
-                        <td>Morning</td>
+                        <td contenteditable="true">David (Flashback)</td>
+                        <td contenteditable="true">Day 1</td>
+                        <td contenteditable="true">Morning</td>
                         <td><span class="scene-badge int-day">INT DAY</span></td>
-                        <td>Emma's Bedroom</td>
+                        <td contenteditable="true">Emma's Bedroom</td>
                         <td contenteditable="true">Quick flashback - David's final moment</td>
                         <td contenteditable="true">1940s style, slicked back</td>
                         <td contenteditable="true">Period makeup, healthy glow</td>
@@ -301,13 +430,14 @@
                         <td contenteditable="true">WWII military uniform, pristine</td>
                         <td contenteditable="true">Flashback - young, vibrant</td>
                     </tr>
-                    <tr>
+                    <tr data-row="4">
+                        <td class="row-num">4</td>
                         <td></td>
-                        <td>The Ghost</td>
-                        <td>Day 1</td>
-                        <td>Morning</td>
+                        <td contenteditable="true">The Ghost</td>
+                        <td contenteditable="true">Day 1</td>
+                        <td contenteditable="true">Morning</td>
                         <td><span class="scene-badge int-day">INT DAY</span></td>
-                        <td>Emma's Bedroom</td>
+                        <td contenteditable="true">Emma's Bedroom</td>
                         <td contenteditable="true">Shadowy figure in mirror</td>
                         <td contenteditable="true">N/A - obscured</td>
                         <td contenteditable="true">N/A - not visible</td>
@@ -318,16 +448,18 @@
 
                     <!-- Scene 2 -->
                     <tr class="scene-header">
+                        <td class="row-num">5</td>
                         <td>2</td>
                         <td colspan="11"><strong>INT. KITCHEN - LATE MORNING</strong></td>
                     </tr>
-                    <tr>
+                    <tr data-row="6">
+                        <td class="row-num">6</td>
                         <td></td>
-                        <td>Emma Hart</td>
-                        <td>Day 1</td>
-                        <td>Late Morning</td>
+                        <td contenteditable="true">Emma Hart</td>
+                        <td contenteditable="true">Day 1</td>
+                        <td contenteditable="true">Late Morning</td>
                         <td><span class="scene-badge int-day">INT DAY</span></td>
-                        <td>Kitchen</td>
+                        <td contenteditable="true">Kitchen</td>
                         <td contenteditable="true">Emma makes coffee, tries to act normal</td>
                         <td contenteditable="true">Tied back in loose bun</td>
                         <td contenteditable="true">Still minimal, slight concealer</td>
@@ -335,13 +467,14 @@
                         <td contenteditable="true">Blue robe over nightgown</td>
                         <td contenteditable="true">Hair change from Sc.1</td>
                     </tr>
-                    <tr>
+                    <tr data-row="7">
+                        <td class="row-num">7</td>
                         <td></td>
-                        <td>Sarah Chen</td>
-                        <td>Day 1</td>
-                        <td>Late Morning</td>
+                        <td contenteditable="true">Sarah Chen</td>
+                        <td contenteditable="true">Day 1</td>
+                        <td contenteditable="true">Late Morning</td>
                         <td><span class="scene-badge int-day">INT DAY</span></td>
-                        <td>Kitchen</td>
+                        <td contenteditable="true">Kitchen</td>
                         <td contenteditable="true">Sarah arrives to check on Emma</td>
                         <td contenteditable="true">Short pixie cut, professional</td>
                         <td contenteditable="true">Full daily makeup, polished</td>
@@ -352,16 +485,18 @@
 
                     <!-- Scene 3 -->
                     <tr class="scene-header">
+                        <td class="row-num">8</td>
                         <td>3</td>
                         <td colspan="11"><strong>EXT. GARDEN PATH - AFTERNOON</strong></td>
                     </tr>
-                    <tr>
+                    <tr data-row="9">
+                        <td class="row-num">9</td>
                         <td></td>
-                        <td>Emma Hart</td>
-                        <td>Day 1</td>
-                        <td>Afternoon</td>
+                        <td contenteditable="true">Emma Hart</td>
+                        <td contenteditable="true">Day 1</td>
+                        <td contenteditable="true">Afternoon</td>
                         <td><span class="scene-badge ext-day">EXT DAY</span></td>
-                        <td>Garden Path</td>
+                        <td contenteditable="true">Garden Path</td>
                         <td contenteditable="true">Emma walks through overgrown garden</td>
                         <td contenteditable="true">Bun loosening, windswept</td>
                         <td contenteditable="true">Same as Sc.2, natural light</td>
@@ -372,16 +507,18 @@
 
                     <!-- Scene 4 -->
                     <tr class="scene-header">
+                        <td class="row-num">10</td>
                         <td>4</td>
                         <td colspan="11"><strong>INT. LIVING ROOM - EVENING</strong></td>
                     </tr>
-                    <tr>
+                    <tr data-row="11">
+                        <td class="row-num">11</td>
                         <td></td>
-                        <td>Emma Hart</td>
-                        <td>Day 1</td>
-                        <td>Evening</td>
+                        <td contenteditable="true">Emma Hart</td>
+                        <td contenteditable="true">Day 1</td>
+                        <td contenteditable="true">Evening</td>
                         <td><span class="scene-badge int-night">INT NIGHT</span></td>
-                        <td>Living Room</td>
+                        <td contenteditable="true">Living Room</td>
                         <td contenteditable="true">Emma researches house history</td>
                         <td contenteditable="true">Bun removed, hair down</td>
                         <td contenteditable="true">Worn off from day, tired</td>
@@ -389,13 +526,14 @@
                         <td contenteditable="true">Same as Sc.3</td>
                         <td contenteditable="true">Laptop, dimly lit</td>
                     </tr>
-                    <tr>
+                    <tr data-row="12">
+                        <td class="row-num">12</td>
                         <td></td>
-                        <td>David (Ghost)</td>
-                        <td>Day 1</td>
-                        <td>Evening</td>
+                        <td contenteditable="true">David (Ghost)</td>
+                        <td contenteditable="true">Day 1</td>
+                        <td contenteditable="true">Evening</td>
                         <td><span class="scene-badge int-night">INT NIGHT</span></td>
-                        <td>Living Room</td>
+                        <td contenteditable="true">Living Room</td>
                         <td contenteditable="true">Ghost fully manifests - David revealed</td>
                         <td contenteditable="true">1940s slicked back, period accurate</td>
                         <td contenteditable="true">Pale, ethereal. Subtle shimmer</td>
@@ -403,110 +541,414 @@
                         <td contenteditable="true">1940s military uniform, weathered</td>
                         <td contenteditable="true">Major SFX - full ghost look</td>
                     </tr>
-
-                    <!-- Scene 5 -->
-                    <tr class="scene-header">
-                        <td>5</td>
-                        <td colspan="11"><strong>INT. EMMA'S BEDROOM - NIGHT</strong></td>
-                    </tr>
-                    <tr>
-                        <td></td>
-                        <td>Emma Hart</td>
-                        <td>Day 1</td>
-                        <td>Night</td>
-                        <td><span class="scene-badge int-night">INT NIGHT</span></td>
-                        <td>Emma's Bedroom</td>
-                        <td contenteditable="true">Emma can't sleep, processes encounter</td>
-                        <td contenteditable="true">Hair down, natural</td>
-                        <td contenteditable="true">Makeup removed, bare face</td>
-                        <td contenteditable="true" class="empty-cell">—</td>
-                        <td contenteditable="true">White nightgown (same as Sc.1)</td>
-                        <td contenteditable="true">Bookend to Sc.1</td>
-                    </tr>
-                    <tr>
-                        <td></td>
-                        <td>David (Ghost)</td>
-                        <td>Day 1</td>
-                        <td>Night</td>
-                        <td><span class="scene-badge int-night">INT NIGHT</span></td>
-                        <td>Emma's Bedroom</td>
-                        <td contenteditable="true">David sits at edge of bed, watching</td>
-                        <td contenteditable="true">Same as Sc.4</td>
-                        <td contenteditable="true">Same as Sc.4 - ethereal pale</td>
-                        <td contenteditable="true">Ghost effect, softer glow</td>
-                        <td contenteditable="true">Same as Sc.4</td>
-                        <td contenteditable="true">Continuity with Sc.4</td>
-                    </tr>
-
-                    <!-- Scene 6 -->
-                    <tr class="scene-header">
-                        <td>6</td>
-                        <td colspan="11"><strong>INT. KITCHEN - MORNING (DAY 2)</strong></td>
-                    </tr>
-                    <tr>
-                        <td></td>
-                        <td>Emma Hart</td>
-                        <td>Day 2</td>
-                        <td>Morning</td>
-                        <td><span class="scene-badge int-day">INT DAY</span></td>
-                        <td>Kitchen</td>
-                        <td contenteditable="true">Emma makes breakfast, David appears</td>
-                        <td contenteditable="true">Messy from sleep, not styled</td>
-                        <td contenteditable="true">No makeup, natural exhausted look</td>
-                        <td contenteditable="true" class="empty-cell">—</td>
-                        <td contenteditable="true">Robe, pajamas underneath</td>
-                        <td contenteditable="true">Day 2 begins</td>
-                    </tr>
-                    <tr>
-                        <td></td>
-                        <td>David (Ghost)</td>
-                        <td>Day 2</td>
-                        <td>Morning</td>
-                        <td><span class="scene-badge int-day">INT DAY</span></td>
-                        <td>Kitchen</td>
-                        <td contenteditable="true">David attempts communication</td>
-                        <td contenteditable="true">Same as Sc.4-5</td>
-                        <td contenteditable="true">Ghost makeup, daylight visible</td>
-                        <td contenteditable="true">Ghost effect in bright light</td>
-                        <td contenteditable="true">Same uniform</td>
-                        <td contenteditable="true">SFX challenge - daylight ghost</td>
-                    </tr>
                 </tbody>
             </table>
+        </div>
+
+        <!-- Status Bar -->
+        <div class="status-bar">
+            <span id="statusText">Ready</span>
+            <span>|</span>
+            <span id="selectionInfo">No rows selected</span>
+        </div>
+
+        <!-- Context Menu -->
+        <div class="context-menu" id="contextMenu">
+            <div class="context-menu-item" onclick="insertRowAbove()">
+                ⬆ Insert Row Above
+            </div>
+            <div class="context-menu-item" onclick="insertRowBelow()">
+                ⬇ Insert Row Below
+            </div>
+            <div class="context-menu-item" onclick="duplicateRow()">
+                📋 Duplicate Row
+            </div>
+            <div class="context-menu-separator"></div>
+            <div class="context-menu-item" onclick="copyRow()">
+                📄 Copy <span class="shortcut">Ctrl+C</span>
+            </div>
+            <div class="context-menu-item" onclick="pasteRow()">
+                📋 Paste <span class="shortcut">Ctrl+V</span>
+            </div>
+            <div class="context-menu-separator"></div>
+            <div class="context-menu-item" onclick="deleteSelectedRows()">
+                🗑 Delete Row <span class="shortcut">Del</span>
+            </div>
         </div>
     </div>
 
     <script>
-        // Save breakdown
+        let selectedRows = new Set();
+        let clipboard = null;
+        let undoStack = [];
+        let redoStack = [];
+        let maxUndoStack = 50;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            setupRowSelection();
+            setupContextMenu();
+            setupKeyboardShortcuts();
+            updateRowNumbers();
+        });
+
+        // Row Selection
+        function setupRowSelection() {
+            document.querySelectorAll('.row-num').forEach(rowNum => {
+                rowNum.addEventListener('click', function(e) {
+                    const row = this.closest('tr');
+                    if (row.classList.contains('scene-header')) return;
+                    
+                    if (e.ctrlKey || e.metaKey) {
+                        // Toggle selection
+                        toggleRowSelection(row);
+                    } else if (e.shiftKey && selectedRows.size > 0) {
+                        // Range selection
+                        selectRange(row);
+                    } else {
+                        // Single selection
+                        clearSelection();
+                        selectRow(row);
+                    }
+                    updateSelectionInfo();
+                    updateToolbarButtons();
+                });
+            });
+        }
+
+        function selectRow(row) {
+            row.classList.add('selected');
+            selectedRows.add(row);
+        }
+
+        function deselectRow(row) {
+            row.classList.remove('selected');
+            selectedRows.delete(row);
+        }
+
+        function toggleRowSelection(row) {
+            if (selectedRows.has(row)) {
+                deselectRow(row);
+            } else {
+                selectRow(row);
+            }
+        }
+
+        function clearSelection() {
+            selectedRows.forEach(row => row.classList.remove('selected'));
+            selectedRows.clear();
+            updateSelectionInfo();
+            updateToolbarButtons();
+        }
+
+        function selectRange(endRow) {
+            const firstSelected = Array.from(selectedRows)[0];
+            const tbody = document.getElementById('breakdownBody');
+            const allRows = Array.from(tbody.querySelectorAll('tr:not(.scene-header)'));
+            
+            const startIndex = allRows.indexOf(firstSelected);
+            const endIndex = allRows.indexOf(endRow);
+            
+            const start = Math.min(startIndex, endIndex);
+            const end = Math.max(startIndex, endIndex);
+            
+            clearSelection();
+            for (let i = start; i <= end; i++) {
+                selectRow(allRows[i]);
+            }
+        }
+
+        // Context Menu
+        function setupContextMenu() {
+            const contextMenu = document.getElementById('contextMenu');
+            
+            document.addEventListener('contextmenu', function(e) {
+                const row = e.target.closest('tr');
+                if (row && row.closest('#breakdownBody') && !row.classList.contains('scene-header')) {
+                    e.preventDefault();
+                    
+                    if (!selectedRows.has(row)) {
+                        clearSelection();
+                        selectRow(row);
+                        updateSelectionInfo();
+                        updateToolbarButtons();
+                    }
+                    
+                    contextMenu.style.left = e.pageX + 'px';
+                    contextMenu.style.top = e.pageY + 'px';
+                    contextMenu.classList.add('active');
+                }
+            });
+            
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.context-menu')) {
+                    contextMenu.classList.remove('active');
+                }
+            });
+        }
+
+        // Keyboard Shortcuts
+        function setupKeyboardShortcuts() {
+            document.addEventListener('keydown', function(e) {
+                // Save
+                if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                    e.preventDefault();
+                    saveBreakdown();
+                }
+                
+                // Undo
+                if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+                    e.preventDefault();
+                    undo();
+                }
+                
+                // Redo
+                if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+                    e.preventDefault();
+                    redo();
+                }
+                
+                // Copy
+                if ((e.ctrlKey || e.metaKey) && e.key === 'c' && selectedRows.size > 0) {
+                    if (!document.activeElement.contentEditable || document.activeElement.contentEditable === 'false') {
+                        e.preventDefault();
+                        copyRow();
+                    }
+                }
+                
+                // Paste
+                if ((e.ctrlKey || e.metaKey) && e.key === 'v' && clipboard) {
+                    if (!document.activeElement.contentEditable || document.activeElement.contentEditable === 'false') {
+                        e.preventDefault();
+                        pasteRow();
+                    }
+                }
+                
+                // Delete
+                if (e.key === 'Delete' && selectedRows.size > 0) {
+                    if (!document.activeElement.contentEditable || document.activeElement.contentEditable === 'false') {
+                        e.preventDefault();
+                        deleteSelectedRows();
+                    }
+                }
+                
+                // Escape - clear selection
+                if (e.key === 'Escape') {
+                    clearSelection();
+                }
+            });
+        }
+
+        // Row Operations
+        function insertRowAbove() {
+            if (selectedRows.size === 0) return;
+            
+            saveState();
+            const firstRow = Array.from(selectedRows)[0];
+            const newRow = createEmptyRow();
+            firstRow.parentNode.insertBefore(newRow, firstRow);
+            
+            updateRowNumbers();
+            setupRowSelection();
+            updateStatus('Row inserted above');
+        }
+
+        function insertRowBelow() {
+            if (selectedRows.size === 0) return;
+            
+            saveState();
+            const lastRow = Array.from(selectedRows)[selectedRows.size - 1];
+            const newRow = createEmptyRow();
+            lastRow.parentNode.insertBefore(newRow, lastRow.nextSibling);
+            
+            updateRowNumbers();
+            setupRowSelection();
+            updateStatus('Row inserted below');
+        }
+
+        function duplicateRow() {
+            if (selectedRows.size === 0) return;
+            
+            saveState();
+            const row = Array.from(selectedRows)[0];
+            const newRow = row.cloneNode(true);
+            newRow.classList.remove('selected');
+            row.parentNode.insertBefore(newRow, row.nextSibling);
+            
+            updateRowNumbers();
+            setupRowSelection();
+            updateStatus('Row duplicated');
+        }
+
+        function deleteSelectedRows() {
+            if (selectedRows.size === 0) return;
+            
+            if (confirm(`Delete ${selectedRows.size} row(s)?`)) {
+                saveState();
+                selectedRows.forEach(row => row.remove());
+                selectedRows.clear();
+                
+                updateRowNumbers();
+                setupRowSelection();
+                updateSelectionInfo();
+                updateToolbarButtons();
+                updateStatus(`${selectedRows.size} row(s) deleted`);
+            }
+        }
+
+        function copyRow() {
+            if (selectedRows.size === 0) return;
+            
+            clipboard = Array.from(selectedRows).map(row => row.cloneNode(true));
+            updateStatus(`${clipboard.length} row(s) copied`);
+        }
+
+        function pasteRow() {
+            if (!clipboard || selectedRows.size === 0) return;
+            
+            saveState();
+            const lastRow = Array.from(selectedRows)[selectedRows.size - 1];
+            
+            clipboard.forEach(copiedRow => {
+                const newRow = copiedRow.cloneNode(true);
+                newRow.classList.remove('selected');
+                lastRow.parentNode.insertBefore(newRow, lastRow.nextSibling);
+            });
+            
+            updateRowNumbers();
+            setupRowSelection();
+            updateStatus(`${clipboard.length} row(s) pasted`);
+        }
+
+        function createEmptyRow() {
+            const newRow = document.createElement('tr');
+            newRow.innerHTML = `
+                <td class="row-num"></td>
+                <td></td>
+                <td contenteditable="true"></td>
+                <td contenteditable="true">Day 1</td>
+                <td contenteditable="true"></td>
+                <td contenteditable="true"></td>
+                <td contenteditable="true"></td>
+                <td contenteditable="true"></td>
+                <td contenteditable="true"></td>
+                <td contenteditable="true"></td>
+                <td contenteditable="true"></td>
+                <td contenteditable="true"></td>
+                <td contenteditable="true"></td>
+            `;
+            return newRow;
+        }
+
+        // Update row numbers
+        function updateRowNumbers() {
+            const rows = document.querySelectorAll('#breakdownBody tr');
+            rows.forEach((row, index) => {
+                const rowNum = row.querySelector('.row-num');
+                if (rowNum) {
+                    rowNum.textContent = index + 1;
+                }
+            });
+        }
+
+        // Undo/Redo
+        function saveState() {
+            const tbody = document.getElementById('breakdownBody');
+            const state = tbody.innerHTML;
+            
+            undoStack.push(state);
+            if (undoStack.length > maxUndoStack) {
+                undoStack.shift();
+            }
+            
+            redoStack = []; // Clear redo stack on new action
+            updateUndoRedoButtons();
+        }
+
+        function undo() {
+            if (undoStack.length === 0) return;
+            
+            const tbody = document.getElementById('breakdownBody');
+            redoStack.push(tbody.innerHTML);
+            tbody.innerHTML = undoStack.pop();
+            
+            setupRowSelection();
+            updateRowNumbers();
+            clearSelection();
+            updateUndoRedoButtons();
+            updateStatus('Undo');
+        }
+
+        function redo() {
+            if (redoStack.length === 0) return;
+            
+            const tbody = document.getElementById('breakdownBody');
+            undoStack.push(tbody.innerHTML);
+            tbody.innerHTML = redoStack.pop();
+            
+            setupRowSelection();
+            updateRowNumbers();
+            clearSelection();
+            updateUndoRedoButtons();
+            updateStatus('Redo');
+        }
+
+        function updateUndoRedoButtons() {
+            document.getElementById('undoBtn').disabled = undoStack.length === 0;
+            document.getElementById('redoBtn').disabled = redoStack.length === 0;
+        }
+
+        // UI Updates
+        function updateSelectionInfo() {
+            const count = selectedRows.size;
+            const info = count === 0 ? 'No rows selected' : `${count} row(s) selected`;
+            document.getElementById('selectionInfo').textContent = info;
+        }
+
+        function updateToolbarButtons() {
+            const hasSelection = selectedRows.size > 0;
+            document.getElementById('insertAboveBtn').disabled = !hasSelection;
+            document.getElementById('insertBelowBtn').disabled = !hasSelection;
+            document.getElementById('duplicateBtn').disabled = !hasSelection;
+            document.getElementById('deleteBtn').disabled = !hasSelection;
+        }
+
+        function updateStatus(message) {
+            document.getElementById('statusText').textContent = message;
+            setTimeout(() => {
+                document.getElementById('statusText').textContent = 'Ready';
+            }, 3000);
+        }
+
+        // Save & Export
         function saveBreakdown() {
             const data = [];
             const rows = document.querySelectorAll('#breakdownBody tr:not(.scene-header)');
             
             rows.forEach(row => {
                 const cells = row.querySelectorAll('td');
-                if (cells.length > 0) {
+                if (cells.length > 1) {
                     data.push({
-                        scene: cells[0].textContent,
-                        character: cells[1].textContent,
-                        day: cells[2].textContent,
-                        time: cells[3].textContent,
-                        intExt: cells[4].textContent,
-                        location: cells[5].textContent,
-                        synopsis: cells[6].textContent,
-                        hair: cells[7].textContent,
-                        makeup: cells[8].textContent,
-                        sfx: cells[9].textContent,
-                        wardrobe: cells[10].textContent,
-                        notes: cells[11].textContent
+                        scene: cells[1].textContent,
+                        character: cells[2].textContent,
+                        day: cells[3].textContent,
+                        time: cells[4].textContent,
+                        intExt: cells[5].textContent,
+                        location: cells[6].textContent,
+                        synopsis: cells[7].textContent,
+                        hair: cells[8].textContent,
+                        makeup: cells[9].textContent,
+                        sfx: cells[10].textContent,
+                        wardrobe: cells[11].textContent,
+                        notes: cells[12].textContent
                     });
                 }
             });
             
             localStorage.setItem('breakdownData', JSON.stringify(data));
-            alert('✓ Breakdown saved!');
+            updateStatus('Breakdown saved!');
         }
 
-        // Export to CSV
         function exportBreakdown() {
             const rows = [];
             
@@ -520,14 +962,13 @@
             // Data
             document.querySelectorAll('#breakdownBody tr:not(.scene-header)').forEach(row => {
                 const cells = row.querySelectorAll('td');
-                if (cells.length > 0) {
+                if (cells.length > 1) {
                     const rowData = [];
-                    cells.forEach(cell => {
-                        let text = cell.textContent.trim();
-                        // Remove badges
+                    for (let i = 1; i < cells.length; i++) {
+                        let text = cells[i].textContent.trim();
                         text = text.replace(/INT DAY|INT NIGHT|EXT DAY|EXT NIGHT/g, '').trim();
                         rowData.push(text);
-                    });
+                    }
                     rows.push(rowData);
                 }
             });
@@ -546,41 +987,13 @@
             a.click();
             URL.revokeObjectURL(url);
             
-            alert('✓ Breakdown exported to CSV!');
+            updateStatus('Breakdown exported to CSV!');
         }
-
-        // Add new row
-        function addRow() {
-            const tbody = document.getElementById('breakdownBody');
-            const newRow = document.createElement('tr');
-            newRow.innerHTML = `
-                <td></td>
-                <td contenteditable="true"></td>
-                <td contenteditable="true">Day 1</td>
-                <td contenteditable="true"></td>
-                <td contenteditable="true"></td>
-                <td contenteditable="true"></td>
-                <td contenteditable="true"></td>
-                <td contenteditable="true"></td>
-                <td contenteditable="true"></td>
-                <td contenteditable="true"></td>
-                <td contenteditable="true"></td>
-                <td contenteditable="true"></td>
-            `;
-            tbody.appendChild(newRow);
-        }
-
-        // Keyboard shortcuts
-        document.addEventListener('keydown', function(e) {
-            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-                e.preventDefault();
-                saveBreakdown();
-            }
-        });
 
         console.log('✓ Breakdown sheet loaded');
-        console.log('• Click cells to edit');
-        console.log('• Press Ctrl/Cmd+S to save');
+        console.log('• Click row numbers to select');
+        console.log('• Right-click for context menu');
+        console.log('• Keyboard shortcuts: Ctrl+C/V, Delete, Ctrl+Z/Y');
     </script>
 </body>
 </html>
