@@ -1022,27 +1022,19 @@
             </div>
 
             <div class="nav-section">
-                <div class="nav-section-title">Pre-Production</div>
-                <div class="nav-item active">
-                    <svg class="nav-icon"><use xlink:href="#icon-dashboard"/></svg>
-                    Dashboard
-                </div>
-                <div class="nav-item" onclick="window.location.href='script-breakdown.html'">
+                <div class="nav-section-title">Menu</div>
+                <div class="nav-item" onclick="window.location.href='script.html'">
                     <svg class="nav-icon"><use xlink:href="#icon-script"/></svg>
-                    Script Breakdown
+                    Script
                 </div>
-                <div class="nav-item" onclick="window.location.href='generate-breakdown.html'">
+                <div class="nav-item" onclick="window.location.href='breakdown.html'">
                     <svg class="nav-icon"><use xlink:href="#icon-generate"/></svg>
-                    Generate Breakdown
+                    Breakdown
                 </div>
                 <div class="nav-item" onclick="window.location.href='characters.html'">
                     <svg class="nav-icon"><use xlink:href="#icon-character"/></svg>
                     Character Design
                 </div>
-            </div>
-
-            <div class="nav-section">
-                <div class="nav-section-title">Production</div>
                 <div class="nav-item" onclick="window.location.href='continuity.html'">
                     <svg class="nav-icon"><use xlink:href="#icon-photo"/></svg>
                     Continuity
@@ -1051,14 +1043,6 @@
                     <svg class="nav-icon"><use xlink:href="#icon-calendar"/></svg>
                     Call Sheets
                 </div>
-                <div class="nav-item" onclick="window.location.href='scenes.html'">
-                    <svg class="nav-icon"><use xlink:href="#icon-scene"/></svg>
-                    Scene Tracking
-                </div>
-            </div>
-
-            <div class="nav-section">
-                <div class="nav-section-title">Management</div>
                 <div class="nav-item" onclick="window.location.href='budget-system.html'">
                     <svg class="nav-icon"><use xlink:href="#icon-budget"/></svg>
                     Budgeting
@@ -1094,7 +1078,7 @@
                 <div class="widgets-grid" id="widgetsGrid">
                     
                     <!-- Today's Call Sheet Widget -->
-                    <div class="widget" draggable="true">
+                    <div class="widget" draggable="true" data-widget-type="call-sheet">
                         <div class="widget-header">
                             <div class="widget-title">
                                 <svg class="widget-icon"><use xlink:href="#icon-calendar"/></svg>
@@ -1132,7 +1116,7 @@
                     </div>
 
                     <!-- Active Chair Timer Widget -->
-                    <div class="widget" draggable="true">
+                    <div class="widget" draggable="true" data-widget-type="chair-timer">
                         <div class="widget-header">
                             <div class="widget-title">
                                 <svg class="widget-icon"><use xlink:href="#icon-time"/></svg>
@@ -1160,7 +1144,7 @@
                     </div>
 
                     <!-- Today's Cast Widget -->
-                    <div class="widget large" draggable="true">
+                    <div class="widget large" draggable="true" data-widget-type="cast-today">
                         <div class="widget-header">
                             <div class="widget-title">
                                 <svg class="widget-icon"><use xlink:href="#icon-character"/></svg>
@@ -1204,7 +1188,7 @@
                     </div>
 
                     <!-- Today's Scenes Widget -->
-                    <div class="widget" draggable="true">
+                    <div class="widget" draggable="true" data-widget-type="scene-requirements">
                         <div class="widget-header">
                             <div class="widget-title">
                                 <svg class="widget-icon"><use xlink:href="#icon-scene"/></svg>
@@ -1251,7 +1235,7 @@
                     </div>
 
                     <!-- Department Budget Widget -->
-                    <div class="widget" draggable="true">
+                    <div class="widget" draggable="true" data-widget-type="dept-budget">
                         <div class="widget-header">
                             <div class="widget-title">
                                 <svg class="widget-icon"><use xlink:href="#icon-budget"/></svg>
@@ -1286,7 +1270,7 @@
                     </div>
 
                     <!-- Quick Actions Widget -->
-                    <div class="widget" draggable="true">
+                    <div class="widget" draggable="true" data-widget-type="quick-actions">
                         <div class="widget-header">
                             <div class="widget-title">
                                 <svg class="widget-icon"><use xlink:href="#icon-plus"/></svg>
@@ -1534,7 +1518,10 @@
         let currentProject = null;
         let timerInterval = null;
         let timerSeconds = 2723; // Start at 45:23
-        
+
+        // Widget storage - stores removed widgets by type
+        let removedWidgets = {};
+
         function loadProjectData() {
             const projectData = localStorage.getItem('currentProject');
             if (projectData) {
@@ -1547,6 +1534,734 @@
 
         function updateDashboard() {
             document.querySelector('.project-info h2').textContent = currentProject?.title || 'The Big Race';
+        }
+
+        // Widget Templates - Complete HTML for all widget types
+        const widgetTemplates = {
+            'call-sheet': `
+                <div class="widget-header">
+                    <div class="widget-title">
+                        <svg class="widget-icon"><use xlink:href="#icon-calendar"/></svg>
+                        Today's Call Sheet
+                        <span class="widget-status">live</span>
+                    </div>
+                    <div class="widget-actions">
+                        <button class="widget-btn">
+                            <svg><use xlink:href="#icon-expand"/></svg>
+                        </button>
+                        <button class="widget-btn widget-btn-close">
+                            <svg><use xlink:href="#icon-close"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="widget-content">
+                    <div class="upload-zone" id="callSheetUpload">
+                        <svg class="upload-icon"><use xlink:href="#icon-upload"/></svg>
+                        <div class="upload-text">Drop today's call sheet here</div>
+                        <div class="upload-hint">PDF from 2nd AD</div>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">General Call</span>
+                        <span class="stat-value highlight">6:00 AM</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">H&MU Call</span>
+                        <span class="stat-value highlight">5:30 AM</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">First Shot</span>
+                        <span class="stat-value">8:00 AM</span>
+                    </div>
+                </div>`,
+
+            'chair-timer': `
+                <div class="widget-header">
+                    <div class="widget-title">
+                        <svg class="widget-icon"><use xlink:href="#icon-time"/></svg>
+                        Active Chair Timer
+                    </div>
+                    <div class="widget-actions">
+                        <button class="widget-btn">
+                            <svg><use xlink:href="#icon-expand"/></svg>
+                        </button>
+                        <button class="widget-btn widget-btn-close">
+                            <svg><use xlink:href="#icon-close"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="widget-content">
+                    <div class="timer-display">
+                        <div class="timer-time">00:45:23</div>
+                        <div class="timer-actor">Sarah Mitchell - Lead</div>
+                        <div class="timer-controls">
+                            <button class="timer-btn">Pause</button>
+                            <button class="timer-btn">Complete</button>
+                        </div>
+                    </div>
+                </div>`,
+
+            'cast-today': `
+                <div class="widget-header">
+                    <div class="widget-title">
+                        <svg class="widget-icon"><use xlink:href="#icon-character"/></svg>
+                        Today's Cast
+                    </div>
+                    <div class="widget-actions">
+                        <button class="widget-btn">
+                            <svg><use xlink:href="#icon-expand"/></svg>
+                        </button>
+                        <button class="widget-btn widget-btn-close">
+                            <svg><use xlink:href="#icon-close"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="widget-content">
+                    <div class="cast-grid">
+                        <div class="cast-card">
+                            <div class="cast-photo">SM</div>
+                            <div class="cast-name">Sarah Mitchell</div>
+                            <div class="cast-call">
+                                <span class="cast-status"></span>5:30 AM
+                            </div>
+                        </div>
+                        <div class="cast-card">
+                            <div class="cast-photo">JR</div>
+                            <div class="cast-name">Jake Rivers</div>
+                            <div class="cast-call">6:00 AM</div>
+                        </div>
+                        <div class="cast-card">
+                            <div class="cast-photo">EW</div>
+                            <div class="cast-name">Emma White</div>
+                            <div class="cast-call">6:30 AM</div>
+                        </div>
+                        <div class="cast-card">
+                            <div class="cast-photo">TC</div>
+                            <div class="cast-name">Tom Chen</div>
+                            <div class="cast-call">7:00 AM</div>
+                        </div>
+                    </div>
+                </div>`,
+
+            'scene-requirements': `
+                <div class="widget-header">
+                    <div class="widget-title">
+                        <svg class="widget-icon"><use xlink:href="#icon-scene"/></svg>
+                        Today's H&MU Requirements
+                    </div>
+                    <div class="widget-actions">
+                        <button class="widget-btn">
+                            <svg><use xlink:href="#icon-expand"/></svg>
+                        </button>
+                        <button class="widget-btn widget-btn-close">
+                            <svg><use xlink:href="#icon-close"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="widget-content">
+                    <div class="scene-item">
+                        <div class="scene-header">
+                            <span class="scene-number">Scene 24</span>
+                            <span class="scene-time">INT. DAY</span>
+                        </div>
+                        <div class="scene-requirements">
+                            Sarah: Running look, sweat & dirt. Jake: Fresh from shower, wet hair
+                        </div>
+                    </div>
+                    <div class="scene-item">
+                        <div class="scene-header">
+                            <span class="scene-number">Scene 25</span>
+                            <span class="scene-time">INT. DAY</span>
+                        </div>
+                        <div class="scene-requirements">
+                            Continuity from Sc. 24. Add bruise on Sarah's cheek
+                        </div>
+                    </div>
+                    <div class="scene-item">
+                        <div class="scene-header">
+                            <span class="scene-number">Scene 31</span>
+                            <span class="scene-time">EXT. NIGHT</span>
+                        </div>
+                        <div class="scene-requirements">
+                            Full glam for party scene. All principals
+                        </div>
+                    </div>
+                </div>`,
+
+            'dept-budget': `
+                <div class="widget-header">
+                    <div class="widget-title">
+                        <svg class="widget-icon"><use xlink:href="#icon-budget"/></svg>
+                        H&MU Budget
+                    </div>
+                    <div class="widget-actions">
+                        <button class="widget-btn">
+                            <svg><use xlink:href="#icon-expand"/></svg>
+                        </button>
+                        <button class="widget-btn widget-btn-close">
+                            <svg><use xlink:href="#icon-close"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="widget-content">
+                    <div class="stat-row">
+                        <span class="stat-label">Department Budget</span>
+                        <span class="stat-value">$25,000</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Spent to Date</span>
+                        <span class="stat-value">$12,350</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Remaining</span>
+                        <span class="stat-value highlight">$12,650</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 49.4%"></div>
+                    </div>
+                </div>`,
+
+            'quick-actions': `
+                <div class="widget-header">
+                    <div class="widget-title">
+                        <svg class="widget-icon"><use xlink:href="#icon-plus"/></svg>
+                        Quick Actions
+                    </div>
+                    <div class="widget-actions">
+                        <button class="widget-btn widget-btn-close">
+                            <svg><use xlink:href="#icon-close"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="widget-content">
+                    <div class="quick-actions">
+                        <div class="quick-action" onclick="window.location.href='continuity.html'">
+                            <svg class="quick-action-icon"><use xlink:href="#icon-photo"/></svg>
+                            <div class="quick-action-label">Upload Photo</div>
+                        </div>
+                        <div class="quick-action" onclick="startNewTimer()">
+                            <svg class="quick-action-icon"><use xlink:href="#icon-time"/></svg>
+                            <div class="quick-action-label">Start Timer</div>
+                        </div>
+                        <div class="quick-action" onclick="addExpense()">
+                            <svg class="quick-action-icon"><use xlink:href="#icon-budget"/></svg>
+                            <div class="quick-action-label">Add Expense</div>
+                        </div>
+                        <div class="quick-action" onclick="viewCharacters()">
+                            <svg class="quick-action-icon"><use xlink:href="#icon-character"/></svg>
+                            <div class="quick-action-label">Characters</div>
+                        </div>
+                    </div>
+                </div>`,
+
+            'schedule': `
+                <div class="widget-header">
+                    <div class="widget-title">
+                        <svg class="widget-icon"><use xlink:href="#icon-calendar"/></svg>
+                        Shooting Schedule
+                    </div>
+                    <div class="widget-actions">
+                        <button class="widget-btn">
+                            <svg><use xlink:href="#icon-expand"/></svg>
+                        </button>
+                        <button class="widget-btn widget-btn-close">
+                            <svg><use xlink:href="#icon-close"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="widget-content">
+                    <div class="upload-zone">
+                        <svg class="upload-icon"><use xlink:href="#icon-upload"/></svg>
+                        <div class="upload-text">Upload Schedule</div>
+                        <div class="upload-hint">From Production</div>
+                    </div>
+                </div>`,
+
+            'actor-queue': `
+                <div class="widget-header">
+                    <div class="widget-title">
+                        <svg class="widget-icon"><use xlink:href="#icon-character"/></svg>
+                        Actor Queue
+                    </div>
+                    <div class="widget-actions">
+                        <button class="widget-btn">
+                            <svg><use xlink:href="#icon-expand"/></svg>
+                        </button>
+                        <button class="widget-btn widget-btn-close">
+                            <svg><use xlink:href="#icon-close"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="widget-content">
+                    <div class="stat-row">
+                        <span class="stat-label">In Chair Now</span>
+                        <span class="stat-value">Sarah Mitchell</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Next Up</span>
+                        <span class="stat-value">Jake Rivers</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Third</span>
+                        <span class="stat-value">Emma White</span>
+                    </div>
+                </div>`,
+
+            'product-tracker': `
+                <div class="widget-header">
+                    <div class="widget-title">
+                        <svg class="widget-icon"><use xlink:href="#icon-kit"/></svg>
+                        Product Tracker
+                    </div>
+                    <div class="widget-actions">
+                        <button class="widget-btn">
+                            <svg><use xlink:href="#icon-expand"/></svg>
+                        </button>
+                        <button class="widget-btn widget-btn-close">
+                            <svg><use xlink:href="#icon-close"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="widget-content">
+                    <div class="stat-row">
+                        <span class="stat-label">Foundation #3</span>
+                        <span class="stat-value highlight">Low</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Setting Spray</span>
+                        <span class="stat-value">60%</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Lash Glue</span>
+                        <span class="stat-value">Full</span>
+                    </div>
+                </div>`,
+
+            'efficiency': `
+                <div class="widget-header">
+                    <div class="widget-title">
+                        <svg class="widget-icon"><use xlink:href="#icon-report"/></svg>
+                        Efficiency Metrics
+                    </div>
+                    <div class="widget-actions">
+                        <button class="widget-btn">
+                            <svg><use xlink:href="#icon-expand"/></svg>
+                        </button>
+                        <button class="widget-btn widget-btn-close">
+                            <svg><use xlink:href="#icon-close"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="widget-content">
+                    <div class="stat-row">
+                        <span class="stat-label">Avg Chair Time</span>
+                        <span class="stat-value">52 min</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Today's Delays</span>
+                        <span class="stat-value highlight">+15 min</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Efficiency</span>
+                        <span class="stat-value">92%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 92%"></div>
+                    </div>
+                </div>`,
+
+            // Additional widget templates
+            'script-sides': `
+                <div class="widget-header">
+                    <div class="widget-title">
+                        <svg class="widget-icon"><use xlink:href="#icon-script"/></svg>
+                        Today's Sides
+                    </div>
+                    <div class="widget-actions">
+                        <button class="widget-btn widget-btn-close">
+                            <svg><use xlink:href="#icon-close"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="widget-content">
+                    <div class="upload-zone">
+                        <svg class="upload-icon"><use xlink:href="#icon-upload"/></svg>
+                        <div class="upload-text">Upload Today's Sides</div>
+                        <div class="upload-hint">Script pages for today</div>
+                    </div>
+                </div>`,
+
+            'dood': `
+                <div class="widget-header">
+                    <div class="widget-title">
+                        <svg class="widget-icon"><use xlink:href="#icon-calendar"/></svg>
+                        Day Out of Days
+                    </div>
+                    <div class="widget-actions">
+                        <button class="widget-btn widget-btn-close">
+                            <svg><use xlink:href="#icon-close"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="widget-content">
+                    <div class="stat-row">
+                        <span class="stat-label">Cast Available</span>
+                        <span class="stat-value">12 actors</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Shoot Days</span>
+                        <span class="stat-value">Day 8 of 24</span>
+                    </div>
+                </div>`,
+
+            'continuity-quick': `
+                <div class="widget-header">
+                    <div class="widget-title">
+                        <svg class="widget-icon"><use xlink:href="#icon-photo"/></svg>
+                        Continuity Upload
+                    </div>
+                    <div class="widget-actions">
+                        <button class="widget-btn widget-btn-close">
+                            <svg><use xlink:href="#icon-close"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="widget-content">
+                    <div class="upload-zone">
+                        <svg class="upload-icon"><use xlink:href="#icon-photo"/></svg>
+                        <div class="upload-text">Quick Photo Upload</div>
+                        <div class="upload-hint">Drag photos here</div>
+                    </div>
+                </div>`,
+
+            'main-cast': `
+                <div class="widget-header">
+                    <div class="widget-title">
+                        <svg class="widget-icon"><use xlink:href="#icon-character"/></svg>
+                        Main Cast Profiles
+                    </div>
+                    <div class="widget-actions">
+                        <button class="widget-btn widget-btn-close">
+                            <svg><use xlink:href="#icon-close"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="widget-content">
+                    <div class="cast-grid">
+                        <div class="cast-card">
+                            <div class="cast-photo">SM</div>
+                            <div class="cast-name">Sarah Mitchell</div>
+                            <div class="cast-call">Lead Role</div>
+                        </div>
+                        <div class="cast-card">
+                            <div class="cast-photo">JR</div>
+                            <div class="cast-name">Jake Rivers</div>
+                            <div class="cast-call">Supporting</div>
+                        </div>
+                    </div>
+                </div>`,
+
+            'cast-allergies': `
+                <div class="widget-header">
+                    <div class="widget-title">
+                        <svg class="widget-icon"><use xlink:href="#icon-character"/></svg>
+                        Cast Sensitivities
+                    </div>
+                    <div class="widget-actions">
+                        <button class="widget-btn widget-btn-close">
+                            <svg><use xlink:href="#icon-close"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="widget-content">
+                    <div class="stat-row">
+                        <span class="stat-label">Sarah M.</span>
+                        <span class="stat-value highlight">Latex allergy</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Emma W.</span>
+                        <span class="stat-value">Fragrance sensitive</span>
+                    </div>
+                </div>`,
+
+            'character-looks': `
+                <div class="widget-header">
+                    <div class="widget-title">
+                        <svg class="widget-icon"><use xlink:href="#icon-character"/></svg>
+                        Character Looks
+                    </div>
+                    <div class="widget-actions">
+                        <button class="widget-btn widget-btn-close">
+                            <svg><use xlink:href="#icon-close"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="widget-content">
+                    <p style="text-align: center; color: var(--text-secondary); padding: 20px;">
+                        Approved character looks gallery
+                    </p>
+                </div>`,
+
+            'special-fx': `
+                <div class="widget-header">
+                    <div class="widget-title">
+                        <svg class="widget-icon"><use xlink:href="#icon-scene"/></svg>
+                        Special FX Schedule
+                    </div>
+                    <div class="widget-actions">
+                        <button class="widget-btn widget-btn-close">
+                            <svg><use xlink:href="#icon-close"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="widget-content">
+                    <div class="stat-row">
+                        <span class="stat-label">Upcoming FX</span>
+                        <span class="stat-value">Bruise makeup - Day 12</span>
+                    </div>
+                </div>`,
+
+            'breakdown-progress': `
+                <div class="widget-header">
+                    <div class="widget-title">
+                        <svg class="widget-icon"><use xlink:href="#icon-script"/></svg>
+                        Breakdown Progress
+                    </div>
+                    <div class="widget-actions">
+                        <button class="widget-btn widget-btn-close">
+                            <svg><use xlink:href="#icon-close"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="widget-content">
+                    <div class="stat-row">
+                        <span class="stat-label">Scenes Broken Down</span>
+                        <span class="stat-value">68 of 92</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 74%"></div>
+                    </div>
+                </div>`,
+
+            'quick-changes': `
+                <div class="widget-header">
+                    <div class="widget-title">
+                        <svg class="widget-icon"><use xlink:href="#icon-scene"/></svg>
+                        Quick Changes
+                    </div>
+                    <div class="widget-actions">
+                        <button class="widget-btn widget-btn-close">
+                            <svg><use xlink:href="#icon-close"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="widget-content">
+                    <div class="stat-row">
+                        <span class="stat-label">Scene 24 → 25</span>
+                        <span class="stat-value highlight">5 min</span>
+                    </div>
+                </div>`,
+
+            'expense-quick': `
+                <div class="widget-header">
+                    <div class="widget-title">
+                        <svg class="widget-icon"><use xlink:href="#icon-budget"/></svg>
+                        Quick Expense
+                    </div>
+                    <div class="widget-actions">
+                        <button class="widget-btn widget-btn-close">
+                            <svg><use xlink:href="#icon-close"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="widget-content">
+                    <div class="quick-actions">
+                        <div class="quick-action">
+                            <svg class="quick-action-icon"><use xlink:href="#icon-budget"/></svg>
+                            <div class="quick-action-label">Add Expense</div>
+                        </div>
+                    </div>
+                </div>`,
+
+            'timesheet-status': `
+                <div class="widget-header">
+                    <div class="widget-title">
+                        <svg class="widget-icon"><use xlink:href="#icon-time"/></svg>
+                        Timesheet Status
+                    </div>
+                    <div class="widget-actions">
+                        <button class="widget-btn widget-btn-close">
+                            <svg><use xlink:href="#icon-close"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="widget-content">
+                    <div class="stat-row">
+                        <span class="stat-label">Team Hours Today</span>
+                        <span class="stat-value">42 hrs</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Pending Approval</span>
+                        <span class="stat-value highlight">3 timesheets</span>
+                    </div>
+                </div>`,
+
+            'team-schedule': `
+                <div class="widget-header">
+                    <div class="widget-title">
+                        <svg class="widget-icon"><use xlink:href="#icon-calendar"/></svg>
+                        Team Schedule
+                    </div>
+                    <div class="widget-actions">
+                        <button class="widget-btn widget-btn-close">
+                            <svg><use xlink:href="#icon-close"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="widget-content">
+                    <div class="stat-row">
+                        <span class="stat-label">Dept Call</span>
+                        <span class="stat-value highlight">5:00 AM</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Team Members</span>
+                        <span class="stat-value">6 crew</span>
+                    </div>
+                </div>`,
+
+            'daily-report': `
+                <div class="widget-header">
+                    <div class="widget-title">
+                        <svg class="widget-icon"><use xlink:href="#icon-report"/></svg>
+                        Daily Report
+                    </div>
+                    <div class="widget-actions">
+                        <button class="widget-btn widget-btn-close">
+                            <svg><use xlink:href="#icon-close"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="widget-content">
+                    <div class="stat-row">
+                        <span class="stat-label">Actors Processed</span>
+                        <span class="stat-value">12</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Avg Time</span>
+                        <span class="stat-value">48 min</span>
+                    </div>
+                </div>`,
+
+            'weekly-overview': `
+                <div class="widget-header">
+                    <div class="widget-title">
+                        <svg class="widget-icon"><use xlink:href="#icon-report"/></svg>
+                        Weekly Overview
+                    </div>
+                    <div class="widget-actions">
+                        <button class="widget-btn widget-btn-close">
+                            <svg><use xlink:href="#icon-close"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="widget-content">
+                    <div class="stat-row">
+                        <span class="stat-label">Shoot Days</span>
+                        <span class="stat-value">5 of 5</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Cast Members</span>
+                        <span class="stat-value">24 total</span>
+                    </div>
+                </div>`,
+
+            'prep-list': `
+                <div class="widget-header">
+                    <div class="widget-title">
+                        <svg class="widget-icon"><use xlink:href="#icon-report"/></svg>
+                        Tomorrow's Prep
+                    </div>
+                    <div class="widget-actions">
+                        <button class="widget-btn widget-btn-close">
+                            <svg><use xlink:href="#icon-close"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="widget-content">
+                    <div class="scene-item">
+                        <div class="scene-requirements">
+                            Check foundation stock for tomorrow's shoot
+                        </div>
+                    </div>
+                    <div class="scene-item">
+                        <div class="scene-requirements">
+                            Prepare special FX materials
+                        </div>
+                    </div>
+                </div>`,
+
+            'notes': `
+                <div class="widget-header">
+                    <div class="widget-title">
+                        <svg class="widget-icon"><use xlink:href="#icon-script"/></svg>
+                        Quick Notes
+                    </div>
+                    <div class="widget-actions">
+                        <button class="widget-btn widget-btn-close">
+                            <svg><use xlink:href="#icon-close"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="widget-content">
+                    <p style="text-align: center; color: var(--text-secondary); padding: 20px;">
+                        Add quick notes and reminders
+                    </p>
+                </div>`,
+
+            'weather': `
+                <div class="widget-header">
+                    <div class="widget-title">
+                        <svg class="widget-icon"><use xlink:href="#icon-calendar"/></svg>
+                        Weather
+                    </div>
+                    <div class="widget-actions">
+                        <button class="widget-btn widget-btn-close">
+                            <svg><use xlink:href="#icon-close"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="widget-content">
+                    <div class="stat-row">
+                        <span class="stat-label">Today</span>
+                        <span class="stat-value">Sunny, 75°F</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Humidity</span>
+                        <span class="stat-value highlight">65%</span>
+                    </div>
+                </div>`,
+
+            'contacts': `
+                <div class="widget-header">
+                    <div class="widget-title">
+                        <svg class="widget-icon"><use xlink:href="#icon-character"/></svg>
+                        Contacts
+                    </div>
+                    <div class="widget-actions">
+                        <button class="widget-btn widget-btn-close">
+                            <svg><use xlink:href="#icon-close"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="widget-content">
+                    <div class="stat-row">
+                        <span class="stat-label">2nd AD</span>
+                        <span class="stat-value">555-0123</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Production Office</span>
+                        <span class="stat-value">555-0199</span>
+                    </div>
+                </div>`
         }
 
         // Timer functionality
@@ -1642,26 +2357,74 @@
             return false;
         }
 
-        // Widget controls
-        document.querySelectorAll('.widget-btn').forEach(btn => {
-            btn.addEventListener('click', function(e) {
-                e.stopPropagation();
-                const widget = this.closest('.widget');
-                const icon = this.querySelector('use').getAttribute('xlink:href');
-                
-                if (icon === '#icon-close') {
-                    widget.style.display = 'none';
-                } else if (icon === '#icon-collapse') {
-                    const content = widget.querySelector('.widget-content');
-                    content.style.display = 'none';
-                    this.querySelector('use').setAttribute('xlink:href', '#icon-expand');
-                } else if (icon === '#icon-expand') {
-                    const content = widget.querySelector('.widget-content');
-                    content.style.display = 'block';
-                    this.querySelector('use').setAttribute('xlink:href', '#icon-collapse');
+        // Widget controls - improved to handle expand/collapse and proper removal
+        function initializeWidgetControls() {
+            document.querySelectorAll('.widget-btn').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const widget = this.closest('.widget');
+                    const icon = this.querySelector('use').getAttribute('xlink:href');
+
+                    if (icon === '#icon-close' || this.classList.contains('widget-btn-close')) {
+                        removeWidget(widget);
+                    } else if (icon === '#icon-collapse') {
+                        const content = widget.querySelector('.widget-content');
+                        content.style.display = 'none';
+                        this.querySelector('use').setAttribute('xlink:href', '#icon-expand');
+                    } else if (icon === '#icon-expand') {
+                        const content = widget.querySelector('.widget-content');
+                        if (content) {
+                            content.style.display = 'block';
+                            this.querySelector('use').setAttribute('xlink:href', '#icon-collapse');
+                        }
+                    }
+                });
+            });
+        }
+
+        // Remove widget and store its HTML for later restoration
+        function removeWidget(widget) {
+            const widgetType = widget.getAttribute('data-widget-type');
+
+            if (widgetType) {
+                // Store the widget's current HTML
+                removedWidgets[widgetType] = widget.outerHTML;
+            }
+
+            // Animate out
+            widget.style.transition = 'all 0.3s ease';
+            widget.style.transform = 'scale(0.8)';
+            widget.style.opacity = '0';
+
+            setTimeout(() => {
+                widget.remove();
+                updateWidgetLibrary();
+            }, 300);
+        }
+
+        // Update widget library to reflect available/added widgets
+        function updateWidgetLibrary() {
+            const currentWidgets = document.querySelectorAll('.widget');
+            const addedTypes = [];
+
+            currentWidgets.forEach(widget => {
+                const type = widget.getAttribute('data-widget-type');
+                if (type) addedTypes.push(type);
+            });
+
+            // Update widget options to show which are already added
+            document.querySelectorAll('.widget-option').forEach(option => {
+                const type = option.getAttribute('data-widget-type');
+                if (addedTypes.includes(type)) {
+                    option.classList.add('added');
+                } else {
+                    option.classList.remove('added');
                 }
             });
-        });
+        }
+
+        // Initialize widget controls on page load
+        initializeWidgetControls();
 
         // Navigation
         document.querySelectorAll('.nav-item').forEach(item => {
@@ -1685,24 +2448,7 @@
         function openWidgetLibrary() {
             const library = document.getElementById('widgetLibrary');
             library.classList.add('active');
-            
-            // Check which widgets are already added
-            const currentWidgets = document.querySelectorAll('.widget');
-            const addedTypes = [];
-            currentWidgets.forEach(widget => {
-                const type = widget.getAttribute('data-widget-type');
-                if (type) addedTypes.push(type);
-            });
-            
-            // Update widget options to show which are already added
-            document.querySelectorAll('.widget-option').forEach(option => {
-                const type = option.getAttribute('data-widget-type');
-                if (addedTypes.includes(type)) {
-                    option.classList.add('added');
-                } else {
-                    option.classList.remove('added');
-                }
-            });
+            updateWidgetLibrary();
         }
 
         function closeWidgetLibrary() {
@@ -1737,40 +2483,46 @@
 
         function addWidgetToDashboard(type, name) {
             const widgetsGrid = document.getElementById('widgetsGrid');
-            
-            // Create widget based on type
-            const widget = createWidget(type, name);
-            
+
+            let widget;
+
+            // Check if we have a stored widget of this type (from previous removal)
+            if (removedWidgets[type]) {
+                // Restore the previously removed widget with its original content
+                const temp = document.createElement('div');
+                temp.innerHTML = removedWidgets[type];
+                widget = temp.firstElementChild;
+
+                // Clear from storage since we're restoring it
+                delete removedWidgets[type];
+            } else {
+                // Create new widget from template
+                widget = createWidget(type, name);
+            }
+
             // Add to grid with animation
             widget.style.opacity = '0';
             widget.style.transform = 'scale(0.9)';
             widgetsGrid.appendChild(widget);
-            
+
             // Animate in
             setTimeout(() => {
                 widget.style.transition = 'all 0.3s ease';
                 widget.style.opacity = '1';
                 widget.style.transform = 'scale(1)';
             }, 50);
-            
+
             // Make it draggable
             widget.addEventListener('dragstart', handleDragStart);
             widget.addEventListener('dragend', handleDragEnd);
             widget.addEventListener('dragover', handleDragOver);
             widget.addEventListener('drop', handleDrop);
-            
-            // Add close functionality
-            const closeBtn = widget.querySelector('.widget-btn-close');
-            if (closeBtn) {
-                closeBtn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    const widget = this.closest('.widget');
-                    widget.style.transition = 'all 0.3s ease';
-                    widget.style.transform = 'scale(0.8)';
-                    widget.style.opacity = '0';
-                    setTimeout(() => widget.remove(), 300);
-                });
-            }
+
+            // Re-initialize controls for this widget
+            initializeWidgetControlsForElement(widget);
+
+            // Update widget library status
+            updateWidgetLibrary();
         }
 
         function createWidget(type, name) {
@@ -1778,160 +2530,67 @@
             widget.className = 'widget';
             widget.setAttribute('draggable', 'true');
             widget.setAttribute('data-widget-type', type);
-            
-            // Widget content based on type
-            let content = '';
-            
-            switch(type) {
-                case 'schedule':
-                    content = `
-                        <div class="widget-header">
-                            <div class="widget-title">
-                                <svg class="widget-icon"><use xlink:href="#icon-calendar"/></svg>
-                                ${name}
-                            </div>
-                            <div class="widget-actions">
-                                <button class="widget-btn">
-                                    <svg><use xlink:href="#icon-expand"/></svg>
-                                </button>
-                                <button class="widget-btn widget-btn-close">
-                                    <svg><use xlink:href="#icon-close"/></svg>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="widget-content">
-                            <div class="upload-zone">
-                                <svg class="upload-icon"><use xlink:href="#icon-upload"/></svg>
-                                <div class="upload-text">Upload Schedule</div>
-                                <div class="upload-hint">From Production</div>
-                            </div>
-                        </div>`;
-                    break;
-                
-                case 'actor-queue':
-                    content = `
-                        <div class="widget-header">
-                            <div class="widget-title">
-                                <svg class="widget-icon"><use xlink:href="#icon-character"/></svg>
-                                ${name}
-                            </div>
-                            <div class="widget-actions">
-                                <button class="widget-btn">
-                                    <svg><use xlink:href="#icon-expand"/></svg>
-                                </button>
-                                <button class="widget-btn widget-btn-close">
-                                    <svg><use xlink:href="#icon-close"/></svg>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="widget-content">
-                            <div class="stat-row">
-                                <span class="stat-label">In Chair Now</span>
-                                <span class="stat-value">Sarah Mitchell</span>
-                            </div>
-                            <div class="stat-row">
-                                <span class="stat-label">Next Up</span>
-                                <span class="stat-value">Jake Rivers</span>
-                            </div>
-                            <div class="stat-row">
-                                <span class="stat-label">Third</span>
-                                <span class="stat-value">Emma White</span>
-                            </div>
-                        </div>`;
-                    break;
-                    
-                case 'product-tracker':
-                    content = `
-                        <div class="widget-header">
-                            <div class="widget-title">
-                                <svg class="widget-icon"><use xlink:href="#icon-kit"/></svg>
-                                ${name}
-                            </div>
-                            <div class="widget-actions">
-                                <button class="widget-btn">
-                                    <svg><use xlink:href="#icon-expand"/></svg>
-                                </button>
-                                <button class="widget-btn widget-btn-close">
-                                    <svg><use xlink:href="#icon-close"/></svg>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="widget-content">
-                            <div class="stat-row">
-                                <span class="stat-label">Foundation #3</span>
-                                <span class="stat-value highlight">Low</span>
-                            </div>
-                            <div class="stat-row">
-                                <span class="stat-label">Setting Spray</span>
-                                <span class="stat-value">60%</span>
-                            </div>
-                            <div class="stat-row">
-                                <span class="stat-label">Lash Glue</span>
-                                <span class="stat-value">Full</span>
-                            </div>
-                        </div>`;
-                    break;
-                    
-                case 'efficiency':
-                    content = `
-                        <div class="widget-header">
-                            <div class="widget-title">
-                                <svg class="widget-icon"><use xlink:href="#icon-report"/></svg>
-                                ${name}
-                            </div>
-                            <div class="widget-actions">
-                                <button class="widget-btn">
-                                    <svg><use xlink:href="#icon-expand"/></svg>
-                                </button>
-                                <button class="widget-btn widget-btn-close">
-                                    <svg><use xlink:href="#icon-close"/></svg>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="widget-content">
-                            <div class="stat-row">
-                                <span class="stat-label">Avg Chair Time</span>
-                                <span class="stat-value">52 min</span>
-                            </div>
-                            <div class="stat-row">
-                                <span class="stat-label">Today's Delays</span>
-                                <span class="stat-value highlight">+15 min</span>
-                            </div>
-                            <div class="stat-row">
-                                <span class="stat-label">Efficiency</span>
-                                <span class="stat-value">92%</span>
-                            </div>
-                            <div class="progress-bar">
-                                <div class="progress-fill" style="width: 92%"></div>
-                            </div>
-                        </div>`;
-                    break;
-                    
-                default:
-                    content = `
-                        <div class="widget-header">
-                            <div class="widget-title">
-                                <svg class="widget-icon"><use xlink:href="#icon-dashboard"/></svg>
-                                ${name}
-                            </div>
-                            <div class="widget-actions">
-                                <button class="widget-btn">
-                                    <svg><use xlink:href="#icon-expand"/></svg>
-                                </button>
-                                <button class="widget-btn widget-btn-close">
-                                    <svg><use xlink:href="#icon-close"/></svg>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="widget-content">
-                            <p style="text-align: center; color: var(--text-secondary); padding: 20px;">
-                                Widget content for ${name}
-                            </p>
-                        </div>`;
+
+            // Check if type is 'cast-today' to add 'large' class
+            if (type === 'cast-today') {
+                widget.classList.add('large');
             }
-            
-            widget.innerHTML = content;
+
+            // Get template content from widgetTemplates object
+            const template = widgetTemplates[type];
+
+            if (template) {
+                widget.innerHTML = template;
+            } else {
+                // Fallback for widgets without defined templates
+                widget.innerHTML = `
+                    <div class="widget-header">
+                        <div class="widget-title">
+                            <svg class="widget-icon"><use xlink:href="#icon-dashboard"/></svg>
+                            ${name}
+                        </div>
+                        <div class="widget-actions">
+                            <button class="widget-btn">
+                                <svg><use xlink:href="#icon-expand"/></svg>
+                            </button>
+                            <button class="widget-btn widget-btn-close">
+                                <svg><use xlink:href="#icon-close"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="widget-content">
+                        <p style="text-align: center; color: var(--text-secondary); padding: 20px;">
+                            Widget content for ${name}
+                        </p>
+                    </div>`;
+            }
+
             return widget;
+        }
+
+        // Initialize widget controls for a specific element (used when adding new widgets)
+        function initializeWidgetControlsForElement(widget) {
+            widget.querySelectorAll('.widget-btn').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const widget = this.closest('.widget');
+                    const icon = this.querySelector('use')?.getAttribute('xlink:href');
+
+                    if (icon === '#icon-close' || this.classList.contains('widget-btn-close')) {
+                        removeWidget(widget);
+                    } else if (icon === '#icon-collapse') {
+                        const content = widget.querySelector('.widget-content');
+                        content.style.display = 'none';
+                        this.querySelector('use').setAttribute('xlink:href', '#icon-expand');
+                    } else if (icon === '#icon-expand') {
+                        const content = widget.querySelector('.widget-content');
+                        if (content) {
+                            content.style.display = 'block';
+                            this.querySelector('use').setAttribute('xlink:href', '#icon-collapse');
+                        }
+                    }
+                });
+            });
         }
 
         function saveLayout() {
