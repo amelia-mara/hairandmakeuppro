@@ -463,6 +463,14 @@
             position: relative;
         }
 
+        .widget-content.clickable {
+            cursor: pointer;
+        }
+
+        .widget-content.clickable:hover {
+            background: linear-gradient(135deg, rgba(201, 169, 97, 0.03), transparent);
+        }
+
         /* Call Sheet Upload Widget */
         .upload-zone {
             border: 2px dashed rgba(201, 169, 97, 0.3);
@@ -1005,6 +1013,9 @@
         <symbol id="icon-close" viewBox="0 0 24 24">
             <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
         </symbol>
+        <symbol id="icon-resize" viewBox="0 0 24 24">
+            <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </symbol>
     </svg>
 
     <div class="app-layout">
@@ -1023,11 +1034,11 @@
 
             <div class="nav-section">
                 <div class="nav-section-title">Menu</div>
-                <div class="nav-item" onclick="window.location.href='script.html'">
+                <div class="nav-item" onclick="window.location.href='script-breakdown.html'">
                     <svg class="nav-icon"><use xlink:href="#icon-script"/></svg>
                     Script
                 </div>
-                <div class="nav-item" onclick="window.location.href='breakdown.html'">
+                <div class="nav-item" onclick="window.location.href='generate-breakdown.html'">
                     <svg class="nav-icon"><use xlink:href="#icon-generate"/></svg>
                     Breakdown
                 </div>
@@ -1039,7 +1050,7 @@
                     <svg class="nav-icon"><use xlink:href="#icon-photo"/></svg>
                     Continuity
                 </div>
-                <div class="nav-item" onclick="window.location.href='call-sheets.html'">
+                <div class="nav-item" onclick="window.location.href='dashboard.html'">
                     <svg class="nav-icon"><use xlink:href="#icon-calendar"/></svg>
                     Call Sheets
                 </div>
@@ -1051,7 +1062,7 @@
                     <svg class="nav-icon"><use xlink:href="#icon-time"/></svg>
                     Timesheets
                 </div>
-                <div class="nav-item" onclick="window.location.href='reports.html'">
+                <div class="nav-item" onclick="window.location.href='dashboard.html'">
                     <svg class="nav-icon"><use xlink:href="#icon-report"/></svg>
                     Reports
                 </div>
@@ -1086,10 +1097,13 @@
                                 <span class="widget-status">live</span>
                             </div>
                             <div class="widget-actions">
+                                <button class="widget-btn widget-btn-resize" title="Toggle size">
+                                    <svg><use xlink:href="#icon-resize"/></svg>
+                                </button>
                                 <button class="widget-btn">
                                     <svg><use xlink:href="#icon-expand"/></svg>
                                 </button>
-                                <button class="widget-btn">
+                                <button class="widget-btn widget-btn-close">
                                     <svg><use xlink:href="#icon-close"/></svg>
                                 </button>
                             </div>
@@ -1123,10 +1137,13 @@
                                 Active Chair Timer
                             </div>
                             <div class="widget-actions">
+                                <button class="widget-btn widget-btn-resize" title="Toggle size">
+                                    <svg><use xlink:href="#icon-resize"/></svg>
+                                </button>
                                 <button class="widget-btn">
                                     <svg><use xlink:href="#icon-expand"/></svg>
                                 </button>
-                                <button class="widget-btn">
+                                <button class="widget-btn widget-btn-close">
                                     <svg><use xlink:href="#icon-close"/></svg>
                                 </button>
                             </div>
@@ -1151,10 +1168,13 @@
                                 Today's Cast
                             </div>
                             <div class="widget-actions">
+                                <button class="widget-btn widget-btn-resize" title="Toggle size">
+                                    <svg><use xlink:href="#icon-resize"/></svg>
+                                </button>
                                 <button class="widget-btn">
                                     <svg><use xlink:href="#icon-expand"/></svg>
                                 </button>
-                                <button class="widget-btn">
+                                <button class="widget-btn widget-btn-close">
                                     <svg><use xlink:href="#icon-close"/></svg>
                                 </button>
                             </div>
@@ -1195,10 +1215,13 @@
                                 Today's H&MU Requirements
                             </div>
                             <div class="widget-actions">
+                                <button class="widget-btn widget-btn-resize" title="Toggle size">
+                                    <svg><use xlink:href="#icon-resize"/></svg>
+                                </button>
                                 <button class="widget-btn">
                                     <svg><use xlink:href="#icon-expand"/></svg>
                                 </button>
-                                <button class="widget-btn">
+                                <button class="widget-btn widget-btn-close">
                                     <svg><use xlink:href="#icon-close"/></svg>
                                 </button>
                             </div>
@@ -1242,10 +1265,13 @@
                                 H&MU Budget
                             </div>
                             <div class="widget-actions">
+                                <button class="widget-btn widget-btn-resize" title="Toggle size">
+                                    <svg><use xlink:href="#icon-resize"/></svg>
+                                </button>
                                 <button class="widget-btn">
                                     <svg><use xlink:href="#icon-expand"/></svg>
                                 </button>
-                                <button class="widget-btn">
+                                <button class="widget-btn widget-btn-close">
                                     <svg><use xlink:href="#icon-close"/></svg>
                                 </button>
                             </div>
@@ -1277,7 +1303,10 @@
                                 Quick Actions
                             </div>
                             <div class="widget-actions">
-                                <button class="widget-btn">
+                                <button class="widget-btn widget-btn-resize" title="Toggle size">
+                                    <svg><use xlink:href="#icon-resize"/></svg>
+                                </button>
+                                <button class="widget-btn widget-btn-close">
                                     <svg><use xlink:href="#icon-close"/></svg>
                                 </button>
                             </div>
@@ -1546,6 +1575,9 @@
                         <span class="widget-status">live</span>
                     </div>
                     <div class="widget-actions">
+                        <button class="widget-btn widget-btn-resize" title="Toggle size">
+                            <svg><use xlink:href="#icon-resize"/></svg>
+                        </button>
                         <button class="widget-btn">
                             <svg><use xlink:href="#icon-expand"/></svg>
                         </button>
@@ -1581,6 +1613,9 @@
                         Active Chair Timer
                     </div>
                     <div class="widget-actions">
+                        <button class="widget-btn widget-btn-resize" title="Toggle size">
+                            <svg><use xlink:href="#icon-resize"/></svg>
+                        </button>
                         <button class="widget-btn">
                             <svg><use xlink:href="#icon-expand"/></svg>
                         </button>
@@ -1607,6 +1642,9 @@
                         Today's Cast
                     </div>
                     <div class="widget-actions">
+                        <button class="widget-btn widget-btn-resize" title="Toggle size">
+                            <svg><use xlink:href="#icon-resize"/></svg>
+                        </button>
                         <button class="widget-btn">
                             <svg><use xlink:href="#icon-expand"/></svg>
                         </button>
@@ -1649,6 +1687,9 @@
                         Today's H&MU Requirements
                     </div>
                     <div class="widget-actions">
+                        <button class="widget-btn widget-btn-resize" title="Toggle size">
+                            <svg><use xlink:href="#icon-resize"/></svg>
+                        </button>
                         <button class="widget-btn">
                             <svg><use xlink:href="#icon-expand"/></svg>
                         </button>
@@ -1694,6 +1735,9 @@
                         H&MU Budget
                     </div>
                     <div class="widget-actions">
+                        <button class="widget-btn widget-btn-resize" title="Toggle size">
+                            <svg><use xlink:href="#icon-resize"/></svg>
+                        </button>
                         <button class="widget-btn">
                             <svg><use xlink:href="#icon-expand"/></svg>
                         </button>
@@ -1727,6 +1771,9 @@
                         Quick Actions
                     </div>
                     <div class="widget-actions">
+                        <button class="widget-btn widget-btn-resize" title="Toggle size">
+                            <svg><use xlink:href="#icon-resize"/></svg>
+                        </button>
                         <button class="widget-btn widget-btn-close">
                             <svg><use xlink:href="#icon-close"/></svg>
                         </button>
@@ -1760,6 +1807,9 @@
                         Shooting Schedule
                     </div>
                     <div class="widget-actions">
+                        <button class="widget-btn widget-btn-resize" title="Toggle size">
+                            <svg><use xlink:href="#icon-resize"/></svg>
+                        </button>
                         <button class="widget-btn">
                             <svg><use xlink:href="#icon-expand"/></svg>
                         </button>
@@ -1783,6 +1833,9 @@
                         Actor Queue
                     </div>
                     <div class="widget-actions">
+                        <button class="widget-btn widget-btn-resize" title="Toggle size">
+                            <svg><use xlink:href="#icon-resize"/></svg>
+                        </button>
                         <button class="widget-btn">
                             <svg><use xlink:href="#icon-expand"/></svg>
                         </button>
@@ -1813,6 +1866,9 @@
                         Product Tracker
                     </div>
                     <div class="widget-actions">
+                        <button class="widget-btn widget-btn-resize" title="Toggle size">
+                            <svg><use xlink:href="#icon-resize"/></svg>
+                        </button>
                         <button class="widget-btn">
                             <svg><use xlink:href="#icon-expand"/></svg>
                         </button>
@@ -1843,6 +1899,9 @@
                         Efficiency Metrics
                     </div>
                     <div class="widget-actions">
+                        <button class="widget-btn widget-btn-resize" title="Toggle size">
+                            <svg><use xlink:href="#icon-resize"/></svg>
+                        </button>
                         <button class="widget-btn">
                             <svg><use xlink:href="#icon-expand"/></svg>
                         </button>
@@ -1877,6 +1936,9 @@
                         Today's Sides
                     </div>
                     <div class="widget-actions">
+                        <button class="widget-btn widget-btn-resize" title="Toggle size">
+                            <svg><use xlink:href="#icon-resize"/></svg>
+                        </button>
                         <button class="widget-btn widget-btn-close">
                             <svg><use xlink:href="#icon-close"/></svg>
                         </button>
@@ -1897,6 +1959,9 @@
                         Day Out of Days
                     </div>
                     <div class="widget-actions">
+                        <button class="widget-btn widget-btn-resize" title="Toggle size">
+                            <svg><use xlink:href="#icon-resize"/></svg>
+                        </button>
                         <button class="widget-btn widget-btn-close">
                             <svg><use xlink:href="#icon-close"/></svg>
                         </button>
@@ -1920,6 +1985,9 @@
                         Continuity Upload
                     </div>
                     <div class="widget-actions">
+                        <button class="widget-btn widget-btn-resize" title="Toggle size">
+                            <svg><use xlink:href="#icon-resize"/></svg>
+                        </button>
                         <button class="widget-btn widget-btn-close">
                             <svg><use xlink:href="#icon-close"/></svg>
                         </button>
@@ -1940,6 +2008,9 @@
                         Main Cast Profiles
                     </div>
                     <div class="widget-actions">
+                        <button class="widget-btn widget-btn-resize" title="Toggle size">
+                            <svg><use xlink:href="#icon-resize"/></svg>
+                        </button>
                         <button class="widget-btn widget-btn-close">
                             <svg><use xlink:href="#icon-close"/></svg>
                         </button>
@@ -1967,6 +2038,9 @@
                         Cast Sensitivities
                     </div>
                     <div class="widget-actions">
+                        <button class="widget-btn widget-btn-resize" title="Toggle size">
+                            <svg><use xlink:href="#icon-resize"/></svg>
+                        </button>
                         <button class="widget-btn widget-btn-close">
                             <svg><use xlink:href="#icon-close"/></svg>
                         </button>
@@ -1990,6 +2064,9 @@
                         Character Looks
                     </div>
                     <div class="widget-actions">
+                        <button class="widget-btn widget-btn-resize" title="Toggle size">
+                            <svg><use xlink:href="#icon-resize"/></svg>
+                        </button>
                         <button class="widget-btn widget-btn-close">
                             <svg><use xlink:href="#icon-close"/></svg>
                         </button>
@@ -2008,6 +2085,9 @@
                         Special FX Schedule
                     </div>
                     <div class="widget-actions">
+                        <button class="widget-btn widget-btn-resize" title="Toggle size">
+                            <svg><use xlink:href="#icon-resize"/></svg>
+                        </button>
                         <button class="widget-btn widget-btn-close">
                             <svg><use xlink:href="#icon-close"/></svg>
                         </button>
@@ -2027,6 +2107,9 @@
                         Breakdown Progress
                     </div>
                     <div class="widget-actions">
+                        <button class="widget-btn widget-btn-resize" title="Toggle size">
+                            <svg><use xlink:href="#icon-resize"/></svg>
+                        </button>
                         <button class="widget-btn widget-btn-close">
                             <svg><use xlink:href="#icon-close"/></svg>
                         </button>
@@ -2049,6 +2132,9 @@
                         Quick Changes
                     </div>
                     <div class="widget-actions">
+                        <button class="widget-btn widget-btn-resize" title="Toggle size">
+                            <svg><use xlink:href="#icon-resize"/></svg>
+                        </button>
                         <button class="widget-btn widget-btn-close">
                             <svg><use xlink:href="#icon-close"/></svg>
                         </button>
@@ -2068,6 +2154,9 @@
                         Quick Expense
                     </div>
                     <div class="widget-actions">
+                        <button class="widget-btn widget-btn-resize" title="Toggle size">
+                            <svg><use xlink:href="#icon-resize"/></svg>
+                        </button>
                         <button class="widget-btn widget-btn-close">
                             <svg><use xlink:href="#icon-close"/></svg>
                         </button>
@@ -2089,6 +2178,9 @@
                         Timesheet Status
                     </div>
                     <div class="widget-actions">
+                        <button class="widget-btn widget-btn-resize" title="Toggle size">
+                            <svg><use xlink:href="#icon-resize"/></svg>
+                        </button>
                         <button class="widget-btn widget-btn-close">
                             <svg><use xlink:href="#icon-close"/></svg>
                         </button>
@@ -2112,6 +2204,9 @@
                         Team Schedule
                     </div>
                     <div class="widget-actions">
+                        <button class="widget-btn widget-btn-resize" title="Toggle size">
+                            <svg><use xlink:href="#icon-resize"/></svg>
+                        </button>
                         <button class="widget-btn widget-btn-close">
                             <svg><use xlink:href="#icon-close"/></svg>
                         </button>
@@ -2135,6 +2230,9 @@
                         Daily Report
                     </div>
                     <div class="widget-actions">
+                        <button class="widget-btn widget-btn-resize" title="Toggle size">
+                            <svg><use xlink:href="#icon-resize"/></svg>
+                        </button>
                         <button class="widget-btn widget-btn-close">
                             <svg><use xlink:href="#icon-close"/></svg>
                         </button>
@@ -2158,6 +2256,9 @@
                         Weekly Overview
                     </div>
                     <div class="widget-actions">
+                        <button class="widget-btn widget-btn-resize" title="Toggle size">
+                            <svg><use xlink:href="#icon-resize"/></svg>
+                        </button>
                         <button class="widget-btn widget-btn-close">
                             <svg><use xlink:href="#icon-close"/></svg>
                         </button>
@@ -2181,6 +2282,9 @@
                         Tomorrow's Prep
                     </div>
                     <div class="widget-actions">
+                        <button class="widget-btn widget-btn-resize" title="Toggle size">
+                            <svg><use xlink:href="#icon-resize"/></svg>
+                        </button>
                         <button class="widget-btn widget-btn-close">
                             <svg><use xlink:href="#icon-close"/></svg>
                         </button>
@@ -2206,6 +2310,9 @@
                         Quick Notes
                     </div>
                     <div class="widget-actions">
+                        <button class="widget-btn widget-btn-resize" title="Toggle size">
+                            <svg><use xlink:href="#icon-resize"/></svg>
+                        </button>
                         <button class="widget-btn widget-btn-close">
                             <svg><use xlink:href="#icon-close"/></svg>
                         </button>
@@ -2224,6 +2331,9 @@
                         Weather
                     </div>
                     <div class="widget-actions">
+                        <button class="widget-btn widget-btn-resize" title="Toggle size">
+                            <svg><use xlink:href="#icon-resize"/></svg>
+                        </button>
                         <button class="widget-btn widget-btn-close">
                             <svg><use xlink:href="#icon-close"/></svg>
                         </button>
@@ -2247,6 +2357,9 @@
                         Contacts
                     </div>
                     <div class="widget-actions">
+                        <button class="widget-btn widget-btn-resize" title="Toggle size">
+                            <svg><use xlink:href="#icon-resize"/></svg>
+                        </button>
                         <button class="widget-btn widget-btn-close">
                             <svg><use xlink:href="#icon-close"/></svg>
                         </button>
@@ -2357,16 +2470,18 @@
             return false;
         }
 
-        // Widget controls - improved to handle expand/collapse and proper removal
+        // Widget controls - improved to handle expand/collapse, resize, and proper removal
         function initializeWidgetControls() {
             document.querySelectorAll('.widget-btn').forEach(btn => {
                 btn.addEventListener('click', function(e) {
                     e.stopPropagation();
                     const widget = this.closest('.widget');
-                    const icon = this.querySelector('use').getAttribute('xlink:href');
+                    const icon = this.querySelector('use')?.getAttribute('xlink:href');
 
                     if (icon === '#icon-close' || this.classList.contains('widget-btn-close')) {
                         removeWidget(widget);
+                    } else if (icon === '#icon-resize' || this.classList.contains('widget-btn-resize')) {
+                        toggleWidgetSize(widget);
                     } else if (icon === '#icon-collapse') {
                         const content = widget.querySelector('.widget-content');
                         content.style.display = 'none';
@@ -2380,6 +2495,14 @@
                     }
                 });
             });
+        }
+
+        // Toggle widget size between normal and large (2x wide)
+        function toggleWidgetSize(widget) {
+            widget.classList.toggle('large');
+
+            // Animate the transition
+            widget.style.transition = 'all 0.3s ease';
         }
 
         // Remove widget and store its HTML for later restoration
@@ -2521,6 +2644,18 @@
             // Re-initialize controls for this widget
             initializeWidgetControlsForElement(widget);
 
+            // Initialize navigation for this widget
+            const widgetType = widget.getAttribute('data-widget-type');
+            const targetPage = widgetPageMap[widgetType];
+            if (targetPage) {
+                widget.querySelector('.widget-content')?.addEventListener('click', function(e) {
+                    if (!e.target.closest('button, input, textarea, select, a')) {
+                        window.location.href = targetPage;
+                    }
+                });
+                widget.querySelector('.widget-content')?.classList.add('clickable');
+            }
+
             // Update widget library status
             updateWidgetLibrary();
         }
@@ -2550,10 +2685,13 @@
                             ${name}
                         </div>
                         <div class="widget-actions">
-                            <button class="widget-btn">
-                                <svg><use xlink:href="#icon-expand"/></svg>
-                            </button>
-                            <button class="widget-btn widget-btn-close">
+                        <button class="widget-btn widget-btn-resize" title="Toggle size">
+                            <svg><use xlink:href="#icon-resize"/></svg>
+                        </button>
+                        <button class="widget-btn">
+                            <svg><use xlink:href="#icon-expand"/></svg>
+                        </button>
+                        <button class="widget-btn widget-btn-close">
                                 <svg><use xlink:href="#icon-close"/></svg>
                             </button>
                         </div>
@@ -2578,6 +2716,8 @@
 
                     if (icon === '#icon-close' || this.classList.contains('widget-btn-close')) {
                         removeWidget(widget);
+                    } else if (icon === '#icon-resize' || this.classList.contains('widget-btn-resize')) {
+                        toggleWidgetSize(widget);
                     } else if (icon === '#icon-collapse') {
                         const content = widget.querySelector('.widget-content');
                         content.style.display = 'none';
@@ -2633,8 +2773,64 @@
             window.location.href = 'characters.html';
         }
 
+        // Widget navigation - map widget types to their corresponding pages
+        const widgetPageMap = {
+            'call-sheet': 'dashboard.html',
+            'chair-timer': null, // Interactive widget, stays on dashboard
+            'cast-today': 'characters.html',
+            'scene-requirements': 'generate-breakdown.html',
+            'dept-budget': 'budget-system.html',
+            'quick-actions': null, // Has its own internal links
+            'schedule': 'dashboard.html',
+            'script-sides': 'script-breakdown.html',
+            'dood': 'dashboard.html',
+            'actor-queue': 'characters.html',
+            'continuity-quick': 'continuity.html',
+            'product-tracker': 'budget-system.html',
+            'main-cast': 'characters.html',
+            'cast-allergies': 'characters.html',
+            'character-looks': 'characters.html',
+            'special-fx': 'generate-breakdown.html',
+            'breakdown-progress': 'generate-breakdown.html',
+            'quick-changes': 'generate-breakdown.html',
+            'expense-quick': 'budget-system.html',
+            'timesheet-status': 'timesheet-system.html',
+            'team-schedule': 'dashboard.html',
+            'efficiency': 'dashboard.html',
+            'daily-report': 'dashboard.html',
+            'weekly-overview': 'dashboard.html',
+            'prep-list': 'dashboard.html',
+            'notes': null,
+            'weather': null,
+            'contacts': null
+        };
+
+        // Make widgets clickable to navigate to their corresponding pages
+        function initializeWidgetNavigation() {
+            document.querySelectorAll('.widget').forEach(widget => {
+                const widgetType = widget.getAttribute('data-widget-type');
+                const targetPage = widgetPageMap[widgetType];
+
+                if (targetPage) {
+                    // Make widget content clickable (but not the header buttons)
+                    widget.querySelector('.widget-content')?.addEventListener('click', function(e) {
+                        // Don't navigate if clicking on interactive elements
+                        if (!e.target.closest('button, input, textarea, select, a')) {
+                            window.location.href = targetPage;
+                        }
+                    });
+
+                    // Add hover effect to indicate clickability
+                    widget.querySelector('.widget-content')?.classList.add('clickable');
+                }
+            });
+        }
+
         // Initialize
         loadProjectData();
+
+        // Initialize widget navigation after a short delay to ensure DOM is ready
+        setTimeout(initializeWidgetNavigation, 100);
     </script>
 </body>
 </html>
