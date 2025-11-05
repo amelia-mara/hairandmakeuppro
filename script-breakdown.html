@@ -24,7 +24,18 @@
             --error: #ff6b6b;
             --warning: #e8a87c;
             
-            /* Tag Colors (Movie Magic style) */
+            /* Scene Type Colors */
+            --int-day: rgba(255, 255, 255, 0.15);
+            --ext-day: rgba(251, 191, 36, 0.15);
+            --int-night: rgba(52, 211, 153, 0.15);
+            --ext-night: rgba(56, 189, 248, 0.15);
+            
+            --int-day-border: rgba(255, 255, 255, 0.3);
+            --ext-day-border: rgba(251, 191, 36, 0.4);
+            --int-night-border: rgba(52, 211, 153, 0.4);
+            --ext-night-border: rgba(56, 189, 248, 0.4);
+            
+            /* Tag Colors */
             --tag-cast: #fbbf24;
             --tag-extras: #f59e0b;
             --tag-wardrobe: #34d399;
@@ -35,6 +46,24 @@
             --tag-stunts: #ef4444;
             --tag-locations: #10b981;
             --tag-notes: #6b7280;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(13, 11, 10, 0.4);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(138, 127, 115, 0.3);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(138, 127, 115, 0.5);
         }
         
         body {
@@ -54,14 +83,20 @@
         /* Top Bar */
         .top-bar {
             height: 56px;
-            background: linear-gradient(135deg, rgba(212, 175, 122, 0.08) 0%, rgba(18, 16, 14, 0.85) 50%, rgba(212, 175, 122, 0.05) 100%);
-            backdrop-filter: blur(24px);
+            background: 
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 0%, transparent 100%),
+                linear-gradient(135deg, rgba(212, 175, 122, 0.08) 0%, rgba(18, 16, 14, 0.85) 50%, rgba(212, 175, 122, 0.05) 100%);
+            backdrop-filter: blur(24px) saturate(180%);
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
             border-bottom: 1px solid var(--glass-border);
             display: flex;
             align-items: center;
             justify-content: space-between;
             padding: 0 24px;
             z-index: 100;
+            box-shadow: 
+                var(--shadow-sm),
+                inset 0 1px 0 rgba(255, 255, 255, 0.05);
         }
         
         .nav-section {
@@ -186,13 +221,19 @@
         
         /* Left Sidebar - Scenes */
         .left-sidebar {
-            width: 300px;
-            background: var(--glass-bg);
-            backdrop-filter: blur(24px);
+            width: 340px;
+            background: 
+                linear-gradient(to right, rgba(255, 255, 255, 0.02) 0%, transparent 100%),
+                linear-gradient(135deg, rgba(212, 175, 122, 0.06) 0%, rgba(18, 16, 14, 0.85) 50%, rgba(212, 175, 122, 0.03) 100%);
+            backdrop-filter: blur(24px) saturate(180%);
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
             border-right: 1px solid var(--glass-border);
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            box-shadow: 
+                var(--shadow-sm),
+                inset 1px 0 0 rgba(255, 255, 255, 0.03);
         }
         
         .sidebar-header { 
@@ -210,6 +251,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            letter-spacing: 0.05em;
         }
         
         .scene-count {
@@ -243,25 +285,81 @@
         }
         
         .scene-item {
-            background: rgba(28, 25, 22, 0.4);
+            background: 
+                linear-gradient(135deg, rgba(212, 175, 122, 0.04) 0%, rgba(28, 25, 22, 0.5) 50%, rgba(212, 175, 122, 0.02) 100%);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             border: 1px solid var(--glass-border);
-            border-radius: 8px;
+            border-radius: 10px;
             padding: 14px;
             margin-bottom: 8px;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+        }
+
+        /* Scene type color coding */
+        .scene-item.int-day {
+            background: linear-gradient(135deg, var(--int-day) 0%, rgba(28, 25, 22, 0.5) 50%, rgba(212, 175, 122, 0.02) 100%);
+            border-left: 3px solid var(--int-day-border);
+        }
+
+        .scene-item.ext-day {
+            background: linear-gradient(135deg, var(--ext-day) 0%, rgba(28, 25, 22, 0.5) 50%, rgba(212, 175, 122, 0.02) 100%);
+            border-left: 3px solid var(--ext-day-border);
+        }
+
+        .scene-item.int-night {
+            background: linear-gradient(135deg, var(--int-night) 0%, rgba(28, 25, 22, 0.5) 50%, rgba(212, 175, 122, 0.02) 100%);
+            border-left: 3px solid var(--int-night-border);
+        }
+
+        .scene-item.ext-night {
+            background: linear-gradient(135deg, var(--ext-night) 0%, rgba(28, 25, 22, 0.5) 50%, rgba(212, 175, 122, 0.02) 100%);
+            border-left: 3px solid var(--ext-night-border);
         }
         
-        .scene-item:hover { 
-            border-color: var(--accent-gold); 
-            background: rgba(201, 169, 97, 0.08);
-            transform: translateX(2px); 
+        .scene-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(212, 175, 122, 0.3), transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
         }
         
-        .scene-item.active { 
-            border-color: var(--accent-gold); 
-            background: rgba(201, 169, 97, 0.15); 
-            box-shadow: 0 0 20px rgba(201, 169, 97, 0.1);
+        .scene-item:hover {
+            border-color: var(--accent-gold);
+            background: 
+                linear-gradient(135deg, rgba(212, 175, 122, 0.12) 0%, rgba(35, 31, 27, 0.65) 50%, rgba(212, 175, 122, 0.08) 100%);
+            transform: translateX(4px);
+            box-shadow: 
+                var(--shadow-sm),
+                inset 0 1px 0 rgba(255, 255, 255, 0.08),
+                0 0 20px rgba(212, 175, 122, 0.15);
+        }
+        
+        .scene-item:hover::before {
+            opacity: 1;
+        }
+        
+        .scene-item.active {
+            border-color: var(--accent-gold);
+            background: 
+                linear-gradient(135deg, rgba(212, 175, 122, 0.15) 0%, rgba(35, 31, 27, 0.7) 50%, rgba(212, 175, 122, 0.1) 100%);
+            box-shadow: 
+                var(--shadow-sm),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1),
+                0 0 25px rgba(212, 175, 122, 0.2);
+        }
+        
+        .scene-item.active::before {
+            opacity: 1;
         }
         
         .scene-header {
@@ -306,11 +404,75 @@
             gap: 8px;
             font-size: 0.75em;
             color: var(--text-muted);
+            margin-bottom: 8px;
         }
         
         .element-count {
             color: var(--accent-blue);
             font-weight: 500;
+        }
+        
+        /* Scene Tags Display */
+        .scene-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 8px;
+        }
+        
+        .scene-tag-chip {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.625em;
+            font-weight: 600;
+            color: #000;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+        
+        .scene-tag-chip.cast { background: var(--tag-cast); }
+        .scene-tag-chip.extras { background: var(--tag-extras); }
+        .scene-tag-chip.wardrobe { background: var(--tag-wardrobe); }
+        .scene-tag-chip.makeup { background: var(--tag-makeup); }
+        .scene-tag-chip.props { background: var(--tag-props); }
+        .scene-tag-chip.vehicles { background: var(--tag-vehicles); }
+        .scene-tag-chip.sfx { background: var(--tag-sfx); }
+        .scene-tag-chip.stunts { background: var(--tag-stunts); }
+        .scene-tag-chip.locations { background: var(--tag-locations); }
+        .scene-tag-chip.notes { background: var(--tag-notes); }
+
+        .scene-type-indicator {
+            font-size: 0.625em;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .scene-type-indicator.int-day {
+            background: var(--int-day);
+            border: 1px solid var(--int-day-border);
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .scene-type-indicator.ext-day {
+            background: var(--ext-day);
+            border: 1px solid var(--ext-day-border);
+            color: #0a0908;
+        }
+
+        .scene-type-indicator.int-night {
+            background: var(--int-night);
+            border: 1px solid var(--int-night-border);
+            color: #0a0908;
+        }
+
+        .scene-type-indicator.ext-night {
+            background: var(--ext-night);
+            border: 1px solid var(--ext-night-border);
+            color: #0a0908;
         }
         
         /* Center Panel - Script View */
@@ -431,52 +593,86 @@
             text-transform: uppercase;
         }
         
-        /* Highlighted elements */
-        .highlighted-cast {
-            background: rgba(251, 191, 36, 0.3);
+        /* Highlighted elements in script */
+        .highlight {
+            cursor: pointer;
+            padding: 2px 3px;
+            margin: 0 -3px;
+            border-radius: 3px;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+        
+        .highlight:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .highlight.cast {
+            background: rgba(251, 191, 36, 0.35);
             border-bottom: 2px solid var(--tag-cast);
-            padding: 0 2px;
         }
         
-        .highlighted-props {
-            background: rgba(251, 146, 60, 0.3);
-            border-bottom: 2px solid var(--tag-props);
-            padding: 0 2px;
+        .highlight.extras {
+            background: rgba(245, 158, 11, 0.35);
+            border-bottom: 2px solid var(--tag-extras);
         }
         
-        .highlighted-wardrobe {
-            background: rgba(52, 211, 153, 0.3);
+        .highlight.wardrobe {
+            background: rgba(52, 211, 153, 0.35);
             border-bottom: 2px solid var(--tag-wardrobe);
-            padding: 0 2px;
         }
         
-        .highlighted-vehicles {
-            background: rgba(56, 189, 248, 0.3);
+        .highlight.makeup {
+            background: rgba(255, 107, 157, 0.35);
+            border-bottom: 2px solid var(--tag-makeup);
+        }
+        
+        .highlight.props {
+            background: rgba(251, 146, 60, 0.35);
+            border-bottom: 2px solid var(--tag-props);
+        }
+        
+        .highlight.vehicles {
+            background: rgba(56, 189, 248, 0.35);
             border-bottom: 2px solid var(--tag-vehicles);
-            padding: 0 2px;
         }
         
-        .highlighted-locations {
-            background: rgba(16, 185, 129, 0.3);
-            border-bottom: 2px solid var(--tag-locations);
-            padding: 0 2px;
-        }
-        
-        .highlighted-sfx {
-            background: rgba(139, 92, 246, 0.3);
+        .highlight.sfx {
+            background: rgba(139, 92, 246, 0.35);
             border-bottom: 2px solid var(--tag-sfx);
-            padding: 0 2px;
+        }
+        
+        .highlight.stunts {
+            background: rgba(239, 68, 68, 0.35);
+            border-bottom: 2px solid var(--tag-stunts);
+        }
+        
+        .highlight.locations {
+            background: rgba(16, 185, 129, 0.35);
+            border-bottom: 2px solid var(--tag-locations);
+        }
+        
+        .highlight.notes {
+            background: rgba(107, 114, 128, 0.35);
+            border-bottom: 2px solid var(--tag-notes);
         }
         
         /* Right Sidebar - Tags */
         .right-sidebar {
             width: 320px;
-            background: var(--glass-bg);
-            backdrop-filter: blur(24px);
+            background: 
+                linear-gradient(to left, rgba(255, 255, 255, 0.02) 0%, transparent 100%),
+                linear-gradient(135deg, rgba(212, 175, 122, 0.06) 0%, rgba(18, 16, 14, 0.85) 50%, rgba(212, 175, 122, 0.03) 100%);
+            backdrop-filter: blur(24px) saturate(180%);
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
             border-left: 1px solid var(--glass-border);
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            box-shadow: 
+                var(--shadow-sm),
+                inset -1px 0 0 rgba(255, 255, 255, 0.03);
         }
         
         .tag-categories {
@@ -515,13 +711,23 @@
         }
         
         .category-icon {
-            width: 20px;
-            height: 20px;
-            border-radius: 4px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
+        }
+        
+        .category-count {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-light);
+            padding: 2px 6px;
+            border-radius: 8px;
             font-size: 0.75em;
+            font-weight: 600;
+            margin-left: auto;
+            margin-right: 8px;
         }
         
         .category-expand {
@@ -578,16 +784,25 @@
             justify-content: space-between;
             align-items: center;
             transition: all 0.2s ease;
+            cursor: pointer;
         }
         
         .tag-item:hover {
             border-color: var(--accent-gold);
             background: rgba(201, 169, 97, 0.05);
+            transform: translateX(2px);
         }
         
         .tag-item.ai-detected {
             border-color: var(--accent-blue);
             background: rgba(102, 126, 234, 0.1);
+        }
+        
+        .tag-item-text {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
         
         .tag-badge {
@@ -599,6 +814,27 @@
             border-radius: 4px;
             font-size: 0.625em;
             color: var(--accent-blue);
+        }
+        
+        .tag-remove {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 1.25em;
+            padding: 0;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+        
+        .tag-remove:hover {
+            background: rgba(255, 107, 107, 0.2);
+            color: var(--error);
         }
         
         /* Script Import Modal */
@@ -811,6 +1047,92 @@
             box-shadow: 0 4px 12px rgba(212, 175, 122, 0.3);
         }
         
+        /* Manual Tag Modal */
+        .manual-tag-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+            z-index: 2500;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .manual-tag-modal.active {
+            display: flex;
+        }
+        
+        .manual-tag-content {
+            background: var(--glass-bg);
+            backdrop-filter: blur(30px);
+            border: 1px solid var(--accent-gold);
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(212, 175, 122, 0.2);
+        }
+        
+        .manual-tag-title {
+            font-size: 1.125em;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+        
+        .manual-tag-input {
+            width: 100%;
+            padding: 10px 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            color: var(--text-light);
+            font-size: 0.875em;
+            margin-bottom: 16px;
+        }
+        
+        .manual-tag-input:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+        }
+        
+        .category-selector {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .category-option {
+            padding: 10px;
+            background: rgba(28, 25, 22, 0.4);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8125em;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+        
+        .category-option:hover {
+            border-color: var(--accent-gold);
+            background: rgba(201, 169, 97, 0.05);
+        }
+        
+        .category-option.selected {
+            border-color: var(--accent-gold);
+            background: rgba(201, 169, 97, 0.15);
+        }
+        
+        .manual-tag-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+        
         /* Empty State */
         .empty-state {
             display: flex;
@@ -825,7 +1147,7 @@
         .empty-icon {
             font-size: 3em;
             margin-bottom: 16px;
-            opacity: 0.5;
+            opacity: 0.2;
         }
         
         .empty-title {
@@ -837,6 +1159,41 @@
         .empty-desc {
             font-size: 0.875em;
             color: var(--text-muted);
+        }
+        
+        /* Selection Toolbar */
+        .selection-toolbar {
+            display: none;
+            position: fixed;
+            background: var(--glass-bg);
+            backdrop-filter: blur(30px);
+            border: 1px solid var(--accent-gold);
+            border-radius: 8px;
+            padding: 8px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            gap: 4px;
+        }
+        
+        .selection-toolbar.active {
+            display: flex;
+        }
+        
+        .selection-btn {
+            padding: 6px 10px;
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-light);
+            font-size: 0.75em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+        
+        .selection-btn:hover {
+            border-color: var(--accent-gold);
+            background: rgba(201, 169, 97, 0.1);
         }
     </style>
 </head>
@@ -850,21 +1207,31 @@
             </div>
             <div class="toolbar">
                 <button class="toolbar-btn ai" onclick="runAIAnalysis()">
-                    🤖 AI Analyze
+                    AI Analyze
                 </button>
                 <button class="toolbar-btn" onclick="openImportModal()">
-                    📄 Import Script
+                    Import Script
                 </button>
             </div>
         </div>
         
         <!-- AI Analysis Progress -->
         <div class="ai-progress" id="aiProgress">
-            <div class="ai-progress-title">🤖 AI Analysis in Progress</div>
+            <div class="ai-progress-title">AI Analysis in Progress</div>
             <div class="ai-progress-status" id="aiStatus">Analyzing scene 1 of 10...</div>
             <div class="ai-progress-bar">
                 <div class="ai-progress-fill" id="aiProgressFill"></div>
             </div>
+        </div>
+        
+        <!-- Selection Toolbar -->
+        <div class="selection-toolbar" id="selectionToolbar">
+            <button class="selection-btn" onclick="tagSelection('cast')">Cast</button>
+            <button class="selection-btn" onclick="tagSelection('props')">Props</button>
+            <button class="selection-btn" onclick="tagSelection('wardrobe')">Wardrobe</button>
+            <button class="selection-btn" onclick="tagSelection('vehicles')">Vehicle</button>
+            <button class="selection-btn" onclick="tagSelection('sfx')">SFX</button>
+            <button class="selection-btn" onclick="tagSelection('stunts')">Stunt</button>
         </div>
         
         <!-- Main Content -->
@@ -880,7 +1247,7 @@
                 </div>
                 <div class="scene-list" id="sceneList">
                     <div class="empty-state">
-                        <div class="empty-icon">📝</div>
+                        <div class="empty-icon">—</div>
                         <div class="empty-desc">No scenes yet</div>
                     </div>
                 </div>
@@ -895,15 +1262,15 @@
                         <button class="view-btn">Strips</button>
                     </div>
                     <div class="view-controls">
-                        <button class="view-btn" onclick="zoomIn()">🔍+</button>
-                        <button class="view-btn" onclick="zoomOut()">🔍-</button>
+                        <button class="view-btn" onclick="zoomIn()">Zoom In</button>
+                        <button class="view-btn" onclick="zoomOut()">Zoom Out</button>
                     </div>
                 </div>
-                <div class="script-viewer">
+                <div class="script-viewer" id="scriptViewer">
                     <div class="script-container">
                         <div class="script-content" id="scriptContent">
                             <div class="empty-state">
-                                <div class="empty-icon">📄</div>
+                                <div class="empty-icon">—</div>
                                 <div class="empty-title">No Script Loaded</div>
                                 <div class="empty-desc">Import your screenplay to begin the breakdown process</div>
                             </div>
@@ -928,7 +1295,7 @@
     <div class="import-modal" id="importModal">
         <div class="import-content">
             <div class="import-header">
-                <div class="import-title">📝 Import Screenplay</div>
+                <div class="import-title">Import Screenplay</div>
                 <button class="close-btn" onclick="closeImportModal()">×</button>
             </div>
             
@@ -936,13 +1303,13 @@
                 <div class="import-editor">
                     <div class="import-toolbar">
                         <button class="import-tool-btn ai" onclick="aiCleanup()">
-                            🤖 AI Cleanup
+                            AI Cleanup
                         </button>
                         <button class="import-tool-btn" onclick="fixFormatting()">
-                            🎬 Fix Format
+                            Fix Format
                         </button>
                         <button class="import-tool-btn" onclick="clearInput()">
-                            🗑️ Clear
+                            Clear
                         </button>
                     </div>
                     <textarea class="script-input" id="scriptInput" placeholder="Paste your screenplay here...
@@ -991,6 +1358,21 @@ This is it. Today's the day."></textarea>
         </div>
     </div>
     
+    <!-- Manual Tag Modal -->
+    <div class="manual-tag-modal" id="manualTagModal">
+        <div class="manual-tag-content">
+            <div class="manual-tag-title">Add Breakdown Element</div>
+            <input type="text" class="manual-tag-input" id="manualTagInput" placeholder="Enter element name...">
+            <div class="category-selector" id="categorySelector">
+                <!-- Category options will be populated here -->
+            </div>
+            <div class="manual-tag-actions">
+                <button class="import-btn" onclick="closeManualTagModal()">Cancel</button>
+                <button class="import-btn primary" onclick="confirmManualTag()">Add Tag</button>
+            </div>
+        </div>
+    </div>
+    
     <script>
         // Global variables
         let currentProject = null;
@@ -998,7 +1380,10 @@ This is it. Today's the day."></textarea>
         let characters = new Set();
         let currentScene = 0;
         let sceneElements = {}; // Store AI-detected elements for each scene
+        let manualTags = {}; // Store manually added tags by scene
         let scriptText = ''; // Store the full script text
+        let selectedText = ''; // Store selected text for tagging
+        let selectedCategoryForManual = null;
         
         // Tag categories with detection patterns
         const tagCategories = [
@@ -1012,7 +1397,7 @@ This is it. Today's the day."></textarea>
                 id: 'extras', 
                 name: 'Extras/Background', 
                 color: '#f59e0b',
-                patterns: ['crowd', 'pedestrians', 'customers', 'patrons', 'guests', 'party-goers', 'audience', 'spectators', 'bystanders']
+                patterns: ['crowd', 'pedestrians', 'customers', 'patrons', 'guests', 'party-goers', 'audience', 'spectators', 'bystanders', 'people', 'group']
             },
             { 
                 id: 'wardrobe', 
@@ -1064,12 +1449,40 @@ This is it. Today's the day."></textarea>
             }
         ];
         
+        // Detect scene type from heading
+        function getSceneType(heading) {
+            const headingUpper = heading.toUpperCase();
+            const isInt = headingUpper.includes('INT.');
+            const isExt = headingUpper.includes('EXT.');
+            const isDay = headingUpper.includes('DAY') || headingUpper.includes('MORNING') || headingUpper.includes('AFTERNOON');
+            const isNight = headingUpper.includes('NIGHT') || headingUpper.includes('EVENING') || headingUpper.includes('DUSK');
+            
+            if (isInt && isDay) return 'int-day';
+            if (isExt && isDay) return 'ext-day';
+            if (isInt && isNight) return 'int-night';
+            if (isExt && isNight) return 'ext-night';
+            
+            // Default to int-day if unclear
+            return 'int-day';
+        }
+
+        // Get scene type label
+        function getSceneTypeLabel(sceneType) {
+            switch(sceneType) {
+                case 'int-day': return 'INT / DAY';
+                case 'ext-day': return 'EXT / DAY';
+                case 'int-night': return 'INT / NIGHT';
+                case 'ext-night': return 'EXT / NIGHT';
+                default: return '';
+            }
+        }
+        
         // Initialize
         function init() {
             currentProject = JSON.parse(localStorage.getItem('currentProject') || 'null');
             
             if (!currentProject) {
-                currentProject = { name: 'undefined' };
+                currentProject = { name: 'Untitled Project' };
             }
             
             document.getElementById('projectTitle').textContent = currentProject.name + ' - Script Breakdown';
@@ -1077,16 +1490,83 @@ This is it. Today's the day."></textarea>
             // Initialize tag categories
             initializeTagCategories();
             
+            // Setup text selection handler
+            setupTextSelection();
+            
             // Check if script exists
             if (!currentProject.scriptContent) {
                 setTimeout(() => openImportModal(), 500);
             } else {
                 loadScript(currentProject.scriptContent);
+                // Load saved elements if they exist
+                if (currentProject.sceneElements) {
+                    sceneElements = currentProject.sceneElements;
+                    manualTags = currentProject.manualTags || {};
+                    renderSceneList();
+                    populateAllElements();
+                    highlightScriptElements();
+                }
             }
             
             // Setup event listeners
             document.getElementById('sceneSearch').addEventListener('input', handleSceneSearch);
             document.getElementById('scriptInput').addEventListener('input', debounce(analyzeInput, 300));
+        }
+        
+        // Setup text selection handler
+        function setupTextSelection() {
+            const scriptViewer = document.getElementById('scriptViewer');
+            const toolbar = document.getElementById('selectionToolbar');
+            
+            scriptViewer.addEventListener('mouseup', (e) => {
+                const selection = window.getSelection();
+                const text = selection.toString().trim();
+                
+                if (text && text.length > 0 && text.length < 100) {
+                    selectedText = text;
+                    
+                    // Position toolbar near selection
+                    const range = selection.getRangeAt(0);
+                    const rect = range.getBoundingClientRect();
+                    
+                    toolbar.style.left = rect.left + (rect.width / 2) - (toolbar.offsetWidth / 2) + 'px';
+                    toolbar.style.top = rect.top - 50 + window.scrollY + 'px';
+                    toolbar.classList.add('active');
+                } else {
+                    toolbar.classList.remove('active');
+                }
+            });
+            
+            document.addEventListener('mousedown', (e) => {
+                if (!toolbar.contains(e.target) && !scriptViewer.contains(e.target)) {
+                    toolbar.classList.remove('active');
+                }
+            });
+        }
+        
+        // Tag selected text
+        function tagSelection(categoryId) {
+            if (!selectedText) return;
+            
+            // Add to manual tags for current scene
+            if (!manualTags[currentScene]) {
+                manualTags[currentScene] = {};
+            }
+            if (!manualTags[currentScene][categoryId]) {
+                manualTags[currentScene][categoryId] = new Set();
+            }
+            
+            manualTags[currentScene][categoryId].add(selectedText);
+            
+            // Hide toolbar
+            document.getElementById('selectionToolbar').classList.remove('active');
+            window.getSelection().removeAllRanges();
+            
+            // Re-render
+            saveProject();
+            populateAllElements();
+            renderSceneList();
+            highlightScriptElements();
         }
         
         // Initialize tag categories
@@ -1100,35 +1580,83 @@ This is it. Today's the day."></textarea>
                 categoryEl.innerHTML = `
                     <div class="category-header" onclick="toggleCategory(this)">
                         <div class="category-title">
-                            <div class="category-icon" style="background: ${category.color}20; color: ${category.color}">
-                                ${category.id === 'cast' ? '👥' : 
-                                  category.id === 'extras' ? '👫' : 
-                                  category.id === 'wardrobe' ? '👔' : 
-                                  category.id === 'makeup' ? '💄' : 
-                                  category.id === 'props' ? '🎭' : 
-                                  category.id === 'vehicles' ? '🚗' : 
-                                  category.id === 'sfx' ? '✨' : 
-                                  category.id === 'stunts' ? '🔥' : 
-                                  category.id === 'locations' ? '📍' : '📝'}
-                            </div>
+                            <div class="category-icon" style="background: ${category.color}"></div>
                             <span>${category.name.toUpperCase()}</span>
                         </div>
-                        <span class="category-expand">+</span>
+                        <span class="category-count" id="count-${category.id}">0</span>
+                        <span class="category-expand">▼</span>
                     </div>
                     <div class="category-content">
                         <div class="tag-list" id="tags-${category.id}">
                             <!-- Tags will be added here -->
                         </div>
-                        <button class="add-tag-btn" onclick="addTag('${category.id}')">+ Add ${category.name}</button>
+                        <button class="add-tag-btn" onclick="openManualTagModal('${category.id}')">+ Add ${category.name}</button>
                     </div>
                 `;
                 container.appendChild(categoryEl);
             });
+            
+            // Setup category selector for manual tags
+            const categorySelector = document.getElementById('categorySelector');
+            categorySelector.innerHTML = tagCategories.map(cat => `
+                <div class="category-option" data-category="${cat.id}" onclick="selectCategory('${cat.id}')">
+                    ${cat.name}
+                </div>
+            `).join('');
         }
         
         // Toggle category expand/collapse
         function toggleCategory(header) {
             header.classList.toggle('collapsed');
+        }
+        
+        // Open manual tag modal
+        function openManualTagModal(categoryId) {
+            selectedCategoryForManual = categoryId;
+            document.getElementById('manualTagModal').classList.add('active');
+            document.getElementById('manualTagInput').value = '';
+            document.getElementById('manualTagInput').focus();
+            
+            // Highlight selected category
+            document.querySelectorAll('.category-option').forEach(opt => {
+                opt.classList.toggle('selected', opt.dataset.category === categoryId);
+            });
+        }
+        
+        // Close manual tag modal
+        function closeManualTagModal() {
+            document.getElementById('manualTagModal').classList.remove('active');
+            selectedCategoryForManual = null;
+        }
+        
+        // Select category in modal
+        function selectCategory(categoryId) {
+            selectedCategoryForManual = categoryId;
+            document.querySelectorAll('.category-option').forEach(opt => {
+                opt.classList.toggle('selected', opt.dataset.category === categoryId);
+            });
+        }
+        
+        // Confirm manual tag
+        function confirmManualTag() {
+            const tagName = document.getElementById('manualTagInput').value.trim();
+            if (!tagName || !selectedCategoryForManual) return;
+            
+            // Add to manual tags for current scene
+            if (!manualTags[currentScene]) {
+                manualTags[currentScene] = {};
+            }
+            if (!manualTags[currentScene][selectedCategoryForManual]) {
+                manualTags[currentScene][selectedCategoryForManual] = new Set();
+            }
+            
+            manualTags[currentScene][selectedCategoryForManual].add(tagName);
+            
+            closeManualTagModal();
+            saveProject();
+            populateAllElements();
+            renderSceneList();
+            highlightScriptElements();
         }
         
         // AI Analysis - Main function
@@ -1145,9 +1673,8 @@ This is it. Today's the day."></textarea>
             
             progressEl.classList.add('active');
             
-            // Clear existing AI-detected elements
+            // Clear existing AI-detected elements (but keep manual tags)
             sceneElements = {};
-            clearAllAITags();
             
             // Update cast patterns with detected characters
             const castCategory = tagCategories.find(c => c.id === 'cast');
@@ -1166,11 +1693,11 @@ This is it. Today's the day."></textarea>
                 sceneElements[i] = elements;
                 
                 // Simulate processing time for demo
-                await sleep(300);
+                await sleep(200);
             }
             
             // Populate detected elements in sidebar
-            populateAIDetectedElements();
+            populateAllElements();
             
             // Update scene list with element counts
             renderSceneList();
@@ -1178,7 +1705,10 @@ This is it. Today's the day."></textarea>
             // Highlight elements in script view
             highlightScriptElements();
             
-            statusEl.textContent = 'Analysis complete!';
+            // Save to project
+            saveProject();
+            
+            statusEl.textContent = 'Analysis complete';
             setTimeout(() => {
                 progressEl.classList.remove('active');
             }, 1500);
@@ -1249,7 +1779,7 @@ This is it. Today's the day."></textarea>
                 
                 if (category.id === 'props') {
                     // Detect objects being used
-                    const propsRegex = /(?:picks up|holds|grabs|takes|pulls out|draws|brandishes)\s+(?:a |an |the |his |her |their )?([^.]+)/gi;
+                    const propsRegex = /(?:picks up|holds|grabs|takes|pulls out|draws|brandishes|carrying|carries)\s+(?:a |an |the |his |her |their )?([^.]+)/gi;
                     let match;
                     while ((match = propsRegex.exec(content)) !== null) {
                         const prop = match[1].replace(/[,.]$/, '').trim().split(' ').slice(0, 3).join(' ');
@@ -1274,57 +1804,186 @@ This is it. Today's the day."></textarea>
             return elements;
         }
         
-        // Clear all AI-detected tags
-        function clearAllAITags() {
+        // Populate all elements in sidebar (AI + Manual)
+        function populateAllElements() {
+            // Clear all tag containers
             tagCategories.forEach(category => {
                 const container = document.getElementById(`tags-${category.id}`);
                 if (container) {
-                    const aiTags = container.querySelectorAll('.tag-item.ai-detected');
-                    aiTags.forEach(tag => tag.remove());
+                    container.innerHTML = '';
                 }
             });
-        }
-        
-        // Populate AI-detected elements in sidebar
-        function populateAIDetectedElements() {
-            // Aggregate all elements across scenes
+            
+            // Aggregate all elements across all scenes
             const allElements = {};
             
             tagCategories.forEach(category => {
-                allElements[category.id] = new Set();
+                allElements[category.id] = new Map(); // Use Map to track source (AI vs Manual)
             });
             
-            // Collect unique elements from all scenes
+            // Collect AI-detected elements
             Object.values(sceneElements).forEach(sceneData => {
                 Object.entries(sceneData).forEach(([categoryId, elements]) => {
                     elements.forEach(element => {
-                        allElements[categoryId].add(element);
+                        if (!allElements[categoryId].has(element)) {
+                            allElements[categoryId].set(element, 'ai');
+                        }
+                    });
+                });
+            });
+            
+            // Collect manual tags
+            Object.values(manualTags).forEach(sceneData => {
+                Object.entries(sceneData).forEach(([categoryId, elements]) => {
+                    elements.forEach(element => {
+                        allElements[categoryId].set(element, 'manual');
                     });
                 });
             });
             
             // Add elements to UI
-            Object.entries(allElements).forEach(([categoryId, elements]) => {
+            Object.entries(allElements).forEach(([categoryId, elementsMap]) => {
                 const container = document.getElementById(`tags-${categoryId}`);
-                if (container && elements.size > 0) {
-                    elements.forEach(element => {
-                        const tagEl = document.createElement('div');
-                        tagEl.className = 'tag-item ai-detected';
-                        tagEl.innerHTML = `
-                            <span>${element}</span>
-                            <span class="tag-badge">🤖 AI</span>
-                            <button onclick="this.parentElement.remove()" style="background: none; border: none; color: var(--text-muted); cursor: pointer;">×</button>
-                        `;
-                        container.appendChild(tagEl);
-                    });
+                const countEl = document.getElementById(`count-${categoryId}`);
+                
+                if (container) {
+                    if (elementsMap.size === 0) {
+                        countEl.textContent = '0';
+                    } else {
+                        countEl.textContent = elementsMap.size;
+                        
+                        Array.from(elementsMap.entries()).forEach(([element, source]) => {
+                            const tagEl = document.createElement('div');
+                            tagEl.className = `tag-item ${source === 'ai' ? 'ai-detected' : ''}`;
+                            tagEl.innerHTML = `
+                                <div class="tag-item-text" onclick="highlightTagInScript('${categoryId}', '${element.replace(/'/g, "\\'")}')">
+                                    <span>${element}</span>
+                                    ${source === 'ai' ? '<span class="tag-badge">AI</span>' : ''}
+                                </div>
+                                <button class="tag-remove" onclick="removeTag('${categoryId}', '${element.replace(/'/g, "\\'")}')">×</button>
+                            `;
+                            container.appendChild(tagEl);
+                        });
+                    }
+                }
+            });
+        }
+        
+        // Remove a tag
+        function removeTag(categoryId, element) {
+            // Remove from all scenes
+            Object.keys(sceneElements).forEach(sceneIdx => {
+                if (sceneElements[sceneIdx][categoryId]) {
+                    sceneElements[sceneIdx][categoryId].delete(element);
+                }
+            });
+            
+            Object.keys(manualTags).forEach(sceneIdx => {
+                if (manualTags[sceneIdx] && manualTags[sceneIdx][categoryId]) {
+                    manualTags[sceneIdx][categoryId].delete(element);
+                }
+            });
+            
+            saveProject();
+            populateAllElements();
+            renderSceneList();
+            highlightScriptElements();
+        }
+        
+        // Highlight tag in script
+        function highlightTagInScript(categoryId, element) {
+            const highlights = document.querySelectorAll(`.highlight.${categoryId}`);
+            highlights.forEach(hl => {
+                if (hl.textContent.toLowerCase().includes(element.toLowerCase())) {
+                    hl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    hl.style.animation = 'pulse 1s ease';
+                    setTimeout(() => {
+                        hl.style.animation = '';
+                    }, 1000);
                 }
             });
         }
         
         // Highlight elements in script view
         function highlightScriptElements() {
-            // This would apply highlighting to detected elements in the script view
-            // For now, we'll keep the script display clean but this could be enhanced
+            if (scenes.length === 0) return;
+            
+            // Re-render script with highlights
+            const container = document.getElementById('scriptContent');
+            const lines = scriptText.split('\n');
+            let html = '';
+            let inScene = false;
+            let currentSceneIdx = 0;
+            
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                const trimmed = line.trim();
+                
+                // Check if this is a scene heading
+                const isSceneHeading = scenes.some(s => s.lineNumber === i);
+                
+                if (isSceneHeading) {
+                    if (inScene) {
+                        html += '</div>'; // Close previous scene
+                    }
+                    html += `<div class="script-scene" id="scene-${scenes[currentSceneIdx].number}">`;
+                    html += `<div class="script-scene-heading">${trimmed}</div>`;
+                    inScene = true;
+                    currentSceneIdx++;
+                } else if (trimmed) {
+                    // Get elements for current scene
+                    let sceneIdx = currentSceneIdx - 1;
+                    let highlightedLine = trimmed;
+                    
+                    // Apply highlights for this scene
+                    if (sceneElements[sceneIdx] || (manualTags[sceneIdx] && Object.keys(manualTags[sceneIdx]).length > 0)) {
+                        tagCategories.forEach(category => {
+                            const aiElements = sceneElements[sceneIdx]?.[category.id] || new Set();
+                            const manualElements = manualTags[sceneIdx]?.[category.id] || new Set();
+                            const allElements = new Set([...aiElements, ...manualElements]);
+                            
+                            allElements.forEach(element => {
+                                const regex = new RegExp(`\\b(${escapeRegex(element)})\\b`, 'gi');
+                                highlightedLine = highlightedLine.replace(regex, `<span class="highlight ${category.id}">$1</span>`);
+                            });
+                        });
+                    }
+                    
+                    // Determine element type
+                    if (trimmed === trimmed.toUpperCase() && trimmed.length < 30 && 
+                        !trimmed.includes('.') && !trimmed.includes(':')) {
+                        // Character name
+                        html += `<div class="script-character">${highlightedLine}</div>`;
+                    } else if (trimmed.startsWith('(') && trimmed.endsWith(')')) {
+                        // Parenthetical
+                        html += `<div class="script-parenthetical">${highlightedLine}</div>`;
+                    } else if (trimmed.includes('CUT TO:') || trimmed.includes('FADE')) {
+                        // Transition
+                        html += `<div class="script-transition">${highlightedLine}</div>`;
+                    } else {
+                        // Dialogue or action - check by context
+                        const prevLine = i > 0 ? lines[i - 1].trim() : '';
+                        if (prevLine && prevLine === prevLine.toUpperCase() && prevLine.length < 30) {
+                            // This is likely dialogue
+                            html += `<div class="script-dialogue">${highlightedLine}</div>`;
+                        } else {
+                            // Action
+                            html += `<div class="script-action">${highlightedLine}</div>`;
+                        }
+                    }
+                }
+            }
+            
+            if (inScene) {
+                html += '</div>'; // Close last scene
+            }
+            
+            container.innerHTML = html || '<div class="empty-state"><div class="empty-icon">—</div><div class="empty-title">Processing...</div></div>';
+        }
+        
+        // Escape regex special characters
+        function escapeRegex(string) {
+            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         }
         
         // Enhanced AI Cleanup
@@ -1553,35 +2212,62 @@ This is it. Today's the day."></textarea>
             saveProject();
         }
         
-        // Render scene list with element counts
+        // Render scene list with tags and color coding
         function renderSceneList() {
             const container = document.getElementById('sceneList');
             
             if (scenes.length === 0) {
-                container.innerHTML = '<div class="empty-state"><div class="empty-icon">📝</div><div class="empty-desc">No scenes detected</div></div>';
+                container.innerHTML = '<div class="empty-state"><div class="empty-icon">—</div><div class="empty-desc">No scenes detected</div></div>';
                 return;
             }
             
             container.innerHTML = scenes.map((scene, index) => {
-                // Count elements for this scene
-                let elementCount = 0;
+                // Collect all tags for this scene
+                const sceneTags = {};
+                
+                // AI tags
                 if (sceneElements[index]) {
-                    Object.values(sceneElements[index]).forEach(set => {
-                        elementCount += set.size;
+                    Object.entries(sceneElements[index]).forEach(([catId, elements]) => {
+                        if (elements.size > 0) {
+                            if (!sceneTags[catId]) sceneTags[catId] = 0;
+                            sceneTags[catId] += elements.size;
+                        }
                     });
                 }
                 
+                // Manual tags
+                if (manualTags[index]) {
+                    Object.entries(manualTags[index]).forEach(([catId, elements]) => {
+                        if (elements.size > 0) {
+                            if (!sceneTags[catId]) sceneTags[catId] = 0;
+                            sceneTags[catId] += elements.size;
+                        }
+                    });
+                }
+                
+                const totalElements = Object.values(sceneTags).reduce((a, b) => a + b, 0);
+                
+                // Get scene type for color coding
+                const sceneType = getSceneType(scene.heading);
+                const sceneTypeLabel = getSceneTypeLabel(sceneType);
+                
+                // Create tag chips
+                const tagChipsHTML = Object.entries(sceneTags).map(([catId, count]) => {
+                    const category = tagCategories.find(c => c.id === catId);
+                    return `<div class="scene-tag-chip ${catId}">${count}</div>`;
+                }).join('');
+                
                 return `
-                    <div class="scene-item ${index === 0 ? 'active' : ''}" onclick="selectScene(${index})">
+                    <div class="scene-item ${sceneType} ${index === currentScene ? 'active' : ''}" onclick="selectScene(${index})">
                         <div class="scene-header">
                             <div class="scene-number">${scene.number}</div>
                             <div class="scene-info">
                                 <div class="scene-heading">${scene.heading}</div>
                                 <div class="scene-meta">
-                                    <span>Page ${Math.ceil(scene.number * 0.8)}</span>
-                                    <span>•</span>
-                                    <span class="${elementCount > 0 ? 'element-count' : ''}">${elementCount} elements</span>
+                                    <span class="scene-type-indicator ${sceneType}">${sceneTypeLabel}</span>
+                                    <span>${totalElements} elements</span>
                                 </div>
+                                ${tagChipsHTML ? `<div class="scene-tags">${tagChipsHTML}</div>` : ''}
                             </div>
                         </div>
                     </div>
@@ -1591,58 +2277,7 @@ This is it. Today's the day."></textarea>
         
         // Render script content
         function renderScript(text) {
-            const container = document.getElementById('scriptContent');
-            const lines = text.split('\n');
-            let html = '';
-            let inScene = false;
-            let currentSceneIdx = 0;
-            
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i];
-                const trimmed = line.trim();
-                
-                // Check if this is a scene heading
-                const isSceneHeading = scenes.some(s => s.lineNumber === i);
-                
-                if (isSceneHeading) {
-                    if (inScene) {
-                        html += '</div>'; // Close previous scene
-                    }
-                    html += `<div class="script-scene" id="scene-${scenes[currentSceneIdx].number}">`;
-                    html += `<div class="script-scene-heading">${trimmed}</div>`;
-                    inScene = true;
-                    currentSceneIdx++;
-                } else if (trimmed) {
-                    // Determine element type
-                    if (trimmed === trimmed.toUpperCase() && trimmed.length < 30 && 
-                        !trimmed.includes('.') && !trimmed.includes(':')) {
-                        // Character name
-                        html += `<div class="script-character">${trimmed}</div>`;
-                    } else if (trimmed.startsWith('(') && trimmed.endsWith(')')) {
-                        // Parenthetical
-                        html += `<div class="script-parenthetical">${trimmed}</div>`;
-                    } else if (trimmed.includes('CUT TO:') || trimmed.includes('FADE')) {
-                        // Transition
-                        html += `<div class="script-transition">${trimmed}</div>`;
-                    } else {
-                        // Dialogue or action - check by context
-                        const prevLine = i > 0 ? lines[i - 1].trim() : '';
-                        if (prevLine && prevLine === prevLine.toUpperCase() && prevLine.length < 30) {
-                            // This is likely dialogue
-                            html += `<div class="script-dialogue">${trimmed}</div>`;
-                        } else {
-                            // Action
-                            html += `<div class="script-action">${trimmed}</div>`;
-                        }
-                    }
-                }
-            }
-            
-            if (inScene) {
-                html += '</div>'; // Close last scene
-            }
-            
-            container.innerHTML = html || '<div class="empty-state"><div class="empty-icon">📄</div><div class="empty-title">Processing...</div></div>';
+            highlightScriptElements();
         }
         
         // Select scene
@@ -1670,23 +2305,6 @@ This is it. Today's the day."></textarea>
             });
         }
         
-        // Add tag
-        function addTag(categoryId) {
-            const category = tagCategories.find(c => c.id === categoryId);
-            const tagName = prompt(`Add ${category.name}:`);
-            
-            if (!tagName) return;
-            
-            const container = document.getElementById(`tags-${categoryId}`);
-            const tagEl = document.createElement('div');
-            tagEl.className = 'tag-item';
-            tagEl.innerHTML = `
-                <span>${tagName}</span>
-                <button onclick="this.parentElement.remove()" style="background: none; border: none; color: var(--text-muted); cursor: pointer;">×</button>
-            `;
-            container.appendChild(tagEl);
-        }
-        
         // Open import modal
         function openImportModal() {
             document.getElementById('importModal').classList.add('active');
@@ -1703,6 +2321,26 @@ This is it. Today's the day."></textarea>
         
         // Save project
         function saveProject() {
+            // Convert Sets to Arrays for storage
+            const serializableElements = {};
+            Object.entries(sceneElements).forEach(([sceneIdx, categories]) => {
+                serializableElements[sceneIdx] = {};
+                Object.entries(categories).forEach(([catId, elements]) => {
+                    serializableElements[sceneIdx][catId] = Array.from(elements);
+                });
+            });
+            
+            const serializableManualTags = {};
+            Object.entries(manualTags).forEach(([sceneIdx, categories]) => {
+                serializableManualTags[sceneIdx] = {};
+                Object.entries(categories).forEach(([catId, elements]) => {
+                    serializableManualTags[sceneIdx][catId] = Array.from(elements);
+                });
+            });
+            
+            currentProject.sceneElements = serializableElements;
+            currentProject.manualTags = serializableManualTags;
+            
             localStorage.setItem('currentProject', JSON.stringify(currentProject));
             
             const projects = JSON.parse(localStorage.getItem('checksHappyProjects') || '[]');
@@ -1743,8 +2381,39 @@ This is it. Today's the day."></textarea>
             return new Promise(resolve => setTimeout(resolve, ms));
         }
         
-        // Initialize
-        init();
+        // Add CSS animation for pulse
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes pulse {
+                0%, 100% { transform: scale(1); }
+                50% { transform: scale(1.05); }
+            }
+        `;
+        document.head.appendChild(style);
+        
+        // Initialize on load with saved data restoration
+        window.addEventListener('load', () => {
+            init();
+            
+            // Restore Sets from Arrays
+            if (currentProject.sceneElements) {
+                Object.entries(currentProject.sceneElements).forEach(([sceneIdx, categories]) => {
+                    if (!sceneElements[sceneIdx]) sceneElements[sceneIdx] = {};
+                    Object.entries(categories).forEach(([catId, elements]) => {
+                        sceneElements[sceneIdx][catId] = new Set(elements);
+                    });
+                });
+            }
+            
+            if (currentProject.manualTags) {
+                Object.entries(currentProject.manualTags).forEach(([sceneIdx, categories]) => {
+                    if (!manualTags[sceneIdx]) manualTags[sceneIdx] = {};
+                    Object.entries(categories).forEach(([catId, elements]) => {
+                        manualTags[sceneIdx][catId] = new Set(elements);
+                    });
+                });
+            }
+        });
     </script>
 </body>
 </html>
