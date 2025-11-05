@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Project Dashboard - Liquid Glass</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <title>The Big Race - Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -13,290 +13,211 @@
         }
 
         :root {
-            /* Warm, Muted Color Palette */
-            --bg-primary: #0d0b0a;
-            --bg-secondary: #1a1612;
-            --bg-card: rgba(36, 32, 25, 0.6);
-            --bg-hover: rgba(36, 32, 25, 0.7);
-            
-            /* Subtle Glass Effects */
-            --glass-bg: rgba(255, 255, 255, 0.02);
-            --glass-border: rgba(255, 255, 255, 0.08);
-            --glass-border-hover: rgba(201, 169, 97, 0.12);
-            --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            --glass-shadow-hover: 0 12px 40px rgba(0, 0, 0, 0.4);
-            
-            /* Softer Text Colors */
+            /* Sophisticated Warm Palette */
+            --bg-dark: #0d0b0a;
+            --bg-medium: rgba(26, 22, 18, 0.7);
+            --card-bg: rgba(36, 32, 25, 0.6);
             --text-primary: #e8e6e3;
-            --text-secondary: #a8a29a;
-            --text-muted: #8a7f73;
-            
-            /* Muted Accent Colors */
+            --text-secondary: #8a7f73;
             --accent-gold: #c9a961;
-            --accent-gold-light: #d0b06a;
-            --accent-gold-dark: #9d8247;
-            --accent-success: #52c186;
-            --accent-warning: #e8a87c;
-            --accent-danger: #cd5c5c;
-            
-            /* Subtle Gradients */
-            --gradient-gold: linear-gradient(135deg, #c9a961, #d0b06a);
-            --gradient-dark: linear-gradient(180deg, rgba(13, 11, 10, 0.9), rgba(26, 22, 18, 0.9));
-            --gradient-glass: linear-gradient(135deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
+            --border: rgba(45, 41, 37, 0.5);
+            --success: #52c186;
+            --warning: #e8a87c;
+            --glass-border: rgba(255, 255, 255, 0.08);
         }
 
-        /* Enhanced Scrollbar */
+        /* Custom Scrollbar */
         ::-webkit-scrollbar {
-            width: 10px;
-            height: 10px;
+            width: 8px;
+            height: 8px;
         }
 
         ::-webkit-scrollbar-track {
-            background: rgba(10, 9, 8, 0.5);
-            border-radius: 5px;
+            background: transparent;
         }
 
         ::-webkit-scrollbar-thumb {
-            background: linear-gradient(180deg, var(--accent-gold-dark), var(--accent-gold));
-            border-radius: 5px;
-            border: 2px solid transparent;
-            background-clip: padding-box;
+            background: rgba(138, 127, 115, 0.2);
+            border-radius: 4px;
         }
 
         ::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(180deg, var(--accent-gold), var(--accent-gold-light));
-            background-clip: padding-box;
+            background: rgba(138, 127, 115, 0.3);
         }
 
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--bg-primary);
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0d0b0a 0%, #1a1612 50%, #0d0b0a 100%);
             color: var(--text-primary);
             min-height: 100vh;
-            overflow-x: hidden;
-            position: relative;
+            font-weight: 400;
+            letter-spacing: -0.01em;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
 
-        /* Animated Background Gradients */
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(ellipse at top left, rgba(201, 169, 97, 0.02) 0%, transparent 50%),
-                        radial-gradient(ellipse at bottom right, rgba(201, 169, 97, 0.015) 0%, transparent 50%),
-                        linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
-            z-index: -1;
-            animation: gradientShift 30s ease-in-out infinite;
-        }
-
-        @keyframes gradientShift {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.9; }
-        }
-
-        /* Layout Container */
-        .app-container {
+        /* Layout */
+        .app-layout {
             display: flex;
             height: 100vh;
-            position: relative;
         }
 
-        /* Enhanced Sidebar with Liquid Glass */
+        /* Sidebar */
         .sidebar {
-            width: 280px;
-            background: rgba(26, 22, 18, 0.7);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
+            width: 260px;
+            background: var(--bg-medium);
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
             border-right: 1px solid var(--glass-border);
             display: flex;
             flex-direction: column;
-            position: relative;
-            z-index: 10;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .sidebar::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: var(--gradient-glass);
-            opacity: 0.5;
-            pointer-events: none;
-        }
-
-        /* Sidebar Header */
         .sidebar-header {
-            padding: 28px 24px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-            position: relative;
-            z-index: 1;
+            padding: 32px 24px 24px;
+            border-bottom: 1px solid var(--glass-border);
         }
 
         .back-btn {
             display: inline-flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             color: var(--text-secondary);
             text-decoration: none;
-            font-size: 0.875rem;
+            font-size: 13px;
             font-weight: 500;
             margin-bottom: 20px;
-            padding: 8px 12px;
-            border-radius: 8px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: color 0.2s ease;
+            opacity: 0.8;
         }
 
         .back-btn:hover {
-            color: var(--accent-gold);
-            background: rgba(201, 169, 97, 0.08);
-            transform: translateX(-2px);
+            color: var(--text-primary);
+            opacity: 1;
+        }
+
+        .back-btn svg {
+            width: 14px;
+            height: 14px;
         }
 
         .project-info h2 {
-            font-size: 1.25rem;
+            font-size: 20px;
             font-weight: 600;
-            margin-bottom: 6px;
-            color: var(--text-primary);
+            margin-bottom: 4px;
             letter-spacing: -0.02em;
         }
 
-        .project-meta {
-            font-size: 0.8125rem;
-            color: var(--text-muted);
+        .project-code {
+            font-size: 12px;
+            color: var(--text-secondary);
             font-weight: 500;
-            letter-spacing: 0.01em;
+            opacity: 0.7;
         }
 
-        /* Navigation Sections */
         .nav-section {
-            padding: 20px 16px;
-            position: relative;
-            z-index: 1;
+            padding: 20px 12px;
+            border-bottom: 1px solid var(--glass-border);
         }
 
-        .nav-section:not(:last-child)::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 24px;
-            right: 24px;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.04), transparent);
-        }
-
-        .nav-title {
-            font-size: 0.6875rem;
+        .nav-section-title {
+            font-size: 11px;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.08em;
-            color: var(--text-muted);
-            margin-bottom: 14px;
-            padding-left: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            padding: 0 12px;
+            opacity: 0.5;
         }
 
         .nav-item {
             display: flex;
             align-items: center;
-            gap: 14px;
-            padding: 12px 14px;
-            margin-bottom: 4px;
-            border-radius: 10px;
+            gap: 12px;
+            padding: 10px 12px;
+            border-radius: 8px;
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            font-size: 0.9rem;
+            transition: all 0.15s ease;
+            margin-bottom: 2px;
+            font-size: 14px;
             color: var(--text-secondary);
             position: relative;
-            overflow: hidden;
-        }
-
-        .nav-item::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 0;
-            height: 100%;
-            background: var(--gradient-gold);
-            opacity: 0.1;
-            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .nav-item:hover {
-            color: var(--text-primary);
             background: rgba(201, 169, 97, 0.05);
-            transform: translateX(2px);
-        }
-
-        .nav-item:hover::before {
-            width: 100%;
+            color: var(--text-primary);
         }
 
         .nav-item.active {
-            color: var(--accent-gold);
             background: rgba(201, 169, 97, 0.1);
+            color: var(--accent-gold);
             font-weight: 500;
         }
 
         .nav-item.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
             width: 3px;
-            opacity: 1;
+            height: 16px;
+            background: var(--accent-gold);
+            border-radius: 2px;
         }
 
         .nav-icon {
-            font-size: 1.25rem;
-            width: 24px;
-            text-align: center;
+            width: 18px;
+            height: 18px;
+            opacity: 0.7;
         }
 
-        /* Main Content Area */
+        .nav-item:hover .nav-icon {
+            opacity: 1;
+        }
+
+        /* Main Content */
         .main-content {
             flex: 1;
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            position: relative;
         }
 
-        /* Enhanced Top Bar */
+        /* Top Bar */
         .top-bar {
-            height: 70px;
-            background: rgba(26, 22, 18, 0.7);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
+            height: 56px;
+            background: var(--bg-medium);
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
             border-bottom: 1px solid var(--glass-border);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 36px;
-            position: relative;
-            z-index: 5;
+            padding: 0 32px;
         }
 
         .view-tabs {
             display: flex;
-            gap: 6px;
-            padding: 4px;
-            background: rgba(10, 9, 8, 0.3);
-            border-radius: 12px;
+            gap: 2px;
+            height: 32px;
+            padding: 2px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
         }
 
         .view-tab {
-            padding: 10px 20px;
+            padding: 0 16px;
             background: transparent;
             border: none;
-            border-radius: 8px;
+            border-radius: 4px;
             color: var(--text-secondary);
             cursor: pointer;
-            font-size: 0.875rem;
+            transition: all 0.15s ease;
+            font-size: 13px;
             font-weight: 500;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
         }
 
         .view-tab:hover {
@@ -304,128 +225,85 @@
         }
 
         .view-tab.active {
+            background: var(--card-bg);
             color: var(--text-primary);
-            background: rgba(201, 169, 97, 0.12);
-            box-shadow: 0 2px 8px rgba(201, 169, 97, 0.15);
         }
 
-        .view-tab.active::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 24px;
-            height: 2px;
-            background: var(--gradient-gold);
-            border-radius: 2px;
-        }
-
-        .top-actions {
+        .top-bar-actions {
             display: flex;
-            gap: 12px;
+            gap: 8px;
+            align-items: center;
         }
 
-        .action-btn {
-            padding: 10px 18px;
-            background: rgba(201, 169, 97, 0.08);
-            border: 1px solid rgba(201, 169, 97, 0.2);
-            border-radius: 10px;
-            color: var(--accent-gold);
+        .layout-btn {
+            padding: 6px 12px;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-secondary);
             cursor: pointer;
-            font-size: 0.875rem;
+            font-size: 13px;
             font-weight: 500;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.15s ease;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
 
-        .action-btn:hover {
-            background: rgba(201, 169, 97, 0.15);
+        .layout-btn:hover {
             border-color: var(--accent-gold);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(201, 169, 97, 0.2);
+            color: var(--accent-gold);
+            background: rgba(201, 169, 97, 0.05);
         }
 
-        /* Dashboard Content */
-        .dashboard-content {
+        .layout-btn svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        /* Dashboard Grid */
+        .dashboard {
             flex: 1;
             overflow-y: auto;
-            padding: 32px;
-            position: relative;
+            padding: 24px;
         }
 
-        /* Enhanced Widget Grid */
-        .widget-grid {
+        .widgets-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-            gap: 24px;
-            animation: fadeIn 0.6s ease-out;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
         }
 
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        /* Liquid Glass Widget Style */
+        /* Widget Styles */
         .widget {
-            background: var(--bg-card);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             border: 1px solid var(--glass-border);
             border-radius: 12px;
             overflow: hidden;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
             cursor: move;
-        }
-
-        .widget::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: var(--gradient-glass);
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            pointer-events: none;
+            transition: all 0.2s ease;
         }
 
         .widget:hover {
+            border-color: rgba(201, 169, 97, 0.2);
             transform: translateY(-2px);
-            border-color: var(--glass-border-hover);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-        }
-
-        .widget:hover::before {
-            opacity: 0.5;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
         }
 
         .widget.dragging {
             opacity: 0.5;
-            transform: scale(0.98);
         }
 
-        /* Widget Header */
         .widget-header {
-            padding: 20px 24px;
-            background: linear-gradient(135deg, rgba(10, 9, 8, 0.2), rgba(20, 17, 15, 0.3));
-            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--glass-border);
             display: flex;
             justify-content: space-between;
             align-items: center;
             cursor: grab;
-            position: relative;
+            background: rgba(26, 22, 18, 0.3);
         }
 
         .widget-header:active {
@@ -435,621 +313,519 @@
         .widget-title {
             display: flex;
             align-items: center;
-            gap: 12px;
-            font-size: 1rem;
+            gap: 10px;
+            font-size: 14px;
             font-weight: 600;
-            color: var(--text-primary);
+            letter-spacing: -0.01em;
         }
 
         .widget-icon {
-            font-size: 1.25rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 32px;
-            height: 32px;
-            background: rgba(201, 169, 97, 0.1);
-            border-radius: 8px;
+            width: 16px;
+            height: 16px;
+            opacity: 0.6;
         }
 
-        .widget-controls {
+        .widget-actions {
             display: flex;
-            gap: 6px;
+            gap: 4px;
         }
 
         .widget-btn {
-            width: 32px;
-            height: 32px;
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            border-radius: 8px;
-            color: var(--text-muted);
+            width: 24px;
+            height: 24px;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
             cursor: pointer;
+            transition: all 0.15s ease;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.875rem;
-            transition: all 0.3s ease;
+            border-radius: 4px;
+            opacity: 0.4;
         }
 
         .widget-btn:hover {
+            opacity: 1;
             background: rgba(201, 169, 97, 0.1);
-            border-color: rgba(201, 169, 97, 0.3);
             color: var(--accent-gold);
-            transform: scale(1.1);
         }
 
-        /* Widget Content */
+        .widget-btn svg {
+            width: 14px;
+            height: 14px;
+        }
+
         .widget-content {
-            padding: 24px;
-            position: relative;
+            padding: 20px;
         }
 
-        /* Stat Items */
-        .stat-item {
+        /* Stat Rows */
+        .stat-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 14px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-            transition: all 0.3s ease;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
         }
 
-        .stat-item:hover {
-            padding-left: 8px;
-            background: rgba(255, 255, 255, 0.01);
-            margin: 0 -8px;
-            padding-right: 16px;
-        }
-
-        .stat-item:last-child {
+        .stat-row:last-child {
             border-bottom: none;
         }
 
         .stat-label {
-            font-size: 0.9rem;
+            font-size: 13px;
             color: var(--text-secondary);
             font-weight: 500;
         }
 
         .stat-value {
-            font-size: 1rem;
+            font-size: 14px;
             font-weight: 600;
             color: var(--text-primary);
         }
 
-        .stat-value.highlight {
-            color: var(--accent-gold);
-        }
-
-        /* Enhanced Progress Bars */
-        .progress-item {
-            margin-top: 20px;
-        }
-
-        .progress-header {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 10px;
+        /* Progress Bars */
+        .progress-section {
+            margin-top: 16px;
         }
 
         .progress-label {
-            font-size: 0.875rem;
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+
+        .progress-label span:first-child {
             color: var(--text-secondary);
             font-weight: 500;
         }
 
-        .progress-value {
-            font-size: 0.875rem;
+        .progress-label span:last-child {
+            color: var(--text-primary);
             font-weight: 600;
-            color: var(--accent-gold);
         }
 
         .progress-bar {
-            height: 8px;
-            background: rgba(10, 9, 8, 0.5);
-            border-radius: 10px;
+            height: 4px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 2px;
             overflow: hidden;
-            position: relative;
         }
 
         .progress-fill {
             height: 100%;
-            background: var(--gradient-gold);
-            border-radius: 10px;
-            transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .progress-fill::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            animation: shimmer 2s infinite;
-        }
-
-        @keyframes shimmer {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
+            background: var(--accent-gold);
+            border-radius: 2px;
+            transition: width 0.3s ease;
         }
 
         .progress-fill.success {
-            background: linear-gradient(135deg, var(--accent-success), #6dd19f);
+            background: var(--success);
         }
 
         .progress-fill.warning {
-            background: linear-gradient(135deg, var(--accent-warning), #f0b890);
+            background: var(--warning);
         }
 
         /* Scene Table */
         .scene-table {
             width: 100%;
-            margin-top: 8px;
+            font-size: 13px;
         }
 
-        .scene-row {
-            display: grid;
-            grid-template-columns: 60px 1fr auto;
-            gap: 16px;
-            padding: 16px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-            transition: all 0.3s ease;
+        .scene-table thead {
+            border-bottom: 1px solid var(--glass-border);
         }
 
-        .scene-row:hover {
-            background: rgba(255, 255, 255, 0.02);
-            padding-left: 8px;
-            margin: 0 -8px;
-            padding-right: 8px;
+        .scene-table th {
+            text-align: left;
+            padding: 10px 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            opacity: 0.6;
         }
 
-        .scene-row:last-child {
+        .scene-table td {
+            padding: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .scene-table tr:last-child td {
             border-bottom: none;
         }
 
         .scene-number {
-            font-size: 1.125rem;
             font-weight: 600;
-            color: var(--accent-gold);
-        }
-
-        .scene-time {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            margin-top: 2px;
+            color: var(--text-primary);
         }
 
         .scene-location {
-            font-size: 0.9rem;
             color: var(--text-primary);
-            align-self: center;
+        }
+
+        .scene-time {
+            color: var(--text-secondary);
+            font-size: 11px;
+            opacity: 0.7;
         }
 
         .scene-status {
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 0.75rem;
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
             font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 0.04em;
-            align-self: center;
-            transition: all 0.3s ease;
+            letter-spacing: 0.02em;
+        }
+
+        .scene-status.shot {
+            background: rgba(82, 193, 134, 0.15);
+            color: var(--success);
         }
 
         .scene-status.ready {
             background: rgba(201, 169, 97, 0.15);
             color: var(--accent-gold);
-            border: 1px solid rgba(201, 169, 97, 0.3);
         }
 
         .scene-status.pending {
-            background: rgba(122, 117, 108, 0.15);
+            background: rgba(138, 127, 115, 0.15);
             color: var(--text-secondary);
-            border: 1px solid rgba(122, 117, 108, 0.3);
-        }
-
-        .scene-status.shot {
-            background: rgba(82, 193, 134, 0.15);
-            color: var(--accent-success);
-            border: 1px solid rgba(82, 193, 134, 0.3);
-        }
-
-        /* Task Items */
-        .task-item {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            padding: 14px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-
-        .task-item:hover {
-            padding-left: 8px;
-            background: rgba(255, 255, 255, 0.02);
-        }
-
-        .task-checkbox {
-            width: 20px;
-            height: 20px;
-            border: 2px solid rgba(201, 169, 97, 0.3);
-            border-radius: 6px;
-            transition: all 0.3s ease;
-            position: relative;
-            flex-shrink: 0;
-        }
-
-        .task-checkbox.checked {
-            background: var(--gradient-gold);
-            border-color: var(--accent-gold);
-        }
-
-        .task-checkbox.checked::after {
-            content: '✓';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: var(--bg-primary);
-            font-size: 0.875rem;
-            font-weight: 600;
-        }
-
-        .task-text {
-            flex: 1;
-            font-size: 0.9rem;
-            color: var(--text-primary);
-            transition: all 0.3s ease;
-        }
-
-        .task-text.completed {
-            text-decoration: line-through;
-            color: var(--text-muted);
         }
 
         /* Character Grid */
         .character-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-            gap: 20px;
-            margin-top: 8px;
-        }
-
-        .character-card {
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .character-card:hover {
-            transform: translateY(-6px) scale(1.05);
+            grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+            gap: 16px;
         }
 
         .character-avatar {
-            width: 72px;
-            height: 72px;
-            margin: 0 auto 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.15s ease;
+        }
+
+        .character-avatar:hover {
+            transform: translateY(-2px);
+        }
+
+        .avatar {
+            width: 56px;
+            height: 56px;
             border-radius: 50%;
-            background: var(--gradient-gold);
+            background: linear-gradient(135deg, var(--accent-gold), #a08650);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.375rem;
             font-weight: 600;
-            color: var(--bg-primary);
-            border: 3px solid rgba(201, 169, 97, 0.2);
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-            transition: all 0.3s ease;
-        }
-
-        .character-card:hover .character-avatar {
-            border-color: var(--accent-gold);
-            box-shadow: 0 6px 24px rgba(201, 169, 97, 0.3);
+            font-size: 18px;
+            color: var(--bg-dark);
+            margin: 0 auto 8px;
+            border: 2px solid var(--glass-border);
         }
 
         .character-name {
-            font-size: 0.9rem;
+            font-size: 12px;
             font-weight: 600;
+            margin-bottom: 2px;
             color: var(--text-primary);
-            margin-bottom: 4px;
         }
 
-        .character-role {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            font-weight: 500;
+        .character-actor {
+            font-size: 11px;
+            color: var(--text-secondary);
+            opacity: 0.7;
+        }
+
+        /* Tasks */
+        .task-item {
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .task-item:last-child {
+            border-bottom: none;
+        }
+
+        .task-checkbox {
+            width: 16px;
+            height: 16px;
+            border: 1.5px solid var(--border);
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            position: relative;
+        }
+
+        .task-checkbox:hover {
+            border-color: var(--accent-gold);
+        }
+
+        .task-checkbox.checked {
+            background: var(--accent-gold);
+            border-color: var(--accent-gold);
+        }
+
+        .task-checkbox.checked::after {
+            content: '';
+            position: absolute;
+            left: 5px;
+            top: 2px;
+            width: 4px;
+            height: 8px;
+            border: solid var(--bg-dark);
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+        }
+
+        .task-text {
+            flex: 1;
+            font-size: 13px;
+            color: var(--text-primary);
+        }
+
+        .task-text.completed {
+            text-decoration: line-through;
+            color: var(--text-secondary);
+            opacity: 0.6;
         }
 
         /* Widget Footer */
         .widget-footer {
-            padding: 16px 24px;
-            background: linear-gradient(135deg, rgba(10, 9, 8, 0.15), rgba(20, 17, 15, 0.25));
-            border-top: 1px solid rgba(255, 255, 255, 0.04);
-            text-align: center;
+            padding: 12px 20px;
+            border-top: 1px solid var(--glass-border);
+            display: flex;
+            justify-content: center;
         }
 
         .widget-link {
             color: var(--accent-gold);
+            font-size: 12px;
             text-decoration: none;
-            font-size: 0.875rem;
+            transition: opacity 0.15s;
             font-weight: 500;
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
         }
 
         .widget-link:hover {
-            color: var(--accent-gold-light);
-            gap: 10px;
+            opacity: 0.8;
         }
 
-        /* Time Display Widget */
-        .time-stat {
-            display: flex;
-            align-items: baseline;
-            gap: 8px;
-        }
-
-        .time-value {
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: var(--accent-gold);
-        }
-
-        .time-unit {
-            font-size: 0.875rem;
-            color: var(--text-secondary);
-        }
-
-        /* Budget Visual */
-        .budget-visual {
-            margin-top: 20px;
-            padding: 16px;
-            background: rgba(10, 9, 8, 0.3);
-            border-radius: 12px;
-        }
-
-        .budget-circle {
-            width: 120px;
-            height: 120px;
-            margin: 0 auto;
-            position: relative;
-        }
-
-        .budget-svg {
-            width: 100%;
-            height: 100%;
-            transform: rotate(-90deg);
-        }
-
-        .budget-bg {
-            fill: none;
-            stroke: rgba(201, 169, 97, 0.1);
-            stroke-width: 8;
-        }
-
-        .budget-fill {
-            fill: none;
-            stroke: var(--accent-gold);
-            stroke-width: 8;
-            stroke-linecap: round;
-            transition: stroke-dasharray 1s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .budget-text {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center;
-        }
-
-        .budget-percent {
-            font-size: 1.75rem;
-            font-weight: 600;
-            color: var(--accent-gold);
-        }
-
-        .budget-label {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-        }
-
-        /* Responsive Design */
-        @media (max-width: 1024px) {
-            .sidebar {
-                width: 240px;
-            }
-            
-            .widget-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .sidebar {
-                position: fixed;
-                left: -280px;
-                z-index: 100;
-                transition: left 0.3s ease;
-            }
-            
-            .sidebar.mobile-open {
-                left: 0;
-                box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
-            }
-            
-            .dashboard-content {
-                padding: 20px;
-            }
-        }
-
-        /* Loading Animation */
-        .widget-loading {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(10, 9, 8, 0.8);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 10;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s ease;
-        }
-
-        .widget-loading.active {
-            opacity: 1;
-            pointer-events: all;
-        }
-
-        .loading-spinner {
-            width: 40px;
-            height: 40px;
-            border: 3px solid rgba(201, 169, 97, 0.2);
-            border-top-color: var(--accent-gold);
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
+        /* SVG Icons */
+        .icon-dashboard { fill: currentColor; }
+        .icon-script { fill: currentColor; }
+        .icon-character { fill: currentColor; }
+        .icon-scene { fill: currentColor; }
+        .icon-photo { fill: currentColor; }
+        .icon-calendar { fill: currentColor; }
+        .icon-time { fill: currentColor; }
+        .icon-budget { fill: currentColor; }
+        .icon-kit { fill: currentColor; }
+        .icon-settings { fill: currentColor; }
     </style>
 </head>
 <body>
-    <div class="app-container">
+    <!-- Hidden SVG Icons -->
+    <svg style="display: none;">
+        <symbol id="icon-arrow-left" viewBox="0 0 24 24">
+            <path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </symbol>
+        <symbol id="icon-dashboard" viewBox="0 0 24 24">
+            <rect x="3" y="3" width="7" height="7" rx="1" fill="currentColor"/>
+            <rect x="14" y="3" width="7" height="7" rx="1" fill="currentColor"/>
+            <rect x="14" y="14" width="7" height="7" rx="1" fill="currentColor"/>
+            <rect x="3" y="14" width="7" height="7" rx="1" fill="currentColor"/>
+        </symbol>
+        <symbol id="icon-script" viewBox="0 0 24 24">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" stroke="currentColor" stroke-width="2" fill="none"/>
+            <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>
+        </symbol>
+        <symbol id="icon-character" viewBox="0 0 24 24">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </symbol>
+        <symbol id="icon-scene" viewBox="0 0 24 24">
+            <rect x="2" y="7" width="20" height="14" rx="2" stroke="currentColor" stroke-width="2" fill="none"/>
+            <path d="M16 2l2 5M8 2l-2 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>
+        </symbol>
+        <symbol id="icon-photo" viewBox="0 0 24 24">
+            <rect x="3" y="7" width="18" height="13" rx="2" stroke="currentColor" stroke-width="2" fill="none"/>
+            <circle cx="12" cy="13" r="3" stroke="currentColor" stroke-width="2" fill="none"/>
+            <path d="M5 7l2-3h10l2 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </symbol>
+        <symbol id="icon-calendar" viewBox="0 0 24 24">
+            <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2" fill="none"/>
+            <path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>
+        </symbol>
+        <symbol id="icon-time" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none"/>
+            <path d="M12 6v6l4 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>
+        </symbol>
+        <symbol id="icon-budget" viewBox="0 0 24 24">
+            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </symbol>
+        <symbol id="icon-kit" viewBox="0 0 24 24">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" stroke="currentColor" stroke-width="2" fill="none"/>
+            <path d="M12 22V12M12 12L3 7M12 12l9-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>
+        </symbol>
+        <symbol id="icon-settings" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" fill="none"/>
+            <path d="M12 1v6m0 6v6m4.22-13.22l-3.39 3.39m-1.66 1.66l-3.39 3.39M20.49 12h-6m-6 0h-6m17.31 4.22l-3.39-3.39m-1.66-1.66l-3.39-3.39" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>
+        </symbol>
+        <symbol id="icon-expand" viewBox="0 0 24 24">
+            <path d="M8 3h8m0 0v8m0-8l-8 8M16 21h-8m0 0v-8m0 8l8-8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </symbol>
+        <symbol id="icon-collapse" viewBox="0 0 24 24">
+            <path d="M8 7v2m0 0h2M8 9l3-3M16 7v2m0 0h-2m2 0l-3-3M16 17v-2m0 0h-2m2 0l-3 3M8 17v-2m0 0h2m-2 0l3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </symbol>
+        <symbol id="icon-close" viewBox="0 0 24 24">
+            <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </symbol>
+        <symbol id="icon-edit" viewBox="0 0 24 24">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </symbol>
+        <symbol id="icon-reset" viewBox="0 0 24 24">
+            <path d="M1 4v6h6M23 20v-6h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </symbol>
+    </svg>
+
+    <div class="app-layout">
         <!-- Sidebar -->
-        <aside class="sidebar">
+        <div class="sidebar">
             <div class="sidebar-header">
                 <a href="index.html" class="back-btn">
-                    <span>←</span>
-                    <span>All Projects</span>
+                    <svg><use xlink:href="#icon-arrow-left"/></svg>
+                    All Projects
                 </a>
                 <div class="project-info">
                     <h2>The Big Race</h2>
-                    <p class="project-meta">TBR-01 • Feature Film</p>
+                    <p class="project-code">TBR-01 • Feature Film</p>
                 </div>
             </div>
 
-            <nav class="nav-section">
-                <div class="nav-title">Workspace</div>
+            <div class="nav-section">
+                <div class="nav-section-title">Workspace</div>
                 <div class="nav-item active">
-                    <span class="nav-icon">📊</span>
-                    <span>Dashboard</span>
+                    <svg class="nav-icon"><use xlink:href="#icon-dashboard"/></svg>
+                    Dashboard
                 </div>
                 <div class="nav-item" onclick="window.location.href='script-breakdown.html'">
-                    <span class="nav-icon">📝</span>
-                    <span>Script Breakdown</span>
+                    <svg class="nav-icon"><use xlink:href="#icon-script"/></svg>
+                    Script Breakdown
                 </div>
                 <div class="nav-item" onclick="window.location.href='characters.html'">
-                    <span class="nav-icon">👥</span>
-                    <span>Character Design</span>
+                    <svg class="nav-icon"><use xlink:href="#icon-character"/></svg>
+                    Character Design
                 </div>
                 <div class="nav-item">
-                    <span class="nav-icon">🎬</span>
-                    <span>Scenes</span>
+                    <svg class="nav-icon"><use xlink:href="#icon-scene"/></svg>
+                    Scenes
                 </div>
-            </nav>
+            </div>
 
-            <nav class="nav-section">
-                <div class="nav-title">Production</div>
+            <div class="nav-section">
+                <div class="nav-section-title">Production</div>
                 <div class="nav-item" onclick="window.location.href='continuity.html'">
-                    <span class="nav-icon">📸</span>
-                    <span>Continuity</span>
+                    <svg class="nav-icon"><use xlink:href="#icon-photo"/></svg>
+                    Continuity
                 </div>
                 <div class="nav-item">
-                    <span class="nav-icon">📅</span>
-                    <span>Call Sheets</span>
+                    <svg class="nav-icon"><use xlink:href="#icon-calendar"/></svg>
+                    Call Sheets
                 </div>
                 <div class="nav-item" onclick="window.location.href='timesheet-system.html'">
-                    <span class="nav-icon">⏱</span>
-                    <span>Time Tracking</span>
+                    <svg class="nav-icon"><use xlink:href="#icon-time"/></svg>
+                    Time Tracking
                 </div>
-            </nav>
+            </div>
 
-            <nav class="nav-section">
-                <div class="nav-title">Resources</div>
+            <div class="nav-section">
+                <div class="nav-section-title">Resources</div>
                 <div class="nav-item" onclick="window.location.href='budget-system.html'">
-                    <span class="nav-icon">💰</span>
-                    <span>Budget</span>
+                    <svg class="nav-icon"><use xlink:href="#icon-budget"/></svg>
+                    Budget
                 </div>
                 <div class="nav-item">
-                    <span class="nav-icon">📦</span>
-                    <span>Kit Inventory</span>
+                    <svg class="nav-icon"><use xlink:href="#icon-kit"/></svg>
+                    Kit Inventory
                 </div>
                 <div class="nav-item">
-                    <span class="nav-icon">⚙️</span>
-                    <span>Settings</span>
+                    <svg class="nav-icon"><use xlink:href="#icon-settings"/></svg>
+                    Settings
                 </div>
-            </nav>
-        </aside>
+            </div>
+        </div>
 
         <!-- Main Content -->
-        <main class="main-content">
+        <div class="main-content">
             <!-- Top Bar -->
-            <header class="top-bar">
+            <div class="top-bar">
                 <div class="view-tabs">
                     <button class="view-tab active">Overview</button>
                     <button class="view-tab">Breakdown</button>
                     <button class="view-tab">Schedule</button>
                 </div>
-                <div class="top-actions">
-                    <button class="action-btn" onclick="toggleEdit()">
-                        <span>✏️</span>
-                        <span>Edit Layout</span>
+                <div class="top-bar-actions">
+                    <button class="layout-btn" onclick="toggleEdit()">
+                        <svg><use xlink:href="#icon-edit"/></svg>
+                        Edit
                     </button>
-                    <button class="action-btn" onclick="resetLayout()">
-                        <span>🔄</span>
-                        <span>Reset</span>
+                    <button class="layout-btn" onclick="resetLayout()">
+                        <svg><use xlink:href="#icon-reset"/></svg>
+                        Reset
                     </button>
                 </div>
-            </header>
+            </div>
 
-            <!-- Dashboard Content -->
-            <section class="dashboard-content">
-                <div class="widget-grid" id="widgetGrid">
-                    
+            <!-- Dashboard -->
+            <div class="dashboard">
+                <div class="widgets-grid" id="widgetsGrid">
                     <!-- Script Status Widget -->
                     <div class="widget" draggable="true">
                         <div class="widget-header">
                             <div class="widget-title">
-                                <div class="widget-icon">📄</div>
-                                <span>Script Status</span>
+                                <svg class="widget-icon"><use xlink:href="#icon-script"/></svg>
+                                Script Status
                             </div>
-                            <div class="widget-controls">
-                                <button class="widget-btn">⤢</button>
-                                <button class="widget-btn">↕</button>
-                                <button class="widget-btn">×</button>
+                            <div class="widget-actions">
+                                <button class="widget-btn">
+                                    <svg><use xlink:href="#icon-expand"/></svg>
+                                </button>
+                                <button class="widget-btn">
+                                    <svg><use xlink:href="#icon-collapse"/></svg>
+                                </button>
+                                <button class="widget-btn">
+                                    <svg><use xlink:href="#icon-close"/></svg>
+                                </button>
                             </div>
                         </div>
                         <div class="widget-content">
-                            <div class="stat-item">
+                            <div class="stat-row">
                                 <span class="stat-label">Total Pages</span>
                                 <span class="stat-value">120</span>
                             </div>
-                            <div class="stat-item">
+                            <div class="stat-row">
                                 <span class="stat-label">Scenes</span>
-                                <span class="stat-value highlight">124</span>
+                                <span class="stat-value">124</span>
                             </div>
-                            <div class="stat-item">
+                            <div class="stat-row">
                                 <span class="stat-label">Shot</span>
                                 <span class="stat-value">85 / 124</span>
                             </div>
-                            <div class="progress-item">
-                                <div class="progress-header">
-                                    <span class="progress-label">Breakdown Complete</span>
-                                    <span class="progress-value">68%</span>
+                            <div class="progress-section">
+                                <div class="progress-label">
+                                    <span>Breakdown Complete</span>
+                                    <span>68%</span>
                                 </div>
                                 <div class="progress-bar">
                                     <div class="progress-fill" style="width: 68%"></div>
@@ -1058,46 +834,61 @@
                         </div>
                     </div>
 
-                    <!-- Upcoming Scenes Widget -->
+                    <!-- Scenes Widget -->
                     <div class="widget" draggable="true">
                         <div class="widget-header">
                             <div class="widget-title">
-                                <div class="widget-icon">🎬</div>
-                                <span>Upcoming Scenes</span>
+                                <svg class="widget-icon"><use xlink:href="#icon-scene"/></svg>
+                                Upcoming Scenes
                             </div>
-                            <div class="widget-controls">
-                                <button class="widget-btn">⤢</button>
-                                <button class="widget-btn">↕</button>
-                                <button class="widget-btn">×</button>
+                            <div class="widget-actions">
+                                <button class="widget-btn">
+                                    <svg><use xlink:href="#icon-expand"/></svg>
+                                </button>
+                                <button class="widget-btn">
+                                    <svg><use xlink:href="#icon-collapse"/></svg>
+                                </button>
+                                <button class="widget-btn">
+                                    <svg><use xlink:href="#icon-close"/></svg>
+                                </button>
                             </div>
                         </div>
                         <div class="widget-content">
-                            <div class="scene-table">
-                                <div class="scene-row">
-                                    <div>
-                                        <div class="scene-number">12</div>
-                                        <div class="scene-time">INT. DAY</div>
-                                    </div>
-                                    <div class="scene-location">Living Room</div>
-                                    <span class="scene-status ready">Ready</span>
-                                </div>
-                                <div class="scene-row">
-                                    <div>
-                                        <div class="scene-number">13</div>
-                                        <div class="scene-time">EXT. NIGHT</div>
-                                    </div>
-                                    <div class="scene-location">Street</div>
-                                    <span class="scene-status pending">Pending</span>
-                                </div>
-                                <div class="scene-row">
-                                    <div>
-                                        <div class="scene-number">14</div>
-                                        <div class="scene-time">INT. DAY</div>
-                                    </div>
-                                    <div class="scene-location">Office</div>
-                                    <span class="scene-status shot">Shot</span>
-                                </div>
-                            </div>
+                            <table class="scene-table">
+                                <thead>
+                                    <tr>
+                                        <th>Scene</th>
+                                        <th>Location</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>
+                                            <div class="scene-number">12</div>
+                                            <div class="scene-time">INT. DAY</div>
+                                        </td>
+                                        <td class="scene-location">Living Room</td>
+                                        <td><span class="scene-status ready">Ready</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <div class="scene-number">13</div>
+                                            <div class="scene-time">EXT. NIGHT</div>
+                                        </td>
+                                        <td class="scene-location">Street</td>
+                                        <td><span class="scene-status pending">Pending</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <div class="scene-number">14</div>
+                                            <div class="scene-time">INT. DAY</div>
+                                        </td>
+                                        <td class="scene-location">Office</td>
+                                        <td><span class="scene-status shot">Shot</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
 
@@ -1105,13 +896,19 @@
                     <div class="widget" draggable="true">
                         <div class="widget-header">
                             <div class="widget-title">
-                                <div class="widget-icon">✅</div>
-                                <span>Today's Tasks</span>
+                                <svg class="widget-icon"><use xlink:href="#icon-calendar"/></svg>
+                                Today's Tasks
                             </div>
-                            <div class="widget-controls">
-                                <button class="widget-btn">+</button>
-                                <button class="widget-btn">↕</button>
-                                <button class="widget-btn">×</button>
+                            <div class="widget-actions">
+                                <button class="widget-btn">
+                                    <svg><use xlink:href="#icon-expand"/></svg>
+                                </button>
+                                <button class="widget-btn">
+                                    <svg><use xlink:href="#icon-collapse"/></svg>
+                                </button>
+                                <button class="widget-btn">
+                                    <svg><use xlink:href="#icon-close"/></svg>
+                                </button>
                             </div>
                         </div>
                         <div class="widget-content">
@@ -1134,48 +931,51 @@
                         </div>
                     </div>
 
-                    <!-- Characters Widget -->
-                    <div class="widget" draggable="true">
+                    <!-- Character Progress Widget -->
+                    <div class="widget clickable" draggable="true">
                         <div class="widget-header">
                             <div class="widget-title">
-                                <div class="widget-icon">👤</div>
-                                <span>Characters</span>
+                                <svg class="widget-icon"><use xlink:href="#icon-character"/></svg>
+                                Characters
                             </div>
-                            <div class="widget-controls">
-                                <button class="widget-btn">⤢</button>
-                                <button class="widget-btn">↕</button>
-                                <button class="widget-btn">×</button>
+                            <div class="widget-actions">
+                                <button class="widget-btn">
+                                    <svg><use xlink:href="#icon-expand"/></svg>
+                                </button>
+                                <button class="widget-btn">
+                                    <svg><use xlink:href="#icon-collapse"/></svg>
+                                </button>
+                                <button class="widget-btn">
+                                    <svg><use xlink:href="#icon-close"/></svg>
+                                </button>
                             </div>
                         </div>
-                        <div class="widget-content">
-                            <div class="character-grid" id="characterGrid">
-                                <div class="character-card" onclick="window.location.href='characters.html'">
-                                    <div class="character-avatar">JD</div>
+                        <div class="widget-content" id="characterWidget">
+                            <div class="character-grid">
+                                <div class="character-avatar" onclick="event.stopPropagation(); window.location.href='characters.html'">
+                                    <div class="avatar">JD</div>
                                     <div class="character-name">Jane Doe</div>
-                                    <div class="character-role">Lead</div>
+                                    <div class="character-actor">Lead</div>
                                 </div>
-                                <div class="character-card" onclick="window.location.href='characters.html'">
-                                    <div class="character-avatar">MS</div>
+                                <div class="character-avatar" onclick="event.stopPropagation(); window.location.href='characters.html'">
+                                    <div class="avatar">MS</div>
                                     <div class="character-name">Mike Smith</div>
-                                    <div class="character-role">Supporting</div>
+                                    <div class="character-actor">Supporting</div>
                                 </div>
-                                <div class="character-card" onclick="window.location.href='characters.html'">
-                                    <div class="character-avatar">SJ</div>
+                                <div class="character-avatar" onclick="event.stopPropagation(); window.location.href='characters.html'">
+                                    <div class="avatar">SJ</div>
                                     <div class="character-name">Sarah Jones</div>
-                                    <div class="character-role">Lead</div>
+                                    <div class="character-actor">Lead</div>
                                 </div>
-                                <div class="character-card" onclick="window.location.href='characters.html'">
-                                    <div class="character-avatar">TB</div>
+                                <div class="character-avatar" onclick="event.stopPropagation(); window.location.href='characters.html'">
+                                    <div class="avatar">TB</div>
                                     <div class="character-name">Tom Brown</div>
-                                    <div class="character-role">Supporting</div>
+                                    <div class="character-actor">Supporting</div>
                                 </div>
                             </div>
                         </div>
                         <div class="widget-footer">
-                            <a href="characters.html" class="widget-link">
-                                <span>View All Characters</span>
-                                <span>→</span>
-                            </a>
+                            <a href="characters.html" class="widget-link">View All Characters →</a>
                         </div>
                     </div>
 
@@ -1183,40 +983,30 @@
                     <div class="widget" draggable="true">
                         <div class="widget-header">
                             <div class="widget-title">
-                                <div class="widget-icon">💰</div>
-                                <span>Budget</span>
+                                <svg class="widget-icon"><use xlink:href="#icon-budget"/></svg>
+                                Budget
                             </div>
-                            <div class="widget-controls">
-                                <button class="widget-btn">↕</button>
-                                <button class="widget-btn">×</button>
+                            <div class="widget-actions">
+                                <button class="widget-btn">
+                                    <svg><use xlink:href="#icon-collapse"/></svg>
+                                </button>
+                                <button class="widget-btn">
+                                    <svg><use xlink:href="#icon-close"/></svg>
+                                </button>
                             </div>
                         </div>
                         <div class="widget-content">
-                            <div class="stat-item">
+                            <div class="stat-row">
                                 <span class="stat-label">Total Budget</span>
-                                <span class="stat-value highlight">$45,000</span>
+                                <span class="stat-value">$45,000</span>
                             </div>
-                            <div class="stat-item">
+                            <div class="stat-row">
                                 <span class="stat-label">Spent</span>
                                 <span class="stat-value">$18,200</span>
                             </div>
-                            <div class="stat-item">
+                            <div class="stat-row">
                                 <span class="stat-label">Remaining</span>
                                 <span class="stat-value">$26,800</span>
-                            </div>
-                            <div class="budget-visual">
-                                <div class="budget-circle">
-                                    <svg class="budget-svg">
-                                        <circle class="budget-bg" cx="60" cy="60" r="54"></circle>
-                                        <circle class="budget-fill" cx="60" cy="60" r="54" 
-                                                stroke-dasharray="238.76 339.29" 
-                                                stroke-dashoffset="0"></circle>
-                                    </svg>
-                                    <div class="budget-text">
-                                        <div class="budget-percent">60%</div>
-                                        <div class="budget-label">Available</div>
-                                    </div>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -1225,48 +1015,40 @@
                     <div class="widget" draggable="true">
                         <div class="widget-header">
                             <div class="widget-title">
-                                <div class="widget-icon">⏱</div>
-                                <span>Time in Chair</span>
+                                <svg class="widget-icon"><use xlink:href="#icon-time"/></svg>
+                                Time in Chair
                             </div>
-                            <div class="widget-controls">
-                                <button class="widget-btn">↕</button>
-                                <button class="widget-btn">×</button>
+                            <div class="widget-actions">
+                                <button class="widget-btn">
+                                    <svg><use xlink:href="#icon-collapse"/></svg>
+                                </button>
+                                <button class="widget-btn">
+                                    <svg><use xlink:href="#icon-close"/></svg>
+                                </button>
                             </div>
                         </div>
                         <div class="widget-content">
-                            <div class="stat-item">
+                            <div class="stat-row">
                                 <span class="stat-label">Today's Total</span>
-                                <div class="time-stat">
-                                    <span class="time-value">4h 30m</span>
-                                </div>
+                                <span class="stat-value">4h 30m</span>
                             </div>
-                            <div class="stat-item">
+                            <div class="stat-row">
                                 <span class="stat-label">Avg per Character</span>
                                 <span class="stat-value">45m</span>
                             </div>
-                            <div class="stat-item">
+                            <div class="stat-row">
                                 <span class="stat-label">Next Call</span>
-                                <span class="stat-value highlight">6:00 AM</span>
-                            </div>
-                            <div class="progress-item">
-                                <div class="progress-header">
-                                    <span class="progress-label">Today's Progress</span>
-                                    <span class="progress-value">75%</span>
-                                </div>
-                                <div class="progress-bar">
-                                    <div class="progress-fill success" style="width: 75%"></div>
-                                </div>
+                                <span class="stat-value">6:00 AM</span>
                             </div>
                         </div>
                     </div>
-
                 </div>
-            </section>
-        </main>
+            </div>
+        </div>
     </div>
 
     <script>
-        // Initialize project data
+        // Load project data
         let currentProject = null;
         
         function loadProjectData() {
@@ -1274,32 +1056,34 @@
             if (projectData) {
                 currentProject = JSON.parse(projectData);
                 updateDashboard();
-                loadCharacterData();
+                loadCharacterWidget();
             } else {
+                // No project selected, redirect to home
                 window.location.href = 'index.html';
             }
         }
 
         function updateDashboard() {
-            // Update project info
+            // Update sidebar header
             document.querySelector('.project-info h2').textContent = currentProject.title;
-            document.querySelector('.project-meta').textContent = `${currentProject.code} • ${currentProject.type}`;
+            document.querySelector('.project-code').textContent = `${currentProject.code} • ${currentProject.type}`;
+            
+            // Update page title
             document.title = `${currentProject.title} - Dashboard`;
             
-            // Update stats
-            const statValues = document.querySelectorAll('.stat-value');
-            if (currentProject.scenes && statValues[1]) {
-                statValues[1].textContent = currentProject.scenes;
+            // Update script status widget
+            const scriptPages = document.querySelectorAll('.stat-row .stat-value');
+            if (scriptPages.length >= 2) {
+                scriptPages[1].textContent = currentProject.scenes || '0';
             }
             
-            // Update progress
-            if (currentProject.progress) {
-                document.querySelector('.progress-fill').style.width = `${currentProject.progress}%`;
-                document.querySelector('.progress-value').textContent = `${currentProject.progress}%`;
-            }
+            // Update progress bars
+            const progressFills = document.querySelectorAll('.progress-fill');
+            if (progressFills[0]) progressFills[0].style.width = `${currentProject.progress || 0}%`;
         }
 
-        function loadCharacterData() {
+        // Load character data into widget
+        function loadCharacterWidget() {
             const projectCode = currentProject?.code;
             if (!projectCode) return;
             
@@ -1308,18 +1092,19 @@
                 const characters = JSON.parse(savedCharacters);
                 
                 if (characters.length > 0) {
-                    const grid = document.getElementById('characterGrid');
-                    const displayChars = characters.slice(0, 4);
+                    const characterWidget = document.getElementById('characterWidget');
+                    const grid = characterWidget.querySelector('.character-grid');
                     
-                    grid.innerHTML = displayChars.map(char => {
+                    // Show first 4 characters
+                    const displayCharacters = characters.slice(0, 4);
+                    
+                    grid.innerHTML = displayCharacters.map(char => {
                         const initials = char.name.split(' ').map(n => n[0]).join('').substring(0, 2);
                         return `
-                            <div class="character-card" onclick="window.location.href='characters.html'">
-                                <div class="character-avatar">
-                                    ${char.photo ? `<img src="${char.photo}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">` : initials}
-                                </div>
+                            <div class="character-avatar" onclick="event.stopPropagation(); window.location.href='characters.html'">
+                                <div class="avatar">${char.photo ? `<img src="${char.photo}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">` : initials}</div>
                                 <div class="character-name">${char.name}</div>
-                                <div class="character-role">${char.role || 'Character'}</div>
+                                <div class="character-actor">${char.role || 'Character'}</div>
                             </div>
                         `;
                     }).join('');
@@ -1329,7 +1114,6 @@
 
         // Drag and Drop functionality
         let draggedElement = null;
-        let placeholder = null;
 
         document.querySelectorAll('.widget').forEach(widget => {
             widget.addEventListener('dragstart', handleDragStart);
@@ -1342,7 +1126,6 @@
             draggedElement = this;
             this.classList.add('dragging');
             e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/html', this.innerHTML);
         }
 
         function handleDragEnd(e) {
@@ -1357,14 +1140,6 @@
                 e.preventDefault();
             }
             e.dataTransfer.dropEffect = 'move';
-            
-            const afterElement = getDragAfterElement(document.getElementById('widgetGrid'), e.clientY);
-            if (afterElement == null) {
-                document.getElementById('widgetGrid').appendChild(draggedElement);
-            } else {
-                document.getElementById('widgetGrid').insertBefore(draggedElement, afterElement);
-            }
-            
             return false;
         }
 
@@ -1372,22 +1147,21 @@
             if (e.stopPropagation) {
                 e.stopPropagation();
             }
-            return false;
-        }
 
-        function getDragAfterElement(container, y) {
-            const draggableElements = [...container.querySelectorAll('.widget:not(.dragging)')];
-            
-            return draggableElements.reduce((closest, child) => {
-                const box = child.getBoundingClientRect();
-                const offset = y - box.top - box.height / 2;
-                
-                if (offset < 0 && offset > closest.offset) {
-                    return { offset: offset, element: child };
+            if (draggedElement !== this) {
+                const grid = document.getElementById('widgetsGrid');
+                const allWidgets = [...grid.children];
+                const draggedIndex = allWidgets.indexOf(draggedElement);
+                const targetIndex = allWidgets.indexOf(this);
+
+                if (draggedIndex < targetIndex) {
+                    this.parentNode.insertBefore(draggedElement, this.nextSibling);
                 } else {
-                    return closest;
+                    this.parentNode.insertBefore(draggedElement, this);
                 }
-            }, { offset: Number.NEGATIVE_INFINITY }).element;
+            }
+
+            return false;
         }
 
         // Widget controls
@@ -1395,21 +1169,18 @@
             btn.addEventListener('click', function(e) {
                 e.stopPropagation();
                 const widget = this.closest('.widget');
+                const icon = this.querySelector('use').getAttribute('xlink:href');
                 
-                if (this.textContent === '×') {
-                    widget.style.transition = 'all 0.3s ease';
-                    widget.style.transform = 'scale(0.8)';
-                    widget.style.opacity = '0';
-                    setTimeout(() => widget.remove(), 300);
-                } else if (this.textContent === '↕') {
+                if (icon === '#icon-close') {
+                    widget.style.display = 'none';
+                } else if (icon === '#icon-collapse') {
                     const content = widget.querySelector('.widget-content');
-                    if (content.style.display === 'none') {
-                        content.style.display = 'block';
-                        this.textContent = '↕';
-                    } else {
-                        content.style.display = 'none';
-                        this.textContent = '↓';
-                    }
+                    content.style.display = 'none';
+                    this.querySelector('use').setAttribute('xlink:href', '#icon-expand');
+                } else if (icon === '#icon-expand') {
+                    const content = widget.querySelector('.widget-content');
+                    content.style.display = 'block';
+                    this.querySelector('use').setAttribute('xlink:href', '#icon-collapse');
                 }
             });
         });
@@ -1419,7 +1190,6 @@
             task.addEventListener('click', function() {
                 const checkbox = this.querySelector('.task-checkbox');
                 const text = this.querySelector('.task-text');
-                
                 checkbox.classList.toggle('checked');
                 text.classList.toggle('completed');
             });
@@ -1427,12 +1197,12 @@
 
         // Navigation
         document.querySelectorAll('.nav-item').forEach(item => {
-            if (!item.onclick) {
-                item.addEventListener('click', function() {
+            item.addEventListener('click', function() {
+                if (!this.onclick) {
                     document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
                     this.classList.add('active');
-                });
-            }
+                }
+            });
         });
 
         // View tabs
@@ -1443,34 +1213,18 @@
             });
         });
 
-        // Action buttons
-        function toggleEdit() {
-            alert('Edit mode enabled - Drag widgets to rearrange them');
-        }
-
         function resetLayout() {
             location.reload();
         }
 
-        // Animate widgets on load
-        window.addEventListener('load', () => {
-            const widgets = document.querySelectorAll('.widget');
-            widgets.forEach((widget, index) => {
-                widget.style.opacity = '0';
-                widget.style.transform = 'translateY(20px)';
-                setTimeout(() => {
-                    widget.style.transition = 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
-                    widget.style.opacity = '1';
-                    widget.style.transform = 'translateY(0)';
-                }, index * 100);
-            });
-        });
+        function toggleEdit() {
+            alert('Edit mode enabled - Drag widgets to rearrange');
+        }
 
-        // Initialize dashboard
+        // Initialize dashboard on page load
         loadProjectData();
         
-        console.log('✨ Enhanced Dashboard Loaded');
-        console.log('🎨 Liquid Glass Aesthetic Applied');
+        console.log('Dashboard initialized');
     </script>
 </body>
 </html>
