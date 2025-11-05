@@ -51,17 +51,9 @@
             flex-direction: column; 
         }
         
-        /* Glass Effect */
-        .glass {
-            background: var(--glass-bg);
-            backdrop-filter: blur(20px) saturate(180%);
-            -webkit-backdrop-filter: blur(20px) saturate(180%);
-            border: 1px solid var(--glass-border);
-        }
-        
         /* Top Bar */
         .top-bar {
-            height: 60px;
+            height: 56px;
             background: linear-gradient(135deg, rgba(212, 175, 122, 0.08) 0%, rgba(18, 16, 14, 0.85) 50%, rgba(212, 175, 122, 0.05) 100%);
             backdrop-filter: blur(24px);
             border-bottom: 1px solid var(--glass-border);
@@ -124,17 +116,65 @@
             background: rgba(201, 169, 97, 0.05);
         }
         
-        .toolbar-btn.primary { 
-            background: linear-gradient(135deg, rgba(201, 169, 97, 0.9) 0%, rgba(184, 150, 81, 0.9) 100%);
-            border-color: var(--accent-gold); 
-            color: #0a0908; 
-            font-weight: 600; 
+        .toolbar-btn.ai {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+            border-color: var(--accent-blue);
+            color: var(--accent-blue);
         }
         
-        .toolbar-btn.primary:hover {
-            background: linear-gradient(135deg, #d4af7a 0%, #c09861 100%);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(212, 175, 122, 0.3);
+        .toolbar-btn.ai:hover {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.2));
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        /* AI Analysis Progress */
+        .ai-progress {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--glass-bg);
+            backdrop-filter: blur(30px);
+            border: 1px solid var(--accent-blue);
+            border-radius: 16px;
+            padding: 32px;
+            z-index: 3000;
+            box-shadow: 0 20px 60px rgba(102, 126, 234, 0.3);
+            min-width: 400px;
+        }
+        
+        .ai-progress.active {
+            display: block;
+        }
+        
+        .ai-progress-title {
+            font-size: 1.125em;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--accent-blue);
+        }
+        
+        .ai-progress-status {
+            font-size: 0.875em;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+        }
+        
+        .ai-progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .ai-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-gold));
+            border-radius: 4px;
+            width: 0%;
+            transition: width 0.3s ease;
         }
         
         /* Main Content Layout */
@@ -146,7 +186,7 @@
         
         /* Left Sidebar - Scenes */
         .left-sidebar {
-            width: 280px;
+            width: 300px;
             background: var(--glass-bg);
             backdrop-filter: blur(24px);
             border-right: 1px solid var(--glass-border);
@@ -178,6 +218,7 @@
             padding: 2px 8px;
             border-radius: 12px;
             font-size: 0.75em;
+            font-weight: 700;
         }
         
         .scene-search {
@@ -205,7 +246,7 @@
             background: rgba(28, 25, 22, 0.4);
             border: 1px solid var(--glass-border);
             border-radius: 8px;
-            padding: 12px;
+            padding: 14px;
             margin-bottom: 8px;
             cursor: pointer;
             transition: all 0.3s ease;
@@ -214,43 +255,50 @@
         .scene-item:hover { 
             border-color: var(--accent-gold); 
             background: rgba(201, 169, 97, 0.08);
-            transform: translateX(4px); 
+            transform: translateX(2px); 
         }
         
         .scene-item.active { 
             border-color: var(--accent-gold); 
             background: rgba(201, 169, 97, 0.15); 
+            box-shadow: 0 0 20px rgba(201, 169, 97, 0.1);
         }
         
         .scene-header {
             display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 8px;
+            align-items: flex-start;
+            gap: 12px;
         }
         
         .scene-number {
-            width: 32px;
-            height: 32px;
+            width: 36px;
+            height: 36px;
             background: linear-gradient(135deg, var(--accent-gold), #b89651);
             color: #0a0908;
-            border-radius: 6px;
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 700;
-            font-size: 0.875em;
+            font-size: 0.9375em;
+            flex-shrink: 0;
         }
         
         .scene-info {
             flex: 1;
+            min-width: 0;
         }
         
         .scene-heading { 
             font-size: 0.8125em; 
             font-weight: 600; 
-            line-height: 1.3;
-            margin-bottom: 4px;
+            line-height: 1.4;
+            margin-bottom: 6px;
+            word-break: break-word;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
         }
         
         .scene-meta {
@@ -260,23 +308,9 @@
             color: var(--text-muted);
         }
         
-        .scene-tags {
-            display: flex;
-            gap: 4px;
-            flex-wrap: wrap;
-            margin-top: 8px;
-        }
-        
-        .scene-tag-indicator {
-            width: 20px;
-            height: 20px;
-            border-radius: 4px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.65em;
-            font-weight: 600;
-            color: var(--bg-dark);
+        .element-count {
+            color: var(--accent-blue);
+            font-weight: 500;
         }
         
         /* Center Panel - Script View */
@@ -326,79 +360,112 @@
         }
         
         .script-container {
-            max-width: 800px;
+            max-width: 700px;
             margin: 0 auto;
-            background: rgba(248, 246, 240, 0.98);
-            padding: 60px 80px;
+            background: rgba(248, 246, 240, 0.95);
+            padding: 60px;
             border-radius: 8px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
             min-height: 100%;
         }
         
         .script-content { 
-            font-family: 'Courier Prime', monospace; 
-            font-size: 12pt; 
+            font-family: 'Courier Prime', 'Courier New', monospace; 
+            font-size: 13pt; 
             line-height: 1.8; 
-            color: #000; 
-            user-select: text; 
+            color: #1a1a1a; 
+            white-space: pre-wrap;
+            word-wrap: break-word;
         }
         
         .script-scene { 
-            margin-bottom: 32px; 
+            margin-bottom: 36px; 
             page-break-inside: avoid;
-            position: relative;
         }
         
         .script-scene-heading { 
             font-weight: 700; 
             text-transform: uppercase; 
-            margin-bottom: 16px; 
+            margin-bottom: 20px; 
             color: #000;
-            position: relative;
-            padding-left: 40px;
-        }
-        
-        .script-scene-number {
-            position: absolute;
-            left: 0;
-            top: 0;
-            font-weight: 700;
-            color: #666;
+            font-size: 13pt;
+            letter-spacing: 0.5px;
         }
         
         .script-action { 
-            margin-bottom: 12px; 
-            color: #000; 
+            margin-bottom: 16px; 
+            color: #1a1a1a; 
+            text-align: left;
+            max-width: 100%;
         }
         
         .script-character { 
-            margin: 20px 0 4px; 
+            margin: 24px 0 0; 
             text-align: center; 
             text-transform: uppercase; 
             color: #000;
             font-weight: 600;
+            letter-spacing: 1px;
         }
         
         .script-dialogue { 
-            margin-bottom: 12px; 
-            width: 70%; 
-            margin-left: 15%; 
-            color: #000; 
+            margin: 4px 0 16px; 
+            width: 65%; 
+            margin-left: 17.5%; 
+            color: #1a1a1a; 
         }
         
         .script-parenthetical { 
-            margin-bottom: 4px; 
-            width: 60%; 
-            margin-left: 20%; 
-            color: #000;
+            margin: 0 0 4px; 
+            width: 55%; 
+            margin-left: 22.5%; 
+            color: #333;
             font-style: italic;
         }
         
         .script-transition { 
             text-align: right; 
-            margin: 20px 0; 
+            margin: 24px 0; 
             font-weight: 600; 
-            color: #000; 
+            color: #000;
+            text-transform: uppercase;
+        }
+        
+        /* Highlighted elements */
+        .highlighted-cast {
+            background: rgba(251, 191, 36, 0.3);
+            border-bottom: 2px solid var(--tag-cast);
+            padding: 0 2px;
+        }
+        
+        .highlighted-props {
+            background: rgba(251, 146, 60, 0.3);
+            border-bottom: 2px solid var(--tag-props);
+            padding: 0 2px;
+        }
+        
+        .highlighted-wardrobe {
+            background: rgba(52, 211, 153, 0.3);
+            border-bottom: 2px solid var(--tag-wardrobe);
+            padding: 0 2px;
+        }
+        
+        .highlighted-vehicles {
+            background: rgba(56, 189, 248, 0.3);
+            border-bottom: 2px solid var(--tag-vehicles);
+            padding: 0 2px;
+        }
+        
+        .highlighted-locations {
+            background: rgba(16, 185, 129, 0.3);
+            border-bottom: 2px solid var(--tag-locations);
+            padding: 0 2px;
+        }
+        
+        .highlighted-sfx {
+            background: rgba(139, 92, 246, 0.3);
+            border-bottom: 2px solid var(--tag-sfx);
+            padding: 0 2px;
         }
         
         /* Right Sidebar - Tags */
@@ -419,7 +486,7 @@
         }
         
         .tag-category {
-            margin-bottom: 20px;
+            margin-bottom: 24px;
         }
         
         .category-header {
@@ -427,36 +494,64 @@
             align-items: center;
             justify-content: space-between;
             margin-bottom: 12px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 6px;
+            transition: background 0.2s ease;
+        }
+        
+        .category-header:hover {
+            background: rgba(201, 169, 97, 0.05);
         }
         
         .category-title {
             display: flex;
             align-items: center;
-            gap: 8px;
-            font-size: 0.875em;
+            gap: 10px;
+            font-size: 0.8125em;
             font-weight: 600;
             text-transform: uppercase;
-            color: var(--text-muted);
+            color: var(--text-light);
         }
         
-        .category-color {
-            width: 12px;
-            height: 12px;
-            border-radius: 3px;
+        .category-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75em;
+        }
+        
+        .category-expand {
+            font-size: 0.875em;
+            color: var(--text-muted);
+            transition: transform 0.2s ease;
+        }
+        
+        .category-header.collapsed .category-expand {
+            transform: rotate(-90deg);
+        }
+        
+        .category-content {
+            display: block;
+            padding-left: 8px;
+        }
+        
+        .category-header.collapsed + .category-content {
+            display: none;
         }
         
         .add-tag-btn {
-            width: 24px;
-            height: 24px;
-            border-radius: 4px;
+            width: 100%;
+            padding: 8px;
+            border-radius: 6px;
             border: 1px dashed var(--glass-border);
             background: transparent;
             color: var(--text-muted);
             cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.875em;
+            font-size: 0.75em;
             transition: all 0.2s ease;
         }
         
@@ -470,6 +565,7 @@
             display: flex;
             flex-direction: column;
             gap: 6px;
+            margin-bottom: 8px;
         }
         
         .tag-item {
@@ -489,47 +585,20 @@
             background: rgba(201, 169, 97, 0.05);
         }
         
-        .tag-item.ai-suggested {
+        .tag-item.ai-detected {
             border-color: var(--accent-blue);
-            background: rgba(102, 126, 234, 0.05);
+            background: rgba(102, 126, 234, 0.1);
         }
         
-        .tag-name {
-            flex: 1;
-        }
-        
-        .tag-actions {
-            display: flex;
-            gap: 4px;
-        }
-        
-        .tag-action {
-            width: 20px;
-            height: 20px;
-            border-radius: 4px;
-            border: 1px solid var(--glass-border);
-            background: transparent;
-            color: var(--text-muted);
-            cursor: pointer;
-            display: flex;
+        .tag-badge {
+            display: inline-flex;
             align-items: center;
-            justify-content: center;
-            font-size: 0.7em;
-            transition: all 0.2s ease;
-        }
-        
-        .tag-action.accept {
-            color: var(--success);
-            border-color: var(--success);
-        }
-        
-        .tag-action.reject {
-            color: var(--error);
-            border-color: var(--error);
-        }
-        
-        .tag-action:hover {
-            background: rgba(255, 255, 255, 0.05);
+            gap: 4px;
+            padding: 2px 6px;
+            background: rgba(102, 126, 234, 0.2);
+            border-radius: 4px;
+            font-size: 0.625em;
+            color: var(--accent-blue);
         }
         
         /* Script Import Modal */
@@ -577,9 +646,25 @@
         .import-title {
             font-size: 1.5em;
             font-weight: 600;
+        }
+        
+        .close-btn {
+            width: 32px;
+            height: 32px;
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 1.25em;
             display: flex;
             align-items: center;
-            gap: 12px;
+            justify-content: center;
+        }
+        
+        .close-btn:hover {
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
         }
         
         .import-body {
@@ -648,7 +733,7 @@
         }
         
         .import-preview {
-            width: 300px;
+            width: 280px;
             background: rgba(0, 0, 0, 0.2);
             border: 1px solid var(--glass-border);
             border-radius: 8px;
@@ -697,16 +782,6 @@
             border-top: 1px solid var(--glass-border);
         }
         
-        .import-status {
-            font-size: 0.875em;
-            color: var(--text-muted);
-        }
-        
-        .import-actions {
-            display: flex;
-            gap: 12px;
-        }
-        
         .import-btn {
             padding: 10px 20px;
             border: 1px solid var(--glass-border);
@@ -734,29 +809,6 @@
             background: linear-gradient(135deg, #d4af7a 0%, #c09861 100%);
             transform: translateY(-1px);
             box-shadow: 0 4px 12px rgba(212, 175, 122, 0.3);
-        }
-        
-        /* Loading State */
-        .loading {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            flex-direction: column;
-            gap: 20px;
-        }
-        
-        .spinner {
-            width: 50px;
-            height: 50px;
-            border: 4px solid rgba(212, 175, 122, 0.2);
-            border-top-color: var(--accent-gold);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-        
-        @keyframes spin { 
-            to { transform: rotate(360deg); } 
         }
         
         /* Empty State */
@@ -797,15 +849,21 @@
                 <h1 class="page-title" id="projectTitle">Script Breakdown</h1>
             </div>
             <div class="toolbar">
+                <button class="toolbar-btn ai" onclick="runAIAnalysis()">
+                    🤖 AI Analyze
+                </button>
                 <button class="toolbar-btn" onclick="openImportModal()">
-                    <span>📄</span> Import Script
+                    📄 Import Script
                 </button>
-                <button class="toolbar-btn" onclick="runAIAnalysis()" id="aiAnalyzeBtn" style="display: none;">
-                    <span>🤖</span> AI Analyze
-                </button>
-                <button class="toolbar-btn primary" onclick="generateReport()" id="generateBtn" style="display: none;">
-                    <span>📊</span> Generate Report
-                </button>
+            </div>
+        </div>
+        
+        <!-- AI Analysis Progress -->
+        <div class="ai-progress" id="aiProgress">
+            <div class="ai-progress-title">🤖 AI Analysis in Progress</div>
+            <div class="ai-progress-status" id="aiStatus">Analyzing scene 1 of 10...</div>
+            <div class="ai-progress-bar">
+                <div class="ai-progress-fill" id="aiProgressFill"></div>
             </div>
         </div>
         
@@ -870,11 +928,8 @@
     <div class="import-modal" id="importModal">
         <div class="import-content">
             <div class="import-header">
-                <div class="import-title">
-                    <span>📝</span>
-                    <span>Import Screenplay</span>
-                </div>
-                <button class="close-btn" onclick="closeImportModal()" style="width: 32px; height: 32px; background: transparent; border: 1px solid var(--glass-border); border-radius: 8px; color: var(--text-secondary); cursor: pointer; font-size: 1.25em;">×</button>
+                <div class="import-title">📝 Import Screenplay</div>
+                <button class="close-btn" onclick="closeImportModal()">×</button>
             </div>
             
             <div class="import-body">
@@ -882,9 +937,6 @@
                     <div class="import-toolbar">
                         <button class="import-tool-btn ai" onclick="aiCleanup()">
                             🤖 AI Cleanup
-                        </button>
-                        <button class="import-tool-btn" onclick="detectScenes()">
-                            📍 Detect Scenes
                         </button>
                         <button class="import-tool-btn" onclick="fixFormatting()">
                             🎬 Fix Format
@@ -903,9 +955,7 @@ INT. COFFEE SHOP - DAY
 JANE (30s) sits alone at a corner table, laptop open.
 
 JANE
-This is it. Today's the day.
-
-The AI will automatically detect scenes and format your script properly."></textarea>
+This is it. Today's the day."></textarea>
                 </div>
                 
                 <div class="import-preview">
@@ -923,26 +973,15 @@ The AI will automatically detect scenes and format your script properly."></text
                             <span class="preview-label">Pages (est.)</span>
                             <span class="preview-value" id="previewPages">0</span>
                         </div>
-                        <div class="preview-stat">
-                            <span class="preview-label">Format</span>
-                            <span class="preview-value" id="previewFormat">—</span>
-                        </div>
-                    </div>
-                    
-                    <div style="margin-top: 20px;">
-                        <div class="preview-title">DETECTED SCENES</div>
-                        <div id="detectedScenes" style="font-size: 0.75em; color: var(--text-muted); max-height: 200px; overflow-y: auto;">
-                            <div style="padding: 8px; text-align: center;">No scenes detected yet</div>
-                        </div>
                     </div>
                 </div>
             </div>
             
             <div class="import-footer">
-                <div class="import-status" id="importStatus">
-                    Ready to import your screenplay
+                <div style="font-size: 0.875em; color: var(--text-muted);">
+                    Paste your script and use AI Cleanup to fix formatting issues
                 </div>
-                <div class="import-actions">
+                <div style="display: flex; gap: 12px;">
                     <button class="import-btn" onclick="closeImportModal()">Cancel</button>
                     <button class="import-btn primary" onclick="processScript()">
                         Import & Process
@@ -955,24 +994,74 @@ The AI will automatically detect scenes and format your script properly."></text
     <script>
         // Global variables
         let currentProject = null;
-        let scriptData = null;
-        let currentScene = 0;
         let scenes = [];
         let characters = new Set();
-        let tags = {};
+        let currentScene = 0;
+        let sceneElements = {}; // Store AI-detected elements for each scene
+        let scriptText = ''; // Store the full script text
         
-        // Tag categories (Movie Magic/Filmustage style)
+        // Tag categories with detection patterns
         const tagCategories = [
-            { id: 'cast', name: 'Cast Members', color: '#fbbf24', icon: '👥' },
-            { id: 'extras', name: 'Extras/Background', color: '#f59e0b', icon: '👫' },
-            { id: 'wardrobe', name: 'Wardrobe', color: '#34d399', icon: '👔' },
-            { id: 'makeup', name: 'Makeup/Hair', color: '#ff6b9d', icon: '💄' },
-            { id: 'props', name: 'Props', color: '#fb923c', icon: '🎭' },
-            { id: 'vehicles', name: 'Vehicles', color: '#38bdf8', icon: '🚗' },
-            { id: 'sfx', name: 'Special Effects', color: '#8b5cf6', icon: '✨' },
-            { id: 'stunts', name: 'Stunts', color: '#ef4444', icon: '🔥' },
-            { id: 'locations', name: 'Locations', color: '#10b981', icon: '📍' },
-            { id: 'notes', name: 'Notes', color: '#6b7280', icon: '📝' }
+            { 
+                id: 'cast', 
+                name: 'Cast Members', 
+                color: '#fbbf24',
+                patterns: [] // Will be filled with character names
+            },
+            { 
+                id: 'extras', 
+                name: 'Extras/Background', 
+                color: '#f59e0b',
+                patterns: ['crowd', 'pedestrians', 'customers', 'patrons', 'guests', 'party-goers', 'audience', 'spectators', 'bystanders']
+            },
+            { 
+                id: 'wardrobe', 
+                name: 'Wardrobe', 
+                color: '#34d399',
+                patterns: ['wearing', 'dressed', 'uniform', 'costume', 'suit', 'dress', 'jacket', 'shirt', 'jeans', 'coat', 'hat', 'shoes', 'boots', 'gloves', 'torn', 'bloodied', 'dirty clothes']
+            },
+            { 
+                id: 'makeup', 
+                name: 'Makeup/Hair', 
+                color: '#ff6b9d',
+                patterns: ['makeup', 'bruised', 'blood', 'wounded', 'scar', 'tattoo', 'beard', 'mustache', 'hair', 'wig', 'bald', 'disheveled']
+            },
+            { 
+                id: 'props', 
+                name: 'Props', 
+                color: '#fb923c',
+                patterns: ['gun', 'knife', 'phone', 'laptop', 'bag', 'briefcase', 'key', 'wallet', 'badge', 'paper', 'document', 'book', 'bottle', 'glass', 'cup', 'cigarette', 'flashlight', 'rope', 'chain', 'tool', 'hammer', 'wrench']
+            },
+            { 
+                id: 'vehicles', 
+                name: 'Vehicles', 
+                color: '#38bdf8',
+                patterns: ['car', 'truck', 'van', 'motorcycle', 'bike', 'bicycle', 'bus', 'taxi', 'police car', 'ambulance', 'helicopter', 'plane', 'boat', 'ship']
+            },
+            { 
+                id: 'sfx', 
+                name: 'Special Effects', 
+                color: '#8b5cf6',
+                patterns: ['explosion', 'fire', 'smoke', 'fog', 'rain', 'snow', 'lightning', 'thunder', 'wind', 'storm', 'glass breaking', 'shatters', 'crashes', 'collapses']
+            },
+            { 
+                id: 'stunts', 
+                name: 'Stunts', 
+                color: '#ef4444',
+                patterns: ['fight', 'punch', 'kick', 'jump', 'fall', 'crash', 'chase', 'runs', 'leaps', 'dives', 'tackles', 'throws', 'hits', 'slams']
+            },
+            { 
+                id: 'locations', 
+                name: 'Locations', 
+                color: '#10b981',
+                patterns: [] // Will be extracted from scene headings
+            },
+            { 
+                id: 'notes', 
+                name: 'Notes', 
+                color: '#6b7280',
+                patterns: []
+            }
         ];
         
         // Initialize
@@ -980,9 +1069,7 @@ The AI will automatically detect scenes and format your script properly."></text
             currentProject = JSON.parse(localStorage.getItem('currentProject') || 'null');
             
             if (!currentProject) {
-                alert('No project selected');
-                window.location.href = 'index.html';
-                return;
+                currentProject = { name: 'undefined' };
             }
             
             document.getElementById('projectTitle').textContent = currentProject.name + ' - Script Breakdown';
@@ -992,19 +1079,17 @@ The AI will automatically detect scenes and format your script properly."></text
             
             // Check if script exists
             if (!currentProject.scriptContent) {
-                // Auto-open import modal for new scripts
                 setTimeout(() => openImportModal(), 500);
             } else {
-                // Load existing script
                 loadScript(currentProject.scriptContent);
             }
             
             // Setup event listeners
             document.getElementById('sceneSearch').addEventListener('input', handleSceneSearch);
-            document.getElementById('scriptInput').addEventListener('input', debounce(analyzeInput, 500));
+            document.getElementById('scriptInput').addEventListener('input', debounce(analyzeInput, 300));
         }
         
-        // Initialize tag categories in sidebar
+        // Initialize tag categories
         function initializeTagCategories() {
             const container = document.getElementById('tagCategories');
             container.innerHTML = '';
@@ -1013,80 +1098,371 @@ The AI will automatically detect scenes and format your script properly."></text
                 const categoryEl = document.createElement('div');
                 categoryEl.className = 'tag-category';
                 categoryEl.innerHTML = `
-                    <div class="category-header">
+                    <div class="category-header" onclick="toggleCategory(this)">
                         <div class="category-title">
-                            <span class="category-color" style="background: ${category.color}"></span>
-                            <span>${category.name}</span>
+                            <div class="category-icon" style="background: ${category.color}20; color: ${category.color}">
+                                ${category.id === 'cast' ? '👥' : 
+                                  category.id === 'extras' ? '👫' : 
+                                  category.id === 'wardrobe' ? '👔' : 
+                                  category.id === 'makeup' ? '💄' : 
+                                  category.id === 'props' ? '🎭' : 
+                                  category.id === 'vehicles' ? '🚗' : 
+                                  category.id === 'sfx' ? '✨' : 
+                                  category.id === 'stunts' ? '🔥' : 
+                                  category.id === 'locations' ? '📍' : '📝'}
+                            </div>
+                            <span>${category.name.toUpperCase()}</span>
                         </div>
-                        <button class="add-tag-btn" onclick="addTag('${category.id}')">+</button>
+                        <span class="category-expand">+</span>
                     </div>
-                    <div class="tag-list" id="tags-${category.id}">
-                        <!-- Tags will be added here -->
+                    <div class="category-content">
+                        <div class="tag-list" id="tags-${category.id}">
+                            <!-- Tags will be added here -->
+                        </div>
+                        <button class="add-tag-btn" onclick="addTag('${category.id}')">+ Add ${category.name}</button>
                     </div>
                 `;
                 container.appendChild(categoryEl);
             });
         }
         
-        // Open import modal
-        function openImportModal() {
-            document.getElementById('importModal').classList.add('active');
-            
-            // If we have a script, show it
-            if (currentProject.scriptContent) {
-                document.getElementById('scriptInput').value = currentProject.scriptContent;
-                analyzeInput();
-            }
+        // Toggle category expand/collapse
+        function toggleCategory(header) {
+            header.classList.toggle('collapsed');
         }
         
-        // Close import modal
-        function closeImportModal() {
-            document.getElementById('importModal').classList.remove('active');
+        // AI Analysis - Main function
+        async function runAIAnalysis() {
+            if (!scriptText) {
+                alert('Please import a script first');
+                return;
+            }
+            
+            // Show progress
+            const progressEl = document.getElementById('aiProgress');
+            const statusEl = document.getElementById('aiStatus');
+            const fillEl = document.getElementById('aiProgressFill');
+            
+            progressEl.classList.add('active');
+            
+            // Clear existing AI-detected elements
+            sceneElements = {};
+            clearAllAITags();
+            
+            // Update cast patterns with detected characters
+            const castCategory = tagCategories.find(c => c.id === 'cast');
+            castCategory.patterns = Array.from(characters);
+            
+            // Analyze each scene
+            for (let i = 0; i < scenes.length; i++) {
+                statusEl.textContent = `Analyzing scene ${i + 1} of ${scenes.length}...`;
+                fillEl.style.width = `${((i + 1) / scenes.length) * 100}%`;
+                
+                // Get scene content
+                const sceneContent = extractSceneContent(scenes[i]);
+                
+                // Analyze scene for elements
+                const elements = analyzeSceneElements(sceneContent, i);
+                sceneElements[i] = elements;
+                
+                // Simulate processing time for demo
+                await sleep(300);
+            }
+            
+            // Populate detected elements in sidebar
+            populateAIDetectedElements();
+            
+            // Update scene list with element counts
+            renderSceneList();
+            
+            // Highlight elements in script view
+            highlightScriptElements();
+            
+            statusEl.textContent = 'Analysis complete!';
+            setTimeout(() => {
+                progressEl.classList.remove('active');
+            }, 1500);
+        }
+        
+        // Extract scene content
+        function extractSceneContent(scene) {
+            const lines = scriptText.split('\n');
+            const startLine = scene.lineNumber;
+            let endLine = lines.length;
+            
+            // Find next scene's start
+            for (let i = scenes.indexOf(scene) + 1; i < scenes.length; i++) {
+                if (scenes[i]) {
+                    endLine = scenes[i].lineNumber;
+                    break;
+                }
+            }
+            
+            return lines.slice(startLine, endLine).join('\n');
+        }
+        
+        // Analyze scene for breakdown elements
+        function analyzeSceneElements(content, sceneIndex) {
+            const elements = {};
+            const contentLower = content.toLowerCase();
+            
+            tagCategories.forEach(category => {
+                elements[category.id] = new Set();
+                
+                if (category.id === 'locations') {
+                    // Extract location from scene heading
+                    const heading = scenes[sceneIndex].heading;
+                    const locationMatch = heading.match(/^(?:INT\.|EXT\.|INT\/EXT\.|I\/E\.)?\s*(.+?)(?:\s*-\s*|\s*$)/i);
+                    if (locationMatch) {
+                        const location = locationMatch[1].split('-')[0].trim();
+                        elements[category.id].add(location);
+                    }
+                } else {
+                    // Search for pattern matches
+                    category.patterns.forEach(pattern => {
+                        const regex = new RegExp(`\\b${pattern}s?\\b`, 'gi');
+                        const matches = content.match(regex);
+                        if (matches) {
+                            matches.forEach(match => {
+                                // Clean up and add the element
+                                const cleaned = match.trim();
+                                if (cleaned.length > 1) {
+                                    elements[category.id].add(cleaned.charAt(0).toUpperCase() + cleaned.slice(1).toLowerCase());
+                                }
+                            });
+                        }
+                    });
+                }
+                
+                // Special detection for specific categories
+                if (category.id === 'wardrobe') {
+                    // Detect clothing mentions in action lines
+                    const clothingRegex = /(?:wearing|dressed in|wears)\s+([^.]+)/gi;
+                    let match;
+                    while ((match = clothingRegex.exec(content)) !== null) {
+                        const clothing = match[1].replace(/[,.]$/, '').trim();
+                        if (clothing.length < 50) {
+                            elements[category.id].add(clothing);
+                        }
+                    }
+                }
+                
+                if (category.id === 'props') {
+                    // Detect objects being used
+                    const propsRegex = /(?:picks up|holds|grabs|takes|pulls out|draws|brandishes)\s+(?:a |an |the |his |her |their )?([^.]+)/gi;
+                    let match;
+                    while ((match = propsRegex.exec(content)) !== null) {
+                        const prop = match[1].replace(/[,.]$/, '').trim().split(' ').slice(0, 3).join(' ');
+                        if (prop.length > 2 && prop.length < 30) {
+                            elements[category.id].add(prop);
+                        }
+                    }
+                }
+                
+                if (category.id === 'makeup') {
+                    // Detect physical descriptions
+                    const makeupRegex = /(?:bruised|bloodied|scarred|wounded|cut|bleeding|swollen|black eye)/gi;
+                    const matches = content.match(makeupRegex);
+                    if (matches) {
+                        matches.forEach(match => {
+                            elements[category.id].add(match.charAt(0).toUpperCase() + match.slice(1).toLowerCase());
+                        });
+                    }
+                }
+            });
+            
+            return elements;
+        }
+        
+        // Clear all AI-detected tags
+        function clearAllAITags() {
+            tagCategories.forEach(category => {
+                const container = document.getElementById(`tags-${category.id}`);
+                if (container) {
+                    const aiTags = container.querySelectorAll('.tag-item.ai-detected');
+                    aiTags.forEach(tag => tag.remove());
+                }
+            });
+        }
+        
+        // Populate AI-detected elements in sidebar
+        function populateAIDetectedElements() {
+            // Aggregate all elements across scenes
+            const allElements = {};
+            
+            tagCategories.forEach(category => {
+                allElements[category.id] = new Set();
+            });
+            
+            // Collect unique elements from all scenes
+            Object.values(sceneElements).forEach(sceneData => {
+                Object.entries(sceneData).forEach(([categoryId, elements]) => {
+                    elements.forEach(element => {
+                        allElements[categoryId].add(element);
+                    });
+                });
+            });
+            
+            // Add elements to UI
+            Object.entries(allElements).forEach(([categoryId, elements]) => {
+                const container = document.getElementById(`tags-${categoryId}`);
+                if (container && elements.size > 0) {
+                    elements.forEach(element => {
+                        const tagEl = document.createElement('div');
+                        tagEl.className = 'tag-item ai-detected';
+                        tagEl.innerHTML = `
+                            <span>${element}</span>
+                            <span class="tag-badge">🤖 AI</span>
+                            <button onclick="this.parentElement.remove()" style="background: none; border: none; color: var(--text-muted); cursor: pointer;">×</button>
+                        `;
+                        container.appendChild(tagEl);
+                    });
+                }
+            });
+        }
+        
+        // Highlight elements in script view
+        function highlightScriptElements() {
+            // This would apply highlighting to detected elements in the script view
+            // For now, we'll keep the script display clean but this could be enhanced
+        }
+        
+        // Enhanced AI Cleanup
+        function aiCleanup() {
+            let text = document.getElementById('scriptInput').value;
+            if (!text) return;
+            
+            // Advanced pattern recognition for screenplay cleanup
+            
+            // Fix merged words with context awareness
+            text = text.replace(/([a-z])([A-Z])/g, (match, p1, p2, offset, string) => {
+                // Check if it's likely a merged word
+                const before = string.substring(Math.max(0, offset - 10), offset);
+                const after = string.substring(offset + 2, Math.min(string.length, offset + 12));
+                
+                // Don't split if it's a name like "McDonalds" or "iPhone"
+                if (/\bMc/.test(before + p1 + p2) || /^[A-Z][a-z]+[A-Z]/.test(p1 + p2)) {
+                    return p1 + p2;
+                }
+                return p1 + ' ' + p2;
+            });
+            
+            // Fix scene headings
+            text = text.replace(/^(\d+)?\.?\s*(INT|EXT|I\/E)(ERIOR|ERIOR)?\.?\s*[-–—]?\s*/gim, (match, num, type) => {
+                const sceneNum = num ? `${num}. ` : '';
+                return `\n\n${sceneNum}${type}. `;
+            });
+            
+            // Fix character names (all caps lines)
+            const lines = text.split('\n');
+            const fixedLines = [];
+            
+            for (let i = 0; i < lines.length; i++) {
+                let line = lines[i];
+                const trimmed = line.trim();
+                
+                // Detect potential character names
+                if (trimmed && trimmed === trimmed.toUpperCase() && trimmed.length < 30 && !trimmed.includes('.')) {
+                    // Ensure spacing around character names
+                    if (i > 0 && fixedLines[fixedLines.length - 1].trim() !== '') {
+                        fixedLines.push('');
+                    }
+                    fixedLines.push(trimmed);
+                } else {
+                    fixedLines.push(line);
+                }
+            }
+            
+            text = fixedLines.join('\n');
+            
+            // Fix common PDF extraction issues
+            text = text.replace(/([.!?])\s*([A-Z])/g, '$1\n\n$2'); // Sentence breaks
+            text = text.replace(/\n{4,}/g, '\n\n\n'); // Limit multiple newlines
+            text = text.replace(/^\s+|\s+$/gm, ''); // Trim each line
+            
+            // Fix parentheticals
+            text = text.replace(/\n\s*\(([^)]+)\)\s*\n/g, '\n($1)\n');
+            
+            document.getElementById('scriptInput').value = text;
+            analyzeInput();
+        }
+        
+        // Fix formatting
+        function fixFormatting() {
+            let text = document.getElementById('scriptInput').value;
+            if (!text) return;
+            
+            // Ensure proper spacing around scene headings
+            const lines = text.split('\n');
+            const formatted = [];
+            
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                const nextLine = lines[i + 1] ? lines[i + 1].trim() : '';
+                
+                // Check if this is a scene heading
+                if (/^(INT\.|EXT\.|INT\/EXT\.)/.test(line)) {
+                    // Add spacing before scene heading if needed
+                    if (i > 0 && formatted[formatted.length - 1] !== '') {
+                        formatted.push('');
+                    }
+                    formatted.push(line);
+                    // Add spacing after scene heading if needed
+                    if (nextLine !== '') {
+                        formatted.push('');
+                    }
+                }
+                // Check if this is a character name (all caps, short)
+                else if (line && line === line.toUpperCase() && line.length < 30 && 
+                         !line.includes('.') && !line.includes('FADE') && !line.includes('CUT')) {
+                    // Character name - add space before if needed
+                    if (i > 0 && formatted[formatted.length - 1] !== '') {
+                        formatted.push('');
+                    }
+                    formatted.push(line);
+                }
+                else {
+                    formatted.push(line);
+                }
+            }
+            
+            document.getElementById('scriptInput').value = formatted.join('\n');
+            analyzeInput();
+        }
+        
+        // Clear input
+        function clearInput() {
+            if (confirm('Clear all text?')) {
+                document.getElementById('scriptInput').value = '';
+                analyzeInput();
+            }
         }
         
         // Analyze input in real-time
         function analyzeInput() {
             const text = document.getElementById('scriptInput').value;
             if (!text.trim()) {
-                updatePreview(0, 0, 0, '—');
+                updatePreview(0, 0, 0);
                 return;
             }
             
-            // Detect scenes
             const detectedScenes = detectScenesInText(text);
-            
-            // Detect characters
             const detectedCharacters = detectCharactersInText(text);
-            
-            // Calculate pages (roughly 1 page per minute, ~120-150 words)
             const wordCount = text.trim().split(/\s+/).length;
             const pageEstimate = Math.ceil(wordCount / 130);
             
-            // Detect format
-            let format = 'Plain Text';
-            if (detectedScenes.length > 0) {
-                format = 'Screenplay';
-            } else if (text.includes('[[') && text.includes(']]')) {
-                format = 'Fountain';
-            }
-            
-            updatePreview(detectedScenes.length, detectedCharacters.size, pageEstimate, format);
-            
-            // Show detected scenes
-            showDetectedScenes(detectedScenes);
+            updatePreview(detectedScenes.length, detectedCharacters.size, pageEstimate);
         }
         
-        // Detect scenes in text
+        // Detect scenes with improved pattern matching
         function detectScenesInText(text) {
             const lines = text.split('\n');
             const detectedScenes = [];
             
-            // Scene patterns
             const patterns = [
-                /^(INT\.|EXT\.|INT\/EXT\.|I\/E\.).*$/i,
-                /^\d+[\.\s]+(INT\.|EXT\.).*$/i,
-                /^(INTERIOR|EXTERIOR).*$/i,
-                /^SCENE\s+\d+.*$/i
+                /^(\d+\.?\s*)?(INT\.|EXT\.|INT\/EXT\.|I\/E\.).*$/i,
+                /^(\d+\.?\s*)?(INTERIOR|EXTERIOR).*$/i,
+                /^(INT|EXT)\s+[-–—]\s+.+$/i
             ];
             
             lines.forEach((line, index) => {
@@ -1107,26 +1483,31 @@ The AI will automatically detect scenes and format your script properly."></text
             return detectedScenes;
         }
         
-        // Detect characters in text
+        // Detect characters with improved logic
         function detectCharactersInText(text) {
             const lines = text.split('\n');
             const detectedCharacters = new Set();
+            const excludeWords = ['FADE IN', 'FADE OUT', 'CUT TO', 'DISSOLVE TO', 'MATCH CUT', 'THE END', 'CONTINUED'];
             
-            lines.forEach(line => {
+            lines.forEach((line, index) => {
                 const trimmed = line.trim();
                 
-                // Character names are usually uppercase, short, and not scene headings
+                // Check if it's likely a character name
                 if (trimmed && 
                     trimmed === trimmed.toUpperCase() && 
                     trimmed.length < 30 && 
+                    trimmed.length > 1 &&
                     !trimmed.includes('.') &&
-                    !trimmed.includes('CUT TO') &&
-                    !trimmed.includes('FADE')) {
+                    !trimmed.includes(':') &&
+                    !excludeWords.some(word => trimmed.includes(word))) {
                     
-                    // Remove parentheticals
-                    const cleaned = trimmed.replace(/\(.*\)/, '').trim();
-                    if (cleaned) {
-                        detectedCharacters.add(cleaned);
+                    // Check context - next line should be dialogue or parenthetical
+                    const nextLine = lines[index + 1] ? lines[index + 1].trim() : '';
+                    if (nextLine && !nextLine.toUpperCase() === nextLine) {
+                        const cleaned = trimmed.replace(/\(.*\)/, '').trim();
+                        if (cleaned && cleaned.length > 1) {
+                            detectedCharacters.add(cleaned);
+                        }
                     }
                 }
             });
@@ -1134,113 +1515,14 @@ The AI will automatically detect scenes and format your script properly."></text
             return detectedCharacters;
         }
         
-        // Update preview panel
-        function updatePreview(sceneCount, characterCount, pageCount, format) {
+        // Update preview
+        function updatePreview(sceneCount, characterCount, pageCount) {
             document.getElementById('previewScenes').textContent = sceneCount;
             document.getElementById('previewCharacters').textContent = characterCount;
             document.getElementById('previewPages').textContent = pageCount;
-            document.getElementById('previewFormat').textContent = format;
         }
         
-        // Show detected scenes
-        function showDetectedScenes(detectedScenes) {
-            const container = document.getElementById('detectedScenes');
-            
-            if (detectedScenes.length === 0) {
-                container.innerHTML = '<div style="padding: 8px; text-align: center;">No scenes detected yet</div>';
-                return;
-            }
-            
-            container.innerHTML = detectedScenes.map(scene => `
-                <div style="padding: 6px 8px; border-bottom: 1px solid var(--glass-border);">
-                    <strong>${scene.number}.</strong> ${scene.heading}
-                </div>
-            `).join('');
-        }
-        
-        // AI Cleanup function
-        function aiCleanup() {
-            const text = document.getElementById('scriptInput').value;
-            if (!text) return;
-            
-            let cleaned = text;
-            
-            // Fix scene headings
-            cleaned = cleaned.replace(/int\./gi, 'INT.');
-            cleaned = cleaned.replace(/ext\./gi, 'EXT.');
-            cleaned = cleaned.replace(/^(INT|EXT)([^.])/gm, '$1. $2');
-            
-            // Clean PDF artifacts
-            cleaned = cleaned.replace(/\s{2,}/g, ' '); // Multiple spaces
-            cleaned = cleaned.replace(/([a-z])([A-Z])/g, '$1 $2'); // Merged words
-            cleaned = cleaned.replace(/\n{3,}/g, '\n\n'); // Excessive line breaks
-            cleaned = cleaned.replace(/^\d+\s*$/gm, ''); // Page numbers
-            
-            // Fix character names (uppercase)
-            const lines = cleaned.split('\n');
-            for (let i = 0; i < lines.length - 1; i++) {
-                const line = lines[i].trim();
-                const nextLine = lines[i + 1] ? lines[i + 1].trim() : '';
-                
-                // If this looks like a character name before dialogue
-                if (line && line.length < 30 && !line.includes('.') && nextLine && 
-                    !nextLine.startsWith('INT.') && !nextLine.startsWith('EXT.')) {
-                    // Check if it should be uppercase
-                    if (line !== line.toUpperCase() && /^[A-Z]/.test(line)) {
-                        lines[i] = lines[i].toUpperCase();
-                    }
-                }
-            }
-            cleaned = lines.join('\n');
-            
-            document.getElementById('scriptInput').value = cleaned;
-            analyzeInput();
-            
-            document.getElementById('importStatus').textContent = '✨ Script cleaned and formatted';
-            setTimeout(() => {
-                document.getElementById('importStatus').textContent = 'Ready to import your screenplay';
-            }, 3000);
-        }
-        
-        // Detect scenes button
-        function detectScenes() {
-            const text = document.getElementById('scriptInput').value;
-            if (!text) return;
-            
-            // Add scene markers
-            let marked = text;
-            const patterns = [
-                /^(INT\.|EXT\.|INT\/EXT\.).*$/gm,
-                /^(INTERIOR|EXTERIOR).*$/gm
-            ];
-            
-            patterns.forEach(pattern => {
-                marked = marked.replace(pattern, '→→→ $1 ←←←');
-            });
-            
-            document.getElementById('scriptInput').value = marked;
-            analyzeInput();
-            
-            document.getElementById('importStatus').textContent = '📍 Scene headings highlighted';
-            setTimeout(() => {
-                document.getElementById('importStatus').textContent = 'Ready to import your screenplay';
-            }, 3000);
-        }
-        
-        // Fix formatting
-        function fixFormatting() {
-            aiCleanup(); // Use the same function for now
-        }
-        
-        // Clear input
-        function clearInput() {
-            if (confirm('Clear all text?')) {
-                document.getElementById('scriptInput').value = '';
-                analyzeInput();
-            }
-        }
-        
-        // Process and import script
+        // Process script
         function processScript() {
             const text = document.getElementById('scriptInput').value;
             
@@ -1249,42 +1531,29 @@ The AI will automatically detect scenes and format your script properly."></text
                 return;
             }
             
-            // Save to project
+            scriptText = text;
             currentProject.scriptContent = text;
             saveProject();
-            
-            // Load the script
             loadScript(text);
-            
-            // Close modal
             closeImportModal();
-            
-            // Show AI analyze button
-            document.getElementById('aiAnalyzeBtn').style.display = 'flex';
-            document.getElementById('generateBtn').style.display = 'flex';
         }
         
-        // Load script into viewer
-        function loadScript(scriptText) {
-            scenes = detectScenesInText(scriptText);
-            characters = detectCharactersInText(scriptText);
+        // Load script
+        function loadScript(text) {
+            scriptText = text;
+            scenes = detectScenesInText(text);
+            characters = detectCharactersInText(text);
             
-            // Update scene count
             document.getElementById('sceneCount').textContent = scenes.length;
-            
-            // Render scene list
             renderSceneList();
+            renderScript(text);
             
-            // Render script
-            renderScript(scriptText);
-            
-            // Update project
             currentProject.scenes = scenes.length;
             currentProject.characters = Array.from(characters);
             saveProject();
         }
         
-        // Render scene list
+        // Render scene list with element counts
         function renderSceneList() {
             const container = document.getElementById('sceneList');
             
@@ -1293,53 +1562,60 @@ The AI will automatically detect scenes and format your script properly."></text
                 return;
             }
             
-            container.innerHTML = scenes.map((scene, index) => `
-                <div class="scene-item ${index === 0 ? 'active' : ''}" onclick="selectScene(${index})">
-                    <div class="scene-header">
-                        <div class="scene-number">${scene.number}</div>
-                        <div class="scene-info">
-                            <div class="scene-heading">${scene.heading}</div>
-                            <div class="scene-meta">
-                                <span>Page ${Math.ceil(scene.number * 0.8)}</span>
-                                <span>•</span>
-                                <span>${Math.floor(Math.random() * 5 + 1)} elements</span>
+            container.innerHTML = scenes.map((scene, index) => {
+                // Count elements for this scene
+                let elementCount = 0;
+                if (sceneElements[index]) {
+                    Object.values(sceneElements[index]).forEach(set => {
+                        elementCount += set.size;
+                    });
+                }
+                
+                return `
+                    <div class="scene-item ${index === 0 ? 'active' : ''}" onclick="selectScene(${index})">
+                        <div class="scene-header">
+                            <div class="scene-number">${scene.number}</div>
+                            <div class="scene-info">
+                                <div class="scene-heading">${scene.heading}</div>
+                                <div class="scene-meta">
+                                    <span>Page ${Math.ceil(scene.number * 0.8)}</span>
+                                    <span>•</span>
+                                    <span class="${elementCount > 0 ? 'element-count' : ''}">${elementCount} elements</span>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="scene-tags">
-                        <!-- Tag indicators will go here -->
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
         
         // Render script content
-        function renderScript(scriptText) {
+        function renderScript(text) {
             const container = document.getElementById('scriptContent');
-            const lines = scriptText.split('\n');
+            const lines = text.split('\n');
             let html = '';
-            let currentSceneIndex = 0;
+            let inScene = false;
+            let currentSceneIdx = 0;
             
-            lines.forEach((line, index) => {
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
                 const trimmed = line.trim();
                 
                 // Check if this is a scene heading
-                let isSceneHeading = false;
-                if (scenes[currentSceneIndex] && scenes[currentSceneIndex].lineNumber === index) {
-                    html += `<div class="script-scene" id="scene-${scenes[currentSceneIndex].number}">`;
-                    html += `<div class="script-scene-heading">
-                        <span class="script-scene-number">${scenes[currentSceneIndex].number}.</span>
-                        ${trimmed}
-                    </div>`;
-                    currentSceneIndex++;
-                    isSceneHeading = true;
-                }
+                const isSceneHeading = scenes.some(s => s.lineNumber === i);
                 
-                if (!isSceneHeading) {
-                    // Determine line type
-                    if (!trimmed) {
-                        html += '<br>';
-                    } else if (trimmed === trimmed.toUpperCase() && trimmed.length < 30 && !trimmed.includes('.')) {
+                if (isSceneHeading) {
+                    if (inScene) {
+                        html += '</div>'; // Close previous scene
+                    }
+                    html += `<div class="script-scene" id="scene-${scenes[currentSceneIdx].number}">`;
+                    html += `<div class="script-scene-heading">${trimmed}</div>`;
+                    inScene = true;
+                    currentSceneIdx++;
+                } else if (trimmed) {
+                    // Determine element type
+                    if (trimmed === trimmed.toUpperCase() && trimmed.length < 30 && 
+                        !trimmed.includes('.') && !trimmed.includes(':')) {
                         // Character name
                         html += `<div class="script-character">${trimmed}</div>`;
                     } else if (trimmed.startsWith('(') && trimmed.endsWith(')')) {
@@ -1349,108 +1625,37 @@ The AI will automatically detect scenes and format your script properly."></text
                         // Transition
                         html += `<div class="script-transition">${trimmed}</div>`;
                     } else {
-                        // Check indentation for dialogue vs action
-                        const indent = line.search(/\S/);
-                        if (indent > 10) {
+                        // Dialogue or action - check by context
+                        const prevLine = i > 0 ? lines[i - 1].trim() : '';
+                        if (prevLine && prevLine === prevLine.toUpperCase() && prevLine.length < 30) {
+                            // This is likely dialogue
                             html += `<div class="script-dialogue">${trimmed}</div>`;
                         } else {
+                            // Action
                             html += `<div class="script-action">${trimmed}</div>`;
                         }
                     }
                 }
-            });
-            
-            // Close last scene
-            if (currentSceneIndex > 0) {
-                html += '</div>';
             }
             
-            container.innerHTML = html || '<div class="empty-state"><div class="empty-icon">📄</div><div class="empty-title">Script Processing...</div></div>';
+            if (inScene) {
+                html += '</div>'; // Close last scene
+            }
+            
+            container.innerHTML = html || '<div class="empty-state"><div class="empty-icon">📄</div><div class="empty-title">Processing...</div></div>';
         }
         
         // Select scene
         function selectScene(index) {
             currentScene = index;
             
-            // Update active state
             document.querySelectorAll('.scene-item').forEach((item, i) => {
                 item.classList.toggle('active', i === index);
             });
             
-            // Scroll to scene in script
             const sceneEl = document.getElementById(`scene-${scenes[index].number}`);
             if (sceneEl) {
                 sceneEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-            
-            // Load tags for this scene
-            loadSceneTags(index);
-        }
-        
-        // Load tags for scene
-        function loadSceneTags(sceneIndex) {
-            // This would load existing tags from storage/database
-            // For now, just clear or show existing
-        }
-        
-        // Add tag
-        function addTag(categoryId) {
-            const category = tagCategories.find(c => c.id === categoryId);
-            const tagName = prompt(`Add ${category.name}:`);
-            
-            if (!tagName) return;
-            
-            // Add to current scene's tags
-            if (!tags[currentScene]) {
-                tags[currentScene] = {};
-            }
-            if (!tags[currentScene][categoryId]) {
-                tags[currentScene][categoryId] = [];
-            }
-            
-            tags[currentScene][categoryId].push({
-                name: tagName,
-                aiSuggested: false
-            });
-            
-            // Update UI
-            updateTagDisplay(categoryId);
-            
-            // Save
-            saveProject();
-        }
-        
-        // Update tag display
-        function updateTagDisplay(categoryId) {
-            const container = document.getElementById(`tags-${categoryId}`);
-            const sceneTags = tags[currentScene]?.[categoryId] || [];
-            
-            container.innerHTML = sceneTags.map((tag, index) => `
-                <div class="tag-item ${tag.aiSuggested ? 'ai-suggested' : ''}">
-                    <span class="tag-name">${tag.name}</span>
-                    <div class="tag-actions">
-                        ${tag.aiSuggested ? `
-                            <button class="tag-action accept" onclick="acceptTag('${categoryId}', ${index})">✓</button>
-                            <button class="tag-action reject" onclick="rejectTag('${categoryId}', ${index})">✕</button>
-                        ` : `
-                            <button class="tag-action reject" onclick="removeTag('${categoryId}', ${index})">✕</button>
-                        `}
-                    </div>
-                </div>
-            `).join('');
-        }
-        
-        // Save project
-        function saveProject() {
-            currentProject.tags = tags;
-            localStorage.setItem('currentProject', JSON.stringify(currentProject));
-            
-            // Also update in projects list
-            const projects = JSON.parse(localStorage.getItem('checksHappyProjects') || '[]');
-            const index = projects.findIndex(p => p.id === currentProject.id);
-            if (index !== -1) {
-                projects[index] = currentProject;
-                localStorage.setItem('checksHappyProjects', JSON.stringify(projects));
             }
         }
         
@@ -1463,6 +1668,49 @@ The AI will automatically detect scenes and format your script properly."></text
                 const heading = scenes[index].heading.toLowerCase();
                 item.style.display = heading.includes(searchTerm) ? 'block' : 'none';
             });
+        }
+        
+        // Add tag
+        function addTag(categoryId) {
+            const category = tagCategories.find(c => c.id === categoryId);
+            const tagName = prompt(`Add ${category.name}:`);
+            
+            if (!tagName) return;
+            
+            const container = document.getElementById(`tags-${categoryId}`);
+            const tagEl = document.createElement('div');
+            tagEl.className = 'tag-item';
+            tagEl.innerHTML = `
+                <span>${tagName}</span>
+                <button onclick="this.parentElement.remove()" style="background: none; border: none; color: var(--text-muted); cursor: pointer;">×</button>
+            `;
+            container.appendChild(tagEl);
+        }
+        
+        // Open import modal
+        function openImportModal() {
+            document.getElementById('importModal').classList.add('active');
+            if (currentProject.scriptContent) {
+                document.getElementById('scriptInput').value = currentProject.scriptContent;
+                analyzeInput();
+            }
+        }
+        
+        // Close import modal
+        function closeImportModal() {
+            document.getElementById('importModal').classList.remove('active');
+        }
+        
+        // Save project
+        function saveProject() {
+            localStorage.setItem('currentProject', JSON.stringify(currentProject));
+            
+            const projects = JSON.parse(localStorage.getItem('checksHappyProjects') || '[]');
+            const index = projects.findIndex(p => p.id === currentProject.id);
+            if (index !== -1) {
+                projects[index] = currentProject;
+                localStorage.setItem('checksHappyProjects', JSON.stringify(projects));
+            }
         }
         
         // Zoom functions
@@ -1478,17 +1726,7 @@ The AI will automatically detect scenes and format your script properly."></text
             container.style.fontSize = (currentSize * 0.9) + 'px';
         }
         
-        // Run AI Analysis
-        function runAIAnalysis() {
-            alert('AI Analysis would process the script and suggest tags for each scene.\n\nThis would integrate with OpenAI/Claude API to:\n• Identify cast members\n• Detect props and wardrobe\n• Find special effects requirements\n• Note location details');
-        }
-        
-        // Generate report
-        function generateReport() {
-            alert(`Breakdown Report Ready!\n\nScenes: ${scenes.length}\nCharacters: ${characters.size}\nPages: ~${Math.ceil(scenes.length * 0.8)}\n\nThis would generate a full production breakdown sheet.`);
-        }
-        
-        // Utility: Debounce function
+        // Utility functions
         function debounce(func, wait) {
             let timeout;
             return function executedFunction(...args) {
@@ -1501,7 +1739,11 @@ The AI will automatically detect scenes and format your script properly."></text
             };
         }
         
-        // Initialize on load
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+        
+        // Initialize
         init();
     </script>
 </body>
