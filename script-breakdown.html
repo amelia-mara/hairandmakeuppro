@@ -1208,6 +1208,280 @@
             font-weight: 600;
         }
 
+        /* Cast Profile Modal Redesign */
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .modal-close {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-size: 1.5em;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-light);
+        }
+
+        .profile-base-section {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--glass-border);
+            background: rgba(212, 175, 122, 0.05);
+        }
+
+        .profile-scenes-count {
+            margin-top: 12px;
+            font-size: 0.8125em;
+            color: var(--text-muted);
+        }
+
+        .scenes-list {
+            color: var(--accent-gold);
+            font-weight: 600;
+        }
+
+        .profile-continuity-section {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--glass-border);
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .profile-scenes-section {
+            padding: 20px 24px;
+        }
+
+        .profile-section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .profile-section-title {
+            font-size: 0.9375em;
+            font-weight: 600;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .profile-add-btn,
+        .profile-filter-btn {
+            padding: 6px 12px;
+            background: linear-gradient(135deg, rgba(212, 175, 122, 0.15), rgba(212, 175, 122, 0.1));
+            border: 1px solid var(--accent-gold);
+            border-radius: 6px;
+            color: var(--accent-gold);
+            font-size: 0.75em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .profile-add-btn:hover,
+        .profile-filter-btn:hover {
+            background: linear-gradient(135deg, rgba(212, 175, 122, 0.25), rgba(212, 175, 122, 0.15));
+            transform: translateY(-1px);
+        }
+
+        .profile-filter-btn.active {
+            background: var(--accent-gold);
+            color: var(--bg-dark);
+        }
+
+        /* Continuity Event Card */
+        .continuity-event-card {
+            background: rgba(28, 25, 22, 0.5);
+            border: 1px solid var(--glass-border);
+            border-left: 3px solid var(--accent-gold);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .continuity-event-card:hover {
+            border-left-width: 4px;
+            background: rgba(28, 25, 22, 0.7);
+        }
+
+        .event-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .event-card-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9375em;
+            font-weight: 600;
+            color: var(--text-light);
+        }
+
+        .event-card-icon {
+            font-size: 1.25em;
+        }
+
+        .event-card-meta {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 12px;
+            font-size: 0.75em;
+            color: var(--text-muted);
+        }
+
+        .event-card-progression {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 12px;
+        }
+
+        .event-card-progression-title {
+            font-size: 0.75em;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            letter-spacing: 0.05em;
+        }
+
+        .event-progression-stage {
+            padding: 6px 0;
+            font-size: 0.8125em;
+            color: var(--text-light);
+            line-height: 1.5;
+        }
+
+        .event-card-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .event-action-btn {
+            padding: 6px 12px;
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            border-radius: 4px;
+            color: var(--text-muted);
+            font-size: 0.75em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .event-action-btn:hover {
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+        }
+
+        .event-action-btn.danger:hover {
+            border-color: var(--error);
+            color: var(--error);
+        }
+
+        /* Scene Quick View */
+        .scene-quick-item {
+            background: rgba(28, 25, 22, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            transition: all 0.2s ease;
+        }
+
+        .scene-quick-item:hover {
+            background: rgba(28, 25, 22, 0.5);
+            border-color: rgba(212, 175, 122, 0.3);
+        }
+
+        .scene-quick-item.has-events {
+            border-left: 3px solid var(--accent-gold);
+        }
+
+        .scene-quick-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .scene-quick-title {
+            font-size: 0.8125em;
+            font-weight: 600;
+            color: var(--text-light);
+        }
+
+        .scene-quick-events {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.75em;
+            color: var(--accent-gold);
+        }
+
+        .scene-quick-details {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            line-height: 1.5;
+            margin-bottom: 8px;
+        }
+
+        .scene-quick-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .scene-quick-btn {
+            padding: 4px 10px;
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            border-radius: 4px;
+            color: var(--text-muted);
+            font-size: 0.6875em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .scene-quick-btn:hover {
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+        }
+
+        .empty-state-small {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .empty-icon-small {
+            font-size: 2.5em;
+            margin-bottom: 12px;
+            opacity: 0.3;
+        }
+
+        .empty-text-small {
+            font-size: 0.8125em;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
         .profile-section {
             margin-bottom: 16px;
         }
@@ -2009,37 +2283,48 @@
     
     <!-- Cast Profile Modal -->
     <div class="modal" id="castProfileModal">
-        <div class="modal-content" style="max-width: 700px; max-height: 85vh; display: flex; flex-direction: column;">
-            <div class="modal-title" id="castProfileTitle">Cast Profile</div>
+        <div class="modal-content" style="max-width: 800px; max-height: 90vh; display: flex; flex-direction: column;">
+            <div class="modal-header">
+                <div class="modal-title" id="castProfileTitle">Cast Profile</div>
+                <button class="modal-close" onclick="closeCastProfile()">×</button>
+            </div>
 
             <!-- Character-wide Base Info -->
-            <div class="profile-section">
-                <label class="profile-label">Character Name</label>
-                <input type="text" class="modal-input" id="castName" readonly>
-            </div>
-
-            <div class="profile-section">
+            <div class="profile-base-section">
                 <label class="profile-label">Base Description (Character-wide)</label>
                 <textarea class="modal-textarea" id="castBaseDesc" rows="2" placeholder="Age, physical appearance, general characteristics..."></textarea>
-            </div>
 
-            <!-- Scene Selector -->
-            <div class="profile-section">
-                <label class="profile-label">⚡ Scene-Specific Breakdown</label>
-                <div style="display: flex; gap: 8px; align-items: center;">
-                    <select class="modal-select" id="sceneSelector" onchange="loadSceneDetails()" style="flex: 1;">
-                        <option value="">-- Select Scene --</option>
-                    </select>
-                    <button class="modal-btn" onclick="previousScene()" id="prevSceneBtn">←</button>
-                    <button class="modal-btn" onclick="nextScene()" id="nextSceneBtn">→</button>
+                <div class="profile-scenes-count" id="scenesCount">
+                    Appears in: <span class="scenes-list"></span>
                 </div>
             </div>
 
-            <!-- Scene Details (scrollable) -->
-            <div id="sceneDetailsContainer" style="flex: 1; overflow-y: auto; margin: 16px 0;">
-                <div class="empty-state" style="padding: 40px 20px;">
-                    <div class="empty-icon">📋</div>
-                    <div class="empty-desc">Select a scene to view/edit details</div>
+            <!-- Continuity Events Section -->
+            <div class="profile-continuity-section">
+                <div class="profile-section-header">
+                    <span class="profile-section-title">Continuity Events</span>
+                    <button class="profile-add-btn" onclick="addContinuityEvent()">+ Add Event</button>
+                </div>
+
+                <div class="continuity-events-container" id="continuityEventsContainer">
+                    <div class="empty-state-small">
+                        <div class="empty-icon-small">⚡</div>
+                        <div class="empty-text-small">No continuity events yet. Click "+ Add Event" to create one.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scene-by-Scene Quick View -->
+            <div class="profile-scenes-section" style="flex: 1; overflow-y: auto;">
+                <div class="profile-section-header">
+                    <span class="profile-section-title">Scene-by-Scene Quick View</span>
+                    <button class="profile-filter-btn" onclick="toggleEventScenes()" id="filterEventsBtn">
+                        Show Only Event Scenes
+                    </button>
+                </div>
+
+                <div class="scenes-quick-view" id="scenesQuickView">
+                    <!-- Populated dynamically -->
                 </div>
             </div>
 
@@ -3800,31 +4085,28 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`;
                 baseDescription: ''
             };
 
-            document.getElementById('castProfileTitle').textContent = `${castMember} - Profile`;
-            document.getElementById('castName').value = castMember;
+            document.getElementById('castProfileTitle').textContent = `${castMember} - Cast Profile`;
             document.getElementById('castBaseDesc').value = profile.baseDescription || '';
 
-            // Populate scene selector with scenes this character is in
-            const sceneSelector = document.getElementById('sceneSelector');
-            sceneSelector.innerHTML = '<option value="">-- Select Scene --</option>';
-
+            // Get scenes this character appears in
+            const characterScenes = [];
             scenes.forEach((scene, index) => {
                 const breakdown = sceneBreakdowns[index] || {};
                 if (breakdown.cast && breakdown.cast.includes(castMember)) {
-                    const option = document.createElement('option');
-                    option.value = index;
-                    option.textContent = `Scene ${scene.number}: ${scene.heading.substring(0, 40)}...`;
-                    sceneSelector.appendChild(option);
+                    characterScenes.push({ scene, index });
                 }
             });
 
-            // Clear scene details
-            document.getElementById('sceneDetailsContainer').innerHTML = `
-                <div class="empty-state" style="padding: 40px 20px;">
-                    <div class="empty-icon">📋</div>
-                    <div class="empty-desc">Select a scene to view/edit details</div>
-                </div>
-            `;
+            // Update scenes count
+            const sceneNumbers = characterScenes.map(s => s.scene.number).join(', ');
+            document.querySelector('.scenes-list').textContent =
+                `${sceneNumbers} (${characterScenes.length} scenes)`;
+
+            // Render continuity events
+            renderContinuityEvents(castMember);
+
+            // Render scene quick view
+            renderSceneQuickView(castMember, characterScenes);
 
             document.getElementById('castProfileModal').classList.add('active');
         }
@@ -3845,9 +4127,6 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`;
             }
 
             castProfiles[currentCastMember].baseDescription = document.getElementById('castBaseDesc').value;
-
-            // Save current scene-specific details
-            saveCastProfileCurrentScene();
 
             saveProject();
             renderCastPanel();
@@ -4951,6 +5230,259 @@ IMPORTANT: Respond with ONLY the description text, no JSON, no formatting, just 
                 scene.characters[currentCastMember].wardrobe = document.getElementById(`wardrobe-${sceneIndex}`)?.value || '';
                 scene.characters[currentCastMember].notes = document.getElementById(`notes-${sceneIndex}`)?.value || '';
             }
+        }
+
+        // Render continuity events for a character
+        function renderContinuityEvents(character) {
+            const container = document.getElementById('continuityEventsContainer');
+            const events = continuityEvents[character] || [];
+
+            if (events.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state-small">
+                        <div class="empty-icon-small">⚡</div>
+                        <div class="empty-text-small">No continuity events yet. Click "+ Add Event" to create one.</div>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            events.forEach(event => {
+                const eventType = eventTypes.find(t => t.id === event.type) || eventTypes[eventTypes.length - 1];
+                const startScene = scenes[event.startScene]?.number || '?';
+                const endScene = event.endScene !== null && event.endScene !== undefined
+                    ? scenes[event.endScene]?.number || '?'
+                    : '?';
+
+                // Get timeline context
+                const startDay = scenes[event.startScene]?.storyDay || '';
+                const endDay = event.endScene !== null && event.endScene !== undefined
+                    ? scenes[event.endScene]?.storyDay || ''
+                    : '';
+                const timeline = startDay && endDay ? `${startDay} → ${endDay}` : '';
+
+                // Count scenes in range
+                const sceneCount = event.endScene !== null && event.endScene !== undefined
+                    ? Math.abs(event.endScene - event.startScene) + 1
+                    : 1;
+
+                html += `
+                    <div class="continuity-event-card">
+                        <div class="event-card-header">
+                            <div class="event-card-title">
+                                <span class="event-card-icon">${eventType.icon}</span>
+                                <span>${event.description}</span>
+                            </div>
+                        </div>
+
+                        <div class="event-card-meta">
+                            <div>Scenes ${startScene} → ${endScene} (${sceneCount} scenes)</div>
+                            ${timeline ? `<div>${timeline}</div>` : ''}
+                        </div>
+
+                        ${event.progression && event.progression.length > 0 ? `
+                            <div class="event-card-progression">
+                                <div class="event-card-progression-title">Progression</div>
+                                ${event.progression.map(stage => `
+                                    <div class="event-progression-stage">
+                                        • Sc ${scenes[stage.sceneIndex]?.number || '?'}: ${stage.description}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+
+                        <div class="event-card-actions">
+                            <button class="event-action-btn" onclick="editContinuityEvent('${event.id}')">Edit Event</button>
+                            <button class="event-action-btn danger" onclick="deleteContinuityEvent('${character}', '${event.id}')">Delete</button>
+                            <button class="event-action-btn" onclick="jumpToScene(${event.startScene})">Jump to Scene ${startScene}</button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        // Render scene-by-scene quick view
+        function renderSceneQuickView(character, characterScenes) {
+            const container = document.getElementById('scenesQuickView');
+
+            if (characterScenes.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state-small">
+                        <div class="empty-text-small">Character doesn't appear in any scenes yet.</div>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            characterScenes.forEach(({ scene, index }) => {
+                const charData = scene.characters?.[character] || {};
+                const sceneTags = scriptTags[index] || [];
+
+                // Get active continuity events for this scene
+                const activeEvents = (continuityEvents[character] || []).filter(event => {
+                    return event.startScene <= index &&
+                           (event.endScene === null || event.endScene === undefined || event.endScene >= index);
+                });
+
+                const hasEvents = activeEvents.length > 0;
+
+                // Build details summary
+                const details = [];
+                if (charData.hair) details.push(`Hair: ${charData.hair}`);
+                if (charData.makeup) details.push(`Makeup: ${charData.makeup}`);
+                if (charData.sfx) details.push(`SFX: ${charData.sfx}`);
+                if (charData.wardrobe) details.push(`Wardrobe: ${charData.wardrobe}`);
+
+                html += `
+                    <div class="scene-quick-item ${hasEvents ? 'has-events' : ''}" data-scene-index="${index}">
+                        <div class="scene-quick-header">
+                            <div class="scene-quick-title">Scene ${scene.number}: ${scene.heading}</div>
+                            ${hasEvents ? `
+                                <div class="scene-quick-events">
+                                    ${activeEvents.map(() => '⚡').join('')}
+                                    ${activeEvents.length} event${activeEvents.length > 1 ? 's' : ''}
+                                </div>
+                            ` : ''}
+                        </div>
+
+                        ${hasEvents ? `
+                            <div style="font-size: 0.75em; color: var(--accent-gold); margin-bottom: 8px;">
+                                Active Events: ${activeEvents.map(e => e.description).join(', ')}
+                            </div>
+                        ` : ''}
+
+                        ${details.length > 0 ? `
+                            <div class="scene-quick-details">
+                                ${details.join(' | ')}
+                            </div>
+                        ` : `
+                            <div class="scene-quick-details" style="font-style: italic; opacity: 0.6;">
+                                No details entered yet
+                            </div>
+                        `}
+
+                        <div class="scene-quick-actions">
+                            <button class="scene-quick-btn" onclick="editSceneDetails(${index}, '${character}')">View/Edit Details</button>
+                            <button class="scene-quick-btn" onclick="jumpToScene(${index})">Jump to Scene</button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        // Jump to scene in script viewer
+        function jumpToScene(sceneIndex) {
+            closeCastProfile();
+            selectScene(scenes[sceneIndex]);
+
+            // Scroll to scene in script
+            setTimeout(() => {
+                const sceneId = `scene-${scenes[sceneIndex].number}`;
+                const sceneElement = document.getElementById(sceneId);
+                if (sceneElement) {
+                    sceneElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }, 300);
+        }
+
+        // Toggle filter to show only scenes with active events
+        let showOnlyEventScenes = false;
+        function toggleEventScenes() {
+            showOnlyEventScenes = !showOnlyEventScenes;
+            const btn = document.getElementById('filterEventsBtn');
+            btn.classList.toggle('active', showOnlyEventScenes);
+            btn.textContent = showOnlyEventScenes ? 'Show All Scenes' : 'Show Only Event Scenes';
+
+            // Filter scene quick view
+            const items = document.querySelectorAll('.scene-quick-item');
+            items.forEach(item => {
+                if (showOnlyEventScenes) {
+                    item.style.display = item.classList.contains('has-events') ? 'block' : 'none';
+                } else {
+                    item.style.display = 'block';
+                }
+            });
+        }
+
+        // Edit scene details (opens scene-specific editor)
+        function editSceneDetails(sceneIndex, character) {
+            // Close cast profile modal
+            closeCastProfile();
+
+            // Select the scene
+            selectScene(scenes[sceneIndex]);
+
+            // Open cast profile again to show scene selector
+            // (This would need the old scene-by-scene editor)
+            // For now, just jump to the scene
+            setTimeout(() => {
+                alert(`Editing details for ${character} in Scene ${scenes[sceneIndex].number}.\n\nUse the Scene Breakdown panel to add Hair, Makeup, SFX, and Wardrobe details.`);
+            }, 100);
+        }
+
+        // Add continuity event (opens existing modal)
+        function addContinuityEvent() {
+            if (!currentCastMember) return;
+
+            // Close cast profile
+            closeCastProfile();
+
+            // Open continuity modal
+            currentEventCharacter = currentCastMember;
+            currentEditingEvent = null;
+
+            document.getElementById('eventCharacterName').textContent = currentCastMember;
+            document.getElementById('eventType').value = 'wound';
+            document.getElementById('eventDescription').value = '';
+            document.getElementById('eventStartScene').value = currentScene || 0;
+            document.getElementById('eventEndScene').value = '';
+
+            document.getElementById('continuityModal').classList.add('active');
+        }
+
+        // Edit continuity event
+        function editContinuityEvent(eventId) {
+            if (!currentCastMember) return;
+
+            const events = continuityEvents[currentCastMember] || [];
+            const event = events.find(e => e.id === eventId);
+            if (!event) return;
+
+            currentEditingEvent = event;
+            currentEventCharacter = currentCastMember;
+
+            // Close cast profile
+            closeCastProfile();
+
+            // Open continuity modal with event data
+            document.getElementById('eventCharacterName').textContent = currentCastMember;
+            document.getElementById('eventType').value = event.type;
+            document.getElementById('eventDescription').value = event.description;
+            document.getElementById('eventStartScene').value = event.startScene;
+            document.getElementById('eventEndScene').value = event.endScene || '';
+
+            document.getElementById('continuityModal').classList.add('active');
+        }
+
+        // Delete continuity event
+        function deleteContinuityEvent(character, eventId) {
+            if (!confirm('Delete this continuity event? This cannot be undone.')) return;
+
+            if (continuityEvents[character]) {
+                continuityEvents[character] = continuityEvents[character].filter(e => e.id !== eventId);
+                if (continuityEvents[character].length === 0) {
+                    delete continuityEvents[character];
+                }
+            }
+
+            saveProject();
+            renderContinuityEvents(character);
         }
 
         // Initialize
