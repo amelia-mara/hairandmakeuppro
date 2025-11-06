@@ -1081,6 +1081,7 @@
                 <h1 class="page-title" id="projectTitle">Script Breakdown</h1>
             </div>
             <div class="toolbar">
+                <button class="toolbar-btn" onclick="openSettingsModal()">⚙️ AI Settings</button>
                 <button class="toolbar-btn" onclick="exportData()">Export Data</button>
                 <button class="toolbar-btn" onclick="openImportModal()">Import Script</button>
             </div>
@@ -1245,6 +1246,43 @@ This is it. Today's the day."></textarea>
         </div>
     </div>
     
+    <!-- AI Settings Modal -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <div class="modal-title">AI Settings</div>
+            
+            <div class="modal-section">
+                <label class="modal-label">AI Provider</label>
+                <select class="modal-select" id="aiProvider">
+                    <option value="openai">OpenAI (GPT-4)</option>
+                    <option value="anthropic">Anthropic (Claude)</option>
+                </select>
+            </div>
+            
+            <div class="modal-section">
+                <label class="modal-label">API Key</label>
+                <input type="password" class="modal-input" id="apiKey" placeholder="Enter your API key...">
+                <div style="font-size: 0.75em; color: var(--text-muted); margin-top: 6px;">
+                    Your API key is stored locally in your browser and never sent anywhere except the AI provider.
+                </div>
+            </div>
+            
+            <div class="modal-section" id="openaiModelSection">
+                <label class="modal-label">OpenAI Model</label>
+                <select class="modal-select" id="openaiModel">
+                    <option value="gpt-4">GPT-4 (Recommended)</option>
+                    <option value="gpt-4-turbo-preview">GPT-4 Turbo</option>
+                    <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Faster, cheaper)</option>
+                </select>
+            </div>
+            
+            <div class="modal-actions">
+                <button class="modal-btn" onclick="closeSettingsModal()">Cancel</button>
+                <button class="modal-btn primary" onclick="saveSettings()">Save Settings</button>
+            </div>
+        </div>
+    </div>
+    
     <!-- Continuity Event Modal -->
     <div class="modal continuity-modal" id="continuityModal">
         <div class="modal-content">
@@ -1331,6 +1369,11 @@ This is it. Today's the day."></textarea>
         let currentEditingEvent = null;
         let activeTab = 'breakdown';
         
+        // AI Settings
+        let aiProvider = localStorage.getItem('aiProvider') || 'openai';
+        let apiKey = localStorage.getItem('apiKey') || '';
+        let openaiModel = localStorage.getItem('openaiModel') || 'gpt-4';
+        
         // Element categories
         const categories = [
             { id: 'cast', name: 'Cast Members', color: '#fbbf24', icon: '👤' },
@@ -1367,6 +1410,15 @@ This is it. Today's the day."></textarea>
             
             document.getElementById('projectTitle').textContent = currentProject.name + ' - Script Breakdown';
             
+            // Check if API key is set
+            if (!apiKey) {
+                setTimeout(() => {
+                    if (confirm('AI features require an API key. Would you like to set one up now?')) {
+                        openSettingsModal();
+                    }
+                }, 1000);
+            }
+            
             if (!currentProject.scriptContent) {
                 setTimeout(() => openImportModal(), 500);
             } else {
@@ -1382,6 +1434,106 @@ This is it. Today's the day."></textarea>
             }
             
             document.getElementById('sceneSearch').addEventListener('input', handleSceneSearch);
+        }
+        
+        // Settings Modal
+        function openSettingsModal() {
+            document.getElementById('aiProvider').value = aiProvider;
+            document.getElementById('apiKey').value = apiKey;
+            document.getElementById('openaiModel').value = openaiModel;
+            document.getElementById('settingsModal').classList.add('active');
+        }
+        
+        function closeSettingsModal() {
+            document.getElementById('settingsModal').classList.remove('active');
+        }
+        
+        function saveSettings() {
+            aiProvider = document.getElementById('aiProvider').value;
+            apiKey = document.getElementById('apiKey').value.trim();
+            openaiModel = document.getElementById('openaiModel').value;
+            
+            if (!apiKey) {
+                alert('Please enter an API key');
+                return;
+            }
+            
+            localStorage.setItem('aiProvider', aiProvider);
+            localStorage.setItem('apiKey', apiKey);
+            localStorage.setItem('openaiModel', openaiModel);
+            
+            closeSettingsModal();
+            alert('AI settings saved! You can now use AI features.');
+        }
+        
+        // Universal AI Call Function
+        async function callAI(prompt, maxTokens = 500) {
+            if (!apiKey) {
+                throw new Error('No API key set. Please configure AI settings first.');
+            }
+            
+            if (aiProvider === 'openai') {
+                const response = await fetch("https://api.openai.com/v1/chat/completions", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: openaiModel,
+                        messages: [{
+                            role: "user",
+                            content: prompt
+                        }],
+                        max_tokens: maxTokens,
+                        temperature: 0.7
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('OpenAI API Error:', errorText);
+                    throw new Error(`OpenAI API returned ${response.status}: ${errorText}`);
+                }
+                
+                const data = await response.json();
+                if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+                    throw new Error('Invalid response format from OpenAI');
+                }
+                
+                return data.choices[0].message.content;
+                
+            } else if (aiProvider === 'anthropic') {
+                const response = await fetch("https://api.anthropic.com/v1/messages", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "x-api-key": apiKey,
+                        "anthropic-version": "2023-06-01"
+                    },
+                    body: JSON.stringify({
+                        model: "claude-sonnet-4-20250514",
+                        max_tokens: maxTokens,
+                        messages: [{
+                            role: "user",
+                            content: prompt
+                        }]
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Anthropic API Error:', errorText);
+                    throw new Error(`Anthropic API returned ${response.status}: ${errorText}`);
+                }
+                
+                const data = await response.json();
+                if (!data.content || !data.content[0]) {
+                    throw new Error('Invalid response format from Anthropic');
+                }
+                
+                return data.content[0].text;
+            }
         }
         
         // Scene type detection
@@ -1559,17 +1711,8 @@ This is it. Today's the day."></textarea>
             
             try {
                 console.log('Starting AI synopsis generation...');
-                const response = await fetch("https://api.anthropic.com/v1/messages", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                        model: "claude-sonnet-4-20250514",
-                        max_tokens: 300,
-                        messages: [{
-                            role: "user",
-                            content: `Analyze this screenplay scene and provide:
+                
+                const prompt = `Analyze this screenplay scene and provide:
 1. A brief 1-2 sentence synopsis of what happens
 2. The main cast members in the scene
 
@@ -1584,30 +1727,15 @@ Respond in JSON format:
   "cast": ["CHARACTER1", "CHARACTER2"]
 }
 
-IMPORTANT: Respond ONLY with valid JSON. Do not include any text outside the JSON structure.`
-                        }]
-                    })
-                });
+IMPORTANT: Respond ONLY with valid JSON. Do not include any text outside the JSON structure.`;
+
+                const responseText = await callAI(prompt, 300);
+                console.log('AI Response:', responseText);
                 
-                console.log('Response status:', response.status);
-                
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error('API Error:', errorText);
-                    throw new Error(`API returned ${response.status}: ${errorText}`);
-                }
-                
-                const data = await response.json();
-                console.log('API Response:', data);
-                
-                if (!data.content || !data.content[0]) {
-                    throw new Error('Invalid response format from API');
-                }
-                
-                let responseText = data.content[0].text;
-                responseText = responseText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-                console.log('Cleaned response:', responseText);
-                const result = JSON.parse(responseText);
+                // Clean and parse response
+                let cleanedResponse = responseText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+                console.log('Cleaned response:', cleanedResponse);
+                const result = JSON.parse(cleanedResponse);
                 
                 // Update scene synopsis
                 scene.synopsis = result.synopsis;
@@ -1666,17 +1794,8 @@ IMPORTANT: Respond ONLY with valid JSON. Do not include any text outside the JSO
             
             try {
                 console.log('Starting AI element detection...');
-                const response = await fetch("https://api.anthropic.com/v1/messages", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                        model: "claude-sonnet-4-20250514",
-                        max_tokens: 500,
-                        messages: [{
-                            role: "user",
-                            content: `Analyze this screenplay scene and identify production elements:
+                
+                const prompt = `Analyze this screenplay scene and identify production elements:
 
 Scene heading: ${scene.heading}
 
@@ -1703,30 +1822,15 @@ Respond in JSON format with arrays for each category:
   "extras": ["group1"]
 }
 
-Only include categories that have items. IMPORTANT: Respond ONLY with valid JSON.`
-                        }]
-                    })
-                });
+Only include categories that have items. IMPORTANT: Respond ONLY with valid JSON.`;
+
+                const responseText = await callAI(prompt, 500);
+                console.log('Element detection response:', responseText);
                 
-                console.log('Element detection response status:', response.status);
-                
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error('API Error:', errorText);
-                    throw new Error(`API returned ${response.status}: ${errorText}`);
-                }
-                
-                const data = await response.json();
-                console.log('Element detection response:', data);
-                
-                if (!data.content || !data.content[0]) {
-                    throw new Error('Invalid response format from API');
-                }
-                
-                let responseText = data.content[0].text;
-                responseText = responseText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-                console.log('Cleaned element response:', responseText);
-                const result = JSON.parse(responseText);
+                // Clean and parse response
+                let cleanedResponse = responseText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+                console.log('Cleaned element response:', cleanedResponse);
+                const result = JSON.parse(cleanedResponse);
                 
                 // Update scene breakdown
                 if (!sceneBreakdowns[sceneIndex]) {
@@ -2239,17 +2343,7 @@ Only include categories that have items. IMPORTANT: Respond ONLY with valid JSON
                 
                 console.log('Requesting progression for:', description, 'Type:', type);
                 
-                const response = await fetch("https://api.anthropic.com/v1/messages", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                        model: "claude-sonnet-4-20250514",
-                        max_tokens: 800,
-                        messages: [{
-                            role: "user",
-                            content: `You are a film production continuity expert. Generate realistic progression stages for a character's ${typeNames[type]}.
+                const prompt = `You are a film production continuity expert. Generate realistic progression stages for a character's ${typeNames[type]}.
 
 Description: ${description}
 ${timeContext}
@@ -2273,30 +2367,15 @@ Respond ONLY with valid JSON in this format:
   ]
 }
 
-Make the descriptions specific and actionable for makeup/wardrobe departments.`
-                        }]
-                    })
-                });
+Make the descriptions specific and actionable for makeup/wardrobe departments.`;
+
+                const responseText = await callAI(prompt, 800);
+                console.log('Progression response:', responseText);
                 
-                console.log('Progression response status:', response.status);
-                
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error('API Error:', errorText);
-                    throw new Error(`API returned ${response.status}: ${errorText}`);
-                }
-                
-                const data = await response.json();
-                console.log('Progression response:', data);
-                
-                if (!data.content || !data.content[0]) {
-                    throw new Error('Invalid response format from API');
-                }
-                
-                let responseText = data.content[0].text;
-                responseText = responseText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-                console.log('Cleaned progression response:', responseText);
-                const result = JSON.parse(responseText);
+                // Clean and parse response
+                let cleanedResponse = responseText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+                console.log('Cleaned progression response:', cleanedResponse);
+                const result = JSON.parse(cleanedResponse);
                 
                 // Display progression stages
                 const listEl = document.getElementById('progressionList');
