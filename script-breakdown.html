@@ -2422,6 +2422,7 @@
                 <h1 class="page-title" id="projectTitle">Script Breakdown</h1>
             </div>
             <div class="toolbar">
+                <button class="toolbar-btn" onclick="openMergeCharactersModal()">🔗 Merge Characters</button>
                 <button class="toolbar-btn" onclick="openSettingsModal()">⚙️ AI Settings</button>
                 <button class="toolbar-btn" onclick="exportData()">Export Data</button>
                 <button class="toolbar-btn" onclick="openImportModal()">Import Script</button>
@@ -2800,16 +2801,14 @@ This is it. Today's the day."></textarea>
             <div class="tag-field">
                 <label>Category</label>
                 <select id="tagCategory" onchange="handleCategoryChange()">
-                    <option value="cast">👤 Cast Member</option>
                     <option value="hair">💇 Hair</option>
                     <option value="makeup">💄 Makeup (Beauty)</option>
                     <option value="sfx">🩸 SFX Makeup</option>
-                    <option value="wardrobe">👔 Wardrobe</option>
-                    <option value="props">📦 Props</option>
-                    <option value="vehicles">🚗 Vehicles</option>
-                    <option value="vfx">✨ VFX</option>
-                    <option value="stunts">🎬 Stunts</option>
-                    <option value="extras">👥 Extras</option>
+                    <option value="health">🤒 Health/Illness</option>
+                    <option value="injuries">🩹 Injuries/Wounds</option>
+                    <option value="stunts">🎬 Stunts/Action</option>
+                    <option value="weather">🌦️ Weather Effects</option>
+                    <option value="wardrobe">👔 Costume/Wardrobe</option>
                 </select>
             </div>
 
@@ -2882,6 +2881,35 @@ This is it. Today's the day."></textarea>
         </div>
     </div>
 
+    <!-- Merge Characters Modal -->
+    <div class="modal" id="mergeCharactersModal">
+        <div class="modal-content">
+            <div class="modal-title">Merge Duplicate Characters</div>
+            <p style="font-size: 0.875em; color: var(--text-muted); margin-bottom: 16px;">
+                Select two characters to merge. All scenes, tags, and data from the second character will be moved to the first.
+            </p>
+
+            <div class="modal-section">
+                <label class="modal-label">Keep This Character (Primary)</label>
+                <select class="modal-select" id="mergePrimaryCharacter">
+                    <option value="">-- Select Character --</option>
+                </select>
+            </div>
+
+            <div class="modal-section">
+                <label class="modal-label">Merge This Character Into Primary (Will be deleted)</label>
+                <select class="modal-select" id="mergeSecondaryCharacter">
+                    <option value="">-- Select Character --</option>
+                </select>
+            </div>
+
+            <div class="modal-actions">
+                <button class="modal-btn" onclick="closeMergeCharactersModal()">Cancel</button>
+                <button class="modal-btn primary" onclick="confirmMergeCharacters()">Merge Characters</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Global state
         let currentProject = null;
@@ -2916,12 +2944,11 @@ This is it. Today's the day."></textarea>
             { id: 'hair', name: 'Hair', color: '#a855f7', icon: '💇' },
             { id: 'makeup', name: 'Makeup (Beauty)', color: '#ec4899', icon: '💄' },
             { id: 'sfx', name: 'SFX Makeup', color: '#ef4444', icon: '🩸' },
-            { id: 'wardrobe', name: 'Wardrobe', color: '#34d399', icon: '👔' },
-            { id: 'props', name: 'Props', color: '#fb923c', icon: '📦' },
-            { id: 'vehicles', name: 'Vehicles', color: '#38bdf8', icon: '🚗' },
-            { id: 'vfx', name: 'VFX', color: '#a78bfa', icon: '✨' },
-            { id: 'stunts', name: 'Stunts', color: '#f59e0b', icon: '🎬' },
-            { id: 'extras', name: 'Extras', color: '#9ca3af', icon: '👥' }
+            { id: 'health', name: 'Health/Illness', color: '#f59e0b', icon: '🤒' },
+            { id: 'injuries', name: 'Injuries/Wounds', color: '#dc2626', icon: '🩹' },
+            { id: 'stunts', name: 'Stunts/Action', color: '#f97316', icon: '🎬' },
+            { id: 'weather', name: 'Weather Effects', color: '#38bdf8', icon: '🌦️' },
+            { id: 'wardrobe', name: 'Costume/Wardrobe', color: '#34d399', icon: '👔' }
         ];
         
         // Continuity event types
@@ -2936,7 +2963,48 @@ This is it. Today's the day."></textarea>
             { id: 'hair', name: 'Hair Change', icon: '✂️', color: '#a855f7' },
             { id: 'other', name: 'Other', icon: '⚡', color: '#667eea' }
         ];
-        
+
+        // Name normalization and matching
+        function normalizeCastName(name) {
+            if (!name || typeof name !== 'string') return '';
+
+            // Convert to uppercase and trim
+            name = name.trim().toUpperCase();
+
+            // Remove common suffixes like (V.O.), (O.S.), (CONT'D)
+            name = name.replace(/\s*\(.*?\)\s*/g, '');
+
+            return name;
+        }
+
+        function findMatchingCastMember(name, existingCast) {
+            const normalized = normalizeCastName(name);
+            if (!normalized) return null;
+
+            // Check for exact match first
+            const exactMatch = existingCast.find(c => normalizeCastName(c) === normalized);
+            if (exactMatch) return exactMatch;
+
+            // Check if name is a first name of an existing cast member
+            // e.g., "Sarah" matches "SARAH CONNOR"
+            const firstNameMatch = existingCast.find(c => {
+                const parts = normalizeCastName(c).split(/\s+/);
+                return parts[0] === normalized || parts.includes(normalized);
+            });
+            if (firstNameMatch) return firstNameMatch;
+
+            // Check if existing cast member is first name of this name
+            // e.g., "SARAH" exists, new name is "SARAH CONNOR"
+            const reverseMatch = existingCast.find(c => {
+                const existingNormalized = normalizeCastName(c);
+                const parts = normalized.split(/\s+/);
+                return parts[0] === existingNormalized || parts.includes(existingNormalized);
+            });
+            if (reverseMatch) return reverseMatch;
+
+            return null;
+        }
+
         // Initialize
         function init() {
             currentProject = JSON.parse(localStorage.getItem('currentProject') || 'null');
@@ -3686,6 +3754,164 @@ This is it. Today's the day."></textarea>
             saveProject();
         }
 
+        // Merge Characters Modal
+        function openMergeCharactersModal() {
+            // Get all cast members
+            const allCast = new Set();
+            Object.values(sceneBreakdowns).forEach(breakdown => {
+                if (breakdown.cast) {
+                    breakdown.cast.forEach(member => allCast.add(member));
+                }
+            });
+
+            const castArray = Array.from(allCast).sort();
+
+            if (castArray.length < 2) {
+                alert('Need at least 2 cast members to merge.');
+                return;
+            }
+
+            // Populate dropdowns
+            const primary = document.getElementById('mergePrimaryCharacter');
+            const secondary = document.getElementById('mergeSecondaryCharacter');
+
+            primary.innerHTML = '<option value="">-- Select Character --</option>';
+            secondary.innerHTML = '<option value="">-- Select Character --</option>';
+
+            castArray.forEach(member => {
+                const opt1 = document.createElement('option');
+                opt1.value = member;
+                opt1.textContent = member;
+                primary.appendChild(opt1);
+
+                const opt2 = document.createElement('option');
+                opt2.value = member;
+                opt2.textContent = member;
+                secondary.appendChild(opt2);
+            });
+
+            document.getElementById('mergeCharactersModal').classList.add('active');
+        }
+
+        function closeMergeCharactersModal() {
+            document.getElementById('mergeCharactersModal').classList.remove('active');
+        }
+
+        function confirmMergeCharacters() {
+            const primaryName = document.getElementById('mergePrimaryCharacter').value;
+            const secondaryName = document.getElementById('mergeSecondaryCharacter').value;
+
+            if (!primaryName || !secondaryName) {
+                alert('Please select both characters.');
+                return;
+            }
+
+            if (primaryName === secondaryName) {
+                alert('Cannot merge a character with itself.');
+                return;
+            }
+
+            if (!confirm(`Merge "${secondaryName}" into "${primaryName}"?\n\nAll data from ${secondaryName} will be moved to ${primaryName}, and ${secondaryName} will be deleted.`)) {
+                return;
+            }
+
+            console.log(`Merging ${secondaryName} into ${primaryName}`);
+
+            // Merge in scene breakdowns
+            Object.keys(sceneBreakdowns).forEach(sceneIndex => {
+                const breakdown = sceneBreakdowns[sceneIndex];
+                if (breakdown.cast) {
+                    const secondaryIndex = breakdown.cast.indexOf(secondaryName);
+                    if (secondaryIndex !== -1) {
+                        // Remove secondary
+                        breakdown.cast.splice(secondaryIndex, 1);
+
+                        // Add primary if not already there
+                        if (!breakdown.cast.includes(primaryName)) {
+                            breakdown.cast.push(primaryName);
+                        }
+                    }
+                }
+            });
+
+            // Merge character states
+            Object.keys(characterStates).forEach(sceneIndex => {
+                if (characterStates[sceneIndex][secondaryName]) {
+                    if (!characterStates[sceneIndex][primaryName]) {
+                        characterStates[sceneIndex][primaryName] = characterStates[sceneIndex][secondaryName];
+                    } else {
+                        // Merge tags
+                        const secondaryTags = characterStates[sceneIndex][secondaryName].tags || [];
+                        const primaryTags = characterStates[sceneIndex][primaryName].tags || [];
+                        characterStates[sceneIndex][primaryName].tags = [...primaryTags, ...secondaryTags];
+                    }
+                    delete characterStates[sceneIndex][secondaryName];
+                }
+            });
+
+            // Merge continuity events
+            if (continuityEvents[secondaryName]) {
+                if (!continuityEvents[primaryName]) {
+                    continuityEvents[primaryName] = continuityEvents[secondaryName];
+                } else {
+                    continuityEvents[primaryName] = [...continuityEvents[primaryName], ...continuityEvents[secondaryName]];
+                }
+                delete continuityEvents[secondaryName];
+            }
+
+            // Merge cast profiles
+            if (castProfiles[secondaryName]) {
+                if (!castProfiles[primaryName]) {
+                    castProfiles[primaryName] = castProfiles[secondaryName];
+                    castProfiles[primaryName].name = primaryName;
+                } else {
+                    // Merge scenes
+                    const secondaryScenes = castProfiles[secondaryName].scenes || [];
+                    const primaryScenes = castProfiles[primaryName].scenes || [];
+                    castProfiles[primaryName].scenes = [...new Set([...primaryScenes, ...secondaryScenes])];
+
+                    // Merge descriptions if primary is empty
+                    if (!castProfiles[primaryName].baseDescription && castProfiles[secondaryName].baseDescription) {
+                        castProfiles[primaryName].baseDescription = castProfiles[secondaryName].baseDescription;
+                    }
+                }
+                delete castProfiles[secondaryName];
+            }
+
+            // Merge tags
+            Object.keys(scriptTags).forEach(sceneIndex => {
+                scriptTags[sceneIndex].forEach(tag => {
+                    if (tag.character === secondaryName) {
+                        tag.character = primaryName;
+                    }
+                });
+            });
+
+            // Merge scene.characters data
+            scenes.forEach(scene => {
+                if (scene.characters && scene.characters[secondaryName]) {
+                    if (!scene.characters[primaryName]) {
+                        scene.characters[primaryName] = scene.characters[secondaryName];
+                    }
+                    delete scene.characters[secondaryName];
+                }
+            });
+
+            saveProject();
+
+            // Refresh UI
+            initializeCharacterTabs();
+            renderSceneList();
+            if (currentScene !== null) {
+                renderBreakdownPanel();
+                renderCastPanel();
+            }
+
+            closeMergeCharactersModal();
+
+            alert(`Successfully merged "${secondaryName}" into "${primaryName}"`);
+        }
+
         // Load script
         function loadScript(text) {
             scriptText = text;
@@ -3723,15 +3949,16 @@ This is it. Today's the day."></textarea>
                 const trimmed = line.trim();
                 for (let pattern of patterns) {
                     if (pattern.test(trimmed)) {
+                        const sceneIndex = detected.length;
                         detected.push({
-                            number: detected.length + 1,
+                            number: sceneIndex + 1,
                             heading: trimmed,
                             lineNumber: index,
                             synopsis: null,
                             storyDay: '',
-                            timeOfDay: detectTimeOfDay(trimmed),
+                            timeOfDay: detectTimeOfDay(trimmed, sceneIndex),
                             intExt: detectIntExt(trimmed),
-                            location: extractLocation(trimmed),
+                            location: extractLocation(trimmed, sceneIndex),
                             characters: {}
                         });
                         break;
@@ -3893,21 +4120,29 @@ IMPORTANT: Respond ONLY with valid JSON. Do not include any text outside the JSO
                 }
                 
                 result.cast.forEach(castMember => {
-                    if (!sceneBreakdowns[sceneIndex].cast.includes(castMember)) {
-                        sceneBreakdowns[sceneIndex].cast.push(castMember);
-                        
-                        if (!castProfiles[castMember]) {
-                            castProfiles[castMember] = {
-                                name: castMember,
-                                baseDescription: '',
-                                makeup: '',
-                                wardrobe: '',
-                                scenes: []
-                            };
-                        }
-                        if (!castProfiles[castMember].scenes.includes(scene.number)) {
-                            castProfiles[castMember].scenes.push(scene.number);
-                        }
+                    // Normalize the name
+                    const normalizedName = normalizeCastName(castMember);
+                    if (!normalizedName) return;
+
+                    // Check if this character already exists under a different name
+                    const existingCast = sceneBreakdowns[sceneIndex].cast || [];
+                    const matchingMember = findMatchingCastMember(normalizedName, existingCast);
+
+                    const finalName = matchingMember || normalizedName;
+
+                    if (!sceneBreakdowns[sceneIndex].cast.includes(finalName)) {
+                        sceneBreakdowns[sceneIndex].cast.push(finalName);
+                    }
+
+                    if (!castProfiles[finalName]) {
+                        castProfiles[finalName] = {
+                            name: finalName,
+                            baseDescription: '',
+                            scenes: []
+                        };
+                    }
+                    if (!castProfiles[finalName].scenes.includes(scene.number)) {
+                        castProfiles[finalName].scenes.push(scene.number);
                     }
                 });
                 
@@ -3950,21 +4185,22 @@ Scene content:
 ${content}
 
 For each element you find, provide:
-1. The category (hair, makeup, sfx, wardrobe, props, vehicles, vfx, stunts, extras)
+1. The category (hair, makeup, sfx, health, injuries, stunts, weather, wardrobe)
 2. The exact text snippet from the scene (2-5 words)
 3. The full sentence/context where it appears
 4. The character it relates to (if applicable, look for ALL CAPS names)
 
-Categories to look for:
-- hair: hairstyles, hair changes, wigs, beards, facial hair
-- makeup: foundation, lipstick, eye shadow, aging makeup (beauty makeup only)
-- sfx: wounds, blood, prosthetics, sweat, dirt, bruising (special makeup effects)
-- wardrobe: specific clothing items mentioned
-- props: objects characters interact with
-- vehicles: cars, bikes, boats, etc.
-- vfx: visual effects, explosions, fire, CGI elements
-- stunts: fights, falls, dangerous actions
-- extras: background performers, crowds
+Categories to look for (MAKEUP DEPARTMENT FOCUS ONLY):
+- hair: hairstyles, hair changes, wigs, beards, facial hair, messy hair, styled hair
+- makeup: foundation, lipstick, eye shadow, natural makeup, stage makeup (beauty makeup only)
+- sfx: wounds, blood, prosthetics, scars, bruising, dirt, grime (special makeup effects)
+- health: illness symptoms, pale complexion, fever, exhaustion, dark circles
+- injuries: cuts, broken bones, black eyes, swelling, bandages
+- stunts: fights, falls, impacts that would affect appearance
+- weather: rain-soaked, wind-blown, sun-burned, frozen, sweating
+- wardrobe: costume damage, torn clothes, bloodstains on clothes, dirt on costume
+
+IGNORE: Props, vehicles, VFX, background extras, or anything that doesn't affect character appearance.
 
 Respond in JSON format:
 {
@@ -4611,32 +4847,47 @@ IMPORTANT:
                 sceneBreakdowns[currentScene][currentElementCategory] = [];
             }
             
-            if (!sceneBreakdowns[currentScene][currentElementCategory].includes(value)) {
-                sceneBreakdowns[currentScene][currentElementCategory].push(value);
-                
-                if (currentElementCategory === 'cast') {
-                    if (!castProfiles[value]) {
-                        castProfiles[value] = {
-                            name: value,
-                            baseDescription: '',
-                            makeup: '',
-                            wardrobe: '',
-                            scenes: []
-                        };
-                    }
-                    if (!castProfiles[value].scenes.includes(scenes[currentScene].number)) {
-                        castProfiles[value].scenes.push(scenes[currentScene].number);
-                    }
+            if (currentElementCategory === 'cast') {
+                // Normalize name
+                const normalizedName = normalizeCastName(value);
+
+                // Check for duplicates
+                const existingCast = sceneBreakdowns[currentScene].cast || [];
+                const matchingMember = findMatchingCastMember(normalizedName, existingCast);
+
+                if (matchingMember) {
+                    alert(`This character already exists as "${matchingMember}". Use that name instead.`);
+                    return;
                 }
-                
+
+                if (!sceneBreakdowns[currentScene][currentElementCategory].includes(normalizedName)) {
+                    sceneBreakdowns[currentScene][currentElementCategory].push(normalizedName);
+                }
+
+                if (!castProfiles[normalizedName]) {
+                    castProfiles[normalizedName] = {
+                        name: normalizedName,
+                        baseDescription: '',
+                        scenes: []
+                    };
+                }
+                if (!castProfiles[normalizedName].scenes.includes(scenes[currentScene].number)) {
+                    castProfiles[normalizedName].scenes.push(scenes[currentScene].number);
+                }
+
                 saveProject();
                 renderBreakdownPanel();
                 renderCastPanel();
                 renderSceneList();
+                initializeCharacterTabs();
+            } else {
+                if (!sceneBreakdowns[currentScene][currentElementCategory].includes(value)) {
+                    sceneBreakdowns[currentScene][currentElementCategory].push(value);
 
-                // Refresh character tabs if a cast member was added
-                if (currentElementCategory === 'cast') {
-                    initializeCharacterTabs();
+                    saveProject();
+                    renderBreakdownPanel();
+                    renderCastPanel();
+                    renderSceneList();
                 }
             }
 
@@ -5931,7 +6182,16 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`;
             }
         }
 
-        function extractLocation(heading) {
+        function extractLocation(heading, sceneIndex = null) {
+            // Check for "SAME" - inherit from previous scene
+            const h = heading.toUpperCase();
+            if ((h.includes('SAME') || h.includes('CONTINUOUS')) && sceneIndex !== null && sceneIndex > 0) {
+                const previousScene = scenes[sceneIndex - 1];
+                if (previousScene && previousScene.location) {
+                    return previousScene.location;
+                }
+            }
+
             // Extract location from scene heading
             // e.g., "INT. KITCHEN - MORNING" -> "KITCHEN"
             const match = heading.match(/(?:INT\.|EXT\.|INT\/EXT\.|I\/E\.)\s+([^-]+)/i);
@@ -5942,8 +6202,19 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`;
         }
 
         // Auto-detect time of day from heading
-        function detectTimeOfDay(heading) {
+        function detectTimeOfDay(heading, sceneIndex = null) {
             const h = heading.toUpperCase();
+
+            // Check for "SAME" or "CONTINUOUS" - inherit from previous scene
+            if ((h.includes('SAME') || h.includes('CONTINUOUS') || h.includes('CONT\'D')) && sceneIndex !== null && sceneIndex > 0) {
+                const previousScene = scenes[sceneIndex - 1];
+                if (previousScene && previousScene.timeOfDay) {
+                    console.log(`Scene ${sceneIndex}: Inherited time "${previousScene.timeOfDay}" from previous scene`);
+                    return previousScene.timeOfDay;
+                }
+            }
+
+            // Standard detection
             if (h.includes('MORNING')) return 'Morning';
             if (h.includes('LATE MORNING')) return 'Late Morning';
             if (h.includes('AFTERNOON')) return 'Afternoon';
