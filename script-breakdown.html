@@ -3115,7 +3115,9 @@ This is it. Today's the day."></textarea>
             }
         }
         
-        // Scene type detection
+        // Scene type detection FOR VISUAL STYLING ONLY
+        // This combines INT/EXT + DAY/NIGHT for color-coding the scene cards
+        // The actual metadata uses separate fields: intExt and timeOfDay
         function getSceneType(heading) {
             const h = heading.toUpperCase();
             const isInt = h.includes('INT.');
@@ -3728,7 +3730,7 @@ This is it. Today's the day."></textarea>
                             synopsis: null,
                             storyDay: '',
                             timeOfDay: detectTimeOfDay(trimmed),
-                            intExt: getSceneType(trimmed),
+                            intExt: detectIntExt(trimmed),
                             location: extractLocation(trimmed),
                             characters: {}
                         });
@@ -3842,7 +3844,13 @@ This is it. Today's the day."></textarea>
                 
                 const prompt = `Analyze this screenplay scene and provide:
 1. A brief 1-2 sentence synopsis of what happens
-2. The main cast members in the scene
+2. ALL cast members in the scene - including characters mentioned by name, even if not in dialogue
+
+IMPORTANT: Look for character names in:
+- ALL CAPS dialogue headers (standard format)
+- Proper nouns in action lines (e.g., "Peter walks in", "She turns around")
+- Character descriptions with names in parentheses
+- Any person referred to by name in the scene
 
 Scene heading: ${scene.heading}
 
@@ -3852,8 +3860,16 @@ ${content}
 Respond in JSON format:
 {
   "synopsis": "brief description",
-  "cast": ["CHARACTER1", "CHARACTER2"]
+  "cast": ["CHARACTER1", "CHARACTER2", "She", "Peter"]
 }
+
+Examples of names to catch:
+- "JOHN" (all caps dialogue)
+- "Peter" (proper noun in action line)
+- "She" or "He" (if used as a character name)
+- "SARAH (30s, tired)" (name with description)
+
+Include ALL people mentioned by name in the scene.
 
 IMPORTANT: Respond ONLY with valid JSON. Do not include any text outside the JSON structure.`;
 
@@ -4265,12 +4281,37 @@ IMPORTANT:
         }
         
         // Select scene
+        function selectSceneFromScript(index) {
+            // Save current scene data first
+            if (currentScene !== null && currentScene !== index) {
+                autoSaveCurrentScene();
+            }
+
+            // Select the new scene
+            selectScene(index);
+        }
+
+        function autoSaveCurrentScene() {
+            if (currentScene === null) return;
+
+            console.log('Auto-saving scene', currentScene);
+
+            // Save the project
+            saveProject();
+        }
+
         function selectScene(index) {
+            // Auto-save previous scene before switching
+            if (currentScene !== null && currentScene !== index) {
+                console.log('Auto-saving scene', currentScene, 'before switching to', index);
+                saveProject();
+            }
+
             currentScene = index;
             renderSceneList();
             renderBreakdownPanel();
             renderCastPanel();
-            
+
             const sceneEl = document.getElementById(`scene-${scenes[index].number}`);
             if (sceneEl) {
                 sceneEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -4311,6 +4352,9 @@ IMPORTANT:
                 <div class="ai-controls">
                     <button class="ai-btn" onclick="generateAISynopsis(${currentScene})">✨ Generate AI Synopsis</button>
                     <button class="ai-btn" onclick="detectAIElements(${currentScene})">🔍 Detect Elements with AI</button>
+                    <button class="ai-btn" style="background: linear-gradient(135deg, rgba(82, 193, 134, 0.15), rgba(52, 211, 153, 0.15)); border-color: var(--success); color: var(--success);" onclick="saveSceneBreakdown()">
+                        💾 Save Scene
+                    </button>
                 </div>
 
                 <!-- SCENE HEADER -->
@@ -4371,6 +4415,7 @@ IMPORTANT:
                         <select class="breakdown-select"
                                 onchange="updateSceneMetadata(${currentScene}, 'timeOfDay', this.value)">
                             <option value="">-- Select Time --</option>
+                            <option value="Day" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Day' ? 'selected' : ''}>Day</option>
                             <option value="Morning" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Morning' ? 'selected' : ''}>Morning</option>
                             <option value="Late Morning" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Late Morning' ? 'selected' : ''}>Late Morning</option>
                             <option value="Afternoon" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Afternoon' ? 'selected' : ''}>Afternoon</option>
@@ -4386,12 +4431,12 @@ IMPORTANT:
                         <label class="breakdown-label">INT/EXT</label>
                         <select class="breakdown-select"
                                 onchange="updateSceneMetadata(${currentScene}, 'intExt', this.value)">
-                            <option value="int-day" ${(scene.intExt || getSceneType(scene.heading)) === 'int-day' ? 'selected' : ''}>INT / DAY</option>
-                            <option value="int-night" ${(scene.intExt || getSceneType(scene.heading)) === 'int-night' ? 'selected' : ''}>INT / NIGHT</option>
-                            <option value="ext-day" ${(scene.intExt || getSceneType(scene.heading)) === 'ext-day' ? 'selected' : ''}>EXT / DAY</option>
-                            <option value="ext-night" ${(scene.intExt || getSceneType(scene.heading)) === 'ext-night' ? 'selected' : ''}>EXT / NIGHT</option>
+                            <option value="">-- Select Type --</option>
+                            <option value="INT" ${scene.intExt === 'INT' ? 'selected' : ''}>INT</option>
+                            <option value="EXT" ${scene.intExt === 'EXT' ? 'selected' : ''}>EXT</option>
+                            <option value="INT/EXT" ${scene.intExt === 'INT/EXT' ? 'selected' : ''}>INT/EXT</option>
                         </select>
-                        <div class="breakdown-hint">Auto-detected: ${getSceneType(scene.heading).toUpperCase().replace('-', ' / ')}</div>
+                        <div class="breakdown-hint">Auto-detected: ${detectIntExt(scene.heading) || 'Not detected'}</div>
                     </div>
 
                     <div class="breakdown-metadata-field">
@@ -5046,7 +5091,7 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`;
                     
                     const scene = scenes[sceneIdx];
                     html += `<div class="script-scene" id="scene-${scene.number}">`;
-                    html += `<div class="scene-header-wrapper">`;
+                    html += `<div class="scene-header-wrapper" onclick="selectSceneFromScript(${sceneIdx})" style="cursor: pointer;">`;
                     html += `<span class="scene-number-badge">Scene ${scene.number}</span>`;
                     html += `<div class="script-scene-heading">${trimmed}</div>`;
                     html += `</div>`;
@@ -5176,7 +5221,25 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`;
             a.download = `${currentProject.name.replace(/\s+/g, '-')}-breakdown.json`;
             a.click();
         }
-        
+
+        // Save scene breakdown with visual feedback
+        function saveSceneBreakdown() {
+            if (currentScene === null) return;
+
+            saveProject();
+
+            // Visual feedback
+            const btn = event.target;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '✓ Saved!';
+            btn.style.background = 'linear-gradient(135deg, rgba(82, 193, 134, 0.25), rgba(52, 211, 153, 0.25))';
+
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.style.background = 'linear-gradient(135deg, rgba(82, 193, 134, 0.15), rgba(52, 211, 153, 0.15))';
+            }, 1500);
+        }
+
         // Save project
         function saveProject() {
             currentProject.sceneBreakdowns = sceneBreakdowns;
@@ -5850,7 +5913,9 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`;
 
             scenes[sceneIndex][field] = value;
 
+            // Auto-save with visual feedback
             saveProject();
+            console.log(`Auto-saved: Scene ${scenes[sceneIndex].number} ${field} = ${value}`);
 
             // Re-render scene list to update the read-only overview
             renderSceneList();
@@ -5888,7 +5953,15 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`;
             if (h.includes('LATE NIGHT')) return 'Late Night';
             if (h.includes('DAWN')) return 'Morning';
             if (h.includes('DUSK')) return 'Evening';
-            if (h.includes('DAY')) return 'Afternoon';
+            if (h.includes('DAY')) return 'Day';
+            return '';
+        }
+
+        function detectIntExt(heading) {
+            const h = heading.toUpperCase();
+            if (h.includes('INT/EXT') || h.includes('I/E')) return 'INT/EXT';
+            if (h.includes('INT.') || h.includes('INTERIOR')) return 'INT';
+            if (h.includes('EXT.') || h.includes('EXTERIOR')) return 'EXT';
             return '';
         }
 
