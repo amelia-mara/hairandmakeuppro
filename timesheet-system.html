@@ -1449,11 +1449,7 @@
                                 <input type="number" class="rate-input" id="base-hours" value="10" onchange="updateRates()">
                             </div>
                             <div class="rate-item">
-                                <label class="rate-label">Required Turnaround (h)</label>
-                                <input type="number" class="rate-input" id="turnaround-hours" value="11" onchange="updateRates()">
-                            </div>
-                            <div class="rate-item">
-                                <label class="rate-label">Pre-Call/De-Rig/BL/BT Multiplier</label>
+                                <label class="rate-label">Pre-Call/De-Rig Multiplier</label>
                                 <input type="number" class="rate-input" id="special-multiplier" value="1.5" step="0.1" onchange="updateRates()">
                             </div>
                         </div>
@@ -1525,27 +1521,24 @@
                                         <th rowspan="2" style="width: 100px;">Day</th>
                                         <th rowspan="2" style="width: 80px;">Date</th>
                                         <th rowspan="2" style="width: 60px;">6th Day?</th>
-                                        <th colspan="5">Times</th>
-                                        <th colspan="2">Overtime</th>
+                                        <th colspan="4">Times</th>
+                                        <th colspan="2">Lunch</th>
                                         <th rowspan="2" style="width: 150px;">Notes</th>
-                                        <th colspan="4">Calculated Hours</th>
-                                        <th colspan="2">Broken</th>
+                                        <th colspan="5">Calculated</th>
                                         <th rowspan="2">Total Hours</th>
                                     </tr>
                                     <tr>
                                         <th>Pre-Call</th>
                                         <th>Unit Call</th>
-                                        <th>Lunch Sched</th>
-                                        <th>Lunch Actual</th>
-                                        <th>Wrap</th>
-                                        <th>Camera OT</th>
+                                        <th>Actual Wrap</th>
                                         <th>De-Rig</th>
+                                        <th>Sched (min)</th>
+                                        <th>Actual (min)</th>
                                         <th>Pre-Call (h)</th>
+                                        <th>Base Hours</th>
                                         <th>Camera OT (h)</th>
                                         <th>OT >23:00 (h)</th>
                                         <th>De-Rig (h)</th>
-                                        <th>Lunch (h)</th>
-                                        <th>T/A (h)</th>
                                     </tr>
                                 </thead>
                                 <tbody id="timesheet-body">
@@ -1582,7 +1575,7 @@
                         <div style="padding: 60px;">
                             <h3 style="font-size: 20px; margin-bottom: 12px;">No Crew Members Yet</h3>
                             <p style="color: var(--text-secondary); margin-bottom: 24px;">Add crew members to start tracking timesheets</p>
-                            <button class="btn primary" onclick="switchTab('crew'); document.querySelector('.tab:nth-child(2)').click();">Add First Crew Member</button>
+                            <button class="btn primary" onclick="addCrewQuick()">Add First Crew Member</button>
                         </div>
                     </div>
                 </div>
@@ -1607,8 +1600,6 @@
                                         <th>Camera OT (£)</th>
                                         <th>Late OT (£)</th>
                                         <th>De-Rig (£)</th>
-                                        <th>Broken Lunch (£)</th>
-                                        <th>BT (£)</th>
                                         <th>Total (£)</th>
                                     </tr>
                                 </thead>
@@ -1623,8 +1614,6 @@
                                         <td class="total-cell" id="total-camera-ot">£0.00</td>
                                         <td class="total-cell" id="total-late-ot">£0.00</td>
                                         <td class="total-cell" id="total-de-rig">£0.00</td>
-                                        <td class="total-cell" id="total-broken-lunch">£0.00</td>
-                                        <td class="total-cell" id="total-bt">£0.00</td>
                                         <td class="total-cell" style="background: rgba(212, 175, 122, 0.15); font-size: 16px;" id="total-all">£0.00</td>
                                     </tr>
                                 </tfoot>
@@ -1776,6 +1765,26 @@
                 this.renderCrew();
                 this.updateCalculations();
                 this.setupAutoSave();
+                this.setupKeyboardShortcuts();
+            }
+
+            setupKeyboardShortcuts() {
+                document.addEventListener('keydown', (e) => {
+                    // Close modal on Escape
+                    if (e.key === 'Escape') {
+                        const modal = document.querySelector('.modal.active');
+                        if (modal) {
+                            modal.classList.remove('active');
+                        }
+                    }
+                    
+                    // Save on Ctrl+S / Cmd+S
+                    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                        e.preventDefault();
+                        this.save();
+                        this.showNotification('Timesheet saved', 'success');
+                    }
+                });
             }
 
             loadRates() {
@@ -1783,7 +1792,6 @@
                 document.getElementById('ot-multiplier').value = this.data.rates.otMultiplier;
                 document.getElementById('late-ot-multiplier').value = this.data.rates.lateOtMultiplier;
                 document.getElementById('base-hours').value = this.data.rates.baseHours;
-                document.getElementById('turnaround-hours').value = this.data.rates.turnaroundHours;
                 document.getElementById('special-multiplier').value = this.data.rates.specialMultiplier;
             }
 
@@ -1793,7 +1801,6 @@
                     otMultiplier: parseFloat(document.getElementById('ot-multiplier').value) || 1.5,
                     lateOtMultiplier: parseFloat(document.getElementById('late-ot-multiplier').value) || 2.0,
                     baseHours: parseFloat(document.getElementById('base-hours').value) || 10,
-                    turnaroundHours: parseFloat(document.getElementById('turnaround-hours').value) || 11,
                     specialMultiplier: parseFloat(document.getElementById('special-multiplier').value) || 1.5
                 };
                 this.save();
@@ -1865,16 +1872,19 @@
 
             renderCrewCards() {
                 const container = document.getElementById('crew-cards');
+                const noCrewMessage = document.getElementById('no-crew-message');
+                const timesheetSection = document.getElementById('timesheet-section');
+                
                 if (!container) return;
 
                 if (this.data.crew.length === 0) {
-                    document.getElementById('no-crew-message').style.display = 'block';
-                    document.getElementById('timesheet-section').style.display = 'none';
-                    container.parentElement.style.display = 'none';
+                    if (noCrewMessage) noCrewMessage.style.display = 'block';
+                    if (timesheetSection) timesheetSection.style.display = 'none';
+                    if (container.parentElement) container.parentElement.style.display = 'none';
                     return;
                 } else {
-                    document.getElementById('no-crew-message').style.display = 'none';
-                    container.parentElement.style.display = 'block';
+                    if (noCrewMessage) noCrewMessage.style.display = 'none';
+                    if (container.parentElement) container.parentElement.style.display = 'block';
                 }
 
                 container.innerHTML = '';
@@ -1924,6 +1934,16 @@
                     
                     container.appendChild(card);
                 });
+                
+                // If a crew is currently selected, show their timesheet
+                if (this.data.currentCrewId && timesheetSection) {
+                    const crew = this.data.crew.find(c => c.id === this.data.currentCrewId);
+                    if (crew) {
+                        timesheetSection.style.display = 'block';
+                    } else {
+                        timesheetSection.style.display = 'none';
+                    }
+                }
             }
 
             getCrewStats(crewId) {
@@ -1985,14 +2005,20 @@
                 // Update active state on cards
                 document.querySelectorAll('.crew-card').forEach(card => {
                     card.classList.remove('active');
+                    // Check if this card matches the selected crew
+                    if (card.querySelector('.crew-card-name').textContent === crew.name) {
+                        card.classList.add('active');
+                    }
                 });
-                event.currentTarget.classList.add('active');
                 
                 // Load timesheet
                 this.loadCrewTimesheet(crewId);
                 
                 // Update crew summary
                 this.updateCrewSummary(crewId);
+                
+                // Save current selection
+                this.save();
             }
 
             showCrewSelection() {
@@ -2047,10 +2073,9 @@
                         sixthDay: false,
                         preCall: '',
                         unitCall: '',
-                        lunchSched: '',
-                        lunchActual: '',
-                        wrap: '',
-                        cameraOT: '',
+                        lunchSched: 60, // Default 60 minutes
+                        lunchActual: 60, // Default 60 minutes
+                        actualWrap: '',
                         deRig: '',
                         notes: '',
                         isWeekend: isWeekend
@@ -2061,6 +2086,18 @@
 
                 this.renderTimesheet(crewId);
                 this.save();
+            }
+
+            generateTimeOptions(selectedTime = '') {
+                let options = '<option value="">--:--</option>';
+                for (let hour = 0; hour < 24; hour++) {
+                    for (let min = 0; min < 60; min += 15) {
+                        const timeStr = `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+                        const selected = timeStr === selectedTime ? 'selected' : '';
+                        options += `<option value="${timeStr}" ${selected}>${timeStr}</option>`;
+                    }
+                }
+                return options;
             }
 
             renderTimesheet(crewId) {
@@ -2074,6 +2111,10 @@
                 timesheet.days.forEach((day, index) => {
                     const row = document.createElement('tr');
                     if (day.isWeekend) row.className = 'weekend-row';
+
+                    // Ensure lunch values are set
+                    if (day.lunchSched === undefined) day.lunchSched = 60;
+                    if (day.lunchActual === undefined) day.lunchActual = 60;
 
                     row.innerHTML = `
                         <td class="day-cell">
@@ -2091,50 +2132,48 @@
                                    onchange="timesheetManager.updateDay(${crewId}, ${day.id}, 'sixthDay', this.checked)">
                         </td>
                         <td>
-                            <input type="text" class="time-input" placeholder="HH:MM" 
-                                   value="${day.preCall}" 
-                                   onchange="timesheetManager.updateDay(${crewId}, ${day.id}, 'preCall', this.value)">
+                            <select class="time-input" style="width: 100%; padding: 4px;" 
+                                    onchange="timesheetManager.updateDay(${crewId}, ${day.id}, 'preCall', this.value)">
+                                ${this.generateTimeOptions(day.preCall)}
+                            </select>
                         </td>
                         <td>
-                            <input type="text" class="time-input" placeholder="HH:MM" 
-                                   value="${day.unitCall}" 
-                                   onchange="timesheetManager.updateDay(${crewId}, ${day.id}, 'unitCall', this.value)">
+                            <select class="time-input" style="width: 100%; padding: 4px;" 
+                                    onchange="timesheetManager.updateDay(${crewId}, ${day.id}, 'unitCall', this.value)">
+                                ${this.generateTimeOptions(day.unitCall)}
+                            </select>
                         </td>
                         <td>
-                            <input type="text" class="time-input" placeholder="HH:MM" 
-                                   value="${day.lunchSched}" 
-                                   onchange="timesheetManager.updateDay(${crewId}, ${day.id}, 'lunchSched', this.value)">
+                            <select class="time-input" style="width: 100%; padding: 4px;" 
+                                    onchange="timesheetManager.updateDay(${crewId}, ${day.id}, 'actualWrap', this.value)">
+                                ${this.generateTimeOptions(day.actualWrap)}
+                            </select>
                         </td>
                         <td>
-                            <input type="text" class="time-input" placeholder="HH:MM" 
-                                   value="${day.lunchActual}" 
-                                   onchange="timesheetManager.updateDay(${crewId}, ${day.id}, 'lunchActual', this.value)">
+                            <select class="time-input" style="width: 100%; padding: 4px;" 
+                                    onchange="timesheetManager.updateDay(${crewId}, ${day.id}, 'deRig', this.value)">
+                                ${this.generateTimeOptions(day.deRig)}
+                            </select>
                         </td>
                         <td>
-                            <input type="text" class="time-input" placeholder="HH:MM" 
-                                   value="${day.wrap}" 
-                                   onchange="timesheetManager.updateDay(${crewId}, ${day.id}, 'wrap', this.value)">
+                            <input type="number" class="time-input" style="width: 60px;" 
+                                   value="${day.lunchSched}" min="0" max="120" step="15"
+                                   onchange="timesheetManager.updateDay(${crewId}, ${day.id}, 'lunchSched', parseInt(this.value))">
                         </td>
                         <td>
-                            <input type="text" class="time-input" placeholder="HH:MM" 
-                                   value="${day.cameraOT}" 
-                                   onchange="timesheetManager.updateDay(${crewId}, ${day.id}, 'cameraOT', this.value)">
-                        </td>
-                        <td>
-                            <input type="text" class="time-input" placeholder="HH:MM" 
-                                   value="${day.deRig}" 
-                                   onchange="timesheetManager.updateDay(${crewId}, ${day.id}, 'deRig', this.value)">
+                            <input type="number" class="time-input" style="width: 60px;" 
+                                   value="${day.lunchActual}" min="0" max="120" step="15"
+                                   onchange="timesheetManager.updateDay(${crewId}, ${day.id}, 'lunchActual', parseInt(this.value))">
                         </td>
                         <td>
                             <textarea class="notes-input" rows="1" placeholder="Notes..."
-                                      onchange="timesheetManager.updateDay(${crewId}, ${day.id}, 'notes', this.value)">${day.notes}</textarea>
+                                      onchange="timesheetManager.updateDay(${crewId}, ${day.id}, 'notes', this.value)">${day.notes || ''}</textarea>
                         </td>
                         <td class="calculated-cell" id="pre-call-hours-${day.id}">0.00</td>
+                        <td class="calculated-cell" id="base-hours-${day.id}">0.00</td>
                         <td class="calculated-cell" id="camera-ot-hours-${day.id}">0.00</td>
                         <td class="calculated-cell" id="late-ot-hours-${day.id}">0.00</td>
                         <td class="calculated-cell" id="de-rig-hours-${day.id}">0.00</td>
-                        <td class="calculated-cell" id="broken-lunch-${day.id}">0.00</td>
-                        <td class="calculated-cell" id="broken-ta-${day.id}">0.00</td>
                         <td class="calculated-cell" id="total-hours-${day.id}">0.00</td>
                     `;
 
@@ -2172,9 +2211,19 @@
             }
 
             parseTime(timeStr) {
-                if (!timeStr) return null;
-                const [hours, minutes] = timeStr.split(':').map(Number);
+                if (!timeStr || typeof timeStr !== 'string') return null;
+                const cleaned = timeStr.trim();
+                if (!cleaned) return null;
+                
+                const parts = cleaned.split(':');
+                if (parts.length !== 2) return null;
+                
+                const hours = parseInt(parts[0], 10);
+                const minutes = parseInt(parts[1], 10);
+                
                 if (isNaN(hours) || isNaN(minutes)) return null;
+                if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
+                
                 return hours + minutes / 60;
             }
 
@@ -2190,96 +2239,97 @@
 
             calculateDay(crewId, day, dayIndex) {
                 const crew = this.data.crew.find(c => c.id === crewId);
-                if (!crew) return { hours: { total: 0, preCall: 0, cameraOT: 0, lateOT: 0, deRig: 0, brokenLunch: 0, brokenTA: 0 } };
+                if (!crew) return { hours: { total: 0, preCall: 0, base: 0, cameraOT: 0, lateOT: 0, deRig: 0 } };
 
                 const rates = this.data.rates;
                 const dayRate = crew.rate || rates.dayRate;
 
-                // Calculate hours
-                const preCallHours = day.preCall && day.unitCall ? 
-                    this.calculateTimeDifference(day.preCall, day.unitCall) : 0;
-                
-                const workEnd = day.cameraOT || day.wrap;
-                const totalWorkHours = day.unitCall && workEnd ? 
-                    this.calculateTimeDifference(day.unitCall, workEnd) : 0;
-                
-                // Camera OT and Late OT calculation
+                // Initialize all hours to 0
+                let preCallHours = 0;
+                let baseHours = 0;
                 let cameraOTHours = 0;
                 let lateOTHours = 0;
-                
-                if (totalWorkHours > rates.baseHours) {
-                    const overtimeStart = this.parseTime(day.unitCall) + rates.baseHours;
-                    const overtimeEnd = this.parseTime(workEnd);
-                    
-                    if (overtimeEnd > 23 || overtimeEnd < overtimeStart) {
-                        if (overtimeStart < 23) {
-                            cameraOTHours = 23 - overtimeStart;
-                        }
-                        if (overtimeEnd > 23) {
-                            lateOTHours = overtimeEnd - 23;
-                        } else if (overtimeEnd < overtimeStart) {
-                            lateOTHours = overtimeEnd + (24 - 23);
-                        }
-                    } else {
-                        cameraOTHours = totalWorkHours - rates.baseHours;
+                let deRigHours = 0;
+
+                // Only calculate if unit call is set
+                if (day.unitCall) {
+                    // 1. Pre-call hours (if pre-call exists)
+                    if (day.preCall) {
+                        preCallHours = this.calculateTimeDifference(day.preCall, day.unitCall);
                     }
-                }
-                
-                const deRigHours = day.wrap && day.deRig ? 
-                    this.calculateTimeDifference(day.wrap, day.deRig) : 0;
-                
-                // Broken lunch calculation
-                let brokenLunchHours = 0;
-                if (day.lunchSched && day.lunchActual) {
-                    const schedLunch = this.parseTime(day.lunchSched);
-                    const actualLunch = this.parseTime(day.lunchActual);
-                    if (schedLunch && actualLunch && actualLunch > schedLunch + 1) {
-                        brokenLunchHours = 0.5;
-                    }
-                }
-                
-                // Broken turnaround calculation
-                let brokenTAHours = 0;
-                const timesheet = this.data.timesheets[crewId];
-                if (dayIndex > 0) {
-                    const prevDay = timesheet.days[dayIndex - 1];
-                    if (prevDay.wrap && day.unitCall) {
-                        const prevWrap = this.parseTime(prevDay.wrap);
-                        const todayCall = this.parseTime(day.unitCall);
-                        if (prevWrap && todayCall) {
-                            const turnaround = (todayCall + 24 - prevWrap) % 24;
-                            if (turnaround < rates.turnaroundHours) {
-                                brokenTAHours = rates.turnaroundHours - turnaround;
+
+                    // 2. Calculate scheduled wrap time
+                    // Scheduled wrap = Unit call + base hours + lunch duration
+                    const unitCallTime = this.parseTime(day.unitCall);
+                    const lunchHours = (day.lunchSched || 60) / 60; // Convert minutes to hours
+                    const scheduledWrapTime = unitCallTime + rates.baseHours + lunchHours;
+
+                    // 3. Base hours = the contracted base hours (10 or 11)
+                    baseHours = rates.baseHours;
+
+                    // 4. Calculate Camera OT and Late OT (if actual wrap exists)
+                    if (day.actualWrap) {
+                        const actualWrapTime = this.parseTime(day.actualWrap);
+                        let adjustedActualWrap = actualWrapTime;
+                        
+                        // Handle overnight wrap (if actual wrap is earlier time, it's next day)
+                        if (actualWrapTime < unitCallTime) {
+                            adjustedActualWrap = actualWrapTime + 24;
+                        }
+
+                        // Calculate total OT hours
+                        const totalOTHours = Math.max(0, adjustedActualWrap - scheduledWrapTime);
+
+                        if (totalOTHours > 0) {
+                            // Determine how much is regular OT vs late OT (after 23:00)
+                            const lateNightStart = 23; // 11 PM
+                            
+                            // Check if any work extends past 11 PM
+                            if (scheduledWrapTime < lateNightStart && adjustedActualWrap > lateNightStart) {
+                                // Split between regular OT and late OT
+                                cameraOTHours = lateNightStart - scheduledWrapTime;
+                                lateOTHours = adjustedActualWrap - lateNightStart;
+                            } else if (scheduledWrapTime >= lateNightStart) {
+                                // All OT is late OT
+                                lateOTHours = totalOTHours;
+                            } else {
+                                // All OT is regular camera OT
+                                cameraOTHours = totalOTHours;
                             }
                         }
+
+                        // 5. De-rig hours (if de-rig time exists)
+                        if (day.deRig) {
+                            deRigHours = this.calculateTimeDifference(day.actualWrap, day.deRig);
+                        }
                     }
                 }
-                
-                // Update hour displays
+
+                // Update display elements
                 const updateElement = (id, value) => {
                     const el = document.getElementById(id);
                     if (el) el.textContent = value.toFixed(2);
                 };
 
                 updateElement(`pre-call-hours-${day.id}`, preCallHours);
+                updateElement(`base-hours-${day.id}`, baseHours);
                 updateElement(`camera-ot-hours-${day.id}`, cameraOTHours);
                 updateElement(`late-ot-hours-${day.id}`, lateOTHours);
                 updateElement(`de-rig-hours-${day.id}`, deRigHours);
-                updateElement(`broken-lunch-${day.id}`, brokenLunchHours);
-                updateElement(`broken-ta-${day.id}`, brokenTAHours);
                 
-                const totalHours = day.unitCall ? rates.baseHours + preCallHours + cameraOTHours + lateOTHours + deRigHours : 0;
+                const totalHours = preCallHours + baseHours + cameraOTHours + lateOTHours + deRigHours;
                 updateElement(`total-hours-${day.id}`, totalHours);
                 
                 return {
                     hours: {
                         total: totalHours,
                         preCall: preCallHours,
+                        base: baseHours,
                         cameraOT: cameraOTHours,
                         lateOT: lateOTHours,
                         deRig: deRigHours,
-                        brokenLunch: brokenLunchHours,
-                        brokenTA: brokenTAHours
+                        brokenLunch: 0, // No longer calculating broken lunch
+                        brokenTA: 0 // No longer calculating broken turnaround
                     }
                 };
             }
@@ -2296,9 +2346,7 @@
                         preCall: 0,
                         cameraOT: 0,
                         lateOT: 0,
-                        deRig: 0,
-                        brokenLunch: 0,
-                        bt: 0
+                        deRig: 0
                     }
                 };
 
@@ -2329,9 +2377,7 @@
                             preCall: calc.hours.preCall * hourlyRate * this.data.rates.specialMultiplier,
                             cameraOT: calc.hours.cameraOT * hourlyRate * this.data.rates.otMultiplier,
                             lateOT: calc.hours.lateOT * hourlyRate * this.data.rates.lateOtMultiplier,
-                            deRig: calc.hours.deRig * hourlyRate * this.data.rates.specialMultiplier,
-                            brokenLunch: calc.hours.brokenLunch * hourlyRate * this.data.rates.specialMultiplier,
-                            bt: calc.hours.brokenTA * hourlyRate * this.data.rates.specialMultiplier
+                            deRig: calc.hours.deRig * hourlyRate * this.data.rates.specialMultiplier
                         };
                         
                         const dayTotal = Object.values(payments).reduce((sum, val) => sum + val, 0);
@@ -2359,8 +2405,6 @@
                                 <td class="calculated-cell">£${payments.cameraOT.toFixed(2)}</td>
                                 <td class="calculated-cell">£${payments.lateOT.toFixed(2)}</td>
                                 <td class="calculated-cell">£${payments.deRig.toFixed(2)}</td>
-                                <td class="calculated-cell">£${payments.brokenLunch.toFixed(2)}</td>
-                                <td class="calculated-cell">£${payments.bt.toFixed(2)}</td>
                                 <td class="total-cell">£${dayTotal.toFixed(2)}</td>
                             `;
                             paymentBody.appendChild(row);
@@ -2370,29 +2414,33 @@
 
                 const budgetImpact = totals.labour - totals.ltdSavings;
 
+                // Safe update helper
+                const safeUpdate = (id, value) => {
+                    const el = document.getElementById(id);
+                    if (el) el.textContent = value;
+                };
+
                 // Update displays
-                document.getElementById('total-labour').textContent = `£${totals.labour.toFixed(2)}`;
-                document.getElementById('budget-impact').textContent = `£${budgetImpact.toFixed(2)}`;
-                document.getElementById('total-days').textContent = totals.days;
-                document.getElementById('total-ot').textContent = totals.otHours.toFixed(2);
-                document.getElementById('sixth-days').textContent = totals.sixthDays;
+                safeUpdate('total-labour', `£${totals.labour.toFixed(2)}`);
+                safeUpdate('budget-impact', `£${budgetImpact.toFixed(2)}`);
+                safeUpdate('total-days', totals.days);
+                safeUpdate('total-ot', totals.otHours.toFixed(2));
+                safeUpdate('sixth-days', totals.sixthDays);
                 
                 // Update payment totals
-                document.getElementById('total-day-rate').textContent = `£${totals.payBreakdown.dayRate.toFixed(2)}`;
-                document.getElementById('total-pre-call').textContent = `£${totals.payBreakdown.preCall.toFixed(2)}`;
-                document.getElementById('total-camera-ot').textContent = `£${totals.payBreakdown.cameraOT.toFixed(2)}`;
-                document.getElementById('total-late-ot').textContent = `£${totals.payBreakdown.lateOT.toFixed(2)}`;
-                document.getElementById('total-de-rig').textContent = `£${totals.payBreakdown.deRig.toFixed(2)}`;
-                document.getElementById('total-broken-lunch').textContent = `£${totals.payBreakdown.brokenLunch.toFixed(2)}`;
-                document.getElementById('total-bt').textContent = `£${totals.payBreakdown.bt.toFixed(2)}`;
-                document.getElementById('total-all').textContent = `£${totals.labour.toFixed(2)}`;
+                safeUpdate('total-day-rate', `£${totals.payBreakdown.dayRate.toFixed(2)}`);
+                safeUpdate('total-pre-call', `£${totals.payBreakdown.preCall.toFixed(2)}`);
+                safeUpdate('total-camera-ot', `£${totals.payBreakdown.cameraOT.toFixed(2)}`);
+                safeUpdate('total-late-ot', `£${totals.payBreakdown.lateOT.toFixed(2)}`);
+                safeUpdate('total-de-rig', `£${totals.payBreakdown.deRig.toFixed(2)}`);
+                safeUpdate('total-all', `£${totals.labour.toFixed(2)}`);
                 
                 // Update grand total
-                document.getElementById('grand-total').textContent = `£${totals.labour.toFixed(2)}`;
+                safeUpdate('grand-total', `£${totals.labour.toFixed(2)}`);
                 
                 // Update sidebar
-                document.getElementById('sidebar-days').textContent = totals.days;
-                document.getElementById('sidebar-cost').textContent = `£${totals.labour.toFixed(2)}`;
+                safeUpdate('sidebar-days', totals.days);
+                safeUpdate('sidebar-cost', `£${totals.labour.toFixed(2)}`);
                 
                 // Update summary
                 let totalHours = 0;
@@ -2405,10 +2453,10 @@
                     });
                 });
                 
-                document.getElementById('summary-days').textContent = totals.days;
-                document.getElementById('summary-hours').textContent = totalHours.toFixed(2);
-                document.getElementById('summary-cost').textContent = `£${totals.labour.toFixed(2)}`;
-                document.getElementById('summary-ltd').textContent = `£${totals.ltdSavings.toFixed(2)}`;
+                safeUpdate('summary-days', totals.days);
+                safeUpdate('summary-hours', totalHours.toFixed(2));
+                safeUpdate('summary-cost', `£${totals.labour.toFixed(2)}`);
+                safeUpdate('summary-ltd', `£${totals.ltdSavings.toFixed(2)}`);
             }
 
             clearTimesheet() {
@@ -2418,11 +2466,15 @@
                     return;
                 }
 
-                if (confirm('Clear all timesheet data for this crew member?')) {
+                const crew = this.data.crew.find(c => c.id === crewId);
+                const crewName = crew ? crew.name : 'this crew member';
+                
+                if (confirm(`Are you sure you want to clear all timesheet data for ${crewName}?\n\nThis action cannot be undone.`)) {
                     this.data.timesheets[crewId] = { days: [] };
-                    this.renderTimesheet(crewId);
+                    this.loadCrewTimesheet(crewId);
                     this.updateCalculations();
                     this.save();
+                    this.showNotification('Timesheet cleared', 'success');
                 }
             }
 
@@ -2460,7 +2512,13 @@
                         this.updateCrewSelector();
                     } catch (e) {
                         console.error('Error loading data:', e);
+                        this.showNotification('Error loading saved data', 'warning');
                     }
+                } else {
+                    // First time user - show welcome message
+                    setTimeout(() => {
+                        this.showNotification('Welcome! Start by adding crew members in the Crew Management tab', 'info');
+                    }, 1000);
                 }
             }
 
@@ -2488,8 +2546,8 @@
                 csv += `Production:,${this.data.projectInfo.name}\n`;
                 csv += `Project Code:,${this.data.projectInfo.code}\n\n`;
                 
-                csv += 'Crew,Day,Date,6th Day,Pre-Call,Unit Call,Lunch Sched,Lunch Actual,Wrap,Camera OT,De-Rig,';
-                csv += 'Total Hours,Day Rate,Pre-Call Pay,Camera OT Pay,Late OT Pay,De-Rig Pay,Broken Lunch Pay,BT Pay,Total Pay\n';
+                csv += 'Crew,Day,Date,6th Day,Pre-Call,Unit Call,Actual Wrap,De-Rig,Lunch Sched (min),Lunch Actual (min),';
+                csv += 'Total Hours,Day Rate,Pre-Call Pay,Camera OT Pay,Late OT Pay,De-Rig Pay,Total Pay\n';
                 
                 this.data.crew.forEach(crew => {
                     const timesheet = this.data.timesheets[crew.id];
@@ -2507,21 +2565,18 @@
                             preCall: calc.hours.preCall * hourlyRate * this.data.rates.specialMultiplier,
                             cameraOT: calc.hours.cameraOT * hourlyRate * this.data.rates.otMultiplier,
                             lateOT: calc.hours.lateOT * hourlyRate * this.data.rates.lateOtMultiplier,
-                            deRig: calc.hours.deRig * hourlyRate * this.data.rates.specialMultiplier,
-                            brokenLunch: calc.hours.brokenLunch * hourlyRate * this.data.rates.specialMultiplier,
-                            bt: calc.hours.brokenTA * hourlyRate * this.data.rates.specialMultiplier
+                            deRig: calc.hours.deRig * hourlyRate * this.data.rates.specialMultiplier
                         };
                         
                         const total = Object.values(payments).reduce((sum, val) => sum + val, 0);
                         
                         csv += `"${crew.name}",${day.name},${day.date},${day.sixthDay ? 'Y' : 'N'},`;
-                        csv += `${day.preCall},${day.unitCall},${day.lunchSched},${day.lunchActual},`;
-                        csv += `${day.wrap},${day.cameraOT},${day.deRig},`;
+                        csv += `${day.preCall || ''},${day.unitCall || ''},${day.actualWrap || ''},${day.deRig || ''},`;
+                        csv += `${day.lunchSched || 60},${day.lunchActual || 60},`;
                         csv += `${calc.hours.total.toFixed(2)},`;
                         csv += `${payments.dayRate.toFixed(2)},${payments.preCall.toFixed(2)},`;
                         csv += `${payments.cameraOT.toFixed(2)},${payments.lateOT.toFixed(2)},`;
-                        csv += `${payments.deRig.toFixed(2)},${payments.brokenLunch.toFixed(2)},`;
-                        csv += `${payments.bt.toFixed(2)},${total.toFixed(2)}\n`;
+                        csv += `${payments.deRig.toFixed(2)},${total.toFixed(2)}\n`;
                     });
                 });
                 
@@ -2551,7 +2606,7 @@
         const timesheetManager = new TimesheetManager();
 
         // Global functions
-        function switchTab(tabName) {
+        function switchTab(tabName, targetElement) {
             document.querySelectorAll('.tab-content').forEach(tab => {
                 tab.classList.remove('active');
             });
@@ -2565,12 +2620,23 @@
             const tab = document.getElementById(tabName + '-tab');
             if (tab) tab.classList.add('active');
             
-            event.target.classList.add('active');
+            // Find and activate the correct tab button
+            document.querySelectorAll('.tab').forEach(btn => {
+                if (btn.textContent.toLowerCase().includes(tabName.toLowerCase()) ||
+                    (tabName === 'overview' && btn.textContent.toLowerCase() === 'overview') ||
+                    (tabName === 'crew' && btn.textContent.toLowerCase().includes('crew')) ||
+                    (tabName === 'timesheet' && btn.textContent.toLowerCase().includes('timesheet')) ||
+                    (tabName === 'payment' && btn.textContent.toLowerCase().includes('payment')) ||
+                    (tabName === 'reports' && btn.textContent.toLowerCase().includes('reports'))) {
+                    btn.classList.add('active');
+                }
+            });
             
             // Update nav item
             document.querySelectorAll('.nav-item').forEach(item => {
-                if (item.textContent.toLowerCase().includes(tabName.toLowerCase()) ||
-                    (tabName === 'timesheet' && item.textContent.includes('TIMESHEET'))) {
+                const itemText = item.textContent.toLowerCase().trim();
+                if (itemText.includes(tabName.toLowerCase()) ||
+                    (tabName === 'timesheet' && itemText.includes('timesheet'))) {
                     item.classList.add('active');
                 }
             });
@@ -2615,20 +2681,44 @@
         }
 
         function saveCrew() {
-            const crew = {
-                name: document.getElementById('crew-name').value,
-                position: document.getElementById('crew-position').value,
-                department: document.getElementById('crew-department').value,
-                rate: parseFloat(document.getElementById('crew-rate').value) || timesheetManager.data.rates.dayRate,
-                type: document.getElementById('crew-type').value,
-                email: document.getElementById('crew-email').value,
-                phone: document.getElementById('crew-phone').value
-            };
+            const name = document.getElementById('crew-name').value.trim();
+            const position = document.getElementById('crew-position').value.trim();
+            const department = document.getElementById('crew-department').value;
+            const rateInput = document.getElementById('crew-rate').value;
+            const type = document.getElementById('crew-type').value;
+            const email = document.getElementById('crew-email').value.trim();
+            const phone = document.getElementById('crew-phone').value.trim();
 
-            if (!crew.name || !crew.position) {
-                timesheetManager.showNotification('Please fill in required fields', 'warning');
+            // Validation
+            if (!name) {
+                timesheetManager.showNotification('Please enter crew member name', 'warning');
+                document.getElementById('crew-name').focus();
                 return;
             }
+            
+            if (!position) {
+                timesheetManager.showNotification('Please enter position', 'warning');
+                document.getElementById('crew-position').focus();
+                return;
+            }
+            
+            const rate = rateInput ? parseFloat(rateInput) : timesheetManager.data.rates.dayRate;
+            
+            if (rate <= 0) {
+                timesheetManager.showNotification('Please enter a valid day rate', 'warning');
+                document.getElementById('crew-rate').focus();
+                return;
+            }
+
+            const crew = {
+                name: name,
+                position: position,
+                department: department,
+                rate: rate,
+                type: type,
+                email: email,
+                phone: phone
+            };
 
             timesheetManager.addCrew(crew);
             closeModal('crewModal');
@@ -2640,12 +2730,13 @@
             document.getElementById('crew-email').value = '';
             document.getElementById('crew-phone').value = '';
             
-            timesheetManager.showNotification('Crew member added', 'success');
+            timesheetManager.showNotification(`${name} added successfully`, 'success');
         }
 
         function addCrewQuick() {
+            // Switch to crew tab
             switchTab('crew');
-            document.querySelector('.tab:nth-child(2)').click();
+            // Open modal after a short delay
             setTimeout(() => openCrewModal(), 100);
         }
 
@@ -2671,7 +2762,20 @@
         }
 
         function exportTimesheet() {
-            timesheetManager.exportData();
+            // Export as JSON for full data preservation
+            const dataStr = JSON.stringify(timesheetManager.data, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const timestamp = new Date().toISOString().split('T')[0];
+            a.download = `timesheet_${timesheetManager.data.projectInfo.code}_${timestamp}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            timesheetManager.showNotification('Timesheet exported successfully', 'success');
         }
 
         function importTimesheet() {
@@ -2680,22 +2784,43 @@
             input.accept = '.json';
             input.onchange = (e) => {
                 const file = e.target.files[0];
+                if (!file) return;
+                
                 const reader = new FileReader();
                 reader.onload = (event) => {
                     try {
                         const data = JSON.parse(event.target.result);
-                        if (confirm('This will replace current data. Continue?')) {
+                        
+                        // Validate the data structure
+                        if (!data.projectInfo || !data.rates || !data.crew || !data.timesheets) {
+                            throw new Error('Invalid timesheet file format');
+                        }
+                        
+                        if (confirm('This will replace all current data. Are you sure you want to continue?')) {
                             timesheetManager.data = data;
                             timesheetManager.loadRates();
                             timesheetManager.renderCrew();
                             timesheetManager.renderCrewCards();
                             timesheetManager.updateCalculations();
                             timesheetManager.save();
-                            timesheetManager.showNotification('Timesheet imported', 'success');
+                            timesheetManager.showNotification('Timesheet imported successfully', 'success');
+                            
+                            // Refresh the page displays
+                            document.getElementById('project-name-display').textContent = data.projectInfo.name;
+                            document.getElementById('project-code-display').textContent = data.projectInfo.code;
+                            
+                            if (data.projectInfo.isLTD) {
+                                document.getElementById('ltd-toggle').classList.add('active');
+                                document.getElementById('ltd-status').textContent = 'Yes - Wages separate from budget';
+                            }
                         }
                     } catch (e) {
-                        timesheetManager.showNotification('Error importing file', 'warning');
+                        console.error('Import error:', e);
+                        timesheetManager.showNotification('Error importing file: ' + e.message, 'warning');
                     }
+                };
+                reader.onerror = () => {
+                    timesheetManager.showNotification('Error reading file', 'warning');
                 };
                 reader.readAsText(file);
             };
@@ -2703,7 +2828,27 @@
         }
 
         function printTimesheet() {
+            // Ensure all tabs are visible for printing
+            const currentTab = document.querySelector('.tab-content.active');
+            const currentTabId = currentTab ? currentTab.id : '';
+            
+            // Temporarily show all content for printing
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.style.display = 'block';
+            });
+            
             window.print();
+            
+            // Restore original visibility
+            setTimeout(() => {
+                document.querySelectorAll('.tab-content').forEach(tab => {
+                    tab.style.display = 'none';
+                });
+                if (currentTabId) {
+                    const tab = document.getElementById(currentTabId);
+                    if (tab) tab.style.display = 'block';
+                }
+            }, 100);
         }
 
         function exportToCSV() {
