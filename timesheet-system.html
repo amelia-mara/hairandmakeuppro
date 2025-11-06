@@ -13,18 +13,22 @@
         }
 
         :root {
-            --bg-dark: #0d0b0a;
-            --bg-medium: #1a1612;
-            --card-bg: #242019;
-            --text-light: #e8e6e3;
-            --text-muted: #8a7f73;
-            --accent-gold: #c9a961;
-            --border: #2d2925;
-            --divider: #363330;
+            --bg-dark: #050403;
+            --bg-darker: #020201;
+            --bg-medium: rgba(18, 16, 14, 0.85);
+            --card-bg: linear-gradient(135deg, rgba(36, 32, 25, 0.7), rgba(42, 38, 31, 0.6));
+            --text-primary: #f0eeeb;
+            --text-secondary: #9a8f83;
+            --accent-gold: #d4af7a;
+            --accent-gold-hover: #e0c08f;
+            --border: rgba(255, 255, 255, 0.06);
+            --glass-border: rgba(255, 255, 255, 0.12);
+            --glass-shine: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.02));
             --success: #52c186;
             --warning: #e8a87c;
             --danger: #ef4444;
-            --glass-border: rgba(255, 255, 255, 0.08);
+            --info: #6b9bd1;
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
             --ltd-color: #6b9bd1;
             --paye-color: #d17b6b;
             --sixth-day: #9b7bd1;
@@ -53,74 +57,114 @@
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--bg-dark);
-            color: var(--text-light);
+            background: radial-gradient(ellipse at top, #0a0908 0%, #020201 40%, #000000 100%);
+            color: var(--text-primary);
             min-height: 100vh;
             font-weight: 400;
             letter-spacing: -0.01em;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 20% 30%, rgba(212, 175, 122, 0.02) 0%, transparent 40%),
+                        radial-gradient(circle at 80% 70%, rgba(212, 175, 122, 0.015) 0%, transparent 40%);
+            pointer-events: none;
+            z-index: 1;
         }
 
         /* Layout */
         .app-layout {
             display: flex;
             height: 100vh;
+            position: relative;
+            z-index: 2;
         }
 
         /* Sidebar */
         .sidebar {
-            width: 280px;
-            background: var(--bg-medium);
-            border-right: 1px solid var(--border);
+            width: 260px;
+            background: linear-gradient(135deg, rgba(26, 22, 18, 0.8), rgba(20, 17, 15, 0.7));
+            backdrop-filter: blur(40px) saturate(120%);
+            -webkit-backdrop-filter: blur(40px) saturate(120%);
+            border-right: 1px solid var(--glass-border);
             display: flex;
             flex-direction: column;
+            position: relative;
+            z-index: 10;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
             overflow-y: auto;
         }
 
+        .sidebar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 100px;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, transparent 100%);
+            pointer-events: none;
+        }
+
         .sidebar-header {
-            padding: 24px;
-            border-bottom: 1px solid var(--border);
+            padding: 32px 24px 24px;
+            border-bottom: 1px solid var(--glass-border);
         }
 
         .back-btn {
-            display: flex;
+            display: inline-flex;
             align-items: center;
             gap: 8px;
-            color: var(--text-muted);
+            color: var(--text-secondary);
             text-decoration: none;
-            font-size: 0.875em;
-            margin-bottom: 16px;
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 20px;
             transition: color 0.2s ease;
+            opacity: 0.8;
         }
 
         .back-btn:hover {
-            color: var(--accent-gold);
+            color: var(--text-primary);
+            opacity: 1;
         }
 
         .project-info h2 {
-            font-size: 1.25em;
+            font-size: 20px;
             font-weight: 600;
             margin-bottom: 4px;
             letter-spacing: -0.02em;
         }
 
         .project-code {
-            font-size: 0.8125em;
-            color: var(--text-muted);
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            opacity: 0.7;
         }
 
         .nav-section {
-            padding: 24px 16px;
-            border-bottom: 1px solid var(--border);
+            padding: 20px 12px;
+            border-bottom: 1px solid var(--glass-border);
         }
 
         .nav-section-title {
-            font-size: 0.6875em;
+            font-size: 11px;
             font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: var(--text-muted);
-            margin-bottom: 12px;
-            padding: 0 8px;
+            letter-spacing: 0.08em;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            padding: 0 12px;
+            opacity: 0.5;
         }
 
         .nav-item {
@@ -128,28 +172,50 @@
             align-items: center;
             gap: 12px;
             padding: 10px 12px;
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.15s ease;
             margin-bottom: 2px;
-            font-size: 0.875em;
-            color: var(--text-muted);
+            font-size: 14px;
+            color: var(--text-secondary);
+            position: relative;
         }
 
         .nav-item:hover {
-            background: rgba(201, 169, 97, 0.08);
-            color: var(--text-light);
+            background: linear-gradient(135deg, rgba(212, 175, 122, 0.08), rgba(212, 175, 122, 0.05));
+            color: var(--text-primary);
+            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.05);
         }
 
         .nav-item.active {
-            background: rgba(201, 169, 97, 0.12);
+            background: linear-gradient(135deg, rgba(212, 175, 122, 0.12), rgba(212, 175, 122, 0.08));
             color: var(--accent-gold);
             font-weight: 500;
+            box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.1),
+                        0 2px 8px rgba(212, 175, 122, 0.1);
+        }
+
+        .nav-item.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 3px;
+            height: 16px;
+            background: var(--accent-gold);
+            border-radius: 2px;
         }
 
         .nav-icon {
             width: 18px;
-            font-size: 1.1em;
+            height: 18px;
+            opacity: 0.7;
+            font-size: 14px;
+        }
+
+        .nav-item:hover .nav-icon {
+            opacity: 1;
         }
 
         /* Main Content */
@@ -162,56 +228,78 @@
 
         /* Top Bar */
         .top-bar {
-            height: 60px;
-            background: var(--bg-medium);
-            border-bottom: 1px solid var(--border);
+            height: 56px;
+            background: linear-gradient(135deg, rgba(26, 22, 18, 0.85), rgba(20, 17, 15, 0.75));
+            backdrop-filter: blur(40px) saturate(120%);
+            -webkit-backdrop-filter: blur(40px) saturate(120%);
+            border-bottom: 1px solid var(--glass-border);
             display: flex;
             align-items: center;
             justify-content: space-between;
             padding: 0 32px;
+            position: relative;
+            z-index: 9;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .top-bar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
         }
 
         .page-title {
-            font-size: 1.125em;
+            font-size: 16px;
             font-weight: 600;
             letter-spacing: -0.01em;
         }
 
         .top-bar-actions {
             display: flex;
-            gap: 12px;
+            gap: 8px;
             align-items: center;
         }
 
         .btn {
             padding: 8px 16px;
-            background: transparent;
-            border: 1px solid var(--border);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
+            border: 1px solid var(--glass-border);
             border-radius: 6px;
-            color: var(--text-muted);
+            color: var(--text-secondary);
             cursor: pointer;
-            font-size: 0.8125em;
-            transition: all 0.2s ease;
+            font-size: 13px;
             font-weight: 500;
+            transition: all 0.15s ease;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
+            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.05),
+                        0 2px 8px rgba(0, 0, 0, 0.2);
         }
 
         .btn:hover {
             border-color: var(--accent-gold);
             color: var(--accent-gold);
-            background: rgba(201, 169, 97, 0.05);
+            background: linear-gradient(135deg, rgba(212, 175, 122, 0.08), rgba(212, 175, 122, 0.04));
+            box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.1),
+                        0 4px 12px rgba(212, 175, 122, 0.15);
+            transform: translateY(-1px);
         }
 
         .btn.primary {
-            background: var(--accent-gold);
+            background: linear-gradient(135deg, rgba(212, 175, 122, 0.9), rgba(184, 150, 81, 0.9));
             border-color: var(--accent-gold);
             color: var(--bg-dark);
         }
 
         .btn.primary:hover {
-            background: #d4b16d;
+            background: linear-gradient(135deg, #d4af7a, #c09861);
+            box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.2),
+                        0 4px 16px rgba(212, 175, 122, 0.3);
         }
 
         /* Content Area */
@@ -224,30 +312,37 @@
         /* Tabs */
         .tabs {
             display: flex;
-            gap: 4px;
+            gap: 2px;
             margin-bottom: 24px;
-            border-bottom: 1px solid var(--border);
+            padding: 2px;
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.3));
+            border-radius: 6px;
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
+            display: inline-flex;
         }
 
         .tab {
-            padding: 12px 24px;
+            padding: 8px 16px;
             background: transparent;
             border: none;
-            border-bottom: 2px solid transparent;
-            color: var(--text-muted);
+            border-radius: 4px;
+            color: var(--text-secondary);
             cursor: pointer;
-            font-size: 0.875em;
+            font-size: 13px;
             font-weight: 500;
-            transition: all 0.2s ease;
+            transition: all 0.15s ease;
         }
 
         .tab:hover {
-            color: var(--text-light);
+            color: var(--text-primary);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
         }
 
         .tab.active {
-            color: var(--accent-gold);
-            border-bottom-color: var(--accent-gold);
+            background: linear-gradient(135deg, rgba(212, 175, 122, 0.15), rgba(212, 175, 122, 0.1));
+            color: var(--text-primary);
+            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1),
+                        0 1px 4px rgba(212, 175, 122, 0.2);
         }
 
         .tab-content {
@@ -268,52 +363,103 @@
 
         .stat-card {
             background: var(--card-bg);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 20px;
+            backdrop-filter: blur(30px) saturate(110%);
+            -webkit-backdrop-filter: blur(30px) saturate(110%);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 24px;
             transition: all 0.2s ease;
+            position: relative;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
+                        inset 0 1px 1px rgba(255, 255, 255, 0.1);
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50%;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, transparent 100%);
+            pointer-events: none;
+            border-radius: 12px 12px 0 0;
         }
 
         .stat-card:hover {
-            border-color: var(--divider);
+            border-color: rgba(212, 175, 122, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5),
+                        inset 0 1px 2px rgba(255, 255, 255, 0.15);
         }
 
         .stat-label {
-            font-size: 0.75em;
-            color: var(--text-muted);
+            font-size: 11px;
+            color: var(--text-secondary);
             margin-bottom: 8px;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            font-weight: 500;
+            font-weight: 600;
         }
 
         .stat-value {
-            font-size: 1.75em;
+            font-size: 2em;
             font-weight: 600;
-            color: var(--text-light);
+            color: var(--text-primary);
             margin-bottom: 4px;
         }
 
         .stat-detail {
-            font-size: 0.8125em;
-            color: var(--text-muted);
+            font-size: 13px;
+            color: var(--text-secondary);
         }
 
         /* Section Cards */
         .section-card {
             background: var(--card-bg);
-            border: 1px solid var(--border);
-            border-radius: 8px;
+            backdrop-filter: blur(30px) saturate(110%);
+            -webkit-backdrop-filter: blur(30px) saturate(110%);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
             overflow: hidden;
             margin-bottom: 24px;
+            position: relative;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
+                        inset 0 1px 1px rgba(255, 255, 255, 0.1);
+        }
+
+        .section-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50%;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, transparent 100%);
+            pointer-events: none;
+            border-radius: 12px 12px 0 0;
+            z-index: 0;
         }
 
         .section-header {
             padding: 20px 24px;
-            border-bottom: 1px solid var(--border);
+            border-bottom: 1px solid var(--glass-border);
             display: flex;
             justify-content: space-between;
             align-items: center;
+            background: linear-gradient(135deg, rgba(30, 26, 22, 0.5), rgba(26, 22, 18, 0.6));
+            position: relative;
+            z-index: 1;
+        }
+
+        .section-header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
         }
 
         .section-title {
@@ -326,6 +472,7 @@
 
         .section-icon {
             font-size: 1.2em;
+            opacity: 0.6;
         }
 
         .section-actions {
@@ -336,10 +483,27 @@
         /* Rate Card Grid */
         .rate-card {
             background: var(--card-bg);
+            backdrop-filter: blur(30px) saturate(110%);
+            -webkit-backdrop-filter: blur(30px) saturate(110%);
             border: 2px solid var(--accent-gold);
-            border-radius: 8px;
+            border-radius: 12px;
             padding: 24px;
             margin-bottom: 24px;
+            position: relative;
+            box-shadow: 0 8px 32px rgba(212, 175, 122, 0.2),
+                        inset 0 1px 2px rgba(255, 255, 255, 0.1);
+        }
+
+        .rate-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50%;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, transparent 100%);
+            pointer-events: none;
+            border-radius: 10px 10px 0 0;
         }
 
         .rate-grid {
@@ -355,19 +519,19 @@
         }
 
         .rate-label {
-            font-size: 0.75em;
-            color: var(--text-muted);
+            font-size: 11px;
+            color: var(--text-secondary);
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            font-weight: 500;
+            font-weight: 600;
         }
 
         .rate-input {
-            padding: 8px 12px;
-            background: var(--bg-medium);
+            padding: 10px 12px;
+            background: rgba(0, 0, 0, 0.3);
             border: 1px solid var(--border);
             border-radius: 6px;
-            color: var(--text-light);
+            color: var(--text-primary);
             font-size: 1em;
             font-weight: 500;
             transition: all 0.2s ease;
@@ -377,37 +541,44 @@
             outline: none;
             border-color: var(--accent-gold);
             background: var(--bg-dark);
+            box-shadow: 0 0 0 3px rgba(212, 175, 122, 0.1);
         }
 
         /* Crew Table */
         .crew-table {
             width: 100%;
             border-collapse: collapse;
+            position: relative;
+            z-index: 1;
         }
 
         .crew-table thead {
-            background: rgba(201, 169, 97, 0.05);
+            background: rgba(212, 175, 122, 0.05);
         }
 
         .crew-table th {
             padding: 12px 16px;
             text-align: left;
-            font-size: 0.75em;
+            font-size: 11px;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            color: var(--text-muted);
+            color: var(--text-secondary);
             border-bottom: 1px solid var(--border);
         }
 
         .crew-table td {
             padding: 12px 16px;
-            font-size: 0.875em;
+            font-size: 14px;
             border-bottom: 1px solid var(--border);
         }
 
+        .crew-table tbody tr {
+            transition: background 0.15s ease;
+        }
+
         .crew-table tbody tr:hover {
-            background: rgba(201, 169, 97, 0.03);
+            background: rgba(212, 175, 122, 0.03);
         }
 
         /* Employment Type Badge */
@@ -415,9 +586,10 @@
             display: inline-block;
             padding: 4px 8px;
             border-radius: 4px;
-            font-size: 0.75em;
+            font-size: 11px;
             font-weight: 600;
             text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
         .employment-badge.ltd {
@@ -432,10 +604,18 @@
             border: 1px solid rgba(209, 123, 107, 0.3);
         }
 
+        .employment-badge.freelance {
+            background: rgba(155, 123, 209, 0.15);
+            color: var(--sixth-day);
+            border: 1px solid rgba(155, 123, 209, 0.3);
+        }
+
         /* Timesheet Table */
         .timesheet-wrapper {
             overflow-x: auto;
             margin-bottom: 24px;
+            position: relative;
+            z-index: 1;
         }
 
         .timesheet-table {
@@ -445,17 +625,17 @@
         }
 
         .timesheet-table thead {
-            background: rgba(201, 169, 97, 0.05);
+            background: rgba(212, 175, 122, 0.05);
         }
 
         .timesheet-table th {
             padding: 10px 6px;
             text-align: center;
-            font-size: 0.7em;
+            font-size: 10px;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            color: var(--text-muted);
+            color: var(--text-secondary);
             border: 1px solid var(--border);
             white-space: nowrap;
         }
@@ -467,15 +647,19 @@
             height: 40px;
         }
 
+        .timesheet-table tbody tr {
+            transition: background 0.15s ease;
+        }
+
         .timesheet-table tbody tr:hover {
-            background: rgba(201, 169, 97, 0.02);
+            background: rgba(212, 175, 122, 0.02);
         }
 
         .day-cell {
             font-weight: 500;
             text-align: left !important;
             padding-left: 12px !important;
-            background: var(--bg-medium);
+            background: linear-gradient(135deg, rgba(30, 26, 22, 0.5), rgba(26, 22, 18, 0.6));
             position: sticky;
             left: 0;
             z-index: 10;
@@ -486,54 +670,49 @@
             background: rgba(123, 159, 209, 0.05);
         }
 
-        .time-input {
+        .time-input, .date-input {
             width: 100%;
             padding: 4px 6px;
             background: var(--input-bg);
             border: 1px solid transparent;
             border-radius: 4px;
-            color: var(--text-light);
+            color: var(--text-primary);
             text-align: center;
-            font-size: 0.8125em;
+            font-size: 13px;
+            transition: all 0.2s ease;
+        }
+
+        .time-input {
             font-family: monospace;
         }
 
-        .time-input:focus {
+        .time-input:focus, .date-input:focus {
             outline: none;
             border-color: var(--accent-gold);
-            background: var(--bg-medium);
-        }
-
-        .date-input {
-            width: 100%;
-            padding: 4px 6px;
-            background: var(--input-bg);
-            border: 1px solid transparent;
-            border-radius: 4px;
-            color: var(--text-light);
-            text-align: center;
-            font-size: 0.8125em;
+            background: rgba(0, 0, 0, 0.3);
+            box-shadow: 0 0 0 2px rgba(212, 175, 122, 0.1);
         }
 
         .sixth-day-checkbox {
             width: 20px;
             height: 20px;
             cursor: pointer;
+            accent-color: var(--accent-gold);
         }
 
         .calculated-cell {
-            background: rgba(201, 169, 97, 0.03);
+            background: rgba(212, 175, 122, 0.05);
             color: var(--accent-gold);
             font-weight: 500;
             font-family: monospace;
-            font-size: 0.875em;
+            font-size: 14px;
         }
 
         .total-cell {
-            background: rgba(201, 169, 97, 0.08);
+            background: rgba(212, 175, 122, 0.1);
             color: var(--accent-gold);
             font-weight: 600;
-            font-size: 0.9em;
+            font-size: 14px;
         }
 
         .notes-input {
@@ -542,9 +721,16 @@
             background: var(--input-bg);
             border: 1px solid transparent;
             border-radius: 4px;
-            color: var(--text-light);
-            font-size: 0.75em;
+            color: var(--text-primary);
+            font-size: 12px;
             resize: none;
+            transition: all 0.2s ease;
+        }
+
+        .notes-input:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+            background: rgba(0, 0, 0, 0.3);
         }
 
         /* Form Elements */
@@ -554,20 +740,20 @@
 
         .form-label {
             display: block;
-            font-size: 0.875em;
+            font-size: 14px;
             font-weight: 500;
-            color: var(--text-light);
+            color: var(--text-primary);
             margin-bottom: 8px;
         }
 
         .form-input, .form-select {
             width: 100%;
             padding: 10px 12px;
-            background: var(--bg-medium);
+            background: rgba(0, 0, 0, 0.3);
             border: 1px solid var(--border);
             border-radius: 6px;
-            color: var(--text-light);
-            font-size: 0.875em;
+            color: var(--text-primary);
+            font-size: 14px;
             transition: all 0.2s ease;
         }
 
@@ -575,6 +761,7 @@
             outline: none;
             border-color: var(--accent-gold);
             background: var(--bg-dark);
+            box-shadow: 0 0 0 3px rgba(212, 175, 122, 0.1);
         }
 
         /* Modal */
@@ -597,25 +784,41 @@
         }
 
         .modal-content {
-            background: var(--card-bg);
-            border: 1px solid var(--border);
-            border-radius: 12px;
+            background: linear-gradient(135deg, rgba(26, 22, 18, 0.95), rgba(20, 17, 15, 0.9));
+            backdrop-filter: blur(40px) saturate(120%);
+            -webkit-backdrop-filter: blur(40px) saturate(120%);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
             width: 90%;
             max-width: 600px;
             max-height: 80vh;
             overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6),
+                        inset 0 1px 2px rgba(255, 255, 255, 0.1);
         }
 
         .modal-header {
             padding: 24px;
-            border-bottom: 1px solid var(--border);
+            border-bottom: 1px solid var(--glass-border);
             display: flex;
             justify-content: space-between;
             align-items: center;
+            background: linear-gradient(135deg, rgba(30, 26, 22, 0.7), rgba(26, 22, 18, 0.8));
+            position: relative;
+        }
+
+        .modal-header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
         }
 
         .modal-title {
-            font-size: 1.25em;
+            font-size: 20px;
             font-weight: 600;
         }
 
@@ -623,14 +826,14 @@
             padding: 8px;
             background: transparent;
             border: none;
-            color: var(--text-muted);
+            color: var(--text-secondary);
             cursor: pointer;
-            font-size: 1.5em;
+            font-size: 24px;
             transition: color 0.2s ease;
         }
 
         .modal-close:hover {
-            color: var(--text-light);
+            color: var(--text-primary);
         }
 
         .modal-body {
@@ -639,7 +842,7 @@
 
         .modal-footer {
             padding: 24px;
-            border-top: 1px solid var(--border);
+            border-top: 1px solid var(--glass-border);
             display: flex;
             gap: 12px;
             justify-content: flex-end;
@@ -673,9 +876,10 @@
             left: 3px;
             width: 18px;
             height: 18px;
-            background: var(--text-light);
+            background: var(--text-primary);
             border-radius: 50%;
             transition: transform 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
 
         .toggle-switch.active .toggle-slider {
@@ -684,11 +888,28 @@
 
         /* Summary Box */
         .summary-box {
-            background: rgba(201, 169, 97, 0.05);
+            background: var(--card-bg);
+            backdrop-filter: blur(30px) saturate(110%);
+            -webkit-backdrop-filter: blur(30px) saturate(110%);
             border: 1px solid var(--accent-gold);
-            border-radius: 8px;
+            border-radius: 12px;
             padding: 24px;
             margin-top: 24px;
+            position: relative;
+            box-shadow: 0 8px 32px rgba(212, 175, 122, 0.2),
+                        inset 0 1px 2px rgba(255, 255, 255, 0.1);
+        }
+
+        .summary-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50%;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, transparent 100%);
+            pointer-events: none;
+            border-radius: 10px 10px 0 0;
         }
 
         .summary-grid {
@@ -704,38 +925,57 @@
         }
 
         .summary-label {
-            font-size: 0.75em;
-            color: var(--text-muted);
+            font-size: 11px;
+            color: var(--text-secondary);
             text-transform: uppercase;
             letter-spacing: 0.05em;
+            font-weight: 600;
         }
 
         .summary-value {
-            font-size: 1.25em;
+            font-size: 20px;
             font-weight: 600;
             color: var(--accent-gold);
         }
 
         /* Grand Total */
         .grand-total {
-            background: linear-gradient(135deg, rgba(201, 169, 97, 0.1), rgba(201, 169, 97, 0.05));
+            background: var(--card-bg);
+            backdrop-filter: blur(30px) saturate(110%);
+            -webkit-backdrop-filter: blur(30px) saturate(110%);
             border: 2px solid var(--accent-gold);
             border-radius: 12px;
             padding: 32px;
             text-align: center;
             margin-top: 24px;
+            position: relative;
+            box-shadow: 0 8px 32px rgba(212, 175, 122, 0.3),
+                        inset 0 1px 2px rgba(255, 255, 255, 0.1);
+        }
+
+        .grand-total::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50%;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, transparent 100%);
+            pointer-events: none;
+            border-radius: 10px 10px 0 0;
         }
 
         .grand-total-label {
-            font-size: 1em;
-            color: var(--text-muted);
+            font-size: 14px;
+            color: var(--text-secondary);
             margin-bottom: 12px;
             text-transform: uppercase;
             letter-spacing: 0.1em;
+            font-weight: 600;
         }
 
         .grand-total-value {
-            font-size: 3em;
+            font-size: 48px;
             font-weight: 700;
             color: var(--accent-gold);
             text-shadow: 0 2px 4px rgba(0,0,0,0.2);
@@ -746,7 +986,7 @@
             display: inline-block;
             padding: 2px 6px;
             border-radius: 4px;
-            font-size: 0.7em;
+            font-size: 10px;
             font-weight: 600;
             margin-left: 8px;
         }
@@ -754,6 +994,7 @@
         .day-type-badge.sixth {
             background: rgba(155, 123, 209, 0.2);
             color: var(--sixth-day);
+            border: 1px solid rgba(155, 123, 209, 0.3);
         }
 
         /* Notification */
@@ -764,19 +1005,28 @@
             padding: 16px 24px;
             border-radius: 8px;
             font-weight: 500;
-            font-size: 0.875em;
+            font-size: 14px;
             z-index: 2000;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
             animation: slideIn 0.3s ease;
+            backdrop-filter: blur(20px);
         }
 
         .notification.success {
-            background: var(--success);
+            background: rgba(82, 193, 134, 0.9);
+            border: 1px solid var(--success);
             color: white;
         }
 
         .notification.warning {
-            background: var(--warning);
+            background: rgba(232, 168, 124, 0.9);
+            border: 1px solid var(--warning);
+            color: var(--bg-dark);
+        }
+
+        .notification.info {
+            background: rgba(212, 175, 122, 0.9);
+            border: 1px solid var(--accent-gold);
             color: var(--bg-dark);
         }
 
@@ -811,23 +1061,41 @@
 
         .crew-card {
             background: var(--card-bg);
-            border: 1px solid var(--border);
-            border-radius: 8px;
+            backdrop-filter: blur(30px) saturate(110%);
+            -webkit-backdrop-filter: blur(30px) saturate(110%);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
             padding: 20px;
             cursor: pointer;
             transition: all 0.2s ease;
             position: relative;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
+                        inset 0 1px 1px rgba(255, 255, 255, 0.1);
+        }
+
+        .crew-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50%;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, transparent 100%);
+            pointer-events: none;
+            border-radius: 12px 12px 0 0;
         }
 
         .crew-card:hover {
             border-color: var(--accent-gold);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(201, 169, 97, 0.1);
+            transform: translateY(-4px);
+            box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5),
+                        inset 0 1px 2px rgba(255, 255, 255, 0.15),
+                        0 0 80px rgba(212, 175, 122, 0.03);
         }
 
         .crew-card.active {
             border-color: var(--accent-gold);
-            background: rgba(201, 169, 97, 0.05);
+            background: linear-gradient(135deg, rgba(212, 175, 122, 0.08), rgba(212, 175, 122, 0.04));
         }
 
         .crew-card-header {
@@ -835,18 +1103,20 @@
             justify-content: space-between;
             align-items: flex-start;
             margin-bottom: 12px;
+            position: relative;
+            z-index: 1;
         }
 
         .crew-card-name {
-            font-size: 1.125em;
+            font-size: 18px;
             font-weight: 600;
-            color: var(--text-light);
+            color: var(--text-primary);
             margin-bottom: 4px;
         }
 
         .crew-card-position {
-            font-size: 0.875em;
-            color: var(--text-muted);
+            font-size: 14px;
+            color: var(--text-secondary);
         }
 
         .crew-card-stats {
@@ -856,6 +1126,8 @@
             margin-top: 16px;
             padding-top: 16px;
             border-top: 1px solid var(--border);
+            position: relative;
+            z-index: 1;
         }
 
         .crew-card-stat {
@@ -865,14 +1137,15 @@
         }
 
         .crew-card-stat-label {
-            font-size: 0.75em;
-            color: var(--text-muted);
+            font-size: 11px;
+            color: var(--text-secondary);
             text-transform: uppercase;
             letter-spacing: 0.05em;
+            font-weight: 600;
         }
 
         .crew-card-stat-value {
-            font-size: 1em;
+            font-size: 16px;
             font-weight: 600;
             color: var(--accent-gold);
         }
@@ -885,25 +1158,71 @@
             height: 8px;
             border-radius: 50%;
             background: var(--success);
+            z-index: 2;
         }
 
         .crew-card-indicator.empty {
-            background: var(--text-muted);
+            background: var(--text-secondary);
         }
 
         .crew-timesheet-summary {
-            background: rgba(201, 169, 97, 0.05);
+            background: var(--card-bg);
+            backdrop-filter: blur(30px) saturate(110%);
+            -webkit-backdrop-filter: blur(30px) saturate(110%);
             border: 1px solid var(--accent-gold);
-            border-radius: 8px;
+            border-radius: 12px;
             padding: 20px;
             margin-top: 24px;
+            position: relative;
+            box-shadow: 0 8px 32px rgba(212, 175, 122, 0.2),
+                        inset 0 1px 2px rgba(255, 255, 255, 0.1);
+        }
+
+        .crew-timesheet-summary::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50%;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, transparent 100%);
+            pointer-events: none;
+            border-radius: 10px 10px 0 0;
         }
 
         .empty-state-card {
             background: var(--card-bg);
-            border: 1px solid var(--border);
-            border-radius: 8px;
+            backdrop-filter: blur(30px) saturate(110%);
+            -webkit-backdrop-filter: blur(30px) saturate(110%);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
             padding: 40px;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
+                        inset 0 1px 1px rgba(255, 255, 255, 0.1);
+        }
+
+        .empty-state-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50%;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, transparent 100%);
+            pointer-events: none;
+            border-radius: 12px 12px 0 0;
+        }
+
+        .empty-state-card h3 {
+            font-size: 20px;
+            margin-bottom: 12px;
+        }
+
+        .empty-state-card p {
+            color: var(--text-secondary);
+            margin-bottom: 24px;
         }
 
         /* Delete Button */
@@ -912,15 +1231,16 @@
             background: transparent;
             border: 1px solid var(--border);
             border-radius: 4px;
-            color: var(--text-muted);
+            color: var(--text-secondary);
             cursor: pointer;
             transition: all 0.2s ease;
-            font-size: 0.875em;
+            font-size: 14px;
         }
 
         .delete-btn:hover {
             border-color: var(--danger);
             color: var(--danger);
+            background: rgba(239, 68, 68, 0.05);
         }
 
         /* Responsive */
@@ -935,6 +1255,10 @@
             
             .content {
                 padding: 20px;
+            }
+            
+            .top-bar {
+                padding: 0 16px;
             }
         }
 
@@ -969,7 +1293,7 @@
         <!-- Sidebar -->
         <div class="sidebar">
             <div class="sidebar-header">
-                <a href="#" class="back-btn">← Back to Budget</a>
+                <a href="dashboard.html" class="back-btn">← Back to Dashboard</a>
                 <div class="project-info">
                     <h2 id="project-name-display">The Big Race</h2>
                     <div class="project-code" id="project-code-display">HM-2025-001</div>
@@ -979,45 +1303,40 @@
             <div class="nav-section">
                 <div class="nav-section-title">Timesheet Tools</div>
                 <div class="nav-item active" onclick="switchTab('overview')">
-                    <span class="nav-icon">📊</span>
-                    Overview
+                    <span class="nav-icon">OVERVIEW</span>
                 </div>
                 <div class="nav-item" onclick="switchTab('crew')">
-                    <span class="nav-icon">👥</span>
-                    Crew Management
+                    <span class="nav-icon">CREW</span>
                 </div>
                 <div class="nav-item" onclick="switchTab('timesheet')">
-                    <span class="nav-icon">⏱️</span>
-                    Daily Timesheet
+                    <span class="nav-icon">TIMESHEET</span>
                 </div>
                 <div class="nav-item" onclick="switchTab('payment')">
-                    <span class="nav-icon">💷</span>
-                    Payment Breakdown
+                    <span class="nav-icon">PAYMENT</span>
                 </div>
                 <div class="nav-item" onclick="switchTab('reports')">
-                    <span class="nav-icon">📈</span>
-                    Reports & Export
+                    <span class="nav-icon">REPORTS</span>
                 </div>
             </div>
 
             <div class="nav-section">
                 <div class="nav-section-title">Quick Stats</div>
-                <div style="padding: 0 16px; font-size: 0.875em;">
+                <div style="padding: 0 16px; font-size: 14px;">
                     <div style="margin-bottom: 12px;">
-                        <div style="color: var(--text-muted); margin-bottom: 4px;">Active Crew</div>
-                        <div style="color: var(--text-light); font-weight: 600;" id="sidebar-crew">0</div>
+                        <div style="color: var(--text-secondary); margin-bottom: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;">Active Crew</div>
+                        <div style="color: var(--text-primary); font-weight: 600;" id="sidebar-crew">0</div>
                     </div>
                     <div style="margin-bottom: 12px;">
-                        <div style="color: var(--text-muted); margin-bottom: 4px;">Total Days</div>
-                        <div style="color: var(--text-light); font-weight: 600;" id="sidebar-days">0</div>
+                        <div style="color: var(--text-secondary); margin-bottom: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;">Total Days</div>
+                        <div style="color: var(--text-primary); font-weight: 600;" id="sidebar-days">0</div>
                     </div>
                     <div style="margin-bottom: 12px;">
-                        <div style="color: var(--text-muted); margin-bottom: 4px;">Total Cost</div>
+                        <div style="color: var(--text-secondary); margin-bottom: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;">Total Cost</div>
                         <div style="color: var(--accent-gold); font-weight: 600;" id="sidebar-cost">£0.00</div>
                     </div>
                     <div>
-                        <div style="color: var(--text-muted); margin-bottom: 4px;">Last Updated</div>
-                        <div style="color: var(--text-light); font-size: 0.875em;" id="sidebar-updated">Never</div>
+                        <div style="color: var(--text-secondary); margin-bottom: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;">Last Updated</div>
+                        <div style="color: var(--text-primary); font-size: 12px;" id="sidebar-updated">Never</div>
                     </div>
                 </div>
             </div>
@@ -1029,22 +1348,10 @@
             <div class="top-bar">
                 <div class="page-title">Professional Timesheet System</div>
                 <div class="top-bar-actions">
-                    <button class="btn" onclick="importTimesheet()">
-                        <span>📥</span>
-                        Import
-                    </button>
-                    <button class="btn" onclick="exportTimesheet()">
-                        <span>📤</span>
-                        Export
-                    </button>
-                    <button class="btn" onclick="printTimesheet()">
-                        <span>🖨️</span>
-                        Print
-                    </button>
-                    <button class="btn primary" onclick="saveTimesheet()">
-                        <span>💾</span>
-                        Save
-                    </button>
+                    <button class="btn" onclick="importTimesheet()">Import</button>
+                    <button class="btn" onclick="exportTimesheet()">Export</button>
+                    <button class="btn" onclick="printTimesheet()">Print</button>
+                    <button class="btn primary" onclick="saveTimesheet()">Save</button>
                 </div>
             </div>
 
@@ -1063,19 +1370,19 @@
                 <div id="overview-tab" class="tab-content active">
                     <!-- LTD Toggle -->
                     <div class="section-card" style="padding: 24px;">
-                        <h3 style="margin-bottom: 20px; font-size: 1.125em;">Employment Settings</h3>
+                        <h3 style="margin-bottom: 20px; font-size: 18px;">Employment Settings</h3>
                         
                         <div class="toggle-group">
                             <span style="font-weight: 500;">Working as LTD Company:</span>
                             <div class="toggle-switch" id="ltd-toggle" onclick="toggleLTD()">
                                 <div class="toggle-slider"></div>
                             </div>
-                            <span style="font-size: 0.875em; color: var(--text-muted);" id="ltd-status">No - Wages affect budget</span>
+                            <span style="font-size: 14px; color: var(--text-secondary);" id="ltd-status">No - Wages affect budget</span>
                         </div>
 
-                        <div style="padding: 16px; background: rgba(201, 169, 97, 0.05); border-radius: 6px; margin-top: 16px;">
-                            <p style="font-size: 0.875em; line-height: 1.5; color: var(--text-muted);">
-                                <strong style="color: var(--text-light);">LTD Mode:</strong> When enabled, your wages won't be deducted from the production budget as you're billing separately as a limited company.
+                        <div style="padding: 16px; background: rgba(212, 175, 122, 0.05); border-radius: 6px; margin-top: 16px; border: 1px solid rgba(212, 175, 122, 0.2);">
+                            <p style="font-size: 14px; line-height: 1.5; color: var(--text-secondary);">
+                                <strong style="color: var(--text-primary);">LTD Mode:</strong> When enabled, your wages won't be deducted from the production budget as you're billing separately as a limited company.
                             </p>
                         </div>
                     </div>
@@ -1122,7 +1429,6 @@
                     <!-- Rate Card Configuration -->
                     <div class="rate-card">
                         <div class="section-title" style="margin-bottom: 20px;">
-                            <span class="section-icon">💰</span>
                             <span style="color: var(--accent-gold); font-weight: 600;">RATE CARD CONFIGURATION</span>
                         </div>
                         <div class="rate-grid">
@@ -1159,12 +1465,11 @@
                     <div class="section-card">
                         <div class="section-header">
                             <div class="section-title">
-                                <span class="section-icon">👥</span>
-                                Crew Members
+                                <span>Crew Members</span>
                             </div>
                             <div class="section-actions">
-                                <button class="btn" onclick="openCrewModal()">+ Add Crew</button>
-                                <button class="btn" onclick="importCrewList()">📥 Import List</button>
+                                <button class="btn primary" onclick="openCrewModal()">+ Add Crew</button>
+                                <button class="btn" onclick="importCrewList()">Import List</button>
                             </div>
                         </div>
                         <table class="crew-table">
@@ -1191,7 +1496,7 @@
                     <!-- Crew Selection Cards -->
                     <div class="crew-selection-grid">
                         <div class="crew-selection-header">
-                            <h3 style="font-size: 1.125em; font-weight: 600;">Select Crew Member</h3>
+                            <h3 style="font-size: 18px; font-weight: 600;">Select Crew Member</h3>
                             <button class="btn primary" onclick="addCrewQuick()">+ Quick Add Crew</button>
                         </div>
                         <div class="crew-cards-grid" id="crew-cards">
@@ -1203,7 +1508,6 @@
                     <div class="section-card" id="timesheet-section" style="display: none;">
                         <div class="section-header">
                             <div class="section-title">
-                                <span class="section-icon">⏱️</span>
                                 <span id="current-crew-name">Daily Timesheet</span>
                                 <span class="employment-badge" id="current-crew-type" style="margin-left: 12px;"></span>
                             </div>
@@ -1275,10 +1579,9 @@
 
                     <!-- Empty State -->
                     <div class="empty-state-card" id="no-crew-message" style="display: none;">
-                        <div style="text-align: center; padding: 60px;">
-                            <div style="font-size: 3em; margin-bottom: 20px;">👥</div>
-                            <h3 style="font-size: 1.25em; margin-bottom: 12px;">No Crew Members Yet</h3>
-                            <p style="color: var(--text-muted); margin-bottom: 24px;">Add crew members to start tracking timesheets</p>
+                        <div style="padding: 60px;">
+                            <h3 style="font-size: 20px; margin-bottom: 12px;">No Crew Members Yet</h3>
+                            <p style="color: var(--text-secondary); margin-bottom: 24px;">Add crew members to start tracking timesheets</p>
                             <button class="btn primary" onclick="switchTab('crew'); document.querySelector('.tab:nth-child(2)').click();">Add First Crew Member</button>
                         </div>
                     </div>
@@ -1289,8 +1592,7 @@
                     <div class="section-card">
                         <div class="section-header">
                             <div class="section-title">
-                                <span class="section-icon">💷</span>
-                                Payment Breakdown
+                                <span>Payment Breakdown</span>
                             </div>
                         </div>
                         
@@ -1323,7 +1625,7 @@
                                         <td class="total-cell" id="total-de-rig">£0.00</td>
                                         <td class="total-cell" id="total-broken-lunch">£0.00</td>
                                         <td class="total-cell" id="total-bt">£0.00</td>
-                                        <td class="total-cell" style="background: rgba(201, 169, 97, 0.15); font-size: 1.1em;" id="total-all">£0.00</td>
+                                        <td class="total-cell" style="background: rgba(212, 175, 122, 0.15); font-size: 16px;" id="total-all">£0.00</td>
                                     </tr>
                                 </tfoot>
                             </table>
@@ -1332,7 +1634,7 @@
 
                     <!-- Grand Total -->
                     <div class="grand-total">
-                        <div class="grand-total-label">🎬 GRAND TOTAL</div>
+                        <div class="grand-total-label">GRAND TOTAL</div>
                         <div class="grand-total-value" id="grand-total">£0.00</div>
                     </div>
                 </div>
@@ -1342,22 +1644,18 @@
                     <div class="section-card">
                         <div class="section-header">
                             <div class="section-title">
-                                <span class="section-icon">📈</span>
-                                Export Options
+                                <span>Export Options</span>
                             </div>
                         </div>
-                        <div style="padding: 24px;">
+                        <div style="padding: 24px; position: relative; z-index: 1;">
                             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
-                                <button class="btn" style="padding: 20px;" onclick="exportToCSV()">
-                                    <span style="font-size: 1.5em;">📊</span>
+                                <button class="btn" style="padding: 20px; justify-content: center;" onclick="exportToCSV()">
                                     <span>Export to CSV</span>
                                 </button>
-                                <button class="btn" style="padding: 20px;" onclick="exportToPDF()">
-                                    <span style="font-size: 1.5em;">📄</span>
+                                <button class="btn" style="padding: 20px; justify-content: center;" onclick="exportToPDF()">
                                     <span>Generate PDF Report</span>
                                 </button>
-                                <button class="btn" style="padding: 20px;" onclick="generateInvoice()">
-                                    <span style="font-size: 1.5em;">💼</span>
+                                <button class="btn" style="padding: 20px; justify-content: center;" onclick="generateInvoice()">
                                     <span>Generate Invoice</span>
                                 </button>
                             </div>
@@ -1366,8 +1664,8 @@
 
                     <!-- Summary Box -->
                     <div class="summary-box">
-                        <h3 style="margin-bottom: 20px;">Production Summary</h3>
-                        <div class="summary-grid">
+                        <h3 style="margin-bottom: 20px; position: relative; z-index: 1;">Production Summary</h3>
+                        <div class="summary-grid" style="position: relative; z-index: 1;">
                             <div class="summary-item">
                                 <span class="summary-label">Total Days</span>
                                 <span class="summary-value" id="summary-days">0</span>
@@ -1530,19 +1828,23 @@
 
                 tbody.innerHTML = '';
 
+                if (this.data.crew.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 40px; color: var(--text-secondary);">No crew members added yet. Click "Add Crew" to get started.</td></tr>';
+                }
+
                 this.data.crew.forEach(crew => {
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td style="font-weight: 500;">${crew.name}</td>
                         <td>${crew.position}</td>
-                        <td>${crew.department}</td>
+                        <td style="text-transform: capitalize;">${crew.department}</td>
                         <td style="font-weight: 500; color: var(--accent-gold);">£${crew.rate}/day</td>
                         <td>
                             <span class="employment-badge ${crew.type}">
                                 ${crew.type.toUpperCase()}
                             </span>
                         </td>
-                        <td style="font-size: 0.875em;">
+                        <td style="font-size: 13px;">
                             ${crew.email || '-'}<br>
                             ${crew.phone || '-'}
                         </td>
@@ -1888,7 +2190,7 @@
 
             calculateDay(crewId, day, dayIndex) {
                 const crew = this.data.crew.find(c => c.id === crewId);
-                if (!crew) return;
+                if (!crew) return { hours: { total: 0, preCall: 0, cameraOT: 0, lateOT: 0, deRig: 0, brokenLunch: 0, brokenTA: 0 } };
 
                 const rates = this.data.rates;
                 const dayRate = crew.rate || rates.dayRate;
@@ -2162,6 +2464,10 @@
                 }
             }
 
+            updateCrewSelector() {
+                this.renderCrewCards();
+            }
+
             exportData() {
                 const csv = this.generateCSV();
                 const blob = new Blob([csv], { type: 'text/csv' });
@@ -2264,7 +2570,7 @@
             // Update nav item
             document.querySelectorAll('.nav-item').forEach(item => {
                 if (item.textContent.toLowerCase().includes(tabName.toLowerCase()) ||
-                    (tabName === 'timesheet' && item.textContent.includes('Daily'))) {
+                    (tabName === 'timesheet' && item.textContent.includes('TIMESHEET'))) {
                     item.classList.add('active');
                 }
             });
@@ -2388,7 +2694,7 @@
                             timesheetManager.showNotification('Timesheet imported', 'success');
                         }
                     } catch (e) {
-                        timesheetManager.showNotification('Error importing file', 'danger');
+                        timesheetManager.showNotification('Error importing file', 'warning');
                     }
                 };
                 reader.readAsText(file);
