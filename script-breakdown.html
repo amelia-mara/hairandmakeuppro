@@ -1136,6 +1136,78 @@
             opacity: 0.7;
         }
 
+        /* Breakdown Synopsis Display */
+        .breakdown-synopsis {
+            background: rgba(212, 175, 122, 0.08);
+            border-left: 3px solid var(--accent-gold);
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            border-radius: 6px;
+            font-size: 0.8125em;
+            line-height: 1.6;
+            color: var(--text-light);
+            font-style: italic;
+        }
+
+        /* Breakdown Cast Section */
+        .breakdown-cast-section {
+            margin-bottom: 16px;
+            padding: 12px;
+            background: rgba(251, 191, 36, 0.08);
+            border: 1px solid rgba(251, 191, 36, 0.2);
+            border-radius: 8px;
+        }
+
+        .breakdown-section-label {
+            font-size: 0.75em;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            letter-spacing: 0.05em;
+        }
+
+        .breakdown-cast-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .breakdown-cast-chip {
+            padding: 4px 10px;
+            background: rgba(251, 191, 36, 0.2);
+            border: 1px solid rgba(251, 191, 36, 0.4);
+            color: #fbbf24;
+            border-radius: 6px;
+            font-size: 0.75em;
+            font-weight: 600;
+        }
+
+        /* Breakdown Tags Summary */
+        .breakdown-tags-summary {
+            margin-bottom: 16px;
+            padding: 12px;
+            background: rgba(102, 126, 234, 0.08);
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            border-radius: 8px;
+        }
+
+        .breakdown-tags-counts {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .breakdown-tag-count {
+            padding: 4px 10px;
+            background: rgba(102, 126, 234, 0.15);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            color: #8b9cec;
+            border-radius: 6px;
+            font-size: 0.75em;
+            font-weight: 600;
+        }
+
         .profile-section {
             margin-bottom: 16px;
         }
@@ -3036,7 +3108,7 @@ IMPORTANT:
         // Render breakdown panel
         function renderBreakdownPanel() {
             const container = document.getElementById('breakdownPanel');
-            
+
             if (currentScene === null) {
                 container.innerHTML = `
                     <div class="empty-state">
@@ -3047,15 +3119,63 @@ IMPORTANT:
                 `;
                 return;
             }
-            
+
             const scene = scenes[currentScene];
             const breakdown = sceneBreakdowns[currentScene] || {};
-            
+
+            // Get cast list
+            const cast = breakdown.cast || [];
+
+            // Count tagged elements
+            const sceneTags = scriptTags[currentScene] || [];
+            const tagCounts = {};
+            sceneTags.forEach(tag => {
+                if (!tagCounts[tag.category]) tagCounts[tag.category] = 0;
+                tagCounts[tag.category]++;
+            });
+
             let html = `
+                <!-- AI CONTROLS AT TOP -->
+                <div class="ai-controls">
+                    <button class="ai-btn" onclick="generateAISynopsis(${currentScene})">✨ Generate AI Synopsis</button>
+                    <button class="ai-btn" onclick="detectAIElements(${currentScene})">🔍 Detect Elements with AI</button>
+                </div>
+
+                <!-- SCENE HEADER -->
                 <div class="breakdown-header">
                     <div class="breakdown-scene-title">Scene ${scene.number}</div>
                     <div class="breakdown-scene-heading">${scene.heading}</div>
                 </div>
+
+                <!-- SYNOPSIS DISPLAY -->
+                ${scene.synopsis ? `
+                    <div class="breakdown-synopsis">
+                        ${scene.synopsis}
+                    </div>
+                ` : ''}
+
+                <!-- CAST IN SCENE -->
+                ${cast.length > 0 ? `
+                    <div class="breakdown-cast-section">
+                        <div class="breakdown-section-label">Cast in Scene</div>
+                        <div class="breakdown-cast-chips">
+                            ${cast.map(c => `<div class="breakdown-cast-chip">${c}</div>`).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+
+                <!-- TAGGED ELEMENTS SUMMARY -->
+                ${Object.keys(tagCounts).length > 0 ? `
+                    <div class="breakdown-tags-summary">
+                        <div class="breakdown-section-label">Tagged Elements</div>
+                        <div class="breakdown-tags-counts">
+                            ${Object.entries(tagCounts).map(([cat, count]) => {
+                                const category = categories.find(c => c.id === cat);
+                                return `<div class="breakdown-tag-count">${category?.icon || '📌'} ${category?.name || cat}: ${count}</div>`;
+                            }).join('')}
+                        </div>
+                    </div>
+                ` : ''}
 
                 <!-- SCENE METADATA INPUTS -->
                 <div class="breakdown-metadata-section">
@@ -3078,48 +3198,42 @@ IMPORTANT:
                         <label class="breakdown-label">Time of Day</label>
                         <select class="breakdown-select"
                                 onchange="updateSceneMetadata(${currentScene}, 'timeOfDay', this.value)">
-                            <option value="${scene.timeOfDay || ''}" selected>${scene.timeOfDay || '-- Select Time --'}</option>
-                            <option value="Morning">Morning</option>
-                            <option value="Late Morning">Late Morning</option>
-                            <option value="Afternoon">Afternoon</option>
-                            <option value="Late Afternoon">Late Afternoon</option>
-                            <option value="Evening">Evening</option>
-                            <option value="Night">Night</option>
-                            <option value="Late Night">Late Night</option>
+                            <option value="">-- Select Time --</option>
+                            <option value="Morning" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Morning' ? 'selected' : ''}>Morning</option>
+                            <option value="Late Morning" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Late Morning' ? 'selected' : ''}>Late Morning</option>
+                            <option value="Afternoon" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Afternoon' ? 'selected' : ''}>Afternoon</option>
+                            <option value="Late Afternoon" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Late Afternoon' ? 'selected' : ''}>Late Afternoon</option>
+                            <option value="Evening" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Evening' ? 'selected' : ''}>Evening</option>
+                            <option value="Night" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Night' ? 'selected' : ''}>Night</option>
+                            <option value="Late Night" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Late Night' ? 'selected' : ''}>Late Night</option>
                         </select>
-                        <div class="breakdown-hint">Auto-detected: ${detectTimeOfDay(scene.heading) || 'None'} (override if needed)</div>
+                        <div class="breakdown-hint">Auto-detected: ${detectTimeOfDay(scene.heading) || 'None'}</div>
                     </div>
 
                     <div class="breakdown-metadata-field">
                         <label class="breakdown-label">INT/EXT</label>
                         <select class="breakdown-select"
                                 onchange="updateSceneMetadata(${currentScene}, 'intExt', this.value)">
-                            <option value="${scene.intExt || getSceneType(scene.heading)}" selected>${(scene.intExt || getSceneType(scene.heading)).toUpperCase().replace('-', ' / ')}</option>
-                            <option value="int-day">INT / DAY</option>
-                            <option value="int-night">INT / NIGHT</option>
-                            <option value="ext-day">EXT / DAY</option>
-                            <option value="ext-night">EXT / NIGHT</option>
+                            <option value="int-day" ${(scene.intExt || getSceneType(scene.heading)) === 'int-day' ? 'selected' : ''}>INT / DAY</option>
+                            <option value="int-night" ${(scene.intExt || getSceneType(scene.heading)) === 'int-night' ? 'selected' : ''}>INT / NIGHT</option>
+                            <option value="ext-day" ${(scene.intExt || getSceneType(scene.heading)) === 'ext-day' ? 'selected' : ''}>EXT / DAY</option>
+                            <option value="ext-night" ${(scene.intExt || getSceneType(scene.heading)) === 'ext-night' ? 'selected' : ''}>EXT / NIGHT</option>
                         </select>
-                        <div class="breakdown-hint">Auto-detected from heading (override if needed)</div>
+                        <div class="breakdown-hint">Auto-detected: ${getSceneType(scene.heading).toUpperCase().replace('-', ' / ')}</div>
                     </div>
 
                     <div class="breakdown-metadata-field">
                         <label class="breakdown-label">Location</label>
                         <input type="text"
                                class="breakdown-input"
-                               value="${scene.location || ''}"
+                               value="${scene.location || extractLocation(scene.heading) || ''}"
                                placeholder="Location name..."
                                onchange="updateSceneMetadata(${currentScene}, 'location', this.value)">
                         <div class="breakdown-hint">Auto-extracted: ${extractLocation(scene.heading) || 'Not detected'}</div>
                     </div>
                 </div>
-
-                <div class="ai-controls">
-                    <button class="ai-btn" onclick="generateAISynopsis(${currentScene})">✨ Generate AI Synopsis</button>
-                    <button class="ai-btn" onclick="detectAIElements(${currentScene})">🔍 Detect Elements with AI</button>
-                </div>
             `;
-            
+
             categories.forEach(cat => {
                 const elements = breakdown[cat.id] || [];
                 html += `
@@ -3143,7 +3257,7 @@ IMPORTANT:
                     </div>
                 `;
             });
-            
+
             container.innerHTML = html;
         }
         
