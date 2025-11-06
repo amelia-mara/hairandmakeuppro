@@ -3145,11 +3145,48 @@ This is it. Today's the day."></textarea>
         // ========================================
 
         function initializeCharacterTabs() {
-            // Get all unique characters from castProfiles
-            const characters = Object.keys(castProfiles).sort();
+            // Clean up first
+            cleanupCastProfiles();
 
-            characterTabs = characters;
+            // Get all unique characters that are ACTUAL cast members (in scene breakdowns)
+            const actualCastMembers = new Set();
+
+            // Collect cast members from all scene breakdowns
+            Object.values(sceneBreakdowns).forEach(breakdown => {
+                if (breakdown.cast && Array.isArray(breakdown.cast)) {
+                    breakdown.cast.forEach(member => {
+                        // Only add if it's a real character name (not empty, reasonable length)
+                        if (member && typeof member === 'string' && member.length >= 2 && member.length <= 50) {
+                            actualCastMembers.add(member);
+                        }
+                    });
+                }
+            });
+
+            // Only create tabs for characters who are actual cast members
+            characterTabs = Array.from(actualCastMembers).sort();
+
+            console.log('Character tabs initialized:', characterTabs);
             renderCharacterTabs();
+        }
+
+        function cleanupCastProfiles() {
+            // Get actual cast members from breakdowns
+            const actualCast = new Set();
+            Object.values(sceneBreakdowns).forEach(breakdown => {
+                if (breakdown.cast) {
+                    breakdown.cast.forEach(member => actualCast.add(member));
+                }
+            });
+
+            // Remove profiles for non-cast entries (but keep the data in case)
+            Object.keys(castProfiles).forEach(name => {
+                if (!actualCast.has(name)) {
+                    // Optional: Delete orphaned profiles, or just skip them in tab creation
+                    // delete castProfiles[name]; // Uncomment if you want to delete orphans
+                    console.log('Skipping non-cast profile:', name);
+                }
+            });
         }
 
         function renderCharacterTabs() {
@@ -3231,6 +3268,199 @@ This is it. Today's the day."></textarea>
             } else {
                 document.getElementById(`characterTab-${tabName.replace('character-', '')}`)?.classList.add('active');
             }
+
+            // Update right panel context
+            updateRightPanelContext();
+        }
+
+        function updateRightPanelContext() {
+            const rightSidebar = document.querySelector('.right-sidebar');
+            if (!rightSidebar) return;
+
+            if (activeCenterTab === 'script') {
+                // Script tab active - restore original structure
+                const existingTabs = rightSidebar.querySelector('.workspace-tabs');
+                if (!existingTabs || existingTabs.innerHTML.indexOf('Scene Breakdown') === -1) {
+                    rightSidebar.innerHTML = `
+                        <div class="workspace-tabs">
+                            <div class="workspace-tab active" onclick="switchTab('breakdown')">Scene Breakdown</div>
+                            <div class="workspace-tab" onclick="switchTab('cast')">Cast in Scene</div>
+                            <div class="workspace-tab" onclick="switchTab('tags')">Tags</div>
+                        </div>
+
+                        <div class="workspace-content">
+                            <div class="tab-panel active" id="breakdownPanel">
+                                <div class="empty-state">
+                                    <div class="empty-icon">📋</div>
+                                    <div class="empty-title">Select a Scene</div>
+                                    <div class="empty-desc">Choose a scene to view and edit its breakdown</div>
+                                </div>
+                            </div>
+
+                            <div class="tab-panel" id="castPanel">
+                                <div class="empty-state">
+                                    <div class="empty-icon">👥</div>
+                                    <div class="empty-title">Select a Scene</div>
+                                    <div class="empty-desc">Choose a scene to view its cast members</div>
+                                </div>
+                            </div>
+
+                            <div class="tab-panel" id="tagsPanel">
+                                <div class="empty-state">
+                                    <div class="empty-icon">🏷️</div>
+                                    <div class="empty-title">Select a Scene</div>
+                                    <div class="empty-desc">Choose a scene to view its tags</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
+                    // Re-render panels if scene is selected
+                    if (currentScene !== null) {
+                        renderBreakdownPanel();
+                        renderCastPanel();
+                        renderTagsPanel();
+                    }
+                }
+
+            } else if (activeCenterTab.startsWith('character-')) {
+                // Character tab active - show character-specific quick editor
+                const characterName = activeCenterTab.replace('character-', '');
+                renderCharacterQuickEditor(characterName);
+            }
+        }
+
+        function renderCharacterQuickEditor(character) {
+            const rightSidebar = document.querySelector('.right-sidebar');
+            if (!rightSidebar) return;
+
+            const profile = castProfiles[character] || { baseDescription: '' };
+
+            // Get all scenes this character appears in
+            const characterScenes = [];
+            scenes.forEach((scene, index) => {
+                const breakdown = sceneBreakdowns[index] || {};
+                if (breakdown.cast && breakdown.cast.includes(character)) {
+                    characterScenes.push({ scene, index });
+                }
+            });
+
+            rightSidebar.innerHTML = `
+                <div class="workspace-tabs">
+                    <div class="workspace-tab active">
+                        👤 ${character}
+                    </div>
+                </div>
+
+                <div class="workspace-content">
+                    <div class="tab-panel active" style="padding: 20px; overflow-y: auto;">
+
+                        <!-- Base Description -->
+                        <div class="profile-section" style="margin-bottom: 24px;">
+                            <label class="profile-label">Base Description</label>
+                            <textarea class="modal-textarea"
+                                      id="quickEditBaseDesc"
+                                      rows="3"
+                                      placeholder="Age, physical appearance, general characteristics..."
+                                      onchange="updateQuickBaseDescription('${character.replace(/'/g, "\\'")}', this.value)">${profile.baseDescription || ''}</textarea>
+                            <div style="font-size: 0.75em; color: var(--text-muted); margin-top: 6px;">
+                                This applies to all ${characterScenes.length} scenes
+                            </div>
+                        </div>
+
+                        <!-- Quick Stats -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px;">
+                            <div style="padding: 12px; background: rgba(212, 175, 122, 0.08); border-radius: 8px; text-align: center;">
+                                <div style="font-size: 1.5em; font-weight: 700; color: var(--accent-gold);">${characterScenes.length}</div>
+                                <div style="font-size: 0.75em; color: var(--text-muted);">Scenes</div>
+                            </div>
+                            <div style="padding: 12px; background: rgba(212, 175, 122, 0.08); border-radius: 8px; text-align: center;">
+                                <div style="font-size: 1.5em; font-weight: 700; color: var(--accent-gold);">${(continuityEvents[character] || []).length}</div>
+                                <div style="font-size: 0.75em; color: var(--text-muted);">Events</div>
+                            </div>
+                        </div>
+
+                        <!-- Scene Selector -->
+                        ${currentScene !== null && characterScenes.some(cs => cs.index === currentScene) ? `
+                            <div style="margin-bottom: 24px; padding: 16px; background: rgba(102, 126, 234, 0.08); border: 1px solid rgba(102, 126, 234, 0.3); border-radius: 8px;">
+                                <div style="font-size: 0.875em; font-weight: 600; color: var(--accent-blue); margin-bottom: 12px;">
+                                    📍 Currently Viewing Scene ${scenes[currentScene].number}
+                                </div>
+                                <div style="font-size: 0.8125em; color: var(--text-muted);">
+                                    ${scenes[currentScene].heading}
+                                </div>
+                                <button class="modal-btn primary"
+                                        style="width: 100%; margin-top: 12px;"
+                                        onclick="switchCenterTab('script'); setTimeout(() => switchTab('breakdown'), 100)">
+                                    Edit Scene Breakdown
+                                </button>
+                            </div>
+                        ` : ''}
+
+                        <!-- Actions -->
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <button class="modal-btn primary" onclick="openCastProfile('${character.replace(/'/g, "\\'")}')">
+                                Open Full Profile
+                            </button>
+                            <button class="modal-btn" onclick="openContinuityModal('${character.replace(/'/g, "\\'")}')">
+                                + Add Continuity Event
+                            </button>
+                            <button class="modal-btn" onclick="exportCharacterReport('${character.replace(/'/g, "\\'")}')">
+                                📄 Export Character Report
+                            </button>
+                        </div>
+
+                        <!-- Recent Scenes Preview -->
+                        ${characterScenes.length > 0 ? `
+                            <div style="margin-top: 24px;">
+                                <div style="font-size: 0.875em; font-weight: 600; color: var(--text-light); margin-bottom: 12px;">
+                                    Recent Scenes
+                                </div>
+                                ${characterScenes.slice(0, 5).map(({ scene, index }) => {
+                                    const sceneTags = scriptTags[index] || [];
+                                    const characterTags = sceneTags.filter(t => t.character === character);
+                                    return `
+                                        <div style="padding: 10px 12px; background: rgba(28, 25, 22, 0.3); border: 1px solid var(--glass-border); border-radius: 6px; margin-bottom: 6px; cursor: pointer;"
+                                             onclick="jumpToSceneFromTimeline(${index})">
+                                            <div style="font-size: 0.8125em; font-weight: 600; color: var(--text-light);">
+                                                Scene ${scene.number}
+                                            </div>
+                                            <div style="font-size: 0.75em; color: var(--text-muted);">
+                                                ${scene.heading.substring(0, 40)}...
+                                            </div>
+                                            ${characterTags.length > 0 ? `
+                                                <div style="font-size: 0.6875em; color: var(--accent-gold); margin-top: 4px;">
+                                                    ${characterTags.length} tags
+                                                </div>
+                                            ` : ''}
+                                        </div>
+                                    `;
+                                }).join('')}
+                                ${characterScenes.length > 5 ? `
+                                    <div style="text-align: center; margin-top: 8px;">
+                                        <button class="modal-btn" onclick="switchCenterTab('character-${character}')">
+                                            View All ${characterScenes.length} Scenes
+                                        </button>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        ` : ''}
+
+                    </div>
+                </div>
+            `;
+        }
+
+        function updateQuickBaseDescription(character, value) {
+            if (!castProfiles[character]) {
+                castProfiles[character] = { name: character };
+            }
+            castProfiles[character].baseDescription = value;
+            saveProject();
+        }
+
+        function exportCharacterReport(character) {
+            alert(`Character report export for ${character} - Coming in Phase 2!`);
         }
 
         function removeCharacterTab(character) {
@@ -3346,6 +3576,23 @@ This is it. Today's the day."></textarea>
                     const sceneTags = scriptTags[index] || [];
                     const characterTags = sceneTags.filter(t => t.character === character);
 
+                    // Get breakdown data for this scene + character
+                    const breakdown = sceneBreakdowns[index] || {};
+
+                    // Aggregate tag summaries by category
+                    const tagSummary = {};
+                    characterTags.forEach(tag => {
+                        if (!tagSummary[tag.category]) tagSummary[tag.category] = [];
+                        tagSummary[tag.category].push(tag.selectedText);
+                    });
+
+                    // Build quick preview of what's in this scene
+                    const previewParts = [];
+                    if (tagSummary.hair?.length) previewParts.push(`💇 ${tagSummary.hair.length} hair`);
+                    if (tagSummary.makeup?.length) previewParts.push(`💄 ${tagSummary.makeup.length} makeup`);
+                    if (tagSummary.sfx?.length) previewParts.push(`🩸 ${tagSummary.sfx.length} SFX`);
+                    if (tagSummary.wardrobe?.length) previewParts.push(`👔 ${tagSummary.wardrobe.length} wardrobe`);
+
                     html += `
                         <div class="timeline-scene-item" onclick="jumpToSceneFromTimeline(${index})">
                             <div class="timeline-scene-number">${scene.number}</div>
@@ -3355,6 +3602,11 @@ This is it. Today's the day."></textarea>
                                     <span class="scene-type-indicator ${sceneType}">${getSceneTypeLabel(sceneType)}</span>
                                     ${scene.location ? `<span>📍 ${scene.location}</span>` : ''}
                                 </div>
+                                ${previewParts.length > 0 ? `
+                                    <div style="font-size: 0.7em; color: var(--text-muted); margin-top: 4px;">
+                                        ${previewParts.slice(0, 2).join(' • ')}
+                                    </div>
+                                ` : ''}
                             </div>
                             <div class="timeline-scene-badges">
                                 ${characterTags.length > 0 ? `<span class="timeline-badge">${characterTags.length} tags</span>` : ''}
@@ -3754,6 +4006,9 @@ IMPORTANT:
 
                 if (result.tags && Array.isArray(result.tags)) {
                     result.tags.forEach(aiTag => {
+                        // Validate character is actual cast before assigning
+                        const isActualCast = sceneBreakdowns[sceneIndex].cast?.includes(aiTag.character);
+
                         // Create tag object
                         const tag = {
                             id: Date.now() + Math.random(),
@@ -3762,7 +4017,7 @@ IMPORTANT:
                             category: aiTag.category,
                             selectedText: aiTag.text,
                             fullContext: aiTag.context,
-                            character: aiTag.character || null,
+                            character: isActualCast ? aiTag.character : null, // Only assign if actual cast
                             continuityType: 'oneoff',
                             continuityEventId: null,
                             elementId: `ai-tag-${Date.now()}-${Math.random()}`,
@@ -3773,7 +4028,7 @@ IMPORTANT:
                         // Add to scriptTags
                         scriptTags[sceneIndex].push(tag);
 
-                        // Add to breakdown
+                        // Add to breakdown (not cast!)
                         const categoryKey = aiTag.category;
                         if (sceneBreakdowns[sceneIndex][categoryKey]) {
                             if (!sceneBreakdowns[sceneIndex][categoryKey].includes(aiTag.text)) {
@@ -3781,10 +4036,8 @@ IMPORTANT:
                             }
                         }
 
-                        // Add character to cast if applicable
-                        if (aiTag.character && !sceneBreakdowns[sceneIndex].cast.includes(aiTag.character)) {
-                            sceneBreakdowns[sceneIndex].cast.push(aiTag.character);
-                        }
+                        // DON'T add character to cast here - that should only come from AI Synopsis
+                        // Cast members must be added via generateAISynopsis() or manual breakdown editing
 
                         tagsCreated++;
                     });
@@ -5264,10 +5517,11 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`;
                 breakdown[categoryKey].push(tag.selectedText);
             }
 
-            // Add to cast if character assigned
-            if (tag.character && !breakdown.cast.includes(tag.character)) {
-                breakdown.cast.push(tag.character);
-            }
+            // DO NOT add to cast automatically - tags are production elements, not cast members
+            // Cast members should only be added via AI Synopsis or manual Scene Breakdown editing
+            // if (tag.character && !breakdown.cast.includes(tag.character)) {
+            //     breakdown.cast.push(tag.character);
+            // }
         }
 
         function linkTagToEvent(tag, eventId) {
