@@ -48,23 +48,10 @@
             --tag-notes: #6b7280;
         }
 
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: rgba(13, 11, 10, 0.4);
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: rgba(138, 127, 115, 0.3);
-            border-radius: 4px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: rgba(138, 127, 115, 0.5);
-        }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(13, 11, 10, 0.4); }
+        ::-webkit-scrollbar-thumb { background: rgba(138, 127, 115, 0.3); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(138, 127, 115, 0.5); }
         
         body {
             font-family: 'Inter', sans-serif;
@@ -74,11 +61,7 @@
             overflow: hidden;
         }
         
-        .app-layout { 
-            display: flex; 
-            height: 100vh; 
-            flex-direction: column; 
-        }
+        .app-layout { display: flex; height: 100vh; flex-direction: column; }
         
         /* Top Bar */
         .top-bar {
@@ -87,49 +70,21 @@
                 linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 0%, transparent 100%),
                 linear-gradient(135deg, rgba(212, 175, 122, 0.08) 0%, rgba(18, 16, 14, 0.85) 50%, rgba(212, 175, 122, 0.05) 100%);
             backdrop-filter: blur(24px) saturate(180%);
-            -webkit-backdrop-filter: blur(24px) saturate(180%);
             border-bottom: 1px solid var(--glass-border);
             display: flex;
             align-items: center;
             justify-content: space-between;
             padding: 0 24px;
             z-index: 100;
-            box-shadow: 
-                var(--shadow-sm),
-                inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.05);
         }
         
-        .nav-section {
-            display: flex;
-            align-items: center;
-            gap: 24px;
-        }
+        .nav-section { display: flex; align-items: center; gap: 24px; }
+        .back-link { display: flex; align-items: center; gap: 8px; color: var(--text-muted); cursor: pointer; font-size: 0.875em; text-decoration: none; transition: color 0.2s ease; }
+        .back-link:hover { color: var(--accent-gold); }
+        .page-title { font-size: 1.125em; font-weight: 600; }
         
-        .back-link { 
-            display: flex; 
-            align-items: center; 
-            gap: 8px; 
-            color: var(--text-muted); 
-            cursor: pointer; 
-            font-size: 0.875em;
-            text-decoration: none;
-            transition: color 0.2s ease;
-        }
-        
-        .back-link:hover { 
-            color: var(--accent-gold); 
-        }
-        
-        .page-title { 
-            font-size: 1.125em; 
-            font-weight: 600; 
-        }
-        
-        .toolbar {
-            display: flex;
-            gap: 8px;
-        }
-        
+        .toolbar { display: flex; gap: 8px; }
         .toolbar-btn {
             padding: 8px 16px;
             background: transparent;
@@ -140,84 +95,11 @@
             font-size: 0.8125em;
             font-weight: 500;
             transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 6px;
         }
-        
-        .toolbar-btn:hover { 
-            border-color: var(--accent-gold); 
-            color: var(--accent-gold);
-            background: rgba(201, 169, 97, 0.05);
-        }
-        
-        .toolbar-btn.ai {
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
-            border-color: var(--accent-blue);
-            color: var(--accent-blue);
-        }
-        
-        .toolbar-btn.ai:hover {
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.2));
-            box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
-        }
-        
-        /* AI Analysis Progress */
-        .ai-progress {
-            display: none;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: var(--glass-bg);
-            backdrop-filter: blur(30px);
-            border: 1px solid var(--accent-blue);
-            border-radius: 16px;
-            padding: 32px;
-            z-index: 3000;
-            box-shadow: 0 20px 60px rgba(102, 126, 234, 0.3);
-            min-width: 400px;
-        }
-        
-        .ai-progress.active {
-            display: block;
-        }
-        
-        .ai-progress-title {
-            font-size: 1.125em;
-            font-weight: 600;
-            margin-bottom: 16px;
-            color: var(--accent-blue);
-        }
-        
-        .ai-progress-status {
-            font-size: 0.875em;
-            color: var(--text-muted);
-            margin-bottom: 16px;
-        }
-        
-        .ai-progress-bar {
-            width: 100%;
-            height: 8px;
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 4px;
-            overflow: hidden;
-        }
-        
-        .ai-progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, var(--accent-blue), var(--accent-gold));
-            border-radius: 4px;
-            width: 0%;
-            transition: width 0.3s ease;
-        }
+        .toolbar-btn:hover { border-color: var(--accent-gold); color: var(--accent-gold); background: rgba(201, 169, 97, 0.05); }
         
         /* Main Content Layout */
-        .main-content { 
-            display: flex; 
-            flex: 1; 
-            overflow: hidden; 
-        }
+        .main-content { display: flex; flex: 1; overflow: hidden; }
         
         /* Left Sidebar - Scenes */
         .left-sidebar {
@@ -226,22 +108,14 @@
                 linear-gradient(to right, rgba(255, 255, 255, 0.02) 0%, transparent 100%),
                 linear-gradient(135deg, rgba(212, 175, 122, 0.06) 0%, rgba(18, 16, 14, 0.85) 50%, rgba(212, 175, 122, 0.03) 100%);
             backdrop-filter: blur(24px) saturate(180%);
-            -webkit-backdrop-filter: blur(24px) saturate(180%);
             border-right: 1px solid var(--glass-border);
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            box-shadow: 
-                var(--shadow-sm),
-                inset 1px 0 0 rgba(255, 255, 255, 0.03);
+            box-shadow: var(--shadow-sm), inset 1px 0 0 rgba(255, 255, 255, 0.03);
         }
         
-        .sidebar-header { 
-            padding: 16px 20px; 
-            border-bottom: 1px solid var(--glass-border);
-            background: rgba(0, 0, 0, 0.2);
-        }
-        
+        .sidebar-header { padding: 16px 20px; border-bottom: 1px solid var(--glass-border); background: rgba(0, 0, 0, 0.2); }
         .sidebar-title { 
             font-size: 0.875em; 
             font-weight: 600; 
@@ -272,23 +146,13 @@
             color: var(--text-light);
             font-size: 0.8125em;
         }
+        .scene-search:focus { outline: none; border-color: var(--accent-gold); }
         
-        .scene-search:focus { 
-            outline: none; 
-            border-color: var(--accent-gold); 
-        }
-        
-        .scene-list { 
-            flex: 1; 
-            overflow-y: auto; 
-            padding: 12px; 
-        }
+        .scene-list { flex: 1; overflow-y: auto; padding: 12px; }
         
         .scene-item {
-            background: 
-                linear-gradient(135deg, rgba(212, 175, 122, 0.04) 0%, rgba(28, 25, 22, 0.5) 50%, rgba(212, 175, 122, 0.02) 100%);
+            background: linear-gradient(135deg, rgba(212, 175, 122, 0.04) 0%, rgba(28, 25, 22, 0.5) 50%, rgba(212, 175, 122, 0.02) 100%);
             backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
             border: 1px solid var(--glass-border);
             border-radius: 10px;
             padding: 14px;
@@ -296,77 +160,26 @@
             cursor: pointer;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
-            overflow: hidden;
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
         }
 
-        /* Scene type color coding */
-        .scene-item.int-day {
-            background: linear-gradient(135deg, var(--int-day) 0%, rgba(28, 25, 22, 0.5) 50%, rgba(212, 175, 122, 0.02) 100%);
-            border-left: 3px solid var(--int-day-border);
-        }
-
-        .scene-item.ext-day {
-            background: linear-gradient(135deg, var(--ext-day) 0%, rgba(28, 25, 22, 0.5) 50%, rgba(212, 175, 122, 0.02) 100%);
-            border-left: 3px solid var(--ext-day-border);
-        }
-
-        .scene-item.int-night {
-            background: linear-gradient(135deg, var(--int-night) 0%, rgba(28, 25, 22, 0.5) 50%, rgba(212, 175, 122, 0.02) 100%);
-            border-left: 3px solid var(--int-night-border);
-        }
-
-        .scene-item.ext-night {
-            background: linear-gradient(135deg, var(--ext-night) 0%, rgba(28, 25, 22, 0.5) 50%, rgba(212, 175, 122, 0.02) 100%);
-            border-left: 3px solid var(--ext-night-border);
-        }
-        
-        .scene-item::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(212, 175, 122, 0.3), transparent);
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
+        .scene-item.int-day { border-left: 3px solid var(--int-day-border); }
+        .scene-item.ext-day { border-left: 3px solid var(--ext-day-border); }
+        .scene-item.int-night { border-left: 3px solid var(--int-night-border); }
+        .scene-item.ext-night { border-left: 3px solid var(--ext-night-border); }
         
         .scene-item:hover {
             border-color: var(--accent-gold);
-            background: 
-                linear-gradient(135deg, rgba(212, 175, 122, 0.12) 0%, rgba(35, 31, 27, 0.65) 50%, rgba(212, 175, 122, 0.08) 100%);
             transform: translateX(4px);
-            box-shadow: 
-                var(--shadow-sm),
-                inset 0 1px 0 rgba(255, 255, 255, 0.08),
-                0 0 20px rgba(212, 175, 122, 0.15);
-        }
-        
-        .scene-item:hover::before {
-            opacity: 1;
+            box-shadow: var(--shadow-sm), 0 0 20px rgba(212, 175, 122, 0.15);
         }
         
         .scene-item.active {
             border-color: var(--accent-gold);
-            background: 
-                linear-gradient(135deg, rgba(212, 175, 122, 0.15) 0%, rgba(35, 31, 27, 0.7) 50%, rgba(212, 175, 122, 0.1) 100%);
-            box-shadow: 
-                var(--shadow-sm),
-                inset 0 1px 0 rgba(255, 255, 255, 0.1),
-                0 0 25px rgba(212, 175, 122, 0.2);
+            background: linear-gradient(135deg, rgba(212, 175, 122, 0.15) 0%, rgba(35, 31, 27, 0.7) 50%, rgba(212, 175, 122, 0.1) 100%);
+            box-shadow: var(--shadow-sm), 0 0 25px rgba(212, 175, 122, 0.2);
         }
         
-        .scene-item.active::before {
-            opacity: 1;
-        }
-        
-        .scene-header {
-            display: flex;
-            align-items: flex-start;
-            gap: 12px;
-        }
+        .scene-header { display: flex; align-items: flex-start; gap: 12px; }
         
         .scene-number {
             width: 36px;
@@ -382,21 +195,13 @@
             flex-shrink: 0;
         }
         
-        .scene-info {
-            flex: 1;
-            min-width: 0;
-        }
-        
+        .scene-info { flex: 1; min-width: 0; }
         .scene-heading { 
             font-size: 0.8125em; 
             font-weight: 600; 
             line-height: 1.4;
             margin-bottom: 6px;
             word-break: break-word;
-            display: -webkit-box;
-            -webkit-line-clamp: 3;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
         }
         
         .scene-meta {
@@ -407,54 +212,53 @@
             margin-bottom: 8px;
         }
         
-        .element-count {
-            color: var(--accent-blue);
-            font-weight: 500;
-        }
-        
-        /* Scene Synopsis */
         .scene-synopsis {
             font-size: 0.75em;
             color: var(--text-muted);
             line-height: 1.4;
             margin-top: 8px;
-            margin-bottom: 8px;
             font-style: italic;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
         }
         
-        /* Scene Tags Display */
-        .scene-tags {
+        .scene-synopsis.placeholder {
+            opacity: 0.5;
+        }
+        
+        .generate-synopsis-btn {
+            margin-top: 8px;
+            padding: 4px 10px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(118, 75, 162, 0.15));
+            border: 1px solid var(--accent-blue);
+            border-radius: 4px;
+            color: var(--accent-blue);
+            font-size: 0.625em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+        }
+        
+        .generate-synopsis-btn:hover {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.25), rgba(118, 75, 162, 0.25));
+            box-shadow: 0 0 12px rgba(102, 126, 234, 0.3);
+        }
+        
+        .scene-cast-list {
             display: flex;
             flex-wrap: wrap;
             gap: 4px;
             margin-top: 8px;
         }
         
-        .scene-tag-chip {
+        .cast-chip {
             padding: 2px 6px;
+            background: var(--tag-cast);
+            color: #000;
             border-radius: 4px;
             font-size: 0.625em;
             font-weight: 600;
-            color: #000;
-            display: flex;
-            align-items: center;
-            gap: 3px;
         }
-        
-        .scene-tag-chip.cast { background: var(--tag-cast); }
-        .scene-tag-chip.extras { background: var(--tag-extras); }
-        .scene-tag-chip.wardrobe { background: var(--tag-wardrobe); }
-        .scene-tag-chip.makeup { background: var(--tag-makeup); }
-        .scene-tag-chip.props { background: var(--tag-props); }
-        .scene-tag-chip.vehicles { background: var(--tag-vehicles); }
-        .scene-tag-chip.sfx { background: var(--tag-sfx); }
-        .scene-tag-chip.stunts { background: var(--tag-stunts); }
-        .scene-tag-chip.locations { background: var(--tag-locations); }
-        .scene-tag-chip.notes { background: var(--tag-notes); }
 
         .scene-type-indicator {
             font-size: 0.625em;
@@ -465,38 +269,13 @@
             letter-spacing: 0.05em;
         }
 
-        .scene-type-indicator.int-day {
-            background: var(--int-day);
-            border: 1px solid var(--int-day-border);
-            color: rgba(255, 255, 255, 0.9);
-        }
-
-        .scene-type-indicator.ext-day {
-            background: var(--ext-day);
-            border: 1px solid var(--ext-day-border);
-            color: #0a0908;
-        }
-
-        .scene-type-indicator.int-night {
-            background: var(--int-night);
-            border: 1px solid var(--int-night-border);
-            color: #0a0908;
-        }
-
-        .scene-type-indicator.ext-night {
-            background: var(--ext-night);
-            border: 1px solid var(--ext-night-border);
-            color: #0a0908;
-        }
+        .scene-type-indicator.int-day { background: var(--int-day); border: 1px solid var(--int-day-border); color: rgba(255, 255, 255, 0.9); }
+        .scene-type-indicator.ext-day { background: var(--ext-day); border: 1px solid var(--ext-day-border); color: #0a0908; }
+        .scene-type-indicator.int-night { background: var(--int-night); border: 1px solid var(--int-night-border); color: #0a0908; }
+        .scene-type-indicator.ext-night { background: var(--ext-night); border: 1px solid var(--ext-night-border); color: #0a0908; }
         
-        /* Center Panel - Script View */
-        .center-panel { 
-            flex: 1; 
-            display: flex; 
-            flex-direction: column; 
-            overflow: hidden;
-            background: rgba(232, 230, 227, 0.02);
-        }
+        /* Center Panel - Script */
+        .center-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: rgba(232, 230, 227, 0.02); }
         
         .script-toolbar {
             display: flex;
@@ -507,11 +286,7 @@
             border-bottom: 1px solid var(--glass-border);
         }
         
-        .view-controls {
-            display: flex;
-            gap: 8px;
-        }
-        
+        .view-controls { display: flex; gap: 8px; }
         .view-btn {
             padding: 6px 12px;
             background: transparent;
@@ -522,20 +297,9 @@
             cursor: pointer;
             transition: all 0.2s ease;
         }
+        .view-btn:hover { border-color: var(--accent-gold); color: var(--accent-gold); background: rgba(201, 169, 97, 0.05); }
         
-        .view-btn:hover {
-            border-color: var(--accent-gold);
-            color: var(--accent-gold);
-            background: rgba(201, 169, 97, 0.05);
-        }
-        
-        .script-viewer { 
-            flex: 1; 
-            overflow-y: auto; 
-            padding: 60px 40px;
-            position: relative;
-        }
-        
+        .script-viewer { flex: 1; overflow-y: auto; padding: 60px 40px; }
         .script-container {
             max-width: 700px;
             margin: 0 auto;
@@ -552,13 +316,7 @@
             color: #1a1a1a; 
         }
         
-        .script-scene { 
-            position: relative;
-            padding-bottom: 20px;
-            margin-bottom: 20px;
-        }
-        
-        /* Elegant scene divider */
+        .script-scene { position: relative; padding-bottom: 20px; margin-bottom: 20px; }
         .script-scene::after {
             content: '';
             position: absolute;
@@ -568,27 +326,10 @@
             height: 1px;
             background: linear-gradient(90deg, transparent, rgba(212, 175, 122, 0.2) 20%, rgba(212, 175, 122, 0.2) 80%, transparent);
         }
+        .script-scene:last-child::after { display: none; }
         
-        .script-scene:last-child::after {
-            display: none;
-        }
-        
-        /* Scene header with edit controls */
-        .scene-header-wrapper {
-            position: relative;
-            margin-bottom: 20px;
-            padding: 12px 0;
-            border-radius: 4px;
-            transition: all 0.2s ease;
-        }
-        
-        .scene-header-wrapper:hover {
-            background: rgba(212, 175, 122, 0.05);
-        }
-        
-        .scene-header-wrapper:hover .scene-edit-btn {
-            opacity: 1;
-        }
+        .scene-header-wrapper { position: relative; margin-bottom: 20px; padding: 12px 0; border-radius: 4px; transition: all 0.2s ease; }
+        .scene-header-wrapper:hover { background: rgba(212, 175, 122, 0.05); }
         
         .script-scene-heading { 
             font-weight: 700; 
@@ -597,7 +338,6 @@
             font-size: 13pt;
             letter-spacing: 0.5px;
             display: inline-block;
-            position: relative;
         }
         
         .scene-number-badge {
@@ -612,254 +352,105 @@
             vertical-align: middle;
         }
         
-        .scene-edit-btn {
-            position: absolute;
-            top: 50%;
-            right: 8px;
-            transform: translateY(-50%);
-            padding: 4px 10px;
-            background: rgba(255, 255, 255, 0.9);
-            border: 1px solid rgba(212, 175, 122, 0.2);
-            border-radius: 4px;
-            color: rgba(0, 0, 0, 0.4);
-            font-size: 0.625em;
-            font-family: 'Inter', sans-serif;
-            cursor: pointer;
-            opacity: 0;
-            transition: all 0.2s ease;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            font-weight: 500;
-        }
+        .script-action { margin-bottom: 16px; color: #1a1a1a; }
+        .script-character { margin: 24px 0 0; text-align: center; text-transform: uppercase; color: #000; font-weight: 600; letter-spacing: 1px; }
+        .script-dialogue { margin: 4px 0 16px; width: 65%; margin-left: 17.5%; color: #1a1a1a; }
+        .script-parenthetical { margin: 0 0 4px; width: 55%; margin-left: 22.5%; color: #333; font-style: italic; }
+        .script-transition { text-align: right; margin: 24px 0; font-weight: 600; color: #000; text-transform: uppercase; }
         
-        .scene-edit-btn:hover {
-            background: rgba(212, 175, 122, 0.1);
-            border-color: var(--accent-gold);
-            color: var(--accent-gold);
-        }
-        
-        .script-action { 
-            margin-bottom: 16px; 
-            color: #1a1a1a; 
-            text-align: left;
-            max-width: 100%;
-        }
-        
-        .script-character { 
-            margin: 24px 0 0; 
-            text-align: center; 
-            text-transform: uppercase; 
-            color: #000;
-            font-weight: 600;
-            letter-spacing: 1px;
-        }
-        
-        .script-dialogue { 
-            margin: 4px 0 16px; 
-            width: 65%; 
-            margin-left: 17.5%; 
-            color: #1a1a1a; 
-        }
-        
-        .script-parenthetical { 
-            margin: 0 0 4px; 
-            width: 55%; 
-            margin-left: 22.5%; 
-            color: #333;
-            font-style: italic;
-        }
-        
-        .script-transition { 
-            text-align: right; 
-            margin: 24px 0; 
-            font-weight: 600; 
-            color: #000;
-            text-transform: uppercase;
-        }
-        
-        /* Highlighted elements in script */
-        .highlight {
-            cursor: pointer;
-            padding: 2px 3px;
-            margin: 0 -3px;
-            border-radius: 3px;
-            position: relative;
-            transition: all 0.2s ease;
-        }
-        
-        .highlight:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-        }
-        
-        .highlight.cast {
-            background: rgba(251, 191, 36, 0.35);
-            border-bottom: 2px solid var(--tag-cast);
-        }
-        
-        .highlight.extras {
-            background: rgba(245, 158, 11, 0.35);
-            border-bottom: 2px solid var(--tag-extras);
-        }
-        
-        .highlight.wardrobe {
-            background: rgba(52, 211, 153, 0.35);
-            border-bottom: 2px solid var(--tag-wardrobe);
-        }
-        
-        .highlight.makeup {
-            background: rgba(255, 107, 157, 0.35);
-            border-bottom: 2px solid var(--tag-makeup);
-        }
-        
-        .highlight.props {
-            background: rgba(251, 146, 60, 0.35);
-            border-bottom: 2px solid var(--tag-props);
-        }
-        
-        .highlight.vehicles {
-            background: rgba(56, 189, 248, 0.35);
-            border-bottom: 2px solid var(--tag-vehicles);
-        }
-        
-        .highlight.sfx {
-            background: rgba(139, 92, 246, 0.35);
-            border-bottom: 2px solid var(--tag-sfx);
-        }
-        
-        .highlight.stunts {
-            background: rgba(239, 68, 68, 0.35);
-            border-bottom: 2px solid var(--tag-stunts);
-        }
-        
-        .highlight.locations {
-            background: rgba(16, 185, 129, 0.35);
-            border-bottom: 2px solid var(--tag-locations);
-        }
-        
-        .highlight.notes {
-            background: rgba(107, 114, 128, 0.35);
-            border-bottom: 2px solid var(--tag-notes);
-        }
-        
-        /* Right Sidebar - Tags */
+        /* Right Sidebar - Scene Breakdown Dashboard */
         .right-sidebar {
-            width: 320px;
+            width: 380px;
             background: 
                 linear-gradient(to left, rgba(255, 255, 255, 0.02) 0%, transparent 100%),
                 linear-gradient(135deg, rgba(212, 175, 122, 0.06) 0%, rgba(18, 16, 14, 0.85) 50%, rgba(212, 175, 122, 0.03) 100%);
             backdrop-filter: blur(24px) saturate(180%);
-            -webkit-backdrop-filter: blur(24px) saturate(180%);
             border-left: 1px solid var(--glass-border);
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            box-shadow: 
-                var(--shadow-sm),
-                inset -1px 0 0 rgba(255, 255, 255, 0.03);
+            box-shadow: var(--shadow-sm), inset -1px 0 0 rgba(255, 255, 255, 0.03);
         }
         
-        .tag-categories {
+        .breakdown-dashboard {
             flex: 1;
             overflow-y: auto;
             padding: 20px;
         }
         
-        .tag-category {
+        .dashboard-header {
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+        
+        .dashboard-scene-title {
+            font-size: 0.875em;
+            font-weight: 600;
+            color: var(--accent-gold);
+            margin-bottom: 4px;
+        }
+        
+        .dashboard-scene-heading {
+            font-size: 0.75em;
+            color: var(--text-muted);
+        }
+        
+        .breakdown-section {
             margin-bottom: 24px;
         }
         
-        .category-header {
+        .section-header {
             display: flex;
-            align-items: center;
             justify-content: space-between;
-            margin-bottom: 12px;
-            cursor: pointer;
-            padding: 8px;
-            border-radius: 6px;
-            transition: background 0.2s ease;
-        }
-        
-        .category-header:hover {
-            background: rgba(201, 169, 97, 0.05);
-        }
-        
-        .category-title {
-            display: flex;
             align-items: center;
-            gap: 10px;
+            margin-bottom: 12px;
+        }
+        
+        .section-title {
             font-size: 0.8125em;
             font-weight: 600;
             text-transform: uppercase;
             color: var(--text-light);
-        }
-        
-        .category-icon {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
             display: flex;
             align-items: center;
-            justify-content: center;
+            gap: 8px;
         }
         
-        .category-count {
-            background: rgba(255, 255, 255, 0.1);
-            color: var(--text-light);
-            padding: 2px 6px;
-            border-radius: 8px;
-            font-size: 0.75em;
-            font-weight: 600;
-            margin-left: auto;
-            margin-right: 8px;
+        .section-icon {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
         }
         
-        .category-expand {
-            font-size: 0.875em;
-            color: var(--text-muted);
-            transition: transform 0.2s ease;
-        }
-        
-        .category-header.collapsed .category-expand {
-            transform: rotate(-90deg);
-        }
-        
-        .category-content {
-            display: block;
-            padding-left: 8px;
-        }
-        
-        .category-header.collapsed + .category-content {
-            display: none;
-        }
-        
-        .add-tag-btn {
-            width: 100%;
-            padding: 8px;
-            border-radius: 6px;
-            border: 1px dashed var(--glass-border);
+        .add-element-btn {
+            padding: 4px 10px;
             background: transparent;
+            border: 1px dashed var(--glass-border);
+            border-radius: 4px;
             color: var(--text-muted);
+            font-size: 0.625em;
             cursor: pointer;
-            font-size: 0.75em;
             transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
         }
         
-        .add-tag-btn:hover {
+        .add-element-btn:hover {
             border-color: var(--accent-gold);
             color: var(--accent-gold);
             background: rgba(201, 169, 97, 0.05);
         }
         
-        .tag-list {
+        .element-list {
             display: flex;
             flex-direction: column;
             gap: 6px;
-            margin-bottom: 8px;
         }
         
-        .tag-item {
-            padding: 8px 12px;
+        .element-item {
+            padding: 10px 12px;
             background: rgba(28, 25, 22, 0.4);
             border: 1px solid var(--glass-border);
             border-radius: 6px;
@@ -868,271 +459,78 @@
             justify-content: space-between;
             align-items: center;
             transition: all 0.2s ease;
+        }
+        
+        .element-item:hover {
+            border-color: var(--accent-gold);
+            background: rgba(201, 169, 97, 0.05);
+        }
+        
+        .element-item.cast {
+            background: rgba(251, 191, 36, 0.1);
+            border-color: rgba(251, 191, 36, 0.3);
+        }
+        
+        .element-item.cast:hover {
+            background: rgba(251, 191, 36, 0.15);
             cursor: pointer;
         }
         
-        .tag-item:hover {
-            border-color: var(--accent-gold);
-            background: rgba(201, 169, 97, 0.05);
-            transform: translateX(2px);
-        }
+        .element-text { flex: 1; }
         
-        .tag-item.ai-detected {
-            border-color: var(--accent-blue);
-            background: rgba(102, 126, 234, 0.1);
-        }
-        
-        .tag-item-text {
-            flex: 1;
+        .element-actions {
             display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        
-        .tag-badge {
-            display: inline-flex;
-            align-items: center;
             gap: 4px;
-            padding: 2px 6px;
-            background: rgba(102, 126, 234, 0.2);
-            border-radius: 4px;
-            font-size: 0.625em;
-            color: var(--accent-blue);
         }
         
-        .tag-remove {
+        .element-action-btn {
+            padding: 4px 8px;
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            border-radius: 4px;
+            color: var(--text-muted);
+            font-size: 0.625em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .element-action-btn:hover {
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+        }
+        
+        .element-remove {
             background: none;
             border: none;
             color: var(--text-muted);
             cursor: pointer;
-            font-size: 1.25em;
-            padding: 0;
-            width: 20px;
-            height: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 4px;
+            font-size: 1.125em;
+            padding: 0 4px;
             transition: all 0.2s ease;
         }
         
-        .tag-remove:hover {
-            background: rgba(255, 107, 107, 0.2);
+        .element-remove:hover {
             color: var(--error);
         }
         
-        /* Script Import Modal */
-        .import-modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
+        /* Empty State */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
             height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            backdrop-filter: blur(12px);
-            z-index: 2000;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .import-modal.active { 
-            display: flex; 
-        }
-        
-        .import-content {
-            background: var(--glass-bg);
-            backdrop-filter: blur(30px);
-            border: 1px solid var(--accent-gold);
-            border-radius: 16px;
-            padding: 32px;
-            max-width: 900px;
-            width: 90%;
-            max-height: 85vh;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 0 20px 60px rgba(212, 175, 122, 0.2);
-        }
-        
-        .import-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 24px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid var(--glass-border);
-        }
-        
-        .import-title {
-            font-size: 1.5em;
-            font-weight: 600;
-        }
-        
-        .close-btn {
-            width: 32px;
-            height: 32px;
-            background: transparent;
-            border: 1px solid var(--glass-border);
-            border-radius: 8px;
-            color: var(--text-secondary);
-            cursor: pointer;
-            font-size: 1.25em;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .close-btn:hover {
-            border-color: var(--accent-gold);
-            color: var(--accent-gold);
-        }
-        
-        .import-body {
-            flex: 1;
-            display: flex;
-            gap: 20px;
-            overflow: hidden;
-        }
-        
-        .import-editor {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .import-toolbar {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 12px;
-            padding: 8px;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 8px;
-        }
-        
-        .import-tool-btn {
-            padding: 6px 12px;
-            background: transparent;
-            border: 1px solid var(--glass-border);
-            border-radius: 6px;
-            color: var(--text-muted);
-            font-size: 0.75em;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        
-        .import-tool-btn:hover {
-            border-color: var(--accent-gold);
-            color: var(--accent-gold);
-            background: rgba(201, 169, 97, 0.05);
-        }
-        
-        .import-tool-btn.ai {
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
-            border-color: var(--accent-blue);
-            color: var(--accent-blue);
-        }
-        
-        .script-input {
-            flex: 1;
-            width: 100%;
-            padding: 16px;
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid var(--glass-border);
-            border-radius: 8px;
-            color: var(--text-light);
-            font-family: 'Courier New', monospace;
-            font-size: 0.875em;
-            line-height: 1.6;
-            resize: none;
-        }
-        
-        .script-input:focus {
-            outline: none;
-            border-color: var(--accent-gold);
-            box-shadow: 0 0 0 1px rgba(212, 175, 122, 0.2);
-        }
-        
-        .import-preview {
-            width: 280px;
-            background: rgba(0, 0, 0, 0.2);
-            border: 1px solid var(--glass-border);
-            border-radius: 8px;
-            padding: 16px;
-            overflow-y: auto;
-        }
-        
-        .preview-title {
-            font-size: 0.875em;
-            font-weight: 600;
-            margin-bottom: 12px;
+            text-align: center;
+            padding: 40px;
             color: var(--text-muted);
         }
         
-        .preview-stats {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
+        .empty-icon { font-size: 2em; margin-bottom: 12px; opacity: 0.3; }
+        .empty-title { font-size: 0.9375em; font-weight: 600; margin-bottom: 6px; }
+        .empty-desc { font-size: 0.8125em; }
         
-        .preview-stat {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 12px;
-            background: rgba(28, 25, 22, 0.4);
-            border-radius: 6px;
-            font-size: 0.8125em;
-        }
-        
-        .preview-label {
-            color: var(--text-muted);
-        }
-        
-        .preview-value {
-            font-weight: 600;
-            color: var(--accent-gold);
-        }
-        
-        .import-footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 24px;
-            padding-top: 20px;
-            border-top: 1px solid var(--glass-border);
-        }
-        
-        .import-btn {
-            padding: 10px 20px;
-            border: 1px solid var(--glass-border);
-            border-radius: 8px;
-            background: transparent;
-            color: var(--text-light);
-            font-size: 0.875em;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        
-        .import-btn.primary {
-            background: linear-gradient(135deg, rgba(201, 169, 97, 0.9) 0%, rgba(184, 150, 81, 0.9) 100%);
-            border-color: var(--accent-gold);
-            color: var(--bg-dark);
-        }
-        
-        .import-btn:hover {
-            border-color: var(--accent-gold);
-            color: var(--accent-gold);
-        }
-        
-        .import-btn.primary:hover {
-            background: linear-gradient(135deg, #d4af7a 0%, #c09861 100%);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(212, 175, 122, 0.3);
-        }
-        
-        /* Manual Tag Modal */
-        .manual-tag-modal {
+        /* Modals */
+        .modal {
             display: none;
             position: fixed;
             top: 0;
@@ -1146,28 +544,26 @@
             justify-content: center;
         }
         
-        .manual-tag-modal.active {
-            display: flex;
-        }
+        .modal.active { display: flex; }
         
-        .manual-tag-content {
+        .modal-content {
             background: var(--glass-bg);
             backdrop-filter: blur(30px);
             border: 1px solid var(--accent-gold);
             border-radius: 16px;
             padding: 24px;
-            max-width: 400px;
+            max-width: 500px;
             width: 90%;
             box-shadow: 0 20px 60px rgba(212, 175, 122, 0.2);
         }
         
-        .manual-tag-title {
+        .modal-title {
             font-size: 1.125em;
             font-weight: 600;
             margin-bottom: 16px;
         }
         
-        .manual-tag-input {
+        .modal-input {
             width: 100%;
             padding: 10px 12px;
             background: rgba(0, 0, 0, 0.3);
@@ -1178,119 +574,118 @@
             margin-bottom: 16px;
         }
         
-        .manual-tag-input:focus {
-            outline: none;
-            border-color: var(--accent-gold);
-        }
+        .modal-input:focus { outline: none; border-color: var(--accent-gold); }
         
-        .category-selector {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 8px;
-            margin-bottom: 20px;
-        }
-        
-        .category-option {
-            padding: 10px;
-            background: rgba(28, 25, 22, 0.4);
+        .modal-textarea {
+            width: 100%;
+            min-height: 100px;
+            padding: 10px 12px;
+            background: rgba(0, 0, 0, 0.3);
             border: 1px solid var(--glass-border);
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.8125em;
-            text-align: center;
-            transition: all 0.2s ease;
+            border-radius: 8px;
+            color: var(--text-light);
+            font-size: 0.875em;
+            margin-bottom: 16px;
+            font-family: 'Inter', sans-serif;
+            resize: vertical;
         }
         
-        .category-option:hover {
-            border-color: var(--accent-gold);
-            background: rgba(201, 169, 97, 0.05);
-        }
+        .modal-textarea:focus { outline: none; border-color: var(--accent-gold); }
         
-        .category-option.selected {
-            border-color: var(--accent-gold);
-            background: rgba(201, 169, 97, 0.15);
-        }
-        
-        .manual-tag-actions {
+        .modal-actions {
             display: flex;
             gap: 8px;
             justify-content: flex-end;
         }
         
-        .form-group {
+        .modal-btn {
+            padding: 8px 16px;
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            background: transparent;
+            color: var(--text-light);
+            font-size: 0.875em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .modal-btn.primary {
+            background: linear-gradient(135deg, rgba(201, 169, 97, 0.9), rgba(184, 150, 81, 0.9));
+            border-color: var(--accent-gold);
+            color: var(--bg-dark);
+        }
+        
+        .modal-btn:hover { border-color: var(--accent-gold); color: var(--accent-gold); }
+        .modal-btn.primary:hover {
+            background: linear-gradient(135deg, #d4af7a, #c09861);
+            transform: translateY(-1px);
+        }
+        
+        /* Cast Profile Modal */
+        .cast-profile-modal .modal-content {
+            max-width: 600px;
+        }
+        
+        .profile-section {
             margin-bottom: 16px;
         }
         
-        .form-label {
+        .profile-label {
             display: block;
-            margin-bottom: 8px;
-            font-size: 0.875em;
+            font-size: 0.8125em;
             color: var(--text-muted);
+            margin-bottom: 6px;
             font-weight: 500;
         }
         
-        /* Empty State */
-        .empty-state {
+        .appearance-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            min-height: 40px;
+        }
+        
+        .appearance-chip {
+            padding: 4px 8px;
+            background: rgba(102, 126, 234, 0.2);
+            border: 1px solid rgba(102, 126, 234, 0.4);
+            border-radius: 4px;
+            font-size: 0.75em;
+            color: var(--accent-blue);
+        }
+        
+        /* Import Modal */
+        .import-modal .modal-content {
+            max-width: 900px;
+            max-height: 85vh;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            text-align: center;
-            padding: 40px;
         }
         
-        .empty-icon {
-            font-size: 3em;
-            margin-bottom: 16px;
-            opacity: 0.2;
+        .import-body {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 20px;
         }
         
-        .empty-title {
-            font-size: 1.25em;
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
-        
-        .empty-desc {
-            font-size: 0.875em;
-            color: var(--text-muted);
-        }
-        
-        /* Selection Toolbar */
-        .selection-toolbar {
-            display: none;
-            position: fixed;
-            background: var(--glass-bg);
-            backdrop-filter: blur(30px);
-            border: 1px solid var(--accent-gold);
-            border-radius: 8px;
-            padding: 8px;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-            z-index: 1000;
-            gap: 4px;
-        }
-        
-        .selection-toolbar.active {
-            display: flex;
-        }
-        
-        .selection-btn {
-            padding: 6px 10px;
-            background: transparent;
+        .script-input {
+            width: 100%;
+            min-height: 400px;
+            padding: 16px;
+            background: rgba(0, 0, 0, 0.3);
             border: 1px solid var(--glass-border);
-            border-radius: 6px;
+            border-radius: 8px;
             color: var(--text-light);
-            font-size: 0.75em;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            white-space: nowrap;
+            font-family: 'Courier New', monospace;
+            font-size: 0.875em;
+            line-height: 1.6;
+            resize: vertical;
         }
         
-        .selection-btn:hover {
-            border-color: var(--accent-gold);
-            background: rgba(201, 169, 97, 0.1);
-        }
+        .script-input:focus { outline: none; border-color: var(--accent-gold); }
     </style>
 </head>
 <body>
@@ -1302,32 +697,9 @@
                 <h1 class="page-title" id="projectTitle">Script Breakdown</h1>
             </div>
             <div class="toolbar">
-                <button class="toolbar-btn ai" onclick="runAIAnalysis()">
-                    AI Analyze
-                </button>
-                <button class="toolbar-btn" onclick="openImportModal()">
-                    Import Script
-                </button>
+                <button class="toolbar-btn" onclick="viewCastProfiles()">Cast Profiles</button>
+                <button class="toolbar-btn" onclick="openImportModal()">Import Script</button>
             </div>
-        </div>
-        
-        <!-- AI Analysis Progress -->
-        <div class="ai-progress" id="aiProgress">
-            <div class="ai-progress-title">AI Analysis in Progress</div>
-            <div class="ai-progress-status" id="aiStatus">Analyzing scene 1 of 10...</div>
-            <div class="ai-progress-bar">
-                <div class="ai-progress-fill" id="aiProgressFill"></div>
-            </div>
-        </div>
-        
-        <!-- Selection Toolbar -->
-        <div class="selection-toolbar" id="selectionToolbar">
-            <button class="selection-btn" onclick="tagSelection('cast')">Cast</button>
-            <button class="selection-btn" onclick="tagSelection('props')">Props</button>
-            <button class="selection-btn" onclick="tagSelection('wardrobe')">Wardrobe</button>
-            <button class="selection-btn" onclick="tagSelection('vehicles')">Vehicle</button>
-            <button class="selection-btn" onclick="tagSelection('sfx')">SFX</button>
-            <button class="selection-btn" onclick="tagSelection('stunts')">Stunt</button>
         </div>
         
         <!-- Main Content -->
@@ -1364,1115 +736,280 @@
                             <div class="empty-state">
                                 <div class="empty-icon">—</div>
                                 <div class="empty-title">No Script Loaded</div>
-                                <div class="empty-desc">Import your screenplay to begin the breakdown process</div>
+                                <div class="empty-desc">Import your screenplay to begin</div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
             
-            <!-- Right Sidebar - Tags -->
+            <!-- Right Sidebar - Scene Breakdown Dashboard -->
             <div class="right-sidebar">
-                <div class="sidebar-header">
-                    <div class="sidebar-title">BREAKDOWN ELEMENTS</div>
-                </div>
-                <div class="tag-categories" id="tagCategories">
-                    <!-- Tag categories will be populated here -->
+                <div class="breakdown-dashboard" id="breakdownDashboard">
+                    <div class="empty-state">
+                        <div class="empty-icon">📋</div>
+                        <div class="empty-title">Select a Scene</div>
+                        <div class="empty-desc">Choose a scene to view and edit its breakdown</div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
     
-    <!-- Script Import Modal -->
-    <div class="import-modal" id="importModal">
-        <div class="import-content">
-            <div class="import-header">
-                <div class="import-title">Import Screenplay</div>
-                <button class="close-btn" onclick="closeImportModal()">×</button>
+    <!-- Add Element Modal -->
+    <div class="modal" id="addElementModal">
+        <div class="modal-content">
+            <div class="modal-title">Add Element</div>
+            <input type="text" class="modal-input" id="elementInput" placeholder="Enter element name...">
+            <div class="modal-actions">
+                <button class="modal-btn" onclick="closeAddElementModal()">Cancel</button>
+                <button class="modal-btn primary" onclick="confirmAddElement()">Add</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Cast Profile Modal -->
+    <div class="modal cast-profile-modal" id="castProfileModal">
+        <div class="modal-content">
+            <div class="modal-title" id="castProfileTitle">Cast Profile</div>
+            
+            <div class="profile-section">
+                <label class="profile-label">Character Name</label>
+                <input type="text" class="modal-input" id="castName" readonly>
             </div>
             
+            <div class="profile-section">
+                <label class="profile-label">Makeup Notes</label>
+                <textarea class="modal-textarea" id="castMakeup" placeholder="Hair style, facial hair, scars, tattoos, aging, special effects..."></textarea>
+            </div>
+            
+            <div class="profile-section">
+                <label class="profile-label">Wardrobe Notes</label>
+                <textarea class="modal-textarea" id="castWardrobe" placeholder="Key wardrobe pieces, costume changes, continuity notes..."></textarea>
+            </div>
+            
+            <div class="profile-section">
+                <label class="profile-label">Appears in Scenes</label>
+                <div class="appearance-list" id="castAppearances"></div>
+            </div>
+            
+            <div class="modal-actions">
+                <button class="modal-btn" onclick="closeCastProfile()">Close</button>
+                <button class="modal-btn primary" onclick="saveCastProfile()">Save Profile</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Import Script Modal -->
+    <div class="modal import-modal" id="importModal">
+        <div class="modal-content">
+            <div class="modal-title">Import Screenplay</div>
             <div class="import-body">
-                <div class="import-editor">
-                    <div class="import-toolbar">
-                        <button class="import-tool-btn ai" onclick="aiCleanup()">
-                            AI Cleanup
-                        </button>
-                        <button class="import-tool-btn" onclick="fixFormatting()">
-                            Fix Format
-                        </button>
-                        <button class="import-tool-btn" onclick="clearInput()">
-                            Clear
-                        </button>
-                    </div>
-                    <textarea class="script-input" id="scriptInput" placeholder="Paste your screenplay here...
-
-Copy your script from any source (PDF, Word, Final Draft, etc.) and paste it here.
+                <textarea class="script-input" id="scriptInput" placeholder="Paste your screenplay here...
 
 Example format:
 INT. COFFEE SHOP - DAY
 
-JANE (30s) sits alone at a corner table, laptop open.
+JANE sits at a table, laptop open.
 
 JANE
 This is it. Today's the day."></textarea>
-                </div>
-                
-                <div class="import-preview">
-                    <div class="preview-title">ANALYSIS</div>
-                    <div class="preview-stats">
-                        <div class="preview-stat">
-                            <span class="preview-label">Scenes Detected</span>
-                            <span class="preview-value" id="previewScenes">0</span>
-                        </div>
-                        <div class="preview-stat">
-                            <span class="preview-label">Characters</span>
-                            <span class="preview-value" id="previewCharacters">0</span>
-                        </div>
-                        <div class="preview-stat">
-                            <span class="preview-label">Pages (est.)</span>
-                            <span class="preview-value" id="previewPages">0</span>
-                        </div>
-                    </div>
-                </div>
             </div>
-            
-            <div class="import-footer">
-                <div style="font-size: 0.875em; color: var(--text-muted);">
-                    Paste your script and use AI Cleanup to fix formatting issues
-                </div>
-                <div style="display: flex; gap: 12px;">
-                    <button class="import-btn" onclick="closeImportModal()">Cancel</button>
-                    <button class="import-btn primary" onclick="processScript()">
-                        Import & Process
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Manual Tag Modal -->
-    <div class="manual-tag-modal" id="manualTagModal">
-        <div class="manual-tag-content">
-            <div class="manual-tag-title">Add Breakdown Element</div>
-            <input type="text" class="manual-tag-input" id="manualTagInput" placeholder="Enter element name...">
-            <div class="category-selector" id="categorySelector">
-                <!-- Category options will be populated here -->
-            </div>
-            <div class="manual-tag-actions">
-                <button class="import-btn" onclick="closeManualTagModal()">Cancel</button>
-                <button class="import-btn primary" onclick="confirmManualTag()">Add Tag</button>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Scene Break Modal -->
-    <div class="manual-tag-modal" id="sceneBreakModal">
-        <div class="manual-tag-content">
-            <div class="manual-tag-title" id="sceneBreakTitle">Edit Scene</div>
-            <div class="form-group">
-                <label class="form-label">Scene Heading</label>
-                <input type="text" class="manual-tag-input" id="sceneBreakHeading" placeholder="INT. LOCATION - DAY">
-            </div>
-            <div class="manual-tag-actions">
-                <button class="import-btn" onclick="closeSceneBreakModal()">Cancel</button>
-                <button class="import-btn primary" onclick="confirmSceneBreak()">Save</button>
+            <div class="modal-actions">
+                <button class="modal-btn" onclick="closeImportModal()">Cancel</button>
+                <button class="modal-btn primary" onclick="processScript()">Import</button>
             </div>
         </div>
     </div>
     
     <script>
-        // Global variables
+        // Global state
         let currentProject = null;
         let scenes = [];
         let characters = new Set();
-        let currentScene = 0;
-        let sceneElements = {};
-        let manualTags = {};
+        let currentScene = null;
+        let sceneBreakdowns = {}; // { sceneIndex: { cast: [], props: [], etc } }
+        let castProfiles = {}; // { characterName: { makeup: '', wardrobe: '', scenes: [] } }
         let scriptText = '';
-        let selectedText = '';
-        let selectedCategoryForManual = null;
+        let currentElementCategory = null;
+        let currentCastMember = null;
         
-        // Tag categories with detection patterns
-        const tagCategories = [
-            { 
-                id: 'cast', 
-                name: 'Cast Members', 
-                color: '#fbbf24',
-                patterns: []
-            },
-            { 
-                id: 'extras', 
-                name: 'Extras/Background', 
-                color: '#f59e0b',
-                patterns: ['crowd', 'pedestrians', 'customers', 'patrons', 'guests', 'party-goers', 'audience', 'spectators', 'bystanders', 'people', 'group']
-            },
-            { 
-                id: 'wardrobe', 
-                name: 'Wardrobe', 
-                color: '#34d399',
-                patterns: ['wearing', 'dressed', 'uniform', 'costume', 'suit', 'dress', 'jacket', 'shirt', 'jeans', 'coat', 'hat', 'shoes', 'boots', 'gloves', 'torn', 'bloodied', 'dirty clothes']
-            },
-            { 
-                id: 'makeup', 
-                name: 'Makeup/Hair', 
-                color: '#ff6b9d',
-                patterns: ['makeup', 'bruised', 'blood', 'wounded', 'scar', 'tattoo', 'beard', 'mustache', 'hair', 'wig', 'bald', 'disheveled']
-            },
-            { 
-                id: 'props', 
-                name: 'Props', 
-                color: '#fb923c',
-                patterns: ['gun', 'knife', 'phone', 'laptop', 'bag', 'briefcase', 'key', 'wallet', 'badge', 'paper', 'document', 'book', 'bottle', 'glass', 'cup', 'cigarette', 'flashlight', 'rope', 'chain', 'tool', 'hammer', 'wrench']
-            },
-            { 
-                id: 'vehicles', 
-                name: 'Vehicles', 
-                color: '#38bdf8',
-                patterns: ['car', 'truck', 'van', 'motorcycle', 'bike', 'bicycle', 'bus', 'taxi', 'police car', 'ambulance', 'helicopter', 'plane', 'boat', 'ship']
-            },
-            { 
-                id: 'sfx', 
-                name: 'Special Effects', 
-                color: '#8b5cf6',
-                patterns: ['explosion', 'fire', 'smoke', 'fog', 'rain', 'snow', 'lightning', 'thunder', 'wind', 'storm', 'glass breaking', 'shatters', 'crashes', 'collapses']
-            },
-            { 
-                id: 'stunts', 
-                name: 'Stunts', 
-                color: '#ef4444',
-                patterns: ['fight', 'punch', 'kick', 'jump', 'fall', 'crash', 'chase', 'runs', 'leaps', 'dives', 'tackles', 'throws', 'hits', 'slams']
-            },
-            { 
-                id: 'locations', 
-                name: 'Locations', 
-                color: '#10b981',
-                patterns: []
-            },
-            { 
-                id: 'notes', 
-                name: 'Notes', 
-                color: '#6b7280',
-                patterns: []
-            }
+        // Element categories
+        const categories = [
+            { id: 'cast', name: 'Cast Members', color: '#fbbf24', icon: '👤' },
+            { id: 'extras', name: 'Extras', color: '#f59e0b', icon: '👥' },
+            { id: 'wardrobe', name: 'Wardrobe', color: '#34d399', icon: '👔' },
+            { id: 'makeup', name: 'Makeup/Hair', color: '#ff6b9d', icon: '💄' },
+            { id: 'props', name: 'Props', color: '#fb923c', icon: '📦' },
+            { id: 'vehicles', name: 'Vehicles', color: '#38bdf8', icon: '🚗' },
+            { id: 'sfx', name: 'SFX', color: '#8b5cf6', icon: '✨' },
+            { id: 'stunts', name: 'Stunts', color: '#ef4444', icon: '🎬' },
+            { id: 'notes', name: 'Notes', color: '#6b7280', icon: '📝' }
         ];
-        
-        // Detect scene type from heading
-        function getSceneType(heading) {
-            const headingUpper = heading.toUpperCase();
-            const isInt = headingUpper.includes('INT.');
-            const isExt = headingUpper.includes('EXT.');
-            const isDay = headingUpper.includes('DAY') || headingUpper.includes('MORNING') || headingUpper.includes('AFTERNOON');
-            const isNight = headingUpper.includes('NIGHT') || headingUpper.includes('EVENING') || headingUpper.includes('DUSK');
-            
-            if (isInt && isDay) return 'int-day';
-            if (isExt && isDay) return 'ext-day';
-            if (isInt && isNight) return 'int-night';
-            if (isExt && isNight) return 'ext-night';
-            
-            return 'int-day';
-        }
-
-        // Get scene type label
-        function getSceneTypeLabel(sceneType) {
-            switch(sceneType) {
-                case 'int-day': return 'INT / DAY';
-                case 'ext-day': return 'EXT / DAY';
-                case 'int-night': return 'INT / NIGHT';
-                case 'ext-night': return 'EXT / NIGHT';
-                default: return '';
-            }
-        }
         
         // Initialize
         function init() {
             currentProject = JSON.parse(localStorage.getItem('currentProject') || 'null');
             
             if (!currentProject) {
-                currentProject = { name: 'Untitled Project' };
+                currentProject = { name: 'Untitled Project', id: Date.now() };
             }
             
             document.getElementById('projectTitle').textContent = currentProject.name + ' - Script Breakdown';
-            
-            initializeTagCategories();
-            setupTextSelection();
             
             if (!currentProject.scriptContent) {
                 setTimeout(() => openImportModal(), 500);
             } else {
                 loadScript(currentProject.scriptContent);
-                if (currentProject.sceneElements) {
-                    sceneElements = currentProject.sceneElements;
-                    manualTags = currentProject.manualTags || {};
-                    renderSceneList();
-                    populateAllElements();
-                    highlightScriptElements();
+                
+                // Load saved breakdowns
+                if (currentProject.sceneBreakdowns) {
+                    sceneBreakdowns = currentProject.sceneBreakdowns;
                 }
+                if (currentProject.castProfiles) {
+                    castProfiles = currentProject.castProfiles;
+                }
+                
+                renderSceneList();
             }
             
             document.getElementById('sceneSearch').addEventListener('input', handleSceneSearch);
-            document.getElementById('scriptInput').addEventListener('input', debounce(analyzeInput, 300));
         }
         
-        // Setup text selection handler
-        function setupTextSelection() {
-            const scriptViewer = document.getElementById('scriptViewer');
-            const toolbar = document.getElementById('selectionToolbar');
+        // Scene type detection
+        function getSceneType(heading) {
+            const h = heading.toUpperCase();
+            const isInt = h.includes('INT.');
+            const isExt = h.includes('EXT.');
+            const isDay = h.includes('DAY') || h.includes('MORNING') || h.includes('AFTERNOON');
+            const isNight = h.includes('NIGHT') || h.includes('EVENING') || h.includes('DUSK');
             
-            scriptViewer.addEventListener('mouseup', (e) => {
-                const selection = window.getSelection();
-                const text = selection.toString().trim();
-                
-                if (text && text.length > 0 && text.length < 100) {
-                    selectedText = text;
-                    
-                    const range = selection.getRangeAt(0);
-                    const rect = range.getBoundingClientRect();
-                    
-                    toolbar.style.left = rect.left + (rect.width / 2) - (toolbar.offsetWidth / 2) + 'px';
-                    toolbar.style.top = rect.top - 50 + window.scrollY + 'px';
-                    toolbar.classList.add('active');
-                } else {
-                    toolbar.classList.remove('active');
-                }
-            });
-            
-            document.addEventListener('mousedown', (e) => {
-                if (!toolbar.contains(e.target) && !scriptViewer.contains(e.target)) {
-                    toolbar.classList.remove('active');
-                }
-            });
+            if (isInt && isDay) return 'int-day';
+            if (isExt && isDay) return 'ext-day';
+            if (isInt && isNight) return 'int-night';
+            if (isExt && isNight) return 'ext-night';
+            return 'int-day';
         }
-        
-        // Tag selected text
-        function tagSelection(categoryId) {
-            if (!selectedText) return;
-            
-            if (!manualTags[currentScene]) {
-                manualTags[currentScene] = {};
-            }
-            if (!manualTags[currentScene][categoryId]) {
-                manualTags[currentScene][categoryId] = new Set();
-            }
-            
-            manualTags[currentScene][categoryId].add(selectedText);
-            
-            document.getElementById('selectionToolbar').classList.remove('active');
-            window.getSelection().removeAllRanges();
-            
-            saveProject();
-            populateAllElements();
-            renderSceneList();
-            highlightScriptElements();
-        }
-        
-        // Initialize tag categories
-        function initializeTagCategories() {
-            const container = document.getElementById('tagCategories');
-            container.innerHTML = '';
-            
-            tagCategories.forEach(category => {
-                const categoryEl = document.createElement('div');
-                categoryEl.className = 'tag-category';
-                categoryEl.innerHTML = `
-                    <div class="category-header" onclick="toggleCategory(this)">
-                        <div class="category-title">
-                            <div class="category-icon" style="background: ${category.color}"></div>
-                            <span>${category.name.toUpperCase()}</span>
-                        </div>
-                        <span class="category-count" id="count-${category.id}">0</span>
-                        <span class="category-expand">▼</span>
-                    </div>
-                    <div class="category-content">
-                        <div class="tag-list" id="tags-${category.id}">
-                        </div>
-                        <button class="add-tag-btn" onclick="openManualTagModal('${category.id}')">+ Add ${category.name}</button>
-                    </div>
-                `;
-                container.appendChild(categoryEl);
-            });
-            
-            const categorySelector = document.getElementById('categorySelector');
-            categorySelector.innerHTML = tagCategories.map(cat => `
-                <div class="category-option" data-category="${cat.id}" onclick="selectCategory('${cat.id}')">
-                    ${cat.name}
-                </div>
-            `).join('');
-        }
-        
-        // Toggle category expand/collapse
-        function toggleCategory(header) {
-            header.classList.toggle('collapsed');
-        }
-        
-        // Open manual tag modal
-        function openManualTagModal(categoryId) {
-            selectedCategoryForManual = categoryId;
-            document.getElementById('manualTagModal').classList.add('active');
-            document.getElementById('manualTagInput').value = '';
-            document.getElementById('manualTagInput').focus();
-            
-            document.querySelectorAll('.category-option').forEach(opt => {
-                opt.classList.toggle('selected', opt.dataset.category === categoryId);
-            });
-        }
-        
-        // Close manual tag modal
-        function closeManualTagModal() {
-            document.getElementById('manualTagModal').classList.remove('active');
-            selectedCategoryForManual = null;
-        }
-        
-        // Select category in modal
-        function selectCategory(categoryId) {
-            selectedCategoryForManual = categoryId;
-            document.querySelectorAll('.category-option').forEach(opt => {
-                opt.classList.toggle('selected', opt.dataset.category === categoryId);
-            });
-        }
-        
-        // Confirm manual tag
-        function confirmManualTag() {
-            const tagName = document.getElementById('manualTagInput').value.trim();
-            if (!tagName || !selectedCategoryForManual) return;
-            
-            if (!manualTags[currentScene]) {
-                manualTags[currentScene] = {};
-            }
-            if (!manualTags[currentScene][selectedCategoryForManual]) {
-                manualTags[currentScene][selectedCategoryForManual] = new Set();
-            }
-            
-            manualTags[currentScene][selectedCategoryForManual].add(tagName);
-            
-            closeManualTagModal();
-            saveProject();
-            populateAllElements();
-            renderSceneList();
-            highlightScriptElements();
-        }
-        
-        // AI Analysis - FIXED with proper error handling
-        async function runAIAnalysis() {
-            if (!scriptText || !scenes || scenes.length === 0) {
-                alert('Please import a script first');
-                return;
-            }
-            
-            console.log('Starting AI analysis for', scenes.length, 'scenes');
-            
-            const progressEl = document.getElementById('aiProgress');
-            const statusEl = document.getElementById('aiStatus');
-            const fillEl = document.getElementById('aiProgressFill');
-            
-            progressEl.classList.add('active');
-            fillEl.style.width = '0%';
-            
-            // Clear existing AI-detected elements
-            sceneElements = {};
-            
-            // Update cast patterns
-            const castCategory = tagCategories.find(c => c.id === 'cast');
-            if (castCategory) {
-                castCategory.patterns = Array.from(characters);
-            }
-            
-            // Process scenes with error handling
-            let successCount = 0;
-            let errorCount = 0;
-            
-            for (let i = 0; i < scenes.length; i++) {
-                try {
-                    statusEl.textContent = `Analyzing scene ${i + 1} of ${scenes.length}...`;
-                    fillEl.style.width = `${((i + 1) / scenes.length) * 100}%`;
-                    
-                    // Get scene content with validation
-                    const sceneContent = extractSceneContent(scenes[i]);
-                    
-                    if (!sceneContent || sceneContent.trim().length === 0) {
-                        console.warn(`Scene ${i + 1} has no content, skipping`);
-                        continue;
-                    }
-                    
-                    // Analyze scene
-                    const elements = analyzeSceneElements(sceneContent, i);
-                    sceneElements[i] = elements;
-                    
-                    // Generate synopsis
-                    const synopsis = generateSceneSynopsis(sceneContent, scenes[i].heading);
-                    scenes[i].synopsis = synopsis;
-                    
-                    successCount++;
-                    
-                    // Update UI every 3 scenes
-                    if (i % 3 === 0 || i === scenes.length - 1) {
-                        await new Promise(resolve => setTimeout(resolve, 10));
-                    }
-                    
-                } catch (error) {
-                    console.error(`Error analyzing scene ${i + 1}:`, error);
-                    errorCount++;
-                    
-                    // Continue with next scene instead of stopping
-                    if (!sceneElements[i]) {
-                        sceneElements[i] = {};
-                        tagCategories.forEach(cat => {
-                            sceneElements[i][cat.id] = new Set();
-                        });
-                    }
-                }
-            }
-            
-            console.log(`Analysis complete: ${successCount} scenes processed, ${errorCount} errors`);
-            
-            // Update UI
-            try {
-                populateAllElements();
-                renderSceneList();
-                highlightScriptElements();
-                saveProject();
-            } catch (error) {
-                console.error('Error updating UI:', error);
-            }
-            
-            statusEl.textContent = `Analysis complete! (${successCount}/${scenes.length} scenes)`;
-            fillEl.style.width = '100%';
-            
-            setTimeout(() => {
-                progressEl.classList.remove('active');
-            }, 2000);
-        }
-        
-        // Extract scene content with validation
-        function extractSceneContent(scene) {
-            if (!scene || !scriptText) return '';
-            
-            const lines = scriptText.split('\n');
-            const startLine = scene.lineNumber || 0;
-            let endLine = lines.length;
-            
-            const sceneIndex = scenes.indexOf(scene);
-            if (sceneIndex !== -1 && sceneIndex < scenes.length - 1) {
-                endLine = scenes[sceneIndex + 1].lineNumber;
-            }
-            
-            return lines.slice(startLine, endLine).join('\n');
-        }
-        
-        // Analyze scene - FIXED with validation
-        function analyzeSceneElements(content, sceneIndex) {
-            const elements = {};
-            
-            if (!content || typeof content !== 'string') {
-                console.warn('Invalid content for scene', sceneIndex);
-                tagCategories.forEach(category => {
-                    elements[category.id] = new Set();
-                });
-                return elements;
-            }
-            
-            const contentLower = content.toLowerCase();
-            
-            tagCategories.forEach(category => {
-                elements[category.id] = new Set();
-                
-                try {
-                    if (category.id === 'locations') {
-                        if (scenes[sceneIndex] && scenes[sceneIndex].heading) {
-                            const heading = scenes[sceneIndex].heading;
-                            const locationMatch = heading.match(/^(?:INT\.|EXT\.|INT\/EXT\.|I\/E\.)?\s*(.+?)(?:\s*-\s*|\s*$)/i);
-                            if (locationMatch && locationMatch[1]) {
-                                const location = locationMatch[1].split('-')[0].trim();
-                                if (location && location.length > 0) {
-                                    elements[category.id].add(location);
-                                }
-                            }
-                        }
-                    } else if (category.patterns && Array.isArray(category.patterns)) {
-                        category.patterns.forEach(pattern => {
-                            if (!pattern || pattern.length === 0) return;
-                            
-                            try {
-                                const escapedPattern = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                                const regex = new RegExp(`\\b${escapedPattern}s?\\b`, 'gi');
-                                const matches = content.match(regex);
-                                
-                                if (matches && Array.isArray(matches)) {
-                                    matches.forEach(match => {
-                                        const cleaned = match.trim();
-                                        if (cleaned.length > 1 && cleaned.length < 50) {
-                                            const capitalized = cleaned.charAt(0).toUpperCase() + cleaned.slice(1).toLowerCase();
-                                            elements[category.id].add(capitalized);
-                                        }
-                                    });
-                                }
-                            } catch (regexError) {
-                                console.warn(`Regex error for pattern "${pattern}":`, regexError);
-                            }
-                        });
-                    }
-                    
-                    // Special detections with error handling
-                    if (category.id === 'wardrobe') {
-                        try {
-                            const clothingRegex = /(?:wearing|dressed in|wears)\s+([^.]{1,50})/gi;
-                            let match;
-                            while ((match = clothingRegex.exec(content)) !== null && elements[category.id].size < 20) {
-                                const clothing = match[1].replace(/[,.]$/, '').trim();
-                                if (clothing.length > 2 && clothing.length < 50) {
-                                    elements[category.id].add(clothing);
-                                }
-                            }
-                        } catch (error) {
-                            console.warn('Error in wardrobe detection:', error);
-                        }
-                    }
-                    
-                    if (category.id === 'props') {
-                        try {
-                            const propsRegex = /(?:picks up|holds|grabs|takes|pulls out|draws|brandishes|carrying|carries)\s+(?:a |an |the |his |her |their )?([^.]{2,30})/gi;
-                            let match;
-                            while ((match = propsRegex.exec(content)) !== null && elements[category.id].size < 20) {
-                                const prop = match[1].replace(/[,.]$/, '').trim().split(' ').slice(0, 3).join(' ');
-                                if (prop.length > 2 && prop.length < 30) {
-                                    elements[category.id].add(prop);
-                                }
-                            }
-                        } catch (error) {
-                            console.warn('Error in props detection:', error);
-                        }
-                    }
-                    
-                } catch (error) {
-                    console.error(`Error processing category ${category.id}:`, error);
-                }
-            });
-            
-            return elements;
-        }
-        
-        // Generate scene synopsis - FIXED
-        function generateSceneSynopsis(content, heading) {
-            try {
-                if (!content || !heading) return 'Scene action';
-                
-                const lines = content.split('\n').filter(line => line && line.trim());
-                const contentLower = content.toLowerCase();
-                
-                // Extract characters
-                const charactersInScene = [];
-                lines.forEach((line, index) => {
-                    const trimmed = line.trim();
-                    if (trimmed && 
-                        trimmed === trimmed.toUpperCase() && 
-                        trimmed.length < 30 && 
-                        !trimmed.includes('.')) {
-                        const nextLine = lines[index + 1] ? lines[index + 1].trim() : '';
-                        if (nextLine && nextLine !== nextLine.toUpperCase()) {
-                            const charName = trimmed.replace(/\(.*\)/, '').trim();
-                            if (charName && charName.length > 0 && !charactersInScene.includes(charName)) {
-                                charactersInScene.push(charName);
-                            }
-                        }
-                    }
-                });
-                
-                // Build synopsis
-                let synopsis = '';
-                
-                if (charactersInScene.length > 0) {
-                    if (charactersInScene.length === 1) {
-                        synopsis = charactersInScene[0];
-                    } else if (charactersInScene.length === 2) {
-                        synopsis = `${charactersInScene[0]} and ${charactersInScene[1]}`;
-                    } else {
-                        synopsis = `${charactersInScene[0]}, ${charactersInScene[1]}, and others`;
-                    }
-                }
-                
-                // Add action if available
-                const actionLines = lines.filter((line, index) => {
-                    const trimmed = line.trim();
-                    const prevLine = index > 0 ? lines[index - 1].trim() : '';
-                    const isDialogue = prevLine && prevLine === prevLine.toUpperCase() && prevLine.length < 30;
-                    const isParenthetical = trimmed.startsWith('(') && trimmed.endsWith(')');
-                    const isCharacterName = trimmed === trimmed.toUpperCase() && trimmed.length < 30;
-                    
-                    return !isDialogue && !isParenthetical && !isCharacterName && trimmed.length > 10;
-                });
-                
-                if (actionLines.length > 0 && synopsis) {
-                    let action = actionLines[0].trim();
-                    action = action.replace(/\s+/g, ' ');
-                    if (action.length > 50) {
-                        action = action.substring(0, 47) + '...';
-                    }
-                    synopsis += ' - ' + action.charAt(0).toLowerCase() + action.slice(1);
-                }
-                
-                // Fallback
-                if (!synopsis || synopsis.length < 5) {
-                    const location = heading.replace(/^(INT\.|EXT\.|INT\/EXT\.|I\/E\.)?\s*/i, '')
-                                            .replace(/\s*-\s*(DAY|NIGHT|MORNING|AFTERNOON|EVENING|DUSK).*/i, '')
-                                            .trim();
-                    synopsis = location || 'Scene';
-                }
-                
-                if (synopsis.length > 100) {
-                    synopsis = synopsis.substring(0, 97) + '...';
-                }
-                
-                return synopsis;
-                
-            } catch (error) {
-                console.error('Error generating synopsis:', error);
-                return 'Scene action';
-            }
-        }
-        
-        // Populate all elements
-        function populateAllElements() {
-            tagCategories.forEach(category => {
-                const container = document.getElementById(`tags-${category.id}`);
-                if (container) container.innerHTML = '';
-            });
-            
-            const allElements = {};
-            tagCategories.forEach(category => {
-                allElements[category.id] = new Map();
-            });
-            
-            // Collect AI elements
-            Object.values(sceneElements).forEach(sceneData => {
-                if (sceneData && typeof sceneData === 'object') {
-                    Object.entries(sceneData).forEach(([categoryId, elements]) => {
-                        if (elements && elements.forEach) {
-                            elements.forEach(element => {
-                                if (element && typeof element === 'string' && !allElements[categoryId].has(element)) {
-                                    allElements[categoryId].set(element, 'ai');
-                                }
-                            });
-                        }
-                    });
-                }
-            });
-            
-            // Collect manual tags
-            Object.values(manualTags).forEach(sceneData => {
-                if (sceneData && typeof sceneData === 'object') {
-                    Object.entries(sceneData).forEach(([categoryId, elements]) => {
-                        if (elements && elements.forEach) {
-                            elements.forEach(element => {
-                                if (element && typeof element === 'string') {
-                                    allElements[categoryId].set(element, 'manual');
-                                }
-                            });
-                        }
-                    });
-                }
-            });
-            
-            // Display elements
-            Object.entries(allElements).forEach(([categoryId, elementsMap]) => {
-                const container = document.getElementById(`tags-${categoryId}`);
-                const countEl = document.getElementById(`count-${categoryId}`);
-                
-                if (container && countEl) {
-                    countEl.textContent = elementsMap.size;
-                    
-                    if (elementsMap.size > 0) {
-                        Array.from(elementsMap.entries()).forEach(([element, source]) => {
-                            const safeElement = element.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-                            const tagEl = document.createElement('div');
-                            tagEl.className = `tag-item ${source === 'ai' ? 'ai-detected' : ''}`;
-                            tagEl.innerHTML = `
-                                <div class="tag-item-text">
-                                    <span>${element}</span>
-                                    ${source === 'ai' ? '<span class="tag-badge">AI</span>' : ''}
-                                </div>
-                                <button class="tag-remove" onclick="removeTag('${categoryId}', '${safeElement}')">×</button>
-                            `;
-                            container.appendChild(tagEl);
-                        });
-                    }
-                }
-            });
-        }
-        
-        // Remove tag
-        function removeTag(categoryId, element) {
-            Object.keys(sceneElements).forEach(sceneIdx => {
-                if (sceneElements[sceneIdx][categoryId]) {
-                    sceneElements[sceneIdx][categoryId].delete(element);
-                }
-            });
-            
-            Object.keys(manualTags).forEach(sceneIdx => {
-                if (manualTags[sceneIdx] && manualTags[sceneIdx][categoryId]) {
-                    manualTags[sceneIdx][categoryId].delete(element);
-                }
-            });
-            
-            saveProject();
-            populateAllElements();
-            renderSceneList();
-            highlightScriptElements();
-        }
-        
-        // Highlight elements in script - FIXED with validation
-        function highlightScriptElements() {
-            if (!scenes || scenes.length === 0 || !scriptText) return;
-            
-            try {
-                const container = document.getElementById('scriptContent');
-                const lines = scriptText.split('\n');
-                let html = '';
-                let inScene = false;
-                let currentSceneIdx = 0;
-                
-                for (let i = 0; i < lines.length; i++) {
-                    const line = lines[i];
-                    const trimmed = line.trim();
-                    
-                    const isSceneHeading = scenes.some(s => s.lineNumber === i);
-                    
-                    if (isSceneHeading) {
-                        if (inScene) {
-                            html += '</div>';
-                        }
-                        
-                        const scene = scenes[currentSceneIdx];
-                        if (scene) {
-                            html += `<div class="script-scene" id="scene-${scene.number}">`;
-                            html += `<div class="scene-header-wrapper">`;
-                            html += `<span class="scene-number-badge">Scene ${scene.number}</span>`;
-                            html += `<div class="script-scene-heading">${trimmed}</div>`;
-                            html += `<button class="scene-edit-btn" onclick="editSceneBreak(${currentSceneIdx})">Edit</button>`;
-                            html += `</div>`;
-                        }
-                        
-                        inScene = true;
-                        currentSceneIdx++;
-                    } else if (trimmed) {
-                        let sceneIdx = currentSceneIdx - 1;
-                        let highlightedLine = trimmed;
-                        
-                        // Apply highlights with validation
-                        if (sceneIdx >= 0 && (sceneElements[sceneIdx] || manualTags[sceneIdx])) {
-                            tagCategories.forEach(category => {
-                                try {
-                                    const aiElements = sceneElements[sceneIdx]?.[category.id] || new Set();
-                                    const manualElements = manualTags[sceneIdx]?.[category.id] || new Set();
-                                    const allElements = new Set([...aiElements, ...manualElements]);
-                                    
-                                    allElements.forEach(element => {
-                                        if (!element || typeof element !== 'string' || element.length === 0) return;
-                                        
-                                        try {
-                                            const escapedElement = element.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                                            if (escapedElement && escapedElement.length > 0) {
-                                                const regex = new RegExp(`\\b(${escapedElement})\\b`, 'gi');
-                                                highlightedLine = highlightedLine.replace(regex, `<span class="highlight ${category.id}">$1</span>`);
-                                            }
-                                        } catch (regexError) {
-                                            console.warn(`Regex error for element "${element}":`, regexError);
-                                        }
-                                    });
-                                } catch (error) {
-                                    console.warn(`Error highlighting category ${category.id}:`, error);
-                                }
-                            });
-                        }
-                        
-                        // Determine element type
-                        if (trimmed === trimmed.toUpperCase() && trimmed.length < 30 && 
-                            !trimmed.includes('.') && !trimmed.includes(':')) {
-                            html += `<div class="script-character">${highlightedLine}</div>`;
-                        } else if (trimmed.startsWith('(') && trimmed.endsWith(')')) {
-                            html += `<div class="script-parenthetical">${highlightedLine}</div>`;
-                        } else if (trimmed.includes('CUT TO:') || trimmed.includes('FADE')) {
-                            html += `<div class="script-transition">${highlightedLine}</div>`;
-                        } else {
-                            const prevLine = i > 0 ? lines[i - 1].trim() : '';
-                            if (prevLine && prevLine === prevLine.toUpperCase() && prevLine.length < 30) {
-                                html += `<div class="script-dialogue">${highlightedLine}</div>`;
-                            } else {
-                                html += `<div class="script-action">${highlightedLine}</div>`;
-                            }
-                        }
-                    }
-                }
-                
-                if (inScene) {
-                    html += '</div>';
-                }
-                
-                container.innerHTML = html || '<div class="empty-state"><div class="empty-icon">—</div><div class="empty-title">Processing...</div></div>';
-            } catch (error) {
-                console.error('Error highlighting script:', error);
-            }
-        }
-        
-        // Enhanced AI Cleanup
-        function aiCleanup() {
-            let text = document.getElementById('scriptInput').value;
-            if (!text) return;
-            
-            text = text.replace(/([a-z])([A-Z])/g, (match, p1, p2, offset, string) => {
-                const before = string.substring(Math.max(0, offset - 10), offset);
-                if (/\bMc/.test(before + p1 + p2) || /^[A-Z][a-z]+[A-Z]/.test(p1 + p2)) {
-                    return p1 + p2;
-                }
-                return p1 + ' ' + p2;
-            });
-            
-            text = text.replace(/^(\d+)?\.?\s*(INT|EXT|I\/E)(ERIOR|ERIOR)?\.?\s*[-–—]?\s*/gim, (match, num, type) => {
-                const sceneNum = num ? `${num}. ` : '';
-                return `\n\n${sceneNum}${type}. `;
-            });
-            
-            const lines = text.split('\n');
-            const fixedLines = [];
-            
-            for (let i = 0; i < lines.length; i++) {
-                let line = lines[i];
-                const trimmed = line.trim();
-                
-                if (trimmed && trimmed === trimmed.toUpperCase() && trimmed.length < 30 && !trimmed.includes('.')) {
-                    if (i > 0 && fixedLines[fixedLines.length - 1].trim() !== '') {
-                        fixedLines.push('');
-                    }
-                    fixedLines.push(trimmed);
-                } else {
-                    fixedLines.push(line);
-                }
-            }
-            
-            text = fixedLines.join('\n');
-            text = text.replace(/([.!?])\s*([A-Z])/g, '$1\n\n$2');
-            text = text.replace(/\n{4,}/g, '\n\n\n');
-            text = text.replace(/^\s+|\s+$/gm, '');
-            text = text.replace(/\n\s*\(([^)]+)\)\s*\n/g, '\n($1)\n');
-            
-            document.getElementById('scriptInput').value = text;
-            analyzeInput();
-        }
-        
-        // Fix formatting
-        function fixFormatting() {
-            let text = document.getElementById('scriptInput').value;
-            if (!text) return;
-            
-            const lines = text.split('\n');
-            const formatted = [];
-            
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i].trim();
-                const nextLine = lines[i + 1] ? lines[i + 1].trim() : '';
-                
-                if (/^(INT\.|EXT\.|INT\/EXT\.)/.test(line)) {
-                    if (i > 0 && formatted[formatted.length - 1] !== '') {
-                        formatted.push('');
-                    }
-                    formatted.push(line);
-                    if (nextLine !== '') {
-                        formatted.push('');
-                    }
-                } else if (line && line === line.toUpperCase() && line.length < 30 && 
-                         !line.includes('.') && !line.includes('FADE') && !line.includes('CUT')) {
-                    if (i > 0 && formatted[formatted.length - 1] !== '') {
-                        formatted.push('');
-                    }
-                    formatted.push(line);
-                } else {
-                    formatted.push(line);
-                }
-            }
-            
-            document.getElementById('scriptInput').value = formatted.join('\n');
-            analyzeInput();
-        }
-        
-        // Clear input
-        function clearInput() {
-            if (confirm('Clear all text?')) {
-                document.getElementById('scriptInput').value = '';
-                analyzeInput();
-            }
-        }
-        
-        // Analyze input
-        function analyzeInput() {
-            const text = document.getElementById('scriptInput').value;
-            if (!text.trim()) {
-                updatePreview(0, 0, 0);
-                return;
-            }
-            
-            const detectedScenes = detectScenesInText(text);
-            const detectedCharacters = detectCharactersInText(text);
-            const wordCount = text.trim().split(/\s+/).length;
-            const pageEstimate = Math.ceil(wordCount / 130);
-            
-            updatePreview(detectedScenes.length, detectedCharacters.size, pageEstimate);
-        }
-        
-        // Detect scenes
-        function detectScenesInText(text) {
-            const lines = text.split('\n');
-            const detectedScenes = [];
-            
-            const patterns = [
-                /^(\d+\.?\s*)?(INT\.|EXT\.|INT\/EXT\.|I\/E\.).*$/i,
-                /^(\d+\.?\s*)?(INTERIOR|EXTERIOR).*$/i,
-                /^(INT|EXT)\s+[-–—]\s+.+$/i
-            ];
-            
-            lines.forEach((line, index) => {
-                const trimmed = line.trim();
-                
-                for (let pattern of patterns) {
-                    if (pattern.test(trimmed)) {
-                        detectedScenes.push({
-                            number: detectedScenes.length + 1,
-                            heading: trimmed,
-                            lineNumber: index
-                        });
-                        break;
-                    }
-                }
-            });
-            
-            return detectedScenes;
-        }
-        
-        // Detect characters
-        function detectCharactersInText(text) {
-            const lines = text.split('\n');
-            const detectedCharacters = new Set();
-            const excludeWords = ['FADE IN', 'FADE OUT', 'CUT TO', 'DISSOLVE TO', 'MATCH CUT', 'THE END', 'CONTINUED'];
-            
-            lines.forEach((line, index) => {
-                const trimmed = line.trim();
-                
-                if (trimmed && 
-                    trimmed === trimmed.toUpperCase() && 
-                    trimmed.length < 30 && 
-                    trimmed.length > 1 &&
-                    !trimmed.includes('.') &&
-                    !trimmed.includes(':') &&
-                    !excludeWords.some(word => trimmed.includes(word))) {
-                    
-                    const nextLine = lines[index + 1] ? lines[index + 1].trim() : '';
-                    if (nextLine && nextLine !== nextLine.toUpperCase()) {
-                        const cleaned = trimmed.replace(/\(.*\)/, '').trim();
-                        if (cleaned && cleaned.length > 1) {
-                            detectedCharacters.add(cleaned);
-                        }
-                    }
-                }
-            });
-            
-            return detectedCharacters;
-        }
-        
-        // Update preview
-        function updatePreview(sceneCount, characterCount, pageCount) {
-            document.getElementById('previewScenes').textContent = sceneCount;
-            document.getElementById('previewCharacters').textContent = characterCount;
-            document.getElementById('previewPages').textContent = pageCount;
-        }
-        
-        // Process script
-        function processScript() {
-            const text = document.getElementById('scriptInput').value;
-            
-            if (!text.trim()) {
-                alert('Please paste your screenplay first');
-                return;
-            }
-            
-            scriptText = text;
-            currentProject.scriptContent = text;
-            saveProject();
-            loadScript(text);
-            closeImportModal();
+
+        function getSceneTypeLabel(sceneType) {
+            const labels = {
+                'int-day': 'INT / DAY',
+                'ext-day': 'EXT / DAY',
+                'int-night': 'INT / NIGHT',
+                'ext-night': 'EXT / NIGHT'
+            };
+            return labels[sceneType] || '';
         }
         
         // Load script
         function loadScript(text) {
             scriptText = text;
             
-            if (currentProject.scenes && Array.isArray(currentProject.scenes) && 
-                currentProject.scenes.length > 0 && currentProject.scenes[0].heading) {
+            if (currentProject.scenes && Array.isArray(currentProject.scenes) && currentProject.scenes.length > 0) {
                 scenes = currentProject.scenes;
             } else {
-                scenes = detectScenesInText(text);
+                scenes = detectScenes(text);
             }
             
-            characters = detectCharactersInText(text);
+            characters = detectCharacters(text);
             
             document.getElementById('sceneCount').textContent = scenes.length;
-            renderSceneList();
-            renderScript(text);
             
-            if (!currentProject.scenes || !Array.isArray(currentProject.scenes)) {
-                currentProject.scenes = scenes;
-            }
+            renderSceneList();
+            renderScript();
+            
+            currentProject.scenes = scenes;
             currentProject.sceneCount = scenes.length;
             currentProject.characters = Array.from(characters);
             saveProject();
+        }
+        
+        // Detect scenes
+        function detectScenes(text) {
+            const lines = text.split('\n');
+            const detected = [];
+            
+            const patterns = [
+                /^(\d+\.?\s*)?(INT\.|EXT\.|INT\/EXT\.|I\/E\.).*$/i,
+                /^(INT|EXT)\s+[-–—]\s+.+$/i
+            ];
+            
+            lines.forEach((line, index) => {
+                const trimmed = line.trim();
+                for (let pattern of patterns) {
+                    if (pattern.test(trimmed)) {
+                        detected.push({
+                            number: detected.length + 1,
+                            heading: trimmed,
+                            lineNumber: index,
+                            synopsis: null
+                        });
+                        break;
+                    }
+                }
+            });
+            
+            return detected;
+        }
+        
+        // Detect characters
+        function detectCharacters(text) {
+            const lines = text.split('\n');
+            const chars = new Set();
+            const exclude = ['FADE IN', 'FADE OUT', 'CUT TO', 'DISSOLVE TO', 'THE END', 'CONTINUED'];
+            
+            lines.forEach((line, index) => {
+                const trimmed = line.trim();
+                if (trimmed && 
+                    trimmed === trimmed.toUpperCase() && 
+                    trimmed.length < 30 && 
+                    trimmed.length > 1 &&
+                    !trimmed.includes('.') &&
+                    !trimmed.includes(':') &&
+                    !exclude.some(word => trimmed.includes(word))) {
+                    
+                    const nextLine = lines[index + 1] ? lines[index + 1].trim() : '';
+                    if (nextLine && nextLine !== nextLine.toUpperCase()) {
+                        const cleaned = trimmed.replace(/\(.*\)/, '').trim();
+                        if (cleaned) chars.add(cleaned);
+                    }
+                }
+            });
+            
+            return chars;
         }
         
         // Render scene list
         function renderSceneList() {
             const container = document.getElementById('sceneList');
             
-            if (!scenes || scenes.length === 0) {
+            if (scenes.length === 0) {
                 container.innerHTML = '<div class="empty-state"><div class="empty-icon">—</div><div class="empty-desc">No scenes detected</div></div>';
                 return;
             }
             
             container.innerHTML = scenes.map((scene, index) => {
-                const sceneTags = {};
-                
-                if (sceneElements[index]) {
-                    Object.entries(sceneElements[index]).forEach(([catId, elements]) => {
-                        if (elements && elements.size > 0) {
-                            if (!sceneTags[catId]) sceneTags[catId] = 0;
-                            sceneTags[catId] += elements.size;
-                        }
-                    });
-                }
-                
-                if (manualTags[index]) {
-                    Object.entries(manualTags[index]).forEach(([catId, elements]) => {
-                        if (elements && elements.size > 0) {
-                            if (!sceneTags[catId]) sceneTags[catId] = 0;
-                            sceneTags[catId] += elements.size;
-                        }
-                    });
-                }
-                
-                const totalElements = Object.values(sceneTags).reduce((a, b) => a + b, 0);
                 const sceneType = getSceneType(scene.heading);
                 const sceneTypeLabel = getSceneTypeLabel(sceneType);
-                
-                const tagChipsHTML = Object.entries(sceneTags).map(([catId, count]) => {
-                    return `<div class="scene-tag-chip ${catId}">${count}</div>`;
-                }).join('');
+                const breakdown = sceneBreakdowns[index] || {};
+                const cast = breakdown.cast || [];
                 
                 return `
-                    <div class="scene-item ${sceneType} ${index === currentScene ? 'active' : ''}" onclick="selectScene(${index})">
+                    <div class="scene-item ${sceneType} ${currentScene === index ? 'active' : ''}" onclick="selectScene(${index})">
                         <div class="scene-header">
                             <div class="scene-number">${scene.number}</div>
                             <div class="scene-info">
                                 <div class="scene-heading">${scene.heading}</div>
-                                ${scene.synopsis ? `<div class="scene-synopsis">${scene.synopsis}</div>` : ''}
                                 <div class="scene-meta">
                                     <span class="scene-type-indicator ${sceneType}">${sceneTypeLabel}</span>
-                                    <span>${totalElements} elements</span>
                                 </div>
-                                ${tagChipsHTML ? `<div class="scene-tags">${tagChipsHTML}</div>` : ''}
+                                ${scene.synopsis ? `<div class="scene-synopsis">${scene.synopsis}</div>` : `<div class="scene-synopsis placeholder">No synopsis yet</div>`}
+                                ${!scene.synopsis ? `<button class="generate-synopsis-btn" onclick="event.stopPropagation(); generateSynopsis(${index})">Generate Synopsis</button>` : ''}
+                                ${cast.length > 0 ? `
+                                    <div class="scene-cast-list">
+                                        ${cast.map(c => `<div class="cast-chip">${c}</div>`).join('')}
+                                    </div>
+                                ` : ''}
                             </div>
                         </div>
                     </div>
@@ -2480,191 +1017,437 @@ This is it. Today's the day."></textarea>
             }).join('');
         }
         
-        // Render script
-        function renderScript(text) {
-            highlightScriptElements();
-        }
-        
         // Select scene
         function selectScene(index) {
             currentScene = index;
+            renderSceneList();
+            renderBreakdownDashboard();
             
-            document.querySelectorAll('.scene-item').forEach((item, i) => {
-                item.classList.toggle('active', i === index);
-            });
-            
+            // Scroll to scene in script
             const sceneEl = document.getElementById(`scene-${scenes[index].number}`);
             if (sceneEl) {
                 sceneEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
         }
         
-        // Handle scene search
-        function handleSceneSearch(e) {
-            const searchTerm = e.target.value.toLowerCase();
-            const sceneItems = document.querySelectorAll('.scene-item');
+        // Generate synopsis for specific scene
+        async function generateSynopsis(sceneIndex) {
+            const scene = scenes[sceneIndex];
+            const content = extractSceneContent(scene);
             
-            sceneItems.forEach((item, index) => {
-                const heading = scenes[index].heading.toLowerCase();
-                item.style.display = heading.includes(searchTerm) ? 'block' : 'none';
+            // Simple AI-like analysis
+            const synopsis = analyzeSceneContent(content, scene.heading);
+            scene.synopsis = synopsis;
+            
+            // Auto-detect cast in this scene
+            const detectedCast = detectCastInScene(content);
+            if (!sceneBreakdowns[sceneIndex]) {
+                sceneBreakdowns[sceneIndex] = {};
+            }
+            if (!sceneBreakdowns[sceneIndex].cast) {
+                sceneBreakdowns[sceneIndex].cast = [];
+            }
+            
+            detectedCast.forEach(castMember => {
+                if (!sceneBreakdowns[sceneIndex].cast.includes(castMember)) {
+                    sceneBreakdowns[sceneIndex].cast.push(castMember);
+                    
+                    // Add to cast profiles
+                    if (!castProfiles[castMember]) {
+                        castProfiles[castMember] = {
+                            name: castMember,
+                            makeup: '',
+                            wardrobe: '',
+                            scenes: []
+                        };
+                    }
+                    if (!castProfiles[castMember].scenes.includes(scene.number)) {
+                        castProfiles[castMember].scenes.push(scene.number);
+                    }
+                }
             });
+            
+            saveProject();
+            renderSceneList();
+            if (currentScene === sceneIndex) {
+                renderBreakdownDashboard();
+            }
         }
         
-        // Open import modal
+        // Extract scene content
+        function extractSceneContent(scene) {
+            const lines = scriptText.split('\n');
+            const startLine = scene.lineNumber;
+            let endLine = lines.length;
+            
+            const sceneIndex = scenes.indexOf(scene);
+            if (sceneIndex < scenes.length - 1) {
+                endLine = scenes[sceneIndex + 1].lineNumber;
+            }
+            
+            return lines.slice(startLine, endLine).join('\n');
+        }
+        
+        // Analyze scene content
+        function analyzeSceneContent(content, heading) {
+            const lines = content.split('\n').filter(l => l.trim());
+            
+            // Get characters
+            const chars = [];
+            lines.forEach((line, i) => {
+                const trimmed = line.trim();
+                if (trimmed === trimmed.toUpperCase() && trimmed.length < 30 && !trimmed.includes('.')) {
+                    const nextLine = lines[i + 1] ? lines[i + 1].trim() : '';
+                    if (nextLine && nextLine !== nextLine.toUpperCase()) {
+                        const charName = trimmed.replace(/\(.*\)/, '').trim();
+                        if (charName && !chars.includes(charName)) {
+                            chars.push(charName);
+                        }
+                    }
+                }
+            });
+            
+            // Build synopsis
+            let synopsis = '';
+            if (chars.length > 0) {
+                if (chars.length === 1) {
+                    synopsis = chars[0];
+                } else if (chars.length === 2) {
+                    synopsis = `${chars[0]} and ${chars[1]}`;
+                } else {
+                    synopsis = `${chars[0]}, ${chars[1]}, and others`;
+                }
+            }
+            
+            // Find action
+            const actionLines = lines.filter((line, i) => {
+                const trimmed = line.trim();
+                const prevLine = i > 0 ? lines[i - 1].trim() : '';
+                const isDialogue = prevLine === prevLine.toUpperCase() && prevLine.length < 30;
+                const isChar = trimmed === trimmed.toUpperCase();
+                return !isDialogue && !isChar && trimmed.length > 15;
+            });
+            
+            if (actionLines.length > 0 && synopsis) {
+                let action = actionLines[0].trim();
+                if (action.length > 50) action = action.substring(0, 47) + '...';
+                synopsis += ' - ' + action.charAt(0).toLowerCase() + action.slice(1);
+            }
+            
+            if (!synopsis) {
+                const location = heading.replace(/^(INT\.|EXT\.)?\s*/i, '').replace(/\s*-\s*(DAY|NIGHT).*/i, '').trim();
+                synopsis = location || 'Scene action';
+            }
+            
+            return synopsis.length > 100 ? synopsis.substring(0, 97) + '...' : synopsis;
+        }
+        
+        // Detect cast in scene
+        function detectCastInScene(content) {
+            const lines = content.split('\n');
+            const cast = [];
+            
+            lines.forEach((line, i) => {
+                const trimmed = line.trim();
+                if (trimmed === trimmed.toUpperCase() && trimmed.length < 30 && !trimmed.includes('.')) {
+                    const nextLine = lines[i + 1] ? lines[i + 1].trim() : '';
+                    if (nextLine && nextLine !== nextLine.toUpperCase()) {
+                        const charName = trimmed.replace(/\(.*\)/, '').trim();
+                        if (charName && !cast.includes(charName)) {
+                            cast.push(charName);
+                        }
+                    }
+                }
+            });
+            
+            return cast;
+        }
+        
+        // Render breakdown dashboard
+        function renderBreakdownDashboard() {
+            const container = document.getElementById('breakdownDashboard');
+            
+            if (currentScene === null) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">📋</div>
+                        <div class="empty-title">Select a Scene</div>
+                        <div class="empty-desc">Choose a scene to view and edit its breakdown</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            const scene = scenes[currentScene];
+            const breakdown = sceneBreakdowns[currentScene] || {};
+            
+            let html = `
+                <div class="dashboard-header">
+                    <div class="dashboard-scene-title">Scene ${scene.number}</div>
+                    <div class="dashboard-scene-heading">${scene.heading}</div>
+                </div>
+            `;
+            
+            categories.forEach(cat => {
+                const elements = breakdown[cat.id] || [];
+                html += `
+                    <div class="breakdown-section">
+                        <div class="section-header">
+                            <div class="section-title">
+                                <span class="section-icon" style="background: ${cat.color}"></span>
+                                ${cat.name}
+                            </div>
+                            <button class="add-element-btn" onclick="openAddElement('${cat.id}')">+ Add</button>
+                        </div>
+                        <div class="element-list">
+                            ${elements.length === 0 ? `<div class="empty-state"><div class="empty-desc">No ${cat.name.toLowerCase()} yet</div></div>` : ''}
+                            ${elements.map(el => `
+                                <div class="element-item ${cat.id}${cat.id === 'cast' ? '" onclick="openCastProfile(\'' + el + '\')"' : ''}">
+                                    <div class="element-text">${el}</div>
+                                    <button class="element-remove" onclick="event.stopPropagation(); removeElement('${cat.id}', '${el.replace(/'/g, "\\'")}')">×</button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        // Add element
+        function openAddElement(categoryId) {
+            currentElementCategory = categoryId;
+            document.getElementById('addElementModal').classList.add('active');
+            document.getElementById('elementInput').value = '';
+            document.getElementById('elementInput').focus();
+        }
+        
+        function closeAddElementModal() {
+            document.getElementById('addElementModal').classList.remove('active');
+            currentElementCategory = null;
+        }
+        
+        function confirmAddElement() {
+            const value = document.getElementById('elementInput').value.trim();
+            if (!value || !currentElementCategory) return;
+            
+            if (!sceneBreakdowns[currentScene]) {
+                sceneBreakdowns[currentScene] = {};
+            }
+            if (!sceneBreakdowns[currentScene][currentElementCategory]) {
+                sceneBreakdowns[currentScene][currentElementCategory] = [];
+            }
+            
+            if (!sceneBreakdowns[currentScene][currentElementCategory].includes(value)) {
+                sceneBreakdowns[currentScene][currentElementCategory].push(value);
+                
+                // If adding cast, update profile
+                if (currentElementCategory === 'cast') {
+                    if (!castProfiles[value]) {
+                        castProfiles[value] = {
+                            name: value,
+                            makeup: '',
+                            wardrobe: '',
+                            scenes: []
+                        };
+                    }
+                    if (!castProfiles[value].scenes.includes(scenes[currentScene].number)) {
+                        castProfiles[value].scenes.push(scenes[currentScene].number);
+                    }
+                }
+                
+                saveProject();
+                renderBreakdownDashboard();
+                renderSceneList();
+            }
+            
+            closeAddElementModal();
+        }
+        
+        // Remove element
+        function removeElement(categoryId, element) {
+            if (!sceneBreakdowns[currentScene] || !sceneBreakdowns[currentScene][categoryId]) return;
+            
+            sceneBreakdowns[currentScene][categoryId] = sceneBreakdowns[currentScene][categoryId].filter(e => e !== element);
+            
+            // Update cast profile
+            if (categoryId === 'cast' && castProfiles[element]) {
+                castProfiles[element].scenes = castProfiles[element].scenes.filter(s => s !== scenes[currentScene].number);
+            }
+            
+            saveProject();
+            renderBreakdownDashboard();
+            renderSceneList();
+        }
+        
+        // Cast profiles
+        function openCastProfile(castMember) {
+            currentCastMember = castMember;
+            const profile = castProfiles[castMember] || {
+                name: castMember,
+                makeup: '',
+                wardrobe: '',
+                scenes: []
+            };
+            
+            document.getElementById('castProfileTitle').textContent = `${castMember} - Profile`;
+            document.getElementById('castName').value = castMember;
+            document.getElementById('castMakeup').value = profile.makeup || '';
+            document.getElementById('castWardrobe').value = profile.wardrobe || '';
+            
+            const appearancesList = document.getElementById('castAppearances');
+            appearancesList.innerHTML = profile.scenes.length > 0 
+                ? profile.scenes.sort((a, b) => a - b).map(s => `<div class="appearance-chip">Scene ${s}</div>`).join('')
+                : '<div style="color: var(--text-muted); font-size: 0.75em;">No scenes yet</div>';
+            
+            document.getElementById('castProfileModal').classList.add('active');
+        }
+        
+        function closeCastProfile() {
+            document.getElementById('castProfileModal').classList.remove('active');
+            currentCastMember = null;
+        }
+        
+        function saveCastProfile() {
+            if (!currentCastMember) return;
+            
+            if (!castProfiles[currentCastMember]) {
+                castProfiles[currentCastMember] = {
+                    name: currentCastMember,
+                    scenes: []
+                };
+            }
+            
+            castProfiles[currentCastMember].makeup = document.getElementById('castMakeup').value;
+            castProfiles[currentCastMember].wardrobe = document.getElementById('castWardrobe').value;
+            
+            saveProject();
+            closeCastProfile();
+        }
+        
+        function viewCastProfiles() {
+            // TODO: Navigate to cast profiles view
+            alert('Cast Profiles view coming soon!\n\nFor now, click on cast members in the scene breakdown to edit their profiles.');
+        }
+        
+        // Render script
+        function renderScript() {
+            if (!scriptText) return;
+            
+            const container = document.getElementById('scriptContent');
+            const lines = scriptText.split('\n');
+            let html = '';
+            let inScene = false;
+            let sceneIdx = 0;
+            
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                const trimmed = line.trim();
+                
+                const isSceneHeading = scenes.some(s => s.lineNumber === i);
+                
+                if (isSceneHeading) {
+                    if (inScene) html += '</div>';
+                    
+                    const scene = scenes[sceneIdx];
+                    html += `<div class="script-scene" id="scene-${scene.number}">`;
+                    html += `<div class="scene-header-wrapper">`;
+                    html += `<span class="scene-number-badge">Scene ${scene.number}</span>`;
+                    html += `<div class="script-scene-heading">${trimmed}</div>`;
+                    html += `</div>`;
+                    
+                    inScene = true;
+                    sceneIdx++;
+                } else if (trimmed) {
+                    if (trimmed === trimmed.toUpperCase() && trimmed.length < 30 && !trimmed.includes('.')) {
+                        html += `<div class="script-character">${trimmed}</div>`;
+                    } else if (trimmed.startsWith('(') && trimmed.endsWith(')')) {
+                        html += `<div class="script-parenthetical">${trimmed}</div>`;
+                    } else if (trimmed.includes('CUT TO:') || trimmed.includes('FADE')) {
+                        html += `<div class="script-transition">${trimmed}</div>`;
+                    } else {
+                        const prevLine = i > 0 ? lines[i - 1].trim() : '';
+                        if (prevLine === prevLine.toUpperCase() && prevLine.length < 30) {
+                            html += `<div class="script-dialogue">${trimmed}</div>`;
+                        } else {
+                            html += `<div class="script-action">${trimmed}</div>`;
+                        }
+                    }
+                }
+            }
+            
+            if (inScene) html += '</div>';
+            container.innerHTML = html;
+        }
+        
+        // Import modal
         function openImportModal() {
             document.getElementById('importModal').classList.add('active');
             if (currentProject.scriptContent) {
                 document.getElementById('scriptInput').value = currentProject.scriptContent;
-                analyzeInput();
             }
         }
         
-        // Close import modal
         function closeImportModal() {
             document.getElementById('importModal').classList.remove('active');
         }
         
-        // Edit scene break
-        function editSceneBreak(sceneIndex) {
-            const scene = scenes[sceneIndex];
-            if (!scene) return;
-            
-            const modal = document.getElementById('sceneBreakModal');
-            modal.classList.add('active');
-            modal.dataset.editIndex = sceneIndex;
-            
-            document.getElementById('sceneBreakTitle').textContent = 'Edit Scene';
-            document.getElementById('sceneBreakHeading').value = scene.heading;
-        }
-        
-        // Confirm scene break
-        function confirmSceneBreak() {
-            const heading = document.getElementById('sceneBreakHeading').value.trim();
-            if (!heading) {
-                alert('Please enter a scene heading');
+        function processScript() {
+            const text = document.getElementById('scriptInput').value;
+            if (!text.trim()) {
+                alert('Please paste your screenplay');
                 return;
             }
             
-            const modal = document.getElementById('sceneBreakModal');
-            const editIndex = modal.dataset.editIndex;
-            
-            if (editIndex !== undefined && scenes[editIndex]) {
-                scenes[editIndex].heading = heading;
-                delete modal.dataset.editIndex;
-            }
-            
-            closeSceneBreakModal();
-            saveProject();
-            renderSceneList();
-            highlightScriptElements();
+            scriptText = text;
+            currentProject.scriptContent = text;
+            loadScript(text);
+            closeImportModal();
         }
         
-        // Close scene break modal
-        function closeSceneBreakModal() {
-            const modal = document.getElementById('sceneBreakModal');
-            modal.classList.remove('active');
-            delete modal.dataset.editIndex;
+        // Search
+        function handleSceneSearch(e) {
+            const term = e.target.value.toLowerCase();
+            document.querySelectorAll('.scene-item').forEach((item, index) => {
+                const heading = scenes[index].heading.toLowerCase();
+                item.style.display = heading.includes(term) ? 'block' : 'none';
+            });
+        }
+        
+        // Zoom
+        function zoomIn() {
+            const el = document.querySelector('.script-content');
+            const size = parseFloat(window.getComputedStyle(el).fontSize);
+            el.style.fontSize = (size * 1.1) + 'px';
+        }
+        
+        function zoomOut() {
+            const el = document.querySelector('.script-content');
+            const size = parseFloat(window.getComputedStyle(el).fontSize);
+            el.style.fontSize = (size * 0.9) + 'px';
         }
         
         // Save project
         function saveProject() {
-            try {
-                const serializableElements = {};
-                Object.entries(sceneElements).forEach(([sceneIdx, categories]) => {
-                    serializableElements[sceneIdx] = {};
-                    Object.entries(categories).forEach(([catId, elements]) => {
-                        serializableElements[sceneIdx][catId] = Array.from(elements);
-                    });
-                });
-                
-                const serializableManualTags = {};
-                Object.entries(manualTags).forEach(([sceneIdx, categories]) => {
-                    serializableManualTags[sceneIdx] = {};
-                    Object.entries(categories).forEach(([catId, elements]) => {
-                        serializableManualTags[sceneIdx][catId] = Array.from(elements);
-                    });
-                });
-                
-                currentProject.sceneElements = serializableElements;
-                currentProject.manualTags = serializableManualTags;
-                currentProject.scenes = scenes;
-                
-                localStorage.setItem('currentProject', JSON.stringify(currentProject));
-                
-                const projects = JSON.parse(localStorage.getItem('checksHappyProjects') || '[]');
-                const index = projects.findIndex(p => p.id === currentProject.id);
-                if (index !== -1) {
-                    projects[index] = currentProject;
-                    localStorage.setItem('checksHappyProjects', JSON.stringify(projects));
-                }
-            } catch (error) {
-                console.error('Error saving project:', error);
-            }
-        }
-        
-        // Zoom functions
-        function zoomIn() {
-            const container = document.querySelector('.script-content');
-            if (container) {
-                const currentSize = parseFloat(window.getComputedStyle(container).fontSize);
-                container.style.fontSize = (currentSize * 1.1) + 'px';
-            }
-        }
-        
-        function zoomOut() {
-            const container = document.querySelector('.script-content');
-            if (container) {
-                const currentSize = parseFloat(window.getComputedStyle(container).fontSize);
-                container.style.fontSize = (currentSize * 0.9) + 'px';
-            }
-        }
-        
-        // Utility functions
-        function debounce(func, wait) {
-            let timeout;
-            return function executedFunction(...args) {
-                const later = () => {
-                    clearTimeout(timeout);
-                    func(...args);
-                };
-                clearTimeout(timeout);
-                timeout = setTimeout(later, wait);
-            };
-        }
-        
-        // Add CSS animation
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes pulse {
-                0%, 100% { transform: scale(1); }
-                50% { transform: scale(1.05); }
-            }
-        `;
-        document.head.appendChild(style);
-        
-        // Initialize on load
-        window.addEventListener('load', () => {
-            init();
+            currentProject.sceneBreakdowns = sceneBreakdowns;
+            currentProject.castProfiles = castProfiles;
+            currentProject.scenes = scenes;
             
-            // Restore Sets from Arrays
-            if (currentProject.sceneElements) {
-                Object.entries(currentProject.sceneElements).forEach(([sceneIdx, categories]) => {
-                    if (!sceneElements[sceneIdx]) sceneElements[sceneIdx] = {};
-                    Object.entries(categories).forEach(([catId, elements]) => {
-                        sceneElements[sceneIdx][catId] = new Set(elements);
-                    });
-                });
-            }
+            localStorage.setItem('currentProject', JSON.stringify(currentProject));
             
-            if (currentProject.manualTags) {
-                Object.entries(currentProject.manualTags).forEach(([sceneIdx, categories]) => {
-                    if (!manualTags[sceneIdx]) manualTags[sceneIdx] = {};
-                    Object.entries(categories).forEach(([catId, elements]) => {
-                        manualTags[sceneIdx][catId] = new Set(elements);
-                    });
-                });
+            const projects = JSON.parse(localStorage.getItem('checksHappyProjects') || '[]');
+            const index = projects.findIndex(p => p.id === currentProject.id);
+            if (index !== -1) {
+                projects[index] = currentProject;
+            } else {
+                projects.push(currentProject);
             }
-        });
+            localStorage.setItem('checksHappyProjects', JSON.stringify(projects));
+        }
+        
+        // Initialize
+        window.addEventListener('load', init);
     </script>
 </body>
 </html>
