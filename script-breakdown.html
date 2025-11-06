@@ -49,7 +49,698 @@
         }
         
         .app-layout { display: flex; height: 100vh; flex-direction: column; }
-        
+
+        /* View Tabs System */
+        .view-tabs {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 0 24px;
+            background:
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 0%, transparent 100%),
+                linear-gradient(135deg, rgba(212, 175, 122, 0.06) 0%, rgba(18, 16, 14, 0.85) 50%, rgba(212, 175, 122, 0.03) 100%);
+            backdrop-filter: blur(24px) saturate(180%);
+            border-bottom: 1px solid var(--glass-border);
+            height: 48px;
+        }
+
+        .view-tab {
+            padding: 8px 20px;
+            background: rgba(28, 25, 22, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px 8px 0 0;
+            color: var(--text-muted);
+            font-size: 0.875em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .view-tab:hover {
+            background: rgba(28, 25, 22, 0.5);
+            color: var(--text-light);
+            transform: translateY(-2px);
+        }
+
+        .view-tab.active {
+            background: linear-gradient(135deg, rgba(212, 175, 122, 0.15), rgba(212, 175, 122, 0.08));
+            border-bottom-color: transparent;
+            color: var(--accent-gold);
+            box-shadow: 0 -2px 12px rgba(212, 175, 122, 0.2);
+        }
+
+        .view-container {
+            display: none;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .view-container.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Timeline View Styles */
+        .timeline-view {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .timeline-left {
+            width: 280px;
+            background:
+                linear-gradient(to right, rgba(255, 255, 255, 0.02) 0%, transparent 100%),
+                linear-gradient(135deg, rgba(212, 175, 122, 0.06) 0%, rgba(18, 16, 14, 0.85) 50%, rgba(212, 175, 122, 0.03) 100%);
+            backdrop-filter: blur(24px) saturate(180%);
+            border-right: 1px solid var(--glass-border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .timeline-center {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: rgba(232, 230, 227, 0.02);
+        }
+
+        .timeline-right {
+            width: 360px;
+            background:
+                linear-gradient(to left, rgba(255, 255, 255, 0.02) 0%, transparent 100%),
+                linear-gradient(135deg, rgba(212, 175, 122, 0.06) 0%, rgba(18, 16, 14, 0.85) 50%, rgba(212, 175, 122, 0.03) 100%);
+            backdrop-filter: blur(24px) saturate(180%);
+            border-left: 1px solid var(--glass-border);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .timeline-characters-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--glass-border);
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .timeline-character-search {
+            width: 100%;
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-light);
+            font-size: 0.8125em;
+            margin-top: 12px;
+        }
+
+        .timeline-character-search:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+        }
+
+        .timeline-characters-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+        }
+
+        .timeline-character-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            margin-bottom: 6px;
+            background: rgba(28, 25, 22, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .timeline-character-item:hover {
+            background: rgba(28, 25, 22, 0.5);
+            border-color: var(--accent-gold);
+        }
+
+        .timeline-character-item.filtered {
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        .timeline-character-checkbox {
+            cursor: pointer;
+        }
+
+        .timeline-character-name {
+            flex: 1;
+            font-size: 0.8125em;
+            font-weight: 600;
+            color: var(--text-light);
+        }
+
+        .timeline-character-count {
+            font-size: 0.75em;
+            color: var(--text-muted);
+        }
+
+        .timeline-canvas-wrapper {
+            flex: 1;
+            overflow: auto;
+            padding: 20px;
+        }
+
+        .timeline-canvas {
+            min-width: 100%;
+            position: relative;
+        }
+
+        .timeline-headers {
+            display: flex;
+            margin-bottom: 16px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: var(--bg-dark);
+            padding: 8px 0;
+        }
+
+        .timeline-header-cell {
+            padding: 12px;
+            background: linear-gradient(135deg, rgba(212, 175, 122, 0.15), rgba(212, 175, 122, 0.08));
+            border: 1px solid var(--accent-gold);
+            border-radius: 8px;
+            text-align: center;
+            font-size: 0.8125em;
+            font-weight: 600;
+            color: var(--accent-gold);
+            margin-right: 8px;
+            min-width: 120px;
+        }
+
+        .timeline-swim-lanes {
+            position: relative;
+        }
+
+        .timeline-character-lane {
+            position: relative;
+            margin-bottom: 12px;
+            min-height: 60px;
+        }
+
+        .timeline-lane-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .timeline-lane-name {
+            font-size: 0.875em;
+            font-weight: 600;
+            color: var(--text-light);
+            min-width: 150px;
+        }
+
+        .timeline-lane-scene-count {
+            font-size: 0.75em;
+            color: var(--text-muted);
+        }
+
+        .timeline-lane-events {
+            position: relative;
+            height: 44px;
+            background: rgba(28, 25, 22, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+        }
+
+        .timeline-event-bar {
+            position: absolute;
+            height: 36px;
+            border-radius: 6px;
+            padding: 0 12px;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.75em;
+            font-weight: 600;
+            color: white;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .timeline-event-bar:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            z-index: 5;
+        }
+
+        .timeline-event-bar.active {
+            box-shadow: 0 0 0 3px var(--accent-gold);
+            z-index: 6;
+        }
+
+        .timeline-event-detail {
+            display: none;
+        }
+
+        .timeline-event-detail.active {
+            display: block;
+        }
+
+        .timeline-detail-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .timeline-detail-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            background: linear-gradient(135deg, rgba(212, 175, 122, 0.2), rgba(212, 175, 122, 0.1));
+        }
+
+        .timeline-detail-title {
+            flex: 1;
+        }
+
+        .timeline-detail-event-name {
+            font-size: 1.125em;
+            font-weight: 700;
+            color: var(--text-light);
+            margin-bottom: 4px;
+        }
+
+        .timeline-detail-character-name {
+            font-size: 0.875em;
+            color: var(--accent-gold);
+        }
+
+        .timeline-detail-section {
+            margin-bottom: 20px;
+        }
+
+        .timeline-detail-section-title {
+            font-size: 0.875em;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 10px;
+        }
+
+        .timeline-detail-info {
+            padding: 12px;
+            background: rgba(28, 25, 22, 0.4);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            font-size: 0.8125em;
+            line-height: 1.6;
+        }
+
+        .timeline-detail-info div {
+            margin-bottom: 6px;
+        }
+
+        .timeline-detail-info div:last-child {
+            margin-bottom: 0;
+        }
+
+        .timeline-detail-progression {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .timeline-progression-item {
+            padding: 10px 12px;
+            background: rgba(28, 25, 22, 0.4);
+            border: 1px solid var(--glass-border);
+            border-left: 3px solid var(--accent-gold);
+            border-radius: 6px;
+            font-size: 0.8125em;
+        }
+
+        .timeline-progression-range {
+            font-weight: 600;
+            color: var(--accent-gold);
+            margin-bottom: 4px;
+        }
+
+        .timeline-progression-desc {
+            color: var(--text-light);
+            line-height: 1.5;
+        }
+
+        .timeline-detail-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 20px;
+        }
+
+        .timeline-action-btn {
+            padding: 10px 16px;
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            color: var(--text-light);
+            font-size: 0.8125em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+
+        .timeline-action-btn:hover {
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+            background: rgba(212, 175, 122, 0.1);
+        }
+
+        .timeline-action-btn.primary {
+            background: linear-gradient(135deg, rgba(212, 175, 122, 0.9), rgba(184, 150, 81, 0.9));
+            border-color: var(--accent-gold);
+            color: var(--bg-dark);
+        }
+
+        .timeline-action-btn.primary:hover {
+            background: linear-gradient(135deg, #d4af7a, #c09861);
+        }
+
+        .timeline-scene-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .timeline-scene-chip {
+            padding: 4px 10px;
+            background: rgba(102, 126, 234, 0.2);
+            border: 1px solid rgba(102, 126, 234, 0.4);
+            border-radius: 6px;
+            font-size: 0.75em;
+            font-weight: 600;
+            color: #8b9cec;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .timeline-scene-chip:hover {
+            background: rgba(102, 126, 234, 0.3);
+            transform: scale(1.05);
+        }
+
+        .timeline-empty-state {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            text-align: center;
+            padding: 40px;
+        }
+
+        .timeline-empty-icon {
+            font-size: 4em;
+            margin-bottom: 16px;
+            opacity: 0.3;
+        }
+
+        .timeline-empty-text {
+            font-size: 1em;
+            margin-bottom: 8px;
+        }
+
+        .timeline-empty-hint {
+            font-size: 0.875em;
+            opacity: 0.7;
+        }
+
+        /* Lookbook View Styles */
+        .lookbook-view {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .lookbook-header {
+            padding: 24px 32px;
+            background:
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 0%, transparent 100%),
+                linear-gradient(135deg, rgba(212, 175, 122, 0.08) 0%, rgba(18, 16, 14, 0.85) 50%, rgba(212, 175, 122, 0.05) 100%);
+            backdrop-filter: blur(24px) saturate(180%);
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .lookbook-title {
+            font-size: 1.5em;
+            font-weight: 700;
+            color: var(--accent-gold);
+            margin-bottom: 16px;
+        }
+
+        .lookbook-day-selector {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+        }
+
+        .lookbook-day-btn {
+            padding: 10px 18px;
+            background: rgba(28, 25, 22, 0.4);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            color: var(--text-muted);
+            font-size: 0.8125em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .lookbook-day-btn:hover {
+            background: rgba(28, 25, 22, 0.6);
+            color: var(--text-light);
+        }
+
+        .lookbook-day-btn.active {
+            background: linear-gradient(135deg, rgba(212, 175, 122, 0.25), rgba(212, 175, 122, 0.15));
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+        }
+
+        .lookbook-current-day {
+            font-size: 0.875em;
+            color: var(--text-muted);
+            margin-top: 12px;
+        }
+
+        .lookbook-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 32px;
+        }
+
+        .lookbook-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 24px;
+        }
+
+        .lookbook-character-card {
+            background:
+                linear-gradient(135deg, rgba(212, 175, 122, 0.06) 0%, rgba(28, 25, 22, 0.5) 50%, rgba(212, 175, 122, 0.03) 100%);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .lookbook-character-card:hover {
+            border-color: var(--accent-gold);
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        .lookbook-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(212, 175, 122, 0.2);
+        }
+
+        .lookbook-card-name {
+            font-size: 1.125em;
+            font-weight: 700;
+            color: var(--accent-gold);
+        }
+
+        .lookbook-card-scene-badge {
+            padding: 4px 10px;
+            background: rgba(102, 126, 234, 0.2);
+            border: 1px solid rgba(102, 126, 234, 0.4);
+            border-radius: 6px;
+            font-size: 0.75em;
+            font-weight: 600;
+            color: #8b9cec;
+        }
+
+        .lookbook-card-section {
+            margin-bottom: 16px;
+        }
+
+        .lookbook-card-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .lookbook-section-title {
+            font-size: 0.75em;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+        }
+
+        .lookbook-section-content {
+            font-size: 0.875em;
+            color: var(--text-light);
+            line-height: 1.6;
+        }
+
+        .lookbook-event-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 10px;
+            background: rgba(28, 25, 22, 0.4);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+
+        .lookbook-event-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .lookbook-event-icon {
+            font-size: 1.25em;
+            flex-shrink: 0;
+        }
+
+        .lookbook-event-info {
+            flex: 1;
+        }
+
+        .lookbook-event-name {
+            font-size: 0.875em;
+            font-weight: 600;
+            color: var(--text-light);
+            margin-bottom: 4px;
+        }
+
+        .lookbook-event-stage {
+            font-size: 0.8125em;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        .lookbook-scene-chips-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .lookbook-scene-chip {
+            padding: 4px 10px;
+            background: rgba(102, 126, 234, 0.2);
+            border: 1px solid rgba(102, 126, 234, 0.4);
+            border-radius: 6px;
+            font-size: 0.75em;
+            font-weight: 600;
+            color: #8b9cec;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .lookbook-scene-chip:hover {
+            background: rgba(102, 126, 234, 0.3);
+            transform: scale(1.05);
+        }
+
+        .lookbook-card-action {
+            width: 100%;
+            padding: 10px 16px;
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            color: var(--text-light);
+            font-size: 0.8125em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 12px;
+        }
+
+        .lookbook-card-action:hover {
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+            background: rgba(212, 175, 122, 0.1);
+        }
+
+        .lookbook-empty-state {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            text-align: center;
+            padding: 40px;
+        }
+
+        .lookbook-empty-icon {
+            font-size: 4em;
+            margin-bottom: 16px;
+            opacity: 0.3;
+        }
+
+        .lookbook-empty-text {
+            font-size: 1em;
+            margin-bottom: 8px;
+        }
+
+        .lookbook-empty-hint {
+            font-size: 0.875em;
+            opacity: 0.7;
+        }
+
         .top-bar {
             height: 56px;
             background: 
@@ -2428,9 +3119,24 @@
                 <button class="toolbar-btn" onclick="openImportModal()">Import Script</button>
             </div>
         </div>
-        
-        <!-- Main Content -->
-        <div class="main-content">
+
+        <!-- View Tabs -->
+        <div class="view-tabs">
+            <div class="view-tab active" data-view="breakdown" onclick="switchView('breakdown')">
+                📋 Breakdown
+            </div>
+            <div class="view-tab" data-view="timeline" onclick="switchView('timeline')">
+                📊 Timeline
+            </div>
+            <div class="view-tab" data-view="lookbook" onclick="switchView('lookbook')">
+                📖 Lookbook
+            </div>
+        </div>
+
+        <!-- Breakdown View Container -->
+        <div class="view-container active" id="breakdownView">
+            <!-- Main Content -->
+            <div class="main-content">
             <!-- Left Sidebar - Scenes -->
             <div class="left-sidebar">
                 <div class="sidebar-header">
@@ -2438,6 +3144,9 @@
                         <span>SCENES</span>
                         <span class="scene-count" id="sceneCount">0</span>
                     </div>
+                    <button class="view-btn" style="width: 100%; margin-bottom: 8px; font-size: 0.75em;" onclick="openStoryDayModal()">
+                        📅 Assign Story Days
+                    </button>
                     <input type="text" class="scene-search" placeholder="Search scenes..." id="sceneSearch">
                 </div>
                 <div class="scene-list" id="sceneList">
@@ -2574,8 +3283,76 @@
                 </div>
             </div>
         </div>
+        </div>
     </div>
-    
+
+    <!-- Timeline View Container -->
+    <div class="view-container" id="timelineView">
+        <div class="timeline-view">
+            <!-- Left Panel - Characters List -->
+            <div class="timeline-left">
+                <div class="timeline-characters-header">
+                    <div class="sidebar-title">
+                        <span>CHARACTERS</span>
+                        <span class="scene-count" id="timelineCharacterCount">0</span>
+                    </div>
+                    <input type="text" class="timeline-character-search" id="timelineCharacterSearch" placeholder="Search characters..." oninput="filterTimelineCharacters()">
+                </div>
+                <div class="timeline-characters-list" id="timelineCharactersList">
+                    <!-- Character items populated by JS -->
+                </div>
+            </div>
+
+            <!-- Center Panel - Timeline Canvas -->
+            <div class="timeline-center">
+                <div class="timeline-canvas-wrapper">
+                    <div class="timeline-canvas" id="timelineCanvas">
+                        <!-- Headers populated by JS -->
+                        <div class="timeline-headers" id="timelineHeaders"></div>
+
+                        <!-- Swim lanes populated by JS -->
+                        <div class="timeline-swim-lanes" id="timelineSwimLanes"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel - Event Detail -->
+            <div class="timeline-right">
+                <div class="timeline-empty-state" id="timelineEmptyDetail">
+                    <div class="timeline-empty-icon">📊</div>
+                    <div class="timeline-empty-text">Select an event to view details</div>
+                    <div class="timeline-empty-hint">Click on any event bar to see information</div>
+                </div>
+                <div class="timeline-event-detail" id="timelineEventDetail">
+                    <!-- Event detail populated by JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lookbook View Container -->
+    <div class="view-container" id="lookbookView">
+        <div class="lookbook-view">
+            <div class="lookbook-header">
+                <div class="lookbook-title">📖 Lookbook</div>
+                <div class="lookbook-day-selector" id="lookbookDaySelector">
+                    <!-- Day buttons populated by JS -->
+                </div>
+                <div class="lookbook-current-day" id="lookbookCurrentDay">Select a story day to view character looks</div>
+            </div>
+            <div class="lookbook-content">
+                <div class="lookbook-empty-state" id="lookbookEmptyState">
+                    <div class="lookbook-empty-icon">📖</div>
+                    <div class="lookbook-empty-text">No story days defined yet</div>
+                    <div class="lookbook-empty-hint">Assign story days to scenes in the Breakdown view to use the Lookbook</div>
+                </div>
+                <div class="lookbook-grid" id="lookbookGrid">
+                    <!-- Character cards populated by JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Add Element Modal -->
     <div class="modal" id="addElementModal">
         <div class="modal-content">
@@ -2910,6 +3687,27 @@ This is it. Today's the day."></textarea>
         </div>
     </div>
 
+    <!-- Story Day Assignment Modal -->
+    <div class="modal" id="storyDayModal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-title">Bulk Assign Story Days</div>
+            <p style="font-size: 0.875em; color: var(--text-muted); margin-bottom: 16px;">
+                Quickly assign story days to multiple scenes at once. Story days help organize your timeline and lookbook views.
+            </p>
+
+            <div id="storyDayAssignments">
+                <!-- Story day assignment rows will be added here -->
+            </div>
+
+            <button class="modal-btn" style="width: 100%; margin-bottom: 16px;" onclick="addStoryDayRow()">+ Add Assignment</button>
+
+            <div class="modal-actions">
+                <button class="modal-btn" onclick="closeStoryDayModal()">Cancel</button>
+                <button class="modal-btn primary" onclick="applyStoryDayAssignments()">Apply</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Global state
         let currentProject = null;
@@ -2932,6 +3730,12 @@ This is it. Today's the day."></textarea>
         let currentSelection = null;
         let activeCenterTab = 'script'; // Track active center tab
         let characterTabs = []; // List of character names with tabs
+
+        // View state
+        let activeView = 'breakdown'; // 'breakdown' | 'timeline' | 'lookbook'
+        let timelineSelectedCharacters = new Set(); // empty = show all
+        let currentLookbookDay = null;
+        let selectedTimelineEvent = null;
 
         // AI Settings
         let aiProvider = localStorage.getItem('aiProvider') || 'openai';
@@ -2963,6 +3767,667 @@ This is it. Today's the day."></textarea>
             { id: 'hair', name: 'Hair Change', icon: '✂️', color: '#a855f7' },
             { id: 'other', name: 'Other', icon: '⚡', color: '#667eea' }
         ];
+
+        // ============================================
+        // VIEW SWITCHING
+        // ============================================
+
+        function switchView(viewName) {
+            // Hide all view containers
+            document.querySelectorAll('.view-container').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+
+            // Show selected view
+            document.getElementById(`${viewName}View`).classList.add('active');
+            document.querySelector(`[data-view="${viewName}"]`).classList.add('active');
+
+            activeView = viewName;
+
+            // Trigger render if needed
+            if (viewName === 'timeline') {
+                renderTimeline();
+            } else if (viewName === 'lookbook') {
+                renderLookbook();
+            }
+        }
+
+        // ============================================
+        // TIMELINE VIEW FUNCTIONS
+        // ============================================
+
+        // Build story timeline from scenes
+        function buildStoryTimeline() {
+            const storyDays = [];
+            const seen = new Set();
+
+            scenes.forEach(scene => {
+                if (scene.storyDay && !seen.has(scene.storyDay)) {
+                    storyDays.push(scene.storyDay);
+                    seen.add(scene.storyDay);
+                }
+            });
+
+            return storyDays;
+        }
+
+        // Get all unique characters
+        function getUniqueCharacters() {
+            return Object.keys(castProfiles).sort();
+        }
+
+        // Get character scenes by story day
+        function getCharacterScenesByDay(characterName) {
+            const scenesByDay = {};
+
+            scenes.forEach((scene, index) => {
+                const breakdown = sceneBreakdowns[index];
+                if (breakdown?.cast?.includes(characterName)) {
+                    const day = scene.storyDay || 'Unassigned';
+                    if (!scenesByDay[day]) {
+                        scenesByDay[day] = [];
+                    }
+                    scenesByDay[day].push({ ...scene, index });
+                }
+            });
+
+            return scenesByDay;
+        }
+
+        // Map continuity event to timeline
+        function mapEventToTimeline(event, character) {
+            const startScene = scenes[event.startScene];
+            const endScene = event.endScene !== null && event.endScene !== undefined
+                ? scenes[event.endScene]
+                : startScene;
+
+            if (!startScene) return null;
+
+            const startDay = startScene.storyDay || 'Unassigned';
+            const endDay = endScene ? (endScene.storyDay || 'Unassigned') : startDay;
+
+            // Get all scene indices between start and end
+            const sceneIndices = [];
+            for (let i = event.startScene; i <= (event.endScene || event.startScene); i++) {
+                sceneIndices.push(i);
+            }
+
+            return {
+                id: event.id,
+                type: event.type,
+                description: event.description,
+                character,
+                startDay,
+                endDay,
+                startScene: event.startScene,
+                endScene: event.endScene,
+                sceneIndices,
+                progression: event.progression || [],
+                color: eventTypes.find(t => t.id === event.type)?.color || '#667eea',
+                icon: eventTypes.find(t => t.id === event.type)?.icon || '⚡'
+            };
+        }
+
+        // Render Timeline View
+        function renderTimeline() {
+            const storyDays = buildStoryTimeline();
+            const characters = getUniqueCharacters();
+
+            // Render character list
+            renderTimelineCharacterList(characters);
+
+            // Render timeline if we have data
+            if (storyDays.length > 0 && characters.length > 0) {
+                renderTimelineHeaders(storyDays);
+                renderTimelineSwimLanes(characters, storyDays);
+            } else {
+                // Show empty state
+                document.getElementById('timelineHeaders').innerHTML = '';
+                document.getElementById('timelineSwimLanes').innerHTML = `
+                    <div class="timeline-empty-state">
+                        <div class="timeline-empty-icon">📊</div>
+                        <div class="timeline-empty-text">No timeline data yet</div>
+                        <div class="timeline-empty-hint">Assign story days to scenes and create continuity events in the Breakdown view</div>
+                    </div>
+                `;
+            }
+        }
+
+        // Render character list (left panel)
+        function renderTimelineCharacterList(characters) {
+            const container = document.getElementById('timelineCharactersList');
+            document.getElementById('timelineCharacterCount').textContent = characters.length;
+
+            if (characters.length === 0) {
+                container.innerHTML = `
+                    <div class="timeline-empty-state">
+                        <div class="timeline-empty-icon">👤</div>
+                        <div class="timeline-empty-text">No characters found</div>
+                    </div>
+                `;
+                return;
+            }
+
+            // Initialize all characters as selected if none are selected
+            if (timelineSelectedCharacters.size === 0) {
+                characters.forEach(char => timelineSelectedCharacters.add(char));
+            }
+
+            container.innerHTML = characters.map(char => {
+                const sceneCount = Object.keys(sceneBreakdowns).filter(index =>
+                    sceneBreakdowns[index]?.cast?.includes(char)
+                ).length;
+                const isSelected = timelineSelectedCharacters.has(char);
+
+                return `
+                    <div class="timeline-character-item ${!isSelected ? 'filtered' : ''}" data-character="${char}">
+                        <input type="checkbox"
+                               class="timeline-character-checkbox"
+                               ${isSelected ? 'checked' : ''}
+                               onchange="toggleTimelineCharacter('${char.replace(/'/g, "\\'")}')">
+                        <div class="timeline-character-name">${char}</div>
+                        <div class="timeline-character-count">${sceneCount} scenes</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Toggle character visibility in timeline
+        function toggleTimelineCharacter(character) {
+            if (timelineSelectedCharacters.has(character)) {
+                timelineSelectedCharacters.delete(character);
+            } else {
+                timelineSelectedCharacters.add(character);
+            }
+            renderTimeline();
+        }
+
+        // Filter timeline characters by search
+        function filterTimelineCharacters() {
+            const searchTerm = document.getElementById('timelineCharacterSearch').value.toLowerCase();
+            const items = document.querySelectorAll('.timeline-character-item');
+
+            items.forEach(item => {
+                const charName = item.dataset.character.toLowerCase();
+                if (charName.includes(searchTerm)) {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+
+        // Render timeline headers (story days)
+        function renderTimelineHeaders(storyDays) {
+            const container = document.getElementById('timelineHeaders');
+            const cellWidth = Math.max(120, Math.floor(800 / storyDays.length));
+
+            container.innerHTML = storyDays.map(day => `
+                <div class="timeline-header-cell" style="min-width: ${cellWidth}px;">${day}</div>
+            `).join('');
+        }
+
+        // Render swim lanes
+        function renderTimelineSwimLanes(characters, storyDays) {
+            const container = document.getElementById('timelineSwimLanes');
+            const cellWidth = Math.max(120, Math.floor(800 / storyDays.length));
+            const totalWidth = cellWidth * storyDays.length;
+
+            // Filter to only show selected characters
+            const visibleCharacters = characters.filter(char => timelineSelectedCharacters.has(char));
+
+            if (visibleCharacters.length === 0) {
+                container.innerHTML = `
+                    <div class="timeline-empty-state">
+                        <div class="timeline-empty-icon">👤</div>
+                        <div class="timeline-empty-text">No characters selected</div>
+                        <div class="timeline-empty-hint">Select characters from the left panel to view their timeline</div>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = visibleCharacters.map(char => {
+                const events = continuityEvents[char] || [];
+                const scenesByDay = getCharacterScenesByDay(char);
+                const sceneCount = Object.values(scenesByDay).flat().length;
+
+                return `
+                    <div class="timeline-character-lane" data-character="${char}">
+                        <div class="timeline-lane-header">
+                            <div class="timeline-lane-name">${char}</div>
+                            <div class="timeline-lane-scene-count">${sceneCount} scenes</div>
+                        </div>
+                        <div class="timeline-lane-events" style="min-width: ${totalWidth}px;">
+                            ${events.map(event => {
+                                const mapped = mapEventToTimeline(event, char);
+                                if (!mapped) return '';
+
+                                // Calculate position and width
+                                const startIndex = storyDays.indexOf(mapped.startDay);
+                                const endIndex = storyDays.indexOf(mapped.endDay);
+
+                                if (startIndex === -1) return '';
+
+                                const left = startIndex * cellWidth;
+                                const width = Math.max(cellWidth, (endIndex - startIndex + 1) * cellWidth) - 8;
+
+                                return `
+                                    <div class="timeline-event-bar ${selectedTimelineEvent === mapped.id ? 'active' : ''}"
+                                         data-event-id="${mapped.id}"
+                                         data-character="${char}"
+                                         data-event-type="${mapped.type}"
+                                         style="left: ${left}px; width: ${width}px; background: ${mapped.color};"
+                                         onclick="showTimelineEventDetail('${char.replace(/'/g, "\\'")}', '${mapped.id}')">
+                                        <span>${mapped.icon} ${mapped.description}</span>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Show event detail in right panel
+        function showTimelineEventDetail(character, eventId) {
+            selectedTimelineEvent = eventId;
+
+            // Update active state on event bars
+            document.querySelectorAll('.timeline-event-bar').forEach(bar => {
+                bar.classList.toggle('active', bar.dataset.eventId === eventId);
+            });
+
+            const events = continuityEvents[character] || [];
+            const event = events.find(e => e.id === eventId);
+            if (!event) return;
+
+            const mapped = mapEventToTimeline(event, character);
+            if (!mapped) return;
+
+            document.getElementById('timelineEmptyDetail').style.display = 'none';
+            const detailContainer = document.getElementById('timelineEventDetail');
+            detailContainer.classList.add('active');
+
+            // Get scene numbers
+            const sceneNumbers = mapped.sceneIndices.map(i => scenes[i]?.number).filter(Boolean);
+
+            detailContainer.innerHTML = `
+                <div class="timeline-detail-header">
+                    <div class="timeline-detail-icon" style="background: ${mapped.color}20;">
+                        ${mapped.icon}
+                    </div>
+                    <div class="timeline-detail-title">
+                        <div class="timeline-detail-event-name">${mapped.description}</div>
+                        <div class="timeline-detail-character-name">${character}</div>
+                    </div>
+                </div>
+
+                <div class="timeline-detail-section">
+                    <div class="timeline-detail-section-title">Event Info</div>
+                    <div class="timeline-detail-info">
+                        <div><strong>Type:</strong> ${eventTypes.find(t => t.id === event.type)?.name || event.type}</div>
+                        <div><strong>Duration:</strong> ${mapped.startDay}${mapped.endDay !== mapped.startDay ? ' → ' + mapped.endDay : ''}</div>
+                        <div><strong>Scenes:</strong> ${sceneNumbers.join(', ')}</div>
+                    </div>
+                </div>
+
+                ${mapped.progression && mapped.progression.length > 0 ? `
+                    <div class="timeline-detail-section">
+                        <div class="timeline-detail-section-title">Progression</div>
+                        <div class="timeline-detail-progression">
+                            ${mapped.progression.map(prog => `
+                                <div class="timeline-progression-item">
+                                    <div class="timeline-progression-range">${prog.range || 'Stage'}</div>
+                                    <div class="timeline-progression-desc">${prog.description}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+
+                <div class="timeline-detail-section">
+                    <div class="timeline-detail-section-title">Jump to Scene</div>
+                    <div class="timeline-scene-chips">
+                        ${sceneNumbers.map((num, idx) => `
+                            <div class="timeline-scene-chip" onclick="jumpToSceneFromTimeline(${mapped.sceneIndices[idx]})">
+                                Scene ${num}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <div class="timeline-detail-actions">
+                    <button class="timeline-action-btn" onclick="openCharacterFromTimeline('${character.replace(/'/g, "\\'")}')">
+                        View Character Profile
+                    </button>
+                    <button class="timeline-action-btn primary" onclick="jumpToSceneFromTimeline(${mapped.startScene})">
+                        Edit in Breakdown View
+                    </button>
+                </div>
+            `;
+        }
+
+        // ============================================
+        // LOOKBOOK VIEW FUNCTIONS
+        // ============================================
+
+        // Render Lookbook View
+        function renderLookbook() {
+            const storyDays = buildStoryTimeline();
+
+            renderLookbookDaySelector(storyDays);
+
+            if (storyDays.length === 0) {
+                document.getElementById('lookbookEmptyState').style.display = 'flex';
+                document.getElementById('lookbookGrid').style.display = 'none';
+                return;
+            }
+
+            // Select first day if none selected
+            if (!currentLookbookDay && storyDays.length > 0) {
+                currentLookbookDay = storyDays[0];
+            }
+
+            if (currentLookbookDay) {
+                renderLookbookForDay(currentLookbookDay);
+            }
+        }
+
+        // Render day selector
+        function renderLookbookDaySelector(storyDays) {
+            const container = document.getElementById('lookbookDaySelector');
+
+            if (storyDays.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+
+            container.innerHTML = storyDays.map(day => `
+                <button class="lookbook-day-btn ${day === currentLookbookDay ? 'active' : ''}"
+                        onclick="selectLookbookDay('${day.replace(/'/g, "\\'")}')">
+                    ${day}
+                </button>
+            `).join('');
+        }
+
+        // Select a lookbook day
+        function selectLookbookDay(day) {
+            currentLookbookDay = day;
+            renderLookbook();
+        }
+
+        // Build lookbook data for a specific day
+        function buildLookbookForDay(storyDay) {
+            // Find all scenes for this day
+            const scenesThisDay = scenes.filter(s => s.storyDay === storyDay);
+
+            // Get unique characters in these scenes
+            const charactersThisDay = new Set();
+            scenesThisDay.forEach(scene => {
+                const breakdown = sceneBreakdowns[scene.index];
+                if (breakdown?.cast) {
+                    breakdown.cast.forEach(c => charactersThisDay.add(c));
+                }
+            });
+
+            // Build character data
+            return Array.from(charactersThisDay).map(char => {
+                const profile = castProfiles[char] || {};
+                const charScenesThisDay = scenesThisDay.filter(s =>
+                    sceneBreakdowns[s.index]?.cast?.includes(char)
+                );
+                const sceneNumbers = charScenesThisDay.map(s => ({ number: s.number, index: s.index }));
+
+                // Get active continuity events for this day
+                const activeEvents = getActiveEventsForDay(char, storyDay, scenesThisDay);
+
+                return {
+                    name: char,
+                    baseDescription: profile.baseDescription || 'No base description',
+                    scenesThisDay: sceneNumbers,
+                    activeEvents
+                };
+            }).sort((a, b) => a.name.localeCompare(b.name));
+        }
+
+        // Get active events for a character on a specific day
+        function getActiveEventsForDay(character, storyDay, scenesThisDay) {
+            const events = continuityEvents[character] || [];
+            const sceneIndicesThisDay = scenesThisDay.map(s => s.index);
+
+            return events.filter(event => {
+                // Check if any scene from this day falls within the event range
+                return sceneIndicesThisDay.some(idx =>
+                    idx >= event.startScene &&
+                    (event.endScene === null || event.endScene === undefined || idx <= event.endScene)
+                );
+            }).map(event => {
+                const mapped = mapEventToTimeline(event, character);
+
+                // Find applicable progression stage
+                let stage = event.description;
+                if (event.progression && event.progression.length > 0) {
+                    // Find the progression stage that applies to scenes in this day
+                    const applicableStage = event.progression.find(prog => {
+                        // Check if any scene from this day is mentioned in the range
+                        const sceneNumsThisDay = scenesThisDay.map(s => s.number);
+                        return sceneNumsThisDay.some(num => prog.range?.includes(`${num}`));
+                    });
+
+                    if (applicableStage) {
+                        stage = applicableStage.description;
+                    } else if (event.progression[0]) {
+                        stage = event.progression[0].description;
+                    }
+                }
+
+                return {
+                    ...mapped,
+                    stage
+                };
+            });
+        }
+
+        // Render lookbook for specific day
+        function renderLookbookForDay(storyDay) {
+            const lookbookData = buildLookbookForDay(storyDay);
+
+            document.getElementById('lookbookCurrentDay').textContent = `Currently viewing: ${storyDay}`;
+            document.getElementById('lookbookEmptyState').style.display = 'none';
+
+            const grid = document.getElementById('lookbookGrid');
+            grid.style.display = 'grid';
+
+            if (lookbookData.length === 0) {
+                grid.innerHTML = `
+                    <div class="lookbook-empty-state">
+                        <div class="lookbook-empty-icon">📖</div>
+                        <div class="lookbook-empty-text">No characters in this story day</div>
+                        <div class="lookbook-empty-hint">Add cast to scenes marked with "${storyDay}"</div>
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = lookbookData.map(char => `
+                <div class="lookbook-character-card">
+                    <div class="lookbook-card-header">
+                        <div class="lookbook-card-name">${char.name}</div>
+                        <div class="lookbook-card-scene-badge">${char.scenesThisDay.length} scenes</div>
+                    </div>
+
+                    <div class="lookbook-card-section">
+                        <div class="lookbook-section-title">Base Look</div>
+                        <div class="lookbook-section-content">${char.baseDescription}</div>
+                    </div>
+
+                    ${char.activeEvents.length > 0 ? `
+                        <div class="lookbook-card-section">
+                            <div class="lookbook-section-title">Active Continuity</div>
+                            ${char.activeEvents.map(event => `
+                                <div class="lookbook-event-item">
+                                    <div class="lookbook-event-icon">${event.icon}</div>
+                                    <div class="lookbook-event-info">
+                                        <div class="lookbook-event-name">${event.description}</div>
+                                        <div class="lookbook-event-stage">${event.stage}</div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+
+                    <div class="lookbook-card-section">
+                        <div class="lookbook-section-title">Scenes</div>
+                        <div class="lookbook-scene-chips-container">
+                            ${char.scenesThisDay.map(s => `
+                                <div class="lookbook-scene-chip" onclick="jumpToSceneFromLookbook(${s.index})">
+                                    ${s.number}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <button class="lookbook-card-action" onclick="openCharacterTimelineFromLookbook('${char.name.replace(/'/g, "\\'")}')">
+                        View Full Timeline
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        // ============================================
+        // CROSS-VIEW NAVIGATION FUNCTIONS
+        // ============================================
+
+        // Jump to scene from Timeline
+        function jumpToSceneFromTimeline(sceneIndex) {
+            switchView('breakdown');
+            setTimeout(() => {
+                selectScene(scenes[sceneIndex]);
+            }, 100);
+        }
+
+        // Jump to scene from Lookbook
+        function jumpToSceneFromLookbook(sceneIndex) {
+            switchView('breakdown');
+            setTimeout(() => {
+                selectScene(scenes[sceneIndex]);
+            }, 100);
+        }
+
+        // Open character profile from Timeline
+        function openCharacterFromTimeline(characterName) {
+            switchView('breakdown');
+            setTimeout(() => {
+                openCastProfile(characterName);
+            }, 100);
+        }
+
+        // Open character timeline from Lookbook
+        function openCharacterTimelineFromLookbook(characterName) {
+            switchView('timeline');
+            // Filter to show only this character
+            timelineSelectedCharacters.clear();
+            timelineSelectedCharacters.add(characterName);
+            setTimeout(() => {
+                renderTimeline();
+            }, 100);
+        }
+
+        // ============================================
+        // STORY DAY BULK ASSIGNMENT
+        // ============================================
+
+        let storyDayRowCounter = 0;
+
+        function openStoryDayModal() {
+            storyDayRowCounter = 0;
+            document.getElementById('storyDayAssignments').innerHTML = '';
+
+            // Add initial row with smart defaults
+            addStoryDayRow();
+
+            document.getElementById('storyDayModal').classList.add('active');
+        }
+
+        function closeStoryDayModal() {
+            document.getElementById('storyDayModal').classList.remove('active');
+        }
+
+        function addStoryDayRow() {
+            const container = document.getElementById('storyDayAssignments');
+            const rowId = `storyDayRow${storyDayRowCounter++}`;
+
+            const rowDiv = document.createElement('div');
+            rowDiv.className = 'modal-section';
+            rowDiv.id = rowId;
+            rowDiv.style.cssText = 'padding: 12px; background: rgba(28, 25, 22, 0.3); border: 1px solid var(--glass-border); border-radius: 8px; margin-bottom: 12px;';
+
+            rowDiv.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <label class="modal-label" style="margin: 0;">Assignment #${storyDayRowCounter}</label>
+                    <button class="modal-btn" style="padding: 4px 8px; font-size: 0.75em;" onclick="document.getElementById('${rowId}').remove()">Remove</button>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 8px; margin-bottom: 8px;">
+                    <div>
+                        <label style="font-size: 0.75em; color: var(--text-muted); display: block; margin-bottom: 4px;">From Scene</label>
+                        <input type="number" class="modal-input" id="${rowId}_from" placeholder="1" min="1" style="padding: 6px 8px;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.75em; color: var(--text-muted); display: block; margin-bottom: 4px;">To Scene</label>
+                        <input type="number" class="modal-input" id="${rowId}_to" placeholder="5" min="1" style="padding: 6px 8px;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.75em; color: var(--text-muted); display: block; margin-bottom: 4px;">Story Day</label>
+                        <input type="text" class="modal-input" id="${rowId}_day" placeholder="Day 1 Morning" style="padding: 6px 8px;">
+                    </div>
+                </div>
+                <div style="font-size: 0.6875em; color: var(--text-muted);">
+                    Examples: "Day 1 Morning", "Day 2 Evening", "Week 2", "Month 3"
+                </div>
+            `;
+
+            container.appendChild(rowDiv);
+        }
+
+        function applyStoryDayAssignments() {
+            const container = document.getElementById('storyDayAssignments');
+            const rows = container.querySelectorAll('[id^="storyDayRow"]');
+
+            let appliedCount = 0;
+
+            rows.forEach(row => {
+                const rowId = row.id;
+                const fromInput = document.getElementById(`${rowId}_from`);
+                const toInput = document.getElementById(`${rowId}_to`);
+                const dayInput = document.getElementById(`${rowId}_day`);
+
+                if (!fromInput || !toInput || !dayInput) return;
+
+                const fromScene = parseInt(fromInput.value);
+                const toScene = parseInt(toInput.value);
+                const storyDay = dayInput.value.trim();
+
+                if (!fromScene || !toScene || !storyDay) return;
+
+                // Find scenes by number and assign story day
+                scenes.forEach((scene, index) => {
+                    if (scene.number >= fromScene && scene.number <= toScene) {
+                        scenes[index].storyDay = storyDay;
+                        appliedCount++;
+                    }
+                });
+            });
+
+            // Save and refresh
+            saveProject();
+            renderSceneList();
+            closeStoryDayModal();
+
+            // Show confirmation
+            if (appliedCount > 0) {
+                alert(`✅ Story days assigned to ${appliedCount} scene(s)!\n\nYou can now use the Timeline and Lookbook views.`);
+            }
+        }
 
         // Name normalization and matching
         function normalizeCastName(name) {
