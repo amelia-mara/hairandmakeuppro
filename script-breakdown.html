@@ -1486,10 +1486,10 @@ This is it. Today's the day."></textarea>
         let scenes = [];
         let characters = new Set();
         let currentScene = 0;
-        let sceneElements = {}; // Store AI-detected elements for each scene
-        let manualTags = {}; // Store manually added tags by scene
-        let scriptText = ''; // Store the full script text
-        let selectedText = ''; // Store selected text for tagging
+        let sceneElements = {};
+        let manualTags = {};
+        let scriptText = '';
+        let selectedText = '';
         let selectedCategoryForManual = null;
         
         // Tag categories with detection patterns
@@ -1498,7 +1498,7 @@ This is it. Today's the day."></textarea>
                 id: 'cast', 
                 name: 'Cast Members', 
                 color: '#fbbf24',
-                patterns: [] // Will be filled with character names
+                patterns: []
             },
             { 
                 id: 'extras', 
@@ -1546,7 +1546,7 @@ This is it. Today's the day."></textarea>
                 id: 'locations', 
                 name: 'Locations', 
                 color: '#10b981',
-                patterns: [] // Will be extracted from scene headings
+                patterns: []
             },
             { 
                 id: 'notes', 
@@ -1593,18 +1593,13 @@ This is it. Today's the day."></textarea>
             
             document.getElementById('projectTitle').textContent = currentProject.name + ' - Script Breakdown';
             
-            // Initialize tag categories
             initializeTagCategories();
-            
-            // Setup text selection handler
             setupTextSelection();
             
-            // Check if script exists
             if (!currentProject.scriptContent) {
                 setTimeout(() => openImportModal(), 500);
             } else {
                 loadScript(currentProject.scriptContent);
-                // Load saved elements if they exist
                 if (currentProject.sceneElements) {
                     sceneElements = currentProject.sceneElements;
                     manualTags = currentProject.manualTags || {};
@@ -1614,7 +1609,6 @@ This is it. Today's the day."></textarea>
                 }
             }
             
-            // Setup event listeners
             document.getElementById('sceneSearch').addEventListener('input', handleSceneSearch);
             document.getElementById('scriptInput').addEventListener('input', debounce(analyzeInput, 300));
         }
@@ -1690,7 +1684,6 @@ This is it. Today's the day."></textarea>
                     </div>
                     <div class="category-content">
                         <div class="tag-list" id="tags-${category.id}">
-                            <!-- Tags will be added here -->
                         </div>
                         <button class="add-tag-btn" onclick="openManualTagModal('${category.id}')">+ Add ${category.name}</button>
                     </div>
@@ -1758,308 +1751,345 @@ This is it. Today's the day."></textarea>
             highlightScriptElements();
         }
         
-        // AI Analysis - Main function with fixed async handling
+        // AI Analysis - FIXED with proper error handling
         async function runAIAnalysis() {
-            if (!scriptText) {
+            if (!scriptText || !scenes || scenes.length === 0) {
                 alert('Please import a script first');
                 return;
             }
+            
+            console.log('Starting AI analysis for', scenes.length, 'scenes');
             
             const progressEl = document.getElementById('aiProgress');
             const statusEl = document.getElementById('aiStatus');
             const fillEl = document.getElementById('aiProgressFill');
             
             progressEl.classList.add('active');
+            fillEl.style.width = '0%';
             
             // Clear existing AI-detected elements
             sceneElements = {};
             
-            // Update cast patterns with detected characters
+            // Update cast patterns
             const castCategory = tagCategories.find(c => c.id === 'cast');
-            castCategory.patterns = Array.from(characters);
+            if (castCategory) {
+                castCategory.patterns = Array.from(characters);
+            }
             
-            // Process scenes with proper async handling
+            // Process scenes with error handling
+            let successCount = 0;
+            let errorCount = 0;
+            
             for (let i = 0; i < scenes.length; i++) {
-                statusEl.textContent = `Analyzing scene ${i + 1} of ${scenes.length}...`;
-                fillEl.style.width = `${((i + 1) / scenes.length) * 100}%`;
-                
-                // Get scene content
-                const sceneContent = extractSceneContent(scenes[i]);
-                
-                // Analyze scene for elements
-                const elements = analyzeSceneElements(sceneContent, i);
-                sceneElements[i] = elements;
-                
-                // Generate scene synopsis
-                const synopsis = generateSceneSynopsis(sceneContent, scenes[i].heading);
-                scenes[i].synopsis = synopsis;
-                
-                // Force UI update with small delay to prevent blocking
-                if (i % 3 === 0 || i === scenes.length - 1) {
-                    await new Promise(resolve => setTimeout(resolve, 50));
+                try {
+                    statusEl.textContent = `Analyzing scene ${i + 1} of ${scenes.length}...`;
+                    fillEl.style.width = `${((i + 1) / scenes.length) * 100}%`;
+                    
+                    // Get scene content with validation
+                    const sceneContent = extractSceneContent(scenes[i]);
+                    
+                    if (!sceneContent || sceneContent.trim().length === 0) {
+                        console.warn(`Scene ${i + 1} has no content, skipping`);
+                        continue;
+                    }
+                    
+                    // Analyze scene
+                    const elements = analyzeSceneElements(sceneContent, i);
+                    sceneElements[i] = elements;
+                    
+                    // Generate synopsis
+                    const synopsis = generateSceneSynopsis(sceneContent, scenes[i].heading);
+                    scenes[i].synopsis = synopsis;
+                    
+                    successCount++;
+                    
+                    // Update UI every 3 scenes
+                    if (i % 3 === 0 || i === scenes.length - 1) {
+                        await new Promise(resolve => setTimeout(resolve, 10));
+                    }
+                    
+                } catch (error) {
+                    console.error(`Error analyzing scene ${i + 1}:`, error);
+                    errorCount++;
+                    
+                    // Continue with next scene instead of stopping
+                    if (!sceneElements[i]) {
+                        sceneElements[i] = {};
+                        tagCategories.forEach(cat => {
+                            sceneElements[i][cat.id] = new Set();
+                        });
+                    }
                 }
             }
             
-            // Populate detected elements in sidebar
-            populateAllElements();
+            console.log(`Analysis complete: ${successCount} scenes processed, ${errorCount} errors`);
             
-            // Update scene list
-            renderSceneList();
+            // Update UI
+            try {
+                populateAllElements();
+                renderSceneList();
+                highlightScriptElements();
+                saveProject();
+            } catch (error) {
+                console.error('Error updating UI:', error);
+            }
             
-            // Highlight elements in script view
-            highlightScriptElements();
-            
-            // Save to project
-            saveProject();
-            
-            statusEl.textContent = 'Analysis complete!';
+            statusEl.textContent = `Analysis complete! (${successCount}/${scenes.length} scenes)`;
             fillEl.style.width = '100%';
             
             setTimeout(() => {
                 progressEl.classList.remove('active');
-            }, 1500);
+            }, 2000);
         }
         
-        // Extract scene content
+        // Extract scene content with validation
         function extractSceneContent(scene) {
+            if (!scene || !scriptText) return '';
+            
             const lines = scriptText.split('\n');
-            const startLine = scene.lineNumber;
+            const startLine = scene.lineNumber || 0;
             let endLine = lines.length;
             
-            for (let i = scenes.indexOf(scene) + 1; i < scenes.length; i++) {
-                if (scenes[i]) {
-                    endLine = scenes[i].lineNumber;
-                    break;
-                }
+            const sceneIndex = scenes.indexOf(scene);
+            if (sceneIndex !== -1 && sceneIndex < scenes.length - 1) {
+                endLine = scenes[sceneIndex + 1].lineNumber;
             }
             
             return lines.slice(startLine, endLine).join('\n');
         }
         
-        // Analyze scene for breakdown elements
+        // Analyze scene - FIXED with validation
         function analyzeSceneElements(content, sceneIndex) {
             const elements = {};
+            
+            if (!content || typeof content !== 'string') {
+                console.warn('Invalid content for scene', sceneIndex);
+                tagCategories.forEach(category => {
+                    elements[category.id] = new Set();
+                });
+                return elements;
+            }
+            
             const contentLower = content.toLowerCase();
             
             tagCategories.forEach(category => {
                 elements[category.id] = new Set();
                 
-                if (category.id === 'locations') {
-                    const heading = scenes[sceneIndex].heading;
-                    const locationMatch = heading.match(/^(?:INT\.|EXT\.|INT\/EXT\.|I\/E\.)?\s*(.+?)(?:\s*-\s*|\s*$)/i);
-                    if (locationMatch) {
-                        const location = locationMatch[1].split('-')[0].trim();
-                        elements[category.id].add(location);
-                    }
-                } else {
-                    category.patterns.forEach(pattern => {
-                        const regex = new RegExp(`\\b${pattern}s?\\b`, 'gi');
-                        const matches = content.match(regex);
-                        if (matches) {
-                            matches.forEach(match => {
-                                const cleaned = match.trim();
-                                if (cleaned.length > 1) {
-                                    elements[category.id].add(cleaned.charAt(0).toUpperCase() + cleaned.slice(1).toLowerCase());
+                try {
+                    if (category.id === 'locations') {
+                        if (scenes[sceneIndex] && scenes[sceneIndex].heading) {
+                            const heading = scenes[sceneIndex].heading;
+                            const locationMatch = heading.match(/^(?:INT\.|EXT\.|INT\/EXT\.|I\/E\.)?\s*(.+?)(?:\s*-\s*|\s*$)/i);
+                            if (locationMatch && locationMatch[1]) {
+                                const location = locationMatch[1].split('-')[0].trim();
+                                if (location && location.length > 0) {
+                                    elements[category.id].add(location);
                                 }
-                            });
+                            }
                         }
-                    });
-                }
-                
-                // Special detection for specific categories
-                if (category.id === 'wardrobe') {
-                    const clothingRegex = /(?:wearing|dressed in|wears)\s+([^.]+)/gi;
-                    let match;
-                    while ((match = clothingRegex.exec(content)) !== null) {
-                        const clothing = match[1].replace(/[,.]$/, '').trim();
-                        if (clothing.length < 50) {
-                            elements[category.id].add(clothing);
-                        }
-                    }
-                }
-                
-                if (category.id === 'props') {
-                    const propsRegex = /(?:picks up|holds|grabs|takes|pulls out|draws|brandishes|carrying|carries)\s+(?:a |an |the |his |her |their )?([^.]+)/gi;
-                    let match;
-                    while ((match = propsRegex.exec(content)) !== null) {
-                        const prop = match[1].replace(/[,.]$/, '').trim().split(' ').slice(0, 3).join(' ');
-                        if (prop.length > 2 && prop.length < 30) {
-                            elements[category.id].add(prop);
-                        }
-                    }
-                }
-                
-                if (category.id === 'makeup') {
-                    const makeupRegex = /(?:bruised|bloodied|scarred|wounded|cut|bleeding|swollen|black eye)/gi;
-                    const matches = content.match(makeupRegex);
-                    if (matches) {
-                        matches.forEach(match => {
-                            elements[category.id].add(match.charAt(0).toUpperCase() + match.slice(1).toLowerCase());
+                    } else if (category.patterns && Array.isArray(category.patterns)) {
+                        category.patterns.forEach(pattern => {
+                            if (!pattern || pattern.length === 0) return;
+                            
+                            try {
+                                const escapedPattern = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                                const regex = new RegExp(`\\b${escapedPattern}s?\\b`, 'gi');
+                                const matches = content.match(regex);
+                                
+                                if (matches && Array.isArray(matches)) {
+                                    matches.forEach(match => {
+                                        const cleaned = match.trim();
+                                        if (cleaned.length > 1 && cleaned.length < 50) {
+                                            const capitalized = cleaned.charAt(0).toUpperCase() + cleaned.slice(1).toLowerCase();
+                                            elements[category.id].add(capitalized);
+                                        }
+                                    });
+                                }
+                            } catch (regexError) {
+                                console.warn(`Regex error for pattern "${pattern}":`, regexError);
+                            }
                         });
                     }
+                    
+                    // Special detections with error handling
+                    if (category.id === 'wardrobe') {
+                        try {
+                            const clothingRegex = /(?:wearing|dressed in|wears)\s+([^.]{1,50})/gi;
+                            let match;
+                            while ((match = clothingRegex.exec(content)) !== null && elements[category.id].size < 20) {
+                                const clothing = match[1].replace(/[,.]$/, '').trim();
+                                if (clothing.length > 2 && clothing.length < 50) {
+                                    elements[category.id].add(clothing);
+                                }
+                            }
+                        } catch (error) {
+                            console.warn('Error in wardrobe detection:', error);
+                        }
+                    }
+                    
+                    if (category.id === 'props') {
+                        try {
+                            const propsRegex = /(?:picks up|holds|grabs|takes|pulls out|draws|brandishes|carrying|carries)\s+(?:a |an |the |his |her |their )?([^.]{2,30})/gi;
+                            let match;
+                            while ((match = propsRegex.exec(content)) !== null && elements[category.id].size < 20) {
+                                const prop = match[1].replace(/[,.]$/, '').trim().split(' ').slice(0, 3).join(' ');
+                                if (prop.length > 2 && prop.length < 30) {
+                                    elements[category.id].add(prop);
+                                }
+                            }
+                        } catch (error) {
+                            console.warn('Error in props detection:', error);
+                        }
+                    }
+                    
+                } catch (error) {
+                    console.error(`Error processing category ${category.id}:`, error);
                 }
             });
             
             return elements;
         }
         
-        // Generate scene synopsis
+        // Generate scene synopsis - FIXED
         function generateSceneSynopsis(content, heading) {
-            const lines = content.split('\n').filter(line => line.trim());
-            const contentLower = content.toLowerCase();
-            
-            const charactersInScene = [];
-            lines.forEach((line, index) => {
-                const trimmed = line.trim();
-                if (trimmed && trimmed === trimmed.toUpperCase() && 
-                    trimmed.length < 30 && !trimmed.includes('.')) {
-                    const nextLine = lines[index + 1] ? lines[index + 1].trim() : '';
-                    if (nextLine && nextLine !== nextLine.toUpperCase()) {
-                        const charName = trimmed.replace(/\(.*\)/, '').trim();
-                        if (charName && !charactersInScene.includes(charName)) {
-                            charactersInScene.push(charName);
+            try {
+                if (!content || !heading) return 'Scene action';
+                
+                const lines = content.split('\n').filter(line => line && line.trim());
+                const contentLower = content.toLowerCase();
+                
+                // Extract characters
+                const charactersInScene = [];
+                lines.forEach((line, index) => {
+                    const trimmed = line.trim();
+                    if (trimmed && 
+                        trimmed === trimmed.toUpperCase() && 
+                        trimmed.length < 30 && 
+                        !trimmed.includes('.')) {
+                        const nextLine = lines[index + 1] ? lines[index + 1].trim() : '';
+                        if (nextLine && nextLine !== nextLine.toUpperCase()) {
+                            const charName = trimmed.replace(/\(.*\)/, '').trim();
+                            if (charName && charName.length > 0 && !charactersInScene.includes(charName)) {
+                                charactersInScene.push(charName);
+                            }
                         }
                     }
-                }
-            });
-            
-            const actionVerbs = ['enters', 'exits', 'walks', 'runs', 'sits', 'stands', 'opens', 'closes', 
-                                'picks up', 'puts down', 'looks', 'turns', 'moves', 'arrives', 'leaves',
-                                'speaks', 'talks', 'argues', 'fights', 'kisses', 'hugs', 'discovers',
-                                'finds', 'searches', 'hides', 'reveals', 'shows', 'grabs', 'throws'];
-            
-            const detectedActions = [];
-            actionVerbs.forEach(verb => {
-                if (contentLower.includes(verb)) {
-                    detectedActions.push(verb);
-                }
-            });
-            
-            const dramaticWords = ['suddenly', 'shocked', 'surprised', 'angry', 'sad', 'happy', 
-                                   'terrified', 'relieved', 'confused', 'realizes', 'discovers',
-                                   'explosion', 'crash', 'scream', 'whisper', 'shout', 'cry'];
-            
-            const hasDrama = dramaticWords.some(word => contentLower.includes(word));
-            
-            const actionLines = [];
-            for (let i = 0; i < lines.length && actionLines.length < 3; i++) {
-                const line = lines[i].trim();
-                const prevLine = i > 0 ? lines[i - 1].trim() : '';
-                const isDialogue = prevLine && prevLine === prevLine.toUpperCase() && prevLine.length < 30;
-                const isParenthetical = line.startsWith('(') && line.endsWith(')');
-                const isCharacterName = line === line.toUpperCase() && line.length < 30 && !line.includes('.');
-                
-                if (!isDialogue && !isParenthetical && !isCharacterName && line.length > 10) {
-                    actionLines.push(line);
-                }
-            }
-            
-            let synopsis = '';
-            
-            if (charactersInScene.length > 0) {
-                if (charactersInScene.length === 1) {
-                    synopsis = charactersInScene[0];
-                } else if (charactersInScene.length === 2) {
-                    synopsis = `${charactersInScene[0]} and ${charactersInScene[1]}`;
-                } else {
-                    synopsis = `${charactersInScene[0]}, ${charactersInScene[1]}, and ${charactersInScene.length - 2} other${charactersInScene.length - 2 > 1 ? 's' : ''}`;
-                }
-            }
-            
-            if (actionLines.length > 0) {
-                let action = actionLines[0];
-                
-                charactersInScene.forEach(char => {
-                    action = action.replace(new RegExp(`\\b${char}\\b`, 'gi'), 'they');
                 });
                 
-                action = action.replace(/\s+/g, ' ').trim();
-                if (action.length > 60) {
-                    action = action.substring(0, 57) + '...';
+                // Build synopsis
+                let synopsis = '';
+                
+                if (charactersInScene.length > 0) {
+                    if (charactersInScene.length === 1) {
+                        synopsis = charactersInScene[0];
+                    } else if (charactersInScene.length === 2) {
+                        synopsis = `${charactersInScene[0]} and ${charactersInScene[1]}`;
+                    } else {
+                        synopsis = `${charactersInScene[0]}, ${charactersInScene[1]}, and others`;
+                    }
                 }
                 
-                action = action.charAt(0).toLowerCase() + action.slice(1);
+                // Add action if available
+                const actionLines = lines.filter((line, index) => {
+                    const trimmed = line.trim();
+                    const prevLine = index > 0 ? lines[index - 1].trim() : '';
+                    const isDialogue = prevLine && prevLine === prevLine.toUpperCase() && prevLine.length < 30;
+                    const isParenthetical = trimmed.startsWith('(') && trimmed.endsWith(')');
+                    const isCharacterName = trimmed === trimmed.toUpperCase() && trimmed.length < 30;
+                    
+                    return !isDialogue && !isParenthetical && !isCharacterName && trimmed.length > 10;
+                });
                 
-                if (synopsis) {
-                    synopsis += ' ' + action;
-                } else {
-                    synopsis = action.charAt(0).toUpperCase() + action.slice(1);
+                if (actionLines.length > 0 && synopsis) {
+                    let action = actionLines[0].trim();
+                    action = action.replace(/\s+/g, ' ');
+                    if (action.length > 50) {
+                        action = action.substring(0, 47) + '...';
+                    }
+                    synopsis += ' - ' + action.charAt(0).toLowerCase() + action.slice(1);
                 }
-            }
-            
-            if (hasDrama && synopsis) {
-                const dramatic = dramaticWords.find(word => contentLower.includes(word));
-                if (dramatic && !synopsis.toLowerCase().includes(dramatic)) {
-                    synopsis += ` [${dramatic}]`;
+                
+                // Fallback
+                if (!synopsis || synopsis.length < 5) {
+                    const location = heading.replace(/^(INT\.|EXT\.|INT\/EXT\.|I\/E\.)?\s*/i, '')
+                                            .replace(/\s*-\s*(DAY|NIGHT|MORNING|AFTERNOON|EVENING|DUSK).*/i, '')
+                                            .trim();
+                    synopsis = location || 'Scene';
                 }
+                
+                if (synopsis.length > 100) {
+                    synopsis = synopsis.substring(0, 97) + '...';
+                }
+                
+                return synopsis;
+                
+            } catch (error) {
+                console.error('Error generating synopsis:', error);
+                return 'Scene action';
             }
-            
-            if (!synopsis || synopsis.length < 10) {
-                const location = heading.replace(/^(INT\.|EXT\.|INT\/EXT\.|I\/E\.)?\s*/i, '')
-                                        .replace(/\s*-\s*(DAY|NIGHT|MORNING|AFTERNOON|EVENING|DUSK).*/i, '')
-                                        .trim();
-                synopsis = `Scene at ${location}`;
-            }
-            
-            if (synopsis.length > 100) {
-                synopsis = synopsis.substring(0, 97) + '...';
-            }
-            
-            return synopsis || 'Scene action';
         }
         
-        // Populate all elements in sidebar
+        // Populate all elements
         function populateAllElements() {
             tagCategories.forEach(category => {
                 const container = document.getElementById(`tags-${category.id}`);
-                if (container) {
-                    container.innerHTML = '';
-                }
+                if (container) container.innerHTML = '';
             });
             
             const allElements = {};
-            
             tagCategories.forEach(category => {
                 allElements[category.id] = new Map();
             });
             
+            // Collect AI elements
             Object.values(sceneElements).forEach(sceneData => {
-                Object.entries(sceneData).forEach(([categoryId, elements]) => {
-                    elements.forEach(element => {
-                        if (!allElements[categoryId].has(element)) {
-                            allElements[categoryId].set(element, 'ai');
+                if (sceneData && typeof sceneData === 'object') {
+                    Object.entries(sceneData).forEach(([categoryId, elements]) => {
+                        if (elements && elements.forEach) {
+                            elements.forEach(element => {
+                                if (element && typeof element === 'string' && !allElements[categoryId].has(element)) {
+                                    allElements[categoryId].set(element, 'ai');
+                                }
+                            });
                         }
                     });
-                });
+                }
             });
             
+            // Collect manual tags
             Object.values(manualTags).forEach(sceneData => {
-                Object.entries(sceneData).forEach(([categoryId, elements]) => {
-                    elements.forEach(element => {
-                        allElements[categoryId].set(element, 'manual');
+                if (sceneData && typeof sceneData === 'object') {
+                    Object.entries(sceneData).forEach(([categoryId, elements]) => {
+                        if (elements && elements.forEach) {
+                            elements.forEach(element => {
+                                if (element && typeof element === 'string') {
+                                    allElements[categoryId].set(element, 'manual');
+                                }
+                            });
+                        }
                     });
-                });
+                }
             });
             
+            // Display elements
             Object.entries(allElements).forEach(([categoryId, elementsMap]) => {
                 const container = document.getElementById(`tags-${categoryId}`);
                 const countEl = document.getElementById(`count-${categoryId}`);
                 
-                if (container) {
-                    if (elementsMap.size === 0) {
-                        countEl.textContent = '0';
-                    } else {
-                        countEl.textContent = elementsMap.size;
-                        
+                if (container && countEl) {
+                    countEl.textContent = elementsMap.size;
+                    
+                    if (elementsMap.size > 0) {
                         Array.from(elementsMap.entries()).forEach(([element, source]) => {
+                            const safeElement = element.replace(/'/g, "\\'").replace(/"/g, '&quot;');
                             const tagEl = document.createElement('div');
                             tagEl.className = `tag-item ${source === 'ai' ? 'ai-detected' : ''}`;
                             tagEl.innerHTML = `
-                                <div class="tag-item-text" onclick="highlightTagInScript('${categoryId}', '${element.replace(/'/g, "\\'")}')">
+                                <div class="tag-item-text">
                                     <span>${element}</span>
                                     ${source === 'ai' ? '<span class="tag-badge">AI</span>' : ''}
                                 </div>
-                                <button class="tag-remove" onclick="removeTag('${categoryId}', '${element.replace(/'/g, "\\'")}')">×</button>
+                                <button class="tag-remove" onclick="removeTag('${categoryId}', '${safeElement}')">×</button>
                             `;
                             container.appendChild(tagEl);
                         });
@@ -2068,7 +2098,7 @@ This is it. Today's the day."></textarea>
             });
         }
         
-        // Remove a tag
+        // Remove tag
         function removeTag(categoryId, element) {
             Object.keys(sceneElements).forEach(sceneIdx => {
                 if (sceneElements[sceneIdx][categoryId]) {
@@ -2088,96 +2118,98 @@ This is it. Today's the day."></textarea>
             highlightScriptElements();
         }
         
-        // Highlight tag in script
-        function highlightTagInScript(categoryId, element) {
-            const highlights = document.querySelectorAll(`.highlight.${categoryId}`);
-            highlights.forEach(hl => {
-                if (hl.textContent.toLowerCase().includes(element.toLowerCase())) {
-                    hl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    hl.style.animation = 'pulse 1s ease';
-                    setTimeout(() => {
-                        hl.style.animation = '';
-                    }, 1000);
-                }
-            });
-        }
-        
-        // Highlight elements in script view - streamlined version
+        // Highlight elements in script - FIXED with validation
         function highlightScriptElements() {
-            if (scenes.length === 0) return;
+            if (!scenes || scenes.length === 0 || !scriptText) return;
             
-            const container = document.getElementById('scriptContent');
-            const lines = scriptText.split('\n');
-            let html = '';
-            let inScene = false;
-            let currentSceneIdx = 0;
-            
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i];
-                const trimmed = line.trim();
+            try {
+                const container = document.getElementById('scriptContent');
+                const lines = scriptText.split('\n');
+                let html = '';
+                let inScene = false;
+                let currentSceneIdx = 0;
                 
-                const isSceneHeading = scenes.some(s => s.lineNumber === i);
-                
-                if (isSceneHeading) {
-                    if (inScene) {
-                        html += '</div>';
-                    }
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i];
+                    const trimmed = line.trim();
                     
-                    const scene = scenes[currentSceneIdx];
-                    html += `<div class="script-scene" id="scene-${scene.number}">`;
-                    html += `<div class="scene-header-wrapper">`;
-                    html += `<span class="scene-number-badge">Scene ${scene.number}</span>`;
-                    html += `<div class="script-scene-heading">${trimmed}</div>`;
-                    html += `<button class="scene-edit-btn" onclick="editSceneBreak(${currentSceneIdx})">Edit</button>`;
-                    html += `</div>`;
+                    const isSceneHeading = scenes.some(s => s.lineNumber === i);
                     
-                    inScene = true;
-                    currentSceneIdx++;
-                } else if (trimmed) {
-                    let sceneIdx = currentSceneIdx - 1;
-                    let highlightedLine = trimmed;
-                    
-                    if (sceneElements[sceneIdx] || (manualTags[sceneIdx] && Object.keys(manualTags[sceneIdx]).length > 0)) {
-                        tagCategories.forEach(category => {
-                            const aiElements = sceneElements[sceneIdx]?.[category.id] || new Set();
-                            const manualElements = manualTags[sceneIdx]?.[category.id] || new Set();
-                            const allElements = new Set([...aiElements, ...manualElements]);
-                            
-                            allElements.forEach(element => {
-                                const regex = new RegExp(`\\b(${escapeRegex(element)})\\b`, 'gi');
-                                highlightedLine = highlightedLine.replace(regex, `<span class="highlight ${category.id}">$1</span>`);
+                    if (isSceneHeading) {
+                        if (inScene) {
+                            html += '</div>';
+                        }
+                        
+                        const scene = scenes[currentSceneIdx];
+                        if (scene) {
+                            html += `<div class="script-scene" id="scene-${scene.number}">`;
+                            html += `<div class="scene-header-wrapper">`;
+                            html += `<span class="scene-number-badge">Scene ${scene.number}</span>`;
+                            html += `<div class="script-scene-heading">${trimmed}</div>`;
+                            html += `<button class="scene-edit-btn" onclick="editSceneBreak(${currentSceneIdx})">Edit</button>`;
+                            html += `</div>`;
+                        }
+                        
+                        inScene = true;
+                        currentSceneIdx++;
+                    } else if (trimmed) {
+                        let sceneIdx = currentSceneIdx - 1;
+                        let highlightedLine = trimmed;
+                        
+                        // Apply highlights with validation
+                        if (sceneIdx >= 0 && (sceneElements[sceneIdx] || manualTags[sceneIdx])) {
+                            tagCategories.forEach(category => {
+                                try {
+                                    const aiElements = sceneElements[sceneIdx]?.[category.id] || new Set();
+                                    const manualElements = manualTags[sceneIdx]?.[category.id] || new Set();
+                                    const allElements = new Set([...aiElements, ...manualElements]);
+                                    
+                                    allElements.forEach(element => {
+                                        if (!element || typeof element !== 'string' || element.length === 0) return;
+                                        
+                                        try {
+                                            const escapedElement = element.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                                            if (escapedElement && escapedElement.length > 0) {
+                                                const regex = new RegExp(`\\b(${escapedElement})\\b`, 'gi');
+                                                highlightedLine = highlightedLine.replace(regex, `<span class="highlight ${category.id}">$1</span>`);
+                                            }
+                                        } catch (regexError) {
+                                            console.warn(`Regex error for element "${element}":`, regexError);
+                                        }
+                                    });
+                                } catch (error) {
+                                    console.warn(`Error highlighting category ${category.id}:`, error);
+                                }
                             });
-                        });
-                    }
-                    
-                    if (trimmed === trimmed.toUpperCase() && trimmed.length < 30 && 
-                        !trimmed.includes('.') && !trimmed.includes(':')) {
-                        html += `<div class="script-character">${highlightedLine}</div>`;
-                    } else if (trimmed.startsWith('(') && trimmed.endsWith(')')) {
-                        html += `<div class="script-parenthetical">${highlightedLine}</div>`;
-                    } else if (trimmed.includes('CUT TO:') || trimmed.includes('FADE')) {
-                        html += `<div class="script-transition">${highlightedLine}</div>`;
-                    } else {
-                        const prevLine = i > 0 ? lines[i - 1].trim() : '';
-                        if (prevLine && prevLine === prevLine.toUpperCase() && prevLine.length < 30) {
-                            html += `<div class="script-dialogue">${highlightedLine}</div>`;
+                        }
+                        
+                        // Determine element type
+                        if (trimmed === trimmed.toUpperCase() && trimmed.length < 30 && 
+                            !trimmed.includes('.') && !trimmed.includes(':')) {
+                            html += `<div class="script-character">${highlightedLine}</div>`;
+                        } else if (trimmed.startsWith('(') && trimmed.endsWith(')')) {
+                            html += `<div class="script-parenthetical">${highlightedLine}</div>`;
+                        } else if (trimmed.includes('CUT TO:') || trimmed.includes('FADE')) {
+                            html += `<div class="script-transition">${highlightedLine}</div>`;
                         } else {
-                            html += `<div class="script-action">${highlightedLine}</div>`;
+                            const prevLine = i > 0 ? lines[i - 1].trim() : '';
+                            if (prevLine && prevLine === prevLine.toUpperCase() && prevLine.length < 30) {
+                                html += `<div class="script-dialogue">${highlightedLine}</div>`;
+                            } else {
+                                html += `<div class="script-action">${highlightedLine}</div>`;
+                            }
                         }
                     }
                 }
+                
+                if (inScene) {
+                    html += '</div>';
+                }
+                
+                container.innerHTML = html || '<div class="empty-state"><div class="empty-icon">—</div><div class="empty-title">Processing...</div></div>';
+            } catch (error) {
+                console.error('Error highlighting script:', error);
             }
-            
-            if (inScene) {
-                html += '</div>';
-            }
-            
-            container.innerHTML = html || '<div class="empty-state"><div class="empty-icon">—</div><div class="empty-title">Processing...</div></div>';
-        }
-        
-        // Escape regex special characters
-        function escapeRegex(string) {
-            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         }
         
         // Enhanced AI Cleanup
@@ -2187,8 +2219,6 @@ This is it. Today's the day."></textarea>
             
             text = text.replace(/([a-z])([A-Z])/g, (match, p1, p2, offset, string) => {
                 const before = string.substring(Math.max(0, offset - 10), offset);
-                const after = string.substring(offset + 2, Math.min(string.length, offset + 12));
-                
                 if (/\bMc/.test(before + p1 + p2) || /^[A-Z][a-z]+[A-Z]/.test(p1 + p2)) {
                     return p1 + p2;
                 }
@@ -2218,7 +2248,6 @@ This is it. Today's the day."></textarea>
             }
             
             text = fixedLines.join('\n');
-            
             text = text.replace(/([.!?])\s*([A-Z])/g, '$1\n\n$2');
             text = text.replace(/\n{4,}/g, '\n\n\n');
             text = text.replace(/^\s+|\s+$/gm, '');
@@ -2248,15 +2277,13 @@ This is it. Today's the day."></textarea>
                     if (nextLine !== '') {
                         formatted.push('');
                     }
-                }
-                else if (line && line === line.toUpperCase() && line.length < 30 && 
+                } else if (line && line === line.toUpperCase() && line.length < 30 && 
                          !line.includes('.') && !line.includes('FADE') && !line.includes('CUT')) {
                     if (i > 0 && formatted[formatted.length - 1] !== '') {
                         formatted.push('');
                     }
                     formatted.push(line);
-                }
-                else {
+                } else {
                     formatted.push(line);
                 }
             }
@@ -2273,7 +2300,7 @@ This is it. Today's the day."></textarea>
             }
         }
         
-        // Analyze input in real-time
+        // Analyze input
         function analyzeInput() {
             const text = document.getElementById('scriptInput').value;
             if (!text.trim()) {
@@ -2289,7 +2316,7 @@ This is it. Today's the day."></textarea>
             updatePreview(detectedScenes.length, detectedCharacters.size, pageEstimate);
         }
         
-        // Detect scenes with improved pattern matching
+        // Detect scenes
         function detectScenesInText(text) {
             const lines = text.split('\n');
             const detectedScenes = [];
@@ -2318,7 +2345,7 @@ This is it. Today's the day."></textarea>
             return detectedScenes;
         }
         
-        // Detect characters with improved logic
+        // Detect characters
         function detectCharactersInText(text) {
             const lines = text.split('\n');
             const detectedCharacters = new Set();
@@ -2336,7 +2363,7 @@ This is it. Today's the day."></textarea>
                     !excludeWords.some(word => trimmed.includes(word))) {
                     
                     const nextLine = lines[index + 1] ? lines[index + 1].trim() : '';
-                    if (nextLine && !nextLine.toUpperCase() === nextLine) {
+                    if (nextLine && nextLine !== nextLine.toUpperCase()) {
                         const cleaned = trimmed.replace(/\(.*\)/, '').trim();
                         if (cleaned && cleaned.length > 1) {
                             detectedCharacters.add(cleaned);
@@ -2400,7 +2427,7 @@ This is it. Today's the day."></textarea>
         function renderSceneList() {
             const container = document.getElementById('sceneList');
             
-            if (scenes.length === 0) {
+            if (!scenes || scenes.length === 0) {
                 container.innerHTML = '<div class="empty-state"><div class="empty-icon">—</div><div class="empty-desc">No scenes detected</div></div>';
                 return;
             }
@@ -2410,7 +2437,7 @@ This is it. Today's the day."></textarea>
                 
                 if (sceneElements[index]) {
                     Object.entries(sceneElements[index]).forEach(([catId, elements]) => {
-                        if (elements.size > 0) {
+                        if (elements && elements.size > 0) {
                             if (!sceneTags[catId]) sceneTags[catId] = 0;
                             sceneTags[catId] += elements.size;
                         }
@@ -2419,7 +2446,7 @@ This is it. Today's the day."></textarea>
                 
                 if (manualTags[index]) {
                     Object.entries(manualTags[index]).forEach(([catId, elements]) => {
-                        if (elements.size > 0) {
+                        if (elements && elements.size > 0) {
                             if (!sceneTags[catId]) sceneTags[catId] = 0;
                             sceneTags[catId] += elements.size;
                         }
@@ -2453,7 +2480,7 @@ This is it. Today's the day."></textarea>
             }).join('');
         }
         
-        // Render script content
+        // Render script
         function renderScript(text) {
             highlightScriptElements();
         }
@@ -2500,6 +2527,7 @@ This is it. Today's the day."></textarea>
         // Edit scene break
         function editSceneBreak(sceneIndex) {
             const scene = scenes[sceneIndex];
+            if (!scene) return;
             
             const modal = document.getElementById('sceneBreakModal');
             modal.classList.add('active');
@@ -2520,7 +2548,7 @@ This is it. Today's the day."></textarea>
             const modal = document.getElementById('sceneBreakModal');
             const editIndex = modal.dataset.editIndex;
             
-            if (editIndex !== undefined) {
+            if (editIndex !== undefined && scenes[editIndex]) {
                 scenes[editIndex].heading = heading;
                 delete modal.dataset.editIndex;
             }
@@ -2540,47 +2568,55 @@ This is it. Today's the day."></textarea>
         
         // Save project
         function saveProject() {
-            const serializableElements = {};
-            Object.entries(sceneElements).forEach(([sceneIdx, categories]) => {
-                serializableElements[sceneIdx] = {};
-                Object.entries(categories).forEach(([catId, elements]) => {
-                    serializableElements[sceneIdx][catId] = Array.from(elements);
+            try {
+                const serializableElements = {};
+                Object.entries(sceneElements).forEach(([sceneIdx, categories]) => {
+                    serializableElements[sceneIdx] = {};
+                    Object.entries(categories).forEach(([catId, elements]) => {
+                        serializableElements[sceneIdx][catId] = Array.from(elements);
+                    });
                 });
-            });
-            
-            const serializableManualTags = {};
-            Object.entries(manualTags).forEach(([sceneIdx, categories]) => {
-                serializableManualTags[sceneIdx] = {};
-                Object.entries(categories).forEach(([catId, elements]) => {
-                    serializableManualTags[sceneIdx][catId] = Array.from(elements);
+                
+                const serializableManualTags = {};
+                Object.entries(manualTags).forEach(([sceneIdx, categories]) => {
+                    serializableManualTags[sceneIdx] = {};
+                    Object.entries(categories).forEach(([catId, elements]) => {
+                        serializableManualTags[sceneIdx][catId] = Array.from(elements);
+                    });
                 });
-            });
-            
-            currentProject.sceneElements = serializableElements;
-            currentProject.manualTags = serializableManualTags;
-            currentProject.scenes = scenes;
-            
-            localStorage.setItem('currentProject', JSON.stringify(currentProject));
-            
-            const projects = JSON.parse(localStorage.getItem('checksHappyProjects') || '[]');
-            const index = projects.findIndex(p => p.id === currentProject.id);
-            if (index !== -1) {
-                projects[index] = currentProject;
-                localStorage.setItem('checksHappyProjects', JSON.stringify(projects));
+                
+                currentProject.sceneElements = serializableElements;
+                currentProject.manualTags = serializableManualTags;
+                currentProject.scenes = scenes;
+                
+                localStorage.setItem('currentProject', JSON.stringify(currentProject));
+                
+                const projects = JSON.parse(localStorage.getItem('checksHappyProjects') || '[]');
+                const index = projects.findIndex(p => p.id === currentProject.id);
+                if (index !== -1) {
+                    projects[index] = currentProject;
+                    localStorage.setItem('checksHappyProjects', JSON.stringify(projects));
+                }
+            } catch (error) {
+                console.error('Error saving project:', error);
             }
         }
         
         // Zoom functions
         function zoomIn() {
             const container = document.querySelector('.script-content');
-            const currentSize = parseFloat(window.getComputedStyle(container).fontSize);
-            container.style.fontSize = (currentSize * 1.1) + 'px';
+            if (container) {
+                const currentSize = parseFloat(window.getComputedStyle(container).fontSize);
+                container.style.fontSize = (currentSize * 1.1) + 'px';
+            }
         }
         
         function zoomOut() {
             const container = document.querySelector('.script-content');
-            const currentSize = parseFloat(window.getComputedStyle(container).fontSize);
-            container.style.fontSize = (currentSize * 0.9) + 'px';
+            if (container) {
+                const currentSize = parseFloat(window.getComputedStyle(container).fontSize);
+                container.style.fontSize = (currentSize * 0.9) + 'px';
+            }
         }
         
         // Utility functions
@@ -2596,7 +2632,7 @@ This is it. Today's the day."></textarea>
             };
         }
         
-        // Add CSS animation for pulse
+        // Add CSS animation
         const style = document.createElement('style');
         style.textContent = `
             @keyframes pulse {
@@ -2610,6 +2646,7 @@ This is it. Today's the day."></textarea>
         window.addEventListener('load', () => {
             init();
             
+            // Restore Sets from Arrays
             if (currentProject.sceneElements) {
                 Object.entries(currentProject.sceneElements).forEach(([sceneIdx, categories]) => {
                     if (!sceneElements[sceneIdx]) sceneElements[sceneIdx] = {};
