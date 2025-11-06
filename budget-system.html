@@ -13,18 +13,21 @@
         }
 
         :root {
-            --bg-dark: #0d0b0a;
-            --bg-medium: #1a1612;
-            --card-bg: #242019;
-            --text-light: #e8e6e3;
-            --text-muted: #8a7f73;
-            --accent-gold: #c9a961;
-            --border: #2d2925;
-            --divider: #363330;
+            --bg-dark: #050403;
+            --bg-darker: #020201;
+            --bg-medium: rgba(18, 16, 14, 0.85);
+            --card-bg: linear-gradient(135deg, rgba(36, 32, 25, 0.7), rgba(42, 38, 31, 0.6));
+            --text-primary: #f0eeeb;
+            --text-secondary: #9a8f83;
+            --accent-gold: #d4af7a;
+            --accent-gold-hover: #e0c08f;
+            --border: rgba(255, 255, 255, 0.06);
+            --glass-border: rgba(255, 255, 255, 0.12);
+            --glass-shine: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.02));
             --success: #52c186;
             --warning: #e8a87c;
             --danger: #ef4444;
-            --glass-border: rgba(255, 255, 255, 0.08);
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
         }
 
         /* Scrollbar */
@@ -48,74 +51,113 @@
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--bg-dark);
-            color: var(--text-light);
+            background: radial-gradient(ellipse at top, #0a0908 0%, #020201 40%, #000000 100%);
+            color: var(--text-primary);
             min-height: 100vh;
             font-weight: 400;
             letter-spacing: -0.01em;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 20% 30%, rgba(212, 175, 122, 0.02) 0%, transparent 40%),
+                        radial-gradient(circle at 80% 70%, rgba(212, 175, 122, 0.015) 0%, transparent 40%);
+            pointer-events: none;
+            z-index: 1;
         }
 
         /* Layout */
         .app-layout {
             display: flex;
             height: 100vh;
+            position: relative;
+            z-index: 2;
         }
 
         /* Sidebar */
         .sidebar {
-            width: 280px;
-            background: var(--bg-medium);
-            border-right: 1px solid var(--border);
+            width: 260px;
+            background: linear-gradient(135deg, rgba(26, 22, 18, 0.8), rgba(20, 17, 15, 0.7));
+            backdrop-filter: blur(40px) saturate(120%);
+            -webkit-backdrop-filter: blur(40px) saturate(120%);
+            border-right: 1px solid var(--glass-border);
             display: flex;
             flex-direction: column;
-            overflow-y: auto;
+            position: relative;
+            z-index: 10;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .sidebar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 100px;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, transparent 100%);
+            pointer-events: none;
         }
 
         .sidebar-header {
-            padding: 24px;
-            border-bottom: 1px solid var(--border);
+            padding: 32px 24px 24px;
+            border-bottom: 1px solid var(--glass-border);
         }
 
         .back-btn {
-            display: flex;
+            display: inline-flex;
             align-items: center;
             gap: 8px;
-            color: var(--text-muted);
+            color: var(--text-secondary);
             text-decoration: none;
-            font-size: 0.875em;
-            margin-bottom: 16px;
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 20px;
             transition: color 0.2s ease;
+            opacity: 0.8;
         }
 
         .back-btn:hover {
-            color: var(--accent-gold);
+            color: var(--text-primary);
+            opacity: 1;
         }
 
         .project-info h2 {
-            font-size: 1.25em;
+            font-size: 20px;
             font-weight: 600;
             margin-bottom: 4px;
             letter-spacing: -0.02em;
         }
 
         .project-code {
-            font-size: 0.8125em;
-            color: var(--text-muted);
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            opacity: 0.7;
         }
 
         .nav-section {
-            padding: 24px 16px;
-            border-bottom: 1px solid var(--border);
+            padding: 20px 12px;
+            border-bottom: 1px solid var(--glass-border);
         }
 
         .nav-section-title {
-            font-size: 0.6875em;
+            font-size: 11px;
             font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: var(--text-muted);
-            margin-bottom: 12px;
-            padding: 0 8px;
+            letter-spacing: 0.08em;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            padding: 0 12px;
+            opacity: 0.5;
         }
 
         .nav-item {
@@ -123,28 +165,49 @@
             align-items: center;
             gap: 12px;
             padding: 10px 12px;
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.15s ease;
             margin-bottom: 2px;
-            font-size: 0.875em;
-            color: var(--text-muted);
+            font-size: 14px;
+            color: var(--text-secondary);
+            position: relative;
         }
 
         .nav-item:hover {
-            background: rgba(201, 169, 97, 0.08);
-            color: var(--text-light);
+            background: linear-gradient(135deg, rgba(212, 175, 122, 0.08), rgba(212, 175, 122, 0.05));
+            color: var(--text-primary);
+            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.05);
         }
 
         .nav-item.active {
-            background: rgba(201, 169, 97, 0.12);
+            background: linear-gradient(135deg, rgba(212, 175, 122, 0.12), rgba(212, 175, 122, 0.08));
             color: var(--accent-gold);
             font-weight: 500;
+            box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.1),
+                        0 2px 8px rgba(212, 175, 122, 0.1);
+        }
+
+        .nav-item.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 3px;
+            height: 16px;
+            background: var(--accent-gold);
+            border-radius: 2px;
         }
 
         .nav-icon {
             width: 18px;
-            font-size: 1.1em;
+            height: 18px;
+            opacity: 0.7;
+        }
+
+        .nav-item:hover .nav-icon {
+            opacity: 1;
         }
 
         /* Main Content */
@@ -157,56 +220,76 @@
 
         /* Top Bar */
         .top-bar {
-            height: 60px;
-            background: var(--bg-medium);
-            border-bottom: 1px solid var(--border);
+            height: 56px;
+            background: linear-gradient(135deg, rgba(26, 22, 18, 0.85), rgba(20, 17, 15, 0.75));
+            backdrop-filter: blur(40px) saturate(120%);
+            -webkit-backdrop-filter: blur(40px) saturate(120%);
+            border-bottom: 1px solid var(--glass-border);
             display: flex;
             align-items: center;
             justify-content: space-between;
             padding: 0 32px;
+            position: relative;
+            z-index: 9;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .top-bar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
         }
 
         .page-title {
-            font-size: 1.125em;
+            font-size: 16px;
             font-weight: 600;
             letter-spacing: -0.01em;
         }
 
         .top-bar-actions {
             display: flex;
-            gap: 12px;
+            gap: 8px;
             align-items: center;
         }
 
         .btn {
             padding: 8px 16px;
-            background: transparent;
-            border: 1px solid var(--border);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
+            border: 1px solid var(--glass-border);
             border-radius: 6px;
-            color: var(--text-muted);
+            color: var(--text-secondary);
             cursor: pointer;
-            font-size: 0.8125em;
-            transition: all 0.2s ease;
+            font-size: 13px;
             font-weight: 500;
+            transition: all 0.15s ease;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
+            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.05),
+                        0 2px 8px rgba(0, 0, 0, 0.2);
         }
 
         .btn:hover {
             border-color: var(--accent-gold);
             color: var(--accent-gold);
-            background: rgba(201, 169, 97, 0.05);
+            background: linear-gradient(135deg, rgba(212, 175, 122, 0.08), rgba(212, 175, 122, 0.04));
+            box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.1),
+                        0 4px 12px rgba(212, 175, 122, 0.15);
+            transform: translateY(-1px);
         }
 
         .btn.primary {
-            background: var(--accent-gold);
+            background: linear-gradient(135deg, rgba(212, 175, 122, 0.9), rgba(184, 150, 81, 0.9));
             border-color: var(--accent-gold);
             color: var(--bg-dark);
         }
 
         .btn.primary:hover {
-            background: #d4b16d;
+            background: linear-gradient(135deg, #d4af7a, #c09861);
         }
 
         /* Content Area */
@@ -226,19 +309,39 @@
 
         .stat-card {
             background: var(--card-bg);
-            border: 1px solid var(--border);
-            border-radius: 8px;
+            backdrop-filter: blur(30px) saturate(110%);
+            -webkit-backdrop-filter: blur(30px) saturate(110%);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
             padding: 24px;
             transition: all 0.2s ease;
+            position: relative;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
+                        inset 0 1px 1px rgba(255, 255, 255, 0.1);
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50%;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, transparent 100%);
+            pointer-events: none;
+            border-radius: 12px 12px 0 0;
         }
 
         .stat-card:hover {
-            border-color: var(--divider);
+            border-color: rgba(212, 175, 122, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5),
+                        inset 0 1px 2px rgba(255, 255, 255, 0.15);
         }
 
         .stat-label {
-            font-size: 0.8125em;
-            color: var(--text-muted);
+            font-size: 13px;
+            color: var(--text-secondary);
             margin-bottom: 8px;
             text-transform: uppercase;
             letter-spacing: 0.05em;
@@ -248,12 +351,12 @@
         .stat-value {
             font-size: 2em;
             font-weight: 600;
-            color: var(--text-light);
+            color: var(--text-primary);
             margin-bottom: 4px;
         }
 
         .stat-change {
-            font-size: 0.8125em;
+            font-size: 13px;
             display: flex;
             align-items: center;
             gap: 4px;
@@ -267,21 +370,50 @@
             color: var(--danger);
         }
 
-        /* Budget Table */
+        /* Budget Section */
         .budget-section {
             background: var(--card-bg);
-            border: 1px solid var(--border);
-            border-radius: 8px;
+            backdrop-filter: blur(30px) saturate(110%);
+            -webkit-backdrop-filter: blur(30px) saturate(110%);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
             overflow: hidden;
             margin-bottom: 24px;
+            position: relative;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
+                        inset 0 1px 1px rgba(255, 255, 255, 0.1);
+        }
+
+        .budget-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50%;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, transparent 100%);
+            pointer-events: none;
+            border-radius: 12px 12px 0 0;
         }
 
         .budget-section-header {
             padding: 20px 24px;
-            border-bottom: 1px solid var(--border);
+            border-bottom: 1px solid var(--glass-border);
             display: flex;
             justify-content: space-between;
             align-items: center;
+            background: linear-gradient(135deg, rgba(30, 26, 22, 0.5), rgba(26, 22, 18, 0.6));
+            position: relative;
+        }
+
+        .budget-section-header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
         }
 
         .section-title {
@@ -292,23 +424,19 @@
             gap: 12px;
         }
 
-        .section-icon {
-            font-size: 1.2em;
-        }
-
         .section-actions {
             display: flex;
             gap: 8px;
         }
 
         .icon-btn {
-            padding: 6px 10px;
+            padding: 6px 12px;
             background: transparent;
             border: 1px solid var(--border);
             border-radius: 6px;
-            color: var(--text-muted);
+            color: var(--text-secondary);
             cursor: pointer;
-            font-size: 0.875em;
+            font-size: 12px;
             transition: all 0.2s ease;
         }
 
@@ -324,17 +452,17 @@
         }
 
         .category-table thead {
-            background: rgba(201, 169, 97, 0.05);
+            background: rgba(212, 175, 122, 0.05);
         }
 
         .category-table th {
             padding: 12px 24px;
             text-align: left;
-            font-size: 0.75em;
+            font-size: 11px;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            color: var(--text-muted);
+            color: var(--text-secondary);
             border-bottom: 1px solid var(--border);
         }
 
@@ -344,7 +472,7 @@
 
         .category-table td {
             padding: 16px 24px;
-            font-size: 0.875em;
+            font-size: 14px;
             border-bottom: 1px solid var(--border);
         }
 
@@ -354,7 +482,7 @@
         }
 
         .category-table tbody tr:hover {
-            background: rgba(201, 169, 97, 0.03);
+            background: rgba(212, 175, 122, 0.03);
         }
 
         .category-table tbody tr:last-child td {
@@ -362,12 +490,12 @@
         }
 
         .item-name {
-            color: var(--text-light);
+            color: var(--text-primary);
             font-weight: 500;
         }
 
         .item-desc {
-            color: var(--text-muted);
+            color: var(--text-secondary);
             font-size: 0.9em;
             margin-top: 2px;
         }
@@ -375,10 +503,10 @@
         .supplier-tag {
             display: inline-block;
             padding: 4px 8px;
-            background: rgba(201, 169, 97, 0.1);
-            border: 1px solid rgba(201, 169, 97, 0.2);
+            background: rgba(212, 175, 122, 0.1);
+            border: 1px solid rgba(212, 175, 122, 0.2);
             border-radius: 4px;
-            font-size: 0.75em;
+            font-size: 11px;
             color: var(--accent-gold);
         }
 
@@ -399,11 +527,11 @@
         .form-input {
             width: 100%;
             padding: 8px 12px;
-            background: var(--bg-medium);
+            background: rgba(0, 0, 0, 0.3);
             border: 1px solid var(--border);
             border-radius: 6px;
-            color: var(--text-light);
-            font-size: 0.875em;
+            color: var(--text-primary);
+            font-size: 14px;
             transition: all 0.2s ease;
         }
 
@@ -414,13 +542,13 @@
         }
 
         .form-input::placeholder {
-            color: var(--text-muted);
+            color: var(--text-secondary);
         }
 
         .calculated-value {
             color: var(--accent-gold);
             font-weight: 600;
-            font-size: 0.875em;
+            font-size: 14px;
             text-align: right;
         }
 
@@ -429,10 +557,10 @@
             background: transparent;
             border: 1px solid var(--border);
             border-radius: 4px;
-            color: var(--text-muted);
+            color: var(--text-secondary);
             cursor: pointer;
             transition: all 0.2s ease;
-            font-size: 0.875em;
+            font-size: 14px;
         }
 
         .delete-btn:hover {
@@ -443,7 +571,7 @@
         /* Category Total */
         .category-total {
             padding: 16px 24px;
-            background: rgba(201, 169, 97, 0.05);
+            background: rgba(212, 175, 122, 0.05);
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -451,37 +579,54 @@
         }
 
         .total-label {
-            color: var(--text-muted);
-            font-size: 0.875em;
+            color: var(--text-secondary);
+            font-size: 14px;
             text-transform: uppercase;
             letter-spacing: 0.05em;
         }
 
         .total-value {
             color: var(--accent-gold);
-            font-size: 1.125em;
+            font-size: 18px;
         }
 
         /* Grand Total */
         .grand-total {
             background: var(--card-bg);
+            backdrop-filter: blur(30px) saturate(110%);
+            -webkit-backdrop-filter: blur(30px) saturate(110%);
             border: 2px solid var(--accent-gold);
-            border-radius: 8px;
+            border-radius: 12px;
             padding: 32px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-top: 32px;
+            position: relative;
+            box-shadow: 0 8px 32px rgba(212, 175, 122, 0.2),
+                        inset 0 1px 2px rgba(255, 255, 255, 0.1);
+        }
+
+        .grand-total::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50%;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, transparent 100%);
+            pointer-events: none;
+            border-radius: 10px 10px 0 0;
         }
 
         .grand-total-label {
-            font-size: 1.25em;
+            font-size: 20px;
             font-weight: 600;
-            color: var(--text-light);
+            color: var(--text-primary);
         }
 
         .grand-total-value {
-            font-size: 2.5em;
+            font-size: 40px;
             font-weight: 700;
             color: var(--accent-gold);
         }
@@ -499,28 +644,47 @@
         }
 
         .progress-label {
-            font-size: 0.875em;
-            color: var(--text-muted);
+            font-size: 14px;
+            color: var(--text-secondary);
         }
 
         .progress-value {
-            font-size: 0.875em;
-            color: var(--text-light);
+            font-size: 14px;
+            color: var(--text-primary);
             font-weight: 500;
         }
 
         .progress-bar {
             height: 8px;
-            background: var(--border);
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.4));
             border-radius: 4px;
             overflow: hidden;
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
         }
 
         .progress-fill {
             height: 100%;
-            background: linear-gradient(90deg, var(--accent-gold), #d4b16d);
+            background: linear-gradient(90deg, var(--accent-gold), rgba(212, 175, 122, 0.8));
             border-radius: 4px;
             transition: width 0.3s ease;
+            box-shadow: 0 0 10px rgba(212, 175, 122, 0.3);
+            position: relative;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
         }
 
         .progress-fill.warning {
@@ -551,25 +715,41 @@
         }
 
         .modal-content {
-            background: var(--card-bg);
-            border: 1px solid var(--border);
-            border-radius: 12px;
+            background: linear-gradient(135deg, rgba(26, 22, 18, 0.95), rgba(20, 17, 15, 0.9));
+            backdrop-filter: blur(40px) saturate(120%);
+            -webkit-backdrop-filter: blur(40px) saturate(120%);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
             width: 90%;
             max-width: 600px;
             max-height: 80vh;
             overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6),
+                        inset 0 1px 2px rgba(255, 255, 255, 0.1);
         }
 
         .modal-header {
             padding: 24px;
-            border-bottom: 1px solid var(--border);
+            border-bottom: 1px solid var(--glass-border);
             display: flex;
             justify-content: space-between;
             align-items: center;
+            background: linear-gradient(135deg, rgba(30, 26, 22, 0.7), rgba(26, 22, 18, 0.8));
+            position: relative;
+        }
+
+        .modal-header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
         }
 
         .modal-title {
-            font-size: 1.25em;
+            font-size: 20px;
             font-weight: 600;
         }
 
@@ -577,14 +757,14 @@
             padding: 8px;
             background: transparent;
             border: none;
-            color: var(--text-muted);
+            color: var(--text-secondary);
             cursor: pointer;
-            font-size: 1.5em;
+            font-size: 24px;
             transition: color 0.2s ease;
         }
 
         .modal-close:hover {
-            color: var(--text-light);
+            color: var(--text-primary);
         }
 
         .modal-body {
@@ -597,26 +777,26 @@
 
         .form-label {
             display: block;
-            font-size: 0.875em;
+            font-size: 14px;
             font-weight: 500;
-            color: var(--text-light);
+            color: var(--text-primary);
             margin-bottom: 8px;
         }
 
         .form-select {
             width: 100%;
             padding: 10px 12px;
-            background: var(--bg-medium);
+            background: rgba(0, 0, 0, 0.3);
             border: 1px solid var(--border);
             border-radius: 6px;
-            color: var(--text-light);
-            font-size: 0.875em;
+            color: var(--text-primary);
+            font-size: 14px;
             cursor: pointer;
         }
 
         .modal-footer {
             padding: 24px;
-            border-top: 1px solid var(--border);
+            border-top: 1px solid var(--glass-border);
             display: flex;
             gap: 12px;
             justify-content: flex-end;
@@ -626,24 +806,18 @@
         .empty-state {
             padding: 60px 24px;
             text-align: center;
-            color: var(--text-muted);
-        }
-
-        .empty-icon {
-            font-size: 3em;
-            margin-bottom: 16px;
-            opacity: 0.5;
+            color: var(--text-secondary);
         }
 
         .empty-title {
-            font-size: 1.125em;
+            font-size: 18px;
             font-weight: 600;
-            color: var(--text-light);
+            color: var(--text-primary);
             margin-bottom: 8px;
         }
 
         .empty-desc {
-            font-size: 0.875em;
+            font-size: 14px;
             margin-bottom: 24px;
         }
 
@@ -660,15 +834,15 @@
             background: transparent;
             border: none;
             border-bottom: 2px solid transparent;
-            color: var(--text-muted);
+            color: var(--text-secondary);
             cursor: pointer;
-            font-size: 0.875em;
+            font-size: 14px;
             font-weight: 500;
             transition: all 0.2s ease;
         }
 
         .tab:hover {
-            color: var(--text-light);
+            color: var(--text-primary);
         }
 
         .tab.active {
@@ -692,29 +866,34 @@
             padding: 16px 24px;
             border-radius: 8px;
             font-weight: 500;
-            font-size: 0.875em;
+            font-size: 14px;
             z-index: 2000;
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
             animation: slideIn 0.3s ease;
+            backdrop-filter: blur(20px);
         }
 
         .notification.success {
-            background: var(--success);
+            background: rgba(82, 193, 134, 0.9);
+            border: 1px solid var(--success);
             color: white;
         }
 
         .notification.warning {
-            background: var(--warning);
+            background: rgba(232, 168, 124, 0.9);
+            border: 1px solid var(--warning);
             color: var(--bg-dark);
         }
 
         .notification.danger {
-            background: var(--danger);
+            background: rgba(239, 68, 68, 0.9);
+            border: 1px solid var(--danger);
             color: white;
         }
 
         .notification.info {
-            background: var(--accent-gold);
+            background: rgba(212, 175, 122, 0.9);
+            border: 1px solid var(--accent-gold);
             color: var(--bg-dark);
         }
 
@@ -738,21 +917,21 @@
         .search-input {
             flex: 1;
             padding: 10px 16px;
-            background: var(--bg-medium);
+            background: rgba(0, 0, 0, 0.3);
             border: 1px solid var(--border);
             border-radius: 6px;
-            color: var(--text-light);
-            font-size: 0.875em;
+            color: var(--text-primary);
+            font-size: 14px;
         }
 
         .filter-btn {
             padding: 10px 16px;
-            background: var(--bg-medium);
+            background: rgba(0, 0, 0, 0.3);
             border: 1px solid var(--border);
             border-radius: 6px;
-            color: var(--text-muted);
+            color: var(--text-secondary);
             cursor: pointer;
-            font-size: 0.875em;
+            font-size: 14px;
             transition: all 0.2s ease;
         }
 
@@ -766,7 +945,7 @@
             display: inline-flex;
             align-items: center;
             gap: 4px;
-            font-size: 0.75em;
+            font-size: 11px;
             font-weight: 600;
             padding: 2px 6px;
             border-radius: 4px;
@@ -783,7 +962,7 @@
         }
 
         .variance.neutral {
-            color: var(--text-muted);
+            color: var(--text-secondary);
             background: rgba(138, 127, 115, 0.1);
         }
 
@@ -791,11 +970,11 @@
         .supplier-select {
             width: 100%;
             padding: 8px 12px;
-            background: var(--bg-medium);
+            background: rgba(0, 0, 0, 0.3);
             border: 1px solid var(--border);
             border-radius: 6px;
-            color: var(--text-light);
-            font-size: 0.875em;
+            color: var(--text-primary);
+            font-size: 14px;
             cursor: pointer;
         }
 
@@ -803,11 +982,11 @@
         .notes-input {
             width: 100%;
             padding: 8px 12px;
-            background: var(--bg-medium);
+            background: rgba(0, 0, 0, 0.3);
             border: 1px solid var(--border);
             border-radius: 6px;
-            color: var(--text-light);
-            font-size: 0.75em;
+            color: var(--text-primary);
+            font-size: 12px;
             resize: vertical;
             min-height: 32px;
         }
@@ -827,18 +1006,19 @@
             width: 56px;
             height: 56px;
             border-radius: 50%;
-            background: var(--accent-gold);
+            background: linear-gradient(135deg, var(--accent-gold), rgba(184, 150, 81, 0.9));
             border: none;
             color: var(--bg-dark);
             cursor: pointer;
-            font-size: 1.5em;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            font-size: 24px;
+            box-shadow: 0 4px 12px rgba(212, 175, 122, 0.3);
             transition: all 0.2s ease;
         }
 
         .fab:hover {
             transform: scale(1.1);
-            background: #d4b16d;
+            background: linear-gradient(135deg, #e0c08f, #c09861);
+            box-shadow: 0 6px 16px rgba(212, 175, 122, 0.4);
         }
 
         .fab-menu {
@@ -855,17 +1035,18 @@
         .fab-item {
             padding: 8px 16px;
             background: var(--card-bg);
+            backdrop-filter: blur(30px);
             border: 1px solid var(--border);
             border-radius: 6px;
-            color: var(--text-light);
+            color: var(--text-primary);
             cursor: pointer;
-            font-size: 0.875em;
+            font-size: 14px;
             white-space: nowrap;
             transition: all 0.2s ease;
         }
 
         .fab-item:hover {
-            background: var(--bg-medium);
+            background: rgba(212, 175, 122, 0.1);
             border-color: var(--accent-gold);
         }
 
@@ -878,18 +1059,18 @@
         .comparison-table th {
             padding: 12px;
             text-align: left;
-            font-size: 0.75em;
+            font-size: 11px;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            color: var(--text-muted);
-            background: rgba(201, 169, 97, 0.05);
+            color: var(--text-secondary);
+            background: rgba(212, 175, 122, 0.05);
             border-bottom: 2px solid var(--border);
         }
 
         .comparison-table td {
             padding: 12px;
-            font-size: 0.875em;
+            font-size: 14px;
             border-bottom: 1px solid var(--border);
         }
 
@@ -973,38 +1154,34 @@
 
             <div class="nav-section">
                 <div class="nav-section-title">Budget Tools</div>
-                <div class="nav-item active" onclick="switchTab('overview')">
-                    <span class="nav-icon">💰</span>
-                    Budget Overview
+                <div class="nav-item active" data-tab="overview">
+                    <span class="nav-icon">OVERVIEW</span>
                 </div>
-                <div class="nav-item" onclick="switchTab('proposal')">
-                    <span class="nav-icon">📝</span>
-                    Budget Proposal
+                <div class="nav-item" data-tab="proposal">
+                    <span class="nav-icon">PROPOSAL</span>
                 </div>
-                <div class="nav-item" onclick="switchTab('tracking')">
-                    <span class="nav-icon">📊</span>
-                    Spend Tracking
+                <div class="nav-item" data-tab="tracking">
+                    <span class="nav-icon">TRACKING</span>
                 </div>
-                <div class="nav-item" onclick="switchTab('comparison')">
-                    <span class="nav-icon">⚖️</span>
-                    Budget vs Actual
+                <div class="nav-item" data-tab="comparison">
+                    <span class="nav-icon">COMPARE</span>
                 </div>
             </div>
 
             <div class="nav-section">
                 <div class="nav-section-title">Quick Stats</div>
-                <div style="padding: 0 16px; font-size: 0.875em;">
+                <div style="padding: 0 16px; font-size: 14px;">
                     <div style="margin-bottom: 12px;">
-                        <div style="color: var(--text-muted); margin-bottom: 4px;">Total Budget</div>
+                        <div style="color: var(--text-secondary); margin-bottom: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;">Total Budget</div>
                         <div style="color: var(--accent-gold); font-weight: 600;" id="sidebar-total">£0.00</div>
                     </div>
                     <div style="margin-bottom: 12px;">
-                        <div style="color: var(--text-muted); margin-bottom: 4px;">Items</div>
-                        <div style="color: var(--text-light); font-weight: 600;" id="sidebar-items">0</div>
+                        <div style="color: var(--text-secondary); margin-bottom: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;">Items</div>
+                        <div style="color: var(--text-primary); font-weight: 600;" id="sidebar-items">0</div>
                     </div>
                     <div>
-                        <div style="color: var(--text-muted); margin-bottom: 4px;">Last Saved</div>
-                        <div style="color: var(--text-light); font-size: 0.875em;" id="sidebar-saved">Never</div>
+                        <div style="color: var(--text-secondary); margin-bottom: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;">Last Saved</div>
+                        <div style="color: var(--text-primary); font-size: 12px;" id="sidebar-saved">Never</div>
                     </div>
                 </div>
             </div>
@@ -1016,22 +1193,10 @@
             <div class="top-bar">
                 <div class="page-title">Budget System Pro</div>
                 <div class="top-bar-actions">
-                    <button class="btn" onclick="importData()">
-                        <span>📥</span>
-                        Import CSV
-                    </button>
-                    <button class="btn" onclick="exportBudget()">
-                        <span>📤</span>
-                        Export
-                    </button>
-                    <button class="btn" onclick="openTemplateModal()">
-                        <span>📋</span>
-                        Templates
-                    </button>
-                    <button class="btn primary" onclick="saveBudget()">
-                        <span>💾</span>
-                        Save
-                    </button>
+                    <button class="btn" onclick="importData()">Import CSV</button>
+                    <button class="btn" onclick="exportBudget()">Export</button>
+                    <button class="btn" onclick="openTemplateModal()">Templates</button>
+                    <button class="btn primary" onclick="saveBudget()">Save</button>
                 </div>
             </div>
 
@@ -1039,10 +1204,10 @@
             <div class="content">
                 <!-- Tabs -->
                 <div class="tabs">
-                    <button class="tab active" onclick="switchTab('overview')">Overview</button>
-                    <button class="tab" onclick="switchTab('proposal')">Budget Proposal</button>
-                    <button class="tab" onclick="switchTab('tracking')">Spend Tracking</button>
-                    <button class="tab" onclick="switchTab('comparison')">Budget vs Actual</button>
+                    <button class="tab active" data-tab="overview">Overview</button>
+                    <button class="tab" data-tab="proposal">Budget Proposal</button>
+                    <button class="tab" data-tab="tracking">Spend Tracking</button>
+                    <button class="tab" data-tab="comparison">Budget vs Actual</button>
                 </div>
 
                 <!-- Overview Tab -->
@@ -1096,12 +1261,9 @@
                     <!-- Category Breakdown -->
                     <div class="budget-section">
                         <div class="budget-section-header">
-                            <div class="section-title">
-                                <span class="section-icon">📦</span>
-                                Category Breakdown
-                            </div>
+                            <div class="section-title">Category Breakdown</div>
                             <div class="section-actions">
-                                <button class="icon-btn" onclick="refreshOverview()">🔄 Refresh</button>
+                                <button class="icon-btn" onclick="refreshOverview()">Refresh</button>
                             </div>
                         </div>
                         <table class="category-table">
@@ -1125,18 +1287,14 @@
                 <div id="proposal-tab" class="tab-content">
                     <!-- Search Bar -->
                     <div class="search-bar">
-                        <input type="text" class="search-input" placeholder="Search items..." id="search-items" onkeyup="searchItems()">
-                        <button class="filter-btn" onclick="filterByCategory()">🔽 Filter Category</button>
-                        <button class="filter-btn" onclick="sortItems()">↕️ Sort</button>
+                        <input type="text" class="search-input" placeholder="Search items..." id="search-items">
+                        <button class="filter-btn" onclick="clearSearch()">Clear Search</button>
                     </div>
 
                     <!-- Project Info -->
                     <div class="budget-section" style="margin-bottom: 24px;">
                         <div class="budget-section-header">
-                            <div class="section-title">
-                                <span class="section-icon">📋</span>
-                                Project Information
-                            </div>
+                            <div class="section-title">Project Information</div>
                         </div>
                         <div style="padding: 24px;">
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
@@ -1182,7 +1340,7 @@
 
                     <!-- Grand Total -->
                     <div class="grand-total">
-                        <div class="grand-total-label">💰 TOTAL ESTIMATED BUDGET</div>
+                        <div class="grand-total-label">TOTAL ESTIMATED BUDGET</div>
                         <div class="grand-total-value" id="grand-total">£0.00</div>
                     </div>
                 </div>
@@ -1191,20 +1349,17 @@
                 <div id="tracking-tab" class="tab-content">
                     <!-- Search Bar -->
                     <div class="search-bar">
-                        <input type="text" class="search-input" placeholder="Search expenses..." id="search-expenses" onkeyup="searchExpenses()">
+                        <input type="text" class="search-input" placeholder="Search expenses..." id="search-expenses">
                         <input type="date" class="form-input" id="expense-date-filter" style="width: 200px;">
-                        <button class="filter-btn" onclick="filterExpenses()">🔽 Filter</button>
+                        <button class="filter-btn" onclick="filterExpenses()">Filter by Date</button>
+                        <button class="filter-btn" onclick="clearExpenseFilter()">Clear Filter</button>
                     </div>
 
                     <div class="budget-section">
                         <div class="budget-section-header">
-                            <div class="section-title">
-                                <span class="section-icon">📊</span>
-                                Expense Tracking
-                            </div>
+                            <div class="section-title">Expense Tracking</div>
                             <div class="section-actions">
                                 <button class="icon-btn" onclick="openExpenseModal()">+ Add Expense</button>
-                                <button class="icon-btn" onclick="importReceipts()">📷 Import Receipt</button>
                             </div>
                         </div>
                         <table class="category-table">
@@ -1234,12 +1389,9 @@
                 <div id="comparison-tab" class="tab-content">
                     <div class="budget-section">
                         <div class="budget-section-header">
-                            <div class="section-title">
-                                <span class="section-icon">⚖️</span>
-                                Budget vs Actual Comparison
-                            </div>
+                            <div class="section-title">Budget vs Actual Comparison</div>
                             <div class="section-actions">
-                                <button class="icon-btn" onclick="exportComparison()">📤 Export Report</button>
+                                <button class="icon-btn" onclick="exportComparison()">Export Report</button>
                             </div>
                         </div>
                         <table class="comparison-table">
@@ -1256,7 +1408,7 @@
                             <tbody id="comparison-table-body">
                                 <!-- Dynamic content -->
                             </tbody>
-                            <tfoot style="background: rgba(201, 169, 97, 0.05); font-weight: 600;">
+                            <tfoot style="background: rgba(212, 175, 122, 0.05); font-weight: 600;">
                                 <tr>
                                     <td style="padding: 16px 12px;">TOTAL</td>
                                     <td id="comp-total-budget">£0.00</td>
@@ -1272,10 +1424,7 @@
                     <!-- Variance Analysis -->
                     <div class="budget-section">
                         <div class="budget-section-header">
-                            <div class="section-title">
-                                <span class="section-icon">📈</span>
-                                Variance Analysis
-                            </div>
+                            <div class="section-title">Variance Analysis</div>
                         </div>
                         <div style="padding: 24px;">
                             <div id="variance-analysis">
@@ -1288,12 +1437,104 @@
         </div>
     </div>
 
+    <!-- Import Modal -->
+    <div id="importModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Import Budget Data</div>
+                <button class="modal-close" onclick="closeModal('importModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Import Instructions</label>
+                    <div style="background: rgba(212, 175, 122, 0.1); padding: 16px; border-radius: 6px; margin-bottom: 16px;">
+                        <div style="font-size: 14px; line-height: 1.6;">
+                            <strong>Supported File Formats:</strong>
+                            <ul style="margin: 8px 0; padding-left: 20px;">
+                                <li><strong>JSON (.json)</strong> - Complete budget backup files exported from this system</li>
+                                <li><strong>CSV (.csv)</strong> - Budget items or expense lists in CSV format</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">CSV Format Requirements</label>
+                    <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.5;">
+                        <strong>For Budget Items CSV:</strong>
+                        <div style="font-family: monospace; background: var(--bg-dark); padding: 8px; border-radius: 4px; margin: 8px 0;">
+                            Category,Item Description,Quantity,Unit Price,Markup %,Total,Supplier,Notes
+                        </div>
+                        
+                        <strong>For Expenses CSV:</strong>
+                        <div style="font-family: monospace; background: var(--bg-dark); padding: 8px; border-radius: 4px; margin: 8px 0;">
+                            Date,Item,Category,Supplier,Receipt #,Amount,Notes
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Important</label>
+                    <div style="background: rgba(239, 68, 68, 0.1); padding: 12px; border-radius: 6px; font-size: 13px; color: var(--text-secondary);">
+                        Importing will ask if you want to merge with or replace your current data. Make sure to save your current budget before importing if you want to keep it!
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top: 24px;">
+                    <button class="btn primary" onclick="triggerFileImport()" style="width: 100%; justify-content: center;">
+                        Select File to Import
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeModal('importModal')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Modal -->
+    <div id="exportModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Export Budget</div>
+                <button class="modal-close" onclick="closeModal('exportModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Export Format</label>
+                    <select class="form-select" id="export-format">
+                        <option value="json">JSON (Complete backup - recommended)</option>
+                        <option value="csv-budget">CSV - Budget Items Only</option>
+                        <option value="csv-expenses">CSV - Expenses Only</option>
+                        <option value="csv-full">CSV - Full Report (Budget + Expenses)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <p style="color: var(--text-secondary); font-size: 14px; line-height: 1.5;" id="export-description">
+                        Export your complete budget data including project info, budget items, and expenses. This format is recommended for backups and can be re-imported later.
+                    </p>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">File Preview</label>
+                    <div style="background: var(--bg-dark); padding: 12px; border-radius: 6px; font-family: monospace; font-size: 12px; color: var(--text-secondary);">
+                        <span id="export-filename">budget_HM-2025-001_2025-01-15.json</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeModal('exportModal')">Cancel</button>
+                <button class="btn primary" onclick="performExport()">Download Export</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Template Modal -->
     <div id="templateModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
                 <div class="modal-title">Load Budget Template</div>
-                <button class="modal-close" onclick="closeModal('templateModal')">&times;</button>
+                <button class="modal-close" onclick="closeModal('templateModal')">×</button>
             </div>
             <div class="modal-body">
                 <div class="form-group">
@@ -1309,13 +1550,13 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">Description</label>
-                    <p style="color: var(--text-muted); font-size: 0.875em; line-height: 1.5;" id="template-description">
+                    <p style="color: var(--text-secondary); font-size: 14px; line-height: 1.5;" id="template-description">
                         Standard feature film budget template for a 4-week shoot. Includes basic disposables, hygiene supplies, and common beauty products. Customize as needed for your specific production requirements.
                     </p>
                 </div>
                 <div class="form-group">
                     <label class="form-label">
-                        <input type="checkbox" id="merge-template"> Merge with existing budget (don't replace)
+                        <input type="checkbox" id="merge-template" style="margin-right: 8px;"> Merge with existing budget (don't replace)
                     </label>
                 </div>
             </div>
@@ -1331,7 +1572,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <div class="modal-title">Add Expense</div>
-                <button class="modal-close" onclick="closeModal('expenseModal')">&times;</button>
+                <button class="modal-close" onclick="closeModal('expenseModal')">×</button>
             </div>
             <div class="modal-body">
                 <div class="form-group">
@@ -1393,10 +1634,10 @@
     <!-- Quick Actions FAB -->
     <div class="quick-actions">
         <div class="fab-menu" id="fab-menu">
-            <div class="fab-item" onclick="quickAddItem()">➕ Quick Add Item</div>
-            <div class="fab-item" onclick="quickAddExpense()">💳 Quick Expense</div>
-            <div class="fab-item" onclick="duplicateLastItem()">📑 Duplicate Last</div>
-            <div class="fab-item" onclick="clearAll()">🗑️ Clear All</div>
+            <div class="fab-item" onclick="quickAddItem()">Quick Add Item</div>
+            <div class="fab-item" onclick="quickAddExpense()">Quick Expense</div>
+            <div class="fab-item" onclick="duplicateLastItem()">Duplicate Last</div>
+            <div class="fab-item" onclick="clearAll()">Clear All</div>
         </div>
         <button class="fab" onclick="toggleFab()">+</button>
     </div>
@@ -1415,18 +1656,16 @@
                         budgetLimit: 0
                     },
                     categories: {
-                        disposables: { icon: '📦', name: 'Disposables', items: [] },
-                        hygiene: { icon: '🧼', name: 'Hygiene & Sanitation', items: [] },
-                        consumables: { icon: '🛍️', name: 'Everyday Consumables', items: [] },
-                        beauty: { icon: '💄', name: 'Beauty Products', items: [] },
-                        sfx: { icon: '🎭', name: 'Special Effects', items: [] },
-                        hair: { icon: '✂️', name: 'Hair Products', items: [] },
-                        tools: { icon: '🔧', name: 'Tools & Equipment', items: [] },
-                        custom: { icon: '🛠️', name: 'Custom Builds / Fabrication', items: [] }
+                        disposables: { name: 'Disposables', items: [] },
+                        hygiene: { name: 'Hygiene & Sanitation', items: [] },
+                        consumables: { name: 'Everyday Consumables', items: [] },
+                        beauty: { name: 'Beauty Products', items: [] },
+                        sfx: { name: 'Special Effects', items: [] },
+                        hair: { name: 'Hair Products', items: [] },
+                        tools: { name: 'Tools & Equipment', items: [] },
+                        custom: { name: 'Custom Builds / Fabrication', items: [] }
                     },
                     expenses: [],
-                    templates: {},
-                    history: [],
                     lastSaved: null
                 };
                 
@@ -1450,6 +1689,32 @@
                     }
                 });
 
+                // Tab navigation
+                document.querySelectorAll('.tab').forEach(tab => {
+                    tab.addEventListener('click', (e) => {
+                        const tabName = e.target.dataset.tab;
+                        this.switchTab(tabName);
+                    });
+                });
+
+                document.querySelectorAll('.nav-item').forEach(item => {
+                    item.addEventListener('click', (e) => {
+                        const tabName = e.currentTarget.dataset.tab;
+                        this.switchTab(tabName);
+                    });
+                });
+
+                // Search functionality
+                const searchItems = document.getElementById('search-items');
+                if (searchItems) {
+                    searchItems.addEventListener('input', (e) => this.searchItems(e.target.value));
+                }
+
+                const searchExpenses = document.getElementById('search-expenses');
+                if (searchExpenses) {
+                    searchExpenses.addEventListener('input', (e) => this.searchExpenses(e.target.value));
+                }
+
                 // Keyboard shortcuts
                 document.addEventListener('keydown', (e) => {
                     if (e.ctrlKey || e.metaKey) {
@@ -1458,20 +1723,54 @@
                                 e.preventDefault();
                                 this.save();
                                 break;
-                            case 'z':
-                                e.preventDefault();
-                                this.undo();
-                                break;
-                            case 'y':
-                                e.preventDefault();
-                                this.redo();
-                                break;
                         }
                     }
                 });
 
                 // Auto-save every 30 seconds
                 setInterval(() => this.autoSave(), 30000);
+
+                // Click outside modal to close
+                document.querySelectorAll('.modal').forEach(modal => {
+                    modal.addEventListener('click', (e) => {
+                        if (e.target === modal) {
+                            modal.classList.remove('active');
+                        }
+                    });
+                });
+            }
+
+            switchTab(tabName) {
+                // Update tab buttons
+                document.querySelectorAll('.tab').forEach(tab => {
+                    if (tab.dataset.tab === tabName) {
+                        tab.classList.add('active');
+                    } else {
+                        tab.classList.remove('active');
+                    }
+                });
+
+                // Update nav items
+                document.querySelectorAll('.nav-item').forEach(item => {
+                    if (item.dataset.tab === tabName) {
+                        item.classList.add('active');
+                    } else {
+                        item.classList.remove('active');
+                    }
+                });
+
+                // Update tab content
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.remove('active');
+                });
+                
+                const targetTab = document.getElementById(`${tabName}-tab`);
+                if (targetTab) {
+                    targetTab.classList.add('active');
+                }
+
+                // Update calculations when switching tabs
+                this.updateAllCalculations();
             }
 
             renderCategories() {
@@ -1492,13 +1791,10 @@
                 section.className = 'budget-section';
                 section.innerHTML = `
                     <div class="budget-section-header">
-                        <div class="section-title">
-                            <span class="section-icon">${category.icon}</span>
-                            ${category.name}
-                        </div>
+                        <div class="section-title">${category.name}</div>
                         <div class="section-actions">
-                            <button class="icon-btn" onclick="budgetManager.addItem('${key}')">+ Add Item</button>
-                            <button class="icon-btn" onclick="budgetManager.clearCategory('${key}')">Clear</button>
+                            <button class="icon-btn" data-action="add" data-category="${key}">+ Add Item</button>
+                            <button class="icon-btn" data-action="clear" data-category="${key}">Clear</button>
                         </div>
                     </div>
                     <div id="${key}-items">
@@ -1509,6 +1805,10 @@
                         <span class="total-value" id="${key}-total">£0.00</span>
                     </div>
                 `;
+
+                // Add event listeners to buttons
+                section.querySelector('[data-action="add"]').addEventListener('click', () => this.addItem(key));
+                section.querySelector('[data-action="clear"]').addEventListener('click', () => this.clearCategory(key));
 
                 // Render existing items
                 if (category.items.length > 0) {
@@ -1531,27 +1831,26 @@
                     <input type="text" class="form-input item-description" 
                            placeholder="Item description" 
                            value="${item.description || ''}"
-                           onchange="budgetManager.updateItem('${categoryKey}', ${index}, 'description', this.value)">
+                           data-field="description">
                     <input type="number" class="form-input item-qty" 
                            placeholder="Qty" 
                            value="${item.qty || 1}" 
                            min="0"
-                           onchange="budgetManager.updateItem('${categoryKey}', ${index}, 'qty', this.value)">
+                           data-field="qty">
                     <input type="number" class="form-input item-price" 
                            placeholder="Unit Price" 
                            value="${item.price || 0}" 
                            step="0.01" 
                            min="0"
-                           onchange="budgetManager.updateItem('${categoryKey}', ${index}, 'price', this.value)">
+                           data-field="price">
                     <input type="number" class="form-input item-markup" 
                            placeholder="Markup %" 
                            value="${item.markup || 0}" 
                            step="1" 
                            min="0"
-                           onchange="budgetManager.updateItem('${categoryKey}', ${index}, 'markup', this.value)">
+                           data-field="markup">
                     <div class="calculated-value">${this.formatCurrency(this.calculateItemTotal(item))}</div>
-                    <select class="supplier-select"
-                            onchange="budgetManager.updateItem('${categoryKey}', ${index}, 'supplier', this.value)">
+                    <select class="supplier-select" data-field="supplier">
                         <option value="">Select Supplier</option>
                         <option value="Amazon" ${item.supplier === 'Amazon' ? 'selected' : ''}>Amazon</option>
                         <option value="Boots" ${item.supplier === 'Boots' ? 'selected' : ''}>Boots</option>
@@ -1564,9 +1863,24 @@
                     <input type="text" class="notes-input" 
                            placeholder="Notes..." 
                            value="${item.notes || ''}"
-                           onchange="budgetManager.updateItem('${categoryKey}', ${index}, 'notes', this.value)">
-                    <button class="delete-btn" onclick="budgetManager.removeItem('${categoryKey}', ${index})">×</button>
+                           data-field="notes">
+                    <button class="delete-btn" data-action="delete">×</button>
                 `;
+
+                // Add event listeners to all inputs
+                row.querySelectorAll('input, select').forEach(input => {
+                    input.addEventListener('change', (e) => {
+                        const field = e.target.dataset.field;
+                        if (field) {
+                            this.updateItem(categoryKey, index, field, e.target.value);
+                        }
+                    });
+                });
+
+                // Delete button
+                row.querySelector('[data-action="delete"]').addEventListener('click', () => {
+                    this.removeItem(categoryKey, index);
+                });
 
                 return row;
             }
@@ -1574,7 +1888,6 @@
             getEmptyState(category) {
                 return `
                     <div class="empty-state">
-                        <div class="empty-icon">${category.icon}</div>
                         <div class="empty-title">No items added yet</div>
                         <div class="empty-desc">Click "Add Item" to start building your budget</div>
                     </div>
@@ -1607,11 +1920,12 @@
                 container.appendChild(newRow);
 
                 // Focus on description
-                newRow.querySelector('.item-description').focus();
+                setTimeout(() => {
+                    newRow.querySelector('.item-description').focus();
+                }, 100);
 
                 this.updateCategoryTotal(categoryKey);
                 this.updateGrandTotal();
-                this.save();
             }
 
             updateItem(categoryKey, index, field, value) {
@@ -1636,7 +1950,10 @@
 
                 this.updateCategoryTotal(categoryKey);
                 this.updateGrandTotal();
-                this.save();
+                
+                // Debounced save
+                clearTimeout(this.saveTimeout);
+                this.saveTimeout = setTimeout(() => this.save(), 1000);
             }
 
             removeItem(categoryKey, index) {
@@ -1687,8 +2004,15 @@
                     grandTotal += this.updateCategoryTotal(key);
                 });
 
-                document.getElementById('grand-total').textContent = this.formatCurrency(grandTotal);
-                document.getElementById('sidebar-total').textContent = this.formatCurrency(grandTotal);
+                const grandTotalEl = document.getElementById('grand-total');
+                if (grandTotalEl) {
+                    grandTotalEl.textContent = this.formatCurrency(grandTotal);
+                }
+                
+                const sidebarTotal = document.getElementById('sidebar-total');
+                if (sidebarTotal) {
+                    sidebarTotal.textContent = this.formatCurrency(grandTotal);
+                }
                 
                 return grandTotal;
             }
@@ -1709,47 +2033,55 @@
                 Object.values(this.data.categories).forEach(cat => {
                     itemCount += cat.items.length;
                 });
-                document.getElementById('sidebar-items').textContent = itemCount;
+                const itemsEl = document.getElementById('sidebar-items');
+                if (itemsEl) {
+                    itemsEl.textContent = itemCount;
+                }
             }
 
             updateOverview(budget, spent, remaining) {
-                document.getElementById('overview-total-budget').textContent = this.formatCurrency(budget);
-                document.getElementById('overview-spent').textContent = this.formatCurrency(spent);
-                document.getElementById('overview-remaining').textContent = this.formatCurrency(remaining);
+                // Update values
+                this.setElementText('overview-total-budget', this.formatCurrency(budget));
+                this.setElementText('overview-spent', this.formatCurrency(spent));
+                this.setElementText('overview-remaining', this.formatCurrency(remaining));
                 
                 const spentPercent = budget > 0 ? (spent / budget * 100).toFixed(1) : 0;
-                const remainingPercent = budget > 0 ? (remaining / budget * 100).toFixed(1) : 0;
+                const remainingPercent = budget > 0 ? (remaining / budget * 100).toFixed(1) : 100;
                 
-                document.getElementById('overview-spent-percent').textContent = spentPercent + '%';
-                document.getElementById('overview-remaining-percent').textContent = remainingPercent + '%';
+                this.setElementText('overview-spent-percent', spentPercent + '%');
+                this.setElementText('overview-remaining-percent', remainingPercent + '%');
                 
                 // Update progress bar
-                document.getElementById('progress-percent').textContent = spentPercent + '% Used';
+                this.setElementText('progress-percent', spentPercent + '% Used');
                 const progressBar = document.getElementById('progress-bar');
-                progressBar.style.width = spentPercent + '%';
-                
-                // Update progress bar color
-                progressBar.classList.remove('warning', 'danger');
-                if (spentPercent > 90) {
-                    progressBar.classList.add('danger');
-                } else if (spentPercent > 75) {
-                    progressBar.classList.add('warning');
+                if (progressBar) {
+                    progressBar.style.width = spentPercent + '%';
+                    
+                    // Update progress bar color
+                    progressBar.classList.remove('warning', 'danger');
+                    if (spentPercent > 90) {
+                        progressBar.classList.add('danger');
+                    } else if (spentPercent > 75) {
+                        progressBar.classList.add('warning');
+                    }
                 }
 
                 // Update variance
                 const variance = spent - budget;
-                document.getElementById('overview-variance').textContent = this.formatCurrency(Math.abs(variance));
+                this.setElementText('overview-variance', this.formatCurrency(Math.abs(variance)));
                 
                 const varianceStatus = document.getElementById('overview-variance-status');
-                if (variance > 0) {
-                    varianceStatus.innerHTML = '<span style="color: var(--danger)">Over budget</span>';
-                    varianceStatus.className = 'stat-change negative';
-                } else if (variance < 0) {
-                    varianceStatus.innerHTML = '<span style="color: var(--success)">Under budget</span>';
-                    varianceStatus.className = 'stat-change positive';
-                } else {
-                    varianceStatus.innerHTML = '<span>On budget</span>';
-                    varianceStatus.className = 'stat-change';
+                if (varianceStatus) {
+                    if (variance > 0) {
+                        varianceStatus.innerHTML = '<span style="color: var(--danger)">Over budget</span>';
+                        varianceStatus.className = 'stat-change negative';
+                    } else if (variance < 0) {
+                        varianceStatus.innerHTML = '<span style="color: var(--success)">Under budget</span>';
+                        varianceStatus.className = 'stat-change positive';
+                    } else {
+                        varianceStatus.innerHTML = '<span>On budget</span>';
+                        varianceStatus.className = 'stat-change';
+                    }
                 }
 
                 // Update category breakdown
@@ -1773,7 +2105,6 @@
                     row.innerHTML = `
                         <td>
                             <div style="display: flex; align-items: center; gap: 8px;">
-                                <span>${category.icon}</span>
                                 <span>${category.name}</span>
                             </div>
                         </td>
@@ -1827,7 +2158,6 @@
                     row.innerHTML = `
                         <td>
                             <div style="display: flex; align-items: center; gap: 8px;">
-                                <span>${category.icon}</span>
                                 <span>${category.name}</span>
                             </div>
                         </td>
@@ -1845,11 +2175,15 @@
                 const totalVariance = totalActual - totalBudget;
                 const totalVariancePercent = totalBudget > 0 ? (totalVariance / totalBudget * 100) : 0;
                 
-                document.getElementById('comp-total-budget').textContent = this.formatCurrency(totalBudget);
-                document.getElementById('comp-total-actual').textContent = this.formatCurrency(totalActual);
-                document.getElementById('comp-total-variance').textContent = this.formatCurrency(totalVariance);
-                document.getElementById('comp-total-variance-percent').textContent = totalVariancePercent.toFixed(1) + '%';
-                document.getElementById('comp-total-status').innerHTML = this.getStatusBadge(totalVariance, totalBudget);
+                this.setElementText('comp-total-budget', this.formatCurrency(totalBudget));
+                this.setElementText('comp-total-actual', this.formatCurrency(totalActual));
+                this.setElementText('comp-total-variance', this.formatCurrency(totalVariance));
+                this.setElementText('comp-total-variance-percent', totalVariancePercent.toFixed(1) + '%');
+                
+                const statusEl = document.getElementById('comp-total-status');
+                if (statusEl) {
+                    statusEl.innerHTML = this.getStatusBadge(totalVariance, totalBudget);
+                }
 
                 // Update variance analysis
                 this.updateVarianceAnalysis(totalBudget, totalActual, totalVariance);
@@ -1902,6 +2236,10 @@
 
                 variances.sort((a, b) => Math.abs(b.variance) - Math.abs(a.variance));
                 
+                if (variances.length === 0) {
+                    return '<li>No variances to report</li>';
+                }
+
                 return variances.slice(0, 3)
                     .map(v => `<li>${v.name}: ${v.variance > 0 ? 'Over' : 'Under'} by ${this.formatCurrency(Math.abs(v.variance))}</li>`)
                     .join('');
@@ -1931,13 +2269,13 @@
                 const percent = budget > 0 ? Math.abs(variance / budget * 100) : 0;
                 
                 if (variance > budget * 0.1) {
-                    return '<span class="variance negative">⚠️ Over</span>';
+                    return '<span class="variance negative">Over</span>';
                 } else if (variance > 0) {
-                    return '<span class="variance warning">⚠ Slightly Over</span>';
+                    return '<span class="variance warning">Slightly Over</span>';
                 } else if (variance < -budget * 0.2) {
-                    return '<span class="variance positive">✓ Under</span>';
+                    return '<span class="variance positive">Under</span>';
                 } else {
-                    return '<span class="variance neutral">✓ On Track</span>';
+                    return '<span class="variance neutral">On Track</span>';
                 }
             }
 
@@ -1950,8 +2288,8 @@
                 this.data.projectInfo.budgetLimit = parseFloat(document.getElementById('budget-limit').value) || 0;
 
                 // Update display
-                document.getElementById('project-name-display').textContent = this.data.projectInfo.name;
-                document.getElementById('project-code-display').textContent = this.data.projectInfo.code;
+                this.setElementText('project-name-display', this.data.projectInfo.name);
+                this.setElementText('project-code-display', this.data.projectInfo.code);
 
                 this.save();
             }
@@ -1971,6 +2309,12 @@
 
                 tbody.innerHTML = '';
                 
+                if (this.data.expenses.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-secondary); padding: 40px;">No expenses recorded yet. Click "Add Expense" to start tracking.</td></tr>';
+                    this.setElementText('total-expenses', '£0.00');
+                    return;
+                }
+
                 const sortedExpenses = [...this.data.expenses].sort((a, b) => 
                     new Date(b.date) - new Date(a.date)
                 );
@@ -1988,14 +2332,19 @@
                         <td>${expense.receipt || '-'}</td>
                         <td>${this.formatCurrency(expense.amount)}</td>
                         <td>
-                            <button class="delete-btn" onclick="budgetManager.deleteExpense(${expense.id})">×</button>
+                            <button class="delete-btn" data-expense-id="${expense.id}">×</button>
                         </td>
                     `;
+                    
+                    // Add delete listener
+                    row.querySelector('.delete-btn').addEventListener('click', () => {
+                        this.deleteExpense(expense.id);
+                    });
+                    
                     tbody.appendChild(row);
                 });
 
-                document.getElementById('total-expenses').textContent = 
-                    this.formatCurrency(this.calculateTotalExpenses());
+                this.setElementText('total-expenses', this.formatCurrency(this.calculateTotalExpenses()));
             }
 
             deleteExpense(id) {
@@ -2011,8 +2360,41 @@
                 return this.data.expenses.reduce((sum, exp) => sum + (parseFloat(exp.amount) || 0), 0);
             }
 
+            searchItems(query) {
+                const lowerQuery = query.toLowerCase();
+                
+                document.querySelectorAll('.input-row').forEach(row => {
+                    const description = row.querySelector('.item-description')?.value.toLowerCase() || '';
+                    const notes = row.querySelector('.notes-input')?.value.toLowerCase() || '';
+                    
+                    if (!query || description.includes(lowerQuery) || notes.includes(lowerQuery)) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+            }
+
+            searchExpenses(query) {
+                const lowerQuery = query.toLowerCase();
+                
+                document.querySelectorAll('#expense-list tr').forEach(row => {
+                    const text = row.textContent.toLowerCase();
+                    if (!query || text.includes(lowerQuery)) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+            }
+
             formatCurrency(amount) {
                 return '£' + (parseFloat(amount) || 0).toFixed(2);
+            }
+
+            setElementText(id, text) {
+                const el = document.getElementById(id);
+                if (el) el.textContent = text;
             }
 
             save() {
@@ -2021,15 +2403,19 @@
                 
                 // Update last saved display
                 const now = new Date();
-                document.getElementById('sidebar-saved').textContent = 
-                    `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
+                this.setElementText('sidebar-saved', `${now.toLocaleTimeString()}`);
                 
                 this.showNotification('Budget saved', 'success');
             }
 
             autoSave() {
                 if (this.hasChanges()) {
-                    this.save();
+                    this.data.lastSaved = new Date().toISOString();
+                    localStorage.setItem('hmBudgetPro', JSON.stringify(this.data));
+                    
+                    // Silent auto-save, no notification
+                    const now = new Date();
+                    this.setElementText('sidebar-saved', `${now.toLocaleTimeString()}`);
                 }
             }
 
@@ -2055,55 +2441,347 @@
                             document.getElementById('project-duration').value = this.data.projectInfo.duration || '';
                             document.getElementById('budget-limit').value = this.data.projectInfo.budgetLimit || '';
                             
-                            document.getElementById('project-name-display').textContent = this.data.projectInfo.name;
-                            document.getElementById('project-code-display').textContent = this.data.projectInfo.code;
+                            this.setElementText('project-name-display', this.data.projectInfo.name);
+                            this.setElementText('project-code-display', this.data.projectInfo.code);
                         }
 
                         // Update last saved
                         if (this.data.lastSaved) {
                             const saved = new Date(this.data.lastSaved);
-                            document.getElementById('sidebar-saved').textContent = 
-                                `${saved.toLocaleDateString()} ${saved.toLocaleTimeString()}`;
+                            this.setElementText('sidebar-saved', saved.toLocaleTimeString());
                         }
 
                         this.renderExpenses();
                     } catch (e) {
                         console.error('Error loading data:', e);
+                        this.showNotification('Error loading saved data', 'danger');
                     }
                 }
             }
 
-            exportData(format = 'json') {
+            exportData(format = 'json', includeExpenses = true) {
                 const data = {
                     projectInfo: this.data.projectInfo,
                     categories: this.data.categories,
-                    expenses: this.data.expenses,
-                    exported: new Date().toISOString()
+                    expenses: includeExpenses ? this.data.expenses : [],
+                    exported: new Date().toISOString(),
+                    exportFormat: format
                 };
 
                 if (format === 'json') {
                     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                    this.downloadFile(blob, `budget_${this.data.projectInfo.code}_${Date.now()}.json`);
-                } else if (format === 'csv') {
-                    const csv = this.convertToCSV(data);
-                    const blob = new Blob([csv], { type: 'text/csv' });
-                    this.downloadFile(blob, `budget_${this.data.projectInfo.code}_${Date.now()}.csv`);
+                    this.downloadFile(blob, `budget_${this.data.projectInfo.code}_${this.getDateStamp()}.json`);
+                } else if (format === 'csv-budget') {
+                    const csv = this.convertBudgetToCSV(data);
+                    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                    this.downloadFile(blob, `budget_items_${this.data.projectInfo.code}_${this.getDateStamp()}.csv`);
+                } else if (format === 'csv-expenses') {
+                    const csv = this.convertExpensesToCSV(data);
+                    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                    this.downloadFile(blob, `expenses_${this.data.projectInfo.code}_${this.getDateStamp()}.csv`);
+                } else if (format === 'csv-full') {
+                    const csvBudget = this.convertBudgetToCSV(data);
+                    const csvExpenses = this.convertExpensesToCSV(data);
+                    const csv = `Budget Items:\n${csvBudget}\n\n\nExpenses:\n${csvExpenses}`;
+                    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                    this.downloadFile(blob, `full_report_${this.data.projectInfo.code}_${this.getDateStamp()}.csv`);
                 }
 
                 this.showNotification('Budget exported successfully', 'success');
             }
 
-            convertToCSV(data) {
-                let csv = 'Category,Item,Quantity,Unit Price,Markup %,Total,Supplier,Notes\n';
+            convertBudgetToCSV(data) {
+                let csv = 'Category,Item Description,Quantity,Unit Price (£),Markup %,Total (£),Supplier,Notes\n';
                 
                 Object.keys(data.categories).forEach(key => {
                     const category = data.categories[key];
                     category.items.forEach(item => {
-                        csv += `"${category.name}","${item.description}",${item.qty},${item.price},${item.markup},${this.calculateItemTotal(item)},"${item.supplier || ''}","${item.notes || ''}"\n`;
+                        const total = this.calculateItemTotal(item);
+                        csv += `"${category.name}","${this.escapeCSV(item.description)}",${item.qty},${item.price},${item.markup},${total.toFixed(2)},"${this.escapeCSV(item.supplier)}","${this.escapeCSV(item.notes)}"\n`;
                     });
                 });
 
+                // Add totals row
+                let grandTotal = 0;
+                Object.values(data.categories).forEach(cat => {
+                    grandTotal += cat.items.reduce((sum, item) => sum + this.calculateItemTotal(item), 0);
+                });
+                csv += `\n"TOTAL","","","","",${grandTotal.toFixed(2)},"",""\n`;
+
                 return csv;
+            }
+
+            convertExpensesToCSV(data) {
+                if (!data.expenses || data.expenses.length === 0) {
+                    return 'No expenses recorded\n';
+                }
+
+                let csv = 'Date,Item,Category,Supplier,Receipt #,Amount (£),Notes\n';
+                
+                data.expenses.forEach(expense => {
+                    const category = data.categories[expense.category]?.name || expense.category;
+                    csv += `${expense.date},"${this.escapeCSV(expense.item)}","${category}","${this.escapeCSV(expense.supplier)}","${this.escapeCSV(expense.receipt)}",${parseFloat(expense.amount).toFixed(2)},"${this.escapeCSV(expense.notes)}"\n`;
+                });
+
+                // Add totals row
+                const totalExpenses = data.expenses.reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
+                csv += `\n"TOTAL","","","","",${totalExpenses.toFixed(2)},""\n`;
+
+                return csv;
+            }
+
+            escapeCSV(value) {
+                if (!value) return '';
+                // Escape quotes and wrap in quotes if contains comma, quote, or newline
+                const stringValue = String(value).replace(/"/g, '""');
+                return stringValue;
+            }
+
+            getDateStamp() {
+                const now = new Date();
+                return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            }
+
+            importFromFile(file) {
+                const fileName = file.name.toLowerCase();
+                const reader = new FileReader();
+
+                reader.onload = (event) => {
+                    try {
+                        if (fileName.endsWith('.json')) {
+                            this.importJSON(event.target.result);
+                        } else if (fileName.endsWith('.csv')) {
+                            this.importCSV(event.target.result);
+                        } else {
+                            this.showNotification('Unsupported file format. Use JSON or CSV.', 'danger');
+                        }
+                    } catch (e) {
+                        console.error('Import error:', e);
+                        this.showNotification('Error importing file: ' + e.message, 'danger');
+                    }
+                };
+
+                reader.onerror = () => {
+                    this.showNotification('Error reading file', 'danger');
+                };
+
+                reader.readAsText(file);
+            }
+
+            importJSON(content) {
+                try {
+                    const data = JSON.parse(content);
+                    
+                    // Validate data structure
+                    if (!data.categories && !data.projectInfo) {
+                        throw new Error('Invalid budget file format');
+                    }
+
+                    if (confirm('This will replace your current budget. Continue?')) {
+                        // Merge imported data with existing structure
+                        if (data.projectInfo) {
+                            this.data.projectInfo = { ...this.data.projectInfo, ...data.projectInfo };
+                        }
+                        
+                        if (data.categories) {
+                            // Only import categories that exist in our structure
+                            Object.keys(this.data.categories).forEach(key => {
+                                if (data.categories[key]) {
+                                    this.data.categories[key].items = data.categories[key].items || [];
+                                }
+                            });
+                        }
+                        
+                        if (data.expenses) {
+                            this.data.expenses = data.expenses;
+                        }
+
+                        // Update UI
+                        this.loadProjectInfo();
+                        this.renderCategories();
+                        this.renderExpenses();
+                        this.updateAllCalculations();
+                        this.save();
+                        
+                        this.showNotification('Budget imported successfully', 'success');
+                    }
+                } catch (e) {
+                    throw new Error('Invalid JSON format: ' + e.message);
+                }
+            }
+
+            importCSV(content) {
+                try {
+                    const lines = content.split('\n').map(line => line.trim()).filter(line => line);
+                    
+                    if (lines.length < 2) {
+                        throw new Error('CSV file is empty or invalid');
+                    }
+
+                    // Check if this is a budget items CSV or expenses CSV
+                    const header = lines[0].toLowerCase();
+                    
+                    if (header.includes('item description') || header.includes('markup')) {
+                        this.importBudgetItemsCSV(lines);
+                    } else if (header.includes('receipt')) {
+                        this.importExpensesCSV(lines);
+                    } else {
+                        throw new Error('Unrecognized CSV format. Please use exported CSV format.');
+                    }
+                    
+                } catch (e) {
+                    throw new Error('CSV import error: ' + e.message);
+                }
+            }
+
+            importBudgetItemsCSV(lines) {
+                const merge = confirm('Merge with existing budget items?\n\nClick OK to merge, Cancel to replace.');
+                
+                if (!merge) {
+                    // Clear existing items
+                    Object.keys(this.data.categories).forEach(key => {
+                        this.data.categories[key].items = [];
+                    });
+                }
+
+                let importedCount = 0;
+                
+                // Parse CSV (skip header)
+                for (let i = 1; i < lines.length; i++) {
+                    const line = lines[i];
+                    if (!line || line.toLowerCase().includes('total')) continue;
+                    
+                    const values = this.parseCSVLine(line);
+                    if (values.length < 5) continue;
+
+                    const [categoryName, description, qty, price, markup, , supplier, notes] = values;
+                    
+                    // Find matching category
+                    const categoryKey = this.findCategoryKey(categoryName);
+                    if (!categoryKey) continue;
+
+                    const item = {
+                        description: description || '',
+                        qty: parseFloat(qty) || 1,
+                        price: parseFloat(price) || 0,
+                        markup: parseFloat(markup) || 0,
+                        supplier: supplier || '',
+                        notes: notes || '',
+                        id: Date.now() + Math.random()
+                    };
+
+                    this.data.categories[categoryKey].items.push(item);
+                    importedCount++;
+                }
+
+                if (importedCount > 0) {
+                    this.renderCategories();
+                    this.updateAllCalculations();
+                    this.save();
+                    this.showNotification(`Imported ${importedCount} budget items`, 'success');
+                } else {
+                    this.showNotification('No valid items found in CSV', 'warning');
+                }
+            }
+
+            importExpensesCSV(lines) {
+                const merge = confirm('Merge with existing expenses?\n\nClick OK to merge, Cancel to replace.');
+                
+                if (!merge) {
+                    this.data.expenses = [];
+                }
+
+                let importedCount = 0;
+                
+                // Parse CSV (skip header)
+                for (let i = 1; i < lines.length; i++) {
+                    const line = lines[i];
+                    if (!line || line.toLowerCase().includes('total')) continue;
+                    
+                    const values = this.parseCSVLine(line);
+                    if (values.length < 5) continue;
+
+                    const [date, item, categoryName, supplier, receipt, amount, notes] = values;
+                    
+                    // Find matching category
+                    const categoryKey = this.findCategoryKey(categoryName);
+                    if (!categoryKey) continue;
+
+                    const expense = {
+                        date: date || new Date().toISOString().split('T')[0],
+                        item: item || '',
+                        category: categoryKey,
+                        supplier: supplier || '',
+                        receipt: receipt || '',
+                        amount: parseFloat(amount) || 0,
+                        notes: notes || '',
+                        id: Date.now() + Math.random()
+                    };
+
+                    this.data.expenses.push(expense);
+                    importedCount++;
+                }
+
+                if (importedCount > 0) {
+                    this.renderExpenses();
+                    this.updateAllCalculations();
+                    this.save();
+                    this.showNotification(`Imported ${importedCount} expenses`, 'success');
+                } else {
+                    this.showNotification('No valid expenses found in CSV', 'warning');
+                }
+            }
+
+            parseCSVLine(line) {
+                const values = [];
+                let current = '';
+                let inQuotes = false;
+                
+                for (let i = 0; i < line.length; i++) {
+                    const char = line[i];
+                    const nextChar = line[i + 1];
+                    
+                    if (char === '"') {
+                        if (inQuotes && nextChar === '"') {
+                            current += '"';
+                            i++; // Skip next quote
+                        } else {
+                            inQuotes = !inQuotes;
+                        }
+                    } else if (char === ',' && !inQuotes) {
+                        values.push(current.trim());
+                        current = '';
+                    } else {
+                        current += char;
+                    }
+                }
+                
+                values.push(current.trim());
+                return values;
+            }
+
+            findCategoryKey(categoryName) {
+                const lowerName = categoryName.toLowerCase();
+                for (const [key, category] of Object.entries(this.data.categories)) {
+                    if (category.name.toLowerCase() === lowerName) {
+                        return key;
+                    }
+                }
+                return null;
+            }
+
+            loadProjectInfo() {
+                if (this.data.projectInfo) {
+                    document.getElementById('project-name').value = this.data.projectInfo.name || '';
+                    document.getElementById('project-code').value = this.data.projectInfo.code || '';
+                    document.getElementById('designer-name').value = this.data.projectInfo.designer || '';
+                    document.getElementById('project-type').value = this.data.projectInfo.type || '';
+                    document.getElementById('project-duration').value = this.data.projectInfo.duration || '';
+                    document.getElementById('budget-limit').value = this.data.projectInfo.budgetLimit || '';
+                    
+                    this.setElementText('project-name-display', this.data.projectInfo.name);
+                    this.setElementText('project-code-display', this.data.projectInfo.code);
+                }
             }
 
             downloadFile(blob, filename) {
@@ -2118,6 +2796,9 @@
             }
 
             showNotification(message, type = 'info') {
+                // Remove existing notifications
+                document.querySelectorAll('.notification').forEach(n => n.remove());
+
                 const notification = document.createElement('div');
                 notification.className = `notification ${type}`;
                 notification.textContent = message;
@@ -2131,65 +2812,86 @@
 
             setTodayDate() {
                 const today = new Date().toISOString().split('T')[0];
-                document.getElementById('expense-date').value = today;
+                const expenseDateInput = document.getElementById('expense-date');
+                if (expenseDateInput) {
+                    expenseDateInput.value = today;
+                }
             }
         }
 
         // Initialize Budget Manager
-        const budgetManager = new BudgetManager();
+        let budgetManager;
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            budgetManager = new BudgetManager();
+        });
 
         // Global functions
-        function switchTab(tabName) {
-            document.querySelectorAll('.tab-content').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            document.querySelectorAll('.tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-
-            document.getElementById(tabName + '-tab').classList.add('active');
-            event.target.classList.add('active');
-
-            // Update calculations when switching tabs
-            budgetManager.updateAllCalculations();
-        }
-
         function saveBudget() {
             budgetManager.save();
         }
 
         function exportBudget() {
-            const format = prompt('Export format: json or csv?', 'json');
-            if (format) {
-                budgetManager.exportData(format.toLowerCase());
-            }
+            openExportModal();
         }
 
         function importData() {
+            openImportModal();
+        }
+
+        function openImportModal() {
+            document.getElementById('importModal').classList.add('active');
+        }
+
+        function triggerFileImport() {
             const input = document.createElement('input');
             input.type = 'file';
             input.accept = '.json,.csv';
             input.onchange = (e) => {
                 const file = e.target.files[0];
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    try {
-                        const data = JSON.parse(event.target.result);
-                        if (confirm('This will replace your current budget. Continue?')) {
-                            budgetManager.data = { ...budgetManager.data, ...data };
-                            budgetManager.renderCategories();
-                            budgetManager.renderExpenses();
-                            budgetManager.updateAllCalculations();
-                            budgetManager.save();
-                            budgetManager.showNotification('Data imported successfully', 'success');
-                        }
-                    } catch (e) {
-                        budgetManager.showNotification('Error importing data', 'danger');
-                    }
-                };
-                reader.readAsText(file);
+                if (file) {
+                    closeModal('importModal');
+                    budgetManager.importFromFile(file);
+                }
             };
             input.click();
+        }
+
+        function openExportModal() {
+            document.getElementById('exportModal').classList.add('active');
+            updateExportPreview();
+            
+            // Add change listener to format selector
+            document.getElementById('export-format').addEventListener('change', updateExportPreview);
+        }
+
+        function updateExportPreview() {
+            const format = document.getElementById('export-format').value;
+            const code = budgetManager.data.projectInfo.code;
+            const dateStamp = budgetManager.getDateStamp();
+            
+            const descriptions = {
+                'json': 'Export your complete budget data including project info, budget items, and expenses. This format is recommended for backups and can be re-imported later.',
+                'csv-budget': 'Export only the budget items with categories, quantities, prices, and totals. Great for sharing with accountants or importing into spreadsheet software.',
+                'csv-expenses': 'Export only the expense tracking data with dates, categories, and amounts. Useful for expense reports and reimbursement tracking.',
+                'csv-full': 'Export a comprehensive report with both budget items and expenses in a single CSV file. Perfect for complete financial documentation.'
+            };
+            
+            const filenames = {
+                'json': `budget_${code}_${dateStamp}.json`,
+                'csv-budget': `budget_items_${code}_${dateStamp}.csv`,
+                'csv-expenses': `expenses_${code}_${dateStamp}.csv`,
+                'csv-full': `full_report_${code}_${dateStamp}.csv`
+            };
+            
+            document.getElementById('export-description').textContent = descriptions[format];
+            document.getElementById('export-filename').textContent = filenames[format];
+        }
+
+        function performExport() {
+            const format = document.getElementById('export-format').value;
+            budgetManager.exportData(format);
+            closeModal('exportModal');
         }
 
         function openTemplateModal() {
@@ -2207,27 +2909,56 @@
             const templates = {
                 feature: {
                     disposables: [
-                        { description: 'Mascara Wands (Pack of 100)', qty: 3, price: 8.00, supplier: 'Amazon' },
-                        { description: 'Cotton Pads (Pack of 200)', qty: 4, price: 4.50, supplier: 'Boots' },
-                        { description: 'Cotton Buds (Pack of 200)', qty: 3, price: 3.00, supplier: 'Boots' },
-                        { description: 'Tissues (Box)', qty: 5, price: 2.50, supplier: 'Superdrug' }
+                        { description: 'Mascara Wands (Pack of 100)', qty: 3, price: 8.00, markup: 0, supplier: 'Amazon', notes: '' },
+                        { description: 'Cotton Pads (Pack of 200)', qty: 4, price: 4.50, markup: 0, supplier: 'Boots', notes: '' },
+                        { description: 'Cotton Buds (Pack of 200)', qty: 3, price: 3.00, markup: 0, supplier: 'Boots', notes: '' },
+                        { description: 'Tissues (Box)', qty: 5, price: 2.50, markup: 0, supplier: 'Superdrug', notes: '' }
                     ],
                     hygiene: [
-                        { description: 'Isopropyl Alcohol 99% (1L)', qty: 3, price: 12.00, supplier: 'Pharmacy' },
-                        { description: 'Brush Cleaner (250ml)', qty: 2, price: 15.00, supplier: 'MAC' }
+                        { description: 'Isopropyl Alcohol 99% (1L)', qty: 3, price: 12.00, markup: 0, supplier: 'Pharmacy', notes: '' },
+                        { description: 'Brush Cleaner (250ml)', qty: 2, price: 15.00, markup: 0, supplier: 'MAC', notes: '' }
                     ],
                     beauty: [
-                        { description: 'Foundation Set (Various Shades)', qty: 1, price: 250.00, supplier: 'MAC' },
-                        { description: 'Concealer Palette', qty: 2, price: 45.00, supplier: 'Charles Fox' },
-                        { description: 'Powder Set', qty: 1, price: 85.00, supplier: 'Kryolan' }
+                        { description: 'Foundation Set (Various Shades)', qty: 1, price: 250.00, markup: 0, supplier: 'MAC', notes: '' },
+                        { description: 'Concealer Palette', qty: 2, price: 45.00, markup: 0, supplier: 'Charles Fox', notes: '' },
+                        { description: 'Powder Set', qty: 1, price: 85.00, markup: 0, supplier: 'Kryolan', notes: '' }
                     ]
                 },
                 horror: {
                     sfx: [
-                        { description: 'Liquid Latex (1L)', qty: 3, price: 25.00, supplier: 'Screenface' },
-                        { description: 'Scar Wax', qty: 5, price: 12.00, supplier: 'Kryolan' },
-                        { description: 'Stage Blood (1L)', qty: 2, price: 18.00, supplier: 'Charles Fox' },
-                        { description: 'Gelatin (1kg)', qty: 2, price: 35.00, supplier: 'Screenface' }
+                        { description: 'Liquid Latex (1L)', qty: 3, price: 25.00, markup: 0, supplier: 'Screenface', notes: '' },
+                        { description: 'Scar Wax', qty: 5, price: 12.00, markup: 0, supplier: 'Kryolan', notes: '' },
+                        { description: 'Stage Blood (1L)', qty: 2, price: 18.00, markup: 0, supplier: 'Charles Fox', notes: '' },
+                        { description: 'Gelatin (1kg)', qty: 2, price: 35.00, markup: 0, supplier: 'Screenface', notes: '' }
+                    ]
+                },
+                tv: {
+                    disposables: [
+                        { description: 'Mascara Wands (Pack of 100)', qty: 2, price: 8.00, markup: 0, supplier: 'Amazon', notes: '' },
+                        { description: 'Cotton Pads (Pack of 200)', qty: 2, price: 4.50, markup: 0, supplier: 'Boots', notes: '' }
+                    ],
+                    beauty: [
+                        { description: 'Foundation Set', qty: 1, price: 150.00, markup: 0, supplier: 'MAC', notes: '' }
+                    ]
+                },
+                commercial: {
+                    beauty: [
+                        { description: 'HD Foundation', qty: 1, price: 120.00, markup: 0, supplier: 'MAC', notes: '' },
+                        { description: 'Setting Spray', qty: 2, price: 25.00, markup: 0, supplier: 'MAC', notes: '' }
+                    ]
+                },
+                period: {
+                    hair: [
+                        { description: 'Period Wigs', qty: 3, price: 200.00, markup: 0, supplier: 'Other', notes: '' },
+                        { description: 'Hair Pieces', qty: 5, price: 80.00, markup: 0, supplier: 'Other', notes: '' }
+                    ],
+                    custom: [
+                        { description: 'Custom Prosthetics', qty: 1, price: 500.00, markup: 0, supplier: 'Other', notes: '' }
+                    ]
+                },
+                indie: {
+                    disposables: [
+                        { description: 'Basic Makeup Kit', qty: 1, price: 100.00, markup: 0, supplier: 'Amazon', notes: '' }
                     ]
                 }
             };
@@ -2247,8 +2978,6 @@
                     selectedTemplate[categoryKey].forEach(item => {
                         budgetManager.data.categories[categoryKey].items.push({
                             ...item,
-                            markup: 0,
-                            notes: '',
                             id: Date.now() + Math.random()
                         });
                     });
@@ -2263,6 +2992,7 @@
         }
 
         function openExpenseModal() {
+            budgetManager.setTodayDate();
             document.getElementById('expenseModal').classList.add('active');
         }
 
@@ -2284,6 +3014,7 @@
 
             budgetManager.addExpense(expense);
             closeModal('expenseModal');
+            budgetManager.showNotification('Expense added successfully', 'success');
 
             // Clear form
             document.getElementById('expense-item').value = '';
@@ -2293,14 +3024,25 @@
             document.getElementById('expense-notes').value = '';
         }
 
-        function searchItems() {
-            const query = document.getElementById('search-items').value.toLowerCase();
+        function clearSearch() {
+            document.getElementById('search-items').value = '';
+            budgetManager.searchItems('');
+        }
+
+        function filterExpenses() {
+            const dateFilter = document.getElementById('expense-date-filter').value;
             
-            document.querySelectorAll('.input-row').forEach(row => {
-                const description = row.querySelector('.item-description')?.value.toLowerCase() || '';
-                const notes = row.querySelector('.notes-input')?.value.toLowerCase() || '';
+            if (!dateFilter) {
+                budgetManager.showNotification('Please select a date to filter', 'warning');
+                return;
+            }
+
+            document.querySelectorAll('#expense-list tr').forEach(row => {
+                const dateCell = row.cells[0];
+                if (!dateCell) return;
                 
-                if (description.includes(query) || notes.includes(query)) {
+                const date = dateCell.textContent;
+                if (date === dateFilter) {
                     row.style.display = '';
                 } else {
                     row.style.display = 'none';
@@ -2308,13 +3050,12 @@
             });
         }
 
-        function searchExpenses() {
-            const query = document.getElementById('search-expenses').value.toLowerCase();
-            
+        function clearExpenseFilter() {
+            document.getElementById('expense-date-filter').value = '';
             document.querySelectorAll('#expense-list tr').forEach(row => {
-                const text = row.textContent.toLowerCase();
-                row.style.display = text.includes(query) ? '' : 'none';
+                row.style.display = '';
             });
+            budgetManager.showNotification('Filter cleared', 'info');
         }
 
         function toggleFab() {
@@ -2322,10 +3063,13 @@
         }
 
         function quickAddItem() {
-            const category = prompt('Enter category key (disposables, hygiene, consumables, beauty, sfx, hair, tools, custom):');
+            const category = prompt('Enter category (disposables, hygiene, consumables, beauty, sfx, hair, tools, custom):');
             if (category && budgetManager.data.categories[category]) {
                 budgetManager.addItem(category);
+                budgetManager.switchTab('proposal');
                 toggleFab();
+            } else if (category) {
+                budgetManager.showNotification('Invalid category', 'warning');
             }
         }
 
@@ -2354,6 +3098,8 @@
                 budgetManager.updateAllCalculations();
                 budgetManager.save();
                 budgetManager.showNotification('Item duplicated', 'success');
+            } else {
+                budgetManager.showNotification('No items to duplicate', 'warning');
             }
             
             toggleFab();
@@ -2380,32 +3126,8 @@
         }
 
         function exportComparison() {
-            budgetManager.exportData('csv');
-        }
-
-        function importReceipts() {
-            budgetManager.showNotification('Receipt import feature coming soon!', 'info');
-        }
-
-        function filterExpenses() {
-            const dateFilter = document.getElementById('expense-date-filter').value;
-            
-            document.querySelectorAll('#expense-list tr').forEach(row => {
-                const date = row.cells[0].textContent;
-                if (!dateFilter || date === dateFilter) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
-            });
-        }
-
-        function filterByCategory() {
-            budgetManager.showNotification('Category filter coming soon!', 'info');
-        }
-
-        function sortItems() {
-            budgetManager.showNotification('Sort feature coming soon!', 'info');
+            // Export comparison as CSV
+            budgetManager.exportData('csv-full');
         }
     </script>
 </body>
