@@ -368,12 +368,14 @@
         }
 
         .tag-highlight[data-category="cast"] { background: rgba(251, 191, 36, 0.2); }
+        .tag-highlight[data-category="hair"] { background: rgba(168, 85, 247, 0.2); }
         .tag-highlight[data-category="makeup"] { background: rgba(236, 72, 153, 0.2); }
+        .tag-highlight[data-category="sfx"] { background: rgba(239, 68, 68, 0.2); }
         .tag-highlight[data-category="wardrobe"] { background: rgba(52, 211, 153, 0.2); }
         .tag-highlight[data-category="props"] { background: rgba(251, 146, 60, 0.2); }
         .tag-highlight[data-category="vehicles"] { background: rgba(56, 189, 248, 0.2); }
-        .tag-highlight[data-category="sfx"] { background: rgba(168, 85, 247, 0.2); }
-        .tag-highlight[data-category="stunts"] { background: rgba(239, 68, 68, 0.2); }
+        .tag-highlight[data-category="vfx"] { background: rgba(167, 139, 250, 0.2); }
+        .tag-highlight[data-category="stunts"] { background: rgba(245, 158, 11, 0.2); }
         .tag-highlight[data-category="extras"] { background: rgba(156, 163, 175, 0.2); }
 
         .tag-highlight:hover {
@@ -956,7 +958,229 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
-        
+
+        /* Scene Detail Fields (for cast profile modal) */
+        .scene-detail-section {
+            background: rgba(28, 25, 22, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 16px;
+        }
+
+        .detail-header {
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .detail-scene-info {
+            font-size: 0.875em;
+            font-weight: 600;
+            color: var(--accent-gold);
+            margin-bottom: 4px;
+        }
+
+        .detail-story-day {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        .detail-field {
+            margin-bottom: 16px;
+        }
+
+        .detail-field:last-child {
+            margin-bottom: 0;
+        }
+
+        .detail-field-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .detail-label {
+            font-size: 0.8125em;
+            font-weight: 600;
+            color: var(--text-light);
+        }
+
+        .ai-generate-btn {
+            padding: 4px 10px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(118, 75, 162, 0.15));
+            border: 1px solid var(--accent-blue);
+            border-radius: 4px;
+            color: var(--accent-blue);
+            font-size: 0.6875em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 600;
+        }
+
+        .ai-generate-btn:hover {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.25), rgba(118, 75, 162, 0.25));
+        }
+
+        .detail-tags {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            font-style: italic;
+        }
+
+        .detail-tag {
+            background: rgba(102, 126, 234, 0.2);
+            padding: 2px 5px;
+            border-radius: 3px;
+            margin-right: 4px;
+        }
+
+        .detail-textarea {
+            width: 100%;
+            padding: 8px 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-light);
+            font-size: 0.8125em;
+            font-family: 'Inter', sans-serif;
+            resize: vertical;
+            line-height: 1.4;
+        }
+
+        .detail-textarea:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+        }
+
+        /* Scene Metadata Pills (Read-Only Overview in Left Sidebar) */
+        .scene-metadata-overview {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+
+        .metadata-pill {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            background: rgba(212, 175, 122, 0.15);
+            border: 1px solid rgba(212, 175, 122, 0.3);
+            border-radius: 12px;
+            font-size: 0.6875em;
+        }
+
+        .metadata-pill-icon {
+            font-size: 1em;
+        }
+
+        .metadata-pill-text {
+            color: var(--accent-gold);
+            font-weight: 600;
+        }
+
+        /* Breakdown Metadata Section (Editable Inputs in Right Panel) */
+        .breakdown-metadata-section {
+            background: rgba(212, 175, 122, 0.08);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+
+        .breakdown-metadata-field {
+            margin-bottom: 12px;
+        }
+
+        .breakdown-metadata-field:last-child {
+            margin-bottom: 0;
+        }
+
+        .breakdown-label {
+            display: block;
+            font-size: 0.75em;
+            font-weight: 600;
+            color: var(--text-light);
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .breakdown-input,
+        .breakdown-select {
+            width: 100%;
+            padding: 8px 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-light);
+            font-size: 0.8125em;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .breakdown-input:focus,
+        .breakdown-select:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+        }
+
+        .breakdown-hint {
+            font-size: 0.6875em;
+            color: var(--text-muted);
+            font-style: italic;
+            margin-top: 3px;
+            opacity: 0.7;
+        }
+
+        .profile-section {
+            margin-bottom: 16px;
+        }
+
+        .profile-label {
+            display: block;
+            font-size: 0.8125em;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .modal-select {
+            width: 100%;
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-light);
+            font-size: 0.8125em;
+        }
+
+        .modal-select:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+        }
+
+        .modal-textarea {
+            width: 100%;
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-light);
+            font-size: 0.8125em;
+            font-family: 'Inter', sans-serif;
+            resize: vertical;
+            line-height: 1.5;
+        }
+
+        .modal-textarea:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+        }
+
         .breakdown-section {
             margin-bottom: 24px;
         }
@@ -1578,12 +1802,14 @@
                 <div class="script-toolbar">
                     <div class="color-legend">
                         <span class="legend-item"><span class="legend-color" style="background: rgba(251, 191, 36, 0.4);"></span>Cast</span>
+                        <span class="legend-item"><span class="legend-color" style="background: rgba(168, 85, 247, 0.4);"></span>Hair</span>
                         <span class="legend-item"><span class="legend-color" style="background: rgba(236, 72, 153, 0.4);"></span>Makeup</span>
+                        <span class="legend-item"><span class="legend-color" style="background: rgba(239, 68, 68, 0.4);"></span>SFX</span>
                         <span class="legend-item"><span class="legend-color" style="background: rgba(52, 211, 153, 0.4);"></span>Wardrobe</span>
                         <span class="legend-item"><span class="legend-color" style="background: rgba(251, 146, 60, 0.4);"></span>Props</span>
                         <span class="legend-item"><span class="legend-color" style="background: rgba(56, 189, 248, 0.4);"></span>Vehicles</span>
-                        <span class="legend-item"><span class="legend-color" style="background: rgba(168, 85, 247, 0.4);"></span>SFX</span>
-                        <span class="legend-item"><span class="legend-color" style="background: rgba(239, 68, 68, 0.4);"></span>Stunts</span>
+                        <span class="legend-item"><span class="legend-color" style="background: rgba(167, 139, 250, 0.4);"></span>VFX</span>
+                        <span class="legend-item"><span class="legend-color" style="background: rgba(245, 158, 11, 0.4);"></span>Stunts</span>
                         <span class="legend-item"><span class="legend-color" style="background: rgba(156, 163, 175, 0.4);"></span>Extras</span>
                     </div>
                     <div class="view-controls">
@@ -1650,11 +1876,13 @@
                                 <select class="tags-filter" id="categoryFilter" onchange="filterTags()">
                                     <option value="all">All Categories</option>
                                     <option value="cast">Cast</option>
-                                    <option value="makeup">Makeup/Hair</option>
+                                    <option value="hair">Hair</option>
+                                    <option value="makeup">Makeup (Beauty)</option>
+                                    <option value="sfx">SFX Makeup</option>
                                     <option value="wardrobe">Wardrobe</option>
                                     <option value="props">Props</option>
                                     <option value="vehicles">Vehicles</option>
-                                    <option value="sfx">SFX/VFX</option>
+                                    <option value="vfx">VFX</option>
                                     <option value="stunts">Stunts</option>
                                     <option value="extras">Extras</option>
                                 </select>
@@ -1708,38 +1936,44 @@
     </div>
     
     <!-- Cast Profile Modal -->
-    <div class="modal cast-profile-modal" id="castProfileModal">
-        <div class="modal-content">
+    <div class="modal" id="castProfileModal">
+        <div class="modal-content" style="max-width: 700px; max-height: 85vh; display: flex; flex-direction: column;">
             <div class="modal-title" id="castProfileTitle">Cast Profile</div>
-            
+
+            <!-- Character-wide Base Info -->
             <div class="profile-section">
                 <label class="profile-label">Character Name</label>
                 <input type="text" class="modal-input" id="castName" readonly>
             </div>
-            
+
             <div class="profile-section">
-                <label class="profile-label">Base Description (From Script)</label>
-                <textarea class="modal-textarea" id="castBaseDesc" placeholder="Age, physical appearance, base costume..."></textarea>
+                <label class="profile-label">Base Description (Character-wide)</label>
+                <textarea class="modal-textarea" id="castBaseDesc" rows="2" placeholder="Age, physical appearance, general characteristics..."></textarea>
             </div>
-            
+
+            <!-- Scene Selector -->
             <div class="profile-section">
-                <label class="profile-label">Makeup Notes</label>
-                <textarea class="modal-textarea" id="castMakeup" placeholder="Hair style, facial hair, scars, tattoos, aging, special effects..."></textarea>
+                <label class="profile-label">⚡ Scene-Specific Breakdown</label>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <select class="modal-select" id="sceneSelector" onchange="loadSceneDetails()" style="flex: 1;">
+                        <option value="">-- Select Scene --</option>
+                    </select>
+                    <button class="modal-btn" onclick="previousScene()" id="prevSceneBtn">←</button>
+                    <button class="modal-btn" onclick="nextScene()" id="nextSceneBtn">→</button>
+                </div>
             </div>
-            
-            <div class="profile-section">
-                <label class="profile-label">Wardrobe Notes</label>
-                <textarea class="modal-textarea" id="castWardrobe" placeholder="Key wardrobe pieces, costume changes, continuity notes..."></textarea>
+
+            <!-- Scene Details (scrollable) -->
+            <div id="sceneDetailsContainer" style="flex: 1; overflow-y: auto; margin: 16px 0;">
+                <div class="empty-state" style="padding: 40px 20px;">
+                    <div class="empty-icon">📋</div>
+                    <div class="empty-desc">Select a scene to view/edit details</div>
+                </div>
             </div>
-            
-            <div class="profile-section">
-                <label class="profile-label">Appears in Scenes</label>
-                <div class="appearance-list" id="castAppearances"></div>
-            </div>
-            
+
             <div class="modal-actions">
                 <button class="modal-btn" onclick="closeCastProfile()">Close</button>
-                <button class="modal-btn primary" onclick="saveCastProfile()">Save Profile</button>
+                <button class="modal-btn primary" onclick="saveCastProfile()">Save All</button>
             </div>
         </div>
     </div>
@@ -1888,11 +2122,13 @@ This is it. Today's the day."></textarea>
                 <label>Category</label>
                 <select id="tagCategory" onchange="handleCategoryChange()">
                     <option value="cast">👤 Cast Member</option>
-                    <option value="makeup">💄 Makeup/Hair</option>
+                    <option value="hair">💇 Hair</option>
+                    <option value="makeup">💄 Makeup (Beauty)</option>
+                    <option value="sfx">🩸 SFX Makeup</option>
                     <option value="wardrobe">👔 Wardrobe</option>
                     <option value="props">📦 Props</option>
                     <option value="vehicles">🚗 Vehicles</option>
-                    <option value="sfx">✨ SFX/VFX</option>
+                    <option value="vfx">✨ VFX</option>
                     <option value="stunts">🎬 Stunts</option>
                     <option value="extras">👥 Extras</option>
                 </select>
@@ -1984,14 +2220,15 @@ This is it. Today's the day."></textarea>
         // Element categories
         const categories = [
             { id: 'cast', name: 'Cast Members', color: '#fbbf24', icon: '👤' },
-            { id: 'extras', name: 'Extras', color: '#f59e0b', icon: '👥' },
+            { id: 'hair', name: 'Hair', color: '#a855f7', icon: '💇' },
+            { id: 'makeup', name: 'Makeup (Beauty)', color: '#ec4899', icon: '💄' },
+            { id: 'sfx', name: 'SFX Makeup', color: '#ef4444', icon: '🩸' },
             { id: 'wardrobe', name: 'Wardrobe', color: '#34d399', icon: '👔' },
-            { id: 'makeup', name: 'Makeup/Hair', color: '#ff6b9d', icon: '💄' },
             { id: 'props', name: 'Props', color: '#fb923c', icon: '📦' },
             { id: 'vehicles', name: 'Vehicles', color: '#38bdf8', icon: '🚗' },
-            { id: 'sfx', name: 'SFX', color: '#8b5cf6', icon: '✨' },
-            { id: 'stunts', name: 'Stunts', color: '#ef4444', icon: '🎬' },
-            { id: 'notes', name: 'Notes', color: '#6b7280', icon: '📝' }
+            { id: 'vfx', name: 'VFX', color: '#a78bfa', icon: '✨' },
+            { id: 'stunts', name: 'Stunts', color: '#f59e0b', icon: '🎬' },
+            { id: 'extras', name: 'Extras', color: '#9ca3af', icon: '👥' }
         ];
         
         // Continuity event types
@@ -2248,7 +2485,12 @@ This is it. Today's the day."></textarea>
                             number: detected.length + 1,
                             heading: trimmed,
                             lineNumber: index,
-                            synopsis: null
+                            synopsis: null,
+                            storyDay: '',
+                            timeOfDay: detectTimeOfDay(trimmed),
+                            intExt: getSceneType(trimmed),
+                            location: extractLocation(trimmed),
+                            characters: {}
                         });
                         break;
                     }
@@ -2449,17 +2691,19 @@ Scene content:
 ${content}
 
 For each element you find, provide:
-1. The category (props, vehicles, wardrobe, makeup, sfx, stunts, extras)
+1. The category (hair, makeup, sfx, wardrobe, props, vehicles, vfx, stunts, extras)
 2. The exact text snippet from the scene (2-5 words)
 3. The full sentence/context where it appears
 4. The character it relates to (if applicable, look for ALL CAPS names)
 
 Categories to look for:
+- hair: hairstyles, hair changes, wigs, beards, facial hair
+- makeup: foundation, lipstick, eye shadow, aging makeup (beauty makeup only)
+- sfx: wounds, blood, prosthetics, sweat, dirt, bruising (special makeup effects)
+- wardrobe: specific clothing items mentioned
 - props: objects characters interact with
 - vehicles: cars, bikes, boats, etc.
-- wardrobe: specific clothing items mentioned
-- makeup: wounds, blood, dirt, aging effects, hairstyles
-- sfx: special effects, explosions, weather
+- vfx: visual effects, explosions, fire, CGI elements
 - stunts: fights, falls, dangerous actions
 - extras: background performers, crowds
 
@@ -2467,7 +2711,7 @@ Respond in JSON format:
 {
   "tags": [
     {
-      "category": "makeup",
+      "category": "sfx",
       "text": "black eye",
       "context": "John has a fresh black eye from the fight.",
       "character": "JOHN"
@@ -2503,14 +2747,15 @@ IMPORTANT:
                 if (!sceneBreakdowns[sceneIndex]) {
                     sceneBreakdowns[sceneIndex] = {
                         cast: [],
-                        extras: [],
-                        wardrobe: [],
+                        hair: [],
                         makeup: [],
+                        sfx: [],
+                        wardrobe: [],
                         props: [],
                         vehicles: [],
-                        sfx: [],
+                        vfx: [],
                         stunts: [],
-                        notes: []
+                        extras: []
                     };
                 }
 
@@ -2558,22 +2803,30 @@ IMPORTANT:
 
                 saveProject();
 
-                // Re-render the script to apply highlights
+                // Re-render the breakdown panels
                 if (currentScene === sceneIndex) {
                     renderBreakdownPanel();
                     renderCastPanel();
                     renderTagsPanel();
-
-                    // Apply highlights after a short delay to ensure DOM is ready
-                    setTimeout(() => {
-                        scriptTags[sceneIndex].forEach(tag => {
-                            applyAITagHighlight(tag);
-                        });
-                        renderMarginIndicators();
-                    }, 500);
                 }
 
-                alert(`AI detected ${tagsCreated} elements and created tags with highlights!`);
+                // CRITICAL: Apply highlights after a delay to ensure DOM is ready
+                setTimeout(() => {
+                    console.log('Applying highlights for scene:', sceneIndex);
+                    const sceneTags = scriptTags[sceneIndex] || [];
+
+                    sceneTags.forEach((tag, index) => {
+                        console.log(`Highlighting tag ${index + 1}/${sceneTags.length}:`, tag.selectedText);
+                        applyAITagHighlight(tag);
+                    });
+
+                    // Apply margin indicators after highlights
+                    setTimeout(() => {
+                        renderMarginIndicators();
+                    }, 200);
+                }, 500);
+
+                alert(`AI detected ${tagsCreated} elements and created highlights!`);
 
             } catch (error) {
                 console.error('AI Detection Error:', error);
@@ -2586,49 +2839,70 @@ IMPORTANT:
 
         // Apply AI-generated tag highlights
         function applyAITagHighlight(tag) {
-            // Find all script elements in the current scene
-            const sceneContainer = document.querySelector(`[data-scene-index="${tag.sceneIndex}"]`);
-            if (!sceneContainer) {
-                console.log('Scene container not found for tag:', tag);
-                return;
-            }
+            console.log('Attempting to apply highlight for tag:', tag);
 
-            // Search through action lines, dialogue, etc.
-            const textElements = sceneContainer.querySelectorAll('.script-action, .script-dialogue, .script-parenthetical');
+            // Wait for DOM to be ready
+            setTimeout(() => {
+                // Find the scene container
+                const sceneId = `scene-${scenes[tag.sceneIndex].number}`;
+                const sceneContainer = document.getElementById(sceneId);
 
-            for (let element of textElements) {
-                const text = element.textContent;
-
-                // Check if this element contains the tagged text
-                if (text.includes(tag.selectedText)) {
-                    // Assign element ID if it doesn't have one
-                    if (!element.id) {
-                        element.id = tag.elementId;
-                    } else {
-                        tag.elementId = element.id;
-                    }
-
-                    // Apply highlight
-                    const innerHTML = element.innerHTML;
-
-                    // Check if already highlighted
-                    if (innerHTML.includes(`data-tag-id="${tag.id}"`)) {
-                        return;
-                    }
-
-                    // Escape special regex characters
-                    const escapedText = tag.selectedText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                    const regex = new RegExp(`(${escapedText})`, 'i');
-
-                    const highlightedHTML = innerHTML.replace(regex,
-                        `<span class="tag-highlight" data-tag-id="${tag.id}" data-category="${tag.category}" onclick="event.stopPropagation();" oncontextmenu="showTagContextMenu(event, '${tag.id}'); return false;">$1</span>`
-                    );
-
-                    element.innerHTML = highlightedHTML;
-                    console.log(`Applied highlight for "${tag.selectedText}" in category ${tag.category}`);
-                    break;
+                if (!sceneContainer) {
+                    console.warn('Scene container not found:', sceneId);
+                    return;
                 }
-            }
+
+                console.log('Found scene container:', sceneId);
+
+                // Search through all text elements in this scene
+                const textElements = sceneContainer.querySelectorAll('.script-action, .script-dialogue, .script-character, .script-parenthetical');
+
+                let highlighted = false;
+
+                for (let element of textElements) {
+                    const text = element.textContent;
+
+                    // Check if this element contains the tagged text
+                    if (text.includes(tag.selectedText)) {
+                        console.log('Found matching text in element:', element);
+
+                        // Assign element ID if it doesn't have one
+                        if (!element.id) {
+                            element.id = `element-${Date.now()}-${Math.random()}`;
+                        }
+                        tag.elementId = element.id;
+
+                        // Get current HTML
+                        const innerHTML = element.innerHTML;
+
+                        // Check if already highlighted
+                        if (innerHTML.includes(`data-tag-id="${tag.id}"`)) {
+                            console.log('Already highlighted, skipping');
+                            return;
+                        }
+
+                        // Escape special regex characters in the selected text
+                        const escapedText = tag.selectedText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+                        // Create regex that matches whole word/phrase
+                        const regex = new RegExp(`(${escapedText})`, 'gi');
+
+                        // Replace with highlighted version
+                        const highlightedHTML = innerHTML.replace(regex,
+                            `<span class="tag-highlight" data-tag-id="${tag.id}" data-category="${tag.category}" onclick="event.stopPropagation();" oncontextmenu="showTagContextMenu(event, '${tag.id}'); return false;">$1</span>`
+                        );
+
+                        element.innerHTML = highlightedHTML;
+                        console.log('✓ Applied highlight for:', tag.selectedText);
+                        highlighted = true;
+                        break;
+                    }
+                }
+
+                if (!highlighted) {
+                    console.warn('Could not find text to highlight:', tag.selectedText);
+                }
+            }, 100); // Small delay to ensure DOM is ready
         }
         
         // Extract scene content
@@ -2704,6 +2978,28 @@ IMPORTANT:
                         
                         ${isActive ? `
                             <div class="scene-expanded">
+                                <!-- READ-ONLY METADATA OVERVIEW -->
+                                <div class="scene-metadata-overview">
+                                    ${scene.storyDay ? `
+                                        <div class="metadata-pill">
+                                            <span class="metadata-pill-icon">📅</span>
+                                            <span class="metadata-pill-text">${scene.storyDay}</span>
+                                        </div>
+                                    ` : ''}
+                                    ${scene.timeOfDay ? `
+                                        <div class="metadata-pill">
+                                            <span class="metadata-pill-icon">🕐</span>
+                                            <span class="metadata-pill-text">${scene.timeOfDay}</span>
+                                        </div>
+                                    ` : ''}
+                                    ${scene.location ? `
+                                        <div class="metadata-pill">
+                                            <span class="metadata-pill-icon">📍</span>
+                                            <span class="metadata-pill-text">${scene.location}</span>
+                                        </div>
+                                    ` : ''}
+                                </div>
+
                                 ${scene.synopsis ? `<div class="scene-synopsis">${scene.synopsis}</div>` : `<div class="scene-synopsis placeholder">No synopsis yet</div>`}
                                 
                                 ${cast.length > 0 ? `
@@ -2760,7 +3056,64 @@ IMPORTANT:
                     <div class="breakdown-scene-title">Scene ${scene.number}</div>
                     <div class="breakdown-scene-heading">${scene.heading}</div>
                 </div>
-                
+
+                <!-- SCENE METADATA INPUTS -->
+                <div class="breakdown-metadata-section">
+                    <div class="section-title" style="margin-bottom: 12px;">
+                        <span class="section-icon" style="background: var(--accent-gold);"></span>
+                        Scene Information
+                    </div>
+
+                    <div class="breakdown-metadata-field">
+                        <label class="breakdown-label">Story Day</label>
+                        <input type="text"
+                               class="breakdown-input"
+                               value="${scene.storyDay || ''}"
+                               placeholder="Day 1 Morning, Week 2, Flashback - 1942..."
+                               onchange="updateSceneMetadata(${currentScene}, 'storyDay', this.value)">
+                        <div class="breakdown-hint">Examples: "Day 1 Morning", "Week 2", "Flashback - 5 years ago"</div>
+                    </div>
+
+                    <div class="breakdown-metadata-field">
+                        <label class="breakdown-label">Time of Day</label>
+                        <select class="breakdown-select"
+                                onchange="updateSceneMetadata(${currentScene}, 'timeOfDay', this.value)">
+                            <option value="${scene.timeOfDay || ''}" selected>${scene.timeOfDay || '-- Select Time --'}</option>
+                            <option value="Morning">Morning</option>
+                            <option value="Late Morning">Late Morning</option>
+                            <option value="Afternoon">Afternoon</option>
+                            <option value="Late Afternoon">Late Afternoon</option>
+                            <option value="Evening">Evening</option>
+                            <option value="Night">Night</option>
+                            <option value="Late Night">Late Night</option>
+                        </select>
+                        <div class="breakdown-hint">Auto-detected: ${detectTimeOfDay(scene.heading) || 'None'} (override if needed)</div>
+                    </div>
+
+                    <div class="breakdown-metadata-field">
+                        <label class="breakdown-label">INT/EXT</label>
+                        <select class="breakdown-select"
+                                onchange="updateSceneMetadata(${currentScene}, 'intExt', this.value)">
+                            <option value="${scene.intExt || getSceneType(scene.heading)}" selected>${(scene.intExt || getSceneType(scene.heading)).toUpperCase().replace('-', ' / ')}</option>
+                            <option value="int-day">INT / DAY</option>
+                            <option value="int-night">INT / NIGHT</option>
+                            <option value="ext-day">EXT / DAY</option>
+                            <option value="ext-night">EXT / NIGHT</option>
+                        </select>
+                        <div class="breakdown-hint">Auto-detected from heading (override if needed)</div>
+                    </div>
+
+                    <div class="breakdown-metadata-field">
+                        <label class="breakdown-label">Location</label>
+                        <input type="text"
+                               class="breakdown-input"
+                               value="${scene.location || ''}"
+                               placeholder="Location name..."
+                               onchange="updateSceneMetadata(${currentScene}, 'location', this.value)">
+                        <div class="breakdown-hint">Auto-extracted: ${extractLocation(scene.heading) || 'Not detected'}</div>
+                    </div>
+                </div>
+
                 <div class="ai-controls">
                     <button class="ai-btn" onclick="generateAISynopsis(${currentScene})">✨ Generate AI Synopsis</button>
                     <button class="ai-btn" onclick="detectAIElements(${currentScene})">🔍 Detect Elements with AI</button>
@@ -3330,23 +3683,35 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`;
             currentCastMember = castMember;
             const profile = castProfiles[castMember] || {
                 name: castMember,
-                baseDescription: '',
-                makeup: '',
-                wardrobe: '',
-                scenes: []
+                baseDescription: ''
             };
-            
+
             document.getElementById('castProfileTitle').textContent = `${castMember} - Profile`;
             document.getElementById('castName').value = castMember;
             document.getElementById('castBaseDesc').value = profile.baseDescription || '';
-            document.getElementById('castMakeup').value = profile.makeup || '';
-            document.getElementById('castWardrobe').value = profile.wardrobe || '';
-            
-            const appearancesList = document.getElementById('castAppearances');
-            appearancesList.innerHTML = profile.scenes.length > 0 
-                ? profile.scenes.sort((a, b) => a - b).map(s => `<div class="appearance-chip">Scene ${s}</div>`).join('')
-                : '<div style="color: var(--text-muted); font-size: 0.75em;">No scenes yet</div>';
-            
+
+            // Populate scene selector with scenes this character is in
+            const sceneSelector = document.getElementById('sceneSelector');
+            sceneSelector.innerHTML = '<option value="">-- Select Scene --</option>';
+
+            scenes.forEach((scene, index) => {
+                const breakdown = sceneBreakdowns[index] || {};
+                if (breakdown.cast && breakdown.cast.includes(castMember)) {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = `Scene ${scene.number}: ${scene.heading.substring(0, 40)}...`;
+                    sceneSelector.appendChild(option);
+                }
+            });
+
+            // Clear scene details
+            document.getElementById('sceneDetailsContainer').innerHTML = `
+                <div class="empty-state" style="padding: 40px 20px;">
+                    <div class="empty-icon">📋</div>
+                    <div class="empty-desc">Select a scene to view/edit details</div>
+                </div>
+            `;
+
             document.getElementById('castProfileModal').classList.add('active');
         }
         
@@ -3357,21 +3722,22 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`;
         
         function saveCastProfile() {
             if (!currentCastMember) return;
-            
+
+            // Save base description
             if (!castProfiles[currentCastMember]) {
                 castProfiles[currentCastMember] = {
-                    name: currentCastMember,
-                    scenes: []
+                    name: currentCastMember
                 };
             }
-            
+
             castProfiles[currentCastMember].baseDescription = document.getElementById('castBaseDesc').value;
-            castProfiles[currentCastMember].makeup = document.getElementById('castMakeup').value;
-            castProfiles[currentCastMember].wardrobe = document.getElementById('castWardrobe').value;
-            
+
+            // Save current scene-specific details
+            saveCastProfileCurrentScene();
+
             saveProject();
             renderCastPanel();
-            closeCastProfile();
+            alert('Profile saved!');
         }
         
         // Render script
@@ -3715,8 +4081,8 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`;
             const characterField = document.getElementById('characterField');
             const linkOption = document.getElementById('linkExistingOption');
 
-            // Show character field for makeup/wardrobe
-            if (category === 'makeup' || category === 'wardrobe') {
+            // Show character field for hair, makeup, sfx, wardrobe
+            if (['hair', 'makeup', 'sfx', 'wardrobe'].includes(category)) {
                 characterField.style.display = 'block';
 
                 // Check if selected character has continuity events
@@ -3847,14 +4213,15 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`;
             if (!sceneBreakdowns[tag.sceneIndex]) {
                 sceneBreakdowns[tag.sceneIndex] = {
                     cast: [],
-                    extras: [],
-                    wardrobe: [],
+                    hair: [],
                     makeup: [],
+                    sfx: [],
+                    wardrobe: [],
                     props: [],
                     vehicles: [],
-                    sfx: [],
+                    vfx: [],
                     stunts: [],
-                    notes: []
+                    extras: []
                 };
             }
 
@@ -4151,14 +4518,31 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`;
         }
 
         function renderAllHighlights() {
+            console.log('Rendering all highlights...');
+            console.log('Script tags:', scriptTags);
+
+            // Wait for script to be fully rendered
             setTimeout(() => {
+                let totalHighlighted = 0;
+
                 Object.keys(scriptTags).forEach(sceneIndex => {
-                    scriptTags[sceneIndex].forEach(tag => {
-                        applyHighlight(tag);
+                    const sceneTags = scriptTags[sceneIndex];
+                    console.log(`Scene ${sceneIndex} has ${sceneTags.length} tags`);
+
+                    sceneTags.forEach((tag, index) => {
+                        console.log(`Applying highlight ${index + 1}:`, tag.selectedText);
+                        applyAITagHighlight(tag);
+                        totalHighlighted++;
                     });
                 });
-                renderMarginIndicators();
-            }, 500);
+
+                console.log(`✓ Applied ${totalHighlighted} highlights`);
+
+                // Apply margin indicators after all highlights
+                setTimeout(() => {
+                    renderMarginIndicators();
+                }, 300);
+            }, 800);
         }
 
         // Add CSS animation for pulse effect
@@ -4170,6 +4554,290 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`;
             }
         `;
         document.head.appendChild(styleTag);
+
+        // ==========================================
+        // SCENE METADATA FUNCTIONS
+        // ==========================================
+
+        function updateSceneMetadata(sceneIndex, field, value) {
+            if (!scenes[sceneIndex]) return;
+
+            scenes[sceneIndex][field] = value;
+
+            saveProject();
+
+            // Re-render scene list to update the read-only overview
+            renderSceneList();
+
+            // Scroll back to active scene
+            if (currentScene === sceneIndex) {
+                setTimeout(() => {
+                    const sceneEl = document.querySelector('.scene-item.active');
+                    if (sceneEl) {
+                        sceneEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                }, 100);
+            }
+        }
+
+        function extractLocation(heading) {
+            // Extract location from scene heading
+            // e.g., "INT. KITCHEN - MORNING" -> "KITCHEN"
+            const match = heading.match(/(?:INT\.|EXT\.|INT\/EXT\.|I\/E\.)\s+([^-]+)/i);
+            if (match) {
+                return match[1].trim();
+            }
+            return '';
+        }
+
+        // Auto-detect time of day from heading
+        function detectTimeOfDay(heading) {
+            const h = heading.toUpperCase();
+            if (h.includes('MORNING')) return 'Morning';
+            if (h.includes('LATE MORNING')) return 'Late Morning';
+            if (h.includes('AFTERNOON')) return 'Afternoon';
+            if (h.includes('LATE AFTERNOON')) return 'Late Afternoon';
+            if (h.includes('EVENING')) return 'Evening';
+            if (h.includes('NIGHT')) return 'Night';
+            if (h.includes('LATE NIGHT')) return 'Late Night';
+            if (h.includes('DAWN')) return 'Morning';
+            if (h.includes('DUSK')) return 'Evening';
+            if (h.includes('DAY')) return 'Afternoon';
+            return '';
+        }
+
+        // ==========================================
+        // CHARACTER SCENE-SPECIFIC BREAKDOWN
+        // ==========================================
+
+        function loadSceneDetails() {
+            const sceneIndex = parseInt(document.getElementById('sceneSelector').value);
+            if (isNaN(sceneIndex)) return;
+
+            const character = currentCastMember;
+            const scene = scenes[sceneIndex];
+
+            // Initialize character data for this scene if needed
+            if (!scene.characters) scene.characters = {};
+            if (!scene.characters[character]) {
+                scene.characters[character] = {
+                    hair: '',
+                    makeup: '',
+                    sfx: '',
+                    wardrobe: '',
+                    notes: ''
+                };
+            }
+
+            const charData = scene.characters[character];
+
+            // Get tags for this character in this scene
+            const sceneTags = scriptTags[sceneIndex] || [];
+            const hairTags = sceneTags.filter(t => t.category === 'hair' && t.character === character);
+            const makeupTags = sceneTags.filter(t => t.category === 'makeup' && t.character === character);
+            const sfxTags = sceneTags.filter(t => t.category === 'sfx' && t.character === character);
+            const wardrobeTags = sceneTags.filter(t => t.category === 'wardrobe' && t.character === character);
+
+            const container = document.getElementById('sceneDetailsContainer');
+            container.innerHTML = `
+                <div class="scene-detail-section">
+                    <div class="detail-header">
+                        <div class="detail-scene-info">Scene ${scene.number}: ${scene.heading}</div>
+                        ${scene.storyDay ? `<div class="detail-story-day">${scene.storyDay}</div>` : ''}
+                    </div>
+
+                    <!-- HAIR -->
+                    <div class="detail-field">
+                        <div class="detail-field-header">
+                            <label class="detail-label">💇 Hair</label>
+                            <button class="ai-generate-btn" onclick="generateDescription(${sceneIndex}, '${character}', 'hair')">
+                                ✨ Generate from Tags
+                            </button>
+                        </div>
+                        ${hairTags.length > 0 ? `
+                            <div class="detail-tags">
+                                Tags: ${hairTags.map(t => `<span class="detail-tag">${t.selectedText}</span>`).join(' ')}
+                            </div>
+                        ` : ''}
+                        <textarea class="detail-textarea" id="hair-${sceneIndex}" rows="2" placeholder="Hair description for breakdown sheet...">${charData.hair || ''}</textarea>
+                    </div>
+
+                    <!-- MAKEUP (Beauty) -->
+                    <div class="detail-field">
+                        <div class="detail-field-header">
+                            <label class="detail-label">💄 Makeup (Beauty)</label>
+                            <button class="ai-generate-btn" onclick="generateDescription(${sceneIndex}, '${character}', 'makeup')">
+                                ✨ Generate from Tags
+                            </button>
+                        </div>
+                        ${makeupTags.length > 0 ? `
+                            <div class="detail-tags">
+                                Tags: ${makeupTags.map(t => `<span class="detail-tag">${t.selectedText}</span>`).join(' ')}
+                            </div>
+                        ` : ''}
+                        <textarea class="detail-textarea" id="makeup-${sceneIndex}" rows="2" placeholder="Beauty makeup description...">${charData.makeup || ''}</textarea>
+                    </div>
+
+                    <!-- SFX MAKEUP -->
+                    <div class="detail-field">
+                        <div class="detail-field-header">
+                            <label class="detail-label">🩸 SFX Makeup</label>
+                            <button class="ai-generate-btn" onclick="generateDescription(${sceneIndex}, '${character}', 'sfx')">
+                                ✨ Generate from Tags
+                            </button>
+                        </div>
+                        ${sfxTags.length > 0 ? `
+                            <div class="detail-tags">
+                                Tags: ${sfxTags.map(t => `<span class="detail-tag">${t.selectedText}</span>`).join(' ')}
+                            </div>
+                        ` : ''}
+                        <textarea class="detail-textarea" id="sfx-${sceneIndex}" rows="2" placeholder="Wounds, blood, prosthetics, special effects...">${charData.sfx || ''}</textarea>
+                    </div>
+
+                    <!-- WARDROBE -->
+                    <div class="detail-field">
+                        <div class="detail-field-header">
+                            <label class="detail-label">👔 Wardrobe</label>
+                            <button class="ai-generate-btn" onclick="generateDescription(${sceneIndex}, '${character}', 'wardrobe')">
+                                ✨ Generate from Tags
+                            </button>
+                        </div>
+                        ${wardrobeTags.length > 0 ? `
+                            <div class="detail-tags">
+                                Tags: ${wardrobeTags.map(t => `<span class="detail-tag">${t.selectedText}</span>`).join(' ')}
+                            </div>
+                        ` : ''}
+                        <textarea class="detail-textarea" id="wardrobe-${sceneIndex}" rows="2" placeholder="Wardrobe description...">${charData.wardrobe || ''}</textarea>
+                    </div>
+
+                    <!-- NOTES -->
+                    <div class="detail-field">
+                        <label class="detail-label">📝 Notes</label>
+                        <textarea class="detail-textarea" id="notes-${sceneIndex}" rows="2" placeholder="Continuity notes, changes from previous scene...">${charData.notes || ''}</textarea>
+                    </div>
+                </div>
+            `;
+
+            // Update prev/next buttons
+            updateSceneNavButtons();
+        }
+
+        async function generateDescription(sceneIndex, character, category) {
+            const btn = event.target;
+            btn.disabled = true;
+            btn.innerHTML = '<div class="spinner" style="width: 10px; height: 10px; border: 2px solid var(--accent-blue); border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite;"></div> Generating...';
+
+            try {
+                // Get tags for this character + category + scene
+                const sceneTags = scriptTags[sceneIndex] || [];
+                const relevantTags = sceneTags.filter(t =>
+                    t.category === category && t.character === character
+                );
+
+                if (relevantTags.length === 0) {
+                    alert('No tags found for this category. Please tag relevant text in the script first.');
+                    return;
+                }
+
+                // Collect tag contexts
+                const contexts = relevantTags.map(t => t.fullContext).join('\n');
+                const tagTexts = relevantTags.map(t => t.selectedText).join(', ');
+
+                const scene = scenes[sceneIndex];
+                const categoryNames = {
+                    'hair': 'hair styling',
+                    'makeup': 'beauty makeup',
+                    'sfx': 'SFX makeup (wounds, blood, prosthetics)',
+                    'wardrobe': 'wardrobe and costume'
+                };
+
+                const prompt = `You are a professional film production breakdown writer. Write a natural, professional description for ${categoryNames[category]} based on these tagged elements from the script.
+
+Tagged elements: ${tagTexts}
+
+Context from script:
+${contexts}
+
+Scene: ${scene.heading}
+${scene.storyDay ? `Story Day: ${scene.storyDay}` : ''}
+
+Write a concise, specific description suitable for a breakdown sheet. Be practical and actionable for the ${category} department. Use 1-2 sentences maximum.
+
+Examples of good descriptions:
+- Hair: "Tied back in loose bun with strands falling out. Windswept appearance."
+- Makeup: "Natural, minimal. Slight concealer under eyes. Natural lip color."
+- SFX: "Fresh black eye with swelling around left eye. Purple-black bruising, tender to touch."
+- Wardrobe: "Blue robe over white cotton nightgown. Barefoot."
+
+IMPORTANT: Respond with ONLY the description text, no JSON, no formatting, just the description.`;
+
+                const description = await callAI(prompt, 200);
+
+                // Populate textarea
+                const textarea = document.getElementById(`${category}-${sceneIndex}`);
+                if (textarea) {
+                    textarea.value = description.trim();
+                }
+
+            } catch (error) {
+                console.error('AI Description Error:', error);
+                alert(`Failed to generate description:\n\n${error.message}`);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '✨ Generate from Tags';
+            }
+        }
+
+        function previousScene() {
+            const selector = document.getElementById('sceneSelector');
+            const currentIndex = parseInt(selector.value);
+            if (isNaN(currentIndex) || currentIndex <= 0) return;
+
+            // Save current scene data before switching
+            saveCastProfileCurrentScene();
+
+            selector.value = currentIndex - 1;
+            loadSceneDetails();
+        }
+
+        function nextScene() {
+            const selector = document.getElementById('sceneSelector');
+            const currentIndex = parseInt(selector.value);
+            if (isNaN(currentIndex) || currentIndex >= scenes.length - 1) return;
+
+            // Save current scene data before switching
+            saveCastProfileCurrentScene();
+
+            selector.value = currentIndex + 1;
+            loadSceneDetails();
+        }
+
+        function updateSceneNavButtons() {
+            const selector = document.getElementById('sceneSelector');
+            const currentIndex = parseInt(selector.value);
+
+            document.getElementById('prevSceneBtn').disabled = isNaN(currentIndex) || currentIndex <= 0;
+            document.getElementById('nextSceneBtn').disabled = isNaN(currentIndex) || currentIndex >= scenes.length - 1;
+        }
+
+        function saveCastProfileCurrentScene() {
+            if (!currentCastMember) return;
+
+            const sceneIndex = parseInt(document.getElementById('sceneSelector').value);
+            if (!isNaN(sceneIndex)) {
+                const scene = scenes[sceneIndex];
+                if (!scene.characters) scene.characters = {};
+                if (!scene.characters[currentCastMember]) {
+                    scene.characters[currentCastMember] = {};
+                }
+
+                scene.characters[currentCastMember].hair = document.getElementById(`hair-${sceneIndex}`)?.value || '';
+                scene.characters[currentCastMember].makeup = document.getElementById(`makeup-${sceneIndex}`)?.value || '';
+                scene.characters[currentCastMember].sfx = document.getElementById(`sfx-${sceneIndex}`)?.value || '';
+                scene.characters[currentCastMember].wardrobe = document.getElementById(`wardrobe-${sceneIndex}`)?.value || '';
+                scene.characters[currentCastMember].notes = document.getElementById(`notes-${sceneIndex}`)?.value || '';
+            }
+        }
 
         // Initialize
         window.addEventListener('load', init);
