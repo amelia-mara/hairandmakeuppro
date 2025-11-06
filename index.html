@@ -342,7 +342,12 @@
             box-shadow: 0 0 8px rgba(232, 168, 124, 0.5);
         }
 
-        .edit-btn {
+        .card-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .edit-btn, .delete-btn {
             padding: 6px 12px;
             background: transparent;
             border: 1px solid var(--glass-border);
@@ -356,6 +361,11 @@
         .edit-btn:hover {
             border-color: var(--accent-gold);
             color: var(--accent-gold);
+        }
+
+        .delete-btn:hover {
+            border-color: #e85d75;
+            color: #e85d75;
         }
 
         /* Modal */
@@ -550,11 +560,11 @@
             </div>
             
             <div class="filters">
-                <button class="filter-btn active">All</button>
-                <button class="filter-btn">Feature Film</button>
-                <button class="filter-btn">Series</button>
-                <button class="filter-btn">Commercial</button>
-                <button class="filter-btn">Music Video</button>
+                <button class="filter-btn active" data-filter="All">All</button>
+                <button class="filter-btn" data-filter="Feature Film">Feature Film</button>
+                <button class="filter-btn" data-filter="Series">Series</button>
+                <button class="filter-btn" data-filter="Commercial">Commercial</button>
+                <button class="filter-btn" data-filter="Music Video">Music Video</button>
             </div>
         </div>
     </div>
@@ -575,11 +585,13 @@
     <div class="modal" id="projectModal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 class="modal-title">Create New Project</h2>
+                <h2 class="modal-title" id="modalTitle">Create New Project</h2>
                 <button class="close-btn" onclick="closeModal()">×</button>
             </div>
             
             <form id="projectForm" onsubmit="saveProject(event)">
+                <input type="hidden" id="editIndex" value="">
+                
                 <div class="form-group">
                     <label class="form-label">Project Name</label>
                     <input type="text" class="form-input" id="projectName" placeholder="Enter project name" required>
@@ -638,7 +650,7 @@
                     </div>
                 </div>
 
-                <button type="submit" class="submit-btn">Create Project</button>
+                <button type="submit" class="submit-btn" id="submitBtn">Create Project</button>
             </form>
         </div>
     </div>
@@ -646,12 +658,61 @@
     <script>
         let projects = [];
 
+        // Helper function to escape HTML
+        function escapeHtml(unsafe) {
+            if (!unsafe) return '';
+            return unsafe
+                .toString()
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
         function loadProjects() {
             const saved = localStorage.getItem('checksHappyProjects');
             if (saved) {
-                projects = JSON.parse(saved);
-                renderProjects();
+                try {
+                    projects = JSON.parse(saved);
+                    // Clean up any corrupted data
+                    projects = projects.map(p => cleanProjectData(p));
+                    saveToStorage(); // Save cleaned data
+                    renderProjects();
+                } catch (e) {
+                    console.error('Error loading projects:', e);
+                    projects = [];
+                }
             }
+        }
+
+        function cleanProjectData(project) {
+            // Ensure scenes is a number, not an object or array
+            if (typeof project.scenes !== 'number') {
+                if (Array.isArray(project.scenes)) {
+                    project.scenes = project.scenes.length;
+                } else {
+                    project.scenes = 0;
+                }
+            }
+            
+            // Ensure all required fields exist
+            return {
+                id: project.id || Date.now(),
+                name: project.name || 'Untitled Project',
+                genre: project.genre || 'Other',
+                type: project.type || 'Other',
+                preProductionStart: project.preProductionStart || '',
+                preProductionEnd: project.preProductionEnd || '',
+                productionStart: project.productionStart || '',
+                productionEnd: project.productionEnd || '',
+                createdAt: project.createdAt || new Date().toISOString(),
+                scriptContent: project.scriptContent || null,
+                scenes: project.scenes || 0,
+                characters: project.characters || [],
+                tags: project.tags || {},
+                progress: project.progress || 0
+            };
         }
 
         function saveToStorage() {
@@ -668,7 +729,7 @@
                 const card = document.createElement('div');
                 card.className = 'project-card';
                 card.onclick = (e) => {
-                    if (!e.target.closest('.edit-btn')) {
+                    if (!e.target.closest('.edit-btn') && !e.target.closest('.delete-btn')) {
                         openProject(index);
                     }
                 };
@@ -676,14 +737,16 @@
                 const hasScript = project.scriptContent ? '✓' : '—';
                 const daysUntilShoot = project.productionStart ? 
                     Math.ceil((new Date(project.productionStart) - new Date()) / (1000 * 60 * 60 * 24)) : '—';
+                
+                const scenesCount = typeof project.scenes === 'number' ? project.scenes : 0;
 
                 card.innerHTML = `
                     <div class="project-header">
-                        <div class="project-title">${project.name}</div>
+                        <div class="project-title">${escapeHtml(project.name)}</div>
                         <div class="project-meta">
-                            <span>${project.genre}</span>
+                            <span>${escapeHtml(project.genre)}</span>
                             <span>•</span>
-                            <span>${project.type}</span>
+                            <span>${escapeHtml(project.type)}</span>
                         </div>
                     </div>
                     <div class="project-body">
@@ -694,7 +757,7 @@
                             </div>
                             <div class="stat-item">
                                 <span class="stat-label">Scenes</span>
-                                <span class="stat-value">${project.scenes || '—'}</span>
+                                <span class="stat-value">${scenesCount}</span>
                             </div>
                             <div class="stat-item">
                                 <span class="stat-label">Days to Shoot</span>
@@ -721,7 +784,10 @@
                             <span class="status-dot ${project.scriptContent ? '' : 'pending'}"></span>
                             <span>${project.scriptContent ? 'Active' : 'Needs Script'}</span>
                         </div>
-                        <button class="edit-btn" onclick="event.stopPropagation(); editProject(${index})">Edit</button>
+                        <div class="card-actions">
+                            <button class="edit-btn" onclick="event.stopPropagation(); editProject(${index})">Edit</button>
+                            <button class="delete-btn" onclick="event.stopPropagation(); deleteProject(${index})">Delete</button>
+                        </div>
                     </div>
                 `;
 
@@ -735,13 +801,18 @@
             return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         }
 
-        function openModal() {
+        function openModal(editMode = false) {
             document.getElementById('projectModal').classList.add('active');
-            document.getElementById('projectForm').reset();
-            
-            // Set default dates (today for pre-production start)
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('preProductionStart').value = today;
+            if (!editMode) {
+                document.getElementById('projectForm').reset();
+                document.getElementById('editIndex').value = '';
+                document.getElementById('modalTitle').textContent = 'Create New Project';
+                document.getElementById('submitBtn').textContent = 'Create Project';
+                
+                // Set default dates (today for pre-production start)
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('preProductionStart').value = today;
+            }
         }
 
         function closeModal() {
@@ -751,8 +822,11 @@
         function saveProject(event) {
             event.preventDefault();
 
+            const editIndex = document.getElementById('editIndex').value;
+            const isEditing = editIndex !== '';
+
             const project = {
-                id: Date.now(),
+                id: isEditing ? projects[editIndex].id : Date.now(),
                 name: document.getElementById('projectName').value,
                 genre: document.getElementById('projectGenre').value,
                 type: document.getElementById('projectType').value,
@@ -760,29 +834,56 @@
                 preProductionEnd: document.getElementById('preProductionEnd').value,
                 productionStart: document.getElementById('productionStart').value,
                 productionEnd: document.getElementById('productionEnd').value,
-                createdAt: new Date().toISOString(),
-                scriptContent: null,
-                scenes: 0,
-                characters: [],
-                tags: {},
-                progress: 0
+                createdAt: isEditing ? projects[editIndex].createdAt : new Date().toISOString(),
+                scriptContent: isEditing ? projects[editIndex].scriptContent : null,
+                scenes: isEditing ? projects[editIndex].scenes : 0,
+                characters: isEditing ? projects[editIndex].characters : [],
+                tags: isEditing ? projects[editIndex].tags : {},
+                progress: isEditing ? projects[editIndex].progress : 0
             };
 
-            projects.unshift(project);
+            if (isEditing) {
+                projects[editIndex] = project;
+            } else {
+                projects.unshift(project);
+            }
+
             saveToStorage();
             renderProjects();
             closeModal();
+        }
+
+        function editProject(index) {
+            const project = projects[index];
+            
+            document.getElementById('editIndex').value = index;
+            document.getElementById('projectName').value = project.name;
+            document.getElementById('projectGenre').value = project.genre;
+            document.getElementById('projectType').value = project.type;
+            document.getElementById('preProductionStart').value = project.preProductionStart;
+            document.getElementById('preProductionEnd').value = project.preProductionEnd;
+            document.getElementById('productionStart').value = project.productionStart;
+            document.getElementById('productionEnd').value = project.productionEnd;
+            
+            document.getElementById('modalTitle').textContent = 'Edit Project';
+            document.getElementById('submitBtn').textContent = 'Save Changes';
+            
+            openModal(true);
+        }
+
+        function deleteProject(index) {
+            const project = projects[index];
+            if (confirm(`Are you sure you want to delete "${project.name}"? This cannot be undone.`)) {
+                projects.splice(index, 1);
+                saveToStorage();
+                renderProjects();
+            }
         }
 
         function openProject(index) {
             const project = projects[index];
             localStorage.setItem('currentProject', JSON.stringify(project));
             window.location.href = 'dashboard.html';
-        }
-
-        function editProject(index) {
-            // TODO: Implement edit functionality
-            console.log('Edit project:', projects[index]);
         }
 
         // Search functionality
@@ -808,7 +909,7 @@
                 document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
                 this.classList.add('active');
                 
-                const filter = this.textContent;
+                const filter = this.getAttribute('data-filter');
                 const cards = document.querySelectorAll('.project-card');
                 
                 cards.forEach((card, index) => {
