@@ -1270,9 +1270,9 @@ This is it. Today's the day."></textarea>
             <div class="modal-section" id="openaiModelSection">
                 <label class="modal-label">OpenAI Model</label>
                 <select class="modal-select" id="openaiModel">
-                    <option value="gpt-4">GPT-4 (Recommended)</option>
-                    <option value="gpt-4-turbo-preview">GPT-4 Turbo</option>
-                    <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Faster, cheaper)</option>
+                    <option value="gpt-4o">GPT-4o (Recommended)</option>
+                    <option value="gpt-4o-mini">GPT-4o Mini (Faster, cheaper)</option>
+                    <option value="gpt-4-turbo">GPT-4 Turbo</option>
                 </select>
             </div>
             
@@ -1372,7 +1372,7 @@ This is it. Today's the day."></textarea>
         // AI Settings
         let aiProvider = localStorage.getItem('aiProvider') || 'openai';
         let apiKey = localStorage.getItem('apiKey') || '';
-        let openaiModel = localStorage.getItem('openaiModel') || 'gpt-4';
+        let openaiModel = localStorage.getItem('openaiModel') || 'gpt-4o';
         
         // Element categories
         const categories = [
@@ -1468,8 +1468,45 @@ This is it. Today's the day."></textarea>
         
         // Universal AI Call Function
         async function callAI(prompt, maxTokens = 500) {
+            // For deployed Vercel version - call secure serverless function
+            if (window.location.hostname.includes('vercel.app') || window.location.hostname.includes('localhost')) {
+                try {
+                    const response = await fetch("/api/ai", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            messages: [{
+                                role: "user",
+                                content: prompt
+                            }],
+                            maxTokens: maxTokens
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (!response.ok) {
+                        throw new Error(`API returned ${response.status}: ${JSON.stringify(data)}`);
+                    }
+                    
+                    // Extract text from response
+                    if (data.choices && data.choices[0] && data.choices[0].message) {
+                        return data.choices[0].message.content;
+                    }
+                    
+                    throw new Error('Invalid response format from API');
+                    
+                } catch (error) {
+                    console.error('Serverless API Error:', error);
+                    throw error;
+                }
+            }
+            
+            // For local testing with API key - INSECURE, only for testing!
             if (!apiKey) {
-                throw new Error('No API key set. Please configure AI settings first.');
+                throw new Error('No API key set. Please configure AI settings first or deploy to Vercel with serverless function.');
             }
             
             if (aiProvider === 'openai') {
