@@ -381,11 +381,6 @@
             box-shadow: 0 0 0 2px currentColor;
         }
 
-        .tags-hidden .tag-highlight {
-            background: transparent !important;
-            padding: 0;
-        }
-
         /* Tag Popup */
         .tag-popup {
             position: fixed;
@@ -577,10 +572,6 @@
             right: -6px;
             font-size: 0.7em;
             filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
-        }
-
-        .tags-hidden .margin-indicator {
-            display: none;
         }
 
         /* Tags Tab */
@@ -1596,7 +1587,6 @@
                         <span class="legend-item"><span class="legend-color" style="background: rgba(156, 163, 175, 0.4);"></span>Extras</span>
                     </div>
                     <div class="view-controls">
-                        <button class="view-btn" onclick="toggleHighlights()" id="toggleHighlightsBtn">👁️ Hide Tags</button>
                         <button class="view-btn" onclick="zoomIn()">Zoom In</button>
                         <button class="view-btn" onclick="zoomOut()">Zoom Out</button>
                     </div>
@@ -1984,7 +1974,6 @@ This is it. Today's the day."></textarea>
         let currentEditingEvent = null;
         let activeTab = 'breakdown';
         let scriptTags = {}; // { sceneIndex: [ tag objects ] }
-        let highlightsVisible = true;
         let currentSelection = null;
 
         // AI Settings
@@ -2444,78 +2433,201 @@ IMPORTANT: Respond ONLY with valid JSON. Do not include any text outside the JSO
         async function detectAIElements(sceneIndex) {
             const scene = scenes[sceneIndex];
             const content = extractSceneContent(scene);
-            
+
             const btn = event.target;
             btn.disabled = true;
             btn.innerHTML = '<div class="spinner"></div> Detecting...';
-            
+
             try {
                 console.log('Starting AI element detection...');
-                
-                const prompt = `Analyze this screenplay scene and identify production elements:
+
+                const prompt = `Analyze this screenplay scene and identify production elements with their exact text from the scene:
 
 Scene heading: ${scene.heading}
 
 Scene content:
 ${content}
 
-Identify and categorize these elements:
-- props (objects characters interact with)
-- vehicles (cars, bikes, boats, etc.)
-- wardrobe (specific clothing items mentioned)
-- makeup (wounds, blood, dirt, aging effects)
-- sfx (special effects, explosions, weather)
-- stunts (fights, falls, dangerous actions)
-- extras (background performers, crowds)
+For each element you find, provide:
+1. The category (props, vehicles, wardrobe, makeup, sfx, stunts, extras)
+2. The exact text snippet from the scene (2-5 words)
+3. The full sentence/context where it appears
+4. The character it relates to (if applicable, look for ALL CAPS names)
 
-Respond in JSON format with arrays for each category:
+Categories to look for:
+- props: objects characters interact with
+- vehicles: cars, bikes, boats, etc.
+- wardrobe: specific clothing items mentioned
+- makeup: wounds, blood, dirt, aging effects, hairstyles
+- sfx: special effects, explosions, weather
+- stunts: fights, falls, dangerous actions
+- extras: background performers, crowds
+
+Respond in JSON format:
 {
-  "props": ["item1", "item2"],
-  "vehicles": ["vehicle1"],
-  "wardrobe": ["clothing1"],
-  "makeup": ["effect1"],
-  "sfx": ["effect1"],
-  "stunts": ["action1"],
-  "extras": ["group1"]
+  "tags": [
+    {
+      "category": "makeup",
+      "text": "black eye",
+      "context": "John has a fresh black eye from the fight.",
+      "character": "JOHN"
+    },
+    {
+      "category": "props",
+      "text": "coffee cup",
+      "context": "She sets down her coffee cup on the desk.",
+      "character": "SARAH"
+    }
+  ]
 }
 
-Only include categories that have items. IMPORTANT: Respond ONLY with valid JSON.`;
+IMPORTANT:
+- Use exact text from the scene
+- Include full sentence for context
+- Only include items explicitly mentioned
+- Respond ONLY with valid JSON`;
 
-                const responseText = await callAI(prompt, 500);
+                const responseText = await callAI(prompt, 1000);
                 console.log('Element detection response:', responseText);
-                
+
                 // Clean and parse response
                 let cleanedResponse = responseText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
                 console.log('Cleaned element response:', cleanedResponse);
                 const result = JSON.parse(cleanedResponse);
-                
-                // Update scene breakdown
-                if (!sceneBreakdowns[sceneIndex]) {
-                    sceneBreakdowns[sceneIndex] = {};
+
+                // Create tags from AI results
+                if (!scriptTags[sceneIndex]) {
+                    scriptTags[sceneIndex] = [];
                 }
-                
-                Object.keys(result).forEach(category => {
-                    if (!sceneBreakdowns[sceneIndex][category]) {
-                        sceneBreakdowns[sceneIndex][category] = [];
-                    }
-                    result[category].forEach(item => {
-                        if (!sceneBreakdowns[sceneIndex][category].includes(item)) {
-                            sceneBreakdowns[sceneIndex][category].push(item);
+
+                if (!sceneBreakdowns[sceneIndex]) {
+                    sceneBreakdowns[sceneIndex] = {
+                        cast: [],
+                        extras: [],
+                        wardrobe: [],
+                        makeup: [],
+                        props: [],
+                        vehicles: [],
+                        sfx: [],
+                        stunts: [],
+                        notes: []
+                    };
+                }
+
+                let tagsCreated = 0;
+
+                if (result.tags && Array.isArray(result.tags)) {
+                    result.tags.forEach(aiTag => {
+                        // Create tag object
+                        const tag = {
+                            id: Date.now() + Math.random(),
+                            sceneIndex: sceneIndex,
+                            sceneNumber: scene.number,
+                            category: aiTag.category,
+                            selectedText: aiTag.text,
+                            fullContext: aiTag.context,
+                            character: aiTag.character || null,
+                            continuityType: 'oneoff',
+                            continuityEventId: null,
+                            elementId: `ai-tag-${Date.now()}-${Math.random()}`,
+                            created: Date.now(),
+                            aiGenerated: true
+                        };
+
+                        // Add to scriptTags
+                        scriptTags[sceneIndex].push(tag);
+
+                        // Add to breakdown
+                        const categoryKey = aiTag.category;
+                        if (sceneBreakdowns[sceneIndex][categoryKey]) {
+                            if (!sceneBreakdowns[sceneIndex][categoryKey].includes(aiTag.text)) {
+                                sceneBreakdowns[sceneIndex][categoryKey].push(aiTag.text);
+                            }
                         }
+
+                        // Add character to cast if applicable
+                        if (aiTag.character && !sceneBreakdowns[sceneIndex].cast.includes(aiTag.character)) {
+                            sceneBreakdowns[sceneIndex].cast.push(aiTag.character);
+                        }
+
+                        tagsCreated++;
                     });
-                });
-                
+                }
+
+                console.log(`Created ${tagsCreated} tags from AI detection`);
+
                 saveProject();
+
+                // Re-render the script to apply highlights
                 if (currentScene === sceneIndex) {
                     renderBreakdownPanel();
+                    renderCastPanel();
+                    renderTagsPanel();
+
+                    // Apply highlights after a short delay to ensure DOM is ready
+                    setTimeout(() => {
+                        scriptTags[sceneIndex].forEach(tag => {
+                            applyAITagHighlight(tag);
+                        });
+                        renderMarginIndicators();
+                    }, 500);
                 }
-                
+
+                alert(`AI detected ${tagsCreated} elements and created tags with highlights!`);
+
             } catch (error) {
                 console.error('AI Detection Error:', error);
                 alert(`Failed to detect elements:\n\n${error.message}\n\nCheck the browser console (F12) for more details.`);
             } finally {
                 btn.disabled = false;
                 btn.textContent = '🔍 Detect Elements with AI';
+            }
+        }
+
+        // Apply AI-generated tag highlights
+        function applyAITagHighlight(tag) {
+            // Find all script elements in the current scene
+            const sceneContainer = document.querySelector(`[data-scene-index="${tag.sceneIndex}"]`);
+            if (!sceneContainer) {
+                console.log('Scene container not found for tag:', tag);
+                return;
+            }
+
+            // Search through action lines, dialogue, etc.
+            const textElements = sceneContainer.querySelectorAll('.script-action, .script-dialogue, .script-parenthetical');
+
+            for (let element of textElements) {
+                const text = element.textContent;
+
+                // Check if this element contains the tagged text
+                if (text.includes(tag.selectedText)) {
+                    // Assign element ID if it doesn't have one
+                    if (!element.id) {
+                        element.id = tag.elementId;
+                    } else {
+                        tag.elementId = element.id;
+                    }
+
+                    // Apply highlight
+                    const innerHTML = element.innerHTML;
+
+                    // Check if already highlighted
+                    if (innerHTML.includes(`data-tag-id="${tag.id}"`)) {
+                        return;
+                    }
+
+                    // Escape special regex characters
+                    const escapedText = tag.selectedText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    const regex = new RegExp(`(${escapedText})`, 'i');
+
+                    const highlightedHTML = innerHTML.replace(regex,
+                        `<span class="tag-highlight" data-tag-id="${tag.id}" data-category="${tag.category}" onclick="event.stopPropagation();" oncontextmenu="showTagContextMenu(event, '${tag.id}'); return false;">$1</span>`
+                    );
+
+                    element.innerHTML = highlightedHTML;
+                    console.log(`Applied highlight for "${tag.selectedText}" in category ${tag.category}`);
+                    break;
+                }
             }
         }
         
@@ -3453,11 +3565,6 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`;
                     closeTagPopup();
                     closeContextMenu();
                 }
-                // Toggle highlights with Cmd/Ctrl + H
-                if ((e.metaKey || e.ctrlKey) && e.key === 'h') {
-                    e.preventDefault();
-                    toggleHighlights();
-                }
             });
 
             // Close context menu on click outside
@@ -3990,13 +4097,6 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`;
             saveProject();
         }
 
-        function toggleHighlights() {
-            highlightsVisible = !highlightsVisible;
-            document.body.classList.toggle('tags-hidden', !highlightsVisible);
-            document.getElementById('toggleHighlightsBtn').textContent =
-                highlightsVisible ? '👁️ Hide Tags' : '👁️ Show Tags';
-            localStorage.setItem('highlightsVisible', highlightsVisible);
-        }
 
         // Context Menu
         let currentContextTagId = null;
