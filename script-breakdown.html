@@ -1558,6 +1558,7 @@ This is it. Today's the day."></textarea>
             btn.innerHTML = '<div class="spinner"></div> Generating...';
             
             try {
+                console.log('Starting AI synopsis generation...');
                 const response = await fetch("https://api.anthropic.com/v1/messages", {
                     method: "POST",
                     headers: {
@@ -1588,9 +1589,24 @@ IMPORTANT: Respond ONLY with valid JSON. Do not include any text outside the JSO
                     })
                 });
                 
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('API Error:', errorText);
+                    throw new Error(`API returned ${response.status}: ${errorText}`);
+                }
+                
                 const data = await response.json();
+                console.log('API Response:', data);
+                
+                if (!data.content || !data.content[0]) {
+                    throw new Error('Invalid response format from API');
+                }
+                
                 let responseText = data.content[0].text;
                 responseText = responseText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+                console.log('Cleaned response:', responseText);
                 const result = JSON.parse(responseText);
                 
                 // Update scene synopsis
@@ -1632,7 +1648,7 @@ IMPORTANT: Respond ONLY with valid JSON. Do not include any text outside the JSO
                 
             } catch (error) {
                 console.error('AI Synopsis Error:', error);
-                alert('Failed to generate synopsis. Please try again.');
+                alert(`Failed to generate synopsis:\n\n${error.message}\n\nCheck the browser console (F12) for more details.`);
             } finally {
                 btn.disabled = false;
                 btn.textContent = '✨ Generate AI Synopsis';
@@ -1649,6 +1665,7 @@ IMPORTANT: Respond ONLY with valid JSON. Do not include any text outside the JSO
             btn.innerHTML = '<div class="spinner"></div> Detecting...';
             
             try {
+                console.log('Starting AI element detection...');
                 const response = await fetch("https://api.anthropic.com/v1/messages", {
                     method: "POST",
                     headers: {
@@ -1691,9 +1708,24 @@ Only include categories that have items. IMPORTANT: Respond ONLY with valid JSON
                     })
                 });
                 
+                console.log('Element detection response status:', response.status);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('API Error:', errorText);
+                    throw new Error(`API returned ${response.status}: ${errorText}`);
+                }
+                
                 const data = await response.json();
+                console.log('Element detection response:', data);
+                
+                if (!data.content || !data.content[0]) {
+                    throw new Error('Invalid response format from API');
+                }
+                
                 let responseText = data.content[0].text;
                 responseText = responseText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+                console.log('Cleaned element response:', responseText);
                 const result = JSON.parse(responseText);
                 
                 // Update scene breakdown
@@ -1719,7 +1751,7 @@ Only include categories that have items. IMPORTANT: Respond ONLY with valid JSON
                 
             } catch (error) {
                 console.error('AI Detection Error:', error);
-                alert('Failed to detect elements. Please try again.');
+                alert(`Failed to detect elements:\n\n${error.message}\n\nCheck the browser console (F12) for more details.`);
             } finally {
                 btn.disabled = false;
                 btn.textContent = '🔍 Detect Elements with AI';
@@ -2184,6 +2216,7 @@ Only include categories that have items. IMPORTANT: Respond ONLY with valid JSON
             btn.innerHTML = '<div class="spinner"></div> Generating...';
             
             try {
+                console.log('Starting AI progression generation...');
                 let timeContext = '';
                 if (startDay && endDay) {
                     timeContext = `The event starts at ${startDay} and ends at ${endDay}.`;
@@ -2203,6 +2236,8 @@ Only include categories that have items. IMPORTANT: Respond ONLY with valid JSON
                     'hair': 'hair change/growth',
                     'other': 'continuity change'
                 };
+                
+                console.log('Requesting progression for:', description, 'Type:', type);
                 
                 const response = await fetch("https://api.anthropic.com/v1/messages", {
                     method: "POST",
@@ -2243,9 +2278,24 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`
                     })
                 });
                 
+                console.log('Progression response status:', response.status);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('API Error:', errorText);
+                    throw new Error(`API returned ${response.status}: ${errorText}`);
+                }
+                
                 const data = await response.json();
+                console.log('Progression response:', data);
+                
+                if (!data.content || !data.content[0]) {
+                    throw new Error('Invalid response format from API');
+                }
+                
                 let responseText = data.content[0].text;
                 responseText = responseText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+                console.log('Cleaned progression response:', responseText);
                 const result = JSON.parse(responseText);
                 
                 // Display progression stages
@@ -2266,7 +2316,7 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`
                 
             } catch (error) {
                 console.error('AI Progression Error:', error);
-                alert('Failed to generate progression. Please try again.');
+                alert(`Failed to generate progression:\n\n${error.message}\n\nCheck the browser console (F12) for more details.`);
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = '✨ AI Generate Progression';
