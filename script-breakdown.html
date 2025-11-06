@@ -1549,9 +1549,9 @@
             <div class="center-panel">
                 <div class="script-toolbar">
                     <div class="view-controls">
-                        <button class="view-btn active" onclick="toggleScriptView('continuous', this)">Continuous</button>
-                        <button class="view-btn" onclick="toggleScriptView('page-breaks', this)">Page Breaks</button>
-                        <button class="view-btn" onclick="toggleScriptView('paginated', this)">Page by Page</button>
+                        <button class="view-btn active" onclick="toggleScriptView('continuous', this)" title="Traditional scrolling view">Continuous</button>
+                        <button class="view-btn" onclick="toggleScriptView('page-breaks', this)" title="Scroll through scenes with page breaks between them">📄 Page Breaks</button>
+                        <button class="view-btn" onclick="toggleScriptView('paginated', this)" title="Navigate one scene at a time">Page by Page</button>
                     </div>
                     <div class="view-controls">
                         <button class="view-btn" onclick="zoomIn()">Zoom In</button>
@@ -2001,56 +2001,69 @@ This is it. Today's the day."></textarea>
                 return;
             }
             
-            // Show progress
-            const progressEl = document.getElementById('aiProgress');
-            const statusEl = document.getElementById('aiStatus');
-            const fillEl = document.getElementById('aiProgressFill');
-            
-            progressEl.classList.add('active');
-            
-            // Clear existing AI-detected elements (but keep manual tags)
-            sceneElements = {};
-            
-            // Update cast patterns with detected characters
-            const castCategory = tagCategories.find(c => c.id === 'cast');
-            castCategory.patterns = Array.from(characters);
-            
-            // Analyze each scene
-            for (let i = 0; i < scenes.length; i++) {
-                statusEl.textContent = `Analyzing scene ${i + 1} of ${scenes.length}...`;
-                fillEl.style.width = `${((i + 1) / scenes.length) * 100}%`;
+            try {
+                // Show progress
+                const progressEl = document.getElementById('aiProgress');
+                const statusEl = document.getElementById('aiStatus');
+                const fillEl = document.getElementById('aiProgressFill');
                 
-                // Get scene content
-                const sceneContent = extractSceneContent(scenes[i]);
+                progressEl.classList.add('active');
                 
-                // Analyze scene for elements
-                const elements = analyzeSceneElements(sceneContent, i);
-                sceneElements[i] = elements;
+                // Clear existing AI-detected elements (but keep manual tags)
+                sceneElements = {};
                 
-                // Generate scene synopsis
-                const synopsis = generateSceneSynopsis(sceneContent, scenes[i].heading);
-                scenes[i].synopsis = synopsis;
+                // Update cast patterns with detected characters
+                const castCategory = tagCategories.find(c => c.id === 'cast');
+                castCategory.patterns = Array.from(characters);
                 
-                // Simulate processing time for demo
-                await sleep(250);
+                // Analyze each scene
+                for (let i = 0; i < scenes.length; i++) {
+                    try {
+                        statusEl.textContent = `Analyzing scene ${i + 1} of ${scenes.length}...`;
+                        fillEl.style.width = `${((i + 1) / scenes.length) * 100}%`;
+                        
+                        // Get scene content
+                        const sceneContent = extractSceneContent(scenes[i]);
+                        
+                        // Analyze scene for elements
+                        const elements = analyzeSceneElements(sceneContent, i);
+                        sceneElements[i] = elements;
+                        
+                        // Generate scene synopsis
+                        const synopsis = generateSceneSynopsis(sceneContent, scenes[i].heading);
+                        scenes[i].synopsis = synopsis;
+                        
+                        // Allow UI to update every 10 scenes for large scripts
+                        if (i % 10 === 0) {
+                            await sleep(10);
+                        }
+                    } catch (sceneError) {
+                        console.error(`Error analyzing scene ${i + 1}:`, sceneError);
+                        // Continue with next scene even if one fails
+                    }
+                }
+                
+                // Populate detected elements in sidebar
+                populateAllElements();
+                
+                // Update scene list with element counts and synopses
+                renderSceneList();
+                
+                // Highlight elements in script view
+                highlightScriptElements();
+                
+                // Save to project
+                saveProject();
+                
+                statusEl.textContent = 'Analysis complete';
+                setTimeout(() => {
+                    progressEl.classList.remove('active');
+                }, 1500);
+            } catch (error) {
+                console.error('AI Analysis error:', error);
+                alert('Analysis encountered an error. Please try again.');
+                document.getElementById('aiProgress').classList.remove('active');
             }
-            
-            // Populate detected elements in sidebar
-            populateAllElements();
-            
-            // Update scene list with element counts and synopses
-            renderSceneList();
-            
-            // Highlight elements in script view
-            highlightScriptElements();
-            
-            // Save to project
-            saveProject();
-            
-            statusEl.textContent = 'Analysis complete';
-            setTimeout(() => {
-                progressEl.classList.remove('active');
-            }, 1500);
         }
         
         // Extract scene content
