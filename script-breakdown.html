@@ -959,59 +959,6 @@
             to { transform: rotate(360deg); }
         }
 
-        /* Scene Metadata Fields */
-        .scene-metadata {
-            background: rgba(0, 0, 0, 0.2);
-            border: 1px solid var(--glass-border);
-            border-radius: 6px;
-            padding: 12px;
-            margin-bottom: 12px;
-        }
-
-        .metadata-field {
-            margin-bottom: 10px;
-        }
-
-        .metadata-field:last-child {
-            margin-bottom: 0;
-        }
-
-        .metadata-label {
-            display: block;
-            font-size: 0.6875em;
-            font-weight: 600;
-            text-transform: uppercase;
-            color: var(--text-muted);
-            margin-bottom: 4px;
-            letter-spacing: 0.05em;
-        }
-
-        .metadata-input,
-        .metadata-select {
-            width: 100%;
-            padding: 6px 8px;
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid var(--glass-border);
-            border-radius: 4px;
-            color: var(--text-light);
-            font-size: 0.75em;
-            font-family: 'Inter', sans-serif;
-        }
-
-        .metadata-input:focus,
-        .metadata-select:focus {
-            outline: none;
-            border-color: var(--accent-gold);
-        }
-
-        .metadata-hint {
-            font-size: 0.625em;
-            color: var(--text-muted);
-            font-style: italic;
-            margin-top: 3px;
-            opacity: 0.7;
-        }
-
         /* Scene Detail Fields (for cast profile modal) */
         .scene-detail-section {
             background: rgba(28, 25, 22, 0.3);
@@ -1106,6 +1053,87 @@
         .detail-textarea:focus {
             outline: none;
             border-color: var(--accent-gold);
+        }
+
+        /* Scene Metadata Pills (Read-Only Overview in Left Sidebar) */
+        .scene-metadata-overview {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+
+        .metadata-pill {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            background: rgba(212, 175, 122, 0.15);
+            border: 1px solid rgba(212, 175, 122, 0.3);
+            border-radius: 12px;
+            font-size: 0.6875em;
+        }
+
+        .metadata-pill-icon {
+            font-size: 1em;
+        }
+
+        .metadata-pill-text {
+            color: var(--accent-gold);
+            font-weight: 600;
+        }
+
+        /* Breakdown Metadata Section (Editable Inputs in Right Panel) */
+        .breakdown-metadata-section {
+            background: rgba(212, 175, 122, 0.08);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+
+        .breakdown-metadata-field {
+            margin-bottom: 12px;
+        }
+
+        .breakdown-metadata-field:last-child {
+            margin-bottom: 0;
+        }
+
+        .breakdown-label {
+            display: block;
+            font-size: 0.75em;
+            font-weight: 600;
+            color: var(--text-light);
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .breakdown-input,
+        .breakdown-select {
+            width: 100%;
+            padding: 8px 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-light);
+            font-size: 0.8125em;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .breakdown-input:focus,
+        .breakdown-select:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+        }
+
+        .breakdown-hint {
+            font-size: 0.6875em;
+            color: var(--text-muted);
+            font-style: italic;
+            margin-top: 3px;
+            opacity: 0.7;
         }
 
         .profile-section {
@@ -2460,6 +2488,7 @@ This is it. Today's the day."></textarea>
                             synopsis: null,
                             storyDay: '',
                             timeOfDay: detectTimeOfDay(trimmed),
+                            intExt: getSceneType(trimmed),
                             location: extractLocation(trimmed),
                             characters: {}
                         });
@@ -2774,22 +2803,30 @@ IMPORTANT:
 
                 saveProject();
 
-                // Re-render the script to apply highlights
+                // Re-render the breakdown panels
                 if (currentScene === sceneIndex) {
                     renderBreakdownPanel();
                     renderCastPanel();
                     renderTagsPanel();
-
-                    // Apply highlights after a short delay to ensure DOM is ready
-                    setTimeout(() => {
-                        scriptTags[sceneIndex].forEach(tag => {
-                            applyAITagHighlight(tag);
-                        });
-                        renderMarginIndicators();
-                    }, 500);
                 }
 
-                alert(`AI detected ${tagsCreated} elements and created tags with highlights!`);
+                // CRITICAL: Apply highlights after a delay to ensure DOM is ready
+                setTimeout(() => {
+                    console.log('Applying highlights for scene:', sceneIndex);
+                    const sceneTags = scriptTags[sceneIndex] || [];
+
+                    sceneTags.forEach((tag, index) => {
+                        console.log(`Highlighting tag ${index + 1}/${sceneTags.length}:`, tag.selectedText);
+                        applyAITagHighlight(tag);
+                    });
+
+                    // Apply margin indicators after highlights
+                    setTimeout(() => {
+                        renderMarginIndicators();
+                    }, 200);
+                }, 500);
+
+                alert(`AI detected ${tagsCreated} elements and created highlights!`);
 
             } catch (error) {
                 console.error('AI Detection Error:', error);
@@ -2802,49 +2839,70 @@ IMPORTANT:
 
         // Apply AI-generated tag highlights
         function applyAITagHighlight(tag) {
-            // Find all script elements in the current scene
-            const sceneContainer = document.querySelector(`[data-scene-index="${tag.sceneIndex}"]`);
-            if (!sceneContainer) {
-                console.log('Scene container not found for tag:', tag);
-                return;
-            }
+            console.log('Attempting to apply highlight for tag:', tag);
 
-            // Search through action lines, dialogue, etc.
-            const textElements = sceneContainer.querySelectorAll('.script-action, .script-dialogue, .script-parenthetical');
+            // Wait for DOM to be ready
+            setTimeout(() => {
+                // Find the scene container
+                const sceneId = `scene-${scenes[tag.sceneIndex].number}`;
+                const sceneContainer = document.getElementById(sceneId);
 
-            for (let element of textElements) {
-                const text = element.textContent;
-
-                // Check if this element contains the tagged text
-                if (text.includes(tag.selectedText)) {
-                    // Assign element ID if it doesn't have one
-                    if (!element.id) {
-                        element.id = tag.elementId;
-                    } else {
-                        tag.elementId = element.id;
-                    }
-
-                    // Apply highlight
-                    const innerHTML = element.innerHTML;
-
-                    // Check if already highlighted
-                    if (innerHTML.includes(`data-tag-id="${tag.id}"`)) {
-                        return;
-                    }
-
-                    // Escape special regex characters
-                    const escapedText = tag.selectedText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                    const regex = new RegExp(`(${escapedText})`, 'i');
-
-                    const highlightedHTML = innerHTML.replace(regex,
-                        `<span class="tag-highlight" data-tag-id="${tag.id}" data-category="${tag.category}" onclick="event.stopPropagation();" oncontextmenu="showTagContextMenu(event, '${tag.id}'); return false;">$1</span>`
-                    );
-
-                    element.innerHTML = highlightedHTML;
-                    console.log(`Applied highlight for "${tag.selectedText}" in category ${tag.category}`);
-                    break;
+                if (!sceneContainer) {
+                    console.warn('Scene container not found:', sceneId);
+                    return;
                 }
-            }
+
+                console.log('Found scene container:', sceneId);
+
+                // Search through all text elements in this scene
+                const textElements = sceneContainer.querySelectorAll('.script-action, .script-dialogue, .script-character, .script-parenthetical');
+
+                let highlighted = false;
+
+                for (let element of textElements) {
+                    const text = element.textContent;
+
+                    // Check if this element contains the tagged text
+                    if (text.includes(tag.selectedText)) {
+                        console.log('Found matching text in element:', element);
+
+                        // Assign element ID if it doesn't have one
+                        if (!element.id) {
+                            element.id = `element-${Date.now()}-${Math.random()}`;
+                        }
+                        tag.elementId = element.id;
+
+                        // Get current HTML
+                        const innerHTML = element.innerHTML;
+
+                        // Check if already highlighted
+                        if (innerHTML.includes(`data-tag-id="${tag.id}"`)) {
+                            console.log('Already highlighted, skipping');
+                            return;
+                        }
+
+                        // Escape special regex characters in the selected text
+                        const escapedText = tag.selectedText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+                        // Create regex that matches whole word/phrase
+                        const regex = new RegExp(`(${escapedText})`, 'gi');
+
+                        // Replace with highlighted version
+                        const highlightedHTML = innerHTML.replace(regex,
+                            `<span class="tag-highlight" data-tag-id="${tag.id}" data-category="${tag.category}" onclick="event.stopPropagation();" oncontextmenu="showTagContextMenu(event, '${tag.id}'); return false;">$1</span>`
+                        );
+
+                        element.innerHTML = highlightedHTML;
+                        console.log('✓ Applied highlight for:', tag.selectedText);
+                        highlighted = true;
+                        break;
+                    }
+                }
+
+                if (!highlighted) {
+                    console.warn('Could not find text to highlight:', tag.selectedText);
+                }
+            }, 100); // Small delay to ensure DOM is ready
         }
         
         // Extract scene content
@@ -2920,43 +2978,26 @@ IMPORTANT:
                         
                         ${isActive ? `
                             <div class="scene-expanded">
-                                <div class="scene-metadata">
-                                    <div class="metadata-field">
-                                        <label class="metadata-label">Story Day</label>
-                                        <input type="text"
-                                               class="metadata-input"
-                                               id="storyDay-${index}"
-                                               value="${scene.storyDay || ''}"
-                                               placeholder="Day 1 Morning, Flashback - 1942..."
-                                               onchange="updateSceneMetadata(${index}, 'storyDay', this.value)">
-                                        <div class="metadata-hint">Examples: "Day 1 Morning", "Week 2", "Flashback - 5 years ago"</div>
-                                    </div>
-
-                                    <div class="metadata-field">
-                                        <label class="metadata-label">Time of Day</label>
-                                        <select class="metadata-select"
-                                                id="timeOfDay-${index}"
-                                                onchange="updateSceneMetadata(${index}, 'timeOfDay', this.value)">
-                                            <option value="" ${!scene.timeOfDay ? 'selected' : ''}>-- Auto-detected --</option>
-                                            <option value="Morning" ${scene.timeOfDay === 'Morning' ? 'selected' : ''}>Morning</option>
-                                            <option value="Late Morning" ${scene.timeOfDay === 'Late Morning' ? 'selected' : ''}>Late Morning</option>
-                                            <option value="Afternoon" ${scene.timeOfDay === 'Afternoon' ? 'selected' : ''}>Afternoon</option>
-                                            <option value="Late Afternoon" ${scene.timeOfDay === 'Late Afternoon' ? 'selected' : ''}>Late Afternoon</option>
-                                            <option value="Evening" ${scene.timeOfDay === 'Evening' ? 'selected' : ''}>Evening</option>
-                                            <option value="Night" ${scene.timeOfDay === 'Night' ? 'selected' : ''}>Night</option>
-                                            <option value="Late Night" ${scene.timeOfDay === 'Late Night' ? 'selected' : ''}>Late Night</option>
-                                        </select>
-                                    </div>
-
-                                    <div class="metadata-field">
-                                        <label class="metadata-label">Location</label>
-                                        <input type="text"
-                                               class="metadata-input"
-                                               id="location-${index}"
-                                               value="${scene.location || ''}"
-                                               placeholder="Extracted from heading..."
-                                               onchange="updateSceneMetadata(${index}, 'location', this.value)">
-                                    </div>
+                                <!-- READ-ONLY METADATA OVERVIEW -->
+                                <div class="scene-metadata-overview">
+                                    ${scene.storyDay ? `
+                                        <div class="metadata-pill">
+                                            <span class="metadata-pill-icon">📅</span>
+                                            <span class="metadata-pill-text">${scene.storyDay}</span>
+                                        </div>
+                                    ` : ''}
+                                    ${scene.timeOfDay ? `
+                                        <div class="metadata-pill">
+                                            <span class="metadata-pill-icon">🕐</span>
+                                            <span class="metadata-pill-text">${scene.timeOfDay}</span>
+                                        </div>
+                                    ` : ''}
+                                    ${scene.location ? `
+                                        <div class="metadata-pill">
+                                            <span class="metadata-pill-icon">📍</span>
+                                            <span class="metadata-pill-text">${scene.location}</span>
+                                        </div>
+                                    ` : ''}
                                 </div>
 
                                 ${scene.synopsis ? `<div class="scene-synopsis">${scene.synopsis}</div>` : `<div class="scene-synopsis placeholder">No synopsis yet</div>`}
@@ -3015,7 +3056,64 @@ IMPORTANT:
                     <div class="breakdown-scene-title">Scene ${scene.number}</div>
                     <div class="breakdown-scene-heading">${scene.heading}</div>
                 </div>
-                
+
+                <!-- SCENE METADATA INPUTS -->
+                <div class="breakdown-metadata-section">
+                    <div class="section-title" style="margin-bottom: 12px;">
+                        <span class="section-icon" style="background: var(--accent-gold);"></span>
+                        Scene Information
+                    </div>
+
+                    <div class="breakdown-metadata-field">
+                        <label class="breakdown-label">Story Day</label>
+                        <input type="text"
+                               class="breakdown-input"
+                               value="${scene.storyDay || ''}"
+                               placeholder="Day 1 Morning, Week 2, Flashback - 1942..."
+                               onchange="updateSceneMetadata(${currentScene}, 'storyDay', this.value)">
+                        <div class="breakdown-hint">Examples: "Day 1 Morning", "Week 2", "Flashback - 5 years ago"</div>
+                    </div>
+
+                    <div class="breakdown-metadata-field">
+                        <label class="breakdown-label">Time of Day</label>
+                        <select class="breakdown-select"
+                                onchange="updateSceneMetadata(${currentScene}, 'timeOfDay', this.value)">
+                            <option value="${scene.timeOfDay || ''}" selected>${scene.timeOfDay || '-- Select Time --'}</option>
+                            <option value="Morning">Morning</option>
+                            <option value="Late Morning">Late Morning</option>
+                            <option value="Afternoon">Afternoon</option>
+                            <option value="Late Afternoon">Late Afternoon</option>
+                            <option value="Evening">Evening</option>
+                            <option value="Night">Night</option>
+                            <option value="Late Night">Late Night</option>
+                        </select>
+                        <div class="breakdown-hint">Auto-detected: ${detectTimeOfDay(scene.heading) || 'None'} (override if needed)</div>
+                    </div>
+
+                    <div class="breakdown-metadata-field">
+                        <label class="breakdown-label">INT/EXT</label>
+                        <select class="breakdown-select"
+                                onchange="updateSceneMetadata(${currentScene}, 'intExt', this.value)">
+                            <option value="${scene.intExt || getSceneType(scene.heading)}" selected>${(scene.intExt || getSceneType(scene.heading)).toUpperCase().replace('-', ' / ')}</option>
+                            <option value="int-day">INT / DAY</option>
+                            <option value="int-night">INT / NIGHT</option>
+                            <option value="ext-day">EXT / DAY</option>
+                            <option value="ext-night">EXT / NIGHT</option>
+                        </select>
+                        <div class="breakdown-hint">Auto-detected from heading (override if needed)</div>
+                    </div>
+
+                    <div class="breakdown-metadata-field">
+                        <label class="breakdown-label">Location</label>
+                        <input type="text"
+                               class="breakdown-input"
+                               value="${scene.location || ''}"
+                               placeholder="Location name..."
+                               onchange="updateSceneMetadata(${currentScene}, 'location', this.value)">
+                        <div class="breakdown-hint">Auto-extracted: ${extractLocation(scene.heading) || 'Not detected'}</div>
+                    </div>
+                </div>
+
                 <div class="ai-controls">
                     <button class="ai-btn" onclick="generateAISynopsis(${currentScene})">✨ Generate AI Synopsis</button>
                     <button class="ai-btn" onclick="detectAIElements(${currentScene})">🔍 Detect Elements with AI</button>
@@ -4420,14 +4518,31 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`;
         }
 
         function renderAllHighlights() {
+            console.log('Rendering all highlights...');
+            console.log('Script tags:', scriptTags);
+
+            // Wait for script to be fully rendered
             setTimeout(() => {
+                let totalHighlighted = 0;
+
                 Object.keys(scriptTags).forEach(sceneIndex => {
-                    scriptTags[sceneIndex].forEach(tag => {
-                        applyHighlight(tag);
+                    const sceneTags = scriptTags[sceneIndex];
+                    console.log(`Scene ${sceneIndex} has ${sceneTags.length} tags`);
+
+                    sceneTags.forEach((tag, index) => {
+                        console.log(`Applying highlight ${index + 1}:`, tag.selectedText);
+                        applyAITagHighlight(tag);
+                        totalHighlighted++;
                     });
                 });
-                renderMarginIndicators();
-            }, 500);
+
+                console.log(`✓ Applied ${totalHighlighted} highlights`);
+
+                // Apply margin indicators after all highlights
+                setTimeout(() => {
+                    renderMarginIndicators();
+                }, 300);
+            }, 800);
         }
 
         // Add CSS animation for pulse effect
@@ -4449,12 +4564,20 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`;
 
             scenes[sceneIndex][field] = value;
 
-            // Auto-extract location from heading if not manually set
-            if (field === 'heading' && !scenes[sceneIndex].location) {
-                scenes[sceneIndex].location = extractLocation(value);
-            }
-
             saveProject();
+
+            // Re-render scene list to update the read-only overview
+            renderSceneList();
+
+            // Scroll back to active scene
+            if (currentScene === sceneIndex) {
+                setTimeout(() => {
+                    const sceneEl = document.querySelector('.scene-item.active');
+                    if (sceneEl) {
+                        sceneEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                }, 100);
+            }
         }
 
         function extractLocation(heading) {
