@@ -357,7 +357,483 @@
         .script-dialogue { margin: 4px 0 16px; width: 65%; margin-left: 17.5%; color: #1a1a1a; }
         .script-parenthetical { margin: 0 0 4px; width: 55%; margin-left: 22.5%; color: #333; font-style: italic; }
         .script-transition { text-align: right; margin: 24px 0; font-weight: 600; color: #000; text-transform: uppercase; }
-        
+
+        /* Tag Highlighting System */
+        .tag-highlight {
+            position: relative;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-radius: 2px;
+            padding: 1px 2px;
+        }
+
+        .tag-highlight[data-category="cast"] { background: rgba(251, 191, 36, 0.2); }
+        .tag-highlight[data-category="makeup"] { background: rgba(236, 72, 153, 0.2); }
+        .tag-highlight[data-category="wardrobe"] { background: rgba(52, 211, 153, 0.2); }
+        .tag-highlight[data-category="props"] { background: rgba(251, 146, 60, 0.2); }
+        .tag-highlight[data-category="vehicles"] { background: rgba(56, 189, 248, 0.2); }
+        .tag-highlight[data-category="sfx"] { background: rgba(168, 85, 247, 0.2); }
+        .tag-highlight[data-category="stunts"] { background: rgba(239, 68, 68, 0.2); }
+        .tag-highlight[data-category="extras"] { background: rgba(156, 163, 175, 0.2); }
+
+        .tag-highlight:hover {
+            filter: brightness(1.2);
+            box-shadow: 0 0 0 2px currentColor;
+        }
+
+        .tags-hidden .tag-highlight {
+            background: transparent !important;
+            padding: 0;
+        }
+
+        /* Tag Popup */
+        .tag-popup {
+            position: fixed;
+            bottom: 80px;
+            right: 40px;
+            width: 380px;
+            background: linear-gradient(135deg, rgba(212, 175, 122, 0.08) 0%, rgba(18, 16, 14, 0.95) 50%, rgba(212, 175, 122, 0.05) 100%);
+            backdrop-filter: blur(24px) saturate(180%);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            z-index: 1000;
+            display: none;
+        }
+
+        .tag-popup.active {
+            display: block;
+            animation: slideInUp 0.3s ease-out;
+        }
+
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .tag-popup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .tag-popup-title {
+            font-size: 0.9375em;
+            font-weight: 600;
+            color: var(--accent-gold);
+        }
+
+        .tag-popup-close {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-size: 1.5em;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .tag-popup-close:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-light);
+        }
+
+        .tag-popup-body {
+            padding: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .tag-field {
+            margin-bottom: 16px;
+        }
+
+        .tag-field label {
+            display: block;
+            font-size: 0.8125em;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .tag-selected-text {
+            padding: 8px 12px;
+            background: rgba(212, 175, 122, 0.15);
+            border: 1px solid var(--accent-gold);
+            border-radius: 6px;
+            font-size: 0.875em;
+            color: var(--text-light);
+            font-family: 'Courier Prime', monospace;
+        }
+
+        .tag-field select,
+        .tag-field textarea {
+            width: 100%;
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-light);
+            font-size: 0.8125em;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .tag-field select:focus,
+        .tag-field textarea:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+        }
+
+        .tag-field textarea {
+            resize: vertical;
+            font-family: 'Courier Prime', monospace;
+            line-height: 1.5;
+        }
+
+        .tag-radio-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .tag-radio {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8125em;
+            color: var(--text-light);
+            cursor: pointer;
+        }
+
+        .tag-radio input[type="radio"] {
+            cursor: pointer;
+        }
+
+        .tag-popup-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            padding: 16px 20px;
+            border-top: 1px solid var(--glass-border);
+        }
+
+        /* Margin Indicators */
+        .script-action,
+        .script-dialogue,
+        .script-character,
+        .script-parenthetical {
+            position: relative;
+        }
+
+        .margin-indicators {
+            position: absolute;
+            left: -35px;
+            top: 2px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .margin-indicator {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.625em;
+            font-weight: 700;
+            color: #0a0908;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .margin-indicator:hover {
+            transform: scale(1.15);
+        }
+
+        .margin-indicator.continuity {
+            position: relative;
+        }
+
+        .margin-indicator.continuity::after {
+            content: '⚡';
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            font-size: 0.7em;
+            filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+        }
+
+        .tags-hidden .margin-indicator {
+            display: none;
+        }
+
+        /* Tags Tab */
+        .tags-header {
+            margin-bottom: 20px;
+        }
+
+        .tags-title {
+            font-size: 1em;
+            font-weight: 600;
+            color: var(--accent-gold);
+            margin-bottom: 16px;
+        }
+
+        .tags-filters {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .tags-filter {
+            width: 100%;
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-light);
+            font-size: 0.8125em;
+        }
+
+        .tags-filter:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+        }
+
+        .tags-stats {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 20px;
+            padding: 12px;
+            background: rgba(212, 175, 122, 0.05);
+            border-radius: 8px;
+            font-size: 0.8125em;
+        }
+
+        .tag-stat {
+            color: var(--text-muted);
+        }
+
+        .tag-stat strong {
+            color: var(--accent-gold);
+            font-weight: 700;
+        }
+
+        .tags-content {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .tags-category-group {
+            background: rgba(28, 25, 22, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .tags-category-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            background: rgba(0, 0, 0, 0.2);
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .category-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.875em;
+        }
+
+        .category-name {
+            flex: 1;
+            font-size: 0.875em;
+            font-weight: 600;
+            color: var(--text-light);
+        }
+
+        .category-count {
+            font-size: 0.75em;
+            color: var(--text-muted);
+        }
+
+        .tags-by-character {
+            padding: 16px;
+        }
+
+        .character-tags-group {
+            margin-bottom: 16px;
+        }
+
+        .character-tags-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .character-tags-name {
+            font-size: 0.8125em;
+            font-weight: 600;
+            color: var(--accent-gold);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .tag-card {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .tag-card:hover {
+            border-color: var(--accent-gold);
+            background: rgba(212, 175, 122, 0.1);
+            transform: translateX(2px);
+        }
+
+        .tag-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+
+        .tag-card-text {
+            font-size: 0.875em;
+            font-weight: 600;
+            color: var(--text-light);
+        }
+
+        .tag-card-badges {
+            display: flex;
+            gap: 4px;
+        }
+
+        .tag-badge {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.6875em;
+            font-weight: 600;
+        }
+
+        .tag-badge.scene {
+            background: rgba(102, 126, 234, 0.2);
+            border: 1px solid rgba(102, 126, 234, 0.4);
+            color: #8b9cec;
+        }
+
+        .tag-badge.continuity {
+            background: rgba(251, 191, 36, 0.2);
+            border: 1px solid rgba(251, 191, 36, 0.4);
+            color: #fbbf24;
+        }
+
+        .tag-card-context {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            font-style: italic;
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+
+        .tag-card-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .tag-action-btn {
+            padding: 4px 8px;
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            border-radius: 4px;
+            color: var(--text-muted);
+            font-size: 0.75em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .tag-action-btn:hover {
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+        }
+
+        /* Color Legend */
+        .color-legend {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.7em;
+            color: var(--text-muted);
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* Context Menu */
+        .tag-context-menu {
+            position: fixed;
+            background: linear-gradient(135deg, rgba(212, 175, 122, 0.1) 0%, rgba(18, 16, 14, 0.98) 50%, rgba(212, 175, 122, 0.08) 100%);
+            backdrop-filter: blur(24px) saturate(180%);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            min-width: 180px;
+            padding: 4px;
+        }
+
+        .context-menu-item {
+            padding: 8px 12px;
+            font-size: 0.8125em;
+            color: var(--text-light);
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .context-menu-item:hover {
+            background: rgba(212, 175, 122, 0.15);
+            color: var(--accent-gold);
+        }
+
         /* Right Sidebar - Workspace with Tabs */
         .right-sidebar {
             width: 380px;
@@ -1109,7 +1585,18 @@
             <!-- Center Panel - Script -->
             <div class="center-panel">
                 <div class="script-toolbar">
+                    <div class="color-legend">
+                        <span class="legend-item"><span class="legend-color" style="background: rgba(251, 191, 36, 0.4);"></span>Cast</span>
+                        <span class="legend-item"><span class="legend-color" style="background: rgba(236, 72, 153, 0.4);"></span>Makeup</span>
+                        <span class="legend-item"><span class="legend-color" style="background: rgba(52, 211, 153, 0.4);"></span>Wardrobe</span>
+                        <span class="legend-item"><span class="legend-color" style="background: rgba(251, 146, 60, 0.4);"></span>Props</span>
+                        <span class="legend-item"><span class="legend-color" style="background: rgba(56, 189, 248, 0.4);"></span>Vehicles</span>
+                        <span class="legend-item"><span class="legend-color" style="background: rgba(168, 85, 247, 0.4);"></span>SFX</span>
+                        <span class="legend-item"><span class="legend-color" style="background: rgba(239, 68, 68, 0.4);"></span>Stunts</span>
+                        <span class="legend-item"><span class="legend-color" style="background: rgba(156, 163, 175, 0.4);"></span>Extras</span>
+                    </div>
                     <div class="view-controls">
+                        <button class="view-btn" onclick="toggleHighlights()" id="toggleHighlightsBtn">👁️ Hide Tags</button>
                         <button class="view-btn" onclick="zoomIn()">Zoom In</button>
                         <button class="view-btn" onclick="zoomOut()">Zoom Out</button>
                     </div>
@@ -1133,6 +1620,7 @@
                 <div class="workspace-tabs">
                     <div class="workspace-tab active" onclick="switchTab('breakdown')">Scene Breakdown</div>
                     <div class="workspace-tab" onclick="switchTab('cast')">Cast in Scene</div>
+                    <div class="workspace-tab" onclick="switchTab('tags')">Tags</div>
                 </div>
                 
                 <div class="workspace-content">
@@ -1151,6 +1639,49 @@
                             <div class="empty-icon">👥</div>
                             <div class="empty-title">Select a Scene</div>
                             <div class="empty-desc">Choose a scene to view its cast members</div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 3: Tags -->
+                    <div class="tab-panel" id="tagsPanel">
+                        <div class="tags-header">
+                            <div class="tags-title">Script Tags</div>
+
+                            <div class="tags-filters">
+                                <select class="tags-filter" id="sceneFilter" onchange="filterTags()">
+                                    <option value="all">All Scenes</option>
+                                    <option value="current">Current Scene Only</option>
+                                </select>
+
+                                <select class="tags-filter" id="characterFilter" onchange="filterTags()">
+                                    <option value="all">All Characters</option>
+                                </select>
+
+                                <select class="tags-filter" id="categoryFilter" onchange="filterTags()">
+                                    <option value="all">All Categories</option>
+                                    <option value="cast">Cast</option>
+                                    <option value="makeup">Makeup/Hair</option>
+                                    <option value="wardrobe">Wardrobe</option>
+                                    <option value="props">Props</option>
+                                    <option value="vehicles">Vehicles</option>
+                                    <option value="sfx">SFX/VFX</option>
+                                    <option value="stunts">Stunts</option>
+                                    <option value="extras">Extras</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="tags-stats">
+                            <span class="tag-stat">Total: <strong id="totalTagsCount">0</strong></span>
+                            <span class="tag-stat">Continuity: <strong id="continuityTagsCount">0</strong></span>
+                        </div>
+
+                        <div class="tags-content" id="tagsContent">
+                            <div class="empty-state">
+                                <div class="empty-icon">🏷️</div>
+                                <div class="empty-title">No Tags Yet</div>
+                                <div class="empty-desc">Select text in the script to create tags</div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1349,7 +1880,91 @@ This is it. Today's the day."></textarea>
             </div>
         </div>
     </div>
-    
+
+    <!-- Tag Popup -->
+    <div class="tag-popup" id="tagPopup">
+        <div class="tag-popup-header">
+            <div class="tag-popup-title">Tag Selection</div>
+            <button class="tag-popup-close" onclick="closeTagPopup()">×</button>
+        </div>
+
+        <div class="tag-popup-body">
+            <div class="tag-field">
+                <label>Selected Text</label>
+                <div class="tag-selected-text" id="tagSelectedText"></div>
+            </div>
+
+            <div class="tag-field">
+                <label>Category</label>
+                <select id="tagCategory" onchange="handleCategoryChange()">
+                    <option value="cast">👤 Cast Member</option>
+                    <option value="makeup">💄 Makeup/Hair</option>
+                    <option value="wardrobe">👔 Wardrobe</option>
+                    <option value="props">📦 Props</option>
+                    <option value="vehicles">🚗 Vehicles</option>
+                    <option value="sfx">✨ SFX/VFX</option>
+                    <option value="stunts">🎬 Stunts</option>
+                    <option value="extras">👥 Extras</option>
+                </select>
+            </div>
+
+            <div class="tag-field" id="characterField" style="display: none;">
+                <label>Assign to Character <span style="color: var(--error);">*</span></label>
+                <select id="tagCharacter">
+                    <option value="">-- Select Character --</option>
+                </select>
+            </div>
+
+            <div class="tag-field">
+                <label>Full Context (editable)</label>
+                <textarea id="tagContext" rows="3" placeholder="Edit the captured context..."></textarea>
+            </div>
+
+            <div class="tag-field">
+                <label>Continuity Options</label>
+                <div class="tag-radio-group">
+                    <label class="tag-radio">
+                        <input type="radio" name="continuity" value="oneoff" checked>
+                        <span>One-off (this scene only)</span>
+                    </label>
+                    <label class="tag-radio">
+                        <input type="radio" name="continuity" value="create">
+                        <span>Create new continuity event</span>
+                    </label>
+                    <label class="tag-radio" id="linkExistingOption" style="display: none;">
+                        <input type="radio" name="continuity" value="link">
+                        <span>Link to existing event</span>
+                    </label>
+                </div>
+
+                <select id="existingEvents" style="display: none; margin-top: 8px;">
+                    <option value="">-- Select Event --</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="tag-popup-footer">
+            <button class="modal-btn" onclick="closeTagPopup()">Cancel</button>
+            <button class="modal-btn primary" onclick="saveTag()">Tag It</button>
+        </div>
+    </div>
+
+    <!-- Tag Context Menu -->
+    <div class="tag-context-menu" id="tagContextMenu" style="display: none;">
+        <div class="context-menu-item" onclick="editTagFromContext()">
+            ✏️ Edit Tag
+        </div>
+        <div class="context-menu-item" onclick="removeTagFromContext()">
+            🗑️ Remove Tag
+        </div>
+        <div class="context-menu-item" onclick="jumpToTagsTab()">
+            📋 View in Tags Tab
+        </div>
+        <div class="context-menu-item" onclick="linkToContinuityFromContext()">
+            ⚡ Link to Continuity
+        </div>
+    </div>
+
     <script>
         // Global state
         let currentProject = null;
@@ -1368,7 +1983,10 @@ This is it. Today's the day."></textarea>
         let currentEventCharacter = null;
         let currentEditingEvent = null;
         let activeTab = 'breakdown';
-        
+        let scriptTags = {}; // { sceneIndex: [ tag objects ] }
+        let highlightsVisible = true;
+        let currentSelection = null;
+
         // AI Settings
         let aiProvider = localStorage.getItem('aiProvider') || 'openai';
         let apiKey = localStorage.getItem('apiKey') || '';
@@ -1429,8 +2047,10 @@ This is it. Today's the day."></textarea>
                 if (currentProject.characterStates) characterStates = currentProject.characterStates;
                 if (currentProject.continuityEvents) continuityEvents = currentProject.continuityEvents;
                 if (currentProject.sceneTimeline) sceneTimeline = currentProject.sceneTimeline;
-                
+                if (currentProject.scriptTags) scriptTags = currentProject.scriptTags;
+
                 renderSceneList();
+                renderAllHighlights();
             }
             
             document.getElementById('sceneSearch').addEventListener('input', handleSceneSearch);
@@ -1916,16 +2536,20 @@ Only include categories that have items. IMPORTANT: Respond ONLY with valid JSON
         // Switch tabs
         function switchTab(tab) {
             activeTab = tab;
-            
+
             document.querySelectorAll('.workspace-tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-            
+
             if (tab === 'breakdown') {
                 document.querySelectorAll('.workspace-tab')[0].classList.add('active');
                 document.getElementById('breakdownPanel').classList.add('active');
-            } else {
+            } else if (tab === 'cast') {
                 document.querySelectorAll('.workspace-tab')[1].classList.add('active');
                 document.getElementById('castPanel').classList.add('active');
+            } else if (tab === 'tags') {
+                document.querySelectorAll('.workspace-tab')[2].classList.add('active');
+                document.getElementById('tagsPanel').classList.add('active');
+                renderTagsPanel();
             }
         }
         
@@ -2798,9 +3422,10 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`;
             currentProject.continuityEvents = continuityEvents;
             currentProject.sceneTimeline = sceneTimeline;
             currentProject.scenes = scenes;
-            
+            currentProject.scriptTags = scriptTags;
+
             localStorage.setItem('currentProject', JSON.stringify(currentProject));
-            
+
             const projects = JSON.parse(localStorage.getItem('checksHappyProjects') || '[]');
             const index = projects.findIndex(p => p.id === currentProject.id);
             if (index !== -1) {
@@ -2810,7 +3435,642 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`;
             }
             localStorage.setItem('checksHappyProjects', JSON.stringify(projects));
         }
-        
+
+        // ==========================================
+        // TAGGING SYSTEM
+        // ==========================================
+
+        // Text Selection Handler
+        document.addEventListener('DOMContentLoaded', function() {
+            const scriptContent = document.getElementById('scriptContent');
+            if (scriptContent) {
+                scriptContent.addEventListener('mouseup', handleTextSelection);
+            }
+
+            // Close popups on Escape
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    closeTagPopup();
+                    closeContextMenu();
+                }
+                // Toggle highlights with Cmd/Ctrl + H
+                if ((e.metaKey || e.ctrlKey) && e.key === 'h') {
+                    e.preventDefault();
+                    toggleHighlights();
+                }
+            });
+
+            // Close context menu on click outside
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.tag-context-menu')) {
+                    closeContextMenu();
+                }
+            });
+        });
+
+        function handleTextSelection(e) {
+            const selection = window.getSelection();
+            const selectedText = selection.toString().trim();
+
+            // Don't show popup if no text selected or clicking on existing tag
+            if (!selectedText || e.target.classList.contains('tag-highlight')) {
+                return;
+            }
+
+            // Get the full context (sentence or paragraph)
+            const range = selection.getRangeAt(0);
+            const container = range.commonAncestorContainer;
+            const element = container.nodeType === 3 ? container.parentElement : container;
+
+            // Don't allow tagging scene headings
+            if (element.classList.contains('script-scene-heading')) {
+                alert('Cannot tag scene headings');
+                return;
+            }
+
+            // Capture full context
+            const fullContext = captureContext(element, selectedText);
+
+            // Detect character from context
+            const detectedCharacter = detectCharacter(fullContext);
+
+            // Store selection data
+            currentSelection = {
+                selectedText: selectedText,
+                fullContext: fullContext,
+                element: element,
+                range: range,
+                detectedCharacter: detectedCharacter
+            };
+
+            // Show tag popup
+            showTagPopup();
+        }
+
+        function captureContext(element, selectedText) {
+            let context = element.textContent;
+
+            // If it's an action line, capture the full sentence or paragraph
+            if (element.classList.contains('script-action')) {
+                // Check if it's a character introduction (all caps name with description in parens)
+                const charIntroPattern = /^[A-Z][A-Z\s]+\s*\([^)]+\)/;
+                if (charIntroPattern.test(context)) {
+                    // Capture full paragraph (all contiguous action lines)
+                    let fullParagraph = context;
+                    let nextSibling = element.nextElementSibling;
+                    while (nextSibling && nextSibling.classList.contains('script-action')) {
+                        fullParagraph += ' ' + nextSibling.textContent;
+                        nextSibling = nextSibling.nextElementSibling;
+                    }
+                    return fullParagraph.trim();
+                }
+
+                // Otherwise capture the full sentence
+                const sentences = context.match(/[^.!?]+[.!?]+/g) || [context];
+                for (let sentence of sentences) {
+                    if (sentence.includes(selectedText)) {
+                        return sentence.trim();
+                    }
+                }
+            }
+
+            return context.trim();
+        }
+
+        function detectCharacter(context) {
+            // Match words that are 2+ letters, all uppercase, not scene keywords
+            const sceneKeywords = ['INT', 'EXT', 'DAY', 'NIGHT', 'CONTINUOUS', 'LATER', 'MORNING', 'AFTERNOON', 'EVENING', 'DAWN', 'DUSK'];
+            const capsWords = context.match(/\b[A-Z]{2,}[A-Z\s]*\b/g);
+
+            if (capsWords) {
+                for (let word of capsWords) {
+                    word = word.trim();
+                    if (!sceneKeywords.includes(word) && characters.has(word)) {
+                        return word;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        function showTagPopup() {
+            if (!currentSelection) return;
+
+            // Populate popup
+            document.getElementById('tagSelectedText').textContent = currentSelection.selectedText;
+            document.getElementById('tagContext').value = currentSelection.fullContext;
+            document.getElementById('tagCategory').value = 'makeup'; // Default to makeup
+
+            // Reset character field
+            document.getElementById('characterField').style.display = 'none';
+
+            // Populate character dropdown
+            const characterSelect = document.getElementById('tagCharacter');
+            characterSelect.innerHTML = '<option value="">-- Select Character --</option>';
+
+            // Add current scene cast if available
+            if (currentScene !== null && sceneBreakdowns[currentScene]?.cast) {
+                sceneBreakdowns[currentScene].cast.forEach(castMember => {
+                    const option = document.createElement('option');
+                    option.value = castMember;
+                    option.textContent = castMember;
+                    if (castMember === currentSelection.detectedCharacter) {
+                        option.selected = true;
+                    }
+                    characterSelect.appendChild(option);
+                });
+            }
+
+            // Show character field for makeup/wardrobe
+            handleCategoryChange();
+
+            // Show popup
+            document.getElementById('tagPopup').classList.add('active');
+        }
+
+        function closeTagPopup() {
+            document.getElementById('tagPopup').classList.remove('active');
+            currentSelection = null;
+
+            // Reset form
+            document.getElementById('tagCategory').value = 'makeup';
+            document.getElementById('tagCharacter').value = '';
+            document.getElementById('tagContext').value = '';
+            document.querySelector('input[name="continuity"][value="oneoff"]').checked = true;
+            document.getElementById('characterField').style.display = 'none';
+            document.getElementById('linkExistingOption').style.display = 'none';
+            document.getElementById('existingEvents').style.display = 'none';
+        }
+
+        function handleCategoryChange() {
+            const category = document.getElementById('tagCategory').value;
+            const characterField = document.getElementById('characterField');
+            const linkOption = document.getElementById('linkExistingOption');
+
+            // Show character field for makeup/wardrobe
+            if (category === 'makeup' || category === 'wardrobe') {
+                characterField.style.display = 'block';
+
+                // Check if selected character has continuity events
+                const character = document.getElementById('tagCharacter').value;
+                if (character && continuityEvents[character]?.length > 0) {
+                    linkOption.style.display = 'block';
+                    populateExistingEvents(character);
+                } else {
+                    linkOption.style.display = 'none';
+                }
+            } else {
+                characterField.style.display = 'none';
+                linkOption.style.display = 'none';
+            }
+        }
+
+        function populateExistingEvents(character) {
+            const eventsSelect = document.getElementById('existingEvents');
+            eventsSelect.innerHTML = '<option value="">-- Select Event --</option>';
+
+            if (continuityEvents[character]) {
+                continuityEvents[character].forEach(event => {
+                    const option = document.createElement('option');
+                    option.value = event.id;
+                    option.textContent = `${event.description} (Sc. ${event.startScene} - ${event.endScene || '?'})`;
+                    eventsSelect.appendChild(option);
+                });
+            }
+
+            // Show/hide events dropdown based on radio selection
+            document.querySelectorAll('input[name="continuity"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    if (this.value === 'link') {
+                        eventsSelect.style.display = 'block';
+                    } else {
+                        eventsSelect.style.display = 'none';
+                    }
+                });
+            });
+        }
+
+        function saveTag() {
+            if (!currentSelection || currentScene === null) return;
+
+            const category = document.getElementById('tagCategory').value;
+            const character = document.getElementById('tagCharacter').value;
+            const context = document.getElementById('tagContext').value;
+            const continuityType = document.querySelector('input[name="continuity"]:checked').value;
+            const continuityEventId = continuityType === 'link' ? document.getElementById('existingEvents').value : null;
+
+            // Validate: makeup/wardrobe must have character
+            if ((category === 'makeup' || category === 'wardrobe') && !character) {
+                alert('Please select a character for makeup/wardrobe tags');
+                return;
+            }
+
+            // Create tag object
+            const tag = {
+                id: Date.now() + Math.random(),
+                sceneIndex: currentScene,
+                sceneNumber: scenes[currentScene].sceneNumber,
+                category: category,
+                selectedText: currentSelection.selectedText,
+                fullContext: context,
+                character: character || null,
+                continuityType: continuityType,
+                continuityEventId: continuityEventId,
+                elementId: currentSelection.element.id || `element-${Date.now()}`,
+                created: Date.now()
+            };
+
+            // Ensure element has an ID
+            if (!currentSelection.element.id) {
+                currentSelection.element.id = tag.elementId;
+            }
+
+            // Store tag
+            if (!scriptTags[currentScene]) {
+                scriptTags[currentScene] = [];
+            }
+            scriptTags[currentScene].push(tag);
+
+            // Apply highlight
+            applyHighlight(tag);
+
+            // Add to scene breakdown
+            addTagToBreakdown(tag);
+
+            // Handle continuity
+            if (continuityType === 'create') {
+                // Create new continuity event (you can expand this later)
+                alert('Continuity event creation will open the continuity modal');
+            } else if (continuityType === 'link' && continuityEventId) {
+                // Link to existing event
+                linkTagToEvent(tag, continuityEventId);
+            }
+
+            // Update displays
+            renderMarginIndicators();
+            renderTagsPanel();
+            saveProject();
+            closeTagPopup();
+        }
+
+        function applyHighlight(tag) {
+            // Find the element and highlight the text
+            const element = document.getElementById(tag.elementId);
+            if (!element) return;
+
+            // Find and wrap the selected text
+            const text = element.innerHTML;
+            const selectedText = tag.selectedText;
+
+            // Check if already highlighted
+            if (text.includes(`data-tag-id="${tag.id}"`)) return;
+
+            // Escape special regex characters in the selected text
+            const escapedText = selectedText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+            // Wrap the text
+            const highlightedText = `<span class="tag-highlight" data-tag-id="${tag.id}" data-category="${tag.category}" onclick="event.stopPropagation();" oncontextmenu="showTagContextMenu(event, '${tag.id}'); return false;">${selectedText}</span>`;
+
+            const newText = text.replace(new RegExp(escapedText, 'i'), highlightedText);
+            element.innerHTML = newText;
+        }
+
+        function addTagToBreakdown(tag) {
+            if (!sceneBreakdowns[tag.sceneIndex]) {
+                sceneBreakdowns[tag.sceneIndex] = {
+                    cast: [],
+                    extras: [],
+                    wardrobe: [],
+                    makeup: [],
+                    props: [],
+                    vehicles: [],
+                    sfx: [],
+                    stunts: [],
+                    notes: []
+                };
+            }
+
+            const breakdown = sceneBreakdowns[tag.sceneIndex];
+            const categoryKey = tag.category;
+
+            if (breakdown[categoryKey] && !breakdown[categoryKey].includes(tag.selectedText)) {
+                breakdown[categoryKey].push(tag.selectedText);
+            }
+
+            // Add to cast if character assigned
+            if (tag.character && !breakdown.cast.includes(tag.character)) {
+                breakdown.cast.push(tag.character);
+            }
+        }
+
+        function linkTagToEvent(tag, eventId) {
+            // Find the event and add tag reference
+            if (tag.character && continuityEvents[tag.character]) {
+                const event = continuityEvents[tag.character].find(e => e.id === eventId);
+                if (event) {
+                    if (!event.linkedTags) event.linkedTags = [];
+                    event.linkedTags.push(tag.id);
+                }
+            }
+        }
+
+        function renderMarginIndicators() {
+            // Add margin indicators to the script for each tag
+            Object.keys(scriptTags).forEach(sceneIndex => {
+                scriptTags[sceneIndex].forEach(tag => {
+                    const element = document.getElementById(tag.elementId);
+                    if (!element) return;
+
+                    // Check if indicator already exists
+                    if (element.querySelector(`[data-indicator-id="${tag.id}"]`)) return;
+
+                    // Create indicator
+                    const category = categories.find(c => c.id === tag.category);
+                    const indicator = document.createElement('div');
+                    indicator.className = 'margin-indicator' + (tag.continuityEventId ? ' continuity' : '');
+                    indicator.style.background = category?.color || '#667eea';
+                    indicator.setAttribute('data-indicator-id', tag.id);
+                    indicator.onclick = () => jumpToTag(tag.id);
+
+                    // Add character initial or category icon
+                    if (tag.character) {
+                        indicator.textContent = tag.character.charAt(0);
+                    } else {
+                        indicator.textContent = category?.icon || '📌';
+                    }
+
+                    // Add to element
+                    let indicators = element.querySelector('.margin-indicators');
+                    if (!indicators) {
+                        indicators = document.createElement('div');
+                        indicators.className = 'margin-indicators';
+                        element.style.position = 'relative';
+                        element.insertBefore(indicators, element.firstChild);
+                    }
+                    indicators.appendChild(indicator);
+                });
+            });
+        }
+
+        function renderTagsPanel() {
+            const content = document.getElementById('tagsContent');
+            if (!content) return;
+
+            // Get all tags
+            const allTags = Object.values(scriptTags).flat();
+
+            if (allTags.length === 0) {
+                content.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">🏷️</div>
+                        <div class="empty-title">No Tags Yet</div>
+                        <div class="empty-desc">Select text in the script to create tags</div>
+                    </div>
+                `;
+                return;
+            }
+
+            // Update stats
+            document.getElementById('totalTagsCount').textContent = allTags.length;
+            document.getElementById('continuityTagsCount').textContent = allTags.filter(t => t.continuityEventId).length;
+
+            // Apply filters
+            const sceneFilter = document.getElementById('sceneFilter')?.value || 'all';
+            const characterFilter = document.getElementById('characterFilter')?.value || 'all';
+            const categoryFilter = document.getElementById('categoryFilter')?.value || 'all';
+
+            let filteredTags = allTags;
+
+            if (sceneFilter === 'current') {
+                filteredTags = filteredTags.filter(t => t.sceneIndex === currentScene);
+            } else if (sceneFilter !== 'all') {
+                filteredTags = filteredTags.filter(t => t.sceneNumber === parseInt(sceneFilter));
+            }
+
+            if (characterFilter !== 'all') {
+                filteredTags = filteredTags.filter(t => t.character === characterFilter);
+            }
+
+            if (categoryFilter !== 'all') {
+                filteredTags = filteredTags.filter(t => t.category === categoryFilter);
+            }
+
+            // Group by category
+            const grouped = {};
+            categories.forEach(cat => {
+                grouped[cat.id] = filteredTags.filter(t => t.category === cat.id);
+            });
+
+            // Render
+            let html = '';
+
+            categories.forEach(cat => {
+                if (grouped[cat.id].length === 0) return;
+
+                // Group by character within category
+                const byCharacter = {};
+                grouped[cat.id].forEach(tag => {
+                    const char = tag.character || 'General';
+                    if (!byCharacter[char]) byCharacter[char] = [];
+                    byCharacter[char].push(tag);
+                });
+
+                html += `
+                    <div class="tags-category-group">
+                        <div class="tags-category-header">
+                            <span class="category-icon" style="background: ${cat.color};">${cat.icon}</span>
+                            <span class="category-name">${cat.name}</span>
+                            <span class="category-count">${grouped[cat.id].length} tags</span>
+                        </div>
+                        <div class="tags-by-character">
+                `;
+
+                Object.keys(byCharacter).forEach(char => {
+                    html += `
+                        <div class="character-tags-group">
+                            <div class="character-tags-name">${char}</div>
+                    `;
+
+                    byCharacter[char].forEach(tag => {
+                        const continuityBadge = tag.continuityEventId ? '<span class="tag-badge continuity">⚡ Continuity</span>' : '';
+
+                        html += `
+                            <div class="tag-card" onclick="jumpToTag('${tag.id}')">
+                                <div class="tag-card-header">
+                                    <div class="tag-card-text">${tag.selectedText}</div>
+                                    <div class="tag-card-badges">
+                                        <span class="tag-badge scene">Sc. ${tag.sceneNumber}</span>
+                                        ${continuityBadge}
+                                    </div>
+                                </div>
+                                <div class="tag-card-context">${tag.fullContext}</div>
+                                <div class="tag-card-actions">
+                                    <button class="tag-action-btn" onclick="event.stopPropagation(); editTag('${tag.id}')">Edit</button>
+                                    <button class="tag-action-btn" onclick="event.stopPropagation(); deleteTag('${tag.id}')">Delete</button>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    html += `</div>`;
+                });
+
+                html += `
+                        </div>
+                    </div>
+                `;
+            });
+
+            content.innerHTML = html;
+        }
+
+        function filterTags() {
+            renderTagsPanel();
+        }
+
+        function jumpToTag(tagId) {
+            // Find tag
+            let foundTag = null;
+            for (let sceneIndex in scriptTags) {
+                const tag = scriptTags[sceneIndex].find(t => t.id === tagId || t.id.toString() === tagId);
+                if (tag) {
+                    foundTag = tag;
+                    break;
+                }
+            }
+
+            if (!foundTag) return;
+
+            // Switch to that scene
+            const scene = scenes[foundTag.sceneIndex];
+            if (scene) {
+                selectScene(scene);
+            }
+
+            // Scroll to highlight
+            setTimeout(() => {
+                const highlight = document.querySelector(`[data-tag-id="${tagId}"]`);
+                if (highlight) {
+                    highlight.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    highlight.style.animation = 'pulse 1s ease-in-out';
+                }
+            }, 300);
+        }
+
+        function editTag(tagId) {
+            alert('Edit tag functionality - to be implemented');
+        }
+
+        function deleteTag(tagId) {
+            if (!confirm('Delete this tag?')) return;
+
+            // Find and remove tag
+            for (let sceneIndex in scriptTags) {
+                scriptTags[sceneIndex] = scriptTags[sceneIndex].filter(t => t.id !== tagId && t.id.toString() !== tagId);
+                if (scriptTags[sceneIndex].length === 0) {
+                    delete scriptTags[sceneIndex];
+                }
+            }
+
+            // Remove highlight
+            const highlight = document.querySelector(`[data-tag-id="${tagId}"]`);
+            if (highlight) {
+                const parent = highlight.parentNode;
+                parent.innerHTML = parent.innerHTML.replace(highlight.outerHTML, highlight.textContent);
+            }
+
+            // Remove indicator
+            const indicator = document.querySelector(`[data-indicator-id="${tagId}"]`);
+            if (indicator) {
+                indicator.remove();
+            }
+
+            renderTagsPanel();
+            saveProject();
+        }
+
+        function toggleHighlights() {
+            highlightsVisible = !highlightsVisible;
+            document.body.classList.toggle('tags-hidden', !highlightsVisible);
+            document.getElementById('toggleHighlightsBtn').textContent =
+                highlightsVisible ? '👁️ Hide Tags' : '👁️ Show Tags';
+            localStorage.setItem('highlightsVisible', highlightsVisible);
+        }
+
+        // Context Menu
+        let currentContextTagId = null;
+
+        function showTagContextMenu(event, tagId) {
+            event.preventDefault();
+            currentContextTagId = tagId;
+
+            const menu = document.getElementById('tagContextMenu');
+            menu.style.display = 'block';
+            menu.style.left = event.pageX + 'px';
+            menu.style.top = event.pageY + 'px';
+        }
+
+        function closeContextMenu() {
+            document.getElementById('tagContextMenu').style.display = 'none';
+            currentContextTagId = null;
+        }
+
+        function editTagFromContext() {
+            if (currentContextTagId) {
+                editTag(currentContextTagId);
+            }
+            closeContextMenu();
+        }
+
+        function removeTagFromContext() {
+            if (currentContextTagId) {
+                deleteTag(currentContextTagId);
+            }
+            closeContextMenu();
+        }
+
+        function jumpToTagsTab() {
+            switchTab('tags');
+            if (currentContextTagId) {
+                // Highlight the tag card
+                setTimeout(() => {
+                    const card = document.querySelector(`[onclick*="${currentContextTagId}"]`);
+                    if (card) {
+                        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        card.style.animation = 'pulse 1s ease-in-out';
+                    }
+                }, 300);
+            }
+            closeContextMenu();
+        }
+
+        function linkToContinuityFromContext() {
+            alert('Link to continuity - to be implemented');
+            closeContextMenu();
+        }
+
+        function renderAllHighlights() {
+            setTimeout(() => {
+                Object.keys(scriptTags).forEach(sceneIndex => {
+                    scriptTags[sceneIndex].forEach(tag => {
+                        applyHighlight(tag);
+                    });
+                });
+                renderMarginIndicators();
+            }, 500);
+        }
+
+        // Add CSS animation for pulse effect
+        const styleTag = document.createElement('style');
+        styleTag.textContent = `
+            @keyframes pulse {
+                0%, 100% { opacity: 1; transform: scale(1); }
+                50% { opacity: 0.7; transform: scale(1.05); }
+            }
+        `;
+        document.head.appendChild(styleTag);
+
         // Initialize
         window.addEventListener('load', init);
     </script>
