@@ -276,7 +276,311 @@
         
         /* Center Panel - Script */
         .center-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: rgba(232, 230, 227, 0.02); }
-        
+
+        /* Center Panel Tabs */
+        .center-tabs {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 8px 12px;
+            background:
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 0%, transparent 100%),
+                linear-gradient(135deg, rgba(212, 175, 122, 0.08) 0%, rgba(18, 16, 14, 0.85) 50%, rgba(212, 175, 122, 0.05) 100%);
+            backdrop-filter: blur(24px) saturate(180%);
+            border-bottom: 1px solid var(--glass-border);
+            overflow-x: auto;
+            overflow-y: hidden;
+        }
+
+        .center-tab {
+            padding: 8px 16px;
+            background: rgba(28, 25, 22, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px 8px 0 0;
+            color: var(--text-muted);
+            font-size: 0.8125em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .center-tab:hover {
+            background: rgba(28, 25, 22, 0.5);
+            color: var(--text-light);
+        }
+
+        .center-tab.active {
+            background: linear-gradient(135deg, rgba(212, 175, 122, 0.15), rgba(212, 175, 122, 0.08));
+            border-bottom-color: transparent;
+            color: var(--accent-gold);
+            box-shadow: 0 -2px 8px rgba(212, 175, 122, 0.2);
+        }
+
+        .center-tab-close {
+            margin-left: 4px;
+            padding: 2px 4px;
+            border-radius: 3px;
+            opacity: 0.6;
+            transition: all 0.2s ease;
+        }
+
+        .center-tab-close:hover {
+            opacity: 1;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .center-tab-spacer {
+            flex: 1;
+        }
+
+        .center-tab-add {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, rgba(212, 175, 122, 0.15), rgba(212, 175, 122, 0.08));
+            border: 1px solid var(--accent-gold);
+            border-radius: 6px;
+            color: var(--accent-gold);
+            font-size: 1.25em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .center-tab-add:hover {
+            background: linear-gradient(135deg, rgba(212, 175, 122, 0.25), rgba(212, 175, 122, 0.15));
+            transform: scale(1.05);
+        }
+
+        .center-tab-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .center-tab-panel {
+            display: none;
+            flex: 1;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .center-tab-panel.active {
+            display: flex;
+        }
+
+        /* Character Timeline View */
+        .character-timeline-view {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+        }
+
+        .character-header {
+            margin-bottom: 24px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .character-name-title {
+            font-size: 1.5em;
+            font-weight: 700;
+            color: var(--accent-gold);
+            margin-bottom: 8px;
+        }
+
+        .character-base-info {
+            font-size: 0.875em;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+
+        .character-stats {
+            display: flex;
+            gap: 20px;
+            margin-top: 12px;
+            font-size: 0.8125em;
+        }
+
+        .character-stat {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-muted);
+        }
+
+        .character-stat-value {
+            color: var(--accent-gold);
+            font-weight: 700;
+        }
+
+        /* Timeline Section */
+        .timeline-section {
+            margin-bottom: 32px;
+        }
+
+        .timeline-section-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            padding: 12px 16px;
+            background: rgba(212, 175, 122, 0.08);
+            border-left: 3px solid var(--accent-gold);
+            border-radius: 6px;
+        }
+
+        .timeline-section-title {
+            font-size: 1em;
+            font-weight: 600;
+            color: var(--text-light);
+        }
+
+        .timeline-section-count {
+            font-size: 0.75em;
+            color: var(--text-muted);
+        }
+
+        .timeline-scene-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-left: 20px;
+        }
+
+        .timeline-scene-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            background: rgba(28, 25, 22, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .timeline-scene-item:hover {
+            background: rgba(28, 25, 22, 0.5);
+            border-color: var(--accent-gold);
+            transform: translateX(4px);
+        }
+
+        .timeline-scene-number {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--accent-gold), #b89651);
+            color: #0a0908;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.875em;
+            flex-shrink: 0;
+        }
+
+        .timeline-scene-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .timeline-scene-heading {
+            font-size: 0.8125em;
+            font-weight: 600;
+            color: var(--text-light);
+            margin-bottom: 4px;
+        }
+
+        .timeline-scene-meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.75em;
+            color: var(--text-muted);
+        }
+
+        .timeline-scene-badges {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .timeline-badge {
+            padding: 2px 6px;
+            background: rgba(102, 126, 234, 0.2);
+            border: 1px solid rgba(102, 126, 234, 0.4);
+            border-radius: 4px;
+            font-size: 0.6875em;
+            font-weight: 600;
+            color: #8b9cec;
+        }
+
+        .timeline-badge.continuity {
+            background: rgba(251, 191, 36, 0.2);
+            border-color: rgba(251, 191, 36, 0.4);
+            color: #fbbf24;
+        }
+
+        .timeline-continuity-events {
+            margin-bottom: 24px;
+            padding: 16px;
+            background: rgba(212, 175, 122, 0.05);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+        }
+
+        .timeline-continuity-title {
+            font-size: 0.9375em;
+            font-weight: 600;
+            color: var(--text-light);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .timeline-event-card {
+            padding: 12px;
+            background: rgba(28, 25, 22, 0.4);
+            border: 1px solid var(--glass-border);
+            border-left: 3px solid var(--accent-gold);
+            border-radius: 6px;
+            margin-bottom: 8px;
+            font-size: 0.8125em;
+        }
+
+        .timeline-event-card:last-child {
+            margin-bottom: 0;
+        }
+
+        .timeline-event-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .timeline-event-icon {
+            font-size: 1.2em;
+        }
+
+        .timeline-event-description {
+            font-weight: 600;
+            color: var(--text-light);
+        }
+
+        .timeline-event-range {
+            font-size: 0.9em;
+            color: var(--text-muted);
+        }
+
         .script-toolbar {
             display: flex;
             align-items: center;
@@ -2145,35 +2449,53 @@
             
             <!-- Center Panel - Script -->
             <div class="center-panel">
-                <div class="script-toolbar">
-                    <div class="color-legend">
-                        <span class="legend-item"><span class="legend-color" style="background: rgba(251, 191, 36, 0.4);"></span>Cast</span>
-                        <span class="legend-item"><span class="legend-color" style="background: rgba(168, 85, 247, 0.4);"></span>Hair</span>
-                        <span class="legend-item"><span class="legend-color" style="background: rgba(236, 72, 153, 0.4);"></span>Makeup</span>
-                        <span class="legend-item"><span class="legend-color" style="background: rgba(239, 68, 68, 0.4);"></span>SFX</span>
-                        <span class="legend-item"><span class="legend-color" style="background: rgba(52, 211, 153, 0.4);"></span>Wardrobe</span>
-                        <span class="legend-item"><span class="legend-color" style="background: rgba(251, 146, 60, 0.4);"></span>Props</span>
-                        <span class="legend-item"><span class="legend-color" style="background: rgba(56, 189, 248, 0.4);"></span>Vehicles</span>
-                        <span class="legend-item"><span class="legend-color" style="background: rgba(167, 139, 250, 0.4);"></span>VFX</span>
-                        <span class="legend-item"><span class="legend-color" style="background: rgba(245, 158, 11, 0.4);"></span>Stunts</span>
-                        <span class="legend-item"><span class="legend-color" style="background: rgba(156, 163, 175, 0.4);"></span>Extras</span>
+                <!-- NEW: Tab Bar -->
+                <div class="center-tabs">
+                    <div class="center-tab active" data-tab="script" onclick="switchCenterTab('script')">
+                        📄 Script
                     </div>
-                    <div class="view-controls">
-                        <button class="view-btn" onclick="zoomIn()">Zoom In</button>
-                        <button class="view-btn" onclick="zoomOut()">Zoom Out</button>
-                    </div>
+                    <!-- Character tabs generated dynamically here -->
+                    <div class="center-tab-spacer"></div>
+                    <button class="center-tab-add" onclick="openAddCharacterModal()">+</button>
                 </div>
-                
-                <div class="script-viewer" id="scriptViewer">
-                    <div class="script-container">
-                        <div class="script-content" id="scriptContent">
-                            <div class="empty-state">
-                                <div class="empty-icon">📄</div>
-                                <div class="empty-title">No Script Loaded</div>
-                                <div class="empty-desc">Import your screenplay to begin</div>
+
+                <!-- Tab Content Container -->
+                <div class="center-tab-content">
+                    <!-- Script Tab (existing content) -->
+                    <div class="center-tab-panel active" id="scriptTabPanel">
+                        <div class="script-toolbar">
+                            <div class="color-legend">
+                                <span class="legend-item"><span class="legend-color" style="background: rgba(251, 191, 36, 0.4);"></span>Cast</span>
+                                <span class="legend-item"><span class="legend-color" style="background: rgba(168, 85, 247, 0.4);"></span>Hair</span>
+                                <span class="legend-item"><span class="legend-color" style="background: rgba(236, 72, 153, 0.4);"></span>Makeup</span>
+                                <span class="legend-item"><span class="legend-color" style="background: rgba(239, 68, 68, 0.4);"></span>SFX</span>
+                                <span class="legend-item"><span class="legend-color" style="background: rgba(52, 211, 153, 0.4);"></span>Wardrobe</span>
+                                <span class="legend-item"><span class="legend-color" style="background: rgba(251, 146, 60, 0.4);"></span>Props</span>
+                                <span class="legend-item"><span class="legend-color" style="background: rgba(56, 189, 248, 0.4);"></span>Vehicles</span>
+                                <span class="legend-item"><span class="legend-color" style="background: rgba(167, 139, 250, 0.4);"></span>VFX</span>
+                                <span class="legend-item"><span class="legend-color" style="background: rgba(245, 158, 11, 0.4);"></span>Stunts</span>
+                                <span class="legend-item"><span class="legend-color" style="background: rgba(156, 163, 175, 0.4);"></span>Extras</span>
+                            </div>
+                            <div class="view-controls">
+                                <button class="view-btn" onclick="zoomIn()">Zoom In</button>
+                                <button class="view-btn" onclick="zoomOut()">Zoom Out</button>
+                            </div>
+                        </div>
+
+                        <div class="script-viewer" id="scriptViewer">
+                            <div class="script-container">
+                                <div class="script-content" id="scriptContent">
+                                    <div class="empty-state">
+                                        <div class="empty-icon">📄</div>
+                                        <div class="empty-title">No Script Loaded</div>
+                                        <div class="empty-desc">Import your screenplay to begin</div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
+
+                    <!-- Character Tab Panels (generated dynamically) -->
                 </div>
             </div>
             
@@ -2548,6 +2870,18 @@ This is it. Today's the day."></textarea>
         </div>
     </div>
 
+    <!-- Add Character Modal -->
+    <div class="modal" id="addCharacterModal">
+        <div class="modal-content">
+            <div class="modal-title">Add Character Tab</div>
+            <input type="text" class="modal-input" id="addCharacterInput" placeholder="Character name..." onkeydown="if(event.key === 'Enter') confirmAddCharacter()">
+            <div class="modal-actions">
+                <button class="modal-btn" onclick="closeAddCharacterModal()">Cancel</button>
+                <button class="modal-btn primary" onclick="confirmAddCharacter()">Add Tab</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Global state
         let currentProject = null;
@@ -2568,6 +2902,8 @@ This is it. Today's the day."></textarea>
         let activeTab = 'breakdown';
         let scriptTags = {}; // { sceneIndex: [ tag objects ] }
         let currentSelection = null;
+        let activeCenterTab = 'script'; // Track active center tab
+        let characterTabs = []; // List of character names with tabs
 
         // AI Settings
         let aiProvider = localStorage.getItem('aiProvider') || 'openai';
@@ -2631,6 +2967,9 @@ This is it. Today's the day."></textarea>
                 if (currentProject.continuityEvents) continuityEvents = currentProject.continuityEvents;
                 if (currentProject.sceneTimeline) sceneTimeline = currentProject.sceneTimeline;
                 if (currentProject.scriptTags) scriptTags = currentProject.scriptTags;
+
+                // Initialize character tabs with loaded data
+                initializeCharacterTabs();
 
                 renderSceneList();
                 renderAllHighlights();
@@ -2800,7 +3139,299 @@ This is it. Today's the day."></textarea>
             };
             return labels[sceneType] || '';
         }
-        
+
+        // ========================================
+        // Character Tab Management
+        // ========================================
+
+        function initializeCharacterTabs() {
+            // Get all unique characters from castProfiles
+            const characters = Object.keys(castProfiles).sort();
+
+            characterTabs = characters;
+            renderCharacterTabs();
+        }
+
+        function renderCharacterTabs() {
+            const tabsContainer = document.querySelector('.center-tabs');
+            if (!tabsContainer) return;
+
+            // Keep script tab, remove old character tabs
+            const scriptTab = tabsContainer.querySelector('[data-tab="script"]');
+            const addButton = tabsContainer.querySelector('.center-tab-add');
+            const spacer = tabsContainer.querySelector('.center-tab-spacer');
+
+            // Clear between script tab and spacer
+            const childrenToRemove = [];
+            let foundScript = false;
+            let foundSpacer = false;
+
+            Array.from(tabsContainer.children).forEach(child => {
+                if (child === scriptTab) foundScript = true;
+                else if (child === spacer) foundSpacer = true;
+                else if (foundScript && !foundSpacer) childrenToRemove.push(child);
+            });
+
+            childrenToRemove.forEach(child => child.remove());
+
+            // Add character tabs
+            characterTabs.forEach(character => {
+                const tab = document.createElement('div');
+                tab.className = 'center-tab';
+                tab.setAttribute('data-tab', `character-${character}`);
+                tab.onclick = () => switchCenterTab(`character-${character}`);
+                tab.innerHTML = `
+                    <span>👤 ${character}</span>
+                    <span class="center-tab-close" onclick="event.stopPropagation(); removeCharacterTab('${character.replace(/'/g, "\\'")}')">×</span>
+                `;
+
+                tabsContainer.insertBefore(tab, spacer);
+            });
+
+            // Create tab panels for each character
+            renderCharacterTabPanels();
+        }
+
+        function renderCharacterTabPanels() {
+            const contentContainer = document.querySelector('.center-tab-content');
+            if (!contentContainer) return;
+
+            // Remove old character panels (keep script panel)
+            const panels = contentContainer.querySelectorAll('[id^="characterTab-"]');
+            panels.forEach(panel => panel.remove());
+
+            // Create new panels
+            characterTabs.forEach(character => {
+                const panel = document.createElement('div');
+                panel.className = 'center-tab-panel';
+                panel.id = `characterTab-${character}`;
+
+                panel.innerHTML = renderCharacterTimeline(character);
+
+                contentContainer.appendChild(panel);
+            });
+        }
+
+        function switchCenterTab(tabName) {
+            activeCenterTab = tabName;
+
+            // Update tab styling
+            document.querySelectorAll('.center-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelector(`[data-tab="${tabName}"]`)?.classList.add('active');
+
+            // Update panel visibility
+            document.querySelectorAll('.center-tab-panel').forEach(panel => {
+                panel.classList.remove('active');
+            });
+
+            if (tabName === 'script') {
+                document.getElementById('scriptTabPanel')?.classList.add('active');
+            } else {
+                document.getElementById(`characterTab-${tabName.replace('character-', '')}`)?.classList.add('active');
+            }
+        }
+
+        function removeCharacterTab(character) {
+            if (!confirm(`Remove ${character}'s tab? (Character data will be preserved)`)) return;
+
+            characterTabs = characterTabs.filter(c => c !== character);
+            renderCharacterTabs();
+
+            // Switch to script tab if we just closed the active tab
+            if (activeCenterTab === `character-${character}`) {
+                switchCenterTab('script');
+            }
+        }
+
+        function renderCharacterTimeline(character) {
+            const profile = castProfiles[character] || {};
+
+            // Get all scenes this character appears in
+            const characterScenes = [];
+            scenes.forEach((scene, index) => {
+                const breakdown = sceneBreakdowns[index] || {};
+                if (breakdown.cast && breakdown.cast.includes(character)) {
+                    characterScenes.push({ scene, index });
+                }
+            });
+
+            // Group scenes by Story Day
+            const scenesByDay = {};
+            characterScenes.forEach(({ scene, index }) => {
+                const day = scene.storyDay || 'Unassigned';
+                if (!scenesByDay[day]) scenesByDay[day] = [];
+                scenesByDay[day].push({ scene, index });
+            });
+
+            // Get continuity events for this character
+            const events = continuityEvents[character] || [];
+
+            // Build HTML
+            let html = `
+                <div class="character-timeline-view">
+                    <div class="character-header">
+                        <div class="character-name-title">${character}</div>
+                        <div class="character-base-info">
+                            ${profile.baseDescription || '<em style="opacity: 0.6;">No base description yet</em>'}
+                        </div>
+                        <div class="character-stats">
+                            <div class="character-stat">
+                                <span>📋</span>
+                                <span class="character-stat-value">${characterScenes.length}</span>
+                                <span>scenes</span>
+                            </div>
+                            <div class="character-stat">
+                                <span>⚡</span>
+                                <span class="character-stat-value">${events.length}</span>
+                                <span>continuity events</span>
+                            </div>
+                        </div>
+                    </div>
+            `;
+
+            // Continuity Events Section
+            if (events.length > 0) {
+                html += `
+                    <div class="timeline-continuity-events">
+                        <div class="timeline-continuity-title">
+                            <span>⚡</span>
+                            <span>Continuity Events</span>
+                        </div>
+                `;
+
+                events.forEach(event => {
+                    const eventType = eventTypes.find(t => t.id === event.type) || eventTypes[eventTypes.length - 1];
+                    const startScene = scenes[event.startScene]?.number || '?';
+                    const endScene = event.endScene !== null ? (scenes[event.endScene]?.number || '?') : 'Ongoing';
+
+                    html += `
+                        <div class="timeline-event-card">
+                            <div class="timeline-event-header">
+                                <span class="timeline-event-icon">${eventType.icon}</span>
+                                <span class="timeline-event-description">${event.description}</span>
+                            </div>
+                            <div class="timeline-event-range">Scenes ${startScene} → ${endScene}</div>
+                        </div>
+                    `;
+                });
+
+                html += `</div>`;
+            }
+
+            // Timeline by Story Day
+            Object.keys(scenesByDay).sort().forEach(day => {
+                const dayScenesData = scenesByDay[day];
+
+                html += `
+                    <div class="timeline-section">
+                        <div class="timeline-section-header">
+                            <span class="timeline-section-title">${day === 'Unassigned' ? '📅 Unassigned' : '📅 ' + day}</span>
+                            <span class="timeline-section-count">${dayScenesData.length} scene${dayScenesData.length !== 1 ? 's' : ''}</span>
+                        </div>
+                        <div class="timeline-scene-list">
+                `;
+
+                dayScenesData.forEach(({ scene, index }) => {
+                    const sceneType = getSceneType(scene.heading);
+
+                    // Check for active continuity events
+                    const activeEvents = events.filter(event => {
+                        return event.startScene <= index &&
+                               (event.endScene === null || event.endScene >= index);
+                    });
+
+                    // Count tags for this scene + character
+                    const sceneTags = scriptTags[index] || [];
+                    const characterTags = sceneTags.filter(t => t.character === character);
+
+                    html += `
+                        <div class="timeline-scene-item" onclick="jumpToSceneFromTimeline(${index})">
+                            <div class="timeline-scene-number">${scene.number}</div>
+                            <div class="timeline-scene-info">
+                                <div class="timeline-scene-heading">${scene.heading}</div>
+                                <div class="timeline-scene-meta">
+                                    <span class="scene-type-indicator ${sceneType}">${getSceneTypeLabel(sceneType)}</span>
+                                    ${scene.location ? `<span>📍 ${scene.location}</span>` : ''}
+                                </div>
+                            </div>
+                            <div class="timeline-scene-badges">
+                                ${characterTags.length > 0 ? `<span class="timeline-badge">${characterTags.length} tags</span>` : ''}
+                                ${activeEvents.length > 0 ? `<span class="timeline-badge continuity">⚡ ${activeEvents.length}</span>` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += `
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `</div>`;
+
+            return html;
+        }
+
+        function jumpToSceneFromTimeline(sceneIndex) {
+            // Switch to script tab
+            switchCenterTab('script');
+
+            // Select the scene
+            selectScene(sceneIndex);
+
+            // Scroll to scene in script viewer
+            setTimeout(() => {
+                const sceneEl = document.getElementById(`scene-${scenes[sceneIndex].number}`);
+                if (sceneEl) {
+                    sceneEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }, 100);
+        }
+
+        // Add Character Modal Functions
+        function openAddCharacterModal() {
+            document.getElementById('addCharacterModal').classList.add('active');
+            document.getElementById('addCharacterInput').value = '';
+            document.getElementById('addCharacterInput').focus();
+        }
+
+        function closeAddCharacterModal() {
+            document.getElementById('addCharacterModal').classList.remove('active');
+        }
+
+        function confirmAddCharacter() {
+            const name = document.getElementById('addCharacterInput').value.trim().toUpperCase();
+            if (!name) return;
+
+            // Add to characters set
+            characters.add(name);
+
+            // Initialize profile if doesn't exist
+            if (!castProfiles[name]) {
+                castProfiles[name] = {
+                    name: name,
+                    baseDescription: '',
+                    scenes: []
+                };
+            }
+
+            // Add tab
+            if (!characterTabs.includes(name)) {
+                characterTabs.push(name);
+                characterTabs.sort();
+                renderCharacterTabs();
+            }
+
+            // Switch to new tab
+            switchCenterTab(`character-${name}`);
+
+            closeAddCharacterModal();
+            saveProject();
+        }
+
         // Load script
         function loadScript(text) {
             scriptText = text;
@@ -2817,7 +3448,7 @@ This is it. Today's the day."></textarea>
             
             renderSceneList();
             renderScript();
-            
+
             currentProject.scenes = scenes;
             currentProject.sceneCount = scenes.length;
             currentProject.characters = Array.from(characters);
@@ -3018,7 +3649,10 @@ IMPORTANT: Respond ONLY with valid JSON. Do not include any text outside the JSO
                     renderBreakdownPanel();
                     renderCastPanel();
                 }
-                
+
+                // Refresh character tabs if new characters were added
+                initializeCharacterTabs();
+
             } catch (error) {
                 console.error('AI Synopsis Error:', error);
                 alert(`Failed to generate synopsis:\n\n${error.message}\n\nCheck the browser console (F12) for more details.`);
@@ -3701,8 +4335,13 @@ IMPORTANT:
                 renderBreakdownPanel();
                 renderCastPanel();
                 renderSceneList();
+
+                // Refresh character tabs if a cast member was added
+                if (currentElementCategory === 'cast') {
+                    initializeCharacterTabs();
+                }
             }
-            
+
             closeAddElementModal();
         }
         
