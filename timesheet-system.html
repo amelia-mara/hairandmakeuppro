@@ -34,6 +34,7 @@
             --sixth-day: #9b7bd1;
             --overtime: #d17b9b;
             --input-bg: rgba(201, 169, 97, 0.05);
+            --calc-highlight: rgba(82, 193, 134, 0.15);
         }
 
         /* Scrollbar */
@@ -226,139 +227,241 @@
             overflow: hidden;
         }
 
-        /* Top Bar */
         .top-bar {
-            height: 56px;
-            background: linear-gradient(135deg, rgba(26, 22, 18, 0.85), rgba(20, 17, 15, 0.75));
+            height: 64px;
+            background: linear-gradient(135deg, rgba(26, 22, 18, 0.7), rgba(20, 17, 15, 0.6));
             backdrop-filter: blur(40px) saturate(120%);
             -webkit-backdrop-filter: blur(40px) saturate(120%);
             border-bottom: 1px solid var(--glass-border);
+            padding: 0 24px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 32px;
-            position: relative;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
             z-index: 9;
-            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
-        }
-
-        .top-bar::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
         }
 
         .page-title {
-            font-size: 16px;
+            font-size: 18px;
             font-weight: 600;
-            letter-spacing: -0.01em;
+            letter-spacing: -0.02em;
         }
 
         .top-bar-actions {
             display: flex;
-            gap: 8px;
-            align-items: center;
+            gap: 12px;
         }
 
-        .btn {
-            padding: 8px 16px;
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
-            border: 1px solid var(--glass-border);
-            border-radius: 6px;
-            color: var(--text-secondary);
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 500;
-            transition: all 0.15s ease;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.05),
-                        0 2px 8px rgba(0, 0, 0, 0.2);
-        }
-
-        .btn:hover {
-            border-color: var(--accent-gold);
-            color: var(--accent-gold);
-            background: linear-gradient(135deg, rgba(212, 175, 122, 0.08), rgba(212, 175, 122, 0.04));
-            box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.1),
-                        0 4px 12px rgba(212, 175, 122, 0.15);
-            transform: translateY(-1px);
-        }
-
-        .btn.primary {
-            background: linear-gradient(135deg, rgba(212, 175, 122, 0.9), rgba(184, 150, 81, 0.9));
-            border-color: var(--accent-gold);
-            color: var(--bg-dark);
-        }
-
-        .btn.primary:hover {
-            background: linear-gradient(135deg, #d4af7a, #c09861);
-            box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.2),
-                        0 4px 16px rgba(212, 175, 122, 0.3);
-        }
-
-        /* Content Area */
+        /* Content */
         .content {
             flex: 1;
             overflow-y: auto;
             padding: 32px;
+            position: relative;
         }
 
         /* Tabs */
         .tabs {
             display: flex;
-            gap: 2px;
-            margin-bottom: 24px;
-            padding: 2px;
-            background: linear-gradient(135deg, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.3));
-            border-radius: 6px;
-            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
-            display: inline-flex;
+            gap: 8px;
+            margin-bottom: 28px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--glass-border);
         }
 
         .tab {
-            padding: 8px 16px;
+            padding: 10px 18px;
             background: transparent;
-            border: none;
-            border-radius: 4px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
             color: var(--text-secondary);
             cursor: pointer;
-            font-size: 13px;
+            transition: all 0.2s ease;
+            font-size: 14px;
             font-weight: 500;
-            transition: all 0.15s ease;
         }
 
         .tab:hover {
+            background: linear-gradient(135deg, rgba(212, 175, 122, 0.05), rgba(212, 175, 122, 0.03));
+            border-color: rgba(212, 175, 122, 0.3);
             color: var(--text-primary);
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
         }
 
         .tab.active {
             background: linear-gradient(135deg, rgba(212, 175, 122, 0.15), rgba(212, 175, 122, 0.1));
-            color: var(--text-primary);
-            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1),
-                        0 1px 4px rgba(212, 175, 122, 0.2);
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1);
         }
 
         .tab-content {
             display: none;
+            animation: fadeIn 0.3s ease;
         }
 
         .tab-content.active {
             display: block;
         }
 
-        /* Stats Cards */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Button */
+        .btn {
+            padding: 10px 18px;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 14px;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            background: linear-gradient(135deg, rgba(212, 175, 122, 0.08), rgba(212, 175, 122, 0.05));
+            border-color: rgba(212, 175, 122, 0.4);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn.primary {
+            background: linear-gradient(135deg, rgba(212, 175, 122, 0.8), rgba(201, 169, 97, 0.7));
+            border-color: var(--accent-gold);
+            color: var(--bg-dark);
+            box-shadow: 0 2px 8px rgba(212, 175, 122, 0.3);
+        }
+
+        .btn.primary:hover {
+            background: linear-gradient(135deg, rgba(224, 192, 143, 0.9), rgba(212, 175, 122, 0.85));
+            box-shadow: 0 4px 12px rgba(212, 175, 122, 0.4);
+        }
+
+        /* Cards */
+        .section-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(30px) saturate(110%);
+            -webkit-backdrop-filter: blur(30px) saturate(110%);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            margin-bottom: 24px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
+                        inset 0 1px 1px rgba(255, 255, 255, 0.1);
+        }
+
+        .section-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50%;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, transparent 100%);
+            pointer-events: none;
+        }
+
+        .section-header {
+            padding: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--glass-border);
+            position: relative;
+            z-index: 1;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .section-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        /* Rate Card */
+        .rate-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(30px) saturate(110%);
+            -webkit-backdrop-filter: blur(30px) saturate(110%);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 24px;
+            position: relative;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
+                        inset 0 1px 1px rgba(255, 255, 255, 0.1);
+        }
+
+        .rate-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50%;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, transparent 100%);
+            pointer-events: none;
+        }
+
+        .rate-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .rate-item {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .rate-label {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .rate-input {
+            padding: 10px 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 15px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .rate-input:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+            background: var(--bg-dark);
+            box-shadow: 0 0 0 3px rgba(212, 175, 122, 0.1);
+        }
+
+        /* Stats Grid */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
             gap: 20px;
-            margin-bottom: 32px;
         }
 
         .stat-card {
@@ -368,7 +471,6 @@
             border: 1px solid var(--glass-border);
             border-radius: 12px;
             padding: 24px;
-            transition: all 0.2s ease;
             position: relative;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
                         inset 0 1px 1px rgba(255, 255, 255, 0.1);
@@ -383,177 +485,49 @@
             height: 50%;
             background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, transparent 100%);
             pointer-events: none;
-            border-radius: 12px 12px 0 0;
-        }
-
-        .stat-card:hover {
-            border-color: rgba(212, 175, 122, 0.3);
-            transform: translateY(-2px);
-            box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5),
-                        inset 0 1px 2px rgba(255, 255, 255, 0.15);
+            border-radius: 10px 10px 0 0;
         }
 
         .stat-label {
             font-size: 11px;
             color: var(--text-secondary);
-            margin-bottom: 8px;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.08em;
             font-weight: 600;
-        }
-
-        .stat-value {
-            font-size: 2em;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: 4px;
-        }
-
-        .stat-detail {
-            font-size: 13px;
-            color: var(--text-secondary);
-        }
-
-        /* Section Cards */
-        .section-card {
-            background: var(--card-bg);
-            backdrop-filter: blur(30px) saturate(110%);
-            -webkit-backdrop-filter: blur(30px) saturate(110%);
-            border: 1px solid var(--glass-border);
-            border-radius: 12px;
-            overflow: hidden;
-            margin-bottom: 24px;
-            position: relative;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
-                        inset 0 1px 1px rgba(255, 255, 255, 0.1);
-        }
-
-        .section-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 50%;
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, transparent 100%);
-            pointer-events: none;
-            border-radius: 12px 12px 0 0;
-            z-index: 0;
-        }
-
-        .section-header {
-            padding: 20px 24px;
-            border-bottom: 1px solid var(--glass-border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: linear-gradient(135deg, rgba(30, 26, 22, 0.5), rgba(26, 22, 18, 0.6));
+            margin-bottom: 8px;
             position: relative;
             z-index: 1;
         }
 
-        .section-header::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-        }
-
-        .section-title {
-            font-size: 1em;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .section-icon {
-            font-size: 1.2em;
-            opacity: 0.6;
-        }
-
-        .section-actions {
-            display: flex;
-            gap: 8px;
-        }
-
-        /* Rate Card Grid */
-        .rate-card {
-            background: var(--card-bg);
-            backdrop-filter: blur(30px) saturate(110%);
-            -webkit-backdrop-filter: blur(30px) saturate(110%);
-            border: 2px solid var(--accent-gold);
-            border-radius: 12px;
-            padding: 24px;
-            margin-bottom: 24px;
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--accent-gold);
             position: relative;
-            box-shadow: 0 8px 32px rgba(212, 175, 122, 0.2),
-                        inset 0 1px 2px rgba(255, 255, 255, 0.1);
+            z-index: 1;
         }
 
-        .rate-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 50%;
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, transparent 100%);
-            pointer-events: none;
-            border-radius: 10px 10px 0 0;
-        }
-
-        .rate-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-        }
-
-        .rate-item {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .rate-label {
-            font-size: 11px;
+        .stat-detail {
+            font-size: 12px;
             color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            font-weight: 600;
-        }
-
-        .rate-input {
-            padding: 10px 12px;
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            color: var(--text-primary);
-            font-size: 1em;
-            font-weight: 500;
-            transition: all 0.2s ease;
-        }
-
-        .rate-input:focus {
-            outline: none;
-            border-color: var(--accent-gold);
-            background: var(--bg-dark);
-            box-shadow: 0 0 0 3px rgba(212, 175, 122, 0.1);
+            margin-top: 4px;
+            position: relative;
+            z-index: 1;
         }
 
         /* Crew Table */
         .crew-table {
             width: 100%;
-            border-collapse: collapse;
-            position: relative;
-            z-index: 1;
+            border-collapse: separate;
+            border-spacing: 0;
         }
 
         .crew-table thead {
-            background: rgba(212, 175, 122, 0.05);
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            background: rgba(26, 22, 18, 0.95);
+            backdrop-filter: blur(10px);
         }
 
         .crew-table th {
@@ -562,29 +536,29 @@
             font-size: 11px;
             font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.08em;
             color: var(--text-secondary);
-            border-bottom: 1px solid var(--border);
+            border-bottom: 1px solid var(--glass-border);
         }
 
         .crew-table td {
-            padding: 12px 16px;
-            font-size: 14px;
+            padding: 16px;
             border-bottom: 1px solid var(--border);
+            font-size: 14px;
         }
 
         .crew-table tbody tr {
-            transition: background 0.15s ease;
+            position: relative;
+            z-index: 1;
         }
 
         .crew-table tbody tr:hover {
             background: rgba(212, 175, 122, 0.03);
         }
 
-        /* Employment Type Badge */
         .employment-badge {
             display: inline-block;
-            padding: 4px 8px;
+            padding: 4px 10px;
             border-radius: 4px;
             font-size: 11px;
             font-weight: 600;
@@ -604,32 +578,147 @@
             border: 1px solid rgba(209, 123, 107, 0.3);
         }
 
-        .employment-badge.freelance {
-            background: rgba(155, 123, 209, 0.15);
-            color: var(--sixth-day);
-            border: 1px solid rgba(155, 123, 209, 0.3);
+        /* Crew Cards */
+        .crew-selection-grid {
+            margin-bottom: 24px;
         }
 
-        /* Timesheet Table */
-        .timesheet-wrapper {
-            overflow-x: auto;
-            margin-bottom: 24px;
+        .crew-selection-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .crew-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+        }
+
+        .crew-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(30px) saturate(110%);
+            -webkit-backdrop-filter: blur(30px) saturate(110%);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+        }
+
+        .crew-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50%;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, transparent 100%);
+            pointer-events: none;
+        }
+
+        .crew-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(212, 175, 122, 0.4);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4),
+                        0 0 20px rgba(212, 175, 122, 0.1);
+        }
+
+        .crew-card.active {
+            border-color: var(--accent-gold);
+            box-shadow: 0 8px 24px rgba(212, 175, 122, 0.3),
+                        inset 0 1px 1px rgba(255, 255, 255, 0.1);
+        }
+
+        .crew-card-indicator {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--success);
+        }
+
+        .crew-card-indicator.empty {
+            background: var(--text-secondary);
+            opacity: 0.3;
+        }
+
+        .crew-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
             position: relative;
             z-index: 1;
         }
 
+        .crew-card-name {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .crew-card-position {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .crew-card-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .crew-card-stat {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .crew-card-stat-label {
+            font-size: 10px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .crew-card-stat-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* Timesheet Table */
+        .timesheet-wrapper {
+            position: relative;
+            z-index: 1;
+            overflow-x: auto;
+        }
+
         .timesheet-table {
             width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
             min-width: 1400px;
-            border-collapse: collapse;
         }
 
         .timesheet-table thead {
-            background: rgba(212, 175, 122, 0.05);
+            position: sticky;
+            top: 0;
+            z-index: 3;
+            background: rgba(26, 22, 18, 0.98);
+            backdrop-filter: blur(10px);
         }
 
         .timesheet-table th {
-            padding: 10px 6px;
+            padding: 12px 8px;
             text-align: center;
             font-size: 10px;
             font-weight: 600;
@@ -637,75 +726,74 @@
             letter-spacing: 0.05em;
             color: var(--text-secondary);
             border: 1px solid var(--border);
-            white-space: nowrap;
+            background: rgba(36, 32, 25, 0.9);
         }
 
         .timesheet-table td {
-            padding: 4px;
-            text-align: center;
+            padding: 8px;
             border: 1px solid var(--border);
-            height: 40px;
+            font-size: 13px;
+            text-align: center;
         }
 
         .timesheet-table tbody tr {
-            transition: background 0.15s ease;
+            position: relative;
+            z-index: 1;
         }
 
         .timesheet-table tbody tr:hover {
-            background: rgba(212, 175, 122, 0.02);
-        }
-
-        .day-cell {
-            font-weight: 500;
-            text-align: left !important;
-            padding-left: 12px !important;
-            background: linear-gradient(135deg, rgba(30, 26, 22, 0.5), rgba(26, 22, 18, 0.6));
-            position: sticky;
-            left: 0;
-            z-index: 10;
-            min-width: 100px;
+            background: rgba(212, 175, 122, 0.03);
         }
 
         .weekend-row {
-            background: rgba(123, 159, 209, 0.05);
+            background: rgba(155, 123, 209, 0.05);
+        }
+
+        .day-cell {
+            font-weight: 600;
+            text-align: left !important;
+            white-space: nowrap;
         }
 
         .time-input, .date-input {
             width: 100%;
-            padding: 4px 6px;
+            padding: 6px 8px;
             background: var(--input-bg);
             border: 1px solid transparent;
             border-radius: 4px;
             color: var(--text-primary);
-            text-align: center;
             font-size: 13px;
-            transition: all 0.2s ease;
-        }
-
-        .time-input {
             font-family: monospace;
+            transition: all 0.2s ease;
         }
 
         .time-input:focus, .date-input:focus {
             outline: none;
             border-color: var(--accent-gold);
             background: rgba(0, 0, 0, 0.3);
-            box-shadow: 0 0 0 2px rgba(212, 175, 122, 0.1);
         }
 
         .sixth-day-checkbox {
-            width: 20px;
-            height: 20px;
+            width: 18px;
+            height: 18px;
             cursor: pointer;
             accent-color: var(--accent-gold);
         }
 
         .calculated-cell {
-            background: rgba(212, 175, 122, 0.05);
+            background: var(--calc-highlight);
+            color: var(--success);
+            font-weight: 500;
+            font-family: monospace;
+            font-size: 13px;
+        }
+
+        .scheduled-wrap-cell {
+            background: rgba(212, 175, 122, 0.1);
             color: var(--accent-gold);
             font-weight: 500;
             font-family: monospace;
-            font-size: 14px;
+            font-size: 13px;
         }
 
         .total-cell {
@@ -1000,203 +1088,57 @@
         /* Notification */
         .notification {
             position: fixed;
-            top: 80px;
-            right: 32px;
+            top: 24px;
+            right: 24px;
             padding: 16px 24px;
-            border-radius: 8px;
-            font-weight: 500;
-            font-size: 14px;
-            z-index: 2000;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-            animation: slideIn 0.3s ease;
+            background: linear-gradient(135deg, rgba(26, 22, 18, 0.98), rgba(20, 17, 15, 0.95));
             backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+            z-index: 2000;
+            display: none;
+            align-items: center;
+            gap: 12px;
+            animation: slideIn 0.3s ease;
+        }
+
+        .notification.show {
+            display: flex;
         }
 
         .notification.success {
-            background: rgba(82, 193, 134, 0.9);
-            border: 1px solid var(--success);
-            color: white;
+            border-left: 3px solid var(--success);
         }
 
         .notification.warning {
-            background: rgba(232, 168, 124, 0.9);
-            border: 1px solid var(--warning);
-            color: var(--bg-dark);
+            border-left: 3px solid var(--warning);
         }
 
         .notification.info {
-            background: rgba(212, 175, 122, 0.9);
-            border: 1px solid var(--accent-gold);
-            color: var(--bg-dark);
+            border-left: 3px solid var(--info);
         }
 
         @keyframes slideIn {
-            from { transform: translateX(400px); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
         }
 
-        @keyframes slideOut {
-            from { transform: translateX(0); opacity: 1; }
-            to { transform: translateX(400px); opacity: 0; }
-        }
-
-        /* Crew Selection Grid */
-        .crew-selection-grid {
-            margin-bottom: 24px;
-        }
-
-        .crew-selection-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .crew-cards-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 16px;
-            margin-bottom: 24px;
-        }
-
-        .crew-card {
-            background: var(--card-bg);
-            backdrop-filter: blur(30px) saturate(110%);
-            -webkit-backdrop-filter: blur(30px) saturate(110%);
-            border: 1px solid var(--glass-border);
-            border-radius: 12px;
-            padding: 20px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            position: relative;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
-                        inset 0 1px 1px rgba(255, 255, 255, 0.1);
-        }
-
-        .crew-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 50%;
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, transparent 100%);
-            pointer-events: none;
-            border-radius: 12px 12px 0 0;
-        }
-
-        .crew-card:hover {
-            border-color: var(--accent-gold);
-            transform: translateY(-4px);
-            box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5),
-                        inset 0 1px 2px rgba(255, 255, 255, 0.15),
-                        0 0 80px rgba(212, 175, 122, 0.03);
-        }
-
-        .crew-card.active {
-            border-color: var(--accent-gold);
-            background: linear-gradient(135deg, rgba(212, 175, 122, 0.08), rgba(212, 175, 122, 0.04));
-        }
-
-        .crew-card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 12px;
-            position: relative;
-            z-index: 1;
-        }
-
-        .crew-card-name {
-            font-size: 18px;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: 4px;
-        }
-
-        .crew-card-position {
-            font-size: 14px;
-            color: var(--text-secondary);
-        }
-
-        .crew-card-stats {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            margin-top: 16px;
-            padding-top: 16px;
-            border-top: 1px solid var(--border);
-            position: relative;
-            z-index: 1;
-        }
-
-        .crew-card-stat {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-
-        .crew-card-stat-label {
-            font-size: 11px;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            font-weight: 600;
-        }
-
-        .crew-card-stat-value {
-            font-size: 16px;
-            font-weight: 600;
-            color: var(--accent-gold);
-        }
-
-        .crew-card-indicator {
-            position: absolute;
-            top: 12px;
-            right: 12px;
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--success);
-            z-index: 2;
-        }
-
-        .crew-card-indicator.empty {
-            background: var(--text-secondary);
-        }
-
-        .crew-timesheet-summary {
-            background: var(--card-bg);
-            backdrop-filter: blur(30px) saturate(110%);
-            -webkit-backdrop-filter: blur(30px) saturate(110%);
-            border: 1px solid var(--accent-gold);
-            border-radius: 12px;
-            padding: 20px;
-            margin-top: 24px;
-            position: relative;
-            box-shadow: 0 8px 32px rgba(212, 175, 122, 0.2),
-                        inset 0 1px 2px rgba(255, 255, 255, 0.1);
-        }
-
-        .crew-timesheet-summary::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 50%;
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, transparent 100%);
-            pointer-events: none;
-            border-radius: 10px 10px 0 0;
-        }
-
+        /* Empty State */
         .empty-state-card {
             background: var(--card-bg);
             backdrop-filter: blur(30px) saturate(110%);
             -webkit-backdrop-filter: blur(30px) saturate(110%);
             border: 1px solid var(--glass-border);
             border-radius: 12px;
-            padding: 40px;
+            padding: 60px;
             text-align: center;
             position: relative;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
@@ -1241,6 +1183,41 @@
             border-color: var(--danger);
             color: var(--danger);
             background: rgba(239, 68, 68, 0.05);
+        }
+
+        /* Rate Card Toggle */
+        .rate-card-toggle {
+            display: flex;
+            gap: 12px;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .rate-card-option {
+            flex: 1;
+            padding: 12px 20px;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 14px;
+            font-weight: 500;
+            text-align: center;
+        }
+
+        .rate-card-option:hover {
+            border-color: rgba(212, 175, 122, 0.3);
+            color: var(--text-primary);
+        }
+
+        .rate-card-option.active {
+            background: linear-gradient(135deg, rgba(212, 175, 122, 0.15), rgba(212, 175, 122, 0.1));
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
         }
 
         /* Responsive */
@@ -1303,19 +1280,19 @@
             <div class="nav-section">
                 <div class="nav-section-title">Timesheet Tools</div>
                 <div class="nav-item active" onclick="switchTab('overview')">
-                    <span class="nav-icon">OVERVIEW</span>
+                    <span class="nav-icon">📊 OVERVIEW</span>
                 </div>
                 <div class="nav-item" onclick="switchTab('crew')">
-                    <span class="nav-icon">CREW</span>
+                    <span class="nav-icon">👥 CREW</span>
                 </div>
                 <div class="nav-item" onclick="switchTab('timesheet')">
-                    <span class="nav-icon">TIMESHEET</span>
+                    <span class="nav-icon">⏱️ TIMESHEET</span>
                 </div>
                 <div class="nav-item" onclick="switchTab('payment')">
-                    <span class="nav-icon">PAYMENT</span>
+                    <span class="nav-icon">💰 PAYMENT</span>
                 </div>
                 <div class="nav-item" onclick="switchTab('reports')">
-                    <span class="nav-icon">REPORTS</span>
+                    <span class="nav-icon">📄 REPORTS</span>
                 </div>
             </div>
 
@@ -1431,22 +1408,39 @@
                         <div class="section-title" style="margin-bottom: 20px;">
                             <span style="color: var(--accent-gold); font-weight: 600;">RATE CARD CONFIGURATION</span>
                         </div>
+                        
+                        <!-- Rate Card Type Selector -->
+                        <div class="rate-card-toggle">
+                            <button class="rate-card-option active" onclick="setRateCardType('10+1')">
+                                10+1 Working Day<br>
+                                <span style="font-size: 12px; opacity: 0.7;">(10hr work + 1hr lunch)</span>
+                            </button>
+                            <button class="rate-card-option" onclick="setRateCardType('11+1')">
+                                11+1 Working Day<br>
+                                <span style="font-size: 12px; opacity: 0.7;">(11hr work + 1hr lunch)</span>
+                            </button>
+                        </div>
+                        
                         <div class="rate-grid">
                             <div class="rate-item">
                                 <label class="rate-label">Default Day Rate (£)</label>
                                 <input type="number" class="rate-input" id="day-rate" value="200" onchange="updateRates()">
                             </div>
                             <div class="rate-item">
-                                <label class="rate-label">Standard OT Multiplier</label>
+                                <label class="rate-label">Base Hours (Work)</label>
+                                <input type="number" class="rate-input" id="base-hours" value="10" onchange="updateRates()" readonly style="background: rgba(0,0,0,0.4);">
+                            </div>
+                            <div class="rate-item">
+                                <label class="rate-label">Lunch Duration (min)</label>
+                                <input type="number" class="rate-input" id="lunch-duration" value="60" onchange="updateRates()">
+                            </div>
+                            <div class="rate-item">
+                                <label class="rate-label">Camera OT Multiplier</label>
                                 <input type="number" class="rate-input" id="ot-multiplier" value="1.5" step="0.1" onchange="updateRates()">
                             </div>
                             <div class="rate-item">
                                 <label class="rate-label">Late OT >23:00 Multiplier</label>
                                 <input type="number" class="rate-input" id="late-ot-multiplier" value="2.0" step="0.1" onchange="updateRates()">
-                            </div>
-                            <div class="rate-item">
-                                <label class="rate-label">Default Base Hours</label>
-                                <input type="number" class="rate-input" id="base-hours" value="10" onchange="updateRates()">
                             </div>
                             <div class="rate-item">
                                 <label class="rate-label">Pre-Call/De-Rig Multiplier</label>
@@ -1521,10 +1515,12 @@
                                         <th rowspan="2" style="width: 100px;">Day</th>
                                         <th rowspan="2" style="width: 80px;">Date</th>
                                         <th rowspan="2" style="width: 60px;">6th Day?</th>
-                                        <th colspan="4">Times</th>
+                                        <th colspan="2">Time Input</th>
+                                        <th rowspan="2" style="width: 90px;">Scheduled Wrap</th>
+                                        <th colspan="2">Actual Times</th>
                                         <th colspan="2">Lunch</th>
                                         <th rowspan="2" style="width: 150px;">Notes</th>
-                                        <th colspan="5">Calculated</th>
+                                        <th colspan="5">Calculated Hours</th>
                                         <th rowspan="2">Total Hours</th>
                                     </tr>
                                     <tr>
@@ -1699,21 +1695,19 @@
                     <select class="form-select" id="crew-department">
                         <option value="hair">Hair</option>
                         <option value="makeup">Makeup</option>
+                        <option value="sfx">SFX Makeup</option>
                         <option value="prosthetics">Prosthetics</option>
-                        <option value="crowd">Crowd</option>
-                        <option value="other">Other</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Day Rate (£)</label>
-                    <input type="number" class="form-input" id="crew-rate" placeholder="0.00" step="10">
+                    <input type="number" class="form-input" id="crew-rate" placeholder="Leave blank to use default rate">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Employment Type</label>
                     <select class="form-select" id="crew-type">
                         <option value="paye">PAYE (Employee)</option>
-                        <option value="ltd">LTD (Contractor)</option>
-                        <option value="freelance">Freelance</option>
+                        <option value="ltd">LTD Company</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -1722,7 +1716,7 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">Phone</label>
-                    <input type="tel" class="form-input" id="crew-phone" placeholder="+44 7xxx xxxxxx">
+                    <input type="tel" class="form-input" id="crew-phone" placeholder="+44 7XXX XXXXXX">
                 </div>
             </div>
             <div class="modal-footer">
@@ -1732,171 +1726,156 @@
         </div>
     </div>
 
-    <script>
-        // Professional Timesheet Manager
-        class TimesheetManager {
-            constructor() {
-                this.data = {
-                    projectInfo: {
-                        name: 'The Big Race',
-                        code: 'HM-2025-001',
-                        isLTD: false
-                    },
-                    rates: {
-                        dayRate: 200,
-                        otMultiplier: 1.5,
-                        lateOtMultiplier: 2.0,
-                        baseHours: 10,
-                        turnaroundHours: 11,
-                        specialMultiplier: 1.5
-                    },
-                    crew: [],
-                    timesheets: {}, // Indexed by crew ID
-                    currentCrewId: null,
-                    dayOrder: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-                };
+    <!-- Notification -->
+    <div class="notification" id="notification">
+        <span id="notification-text">Notification</span>
+    </div>
 
-                this.init();
-            }
+    <script>
+        // Timesheet Manager
+        const timesheetManager = {
+            data: {
+                projectInfo: {
+                    name: 'The Big Race',
+                    code: 'HM-2025-001',
+                    isLTD: false
+                },
+                rates: {
+                    dayRate: 200,
+                    baseHours: 10,
+                    lunchDuration: 60, // minutes
+                    otMultiplier: 1.5,
+                    lateOtMultiplier: 2.0,
+                    specialMultiplier: 1.5,
+                    rateCardType: '10+1'
+                },
+                crew: [],
+                timesheets: {},
+                currentCrewId: null,
+                dayOrder: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+            },
 
             init() {
                 this.loadFromStorage();
                 this.loadRates();
                 this.renderCrew();
+                this.renderCrewCards();
                 this.updateCalculations();
-                this.setupAutoSave();
-                this.setupKeyboardShortcuts();
-            }
+                
+                // Update crew count in sidebar
+                document.getElementById('sidebar-crew').textContent = this.data.crew.length;
+            },
 
-            setupKeyboardShortcuts() {
-                document.addEventListener('keydown', (e) => {
-                    // Close modal on Escape
-                    if (e.key === 'Escape') {
-                        const modal = document.querySelector('.modal.active');
-                        if (modal) {
-                            modal.classList.remove('active');
-                        }
+            showNotification(message, type = 'info') {
+                const notification = document.getElementById('notification');
+                const text = document.getElementById('notification-text');
+                
+                text.textContent = message;
+                notification.className = `notification show ${type}`;
+                
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                }, 3000);
+            },
+
+            addCrew(crew) {
+                const newCrew = {
+                    id: Date.now(),
+                    ...crew
+                };
+                this.data.crew.push(newCrew);
+                this.data.timesheets[newCrew.id] = { days: [] };
+                
+                this.renderCrew();
+                this.renderCrewCards();
+                this.save();
+                
+                // Update crew count
+                document.getElementById('sidebar-crew').textContent = this.data.crew.length;
+                document.getElementById('active-crew').textContent = this.data.crew.length;
+            },
+
+            deleteCrew(crewId) {
+                const crew = this.data.crew.find(c => c.id === crewId);
+                const crewName = crew ? crew.name : 'this crew member';
+                
+                if (confirm(`Are you sure you want to delete ${crewName}?\n\nThis will remove all their timesheet data and cannot be undone.`)) {
+                    this.data.crew = this.data.crew.filter(c => c.id !== crewId);
+                    delete this.data.timesheets[crewId];
+                    
+                    if (this.data.currentCrewId === crewId) {
+                        this.data.currentCrewId = null;
+                        document.getElementById('timesheet-section').style.display = 'none';
                     }
                     
-                    // Save on Ctrl+S / Cmd+S
-                    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-                        e.preventDefault();
-                        this.save();
-                        this.showNotification('Timesheet saved', 'success');
-                    }
-                });
-            }
-
-            loadRates() {
-                document.getElementById('day-rate').value = this.data.rates.dayRate;
-                document.getElementById('ot-multiplier').value = this.data.rates.otMultiplier;
-                document.getElementById('late-ot-multiplier').value = this.data.rates.lateOtMultiplier;
-                document.getElementById('base-hours').value = this.data.rates.baseHours;
-                document.getElementById('special-multiplier').value = this.data.rates.specialMultiplier;
-            }
-
-            saveRates() {
-                this.data.rates = {
-                    dayRate: parseFloat(document.getElementById('day-rate').value) || 200,
-                    otMultiplier: parseFloat(document.getElementById('ot-multiplier').value) || 1.5,
-                    lateOtMultiplier: parseFloat(document.getElementById('late-ot-multiplier').value) || 2.0,
-                    baseHours: parseFloat(document.getElementById('base-hours').value) || 10,
-                    specialMultiplier: parseFloat(document.getElementById('special-multiplier').value) || 1.5
-                };
-                this.save();
-                this.updateCalculations();
-            }
-
-            addCrew(crewMember) {
-                crewMember.id = Date.now();
-                crewMember.active = true;
-                this.data.crew.push(crewMember);
-                this.data.timesheets[crewMember.id] = { days: [] };
-                this.renderCrew();
-                this.updateCrewSelector();
-                this.updateCalculations();
-                this.save();
-            }
-
-            removeCrew(id) {
-                if (confirm('Remove this crew member and all their timesheet data?')) {
-                    this.data.crew = this.data.crew.filter(c => c.id !== id);
-                    delete this.data.timesheets[id];
                     this.renderCrew();
-                    this.updateCrewSelector();
+                    this.renderCrewCards();
                     this.updateCalculations();
                     this.save();
+                    
+                    this.showNotification(`${crewName} deleted`, 'warning');
+                    
+                    // Update crew count
+                    document.getElementById('sidebar-crew').textContent = this.data.crew.length;
+                    document.getElementById('active-crew').textContent = this.data.crew.length;
                 }
-            }
+            },
 
             renderCrew() {
                 const tbody = document.getElementById('crew-list');
                 if (!tbody) return;
-
+                
                 tbody.innerHTML = '';
-
+                
                 if (this.data.crew.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 40px; color: var(--text-secondary);">No crew members added yet. Click "Add Crew" to get started.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 40px; color: var(--text-secondary);">No crew members added yet</td></tr>';
+                    return;
                 }
-
+                
                 this.data.crew.forEach(crew => {
                     const row = document.createElement('tr');
                     row.innerHTML = `
-                        <td style="font-weight: 500;">${crew.name}</td>
+                        <td><strong>${crew.name}</strong></td>
                         <td>${crew.position}</td>
-                        <td style="text-transform: capitalize;">${crew.department}</td>
-                        <td style="font-weight: 500; color: var(--accent-gold);">£${crew.rate}/day</td>
-                        <td>
-                            <span class="employment-badge ${crew.type}">
-                                ${crew.type.toUpperCase()}
-                            </span>
-                        </td>
-                        <td style="font-size: 13px;">
-                            ${crew.email || '-'}<br>
-                            ${crew.phone || '-'}
+                        <td>${crew.department}</td>
+                        <td style="font-family: monospace;">£${crew.rate}</td>
+                        <td><span class="employment-badge ${crew.type}">${crew.type.toUpperCase()}</span></td>
+                        <td style="font-size: 12px;">
+                            ${crew.email ? `📧 ${crew.email}<br>` : ''}
+                            ${crew.phone ? `📞 ${crew.phone}` : ''}
                         </td>
                         <td>
-                            <button class="delete-btn" onclick="timesheetManager.removeCrew(${crew.id})">×</button>
+                            <button class="delete-btn" onclick="timesheetManager.deleteCrew(${crew.id})">🗑️</button>
                         </td>
                     `;
                     tbody.appendChild(row);
                 });
-
-                // Update sidebar
-                document.getElementById('sidebar-crew').textContent = this.data.crew.length;
-                document.getElementById('active-crew').textContent = this.data.crew.length;
-                
-                // Update crew cards in timesheet tab
-                this.renderCrewCards();
-            }
+            },
 
             renderCrewCards() {
                 const container = document.getElementById('crew-cards');
-                const noCrewMessage = document.getElementById('no-crew-message');
                 const timesheetSection = document.getElementById('timesheet-section');
+                const noCrewMessage = document.getElementById('no-crew-message');
                 
                 if (!container) return;
-
+                
+                container.innerHTML = '';
+                
                 if (this.data.crew.length === 0) {
-                    if (noCrewMessage) noCrewMessage.style.display = 'block';
-                    if (timesheetSection) timesheetSection.style.display = 'none';
-                    if (container.parentElement) container.parentElement.style.display = 'none';
+                    noCrewMessage.style.display = 'block';
                     return;
                 } else {
-                    if (noCrewMessage) noCrewMessage.style.display = 'none';
-                    if (container.parentElement) container.parentElement.style.display = 'block';
+                    noCrewMessage.style.display = 'none';
                 }
-
-                container.innerHTML = '';
-
+                
                 this.data.crew.forEach(crew => {
-                    const timesheet = this.data.timesheets[crew.id];
                     const stats = this.getCrewStats(crew.id);
-                    
                     const card = document.createElement('div');
                     card.className = 'crew-card';
+                    
+                    // Check if this crew is currently selected
                     if (this.data.currentCrewId === crew.id) {
-                        card.className += ' active';
+                        card.classList.add('active');
                     }
                     
                     card.onclick = () => this.selectCrew(crew.id);
@@ -1944,7 +1923,7 @@
                         timesheetSection.style.display = 'none';
                     }
                 }
-            }
+            },
 
             getCrewStats(crewId) {
                 const crew = this.data.crew.find(c => c.id === crewId);
@@ -1977,16 +1956,14 @@
                         preCall: calc.hours.preCall * hourlyRate * this.data.rates.specialMultiplier,
                         cameraOT: calc.hours.cameraOT * hourlyRate * this.data.rates.otMultiplier,
                         lateOT: calc.hours.lateOT * hourlyRate * this.data.rates.lateOtMultiplier,
-                        deRig: calc.hours.deRig * hourlyRate * this.data.rates.specialMultiplier,
-                        brokenLunch: calc.hours.brokenLunch * hourlyRate * this.data.rates.specialMultiplier,
-                        bt: calc.hours.brokenTA * hourlyRate * this.data.rates.specialMultiplier
+                        deRig: calc.hours.deRig * hourlyRate * this.data.rates.specialMultiplier
                     };
                     
                     stats.totalEarnings += Object.values(payments).reduce((sum, val) => sum + val, 0);
                 });
                 
                 return stats;
-            }
+            },
 
             selectCrew(crewId) {
                 this.data.currentCrewId = crewId;
@@ -2019,12 +1996,12 @@
                 
                 // Save current selection
                 this.save();
-            }
+            },
 
             showCrewSelection() {
                 document.getElementById('timesheet-section').style.display = 'none';
                 this.renderCrewCards();
-            }
+            },
 
             updateCrewSummary(crewId) {
                 const stats = this.getCrewStats(crewId);
@@ -2033,7 +2010,7 @@
                 document.getElementById('crew-total-hours').textContent = stats.totalHours.toFixed(2);
                 document.getElementById('crew-total-earnings').textContent = `£${stats.totalEarnings.toFixed(2)}`;
                 document.getElementById('crew-ot-hours').textContent = stats.otHours.toFixed(2);
-            }
+            },
 
             loadCrewTimesheet(crewId) {
                 if (!crewId) crewId = this.data.currentCrewId;
@@ -2049,7 +2026,7 @@
                 }
                 
                 this.updateCrewSummary(crewId);
-            }
+            },
 
             addWeek() {
                 const crewId = this.data.currentCrewId;
@@ -2073,8 +2050,8 @@
                         sixthDay: false,
                         preCall: '',
                         unitCall: '',
-                        lunchSched: 60, // Default 60 minutes
-                        lunchActual: 60, // Default 60 minutes
+                        lunchSched: this.data.rates.lunchDuration,
+                        lunchActual: this.data.rates.lunchDuration,
                         actualWrap: '',
                         deRig: '',
                         notes: '',
@@ -2086,7 +2063,7 @@
 
                 this.renderTimesheet(crewId);
                 this.save();
-            }
+            },
 
             generateTimeOptions(selectedTime = '') {
                 let options = '<option value="">--:--</option>';
@@ -2098,7 +2075,17 @@
                     }
                 }
                 return options;
-            }
+            },
+
+            formatTime(decimalHours) {
+                if (!decimalHours) return '--:--';
+                
+                // Handle hours >= 24 by wrapping around
+                const normalizedHours = decimalHours % 24;
+                const hours = Math.floor(normalizedHours);
+                const minutes = Math.round((normalizedHours - hours) * 60);
+                return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+            },
 
             renderTimesheet(crewId) {
                 const tbody = document.getElementById('timesheet-body');
@@ -2113,8 +2100,19 @@
                     if (day.isWeekend) row.className = 'weekend-row';
 
                     // Ensure lunch values are set
-                    if (day.lunchSched === undefined) day.lunchSched = 60;
-                    if (day.lunchActual === undefined) day.lunchActual = 60;
+                    if (day.lunchSched === undefined) day.lunchSched = this.data.rates.lunchDuration;
+                    if (day.lunchActual === undefined) day.lunchActual = this.data.rates.lunchDuration;
+
+                    // Calculate scheduled wrap time
+                    let scheduledWrapDisplay = '--:--';
+                    if (day.unitCall) {
+                        const unitCallTime = this.parseTime(day.unitCall);
+                        if (unitCallTime !== null) {
+                            const lunchHours = day.lunchSched / 60;
+                            const scheduledWrapTime = unitCallTime + this.data.rates.baseHours + lunchHours;
+                            scheduledWrapDisplay = this.formatTime(scheduledWrapTime);
+                        }
+                    }
 
                     row.innerHTML = `
                         <td class="day-cell">
@@ -2143,6 +2141,7 @@
                                 ${this.generateTimeOptions(day.unitCall)}
                             </select>
                         </td>
+                        <td class="scheduled-wrap-cell" id="scheduled-wrap-${day.id}">${scheduledWrapDisplay}</td>
                         <td>
                             <select class="time-input" style="width: 100%; padding: 4px;" 
                                     onchange="timesheetManager.updateDay(${crewId}, ${day.id}, 'actualWrap', this.value)">
@@ -2180,7 +2179,7 @@
                     tbody.appendChild(row);
                     this.calculateDay(crewId, day, index);
                 });
-            }
+            },
 
             updateDay(crewId, dayId, field, value) {
                 const timesheet = this.data.timesheets[crewId];
@@ -2205,10 +2204,26 @@
                     }
                 }
 
+                // If unit call or lunch changes, update scheduled wrap display
+                if (field === 'unitCall' || field === 'lunchSched') {
+                    if (day.unitCall) {
+                        const unitCallTime = this.parseTime(day.unitCall);
+                        if (unitCallTime !== null) {
+                            const lunchHours = day.lunchSched / 60;
+                            const scheduledWrapTime = unitCallTime + this.data.rates.baseHours + lunchHours;
+                            const scheduledWrapDisplay = this.formatTime(scheduledWrapTime);
+                            const scheduledWrapEl = document.getElementById(`scheduled-wrap-${dayId}`);
+                            if (scheduledWrapEl) {
+                                scheduledWrapEl.textContent = scheduledWrapDisplay;
+                            }
+                        }
+                    }
+                }
+
                 this.calculateDay(crewId, day, dayIndex);
                 this.updateCalculations();
                 this.save();
-            }
+            },
 
             parseTime(timeStr) {
                 if (!timeStr || typeof timeStr !== 'string') return null;
@@ -2225,7 +2240,7 @@
                 if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
                 
                 return hours + minutes / 60;
-            }
+            },
 
             calculateTimeDifference(start, end) {
                 const startTime = this.parseTime(start);
@@ -2235,7 +2250,7 @@
                 let diff = endTime - startTime;
                 if (diff < 0) diff += 24; // Handle overnight
                 return diff;
-            }
+            },
 
             calculateDay(crewId, day, dayIndex) {
                 const crew = this.data.crew.find(c => c.id === crewId);
@@ -2261,7 +2276,7 @@
                     // 2. Calculate scheduled wrap time
                     // Scheduled wrap = Unit call + base hours + lunch duration
                     const unitCallTime = this.parseTime(day.unitCall);
-                    const lunchHours = (day.lunchSched || 60) / 60; // Convert minutes to hours
+                    const lunchHours = (day.lunchSched || this.data.rates.lunchDuration) / 60;
                     const scheduledWrapTime = unitCallTime + rates.baseHours + lunchHours;
 
                     // 3. Base hours = the contracted base hours (10 or 11)
@@ -2277,7 +2292,7 @@
                             adjustedActualWrap = actualWrapTime + 24;
                         }
 
-                        // Calculate total OT hours
+                        // Calculate total OT hours (time beyond scheduled wrap)
                         const totalOTHours = Math.max(0, adjustedActualWrap - scheduledWrapTime);
 
                         if (totalOTHours > 0) {
@@ -2327,12 +2342,10 @@
                         base: baseHours,
                         cameraOT: cameraOTHours,
                         lateOT: lateOTHours,
-                        deRig: deRigHours,
-                        brokenLunch: 0, // No longer calculating broken lunch
-                        brokenTA: 0 // No longer calculating broken turnaround
+                        deRig: deRigHours
                     }
                 };
-            }
+            },
 
             updateCalculations() {
                 let totals = {
@@ -2457,7 +2470,7 @@
                 safeUpdate('summary-hours', totalHours.toFixed(2));
                 safeUpdate('summary-cost', `£${totals.labour.toFixed(2)}`);
                 safeUpdate('summary-ltd', `£${totals.ltdSavings.toFixed(2)}`);
-            }
+            },
 
             clearTimesheet() {
                 const crewId = this.data.currentCrewId;
@@ -2476,7 +2489,7 @@
                     this.save();
                     this.showNotification('Timesheet cleared', 'success');
                 }
-            }
+            },
 
             save() {
                 this.data.lastUpdated = new Date().toISOString();
@@ -2485,7 +2498,7 @@
                 const now = new Date();
                 document.getElementById('sidebar-updated').textContent = 
                     `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
-            }
+            },
 
             loadFromStorage() {
                 const saved = localStorage.getItem('proTimesheetSystem');
@@ -2502,52 +2515,47 @@
                             document.getElementById('ltd-toggle').classList.add('active');
                             document.getElementById('ltd-status').textContent = 'Yes - Wages separate from budget';
                         }
-                        
-                        if (this.data.lastUpdated) {
-                            const updated = new Date(this.data.lastUpdated);
-                            document.getElementById('sidebar-updated').textContent = 
-                                `${updated.toLocaleDateString()} ${updated.toLocaleTimeString()}`;
-                        }
-                        
-                        this.updateCrewSelector();
                     } catch (e) {
                         console.error('Error loading data:', e);
-                        this.showNotification('Error loading saved data', 'warning');
                     }
-                } else {
-                    // First time user - show welcome message
-                    setTimeout(() => {
-                        this.showNotification('Welcome! Start by adding crew members in the Crew Management tab', 'info');
-                    }, 1000);
                 }
-            }
+            },
 
-            updateCrewSelector() {
-                this.renderCrewCards();
-            }
+            loadRates() {
+                const rates = this.data.rates;
+                document.getElementById('day-rate').value = rates.dayRate;
+                document.getElementById('base-hours').value = rates.baseHours;
+                document.getElementById('lunch-duration').value = rates.lunchDuration;
+                document.getElementById('ot-multiplier').value = rates.otMultiplier;
+                document.getElementById('late-ot-multiplier').value = rates.lateOtMultiplier;
+                document.getElementById('special-multiplier').value = rates.specialMultiplier;
+                
+                // Set rate card type buttons
+                const rateCardType = rates.rateCardType || '10+1';
+                document.querySelectorAll('.rate-card-option').forEach(btn => {
+                    if (btn.textContent.includes(rateCardType)) {
+                        btn.classList.add('active');
+                    } else {
+                        btn.classList.remove('active');
+                    }
+                });
+            },
+
+            saveRates() {
+                this.data.rates.dayRate = parseFloat(document.getElementById('day-rate').value) || 200;
+                this.data.rates.baseHours = parseFloat(document.getElementById('base-hours').value) || 10;
+                this.data.rates.lunchDuration = parseFloat(document.getElementById('lunch-duration').value) || 60;
+                this.data.rates.otMultiplier = parseFloat(document.getElementById('ot-multiplier').value) || 1.5;
+                this.data.rates.lateOtMultiplier = parseFloat(document.getElementById('late-ot-multiplier').value) || 2.0;
+                this.data.rates.specialMultiplier = parseFloat(document.getElementById('special-multiplier').value) || 1.5;
+                
+                this.updateCalculations();
+                this.save();
+            },
 
             exportData() {
-                const csv = this.generateCSV();
-                const blob = new Blob([csv], { type: 'text/csv' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `timesheet_${this.data.projectInfo.code}_${Date.now()}.csv`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                
-                this.showNotification('Timesheet exported', 'success');
-            }
-
-            generateCSV() {
-                let csv = 'Professional Timesheet Export\n';
-                csv += `Production:,${this.data.projectInfo.name}\n`;
-                csv += `Project Code:,${this.data.projectInfo.code}\n\n`;
-                
-                csv += 'Crew,Day,Date,6th Day,Pre-Call,Unit Call,Actual Wrap,De-Rig,Lunch Sched (min),Lunch Actual (min),';
-                csv += 'Total Hours,Day Rate,Pre-Call Pay,Camera OT Pay,Late OT Pay,De-Rig Pay,Total Pay\n';
+                // Create CSV content
+                let csv = 'Crew Member,Position,Day,Date,Pre-Call,Unit Call,Scheduled Wrap,Actual Wrap,De-Rig,Camera OT (h),Late OT (h),Total Hours,Day Rate,Pre-Call Pay,Camera OT Pay,Late OT Pay,De-Rig Pay,Total Pay\n';
                 
                 this.data.crew.forEach(crew => {
                     const timesheet = this.data.timesheets[crew.id];
@@ -2557,96 +2565,110 @@
                     const hourlyRate = dayRate / this.data.rates.baseHours;
                     
                     timesheet.days.forEach((day, index) => {
+                        if (!day.unitCall) return;
+                        
                         const calc = this.calculateDay(crew.id, day, index);
+                        
+                        // Calculate scheduled wrap
+                        let scheduledWrap = '--:--';
+                        if (day.unitCall) {
+                            const unitCallTime = this.parseTime(day.unitCall);
+                            const lunchHours = day.lunchSched / 60;
+                            const scheduledWrapTime = unitCallTime + this.data.rates.baseHours + lunchHours;
+                            scheduledWrap = this.formatTime(scheduledWrapTime);
+                        }
                         
                         const dayRateMultiplier = day.sixthDay ? 1.5 : 1;
                         const payments = {
-                            dayRate: day.unitCall ? dayRate * dayRateMultiplier : 0,
+                            dayRate: dayRate * dayRateMultiplier,
                             preCall: calc.hours.preCall * hourlyRate * this.data.rates.specialMultiplier,
                             cameraOT: calc.hours.cameraOT * hourlyRate * this.data.rates.otMultiplier,
                             lateOT: calc.hours.lateOT * hourlyRate * this.data.rates.lateOtMultiplier,
                             deRig: calc.hours.deRig * hourlyRate * this.data.rates.specialMultiplier
                         };
                         
-                        const total = Object.values(payments).reduce((sum, val) => sum + val, 0);
+                        const dayTotal = Object.values(payments).reduce((sum, val) => sum + val, 0);
                         
-                        csv += `"${crew.name}",${day.name},${day.date},${day.sixthDay ? 'Y' : 'N'},`;
-                        csv += `${day.preCall || ''},${day.unitCall || ''},${day.actualWrap || ''},${day.deRig || ''},`;
-                        csv += `${day.lunchSched || 60},${day.lunchActual || 60},`;
-                        csv += `${calc.hours.total.toFixed(2)},`;
-                        csv += `${payments.dayRate.toFixed(2)},${payments.preCall.toFixed(2)},`;
-                        csv += `${payments.cameraOT.toFixed(2)},${payments.lateOT.toFixed(2)},`;
-                        csv += `${payments.deRig.toFixed(2)},${total.toFixed(2)}\n`;
+                        csv += `${crew.name},${crew.position},${day.name},${day.date},${day.preCall || ''},${day.unitCall},${scheduledWrap},${day.actualWrap || ''},${day.deRig || ''},${calc.hours.cameraOT.toFixed(2)},${calc.hours.lateOT.toFixed(2)},${calc.hours.total.toFixed(2)},${payments.dayRate.toFixed(2)},${payments.preCall.toFixed(2)},${payments.cameraOT.toFixed(2)},${payments.lateOT.toFixed(2)},${payments.deRig.toFixed(2)},${dayTotal.toFixed(2)}\n`;
                     });
                 });
                 
-                return csv;
-            }
-
-            showNotification(message, type = 'success') {
-                const notification = document.createElement('div');
-                notification.className = `notification ${type}`;
-                notification.textContent = message;
-                document.body.appendChild(notification);
+                // Download CSV
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                const timestamp = new Date().toISOString().split('T')[0];
+                a.download = `timesheet_${this.data.projectInfo.code}_${timestamp}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
                 
-                setTimeout(() => {
-                    notification.style.animation = 'slideOut 0.3s ease';
-                    setTimeout(() => notification.remove(), 300);
-                }, 3000);
+                this.showNotification('CSV exported successfully', 'success');
             }
+        };
 
-            setupAutoSave() {
-                setInterval(() => {
-                    this.save();
-                }, 30000); // Auto-save every 30 seconds
-            }
-        }
-
-        // Initialize
-        const timesheetManager = new TimesheetManager();
-
-        // Global functions
-        function switchTab(tabName, targetElement) {
-            document.querySelectorAll('.tab-content').forEach(tab => {
-                tab.classList.remove('active');
-            });
+        // Global Functions
+        function switchTab(tabName) {
+            // Update tab buttons
             document.querySelectorAll('.tab').forEach(tab => {
                 tab.classList.remove('active');
             });
+            event.target.classList.add('active');
+            
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+            
+            // Update nav items
             document.querySelectorAll('.nav-item').forEach(item => {
                 item.classList.remove('active');
             });
+            event.target.closest('.nav-item')?.classList.add('active');
+        }
 
-            const tab = document.getElementById(tabName + '-tab');
-            if (tab) tab.classList.add('active');
+        function updateProjectInfo() {
+            const name = document.getElementById('project-name').value.trim();
+            const code = document.getElementById('project-code').value.trim();
             
-            // Find and activate the correct tab button
-            document.querySelectorAll('.tab').forEach(btn => {
-                if (btn.textContent.toLowerCase().includes(tabName.toLowerCase()) ||
-                    (tabName === 'overview' && btn.textContent.toLowerCase() === 'overview') ||
-                    (tabName === 'crew' && btn.textContent.toLowerCase().includes('crew')) ||
-                    (tabName === 'timesheet' && btn.textContent.toLowerCase().includes('timesheet')) ||
-                    (tabName === 'payment' && btn.textContent.toLowerCase().includes('payment')) ||
-                    (tabName === 'reports' && btn.textContent.toLowerCase().includes('reports'))) {
+            if (name) timesheetManager.data.projectInfo.name = name;
+            if (code) timesheetManager.data.projectInfo.code = code;
+            
+            document.getElementById('project-name-display').textContent = timesheetManager.data.projectInfo.name;
+            document.getElementById('project-code-display').textContent = timesheetManager.data.projectInfo.code;
+            
+            timesheetManager.save();
+            closeModal('projectModal');
+        }
+
+        function setRateCardType(type) {
+            // Update button states
+            document.querySelectorAll('.rate-card-option').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.textContent.includes(type)) {
                     btn.classList.add('active');
                 }
             });
             
-            // Update nav item
-            document.querySelectorAll('.nav-item').forEach(item => {
-                const itemText = item.textContent.toLowerCase().trim();
-                if (itemText.includes(tabName.toLowerCase()) ||
-                    (tabName === 'timesheet' && itemText.includes('timesheet'))) {
-                    item.classList.add('active');
-                }
-            });
+            // Update base hours based on selection
+            const baseHours = type === '10+1' ? 10 : 11;
+            document.getElementById('base-hours').value = baseHours;
+            timesheetManager.data.rates.baseHours = baseHours;
+            timesheetManager.data.rates.rateCardType = type;
             
-            // If switching to timesheet tab, render crew cards
-            if (tabName === 'timesheet') {
-                timesheetManager.renderCrewCards();
+            // Recalculate everything
+            timesheetManager.updateCalculations();
+            
+            // If there's a current crew selected, re-render their timesheet to update scheduled wrap times
+            if (timesheetManager.data.currentCrewId) {
+                timesheetManager.renderTimesheet(timesheetManager.data.currentCrewId);
             }
             
-            timesheetManager.updateCalculations();
+            timesheetManager.save();
+            timesheetManager.showNotification(`Rate card set to ${type} working day`, 'success');
         }
 
         function toggleLTD() {
@@ -2870,6 +2892,11 @@
         function importCrewList() {
             timesheetManager.showNotification('Crew import coming soon!', 'info');
         }
+
+        // Initialize on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            timesheetManager.init();
+        });
     </script>
 </body>
 </html>
