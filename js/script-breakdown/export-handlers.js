@@ -131,6 +131,11 @@ function extractCharactersFromScenes() {
     state.characters = new Set();
     const characterCounts = new Map(); // Track character appearance counts
 
+    // Clear CharacterManager for fresh extraction
+    if (window.characterManager) {
+        window.characterManager.clear();
+    }
+
     console.log(`🎭 Extracting characters from ${state.scenes.length} scenes using STRICT detection...`);
 
     // Critical: These patterns DISQUALIFY something from being a character
@@ -247,8 +252,12 @@ function extractCharactersFromScenes() {
             }
 
             // At this point, it's LIKELY a character name
-            // Normalize to title case
-            const normalized = normalizeCharacterName(charName);
+            // Normalize through CharacterManager for deduplication and case handling
+            const normalized = window.characterManager
+                ? window.characterManager.addCharacter(charName)
+                : normalizeCharacterName(charName);
+
+            if (!normalized) continue;
 
             // Track appearances
             if (characterCounts.has(normalized)) {
@@ -279,19 +288,9 @@ function extractCharactersFromScenes() {
     // Store character counts globally for review UI
     window.characterCounts = characterCounts;
 
-    // Create alias map to merge name variations (e.g., "Gwen" -> "Gwen Lawson")
-    const aliasMap = createCharacterAliasMap();
-
-    // Apply aliases to existing scene breakdowns
-    if (aliasMap.size > 0) {
-        Object.keys(state.sceneBreakdowns).forEach(sceneIndex => {
-            const breakdown = state.sceneBreakdowns[sceneIndex];
-            if (breakdown.cast) {
-                breakdown.cast = breakdown.cast.map(char => aliasMap.get(char) || char);
-            }
-        });
-        console.log(`✓ Applied character aliases to existing breakdowns`);
-    }
+    // NOTE: CharacterManager now handles all aliasing and normalization automatically
+    // The old createCharacterAliasMap() function is no longer needed
+    console.log('✓ Character deduplication handled by CharacterManager');
 }
 
 /**
