@@ -1858,6 +1858,130 @@
             margin: 0 4px;
         }
 
+        /* Sticky Scene Navigation */
+        .breakdown-scene-nav-sticky {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 10px 14px;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg,
+                rgba(212, 175, 122, 0.12) 0%,
+                rgba(28, 25, 22, 0.95) 50%,
+                rgba(212, 175, 122, 0.08) 100%
+            );
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .scene-nav-btn-compact {
+            padding: 8px 14px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-light);
+            font-size: 0.75em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            min-width: 100px;
+        }
+
+        .scene-nav-btn-compact:hover:not(.disabled) {
+            background: rgba(212, 175, 122, 0.15);
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+        }
+
+        .scene-nav-btn-compact.disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .scene-nav-current-compact {
+            flex: 1;
+            text-align: center;
+            font-size: 0.95em;
+            font-weight: 700;
+            color: var(--accent-gold);
+            letter-spacing: 0.5px;
+        }
+
+        /* Scene Info Collapsible Section */
+        .scene-info-section {
+            margin-bottom: 16px;
+            background: rgba(28, 25, 22, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .scene-info-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .scene-info-header:hover {
+            background: rgba(212, 175, 122, 0.08);
+        }
+
+        .scene-info-title {
+            font-size: 0.8125em;
+            font-weight: 600;
+            color: var(--text-light);
+        }
+
+        .scene-info-toggle {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 0.75em;
+            cursor: pointer;
+            padding: 0;
+            transition: transform 0.2s ease;
+        }
+
+        .scene-info-content {
+            display: none;
+            padding: 0 14px 14px;
+        }
+
+        .scene-info-section.expanded .scene-info-content {
+            display: block;
+        }
+
+        .scene-info-section.expanded .scene-info-toggle {
+            transform: rotate(90deg);
+        }
+
+        /* Cast Member Preview (shown when collapsed) */
+        .cast-member-preview {
+            padding: 8px 14px;
+            font-size: 0.75em;
+            color: var(--text-muted);
+            background: rgba(0, 0, 0, 0.2);
+            border-top: 1px solid rgba(212, 175, 122, 0.1);
+            line-height: 1.4;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .cast-member-card.expanded .cast-member-preview {
+            display: none;
+        }
+
         /* Compact AI Controls */
         .ai-controls-compact {
             display: flex;
@@ -3425,6 +3549,362 @@
             background: linear-gradient(135deg, rgba(102, 126, 234, 0.25), rgba(118, 75, 162, 0.25));
         }
 
+        /* Look State Badge and Sections in Breakdown Panel */
+        .events-badge {
+            display: inline-block;
+            margin-left: 8px;
+            padding: 2px 6px;
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            border-radius: 10px;
+            font-size: 0.7em;
+            font-weight: 600;
+            color: #ef4444;
+        }
+
+        .look-state-section {
+            margin-bottom: 12px;
+            padding: 10px;
+            background: rgba(212, 175, 122, 0.08);
+            border: 1px solid rgba(212, 175, 122, 0.2);
+            border-radius: 6px;
+        }
+
+        .look-state-section-title {
+            font-size: 0.625em;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--accent-gold);
+            margin-bottom: 10px;
+            letter-spacing: 0.1em;
+            text-align: center;
+            opacity: 0.7;
+        }
+
+        .look-state-info {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .look-state-name-badge {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 10px;
+            background: rgba(212, 175, 122, 0.12);
+            border: 1px solid rgba(212, 175, 122, 0.3);
+            border-radius: 6px;
+        }
+
+        .look-name-text {
+            font-size: 0.8125em;
+            font-weight: 600;
+            color: var(--accent-gold);
+        }
+
+        .look-complexity-mini {
+            font-size: 0.6875em;
+            font-weight: 600;
+            color: var(--text-muted);
+            padding: 2px 6px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+        }
+
+        .look-state-meta {
+            font-size: 0.6875em;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        .look-must-match {
+            font-size: 0.75em;
+            color: var(--text-light);
+            line-height: 1.4;
+            padding: 6px 0;
+        }
+
+        .look-must-match strong {
+            color: var(--accent-gold);
+            font-weight: 600;
+        }
+
+        .view-look-details-btn {
+            width: 100%;
+            padding: 6px 10px;
+            background: rgba(212, 175, 122, 0.1);
+            border: 1px solid rgba(212, 175, 122, 0.3);
+            border-radius: 6px;
+            color: var(--accent-gold);
+            font-size: 0.6875em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            margin-top: 4px;
+        }
+
+        .view-look-details-btn:hover {
+            background: rgba(212, 175, 122, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .scene-override-section {
+            margin-top: 12px;
+            padding: 10px;
+            background: rgba(102, 126, 234, 0.05);
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            border-radius: 6px;
+        }
+
+        .scene-override-title {
+            font-size: 0.625em;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--accent-blue);
+            margin-bottom: 8px;
+            letter-spacing: 0.1em;
+            text-align: center;
+            opacity: 0.7;
+        }
+
+        .scene-override-note {
+            font-size: 0.6875em;
+            color: var(--text-muted);
+            font-style: italic;
+            text-align: center;
+            line-height: 1.4;
+        }
+
+        /* Transition Scene Banner */
+        .transition-scene-banner {
+            margin: 20px 0;
+            padding: 16px;
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.1));
+            border: 2px solid rgba(239, 68, 68, 0.4);
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.2);
+        }
+
+        .transition-banner-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .transition-banner-icon {
+            font-size: 1.5em;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
+        }
+
+        .transition-banner-title {
+            font-size: 0.9375em;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #ef4444;
+            letter-spacing: 0.1em;
+        }
+
+        .transition-banner-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .transition-banner-item {
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 6px;
+            border-left: 3px solid #ef4444;
+        }
+
+        .transition-character-line {
+            font-size: 0.8125em;
+            margin-bottom: 6px;
+            color: var(--text-light);
+        }
+
+        .transition-character-line strong {
+            color: #fbbf24;
+            font-weight: 600;
+        }
+
+        .transition-looks {
+            color: var(--text-light);
+            margin-left: 8px;
+        }
+
+        .transition-event-line {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            font-style: italic;
+            margin-bottom: 8px;
+        }
+
+        .view-transition-btn-mini {
+            width: 100%;
+            padding: 6px 10px;
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            border-radius: 4px;
+            color: #ef4444;
+            font-size: 0.6875em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .view-transition-btn-mini:hover {
+            background: rgba(239, 68, 68, 0.25);
+            transform: translateY(-1px);
+        }
+
+        /* Transition Details in Cast Card */
+        .transition-details-section {
+            margin-bottom: 12px;
+            padding: 12px;
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.05));
+            border: 2px solid rgba(239, 68, 68, 0.3);
+            border-radius: 6px;
+        }
+
+        .transition-details-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .transition-icon-large {
+            font-size: 1.2em;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .transition-title {
+            font-size: 0.75em;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #ef4444;
+            letter-spacing: 0.05em;
+        }
+
+        .transition-looks-flow {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 6px;
+        }
+
+        .transition-look-from,
+        .transition-look-to {
+            flex: 1;
+        }
+
+        .transition-look-label {
+            font-size: 0.625em;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .transition-look-name {
+            font-size: 0.8125em;
+            font-weight: 600;
+            color: var(--accent-gold);
+        }
+
+        .transition-arrow {
+            font-size: 1.5em;
+            color: #ef4444;
+            font-weight: bold;
+        }
+
+        .transition-detail-item {
+            margin-bottom: 10px;
+        }
+
+        .transition-detail-label {
+            font-size: 0.6875em;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .transition-detail-text {
+            font-size: 0.75em;
+            color: var(--text-light);
+            font-style: italic;
+            line-height: 1.4;
+        }
+
+        .transition-changes-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .transition-change-item {
+            font-size: 0.75em;
+            color: var(--text-light);
+            padding: 6px 8px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+            border-left: 2px solid #ef4444;
+        }
+
+        .transition-change-item strong {
+            color: #ef4444;
+            font-weight: 600;
+        }
+
+        .view-transition-details-btn {
+            width: 100%;
+            padding: 8px 12px;
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            border-radius: 6px;
+            color: #ef4444;
+            font-size: 0.75em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 8px;
+        }
+
+        .view-transition-details-btn:hover {
+            background: rgba(239, 68, 68, 0.25);
+            transform: translateY(-1px);
+        }
+
+        .transition-new-look-note {
+            font-size: 0.625em;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #ef4444;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(239, 68, 68, 0.2);
+            text-align: center;
+            letter-spacing: 0.1em;
+            opacity: 0.8;
+        }
+
         /* Timeline View Modes */
         .timeline-view-modes {
             display: flex;
@@ -3669,7 +4149,387 @@
             background: linear-gradient(135deg, #d4af7a, #c09861);
             transform: translateY(-1px);
         }
-        
+
+        .modal-btn.secondary {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.3), rgba(118, 75, 162, 0.3));
+            border-color: var(--accent-blue);
+            color: var(--accent-blue);
+        }
+
+        .modal-btn.secondary:hover {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.4), rgba(118, 75, 162, 0.4));
+            border-color: var(--accent-blue);
+            color: var(--accent-blue);
+            transform: translateY(-1px);
+        }
+
+        /* Auto-Suggest Look States Modal */
+        .suggest-info-box {
+            padding: 12px;
+            background: rgba(102, 126, 234, 0.1);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            border-radius: 6px;
+            font-size: 0.8125em;
+            color: var(--text-light);
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+
+        .suggestion-card {
+            background: rgba(28, 25, 22, 0.4);
+            border: 2px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 14px;
+            margin-bottom: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .suggestion-card.selected {
+            border-color: rgba(102, 126, 234, 0.6);
+            background: rgba(102, 126, 234, 0.08);
+        }
+
+        .suggestion-card:hover {
+            background: rgba(28, 25, 22, 0.6);
+        }
+
+        .suggestion-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .suggestion-checkbox-area {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+            cursor: pointer;
+        }
+
+        .suggestion-checkbox-area input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .suggestion-name-input {
+            flex: 1;
+            padding: 6px 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-light);
+            font-size: 0.9375em;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .suggestion-name-input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+        }
+
+        .suggestion-meta {
+            display: flex;
+            gap: 8px;
+        }
+
+        .confidence-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.6875em;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border: 1px solid;
+        }
+
+        .suggestion-scenes {
+            font-size: 0.8125em;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+
+        .suggestion-scenes strong {
+            color: var(--text-light);
+        }
+
+        .suggestion-appearance {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .suggestion-field {
+            display: flex;
+            gap: 8px;
+            font-size: 0.8125em;
+        }
+
+        .suggestion-field-label {
+            min-width: 90px;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .suggestion-field-value {
+            flex: 1;
+            color: var(--text-light);
+            line-height: 1.4;
+        }
+
+        /* Validation System */
+        .validation-count-badge {
+            display: inline-block;
+            margin-left: 10px;
+            padding: 4px 10px;
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: 700;
+            color: #ef4444;
+        }
+
+        .validation-info-box {
+            padding: 12px;
+            background: rgba(102, 126, 234, 0.1);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            border-radius: 6px;
+            font-size: 0.8125em;
+            color: var(--text-light);
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+
+        .validation-success {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            padding: 40px;
+            background: rgba(34, 197, 94, 0.1);
+            border: 2px solid rgba(34, 197, 94, 0.3);
+            border-radius: 8px;
+        }
+
+        .validation-success-icon {
+            font-size: 3em;
+            color: #22c55e;
+            margin-bottom: 12px;
+        }
+
+        .validation-success-text {
+            font-size: 1em;
+            color: var(--text-light);
+            font-weight: 600;
+        }
+
+        .issue-group {
+            margin-bottom: 20px;
+        }
+
+        .issue-group-title {
+            font-size: 0.8125em;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-light);
+            margin-bottom: 12px;
+            letter-spacing: 0.05em;
+        }
+
+        .validation-issue-card {
+            background: rgba(28, 25, 22, 0.4);
+            border: 1px solid var(--glass-border);
+            border-left: 3px solid;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+
+        .validation-issue-card.error {
+            border-left-color: #ef4444;
+            background: rgba(239, 68, 68, 0.05);
+        }
+
+        .validation-issue-card.warning {
+            border-left-color: #f59e0b;
+            background: rgba(245, 158, 11, 0.05);
+        }
+
+        .validation-issue-card.info {
+            border-left-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        .issue-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .issue-icon {
+            font-size: 1.2em;
+            flex-shrink: 0;
+        }
+
+        .issue-message {
+            flex: 1;
+            font-size: 0.875em;
+            color: var(--text-light);
+            line-height: 1.4;
+        }
+
+        .issue-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .fix-btn {
+            padding: 6px 12px;
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.3), rgba(22, 163, 74, 0.3));
+            border: 1px solid #22c55e;
+            border-radius: 4px;
+            color: #22c55e;
+            font-size: 0.75em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .fix-btn:hover {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.4), rgba(22, 163, 74, 0.4));
+            transform: translateY(-1px);
+        }
+
+        .goto-scene-btn {
+            padding: 6px 12px;
+            background: rgba(102, 126, 234, 0.2);
+            border: 1px solid var(--accent-blue);
+            border-radius: 4px;
+            color: var(--accent-blue);
+            font-size: 0.75em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .goto-scene-btn:hover {
+            background: rgba(102, 126, 234, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .cannot-fix-note {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            font-style: italic;
+            align-self: center;
+        }
+
+        /* Validation Alert in Character Timeline */
+        .validation-alert {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            margin: 16px 0;
+            border-radius: 8px;
+            border: 2px solid;
+        }
+
+        .validation-alert.error {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.4);
+        }
+
+        .validation-alert.warning {
+            background: rgba(245, 158, 11, 0.1);
+            border-color: rgba(245, 158, 11, 0.4);
+        }
+
+        .validation-alert.success {
+            background: rgba(34, 197, 94, 0.1);
+            border-color: rgba(34, 197, 94, 0.3);
+        }
+
+        .validation-alert-icon {
+            font-size: 1.5em;
+            flex-shrink: 0;
+        }
+
+        .validation-alert.error .validation-alert-icon {
+            color: #ef4444;
+        }
+
+        .validation-alert.warning .validation-alert-icon {
+            color: #f59e0b;
+        }
+
+        .validation-alert.success .validation-alert-icon {
+            color: #22c55e;
+        }
+
+        .validation-alert-content {
+            flex: 1;
+        }
+
+        .validation-alert-title {
+            font-size: 0.875em;
+            font-weight: 700;
+            color: var(--text-light);
+            margin-bottom: 2px;
+        }
+
+        .validation-alert-desc {
+            font-size: 0.75em;
+            color: var(--text-muted);
+        }
+
+        .view-issues-btn {
+            padding: 6px 12px;
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            border-radius: 6px;
+            color: #ef4444;
+            font-size: 0.75em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .validation-alert.warning .view-issues-btn {
+            background: rgba(245, 158, 11, 0.2);
+            border-color: rgba(245, 158, 11, 0.4);
+            color: #f59e0b;
+        }
+
+        .view-issues-btn:hover {
+            transform: translateY(-1px);
+            filter: brightness(1.2);
+        }
+
+        .validate-btn {
+            padding: 8px 16px;
+            background: rgba(102, 126, 234, 0.2);
+            border: 1px solid var(--accent-blue);
+            border-radius: 8px;
+            color: var(--accent-blue);
+            font-size: 0.875em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .validate-btn:hover {
+            background: rgba(102, 126, 234, 0.3);
+            transform: translateY(-1px);
+        }
+
         /* Cast Profile Modal */
         .cast-profile-modal .modal-content {
             max-width: 600px;
@@ -3705,7 +4565,851 @@
             font-size: 0.75em;
             color: var(--accent-blue);
         }
-        
+
+        /* Manage Looks Modal */
+        .looks-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .look-state-card {
+            background: rgba(28, 25, 22, 0.4);
+            border: 1px solid var(--glass-border);
+            border-left: 3px solid rgba(201, 169, 97, 0.5);
+            border-radius: 8px;
+            padding: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .look-state-card:hover {
+            background: rgba(28, 25, 22, 0.6);
+            border-left-color: var(--accent-gold);
+        }
+
+        .look-state-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .look-state-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .look-state-name {
+            font-size: 0.95em;
+            font-weight: 600;
+            color: var(--text-light);
+        }
+
+        .complexity-indicator {
+            font-size: 1.1em;
+        }
+
+        .look-state-actions {
+            display: flex;
+            gap: 6px;
+        }
+
+        .look-action-btn {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            padding: 4px 8px;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .look-action-btn:hover {
+            background: rgba(201, 169, 97, 0.2);
+            border-color: var(--accent-gold);
+        }
+
+        .look-action-btn.delete:hover {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: #ef4444;
+        }
+
+        .look-state-details {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .look-detail-row {
+            display: flex;
+            gap: 8px;
+            font-size: 0.8125em;
+        }
+
+        .look-detail-label {
+            color: var(--text-muted);
+            font-weight: 500;
+            min-width: 100px;
+        }
+
+        .look-detail-value {
+            color: var(--text-light);
+        }
+
+        /* Transition Indicator in Look Card */
+        .transition-indicator {
+            background: rgba(102, 126, 234, 0.1);
+            border-bottom: 1px solid rgba(102, 126, 234, 0.3);
+            padding: 10px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .transition-info {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .transition-icon {
+            font-size: 1.1em;
+            color: var(--accent-blue);
+        }
+
+        .transition-text {
+            font-size: 0.75em;
+            color: var(--text-light);
+            line-height: 1.3;
+        }
+
+        .transition-text strong {
+            color: var(--accent-blue);
+            font-weight: 600;
+        }
+
+        .transition-edit-btn {
+            background: rgba(102, 126, 234, 0.15) !important;
+            border-color: rgba(102, 126, 234, 0.4) !important;
+            color: var(--accent-blue) !important;
+        }
+
+        .transition-edit-btn:hover {
+            background: rgba(102, 126, 234, 0.25) !important;
+            border-color: var(--accent-blue) !important;
+        }
+
+        /* Edit Look State Modal */
+        .modal-section {
+            margin-bottom: 20px;
+        }
+
+        .modal-label {
+            display: block;
+            font-size: 0.8125em;
+            font-weight: 600;
+            color: var(--text-light);
+            margin-bottom: 8px;
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 10px 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-light);
+            font-size: 0.875em;
+        }
+
+        .modal-input:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+        }
+
+        .modal-textarea {
+            width: 100%;
+            padding: 10px 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-light);
+            font-size: 0.875em;
+            resize: vertical;
+        }
+
+        .modal-textarea:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+        }
+
+        .modal-select {
+            width: 100%;
+            padding: 10px 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-light);
+            font-size: 0.875em;
+            cursor: pointer;
+        }
+
+        .modal-select:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+        }
+
+        /* Scene Checkboxes */
+        .scene-checkboxes {
+            max-height: 250px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 8px;
+        }
+
+        .scene-checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px;
+            margin-bottom: 6px;
+            background: rgba(28, 25, 22, 0.4);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .scene-checkbox-item:hover {
+            background: rgba(28, 25, 22, 0.6);
+            border-color: var(--accent-gold);
+        }
+
+        .scene-checkbox {
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+        }
+
+        .scene-checkbox-label {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .scene-number {
+            font-size: 0.75em;
+            font-weight: 600;
+            color: var(--accent-gold);
+        }
+
+        .scene-heading {
+            font-size: 0.75em;
+            color: var(--text-muted);
+        }
+
+        .selected-count {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        /* Appearance Fields */
+        .appearance-field {
+            margin-bottom: 14px;
+        }
+
+        .field-sublabel {
+            display: block;
+            font-size: 0.75em;
+            font-weight: 500;
+            color: var(--text-light);
+            margin-bottom: 6px;
+        }
+
+        /* Script Evidence */
+        .evidence-subsection {
+            margin-bottom: 16px;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+        }
+
+        .subsection-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .subsection-label {
+            font-size: 0.8125em;
+            font-weight: 600;
+            color: var(--text-light);
+        }
+
+        .add-item-btn {
+            padding: 4px 10px;
+            background: rgba(201, 169, 97, 0.15);
+            border: 1px solid rgba(201, 169, 97, 0.3);
+            border-radius: 4px;
+            color: var(--accent-gold);
+            font-size: 0.75em;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .add-item-btn:hover {
+            background: rgba(201, 169, 97, 0.25);
+            border-color: var(--accent-gold);
+        }
+
+        .evidence-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .empty-evidence {
+            padding: 10px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.75em;
+            font-style: italic;
+        }
+
+        .evidence-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 8px;
+            padding: 8px 10px;
+            background: rgba(28, 25, 22, 0.5);
+            border: 1px solid var(--glass-border);
+            border-radius: 4px;
+        }
+
+        .evidence-text {
+            flex: 1;
+            font-size: 0.8125em;
+            color: var(--text-light);
+            line-height: 1.4;
+        }
+
+        .evidence-remove-btn {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 4px;
+            color: #ef4444;
+            font-size: 1em;
+            font-weight: 700;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .evidence-remove-btn:hover {
+            background: rgba(239, 68, 68, 0.35);
+            border-color: #ef4444;
+        }
+
+        /* Transition Editor Modal Specific */
+        .transition-looks-display {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+        }
+
+        .transition-look-box {
+            flex: 1;
+        }
+
+        .read-only-display {
+            padding: 10px 12px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-light);
+            font-size: 0.875em;
+            font-weight: 600;
+        }
+
+        .transition-arrow {
+            font-size: 1.5em;
+            color: var(--accent-gold);
+            font-weight: 700;
+        }
+
+        .field-hint {
+            margin-top: 6px;
+            font-size: 0.75em;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        /* Look State Timeline Styles */
+        .look-state-timeline {
+            padding: 20px 0;
+        }
+
+        .timeline-title {
+            font-size: 0.875em;
+            font-weight: 700;
+            color: var(--accent-gold);
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+            padding-left: 4px;
+        }
+
+        .manage-looks-btn {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, rgba(201, 169, 97, 0.15), rgba(184, 150, 81, 0.15));
+            border: 1px solid rgba(201, 169, 97, 0.4);
+            border-radius: 8px;
+            color: var(--accent-gold);
+            font-size: 0.875em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .manage-looks-btn:hover {
+            background: linear-gradient(135deg, rgba(201, 169, 97, 0.25), rgba(184, 150, 81, 0.25));
+            border-color: var(--accent-gold);
+            transform: translateY(-1px);
+        }
+
+        /* Look State Timeline Card */
+        .look-state-timeline-card {
+            background: rgba(28, 25, 22, 0.4);
+            border: 1px solid var(--glass-border);
+            border-left: 3px solid rgba(201, 169, 97, 0.6);
+            border-radius: 8px;
+            margin-bottom: 16px;
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+
+        .look-state-timeline-card:hover {
+            border-left-color: var(--accent-gold);
+            background: rgba(28, 25, 22, 0.6);
+        }
+
+        .look-card-header {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .look-card-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .look-name {
+            font-size: 1em;
+            font-weight: 700;
+            color: var(--text-light);
+        }
+
+        .complexity-badge {
+            padding: 4px 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .look-card-body {
+            padding: 14px 16px;
+        }
+
+        .look-info-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-size: 0.8125em;
+        }
+
+        .look-info-row.complexity-warning {
+            color: var(--accent-gold);
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: var(--text-muted);
+            min-width: 90px;
+        }
+
+        .info-value {
+            color: var(--text-light);
+        }
+
+        .appearance-preview {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--glass-border);
+        }
+
+        .preview-line {
+            padding: 4px 0;
+            font-size: 0.75em;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        .look-card-actions {
+            display: flex;
+            gap: 8px;
+            padding: 12px 16px;
+            border-top: 1px solid var(--glass-border);
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .look-card-btn {
+            flex: 1;
+            padding: 8px 14px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-light);
+            font-size: 0.8125em;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .look-card-btn:hover {
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+        }
+
+        .look-card-btn.primary {
+            background: linear-gradient(135deg, rgba(201, 169, 97, 0.2), rgba(184, 150, 81, 0.2));
+            border-color: rgba(201, 169, 97, 0.4);
+            color: var(--accent-gold);
+        }
+
+        .look-card-btn.primary:hover {
+            background: linear-gradient(135deg, rgba(201, 169, 97, 0.3), rgba(184, 150, 81, 0.3));
+            border-color: var(--accent-gold);
+        }
+
+        .look-expanded-details {
+            padding: 16px;
+            background: rgba(0, 0, 0, 0.3);
+            border-top: 1px solid var(--glass-border);
+        }
+
+        .detail-field {
+            margin-bottom: 10px;
+            font-size: 0.8125em;
+            color: var(--text-light);
+            line-height: 1.5;
+        }
+
+        .detail-field strong {
+            color: var(--accent-gold);
+        }
+
+        /* Transition Card */
+        .transition-card {
+            background: rgba(102, 126, 234, 0.08);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            border-radius: 8px;
+            padding: 14px 16px;
+            margin-bottom: 16px;
+            position: relative;
+        }
+
+        .transition-card.undefined {
+            background: rgba(239, 68, 68, 0.08);
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+
+        .transition-card-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .transition-icon {
+            font-size: 1.2em;
+        }
+
+        .transition-scene-label {
+            font-size: 0.75em;
+            font-weight: 700;
+            color: var(--accent-blue);
+            letter-spacing: 0.5px;
+        }
+
+        .transition-card.undefined .transition-scene-label {
+            color: #ef4444;
+        }
+
+        .transition-event {
+            font-size: 0.875em;
+            font-weight: 600;
+            color: var(--text-light);
+            margin-bottom: 8px;
+        }
+
+        .transition-quote {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-left: 2px solid var(--accent-blue);
+            border-radius: 4px;
+            margin-bottom: 8px;
+        }
+
+        .quote-icon {
+            font-size: 0.875em;
+            color: var(--accent-blue);
+        }
+
+        .transition-quote {
+            font-size: 0.8125em;
+            color: var(--text-muted);
+            font-style: italic;
+            line-height: 1.4;
+        }
+
+        .transition-changes {
+            margin: 10px 0;
+        }
+
+        .change-item {
+            padding: 6px 10px;
+            margin-bottom: 4px;
+            background: rgba(0, 0, 0, 0.2);
+            border-left: 2px solid var(--accent-blue);
+            border-radius: 4px;
+            font-size: 0.75em;
+            color: var(--text-light);
+        }
+
+        .change-more {
+            padding: 4px 10px;
+            font-size: 0.75em;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        .edit-transition-mini-btn {
+            padding: 6px 12px;
+            background: rgba(102, 126, 234, 0.15);
+            border: 1px solid rgba(102, 126, 234, 0.4);
+            border-radius: 6px;
+            color: var(--accent-blue);
+            font-size: 0.75em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .edit-transition-mini-btn:hover {
+            background: rgba(102, 126, 234, 0.25);
+            border-color: var(--accent-blue);
+        }
+
+        /* No Looks Fallback */
+        .no-looks-message {
+            padding: 20px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.875em;
+        }
+
+        .story-day-card-simple {
+            background: rgba(28, 25, 22, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 14px;
+            margin-bottom: 12px;
+        }
+
+        .story-day-card-simple .day-label {
+            font-size: 0.875em;
+            font-weight: 600;
+            color: var(--accent-gold);
+            margin-bottom: 8px;
+        }
+
+        .story-day-card-simple .scene-count {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+
+        /* Look Detail Modal Styles */
+        .look-detail-header {
+            margin-bottom: 24px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid var(--glass-border);
+        }
+
+        .look-detail-name {
+            font-size: 1.5em;
+            font-weight: 700;
+            color: var(--accent-gold);
+            margin-bottom: 12px;
+        }
+
+        .look-detail-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .detail-meta-item {
+            display: flex;
+            gap: 8px;
+            font-size: 0.875em;
+        }
+
+        .meta-label {
+            font-weight: 600;
+            color: var(--text-muted);
+            min-width: 100px;
+        }
+
+        .meta-value {
+            color: var(--text-light);
+        }
+
+        .detail-section {
+            margin-bottom: 24px;
+        }
+
+        .detail-section-title {
+            font-size: 0.8125em;
+            font-weight: 700;
+            color: var(--accent-gold);
+            letter-spacing: 1px;
+            margin-bottom: 14px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .detail-section-content {
+            font-size: 0.875em;
+            color: var(--text-light);
+            line-height: 1.6;
+        }
+
+        .appearance-detail-field {
+            margin-bottom: 14px;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border-left: 2px solid rgba(201, 169, 97, 0.5);
+            border-radius: 4px;
+        }
+
+        .appearance-detail-field strong {
+            display: block;
+            color: var(--accent-gold);
+            margin-bottom: 6px;
+            font-size: 0.875em;
+        }
+
+        .appearance-detail-field .field-content {
+            font-size: 0.875em;
+            color: var(--text-light);
+            line-height: 1.6;
+        }
+
+        .evidence-group {
+            margin-bottom: 16px;
+        }
+
+        .evidence-group-label {
+            font-size: 0.875em;
+            font-weight: 600;
+            color: var(--text-light);
+            margin-bottom: 8px;
+        }
+
+        .evidence-ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .evidence-ul li {
+            padding: 8px 12px;
+            margin-bottom: 6px;
+            background: rgba(0, 0, 0, 0.2);
+            border-left: 2px solid var(--accent-blue);
+            border-radius: 4px;
+            font-size: 0.8125em;
+            color: var(--text-light);
+            line-height: 1.5;
+        }
+
+        .no-evidence {
+            padding: 12px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.875em;
+            font-style: italic;
+        }
+
+        .scenes-with-look {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .scene-detail-item {
+            padding: 10px 12px;
+            background: rgba(28, 25, 22, 0.4);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            gap: 8px;
+        }
+
+        .scene-detail-item:hover {
+            background: rgba(28, 25, 22, 0.6);
+            border-color: var(--accent-gold);
+        }
+
+        .scene-detail-number {
+            font-weight: 600;
+            color: var(--accent-gold);
+            font-size: 0.8125em;
+            white-space: nowrap;
+        }
+
+        .scene-detail-heading {
+            color: var(--text-light);
+            font-size: 0.8125em;
+        }
+
         /* Import Modal */
         .import-modal .modal-content {
             max-width: 900px;
@@ -4052,12 +5756,391 @@
 
             <div class="modal-actions">
                 <button class="print-lookbook-btn" onclick="printLookbook()">📄 Print Lookbook</button>
+                <button class="modal-btn" onclick="openManageLooks(currentCastMember)">📊 Manage Look States</button>
                 <button class="modal-btn" onclick="closeCastProfile()">Close</button>
                 <button class="modal-btn primary" onclick="saveCastProfile()">💾 Save All</button>
             </div>
         </div>
     </div>
-    
+
+    <!-- Manage Looks Modal -->
+    <div class="modal" id="manageLooksModal">
+        <div class="modal-content" style="max-width: 800px; max-height: 90vh; display: flex; flex-direction: column;">
+            <div class="modal-header">
+                <h3 id="manageLooksTitle">Look States - [Character Name]</h3>
+                <button class="modal-close" onclick="closeManageLooks()">×</button>
+            </div>
+
+            <div style="flex: 1; overflow-y: auto; padding: 20px;">
+                <div class="looks-list" id="looksList">
+                    <!-- Look states will be populated here -->
+                    <div class="empty-state-small">
+                        <div class="empty-icon-small">👔</div>
+                        <div class="empty-text-small">No look states defined yet. Click "+ Add Look State" to create one.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="modal-btn primary" onclick="addNewLook()">+ Add Look State</button>
+                <button class="modal-btn secondary" onclick="openSuggestLooks(currentLookCharacter)">🔮 Auto-Suggest from Scene Data</button>
+                <button class="modal-btn" onclick="closeManageLooks()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Look State Modal -->
+    <div class="modal" id="editLookModal">
+        <div class="modal-content" style="max-width: 900px; max-height: 90vh; display: flex; flex-direction: column;">
+            <div class="modal-header">
+                <h3 id="editLookTitle">Edit Look State</h3>
+                <button class="modal-close" onclick="closeEditLook()">×</button>
+            </div>
+
+            <div style="flex: 1; overflow-y: auto; padding: 20px;">
+                <!-- Look Name -->
+                <div class="modal-section">
+                    <label class="modal-label">Look Name</label>
+                    <input type="text" class="modal-input" id="lookName" placeholder="e.g., Clean Professional, Post-Fight Injured, Casual Weekend">
+                </div>
+
+                <!-- Scene Selection -->
+                <div class="modal-section">
+                    <label class="modal-label">Scenes (select all that apply)</label>
+                    <div class="scene-checkboxes" id="sceneCheckboxes">
+                        <!-- Populated dynamically -->
+                    </div>
+                    <div class="selected-count" id="selectedScenesCount">0 scenes selected</div>
+                </div>
+
+                <!-- Story Time -->
+                <div class="modal-section">
+                    <label class="modal-label">Story Time / Timeline Context</label>
+                    <input type="text" class="modal-input" id="lookStoryTime" placeholder="e.g., Day 1 - Morning to Afternoon, Week 2, 5 years later">
+                </div>
+
+                <!-- Appearance Fields -->
+                <div class="modal-section">
+                    <label class="modal-label">Appearance Details</label>
+
+                    <div class="appearance-field">
+                        <label class="field-sublabel">💇 Hair</label>
+                        <textarea class="modal-textarea" id="lookHair" rows="2" placeholder="Hairstyle, color, condition, changes..."></textarea>
+                    </div>
+
+                    <div class="appearance-field">
+                        <label class="field-sublabel">💄 Makeup</label>
+                        <textarea class="modal-textarea" id="lookMakeup" rows="2" placeholder="Makeup look, style, specific details..."></textarea>
+                    </div>
+
+                    <div class="appearance-field">
+                        <label class="field-sublabel">🩸 SFX Makeup</label>
+                        <textarea class="modal-textarea" id="lookSfx" rows="2" placeholder="Injuries, wounds, bruises, prosthetics..."></textarea>
+                    </div>
+
+                    <div class="appearance-field">
+                        <label class="field-sublabel">👔 Wardrobe</label>
+                        <textarea class="modal-textarea" id="lookWardrobe" rows="2" placeholder="Costume description, accessories, condition..."></textarea>
+                    </div>
+
+                    <div class="appearance-field">
+                        <label class="field-sublabel">🏃 Physical State</label>
+                        <textarea class="modal-textarea" id="lookPhysicalState" rows="2" placeholder="Energy level, posture, movement, overall condition..."></textarea>
+                    </div>
+                </div>
+
+                <!-- Script Evidence -->
+                <div class="modal-section">
+                    <label class="modal-label">Script Evidence</label>
+
+                    <div class="evidence-subsection">
+                        <div class="subsection-header">
+                            <span class="subsection-label">Direct Quotes</span>
+                            <button class="add-item-btn" onclick="addScriptQuote()">+ Add Quote</button>
+                        </div>
+                        <div class="evidence-list" id="scriptQuotesList">
+                            <div class="empty-evidence">No quotes added yet</div>
+                        </div>
+                    </div>
+
+                    <div class="evidence-subsection">
+                        <div class="subsection-header">
+                            <span class="subsection-label">Implications</span>
+                            <button class="add-item-btn" onclick="addImplication()">+ Add Implication</button>
+                        </div>
+                        <div class="evidence-list" id="implicationsList">
+                            <div class="empty-evidence">No implications added yet</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Complexity -->
+                <div class="modal-section">
+                    <label class="modal-label">Complexity Level</label>
+                    <select class="modal-select" id="lookComplexity">
+                        <option value="low">🟢 Low - Simple, easy to replicate</option>
+                        <option value="medium">🟡 Medium - Moderate detail and effort</option>
+                        <option value="high">🔴 High - Complex, requires significant time/skill</option>
+                    </select>
+                </div>
+
+                <!-- Story Context -->
+                <div class="modal-section">
+                    <label class="modal-label">Story Context / Notes</label>
+                    <textarea class="modal-textarea" id="lookStoryContext" rows="3" placeholder="Additional context about this look, why it matters, what happened before/after..."></textarea>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="modal-btn" onclick="closeEditLook()">Cancel</button>
+                <button class="modal-btn primary" onclick="saveLookState()">💾 Save Look State</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Look Detail Modal -->
+    <div class="modal" id="lookDetailModal">
+        <div class="modal-content" style="max-width: 800px; max-height: 90vh; display: flex; flex-direction: column;">
+            <div class="modal-header">
+                <h3 id="lookDetailTitle">Look Details</h3>
+                <button class="modal-close" onclick="closeLookDetail()">×</button>
+            </div>
+
+            <div style="flex: 1; overflow-y: auto; padding: 20px;">
+                <!-- Look Header Info -->
+                <div class="look-detail-header">
+                    <h2 class="look-detail-name" id="lookDetailName">Look Name</h2>
+                    <div class="look-detail-meta">
+                        <div class="detail-meta-item">
+                            <span class="meta-label">Scenes:</span>
+                            <span class="meta-value" id="lookDetailScenes">1, 2, 3, 4, 5 (5 scenes)</span>
+                        </div>
+                        <div class="detail-meta-item">
+                            <span class="meta-label">Story Time:</span>
+                            <span class="meta-value" id="lookDetailStoryTime">Day 1 - Morning to Afternoon</span>
+                        </div>
+                        <div class="detail-meta-item">
+                            <span class="meta-label">Complexity:</span>
+                            <span class="meta-value" id="lookDetailComplexity">🟢 LOW</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Appearance Section -->
+                <div class="detail-section">
+                    <div class="detail-section-title">━━━ APPEARANCE ━━━</div>
+                    <div id="lookDetailAppearance">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+
+                <!-- Script Evidence Section -->
+                <div class="detail-section" id="lookDetailEvidenceSection">
+                    <div class="detail-section-title">━━━ SCRIPT EVIDENCE ━━━</div>
+
+                    <div class="evidence-group" id="lookDetailQuotesGroup" style="display: none;">
+                        <div class="evidence-group-label">Script Quotes:</div>
+                        <ul class="evidence-ul" id="lookDetailQuotes">
+                            <!-- Populated dynamically -->
+                        </ul>
+                    </div>
+
+                    <div class="evidence-group" id="lookDetailImplicationsGroup" style="display: none;">
+                        <div class="evidence-group-label">Implications:</div>
+                        <ul class="evidence-ul" id="lookDetailImplications">
+                            <!-- Populated dynamically -->
+                        </ul>
+                    </div>
+
+                    <div class="no-evidence" id="lookDetailNoEvidence">
+                        <em>No script evidence recorded</em>
+                    </div>
+                </div>
+
+                <!-- Story Context Section -->
+                <div class="detail-section" id="lookDetailContextSection">
+                    <div class="detail-section-title">━━━ STORY CONTEXT ━━━</div>
+                    <div class="detail-section-content" id="lookDetailContext">
+                        <em>No story context provided</em>
+                    </div>
+                </div>
+
+                <!-- Scenes List Section -->
+                <div class="detail-section">
+                    <div class="detail-section-title">━━━ SCENES WITH THIS LOOK ━━━</div>
+                    <div class="scenes-with-look" id="lookDetailScenesList">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="modal-btn primary" onclick="editLookFromDetail()">Edit This Look</button>
+                <button class="modal-btn" onclick="closeLookDetail()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Suggest Looks from Scene Data Modal -->
+    <div class="modal" id="suggestLooksModal">
+        <div class="modal-content" style="max-width: 1000px; max-height: 90vh; display: flex; flex-direction: column;">
+            <div class="modal-header">
+                <h3 id="suggestLooksTitle">🔮 Auto-Suggested Look States</h3>
+                <button class="modal-close" onclick="closeSuggestLooks()">×</button>
+            </div>
+
+            <div style="flex: 1; overflow-y: auto; padding: 20px;">
+                <div class="suggest-info-box">
+                    <strong>How this works:</strong> This tool analyzes your existing scene-by-scene appearance data
+                    and groups consecutive scenes with similar descriptions. Groups of 3+ scenes with consistent
+                    appearance are suggested as look states.
+                </div>
+
+                <div id="suggestionsList">
+                    <!-- Suggestions will be populated here -->
+                </div>
+
+                <div id="noSuggestionsMessage" style="display: none;">
+                    <div class="empty-state-small">
+                        <div class="empty-icon-small">🤷</div>
+                        <div class="empty-text-small">
+                            No look states could be suggested from existing data. Try filling in more scene-by-scene
+                            appearance details, or create look states manually.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="modal-btn primary" onclick="createLookStatesFromSuggestions()">✓ Create Selected Look States</button>
+                <button class="modal-btn" onclick="closeSuggestLooks()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transition Editor Modal -->
+    <div class="modal" id="transitionEditorModal">
+        <div class="modal-content" style="max-width: 800px; max-height: 90vh; display: flex; flex-direction: column;">
+            <div class="modal-header">
+                <h3 id="transitionEditorTitle">Edit Look Transition</h3>
+                <button class="modal-close" onclick="closeTransitionEditor()">×</button>
+            </div>
+
+            <div style="flex: 1; overflow-y: auto; padding: 20px;">
+                <!-- From/To Look (Read-only) -->
+                <div class="modal-section">
+                    <div class="transition-looks-display">
+                        <div class="transition-look-box">
+                            <label class="modal-label">From Look</label>
+                            <div class="read-only-display" id="transitionFromLook">Look 1</div>
+                        </div>
+                        <div class="transition-arrow">→</div>
+                        <div class="transition-look-box">
+                            <label class="modal-label">To Look</label>
+                            <div class="read-only-display" id="transitionToLook">Look 2</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Transition Scene -->
+                <div class="modal-section">
+                    <label class="modal-label">Transition Scene</label>
+                    <select class="modal-select" id="transitionScene">
+                        <!-- Populated dynamically -->
+                    </select>
+                </div>
+
+                <!-- Script Event -->
+                <div class="modal-section">
+                    <label class="modal-label">Script Event</label>
+                    <input type="text" class="modal-input" id="transitionScriptEvent" placeholder="e.g., Caught in rainstorm, Fight scene, Changed clothes">
+                </div>
+
+                <!-- Script Quote -->
+                <div class="modal-section">
+                    <label class="modal-label">Script Quote</label>
+                    <textarea class="modal-textarea" id="transitionScriptQuote" rows="3" placeholder="Direct quote from script describing the event..."></textarea>
+                </div>
+
+                <!-- Visual Changes -->
+                <div class="modal-section">
+                    <label class="modal-label">Visual Changes</label>
+                    <div class="evidence-subsection">
+                        <div class="subsection-header">
+                            <span class="subsection-label">Describe specific changes</span>
+                            <button class="add-item-btn" onclick="addVisualChange()">+ Add Change</button>
+                        </div>
+                        <div class="evidence-list" id="visualChangesList">
+                            <div class="empty-evidence">No visual changes added yet</div>
+                        </div>
+                    </div>
+                    <div class="field-hint">Example: "Hair: neat bun → wet and tangled"</div>
+                </div>
+
+                <!-- Visibility -->
+                <div class="modal-section">
+                    <label class="modal-label">Visibility</label>
+                    <select class="modal-select" id="transitionVisibility">
+                        <option value="on-screen">👁️ On-Screen - Audience sees the change happen</option>
+                        <option value="off-screen">🚪 Off-Screen - Change happens between scenes</option>
+                        <option value="implied">💭 Implied - Suggested but not shown</option>
+                    </select>
+                </div>
+
+                <!-- Speed -->
+                <div class="modal-section">
+                    <label class="modal-label">Speed of Change</label>
+                    <select class="modal-select" id="transitionSpeed">
+                        <option value="instant">⚡ Instant - Happens in a moment</option>
+                        <option value="sudden">🔥 Sudden - Quick but visible</option>
+                        <option value="gradual">🕐 Gradual - Takes time across scenes</option>
+                    </select>
+                </div>
+
+                <!-- Story Significance -->
+                <div class="modal-section">
+                    <label class="modal-label">Story Significance</label>
+                    <textarea class="modal-textarea" id="transitionStorySignificance" rows="3" placeholder="What does this visual change represent? How does it reflect the character's journey?"></textarea>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="modal-btn" onclick="closeTransitionEditor()">Cancel</button>
+                <button class="modal-btn primary" onclick="saveTransition()">💾 Save Transition</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Validation Issues Modal -->
+    <div class="modal" id="validationModal">
+        <div class="modal-content" style="max-width: 900px; max-height: 90vh; display: flex; flex-direction: column;">
+            <div class="modal-header">
+                <h3>
+                    <span>Validation Issues - </span>
+                    <span id="validationCharacterName">Character Name</span>
+                    <span class="validation-count-badge" id="validationIssueCount">0</span>
+                </h3>
+                <button class="modal-close" onclick="closeValidation()">×</button>
+            </div>
+
+            <div style="flex: 1; overflow-y: auto; padding: 20px;">
+                <div class="validation-info-box">
+                    <strong>What this checks:</strong> This tool validates that look states and transitions are
+                    consistent with scene data. It catches missing look assignments, scene overlaps, gaps, and
+                    transition mismatches.
+                </div>
+
+                <div id="validationIssuesList">
+                    <!-- Issues will be populated here -->
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="modal-btn" onclick="closeValidation()">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Import Script Modal -->
     <div class="modal import-modal" id="importModal">
         <div class="modal-content">
@@ -4308,6 +6391,8 @@ This is it. Today's the day."></textarea>
         let sceneBreakdowns = {};
         let castProfiles = {};
         let characterStates = {}; // { sceneIndex: { characterName: { tags: [], notes: '' } } }
+        let characterLooks = {}; // { characterName: [{ id, lookName, scenes: [], storyTime, appearance: {}, scriptEvidence: {}, complexity, mustMatchScenes, storyContext }] }
+        let lookTransitions = []; // [{ id, character, fromLookId, toLookId, transitionScene, scriptEvent, scriptQuote, visualChanges: [], visibility, speed, storySignificance }]
         let continuityEvents = {}; // { characterName: [{ id, type, description, startScene, endScene, progression: [] }] }
         let sceneTimeline = {}; // { sceneIndex: { day: 1, time: "Morning", label: "Day 1 - Morning" } }
         let scriptText = '';
@@ -4550,6 +6635,8 @@ This is it. Today's the day."></textarea>
                 if (currentProject.sceneBreakdowns) sceneBreakdowns = currentProject.sceneBreakdowns;
                 if (currentProject.castProfiles) castProfiles = currentProject.castProfiles;
                 if (currentProject.characterStates) characterStates = currentProject.characterStates;
+                if (currentProject.characterLooks) characterLooks = currentProject.characterLooks;
+                if (currentProject.lookTransitions) lookTransitions = currentProject.lookTransitions;
                 if (currentProject.continuityEvents) continuityEvents = currentProject.continuityEvents;
                 if (currentProject.sceneTimeline) sceneTimeline = currentProject.sceneTimeline;
                 if (currentProject.scriptTags) scriptTags = currentProject.scriptTags;
@@ -5271,15 +7358,18 @@ This is it. Today's the day."></textarea>
 
         function renderCharacterTimeline(character) {
             const profile = castProfiles[character] || {};
-            const storyDays = getStoryDaysForCharacter(character);
-
-            // Calculate total scenes
-            const totalScenes = storyDays.reduce((sum, day) => sum + day.scenes.length, 0);
-
-            // Get continuity events for this character
+            const looks = characterLooks[character] || [];
             const events = continuityEvents[character] || [];
 
-            // Build HTML - Story Day Card Timeline
+            // Check if character has look states defined
+            const hasLooks = looks.length > 0;
+
+            // Run validation
+            const validationIssues = hasLooks ? validateCharacterContinuity(character) : [];
+            const hasErrors = validationIssues.filter(i => i.severity === 'error').length > 0;
+            const hasWarnings = validationIssues.filter(i => i.severity === 'warning').length > 0;
+
+            // Build HTML - Look State Timeline
             let html = `
                 <div class="character-timeline-view">
                     <!-- Header -->
@@ -5289,13 +7379,15 @@ This is it. Today's the day."></textarea>
                             <div class="character-base-info">${profile.baseDescription || '<em style="opacity: 0.6;">No description yet</em>'}</div>
                         </div>
                         <div class="timeline-stats">
+                            ${hasLooks ? `
+                                <div class="stat">
+                                    <span class="stat-value">${looks.length}</span>
+                                    <span class="stat-label">Look States</span>
+                                </div>
+                            ` : ''}
                             <div class="stat">
-                                <span class="stat-value">${storyDays.length}</span>
-                                <span class="stat-label">Story Days</span>
-                            </div>
-                            <div class="stat">
-                                <span class="stat-value">${totalScenes}</span>
-                                <span class="stat-label">Scenes</span>
+                                <span class="stat-value">${getTransitionsForCharacter(character).length}</span>
+                                <span class="stat-label">Transitions</span>
                             </div>
                             <div class="stat">
                                 <span class="stat-value">${events.length}</span>
@@ -5304,76 +7396,211 @@ This is it. Today's the day."></textarea>
                         </div>
                     </div>
 
-                    <!-- Timeline Controls -->
-                    <div class="timeline-controls">
-                        <button class="nav-btn" onclick="scrollToPreviousDay()">← Previous Day</button>
-                        <div class="view-mode-switcher">
-                            <button class="mode-btn active">Timeline</button>
+                    ${hasLooks && validationIssues.length > 0 ? `
+                        <!-- Validation Alert -->
+                        <div class="validation-alert ${hasErrors ? 'error' : 'warning'}">
+                            <div class="validation-alert-icon">${hasErrors ? '🔴' : '⚠️'}</div>
+                            <div class="validation-alert-content">
+                                <div class="validation-alert-title">
+                                    ${validationIssues.length} Issue${validationIssues.length !== 1 ? 's' : ''} Found
+                                </div>
+                                <div class="validation-alert-desc">
+                                    ${hasErrors ? `${validationIssues.filter(i => i.severity === 'error').length} error(s), ` : ''}
+                                    ${hasWarnings ? `${validationIssues.filter(i => i.severity === 'warning').length} warning(s)` : ''}
+                                </div>
+                            </div>
+                            <button class="view-issues-btn" onclick="showValidationIssues('${character}')">
+                                View Issues
+                            </button>
                         </div>
-                        <button class="nav-btn" onclick="scrollToNextDay()">Next Day →</button>
-                    </div>
+                    ` : hasLooks ? `
+                        <!-- Validation Success -->
+                        <div class="validation-alert success">
+                            <div class="validation-alert-icon">✓</div>
+                            <div class="validation-alert-content">
+                                <div class="validation-alert-title">No Issues</div>
+                                <div class="validation-alert-desc">Look states are consistent</div>
+                            </div>
+                        </div>
+                    ` : ''}
 
-                    <!-- Story Day Cards -->
-                    <div class="story-day-timeline">
+                    <!-- Manage Look States Button -->
+                    <div class="timeline-controls">
+                        <button class="manage-looks-btn" onclick="openManageLooks('${character}')">
+                            📊 Manage Look States
+                        </button>
+                        ${hasLooks ? `
+                            <button class="validate-btn" onclick="showValidationIssues('${character}')">
+                                🔍 Validate
+                            </button>
+                        ` : ''}
+                    </div>
             `;
 
-            storyDays.forEach(dayData => {
-                const aggregated = aggregateStoryDay(character, dayData);
-                const activeEvents = getActiveEventsForDay(character, dayData.label);
-                const hasImage = profile.storyDayImages?.[dayData.label];
+            if (hasLooks) {
+                // LOOK STATE TIMELINE
+                html += `<div class="look-state-timeline">`;
+                html += `<div class="timeline-title">CHARACTER JOURNEY</div>`;
+
+                // Sort looks chronologically
+                const sortedLooks = [...looks].sort((a, b) => {
+                    const firstSceneA = Math.min(...(a.scenes || [Infinity]));
+                    const firstSceneB = Math.min(...(b.scenes || [Infinity]));
+                    return firstSceneA - firstSceneB;
+                });
+
+                sortedLooks.forEach((look, index) => {
+                    const previousLook = index > 0 ? sortedLooks[index - 1] : null;
+
+                    // TRANSITION CARD (if not first look)
+                    if (previousLook) {
+                        const transition = findTransition(character, previousLook.id, look.id);
+                        if (transition) {
+                            html += `
+                                <div class="transition-card">
+                                    <div class="transition-card-header">
+                                        <span class="transition-icon">⚡</span>
+                                        <span class="transition-scene-label">TRANSITION in Scene ${transition.transitionScene}</span>
+                                    </div>
+                                    <div class="transition-event">${transition.scriptEvent || 'Transition event not defined'}</div>
+                                    ${transition.scriptQuote ? `
+                                        <div class="transition-quote">
+                                            <span class="quote-icon">📝</span>
+                                            "${transition.scriptQuote}"
+                                        </div>
+                                    ` : ''}
+                                    ${transition.visualChanges && transition.visualChanges.length > 0 ? `
+                                        <div class="transition-changes">
+                                            ${transition.visualChanges.slice(0, 3).map(change => `
+                                                <div class="change-item">${change}</div>
+                                            `).join('')}
+                                            ${transition.visualChanges.length > 3 ? `
+                                                <div class="change-more">+${transition.visualChanges.length - 3} more...</div>
+                                            ` : ''}
+                                        </div>
+                                    ` : ''}
+                                    <button class="edit-transition-mini-btn" onclick="openTransitionEditor('${character}', '${look.id}')">
+                                        Edit Transition
+                                    </button>
+                                </div>
+                            `;
+                        } else {
+                            // Show placeholder if transition not defined
+                            html += `
+                                <div class="transition-card undefined">
+                                    <div class="transition-card-header">
+                                        <span class="transition-icon">⚠️</span>
+                                        <span class="transition-scene-label">TRANSITION NOT DEFINED</span>
+                                    </div>
+                                    <button class="edit-transition-mini-btn" onclick="openTransitionEditor('${character}', '${look.id}')">
+                                        Define Transition
+                                    </button>
+                                </div>
+                            `;
+                        }
+                    }
+
+                    // LOOK STATE CARD
+                    const sceneNumbers = (look.scenes || []).sort((a, b) => a - b);
+                    const sceneRangeText = formatSceneRange(look.scenes);
+                    const complexityIcon = getComplexityIcon(look.complexity);
+
+                    // Build appearance preview
+                    const appearancePreviews = [];
+                    if (look.appearance?.hair) {
+                        const preview = look.appearance.hair.substring(0, 40);
+                        appearancePreviews.push(`💇 ${preview}${look.appearance.hair.length > 40 ? '...' : ''}`);
+                    }
+                    if (look.appearance?.makeup) {
+                        const preview = look.appearance.makeup.substring(0, 40);
+                        appearancePreviews.push(`💄 ${preview}${look.appearance.makeup.length > 40 ? '...' : ''}`);
+                    }
+                    if (look.appearance?.sfx) {
+                        const preview = look.appearance.sfx.substring(0, 40);
+                        appearancePreviews.push(`🩸 ${preview}${look.appearance.sfx.length > 40 ? '...' : ''}`);
+                    }
+                    if (look.appearance?.wardrobe) {
+                        const preview = look.appearance.wardrobe.substring(0, 40);
+                        appearancePreviews.push(`👔 ${preview}${look.appearance.wardrobe.length > 40 ? '...' : ''}`);
+                    }
+
+                    html += `
+                        <div class="look-state-timeline-card">
+                            <div class="look-card-header">
+                                <div class="look-card-title">
+                                    <span class="look-name">${look.lookName || 'Untitled Look'}</span>
+                                    <span class="complexity-badge">${complexityIcon} ${look.complexity?.toUpperCase() || 'LOW'}</span>
+                                </div>
+                            </div>
+
+                            <div class="look-card-body">
+                                <div class="look-info-row">
+                                    <span class="info-label">Scenes:</span>
+                                    <span class="info-value">${sceneRangeText} (${look.scenes?.length || 0} scenes)</span>
+                                </div>
+
+                                ${look.storyTime ? `
+                                    <div class="look-info-row">
+                                        <span class="info-label">Story Time:</span>
+                                        <span class="info-value">${look.storyTime}</span>
+                                    </div>
+                                ` : ''}
+
+                                ${look.mustMatchScenes ? `
+                                    <div class="look-info-row complexity-warning">
+                                        <span class="info-label">Complexity:</span>
+                                        <span class="info-value">${complexityIcon} ${look.complexity?.toUpperCase()} (${look.mustMatchScenes} scenes must match exactly)</span>
+                                    </div>
+                                ` : ''}
+
+                                ${appearancePreviews.length > 0 ? `
+                                    <div class="appearance-preview">
+                                        ${appearancePreviews.map(preview => `
+                                            <div class="preview-line">${preview}</div>
+                                        `).join('')}
+                                    </div>
+                                ` : ''}
+                            </div>
+
+                            <div class="look-card-actions">
+                                <button class="look-card-btn" onclick="expandLookDetails('${look.id}', this)">
+                                    View Details ▼
+                                </button>
+                                <button class="look-card-btn primary" onclick="editLook('${look.id}'); currentLookCharacter='${character}';">
+                                    Edit Look
+                                </button>
+                            </div>
+
+                            <div class="look-expanded-details" style="display: none;">
+                                ${look.appearance?.hair ? `<div class="detail-field"><strong>💇 Hair:</strong> ${look.appearance.hair}</div>` : ''}
+                                ${look.appearance?.makeup ? `<div class="detail-field"><strong>💄 Makeup:</strong> ${look.appearance.makeup}</div>` : ''}
+                                ${look.appearance?.sfx ? `<div class="detail-field"><strong>🩸 SFX:</strong> ${look.appearance.sfx}</div>` : ''}
+                                ${look.appearance?.wardrobe ? `<div class="detail-field"><strong>👔 Wardrobe:</strong> ${look.appearance.wardrobe}</div>` : ''}
+                                ${look.appearance?.physicalState ? `<div class="detail-field"><strong>🏃 Physical State:</strong> ${look.appearance.physicalState}</div>` : ''}
+                                ${look.storyContext ? `<div class="detail-field"><strong>Story Context:</strong> ${look.storyContext}</div>` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += `</div>`;
+
+            } else {
+                // FALLBACK: Show scene-by-scene if no looks defined
+                const storyDays = getStoryDaysForCharacter(character);
 
                 html += `
-                    <div class="story-day-card" data-day-label="${dayData.label}">
-                        <div class="day-card-header">
+                    <div class="no-looks-message">
+                        <p>No look states defined. Showing scene-by-scene breakdown:</p>
+                    </div>
+                    <div class="story-day-timeline">
+                `;
+
+                storyDays.forEach(dayData => {
+                    html += `
+                        <div class="story-day-card-simple" data-day-label="${dayData.label}">
                             <div class="day-label">${dayData.label}</div>
                             <div class="scene-count">${dayData.scenes.length} scene${dayData.scenes.length !== 1 ? 's' : ''}</div>
-                        </div>
-
-                        <div class="reference-image-zone">
-                            ${hasImage ? `
-                                <img src="${profile.storyDayImages[dayData.label]}" class="day-reference-image" />
-                                <div class="image-overlay">
-                                    <button class="change-image-btn">Change Photo</button>
-                                </div>
-                            ` : `
-                                <div class="image-placeholder">
-                                    <span class="upload-icon">📷</span>
-                                    <span class="upload-text">+ Upload Reference</span>
-                                </div>
-                            `}
-                        </div>
-
-                        <div class="look-summary">
-                            <div class="look-field ${aggregated.hair ? '' : 'empty'}">
-                                <span class="field-icon">💇</span>
-                                <span class="field-text">${aggregated.hair || '—'}</span>
-                            </div>
-                            <div class="look-field ${aggregated.makeup ? '' : 'empty'}">
-                                <span class="field-icon">💄</span>
-                                <span class="field-text">${aggregated.makeup || '—'}</span>
-                            </div>
-                            <div class="look-field ${aggregated.sfx ? 'has-event' : 'empty'}">
-                                <span class="field-icon">🩸</span>
-                                <span class="field-text">${aggregated.sfx || '—'} ${aggregated.sfx && activeEvents.length > 0 ? '<span class="event-indicator">⚡</span>' : ''}</span>
-                            </div>
-                            <div class="look-field ${aggregated.wardrobe ? '' : 'empty'}">
-                                <span class="field-icon">👔</span>
-                                <span class="field-text">${aggregated.wardrobe || '—'}</span>
-                            </div>
-                        </div>
-
-                        ${activeEvents.length > 0 ? `
-                            <div class="active-events-badge">
-                                <span class="event-icon">⚡</span>
-                                <span class="event-text">${activeEvents.length} active event${activeEvents.length !== 1 ? 's' : ''}</span>
-                            </div>
-                        ` : ''}
-
-                        <button class="expand-day-btn" onclick="toggleDayExpansion(this)">
-                            View Scenes ▼
-                        </button>
-
-                        <div class="expanded-scene-list" style="display: none;">
                             ${dayData.scenes.map(({ scene, index }) => {
                                 const state = characterStates[index]?.[character] || {};
                                 const lookDetails = [];
@@ -5395,16 +7622,184 @@ This is it. Today's the day."></textarea>
                                 `;
                             }).join('')}
                         </div>
-                    </div>
-                `;
-            });
+                    `;
+                });
 
-            html += `
-                    </div>
-                </div>
-            `;
+                html += `</div>`;
+            }
+
+            html += `</div>`;
 
             return html;
+        }
+
+        function expandLookDetails(lookId, button) {
+            // Get current character from the timeline
+            const characterNameEl = document.querySelector('.character-name-title');
+            const character = characterNameEl ? characterNameEl.textContent : currentLookCharacter;
+
+            // Open the detail modal instead of inline expansion
+            openLookDetail(character, lookId);
+        }
+
+        // ========== LOOK DETAIL MODAL ==========
+
+        let currentDetailLookId = null;
+        let currentDetailCharacter = null;
+
+        function openLookDetail(character, lookId) {
+            currentDetailCharacter = character;
+            currentDetailLookId = lookId;
+
+            // Find the look
+            const looks = characterLooks[character] || [];
+            const look = looks.find(l => l.id === lookId);
+
+            if (!look) {
+                alert('Look not found');
+                return;
+            }
+
+            // Populate header
+            document.getElementById('lookDetailName').textContent = look.lookName || 'Untitled Look';
+
+            // Scenes
+            const sceneNumbers = (look.scenes || []).sort((a, b) => a - b);
+            const sceneRangeText = formatSceneRange(look.scenes);
+            document.getElementById('lookDetailScenes').textContent = `${sceneRangeText} (${sceneNumbers.length} scenes)`;
+
+            // Story Time
+            document.getElementById('lookDetailStoryTime').textContent = look.storyTime || 'Not specified';
+
+            // Complexity
+            const complexityIcon = getComplexityIcon(look.complexity);
+            const complexityText = look.complexity?.toUpperCase() || 'LOW';
+            document.getElementById('lookDetailComplexity').textContent = `${complexityIcon} ${complexityText}`;
+
+            // Appearance
+            const appearanceContainer = document.getElementById('lookDetailAppearance');
+            let appearanceHTML = '';
+
+            if (look.appearance?.hair) {
+                appearanceHTML += `
+                    <div class="appearance-detail-field">
+                        <strong>💇 Hair:</strong>
+                        <div class="field-content">${look.appearance.hair}</div>
+                    </div>
+                `;
+            }
+
+            if (look.appearance?.makeup) {
+                appearanceHTML += `
+                    <div class="appearance-detail-field">
+                        <strong>💄 Makeup:</strong>
+                        <div class="field-content">${look.appearance.makeup}</div>
+                    </div>
+                `;
+            }
+
+            if (look.appearance?.sfx) {
+                appearanceHTML += `
+                    <div class="appearance-detail-field">
+                        <strong>🩸 SFX Makeup:</strong>
+                        <div class="field-content">${look.appearance.sfx}</div>
+                    </div>
+                `;
+            }
+
+            if (look.appearance?.wardrobe) {
+                appearanceHTML += `
+                    <div class="appearance-detail-field">
+                        <strong>👔 Wardrobe:</strong>
+                        <div class="field-content">${look.appearance.wardrobe}</div>
+                    </div>
+                `;
+            }
+
+            if (look.appearance?.physicalState) {
+                appearanceHTML += `
+                    <div class="appearance-detail-field">
+                        <strong>🏃 Physical State:</strong>
+                        <div class="field-content">${look.appearance.physicalState}</div>
+                    </div>
+                `;
+            }
+
+            if (!appearanceHTML) {
+                appearanceHTML = '<em style="color: var(--text-muted);">No appearance details defined</em>';
+            }
+
+            appearanceContainer.innerHTML = appearanceHTML;
+
+            // Script Evidence
+            const hasQuotes = look.scriptEvidence?.quotes && look.scriptEvidence.quotes.length > 0;
+            const hasImplications = look.scriptEvidence?.implications && look.scriptEvidence.implications.length > 0;
+
+            if (hasQuotes) {
+                const quotesContainer = document.getElementById('lookDetailQuotes');
+                quotesContainer.innerHTML = look.scriptEvidence.quotes.map(quote => `<li>"${quote}"</li>`).join('');
+                document.getElementById('lookDetailQuotesGroup').style.display = 'block';
+            } else {
+                document.getElementById('lookDetailQuotesGroup').style.display = 'none';
+            }
+
+            if (hasImplications) {
+                const implicationsContainer = document.getElementById('lookDetailImplications');
+                implicationsContainer.innerHTML = look.scriptEvidence.implications.map(impl => `<li>${impl}</li>`).join('');
+                document.getElementById('lookDetailImplicationsGroup').style.display = 'block';
+            } else {
+                document.getElementById('lookDetailImplicationsGroup').style.display = 'none';
+            }
+
+            document.getElementById('lookDetailNoEvidence').style.display = (hasQuotes || hasImplications) ? 'none' : 'block';
+
+            // Story Context
+            if (look.storyContext && look.storyContext.trim()) {
+                document.getElementById('lookDetailContext').innerHTML = look.storyContext;
+            } else {
+                document.getElementById('lookDetailContext').innerHTML = '<em>No story context provided</em>';
+            }
+
+            // Scenes List
+            const scenesListContainer = document.getElementById('lookDetailScenesList');
+            let scenesHTML = '';
+
+            sceneNumbers.forEach(sceneNum => {
+                const sceneIndex = scenes.findIndex(s => s.number === sceneNum);
+                if (sceneIndex !== -1) {
+                    const scene = scenes[sceneIndex];
+                    scenesHTML += `
+                        <div class="scene-detail-item" onclick="jumpToSceneFromTimeline(${sceneIndex})">
+                            <span class="scene-detail-number">Scene ${scene.number}:</span>
+                            <span class="scene-detail-heading">${scene.heading}</span>
+                        </div>
+                    `;
+                }
+            });
+
+            scenesListContainer.innerHTML = scenesHTML;
+
+            // Show modal
+            document.getElementById('lookDetailModal').classList.add('active');
+        }
+
+        function closeLookDetail() {
+            document.getElementById('lookDetailModal').classList.remove('active');
+            currentDetailLookId = null;
+            currentDetailCharacter = null;
+        }
+
+        function editLookFromDetail() {
+            if (!currentDetailCharacter || !currentDetailLookId) return;
+
+            // Close detail modal
+            closeLookDetail();
+
+            // Set current character for edit modal
+            currentLookCharacter = currentDetailCharacter;
+
+            // Open edit modal
+            openEditLook(currentDetailCharacter, currentDetailLookId);
         }
 
         function jumpToSceneFromTimeline(sceneIndex) {
@@ -6453,6 +8848,220 @@ OUTPUT FORMAT (JSON only):
         }
         
         // Render breakdown panel
+        // Helper function to get look state for a character in a scene
+        function getLookStateForScene(character, sceneIndex) {
+            const looks = characterLooks[character] || [];
+            const sceneNumber = scenes[sceneIndex]?.number;
+            return looks.find(look => look.scenes && look.scenes.includes(sceneNumber));
+        }
+
+        // Transition detection helper functions
+        function isTransitionScene(character, sceneIndex) {
+            const sceneNumber = scenes[sceneIndex]?.number;
+            return lookTransitions.some(t =>
+                t.character === character &&
+                t.transitionScene === sceneNumber
+            );
+        }
+
+        function getTransitionForScene(character, sceneIndex) {
+            const sceneNumber = scenes[sceneIndex]?.number;
+            return lookTransitions.find(t =>
+                t.character === character &&
+                t.transitionScene === sceneNumber
+            );
+        }
+
+        function getSceneTransitions(sceneIndex) {
+            const sceneNumber = scenes[sceneIndex]?.number;
+            return lookTransitions.filter(t => t.transitionScene === sceneNumber);
+        }
+
+        function openTransitionDetail(transitionId) {
+            const transition = lookTransitions.find(t => t.id === transitionId);
+            if (!transition) return;
+
+            // Find the from/to looks
+            const characterLooksList = characterLooks[transition.character] || [];
+            const fromLook = characterLooksList.find(l => l.id === transition.fromLookId);
+            const toLook = characterLooksList.find(l => l.id === transition.toLookId);
+
+            // Open the transition editor in view mode
+            openTransitionEditor(transition.character, transition.id);
+        }
+
+        // Look State Migration & Suggestion System
+        // Calculate similarity between two strings (Levenshtein distance-based)
+        function calculateStringSimilarity(str1, str2) {
+            if (!str1 && !str2) return 1.0; // Both empty = identical
+            if (!str1 || !str2) return 0.0; // One empty = different
+
+            const s1 = str1.toLowerCase().trim();
+            const s2 = str2.toLowerCase().trim();
+
+            if (s1 === s2) return 1.0;
+
+            // Check if one is substring of another
+            if (s1.includes(s2) || s2.includes(s1)) {
+                const shorter = Math.min(s1.length, s2.length);
+                const longer = Math.max(s1.length, s2.length);
+                return shorter / longer;
+            }
+
+            // Levenshtein distance
+            const matrix = [];
+            for (let i = 0; i <= s2.length; i++) {
+                matrix[i] = [i];
+            }
+            for (let j = 0; j <= s1.length; j++) {
+                matrix[0][j] = j;
+            }
+            for (let i = 1; i <= s2.length; i++) {
+                for (let j = 1; j <= s1.length; j++) {
+                    if (s2.charAt(i - 1) === s1.charAt(j - 1)) {
+                        matrix[i][j] = matrix[i - 1][j - 1];
+                    } else {
+                        matrix[i][j] = Math.min(
+                            matrix[i - 1][j - 1] + 1,
+                            matrix[i][j - 1] + 1,
+                            matrix[i - 1][j] + 1
+                        );
+                    }
+                }
+            }
+
+            const distance = matrix[s2.length][s1.length];
+            const maxLength = Math.max(s1.length, s2.length);
+            return 1 - (distance / maxLength);
+        }
+
+        // Calculate similarity between two appearance objects
+        function calculateAppearanceSimilarity(app1, app2) {
+            const fields = ['hair', 'makeup', 'sfx', 'wardrobe'];
+            let totalSimilarity = 0;
+            let fieldsCompared = 0;
+
+            fields.forEach(field => {
+                const val1 = app1[field] || '';
+                const val2 = app2[field] || '';
+
+                // Only compare if at least one has data
+                if (val1 || val2) {
+                    totalSimilarity += calculateStringSimilarity(val1, val2);
+                    fieldsCompared++;
+                }
+            });
+
+            return fieldsCompared > 0 ? totalSimilarity / fieldsCompared : 0;
+        }
+
+        // Suggest look states from existing scene data
+        function suggestLookStatesFromScenes(character) {
+            const suggestions = [];
+            const sceneData = [];
+
+            // Collect all scenes where character appears
+            scenes.forEach((scene, sceneIndex) => {
+                const state = characterStates[sceneIndex]?.[character];
+                if (state) {
+                    sceneData.push({
+                        sceneIndex,
+                        sceneNumber: scene.number,
+                        appearance: {
+                            hair: state.hair || '',
+                            makeup: state.makeup || '',
+                            sfx: state.sfx || '',
+                            wardrobe: state.wardrobe || ''
+                        }
+                    });
+                }
+            });
+
+            if (sceneData.length === 0) return suggestions;
+
+            // Group consecutive scenes with similar appearance
+            let currentGroup = [sceneData[0]];
+            let groupIndex = 1;
+
+            for (let i = 1; i < sceneData.length; i++) {
+                const prevAppearance = sceneData[i - 1].appearance;
+                const currAppearance = sceneData[i].appearance;
+
+                const similarity = calculateAppearanceSimilarity(prevAppearance, currAppearance);
+
+                // If similarity is high (>0.8), add to current group
+                if (similarity > 0.8) {
+                    currentGroup.push(sceneData[i]);
+                } else {
+                    // Similarity is low - this is a transition
+                    // Save current group if it has 3+ scenes
+                    if (currentGroup.length >= 3) {
+                        suggestions.push(createLookSuggestion(character, currentGroup, groupIndex++));
+                    }
+                    // Start new group
+                    currentGroup = [sceneData[i]];
+                }
+            }
+
+            // Don't forget the last group
+            if (currentGroup.length >= 3) {
+                suggestions.push(createLookSuggestion(character, currentGroup, groupIndex++));
+            }
+
+            return suggestions;
+        }
+
+        // Create a look suggestion from a group of scenes
+        function createLookSuggestion(character, sceneGroup, groupIndex) {
+            // Merge appearance data (use most common or first occurrence)
+            const mergedAppearance = {
+                hair: '',
+                makeup: '',
+                sfx: '',
+                wardrobe: ''
+            };
+
+            // For each field, find the most common value
+            const fields = ['hair', 'makeup', 'sfx', 'wardrobe'];
+            fields.forEach(field => {
+                const values = sceneGroup
+                    .map(s => s.appearance[field])
+                    .filter(v => v && v.trim());
+
+                if (values.length > 0) {
+                    // Use the longest/most detailed description
+                    mergedAppearance[field] = values.reduce((a, b) =>
+                        a.length > b.length ? a : b
+                    );
+                }
+            });
+
+            // Calculate confidence based on data consistency
+            let consistencyScore = 0;
+            fields.forEach(field => {
+                const values = sceneGroup.map(s => s.appearance[field]).filter(v => v);
+                if (values.length > 0) {
+                    const avgSimilarity = values.reduce((sum, val, idx) => {
+                        if (idx === 0) return sum;
+                        return sum + calculateStringSimilarity(values[0], val);
+                    }, 0) / Math.max(1, values.length - 1);
+                    consistencyScore += avgSimilarity;
+                }
+            });
+            consistencyScore /= fields.length;
+
+            const confidence = consistencyScore > 0.9 ? 'high' :
+                              consistencyScore > 0.7 ? 'medium' : 'low';
+
+            return {
+                suggestedName: `Look ${groupIndex}`,
+                scenes: sceneGroup.map(s => s.sceneNumber),
+                appearance: mergedAppearance,
+                confidence: confidence,
+                sceneCount: sceneGroup.length
+            };
+        }
+
         function renderBreakdownPanel() {
             const container = document.getElementById('breakdownPanel');
 
@@ -6487,36 +9096,60 @@ OUTPUT FORMAT (JSON only):
             const previousScene = hasPrevious ? scenes[currentScene - 1] : null;
             const nextScene = hasNext ? scenes[currentScene + 1] : null;
 
+            // Check for transitions in this scene
+            const sceneTransitions = getSceneTransitions(currentScene);
+
             let html = `
-                <!-- SCENE NAVIGATION BAR -->
-                <div class="breakdown-scene-nav">
-                    <button class="scene-nav-btn ${!hasPrevious ? 'disabled' : ''}"
+                <!-- SCENE NAVIGATION BAR - STICKY AT TOP -->
+                <div class="breakdown-scene-nav-sticky">
+                    <button class="scene-nav-btn-compact ${!hasPrevious ? 'disabled' : ''}"
                             onclick="navigateToScene(${currentScene - 1})"
                             ${!hasPrevious ? 'disabled' : ''}>
-                        <span class="nav-arrow">←</span>
-                        <span class="nav-text">
-                            ${hasPrevious ? `Scene ${previousScene.number}` : 'No Previous'}
-                        </span>
+                        ← ${hasPrevious ? `Scene ${previousScene.number}` : ''}
                     </button>
-
-                    <div class="scene-nav-current">
-                        <div class="nav-scene-number">Scene ${scene.number}</div>
-                        <div class="nav-scene-heading">${scene.heading}</div>
-                        <div class="nav-scene-meta">
-                            ${scene.storyDay ? `<span>${scene.storyDay}</span>` : ''}
-                            ${scene.timeOfDay ? `<span>• ${scene.timeOfDay}</span>` : ''}
-                        </div>
+                    <div class="scene-nav-current-compact">
+                        SCENE ${scene.number}
                     </div>
-
-                    <button class="scene-nav-btn ${!hasNext ? 'disabled' : ''}"
+                    <button class="scene-nav-btn-compact ${!hasNext ? 'disabled' : ''}"
                             onclick="navigateToScene(${currentScene + 1})"
                             ${!hasNext ? 'disabled' : ''}>
-                        <span class="nav-text">
-                            ${hasNext ? `Scene ${nextScene.number}` : 'No Next'}
-                        </span>
-                        <span class="nav-arrow">→</span>
+                        ${hasNext ? `Scene ${nextScene.number}` : ''} →
                     </button>
                 </div>
+
+                ${sceneTransitions.length > 0 ? `
+                    <!-- TRANSITION SCENE BANNER -->
+                    <div class="transition-scene-banner">
+                        <div class="transition-banner-header">
+                            <span class="transition-banner-icon">⚡</span>
+                            <span class="transition-banner-title">TRANSITION SCENE</span>
+                        </div>
+                        <div class="transition-banner-list">
+                            ${sceneTransitions.map(t => {
+                                const characterLooksList = characterLooks[t.character] || [];
+                                const fromLook = characterLooksList.find(l => l.id === t.fromLookId);
+                                const toLook = characterLooksList.find(l => l.id === t.toLookId);
+
+                                return `
+                                    <div class="transition-banner-item">
+                                        <div class="transition-character-line">
+                                            <strong>${t.character}:</strong>
+                                            <span class="transition-looks">${fromLook?.lookName || 'Previous'} → ${toLook?.lookName || 'New Look'}</span>
+                                        </div>
+                                        ${t.scriptEvent ? `
+                                            <div class="transition-event-line">
+                                                Event: ${t.scriptEvent.substring(0, 60)}${t.scriptEvent.length > 60 ? '...' : ''}
+                                            </div>
+                                        ` : ''}
+                                        <button class="view-transition-btn-mini" onclick="openTransitionDetail('${t.id}')">
+                                            View Transition Details
+                                        </button>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                ` : ''}
 
                 <!-- SYNOPSIS SECTION -->
                 <div class="breakdown-synopsis-section">
@@ -6529,51 +9162,59 @@ OUTPUT FORMAT (JSON only):
                     <div class="synopsis-display">${scene.synopsis || 'Click Generate to create synopsis...'}</div>
                 </div>
 
-                <!-- SCENE INFORMATION - COMPACT 3-COLUMN -->
-                <div class="scene-info-compact">
-                    <div class="info-row">
-                        <div class="info-field">
-                            <label>Story Day</label>
-                            <input type="text"
-                                   value="${scene.storyDay || ''}"
-                                   placeholder="Day 1..."
-                                   onchange="updateSceneMetadata(${currentScene}, 'storyDay', this.value)">
-                        </div>
-                        <div class="info-field">
-                            <label>Time</label>
-                            <select onchange="updateSceneMetadata(${currentScene}, 'timeOfDay', this.value)">
-                                <option value="">-- Time --</option>
-                                <option value="Day" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Day' ? 'selected' : ''}>Day</option>
-                                <option value="Morning" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Morning' ? 'selected' : ''}>Morning</option>
-                                <option value="Afternoon" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Afternoon' ? 'selected' : ''}>Afternoon</option>
-                                <option value="Evening" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Evening' ? 'selected' : ''}>Evening</option>
-                                <option value="Night" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Night' ? 'selected' : ''}>Night</option>
-                            </select>
-                        </div>
-                        <div class="info-field">
-                            <label>INT/EXT</label>
-                            <select onchange="updateSceneMetadata(${currentScene}, 'intExt', this.value)">
-                                <option value="">-- Type --</option>
-                                <option value="INT" ${scene.intExt === 'INT' ? 'selected' : ''}>INT</option>
-                                <option value="EXT" ${scene.intExt === 'EXT' ? 'selected' : ''}>EXT</option>
-                                <option value="INT/EXT" ${scene.intExt === 'INT/EXT' ? 'selected' : ''}>INT/EXT</option>
-                            </select>
-                        </div>
+                <!-- SCENE INFORMATION - COLLAPSIBLE -->
+                <div class="scene-info-section" id="sceneInfoSection">
+                    <div class="scene-info-header" onclick="toggleSceneInfo()">
+                        <span class="scene-info-title">Scene Info ${(scene.storyDay && scene.timeOfDay && scene.intExt && scene.location) ? '✓' : '⚠'}</span>
+                        <button class="scene-info-toggle">▶</button>
                     </div>
-                    <div class="info-row">
-                        <div class="info-field full-width">
-                            <label>Location</label>
-                            <input type="text"
-                                   value="${scene.location || extractLocation(scene.heading) || ''}"
-                                   placeholder="FERRY"
-                                   onchange="updateSceneMetadata(${currentScene}, 'location', this.value)">
+                    <div class="scene-info-content">
+                        <div class="scene-info-compact">
+                            <div class="info-row">
+                                <div class="info-field">
+                                    <label>Story Day</label>
+                                    <input type="text"
+                                           value="${scene.storyDay || ''}"
+                                           placeholder="Day 1..."
+                                           onchange="updateSceneMetadata(${currentScene}, 'storyDay', this.value)">
+                                </div>
+                                <div class="info-field">
+                                    <label>Time</label>
+                                    <select onchange="updateSceneMetadata(${currentScene}, 'timeOfDay', this.value)">
+                                        <option value="">-- Time --</option>
+                                        <option value="Day" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Day' ? 'selected' : ''}>Day</option>
+                                        <option value="Morning" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Morning' ? 'selected' : ''}>Morning</option>
+                                        <option value="Afternoon" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Afternoon' ? 'selected' : ''}>Afternoon</option>
+                                        <option value="Evening" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Evening' ? 'selected' : ''}>Evening</option>
+                                        <option value="Night" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Night' ? 'selected' : ''}>Night</option>
+                                    </select>
+                                </div>
+                                <div class="info-field">
+                                    <label>INT/EXT</label>
+                                    <select onchange="updateSceneMetadata(${currentScene}, 'intExt', this.value)">
+                                        <option value="">-- Type --</option>
+                                        <option value="INT" ${scene.intExt === 'INT' ? 'selected' : ''}>INT</option>
+                                        <option value="EXT" ${scene.intExt === 'EXT' ? 'selected' : ''}>EXT</option>
+                                        <option value="INT/EXT" ${scene.intExt === 'INT/EXT' ? 'selected' : ''}>INT/EXT</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="info-row">
+                                <div class="info-field full-width">
+                                    <label>Location</label>
+                                    <input type="text"
+                                           value="${scene.location || extractLocation(scene.heading) || ''}"
+                                           placeholder="FERRY"
+                                           onchange="updateSceneMetadata(${currentScene}, 'location', this.value)">
+                                </div>
+                            </div>
+                            <div class="ai-detect-row">
+                                <button class="ai-btn-compact" onclick="detectAIElements(${currentScene})" title="Auto-detect cast & elements">
+                                    🔍 Auto-Detect Elements
+                                </button>
+                                <div class="ai-status" id="aiStatus"></div>
+                            </div>
                         </div>
-                    </div>
-                    <div class="ai-detect-row">
-                        <button class="ai-btn-compact" onclick="detectAIElements(${currentScene})" title="Auto-detect cast & elements">
-                            🔍 Auto-Detect Elements
-                        </button>
-                        <div class="ai-status" id="aiStatus"></div>
                     </div>
                 </div>
 
@@ -6592,7 +9233,7 @@ OUTPUT FORMAT (JSON only):
                     <div style="margin: 24px 0;">
                         <div class="section-title" style="margin-bottom: 16px;">
                             <span class="section-icon" style="background: rgba(251, 191, 36, 0.5);"></span>
-                            Cast in This Scene
+                            CAST (${cast.length})
                         </div>
 
                         ${cast.map(castMember => {
@@ -6600,11 +9241,45 @@ OUTPUT FORMAT (JSON only):
                             const state = characterStates[currentScene]?.[castMember] || {};
                             const activeEvents = getActiveEventsForScene(castMember, currentScene);
 
+                            // Get look state for this character in this scene
+                            const lookState = getLookStateForScene(castMember, currentScene);
+
+                            // Check if this character is transitioning in this scene
+                            const characterTransition = getTransitionForScene(castMember, currentScene);
+
+                            // Create inline preview for collapsed state
+                            let inlinePreview = '';
+                            if (characterTransition) {
+                                // Show transition info when transitioning
+                                const characterLooksList = characterLooks[castMember] || [];
+                                const fromLook = characterLooksList.find(l => l.id === characterTransition.fromLookId);
+                                const toLook = characterLooksList.find(l => l.id === characterTransition.toLookId);
+                                inlinePreview = `⚡ <strong>LOOK CHANGES:</strong> ${fromLook?.lookName || 'Previous'} → ${toLook?.lookName || 'New Look'}<br>
+                                    <span style="font-size: 0.85em; opacity: 0.8;">${characterTransition.scriptEvent ? characterTransition.scriptEvent.substring(0, 50) + '...' : 'See transition details'}</span>`;
+                            } else if (lookState) {
+                                // Show look state info when collapsed
+                                const complexityIcon = getComplexityIcon(lookState.complexity);
+                                const sceneRangeText = formatSceneRange(lookState.scenes);
+                                inlinePreview = `Look: ${lookState.lookName} (${complexityIcon} ${lookState.complexity?.toUpperCase() || 'LOW'})<br>
+                                    <span style="font-size: 0.85em; opacity: 0.8;">${sceneRangeText}</span>`;
+                            } else {
+                                // Fallback to scene-specific preview if no look state
+                                const hairPreview = (state.hair || '').substring(0, 40);
+                                const makeupPreview = (state.makeup || '').substring(0, 40);
+                                const sfxPreview = (state.sfx || '').substring(0, 40);
+                                const previewParts = [];
+                                if (hairPreview) previewParts.push(`💇 ${hairPreview}${state.hair && state.hair.length > 40 ? '...' : ''}`);
+                                if (makeupPreview) previewParts.push(`💄 ${makeupPreview}${state.makeup && state.makeup.length > 40 ? '...' : ''}`);
+                                if (sfxPreview) previewParts.push(`🩸 ${sfxPreview}${state.sfx && state.sfx.length > 40 ? '...' : ''}`);
+                                inlinePreview = previewParts.length > 0 ? previewParts.join(' • ') : '';
+                            }
+
                             return `
                                 <div class="cast-member-card" id="castCard${castMember.replace(/\s/g, '')}">
                                     <div class="cast-member-header" onclick="toggleCastCard('${castMember.replace(/\s/g, '')}')">
                                         <span class="cast-member-name">${castMember}</span>
                                         <div class="header-actions">
+                                            ${activeEvents.length > 0 ? `<span class="events-badge">⚡${activeEvents.length}</span>` : ''}
                                             <button class="ai-mini-btn" onclick="event.stopPropagation(); aiFillCharacterFields('${castMember}')">
                                                 ✨ AI Fill
                                             </button>
@@ -6612,10 +9287,104 @@ OUTPUT FORMAT (JSON only):
                                         </div>
                                     </div>
 
+                                    ${inlinePreview ? `<div class="cast-member-preview">${inlinePreview}</div>` : ''}
+
                                     <div class="cast-member-body">
                                         <div class="cast-member-base">
                                             Base: ${profile.baseDescription || 'No base description set'}
                                         </div>
+
+                                        ${lookState ? `
+                                            <div class="look-state-section">
+                                                <div class="look-state-section-title">━━━ LOOK STATE ━━━</div>
+                                                <div class="look-state-info">
+                                                    <div class="look-state-name-badge">
+                                                        <span class="look-name-text">${lookState.lookName}</span>
+                                                        <span class="look-complexity-mini">${getComplexityIcon(lookState.complexity)} ${lookState.complexity?.toUpperCase() || 'LOW'}</span>
+                                                    </div>
+                                                    <div class="look-state-meta">
+                                                        ${formatSceneRange(lookState.scenes)} • ${lookState.scenes?.length || 0} scenes total
+                                                    </div>
+                                                    ${lookState.appearance ? `
+                                                        <div class="look-must-match">
+                                                            <strong>Must match:</strong>
+                                                            ${[
+                                                                lookState.appearance.hair ? `hair (${lookState.appearance.hair.substring(0, 40)}${lookState.appearance.hair.length > 40 ? '...' : ''})` : '',
+                                                                lookState.appearance.makeup ? `makeup (${lookState.appearance.makeup.substring(0, 40)}${lookState.appearance.makeup.length > 40 ? '...' : ''})` : '',
+                                                                lookState.appearance.sfx ? `sfx (${lookState.appearance.sfx.substring(0, 40)}${lookState.appearance.sfx.length > 40 ? '...' : ''})` : '',
+                                                                lookState.appearance.wardrobe ? `wardrobe (${lookState.appearance.wardrobe.substring(0, 40)}${lookState.appearance.wardrobe.length > 40 ? '...' : ''})` : ''
+                                                            ].filter(Boolean).join(', ')}
+                                                        </div>
+                                                    ` : ''}
+                                                    <button class="view-look-details-btn" onclick="event.stopPropagation(); openLookDetail('${castMember}', '${lookState.id}')">
+                                                        View Look Details
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <div class="scene-override-section">
+                                                <div class="scene-override-title">━━━ SCENE-SPECIFIC OVERRIDES ━━━</div>
+                                                <div class="scene-override-note">
+                                                    Fields below override the look state for this scene only
+                                                </div>
+                                            </div>
+                                        ` : ''}
+
+                                        ${characterTransition ? `
+                                            <div class="transition-details-section">
+                                                <div class="transition-details-header">
+                                                    <span class="transition-icon-large">⚡</span>
+                                                    <span class="transition-title">LOOK CHANGES IN THIS SCENE</span>
+                                                </div>
+                                                ${(() => {
+                                                    const characterLooksList = characterLooks[castMember] || [];
+                                                    const fromLook = characterLooksList.find(l => l.id === characterTransition.fromLookId);
+                                                    const toLook = characterLooksList.find(l => l.id === characterTransition.toLookId);
+
+                                                    return `
+                                                        <div class="transition-looks-flow">
+                                                            <div class="transition-look-from">
+                                                                <div class="transition-look-label">FROM:</div>
+                                                                <div class="transition-look-name">${fromLook?.lookName || 'Previous Look'}</div>
+                                                            </div>
+                                                            <div class="transition-arrow">→</div>
+                                                            <div class="transition-look-to">
+                                                                <div class="transition-look-label">TO:</div>
+                                                                <div class="transition-look-name">${toLook?.lookName || 'New Look'}</div>
+                                                            </div>
+                                                        </div>
+
+                                                        ${characterTransition.scriptEvent ? `
+                                                            <div class="transition-detail-item">
+                                                                <div class="transition-detail-label">Script Event:</div>
+                                                                <div class="transition-detail-text">"${characterTransition.scriptEvent}"</div>
+                                                            </div>
+                                                        ` : ''}
+
+                                                        ${characterTransition.visualChanges && characterTransition.visualChanges.length > 0 ? `
+                                                            <div class="transition-detail-item">
+                                                                <div class="transition-detail-label">Visual Changes:</div>
+                                                                <div class="transition-changes-list">
+                                                                    ${characterTransition.visualChanges.map(change => `
+                                                                        <div class="transition-change-item">
+                                                                            <strong>${change.department}:</strong> ${change.change}
+                                                                        </div>
+                                                                    `).join('')}
+                                                                </div>
+                                                            </div>
+                                                        ` : ''}
+
+                                                        <button class="view-transition-details-btn" onclick="event.stopPropagation(); openTransitionDetail('${characterTransition.id}')">
+                                                            📋 View Full Transition Details
+                                                        </button>
+
+                                                        <div class="transition-new-look-note">
+                                                            ━━━ NEW LOOK (after transition) ━━━
+                                                        </div>
+                                                    `;
+                                                })()}
+                                            </div>
+                                        ` : ''}
 
                                         ${activeEvents.length > 0 ? `
                                             <div class="active-events-section">
@@ -6689,9 +9458,15 @@ OUTPUT FORMAT (JSON only):
                                         </div>
 
                                         <div class="cast-member-actions">
-                                            <button class="view-timeline-btn" onclick="openCastProfile('${castMember}')">
-                                                📊 View ${castMember}'s Timeline
-                                            </button>
+                                            ${lookState ? `
+                                                <button class="view-timeline-btn" onclick="switchCharacterTab('${castMember}')">
+                                                    📊 View Character Timeline
+                                                </button>
+                                            ` : `
+                                                <button class="view-timeline-btn" onclick="openCastProfile('${castMember}')">
+                                                    📊 View ${castMember}'s Timeline
+                                                </button>
+                                            `}
                                         </div>
                                     </div>
                                 </div>
@@ -7659,6 +10434,23 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`;
             }
         }
 
+        // Toggle Scene Info section expand/collapse
+        function toggleSceneInfo() {
+            const section = document.getElementById('sceneInfoSection');
+            if (!section) return;
+
+            const isExpanded = section.classList.contains('expanded');
+            const toggle = section.querySelector('.scene-info-toggle');
+
+            if (isExpanded) {
+                section.classList.remove('expanded');
+                if (toggle) toggle.textContent = '▶';
+            } else {
+                section.classList.add('expanded');
+                if (toggle) toggle.textContent = '▼';
+            }
+        }
+
         // Toggle category section expand/collapse
         function toggleCategory(categoryId) {
             const section = document.getElementById('category-' + categoryId);
@@ -7824,7 +10616,1230 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`;
             renderCastPanel();
             alert('Profile saved!');
         }
-        
+
+        // ========== MANAGE LOOKS FUNCTIONS ==========
+
+        let currentLookCharacter = null;
+
+        function openManageLooks(character) {
+            currentLookCharacter = character;
+            document.getElementById('manageLooksTitle').textContent = `Look States - ${character}`;
+
+            renderLooksList(character);
+
+            document.getElementById('manageLooksModal').classList.add('active');
+        }
+
+        function closeManageLooks() {
+            document.getElementById('manageLooksModal').classList.remove('active');
+            currentLookCharacter = null;
+        }
+
+        // Auto-suggest look states from scene data
+        let currentSuggestions = [];
+        let selectedSuggestions = new Set();
+
+        function openSuggestLooks(character) {
+            currentLookCharacter = character;
+
+            // Generate suggestions
+            currentSuggestions = suggestLookStatesFromScenes(character);
+            selectedSuggestions = new Set();
+
+            // Update modal title
+            document.getElementById('suggestLooksTitle').textContent = `🔮 Auto-Suggested Look States for ${character}`;
+
+            // Render suggestions
+            renderSuggestionsList();
+
+            // Show modal
+            document.getElementById('suggestLooksModal').classList.add('active');
+        }
+
+        function closeSuggestLooks() {
+            document.getElementById('suggestLooksModal').classList.remove('active');
+            currentSuggestions = [];
+            selectedSuggestions = new Set();
+        }
+
+        function renderSuggestionsList() {
+            const container = document.getElementById('suggestionsList');
+            const noSuggestionsMsg = document.getElementById('noSuggestionsMessage');
+
+            if (currentSuggestions.length === 0) {
+                container.innerHTML = '';
+                noSuggestionsMsg.style.display = 'block';
+                return;
+            }
+
+            noSuggestionsMsg.style.display = 'none';
+
+            // Auto-select all suggestions by default
+            currentSuggestions.forEach((_, idx) => selectedSuggestions.add(idx));
+
+            let html = '';
+            currentSuggestions.forEach((suggestion, index) => {
+                const isSelected = selectedSuggestions.has(index);
+                const confidenceColor = suggestion.confidence === 'high' ? '#22c55e' :
+                                       suggestion.confidence === 'medium' ? '#f59e0b' : '#ef4444';
+                const confidenceLabel = suggestion.confidence.toUpperCase();
+
+                const hasHair = suggestion.appearance.hair && suggestion.appearance.hair.trim();
+                const hasMakeup = suggestion.appearance.makeup && suggestion.appearance.makeup.trim();
+                const hasSfx = suggestion.appearance.sfx && suggestion.appearance.sfx.trim();
+                const hasWardrobe = suggestion.appearance.wardrobe && suggestion.appearance.wardrobe.trim();
+
+                html += `
+                    <div class="suggestion-card ${isSelected ? 'selected' : ''}" data-index="${index}">
+                        <div class="suggestion-header">
+                            <div class="suggestion-checkbox-area" onclick="toggleSuggestion(${index})">
+                                <input type="checkbox"
+                                       ${isSelected ? 'checked' : ''}
+                                       onchange="toggleSuggestion(${index})"
+                                       onclick="event.stopPropagation()">
+                                <input type="text"
+                                       class="suggestion-name-input"
+                                       value="${suggestion.suggestedName}"
+                                       placeholder="Look name..."
+                                       onclick="event.stopPropagation()"
+                                       onchange="updateSuggestionName(${index}, this.value)">
+                            </div>
+                            <div class="suggestion-meta">
+                                <span class="confidence-badge" style="background: ${confidenceColor}20; border-color: ${confidenceColor}; color: ${confidenceColor};">
+                                    ${confidenceLabel} CONFIDENCE
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="suggestion-scenes">
+                            <strong>Scenes:</strong> ${formatSceneRange(suggestion.scenes)} (${suggestion.sceneCount} scenes)
+                        </div>
+
+                        <div class="suggestion-appearance">
+                            ${hasHair ? `
+                                <div class="suggestion-field">
+                                    <div class="suggestion-field-label">💇 Hair:</div>
+                                    <div class="suggestion-field-value">${suggestion.appearance.hair}</div>
+                                </div>
+                            ` : ''}
+                            ${hasMakeup ? `
+                                <div class="suggestion-field">
+                                    <div class="suggestion-field-label">💄 Makeup:</div>
+                                    <div class="suggestion-field-value">${suggestion.appearance.makeup}</div>
+                                </div>
+                            ` : ''}
+                            ${hasSfx ? `
+                                <div class="suggestion-field">
+                                    <div class="suggestion-field-label">🩸 SFX:</div>
+                                    <div class="suggestion-field-value">${suggestion.appearance.sfx}</div>
+                                </div>
+                            ` : ''}
+                            ${hasWardrobe ? `
+                                <div class="suggestion-field">
+                                    <div class="suggestion-field-label">👔 Wardrobe:</div>
+                                    <div class="suggestion-field-value">${suggestion.appearance.wardrobe}</div>
+                                </div>
+                            ` : ''}
+                            ${!hasHair && !hasMakeup && !hasSfx && !hasWardrobe ? `
+                                <div class="suggestion-field">
+                                    <em style="color: var(--text-muted);">No appearance details detected</em>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function toggleSuggestion(index) {
+            if (selectedSuggestions.has(index)) {
+                selectedSuggestions.delete(index);
+            } else {
+                selectedSuggestions.add(index);
+            }
+            renderSuggestionsList();
+        }
+
+        function updateSuggestionName(index, newName) {
+            if (currentSuggestions[index]) {
+                currentSuggestions[index].suggestedName = newName;
+            }
+        }
+
+        function createLookStatesFromSuggestions() {
+            if (selectedSuggestions.size === 0) {
+                alert('Please select at least one suggestion to create.');
+                return;
+            }
+
+            let created = 0;
+            selectedSuggestions.forEach(index => {
+                const suggestion = currentSuggestions[index];
+
+                // Create new look state
+                const newLook = {
+                    id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+                    lookName: suggestion.suggestedName,
+                    scenes: suggestion.scenes,
+                    appearance: suggestion.appearance,
+                    scriptEvidence: {
+                        quotes: [],
+                        implications: []
+                    },
+                    complexity: suggestion.confidence === 'high' ? 'low' :
+                               suggestion.confidence === 'medium' ? 'medium' : 'high',
+                    storyContext: `Auto-suggested from ${suggestion.sceneCount} consecutive scenes with similar appearance data.`
+                };
+
+                // Add to characterLooks
+                if (!characterLooks[currentLookCharacter]) {
+                    characterLooks[currentLookCharacter] = [];
+                }
+                characterLooks[currentLookCharacter].push(newLook);
+                created++;
+            });
+
+            // Save and close
+            saveProject();
+            closeSuggestLooks();
+
+            // Refresh the manage looks modal if it's open
+            if (document.getElementById('manageLooksModal').classList.contains('active')) {
+                renderLooksList(currentLookCharacter);
+            }
+
+            alert(`✓ Created ${created} look state${created !== 1 ? 's' : ''} from suggestions!`);
+        }
+
+        // Look State Validation System
+        // Check if a character appears in a specific scene
+        function sceneHasCharacter(sceneIndex, character) {
+            const breakdown = sceneBreakdowns[sceneIndex];
+            if (!breakdown || !breakdown.cast) return false;
+            return breakdown.cast.includes(character);
+        }
+
+        // Validate character continuity and look state consistency
+        function validateCharacterContinuity(character) {
+            const issues = [];
+            const looks = characterLooks[character] || [];
+            const transitions = getTransitionsForCharacter(character);
+
+            // Build a map of scene -> looks for quick lookup
+            const sceneLookMap = new Map(); // scene number -> array of look IDs
+            looks.forEach(look => {
+                look.scenes?.forEach(sceneNum => {
+                    if (!sceneLookMap.has(sceneNum)) {
+                        sceneLookMap.set(sceneNum, []);
+                    }
+                    sceneLookMap.get(sceneNum).push(look.id);
+                });
+            });
+
+            // Check 1: Every scene where character appears should have a look assigned
+            scenes.forEach((scene, sceneIndex) => {
+                if (sceneHasCharacter(sceneIndex, character)) {
+                    const looksForScene = sceneLookMap.get(scene.number) || [];
+
+                    if (looksForScene.length === 0) {
+                        issues.push({
+                            id: `missing_${scene.number}`,
+                            type: 'missing_look',
+                            severity: 'warning',
+                            sceneIndex: sceneIndex,
+                            sceneNumber: scene.number,
+                            message: `Scene ${scene.number}: No look state assigned`,
+                            autoFixable: looks.length > 0
+                        });
+                    }
+
+                    // Check 2: No scene overlap (scene in multiple looks)
+                    if (looksForScene.length > 1) {
+                        const lookNames = looksForScene.map(lookId =>
+                            looks.find(l => l.id === lookId)?.lookName || 'Unknown'
+                        ).join(', ');
+
+                        issues.push({
+                            id: `overlap_${scene.number}`,
+                            type: 'overlap',
+                            severity: 'error',
+                            sceneIndex: sceneIndex,
+                            sceneNumber: scene.number,
+                            message: `Scene ${scene.number}: Appears in ${looksForScene.length} different look states (${lookNames})`,
+                            autoFixable: false,
+                            affectedLooks: looksForScene
+                        });
+                    }
+                }
+            });
+
+            // Check 3: Scene gaps - character appears in non-consecutive scenes without looks
+            const sortedLooks = [...looks].sort((a, b) => {
+                const firstA = Math.min(...(a.scenes || [Infinity]));
+                const firstB = Math.min(...(b.scenes || [Infinity]));
+                return firstA - firstB;
+            });
+
+            sortedLooks.forEach((look, index) => {
+                if (index < sortedLooks.length - 1) {
+                    const currentLookLastScene = Math.max(...look.scenes);
+                    const nextLookFirstScene = Math.min(...sortedLooks[index + 1].scenes);
+
+                    // Check scenes between this look and next look
+                    for (let sceneNum = currentLookLastScene + 1; sceneNum < nextLookFirstScene; sceneNum++) {
+                        const sceneIndex = scenes.findIndex(s => s.number === sceneNum);
+                        if (sceneIndex >= 0 && sceneHasCharacter(sceneIndex, character)) {
+                            issues.push({
+                                id: `gap_${sceneNum}`,
+                                type: 'gap',
+                                severity: 'warning',
+                                sceneIndex: sceneIndex,
+                                sceneNumber: sceneNum,
+                                message: `Scene ${sceneNum}: Character appears but no look state covers this scene (gap between "${look.lookName}" and "${sortedLooks[index + 1].lookName}")`,
+                                autoFixable: true,
+                                fromLook: look.id,
+                                toLook: sortedLooks[index + 1].id
+                            });
+                        }
+                    }
+                }
+            });
+
+            // Check 4: Transition scenes match look boundaries
+            transitions.forEach(transition => {
+                const fromLook = looks.find(l => l.id === transition.fromLookId);
+                const toLook = looks.find(l => l.id === transition.toLookId);
+
+                if (!fromLook || !toLook) return;
+
+                const transitionSceneNum = transition.transitionScene;
+                const fromLookHasScene = fromLook.scenes?.includes(transitionSceneNum);
+                const toLookHasScene = toLook.scenes?.includes(transitionSceneNum);
+
+                // Transition scene should be in the "to" look, not the "from" look
+                if (!toLookHasScene) {
+                    issues.push({
+                        id: `transition_mismatch_${transitionSceneNum}`,
+                        type: 'transition_mismatch',
+                        severity: 'warning',
+                        sceneIndex: scenes.findIndex(s => s.number === transitionSceneNum),
+                        sceneNumber: transitionSceneNum,
+                        message: `Transition defined for Scene ${transitionSceneNum}, but "${toLook.lookName}" doesn't start there`,
+                        autoFixable: true,
+                        transitionId: transition.id,
+                        toLookId: toLook.id
+                    });
+                }
+            });
+
+            // Check 5: Look states with no scenes
+            looks.forEach(look => {
+                if (!look.scenes || look.scenes.length === 0) {
+                    issues.push({
+                        id: `empty_look_${look.id}`,
+                        type: 'empty_look',
+                        severity: 'info',
+                        message: `Look "${look.lookName}" has no scenes assigned`,
+                        autoFixable: false,
+                        lookId: look.id
+                    });
+                }
+            });
+
+            return issues;
+        }
+
+        // Auto-fix validation issues
+        function autoFixIssue(character, issue) {
+            const looks = characterLooks[character] || [];
+
+            switch (issue.type) {
+                case 'missing_look':
+                    // Add scene to nearest look (chronologically)
+                    if (looks.length === 0) return false;
+
+                    const sortedLooks = [...looks].sort((a, b) => {
+                        const firstA = Math.min(...(a.scenes || [Infinity]));
+                        const firstB = Math.min(...(b.scenes || [Infinity]));
+                        return firstA - firstB;
+                    });
+
+                    // Find the nearest look
+                    let closestLook = sortedLooks[0];
+                    let minDistance = Infinity;
+
+                    sortedLooks.forEach(look => {
+                        const lookScenes = look.scenes || [];
+                        lookScenes.forEach(sceneNum => {
+                            const distance = Math.abs(sceneNum - issue.sceneNumber);
+                            if (distance < minDistance) {
+                                minDistance = distance;
+                                closestLook = look;
+                            }
+                        });
+                    });
+
+                    // Add scene to closest look
+                    if (!closestLook.scenes) closestLook.scenes = [];
+                    if (!closestLook.scenes.includes(issue.sceneNumber)) {
+                        closestLook.scenes.push(issue.sceneNumber);
+                        closestLook.scenes.sort((a, b) => a - b);
+                        saveProject();
+                        return true;
+                    }
+                    break;
+
+                case 'gap':
+                    // Extend the "from" look to include the gap scene
+                    const fromLook = looks.find(l => l.id === issue.fromLook);
+                    if (fromLook) {
+                        if (!fromLook.scenes) fromLook.scenes = [];
+                        if (!fromLook.scenes.includes(issue.sceneNumber)) {
+                            fromLook.scenes.push(issue.sceneNumber);
+                            fromLook.scenes.sort((a, b) => a - b);
+                            saveProject();
+                            return true;
+                        }
+                    }
+                    break;
+
+                case 'transition_mismatch':
+                    // Add transition scene to the "to" look
+                    const toLook = looks.find(l => l.id === issue.toLookId);
+                    if (toLook) {
+                        if (!toLook.scenes) toLook.scenes = [];
+                        if (!toLook.scenes.includes(issue.sceneNumber)) {
+                            toLook.scenes.push(issue.sceneNumber);
+                            toLook.scenes.sort((a, b) => a - b);
+                            saveProject();
+                            return true;
+                        }
+                    }
+                    break;
+            }
+
+            return false;
+        }
+
+        // Show validation issues modal
+        let currentValidationIssues = [];
+
+        function showValidationIssues(character) {
+            currentValidationIssues = validateCharacterContinuity(character);
+
+            document.getElementById('validationCharacterName').textContent = character;
+            document.getElementById('validationIssueCount').textContent = currentValidationIssues.length;
+
+            renderValidationIssues();
+
+            document.getElementById('validationModal').classList.add('active');
+        }
+
+        function closeValidation() {
+            document.getElementById('validationModal').classList.remove('active');
+            currentValidationIssues = [];
+        }
+
+        function renderValidationIssues() {
+            const container = document.getElementById('validationIssuesList');
+
+            if (currentValidationIssues.length === 0) {
+                container.innerHTML = `
+                    <div class="validation-success">
+                        <div class="validation-success-icon">✓</div>
+                        <div class="validation-success-text">No issues found! Look states and transitions are consistent.</div>
+                    </div>
+                `;
+                return;
+            }
+
+            // Group by severity
+            const errors = currentValidationIssues.filter(i => i.severity === 'error');
+            const warnings = currentValidationIssues.filter(i => i.severity === 'warning');
+            const info = currentValidationIssues.filter(i => i.severity === 'info');
+
+            let html = '';
+
+            if (errors.length > 0) {
+                html += `<div class="issue-group"><div class="issue-group-title">🔴 Errors (${errors.length})</div>`;
+                errors.forEach((issue, idx) => {
+                    html += renderIssueCard(issue, idx);
+                });
+                html += `</div>`;
+            }
+
+            if (warnings.length > 0) {
+                html += `<div class="issue-group"><div class="issue-group-title">⚠️ Warnings (${warnings.length})</div>`;
+                warnings.forEach((issue, idx) => {
+                    html += renderIssueCard(issue, idx);
+                });
+                html += `</div>`;
+            }
+
+            if (info.length > 0) {
+                html += `<div class="issue-group"><div class="issue-group-title">ℹ️ Info (${info.length})</div>`;
+                info.forEach((issue, idx) => {
+                    html += renderIssueCard(issue, idx);
+                });
+                html += `</div>`;
+            }
+
+            container.innerHTML = html;
+        }
+
+        function renderIssueCard(issue, index) {
+            const severityIcon = issue.severity === 'error' ? '🔴' :
+                                issue.severity === 'warning' ? '⚠️' : 'ℹ️';
+
+            return `
+                <div class="validation-issue-card ${issue.severity}">
+                    <div class="issue-header">
+                        <span class="issue-icon">${severityIcon}</span>
+                        <span class="issue-message">${issue.message}</span>
+                    </div>
+                    ${issue.autoFixable ? `
+                        <div class="issue-actions">
+                            <button class="fix-btn" onclick="fixAndRefreshValidation(${index})">
+                                🔧 Auto-Fix
+                            </button>
+                            ${issue.sceneIndex !== undefined ? `
+                                <button class="goto-scene-btn" onclick="goToScene(${issue.sceneIndex}); closeValidation();">
+                                    Go to Scene
+                                </button>
+                            ` : ''}
+                        </div>
+                    ` : `
+                        <div class="issue-actions">
+                            <span class="cannot-fix-note">Manual fix required</span>
+                            ${issue.sceneIndex !== undefined ? `
+                                <button class="goto-scene-btn" onclick="goToScene(${issue.sceneIndex}); closeValidation();">
+                                    Go to Scene
+                                </button>
+                            ` : ''}
+                        </div>
+                    `}
+                </div>
+            `;
+        }
+
+        function fixAndRefreshValidation(issueIndex) {
+            const issue = currentValidationIssues[issueIndex];
+            const character = document.getElementById('validationCharacterName').textContent;
+
+            const fixed = autoFixIssue(character, issue);
+
+            if (fixed) {
+                // Refresh validation
+                currentValidationIssues = validateCharacterContinuity(character);
+                document.getElementById('validationIssueCount').textContent = currentValidationIssues.length;
+                renderValidationIssues();
+
+                // Refresh timeline if open
+                const timelineContainer = document.getElementById(`timeline-${character}`);
+                if (timelineContainer) {
+                    renderCharacterTimeline(character);
+                }
+
+                // Refresh manage looks if open
+                if (document.getElementById('manageLooksModal').classList.contains('active')) {
+                    renderLooksList(character);
+                }
+            } else {
+                alert('Could not auto-fix this issue.');
+            }
+        }
+
+        function goToScene(sceneIndex) {
+            selectScene(sceneIndex);
+        }
+
+        function renderLooksList(character) {
+            const looks = characterLooks[character] || [];
+            const container = document.getElementById('looksList');
+
+            if (looks.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state-small">
+                        <div class="empty-icon-small">👔</div>
+                        <div class="empty-text-small">No look states defined yet. Click "+ Add Look State" to create one.</div>
+                    </div>
+                `;
+                return;
+            }
+
+            // Sort looks by their first scene number for chronological order
+            const sortedLooks = [...looks].sort((a, b) => {
+                const firstSceneA = Math.min(...(a.scenes || [Infinity]));
+                const firstSceneB = Math.min(...(b.scenes || [Infinity]));
+                return firstSceneA - firstSceneB;
+            });
+
+            let html = '';
+            sortedLooks.forEach((look, index) => {
+                const sceneRangeText = formatSceneRange(look.scenes);
+                const complexityIcon = getComplexityIcon(look.complexity);
+                const hasAppearanceData = Object.values(look.appearance || {}).some(v => v && v.trim());
+
+                // Check if there's a transition to this look
+                const previousLook = index > 0 ? sortedLooks[index - 1] : null;
+                let transitionInfo = null;
+                if (previousLook) {
+                    const transition = findTransition(character, previousLook.id, look.id);
+                    const firstScene = Math.min(...(look.scenes || []));
+                    transitionInfo = {
+                        exists: !!transition,
+                        fromLookName: previousLook.lookName,
+                        fromLookId: previousLook.id,
+                        toLookId: look.id,
+                        scene: transition?.transitionScene || firstScene,
+                        event: transition?.scriptEvent || 'Not defined'
+                    };
+                }
+
+                html += `
+                    <div class="look-state-card">
+                        ${transitionInfo ? `
+                            <div class="transition-indicator">
+                                <div class="transition-info">
+                                    <span class="transition-icon">⚡</span>
+                                    <span class="transition-text">
+                                        TRANSITION from "${transitionInfo.fromLookName}" in Scene ${transitionInfo.scene}:
+                                        <strong>${transitionInfo.event}</strong>
+                                    </span>
+                                </div>
+                                <button class="look-action-btn transition-edit-btn"
+                                        onclick="openTransitionEditor('${character}', '${look.id}')"
+                                        title="${transitionInfo.exists ? 'Edit Transition' : 'Define Transition'}">
+                                    ⚡ ${transitionInfo.exists ? 'Edit' : 'Define'}
+                                </button>
+                            </div>
+                        ` : ''}
+                        <div class="look-state-header">
+                            <div class="look-state-title">
+                                <span class="look-state-name">${look.lookName || 'Untitled Look'}</span>
+                                <span class="complexity-indicator">${complexityIcon}</span>
+                            </div>
+                            <div class="look-state-actions">
+                                <button class="look-action-btn" onclick="editLook('${look.id}')" title="Edit">✏️</button>
+                                <button class="look-action-btn delete" onclick="deleteLook('${look.id}')" title="Delete">🗑️</button>
+                            </div>
+                        </div>
+                        <div class="look-state-details">
+                            <div class="look-detail-row">
+                                <span class="look-detail-label">Scenes:</span>
+                                <span class="look-detail-value">${sceneRangeText}</span>
+                            </div>
+                            ${look.storyTime ? `
+                                <div class="look-detail-row">
+                                    <span class="look-detail-label">Story Time:</span>
+                                    <span class="look-detail-value">${look.storyTime}</span>
+                                </div>
+                            ` : ''}
+                            ${hasAppearanceData ? `
+                                <div class="look-detail-row">
+                                    <span class="look-detail-label">Defined:</span>
+                                    <span class="look-detail-value">${getDefinedFields(look.appearance)}</span>
+                                </div>
+                            ` : ''}
+                            ${look.mustMatchScenes ? `
+                                <div class="look-detail-row">
+                                    <span class="look-detail-label">Must Match:</span>
+                                    <span class="look-detail-value">${look.mustMatchScenes} scenes</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function formatSceneRange(scenes) {
+            if (!scenes || scenes.length === 0) return 'No scenes';
+
+            const sorted = [...scenes].sort((a, b) => a - b);
+            const ranges = [];
+            let start = sorted[0];
+            let end = sorted[0];
+
+            for (let i = 1; i < sorted.length; i++) {
+                if (sorted[i] === end + 1) {
+                    end = sorted[i];
+                } else {
+                    ranges.push(start === end ? `${start}` : `${start}-${end}`);
+                    start = sorted[i];
+                    end = sorted[i];
+                }
+            }
+            ranges.push(start === end ? `${start}` : `${start}-${end}`);
+
+            return 'Scenes ' + ranges.join(', ');
+        }
+
+        function getComplexityIcon(complexity) {
+            switch (complexity) {
+                case 'low': return '🟢';
+                case 'medium': return '🟡';
+                case 'high': return '🔴';
+                default: return '⚪';
+            }
+        }
+
+        function getDefinedFields(appearance) {
+            if (!appearance) return 'None';
+            const fields = [];
+            if (appearance.hair) fields.push('Hair');
+            if (appearance.makeup) fields.push('Makeup');
+            if (appearance.sfx) fields.push('SFX');
+            if (appearance.wardrobe) fields.push('Wardrobe');
+            if (appearance.physicalState) fields.push('Physical State');
+            return fields.length > 0 ? fields.join(', ') : 'None';
+        }
+
+        function addNewLook() {
+            if (!currentLookCharacter) return;
+
+            // Open edit modal for new look (no lookId)
+            openEditLook(currentLookCharacter, null);
+        }
+
+        function editLook(lookId) {
+            if (!currentLookCharacter) return;
+
+            // Open edit modal for existing look
+            openEditLook(currentLookCharacter, lookId);
+        }
+
+        function deleteLook(lookId) {
+            if (!currentLookCharacter) return;
+
+            if (!confirm('Are you sure you want to delete this look state?')) return;
+
+            const looks = characterLooks[currentLookCharacter] || [];
+            const index = looks.findIndex(l => l.id === lookId);
+
+            if (index !== -1) {
+                looks.splice(index, 1);
+                saveProject();
+                renderLooksList(currentLookCharacter);
+            }
+        }
+
+        // ========== EDIT LOOK STATE MODAL ==========
+
+        let currentEditingLook = null;
+        let currentEditingLookCharacter = null;
+
+        function openEditLook(character, lookId = null) {
+            currentEditingLookCharacter = character;
+            currentEditingLook = lookId;
+
+            // Set modal title
+            const isNew = lookId === null;
+            document.getElementById('editLookTitle').textContent = isNew ? 'Create New Look State' : 'Edit Look State';
+
+            // Get the look data if editing existing
+            let lookData = null;
+            if (!isNew) {
+                const looks = characterLooks[character] || [];
+                lookData = looks.find(l => l.id === lookId);
+            }
+
+            // Populate form fields
+            document.getElementById('lookName').value = lookData?.lookName || '';
+            document.getElementById('lookStoryTime').value = lookData?.storyTime || '';
+            document.getElementById('lookHair').value = lookData?.appearance?.hair || '';
+            document.getElementById('lookMakeup').value = lookData?.appearance?.makeup || '';
+            document.getElementById('lookSfx').value = lookData?.appearance?.sfx || '';
+            document.getElementById('lookWardrobe').value = lookData?.appearance?.wardrobe || '';
+            document.getElementById('lookPhysicalState').value = lookData?.appearance?.physicalState || '';
+            document.getElementById('lookComplexity').value = lookData?.complexity || 'low';
+            document.getElementById('lookStoryContext').value = lookData?.storyContext || '';
+
+            // Render scene checkboxes
+            renderSceneCheckboxes(lookData?.scenes || []);
+
+            // Render script evidence lists
+            renderScriptQuotes(lookData?.scriptEvidence?.quotes || []);
+            renderImplications(lookData?.scriptEvidence?.implications || []);
+
+            // Show modal
+            document.getElementById('editLookModal').classList.add('active');
+        }
+
+        function closeEditLook() {
+            document.getElementById('editLookModal').classList.remove('active');
+            currentEditingLook = null;
+            currentEditingLookCharacter = null;
+        }
+
+        function renderSceneCheckboxes(selectedScenes = []) {
+            const container = document.getElementById('sceneCheckboxes');
+            let html = '';
+
+            scenes.forEach((scene, index) => {
+                const sceneNumber = scene.number;
+                const isChecked = selectedScenes.includes(sceneNumber);
+                const heading = scene.heading.length > 50 ? scene.heading.substring(0, 50) + '...' : scene.heading;
+
+                html += `
+                    <label class="scene-checkbox-item">
+                        <input type="checkbox"
+                               class="scene-checkbox"
+                               value="${sceneNumber}"
+                               ${isChecked ? 'checked' : ''}
+                               onchange="updateSceneCount()">
+                        <span class="scene-checkbox-label">
+                            <span class="scene-number">Scene ${sceneNumber}</span>
+                            <span class="scene-heading">${heading}</span>
+                        </span>
+                    </label>
+                `;
+            });
+
+            container.innerHTML = html;
+            updateSceneCount();
+        }
+
+        function updateSceneCount() {
+            const checkboxes = document.querySelectorAll('.scene-checkbox:checked');
+            const count = checkboxes.length;
+            document.getElementById('selectedScenesCount').textContent = `${count} scene${count !== 1 ? 's' : ''} selected`;
+        }
+
+        function getSelectedScenes() {
+            const checkboxes = document.querySelectorAll('.scene-checkbox:checked');
+            return Array.from(checkboxes).map(cb => parseInt(cb.value));
+        }
+
+        // Script Quotes Management
+        let currentQuotes = [];
+
+        function renderScriptQuotes(quotes = []) {
+            currentQuotes = [...quotes];
+            const container = document.getElementById('scriptQuotesList');
+
+            if (currentQuotes.length === 0) {
+                container.innerHTML = '<div class="empty-evidence">No quotes added yet</div>';
+                return;
+            }
+
+            let html = '';
+            currentQuotes.forEach((quote, index) => {
+                html += `
+                    <div class="evidence-item">
+                        <div class="evidence-text">${quote}</div>
+                        <button class="evidence-remove-btn" onclick="removeScriptQuote(${index})">×</button>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function addScriptQuote() {
+            const quote = prompt('Enter script quote:');
+            if (quote && quote.trim()) {
+                currentQuotes.push(quote.trim());
+                renderScriptQuotes(currentQuotes);
+            }
+        }
+
+        function removeScriptQuote(index) {
+            currentQuotes.splice(index, 1);
+            renderScriptQuotes(currentQuotes);
+        }
+
+        // Implications Management
+        let currentImplications = [];
+
+        function renderImplications(implications = []) {
+            currentImplications = [...implications];
+            const container = document.getElementById('implicationsList');
+
+            if (currentImplications.length === 0) {
+                container.innerHTML = '<div class="empty-evidence">No implications added yet</div>';
+                return;
+            }
+
+            let html = '';
+            currentImplications.forEach((implication, index) => {
+                html += `
+                    <div class="evidence-item">
+                        <div class="evidence-text">${implication}</div>
+                        <button class="evidence-remove-btn" onclick="removeImplication(${index})">×</button>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function addImplication() {
+            const implication = prompt('Enter implication from script:');
+            if (implication && implication.trim()) {
+                currentImplications.push(implication.trim());
+                renderImplications(currentImplications);
+            }
+        }
+
+        function removeImplication(index) {
+            currentImplications.splice(index, 1);
+            renderImplications(currentImplications);
+        }
+
+        function saveLookState() {
+            if (!currentEditingLookCharacter) return;
+
+            // Validate required fields
+            const lookName = document.getElementById('lookName').value.trim();
+            if (!lookName) {
+                alert('Please enter a look name');
+                return;
+            }
+
+            const selectedScenes = getSelectedScenes();
+            if (selectedScenes.length === 0) {
+                alert('Please select at least one scene');
+                return;
+            }
+
+            // Build the look object
+            const lookData = {
+                id: currentEditingLook || 'look-' + Date.now(),
+                lookName: lookName,
+                scenes: selectedScenes,
+                storyTime: document.getElementById('lookStoryTime').value.trim(),
+                appearance: {
+                    hair: document.getElementById('lookHair').value.trim(),
+                    makeup: document.getElementById('lookMakeup').value.trim(),
+                    sfx: document.getElementById('lookSfx').value.trim(),
+                    wardrobe: document.getElementById('lookWardrobe').value.trim(),
+                    physicalState: document.getElementById('lookPhysicalState').value.trim()
+                },
+                scriptEvidence: {
+                    quotes: currentQuotes,
+                    implications: currentImplications
+                },
+                complexity: document.getElementById('lookComplexity').value,
+                mustMatchScenes: selectedScenes.length,
+                storyContext: document.getElementById('lookStoryContext').value.trim()
+            };
+
+            // Initialize character looks array if needed
+            if (!characterLooks[currentEditingLookCharacter]) {
+                characterLooks[currentEditingLookCharacter] = [];
+            }
+
+            // Update or add the look
+            const looks = characterLooks[currentEditingLookCharacter];
+            if (currentEditingLook) {
+                // Update existing
+                const index = looks.findIndex(l => l.id === currentEditingLook);
+                if (index !== -1) {
+                    looks[index] = lookData;
+                }
+            } else {
+                // Add new
+                looks.push(lookData);
+            }
+
+            // Save and refresh
+            saveProject();
+            renderLooksList(currentEditingLookCharacter);
+            closeEditLook();
+
+            // If manage looks modal is open, keep it open
+            if (document.getElementById('manageLooksModal').classList.contains('active')) {
+                // Already open, just refreshed
+            }
+        }
+
+        // ========== LOOK TRANSITION HELPER FUNCTIONS ==========
+
+        /**
+         * Get all transitions for a specific character
+         * @param {string} character - Character name
+         * @returns {Array} Array of transition objects for this character
+         */
+        function getTransitionsForCharacter(character) {
+            return lookTransitions.filter(transition => transition.character === character);
+        }
+
+        /**
+         * Find a specific transition between two looks
+         * @param {string} character - Character name
+         * @param {string} fromLookId - Starting look ID
+         * @param {string} toLookId - Ending look ID
+         * @returns {Object|null} Transition object or null if not found
+         */
+        function findTransition(character, fromLookId, toLookId) {
+            return lookTransitions.find(transition =>
+                transition.character === character &&
+                transition.fromLookId === fromLookId &&
+                transition.toLookId === toLookId
+            ) || null;
+        }
+
+        /**
+         * Get all transitions that occur in a specific scene
+         * @param {number} sceneNumber - Scene number
+         * @returns {Array} Array of transitions that occur in this scene
+         */
+        function getTransitionsInScene(sceneNumber) {
+            return lookTransitions.filter(transition => transition.transitionScene === sceneNumber);
+        }
+
+        /**
+         * Get transitions from a specific look
+         * @param {string} character - Character name
+         * @param {string} lookId - Look ID to find transitions from
+         * @returns {Array} Array of transitions starting from this look
+         */
+        function getTransitionsFromLook(character, lookId) {
+            return lookTransitions.filter(transition =>
+                transition.character === character &&
+                transition.fromLookId === lookId
+            );
+        }
+
+        /**
+         * Get transitions to a specific look
+         * @param {string} character - Character name
+         * @param {string} lookId - Look ID to find transitions to
+         * @returns {Array} Array of transitions ending at this look
+         */
+        function getTransitionsToLook(character, lookId) {
+            return lookTransitions.filter(transition =>
+                transition.character === character &&
+                transition.toLookId === lookId
+            );
+        }
+
+        /**
+         * Add a new transition
+         * @param {Object} transitionData - Transition object with all required fields
+         * @returns {string} ID of the created transition
+         */
+        function addTransition(transitionData) {
+            const transition = {
+                id: transitionData.id || 'trans-' + Date.now(),
+                character: transitionData.character,
+                fromLookId: transitionData.fromLookId,
+                toLookId: transitionData.toLookId,
+                transitionScene: transitionData.transitionScene,
+                scriptEvent: transitionData.scriptEvent || '',
+                scriptQuote: transitionData.scriptQuote || '',
+                visualChanges: transitionData.visualChanges || [],
+                visibility: transitionData.visibility || 'on-screen',
+                speed: transitionData.speed || 'sudden',
+                storySignificance: transitionData.storySignificance || ''
+            };
+
+            lookTransitions.push(transition);
+            saveProject();
+            return transition.id;
+        }
+
+        /**
+         * Update an existing transition
+         * @param {string} transitionId - ID of transition to update
+         * @param {Object} updates - Object with fields to update
+         * @returns {boolean} Success status
+         */
+        function updateTransition(transitionId, updates) {
+            const index = lookTransitions.findIndex(t => t.id === transitionId);
+            if (index === -1) return false;
+
+            lookTransitions[index] = { ...lookTransitions[index], ...updates };
+            saveProject();
+            return true;
+        }
+
+        /**
+         * Delete a transition
+         * @param {string} transitionId - ID of transition to delete
+         * @returns {boolean} Success status
+         */
+        function deleteTransition(transitionId) {
+            const index = lookTransitions.findIndex(t => t.id === transitionId);
+            if (index === -1) return false;
+
+            lookTransitions.splice(index, 1);
+            saveProject();
+            return true;
+        }
+
+        // ========== TRANSITION EDITOR MODAL ==========
+
+        let currentTransitionCharacter = null;
+        let currentTransitionToLookId = null;
+        let currentTransitionFromLookId = null;
+        let currentTransitionId = null;
+        let currentVisualChanges = [];
+
+        function openTransitionEditor(character, toLookId) {
+            currentTransitionCharacter = character;
+            currentTransitionToLookId = toLookId;
+
+            // Find the looks
+            const looks = characterLooks[character] || [];
+            const sortedLooks = [...looks].sort((a, b) => {
+                const firstSceneA = Math.min(...(a.scenes || [Infinity]));
+                const firstSceneB = Math.min(...(b.scenes || [Infinity]));
+                return firstSceneA - firstSceneB;
+            });
+
+            const toLookIndex = sortedLooks.findIndex(l => l.id === toLookId);
+            const toLook = sortedLooks[toLookIndex];
+            const fromLook = toLookIndex > 0 ? sortedLooks[toLookIndex - 1] : null;
+
+            if (!fromLook || !toLook) {
+                alert('Cannot create transition: Previous look not found.');
+                return;
+            }
+
+            currentTransitionFromLookId = fromLook.id;
+
+            // Check if transition exists
+            const existingTransition = findTransition(character, fromLook.id, toLook.id);
+            currentTransitionId = existingTransition?.id || null;
+
+            // Set modal title
+            document.getElementById('transitionEditorTitle').textContent =
+                existingTransition ? 'Edit Look Transition' : 'Define Look Transition';
+
+            // Populate read-only look names
+            document.getElementById('transitionFromLook').textContent = fromLook.lookName || 'Untitled Look';
+            document.getElementById('transitionToLook').textContent = toLook.lookName || 'Untitled Look';
+
+            // Populate transition scene dropdown
+            const sceneSelect = document.getElementById('transitionScene');
+            sceneSelect.innerHTML = '';
+
+            // Add scenes between the last scene of fromLook and first scene of toLook
+            const fromLastScene = Math.max(...(fromLook.scenes || []));
+            const toFirstScene = Math.min(...(toLook.scenes || []));
+
+            scenes.forEach((scene, index) => {
+                const sceneNumber = scene.number;
+                // Include scenes from fromLastScene to toFirstScene
+                if (sceneNumber >= fromLastScene && sceneNumber <= toFirstScene) {
+                    const option = document.createElement('option');
+                    option.value = sceneNumber;
+                    option.textContent = `Scene ${sceneNumber}: ${scene.heading.substring(0, 40)}...`;
+                    sceneSelect.appendChild(option);
+                }
+            });
+
+            // Set default to first scene of toLook
+            sceneSelect.value = existingTransition?.transitionScene || toFirstScene;
+
+            // Populate other fields
+            document.getElementById('transitionScriptEvent').value = existingTransition?.scriptEvent || '';
+            document.getElementById('transitionScriptQuote').value = existingTransition?.scriptQuote || '';
+            document.getElementById('transitionVisibility').value = existingTransition?.visibility || 'on-screen';
+            document.getElementById('transitionSpeed').value = existingTransition?.speed || 'sudden';
+            document.getElementById('transitionStorySignificance').value = existingTransition?.storySignificance || '';
+
+            // Render visual changes
+            renderVisualChanges(existingTransition?.visualChanges || []);
+
+            // Show modal
+            document.getElementById('transitionEditorModal').classList.add('active');
+        }
+
+        function closeTransitionEditor() {
+            document.getElementById('transitionEditorModal').classList.remove('active');
+            currentTransitionCharacter = null;
+            currentTransitionToLookId = null;
+            currentTransitionFromLookId = null;
+            currentTransitionId = null;
+            currentVisualChanges = [];
+        }
+
+        // Visual Changes Management
+        function renderVisualChanges(changes = []) {
+            currentVisualChanges = [...changes];
+            const container = document.getElementById('visualChangesList');
+
+            if (currentVisualChanges.length === 0) {
+                container.innerHTML = '<div class="empty-evidence">No visual changes added yet</div>';
+                return;
+            }
+
+            let html = '';
+            currentVisualChanges.forEach((change, index) => {
+                html += `
+                    <div class="evidence-item">
+                        <div class="evidence-text">${change}</div>
+                        <button class="evidence-remove-btn" onclick="removeVisualChange(${index})">×</button>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function addVisualChange() {
+            const change = prompt('Enter visual change (e.g., "Hair: neat bun → wet and tangled"):');
+            if (change && change.trim()) {
+                currentVisualChanges.push(change.trim());
+                renderVisualChanges(currentVisualChanges);
+            }
+        }
+
+        function removeVisualChange(index) {
+            currentVisualChanges.splice(index, 1);
+            renderVisualChanges(currentVisualChanges);
+        }
+
+        function saveTransition() {
+            if (!currentTransitionCharacter || !currentTransitionFromLookId || !currentTransitionToLookId) {
+                alert('Missing transition information');
+                return;
+            }
+
+            // Get form values
+            const transitionScene = parseInt(document.getElementById('transitionScene').value);
+            const scriptEvent = document.getElementById('transitionScriptEvent').value.trim();
+            const scriptQuote = document.getElementById('transitionScriptQuote').value.trim();
+            const visibility = document.getElementById('transitionVisibility').value;
+            const speed = document.getElementById('transitionSpeed').value;
+            const storySignificance = document.getElementById('transitionStorySignificance').value.trim();
+
+            const transitionData = {
+                character: currentTransitionCharacter,
+                fromLookId: currentTransitionFromLookId,
+                toLookId: currentTransitionToLookId,
+                transitionScene: transitionScene,
+                scriptEvent: scriptEvent,
+                scriptQuote: scriptQuote,
+                visualChanges: currentVisualChanges,
+                visibility: visibility,
+                speed: speed,
+                storySignificance: storySignificance
+            };
+
+            if (currentTransitionId) {
+                // Update existing transition
+                transitionData.id = currentTransitionId;
+                updateTransition(currentTransitionId, transitionData);
+            } else {
+                // Create new transition
+                addTransition(transitionData);
+            }
+
+            // Refresh the looks list to show updated transition
+            renderLooksList(currentTransitionCharacter);
+
+            // Close editor
+            closeTransitionEditor();
+        }
+
         // Render script
         function renderScript() {
             if (!scriptText) return;
@@ -8000,6 +12015,8 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`;
             currentProject.sceneBreakdowns = sceneBreakdowns;
             currentProject.castProfiles = castProfiles;
             currentProject.characterStates = characterStates;
+            currentProject.characterLooks = characterLooks;
+            currentProject.lookTransitions = lookTransitions;
             currentProject.continuityEvents = continuityEvents;
             currentProject.sceneTimeline = sceneTimeline;
             currentProject.scenes = scenes;
