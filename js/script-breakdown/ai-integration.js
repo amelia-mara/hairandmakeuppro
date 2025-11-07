@@ -813,79 +813,143 @@ export function cancelBatchProcessing() {
 }
 
 // ============================================================================
-// PROGRESS MODAL UTILITIES
+// CORNER PROGRESS NOTIFICATION (Non-blocking)
 // ============================================================================
 
 /**
- * Open progress modal
+ * Show corner progress notification
+ * Non-blocking - allows user to continue working while processing
  */
-function openProgressModal(title, total) {
-    const modal = document.getElementById('progress-modal');
-    const titleEl = document.getElementById('progress-title');
-    const messageEl = document.getElementById('progress-message');
-    const labelEl = document.getElementById('progress-label');
-    const fillEl = document.getElementById('progress-fill');
-    const detailsEl = document.getElementById('progress-details');
-    const cancelBtn = document.getElementById('progress-cancel-btn');
-    const doneBtn = document.getElementById('progress-done-btn');
+function showCornerProgress(title, total) {
+    const corner = document.getElementById('corner-progress');
+    if (!corner) {
+        console.error('Corner progress element not found');
+        return;
+    }
 
-    if (!modal) return;
+    document.getElementById('corner-progress-title').textContent = title;
+    document.getElementById('corner-progress-message').textContent = 'Starting batch processing...';
+    document.getElementById('corner-progress-fill').style.width = '0%';
+    document.getElementById('corner-progress-label').textContent = `0 / ${total}`;
+    document.getElementById('corner-progress-details').innerHTML = '';
 
-    titleEl.textContent = title;
-    messageEl.textContent = 'Starting batch processing...';
-    labelEl.textContent = `0 / ${total}`;
-    fillEl.style.width = '0%';
-    detailsEl.textContent = '';
-    cancelBtn.style.display = 'inline-block';
-    doneBtn.style.display = 'none';
+    corner.style.display = 'block';
+    corner.classList.remove('minimized', 'completed', 'error');
 
-    modal.style.display = 'flex';
+    console.log(`📊 Corner progress shown: ${title} (${total} items)`);
 }
 
 /**
- * Update progress modal
+ * Update corner progress
  */
-function updateProgressModal(current, total, message, isDone) {
-    const messageEl = document.getElementById('progress-message');
-    const labelEl = document.getElementById('progress-label');
-    const fillEl = document.getElementById('progress-fill');
-    const cancelBtn = document.getElementById('progress-cancel-btn');
-    const doneBtn = document.getElementById('progress-done-btn');
+function updateCornerProgress(current, total, message, detail = '') {
+    const percentage = (current / total) * 100;
+
+    const messageEl = document.getElementById('corner-progress-message');
+    const fillEl = document.getElementById('corner-progress-fill');
+    const labelEl = document.getElementById('corner-progress-label');
 
     if (messageEl) messageEl.textContent = message;
+    if (fillEl) fillEl.style.width = percentage + '%';
     if (labelEl) labelEl.textContent = `${current} / ${total}`;
-    if (fillEl) {
-        const percentage = (current / total) * 100;
-        fillEl.style.width = `${percentage}%`;
+
+    // Add detail to history (keep last 5)
+    if (detail) {
+        const detailsDiv = document.getElementById('corner-progress-details');
+        if (detailsDiv) {
+            const detailEl = document.createElement('div');
+            detailEl.textContent = detail;
+            detailsDiv.appendChild(detailEl);
+
+            // Keep only last 5 details
+            while (detailsDiv.children.length > 5) {
+                detailsDiv.removeChild(detailsDiv.firstChild);
+            }
+
+            // Auto-scroll to bottom
+            detailsDiv.scrollTop = detailsDiv.scrollHeight;
+        }
     }
+}
+
+/**
+ * Mark corner progress as completed
+ */
+function completeCornerProgress(message) {
+    const corner = document.getElementById('corner-progress');
+    const messageEl = document.getElementById('corner-progress-message');
+
+    if (corner) corner.classList.add('completed');
+    if (messageEl) messageEl.textContent = message;
+
+    // Auto-close after 5 seconds
+    setTimeout(() => {
+        closeCornerProgress();
+    }, 5000);
+}
+
+/**
+ * Mark corner progress as error
+ */
+function errorCornerProgress(message) {
+    const corner = document.getElementById('corner-progress');
+    const messageEl = document.getElementById('corner-progress-message');
+
+    if (corner) corner.classList.add('error');
+    if (messageEl) messageEl.textContent = message;
+}
+
+/**
+ * Close corner progress
+ */
+function closeCornerProgress() {
+    const corner = document.getElementById('corner-progress');
+    if (corner) corner.style.display = 'none';
+}
+
+/**
+ * Toggle corner progress minimize/maximize
+ */
+function toggleCornerProgress() {
+    const corner = document.getElementById('corner-progress');
+    if (corner) corner.classList.toggle('minimized');
+}
+
+// ============================================================================
+// LEGACY MODAL SUPPORT (for backwards compatibility)
+// ============================================================================
+
+/**
+ * Open progress modal (legacy - redirects to corner progress)
+ */
+function openProgressModal(title, total) {
+    showCornerProgress(title, total);
+}
+
+/**
+ * Update progress modal (legacy - redirects to corner progress)
+ */
+function updateProgressModal(current, total, message, isDone) {
+    updateCornerProgress(current, total, message);
 
     if (isDone) {
-        if (cancelBtn) cancelBtn.style.display = 'none';
-        if (doneBtn) doneBtn.style.display = 'inline-block';
+        completeCornerProgress(message);
     }
 }
 
 /**
- * Update progress details
+ * Update progress details (legacy - redirects to corner progress)
  */
 function updateProgressDetails(detail) {
-    const detailsEl = document.getElementById('progress-details');
-    if (!detailsEl) return;
-
-    // Keep last 5 details
-    const lines = detailsEl.textContent.split('\n').filter(l => l.trim());
-    lines.push(detail);
-    if (lines.length > 5) lines.shift();
-
-    detailsEl.textContent = lines.join('\n');
+    // Extract just the text from the detail
+    updateCornerProgress(0, 0, '', detail);
 }
 
 /**
- * Close progress modal
+ * Close progress modal (legacy - redirects to corner progress)
  */
 function closeProgressModal() {
-    const modal = document.getElementById('progress-modal');
-    if (modal) modal.style.display = 'none';
+    closeCornerProgress();
 }
 
 // Expose functions globally for HTML onclick handlers
@@ -896,3 +960,4 @@ window.generateAllSynopses = generateAllSynopses;
 window.autoTagScript = autoTagScript;
 window.cancelBatchProcessing = cancelBatchProcessing;
 window.closeProgressModal = closeProgressModal;
+window.toggleCornerProgress = toggleCornerProgress;

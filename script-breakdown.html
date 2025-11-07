@@ -293,6 +293,23 @@
     <!-- Tag Tooltip (hover on tags) -->
     <div class="tag-tooltip" id="tag-tooltip" style="display: none;"></div>
 
+    <!-- Corner Progress Notification (Non-blocking) -->
+    <div class="corner-progress" id="corner-progress" style="display: none;">
+        <div class="corner-progress-header">
+            <div class="corner-progress-title" id="corner-progress-title">Processing...</div>
+            <button class="corner-progress-minimize" onclick="toggleCornerProgress()">−</button>
+            <button class="corner-progress-close" onclick="cancelBatchProcessing()">×</button>
+        </div>
+        <div class="corner-progress-body" id="corner-progress-body">
+            <div class="corner-progress-message" id="corner-progress-message">Starting...</div>
+            <div class="corner-progress-bar">
+                <div class="corner-progress-fill" id="corner-progress-fill" style="width: 0%;"></div>
+            </div>
+            <div class="corner-progress-label" id="corner-progress-label">0 / 0</div>
+            <div class="corner-progress-details" id="corner-progress-details"></div>
+        </div>
+    </div>
+
     <!-- ============================================================================ -->
     <!-- JAVASCRIPT MODULES -->
     <!-- ============================================================================ -->
