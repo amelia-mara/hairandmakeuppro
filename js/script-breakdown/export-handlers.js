@@ -124,7 +124,9 @@ export async function processScript() {
 function extractCharactersFromScenes() {
     state.characters = new Set();
 
-    state.scenes.forEach(scene => {
+    console.log(`Extracting characters from ${state.scenes.length} scenes...`);
+
+    state.scenes.forEach((scene, sceneIndex) => {
         const lines = scene.content.split('\n');
 
         for (let i = 0; i < lines.length; i++) {
@@ -143,12 +145,13 @@ function extractCharactersFromScenes() {
                 const cleanName = line.replace(/\s*\([^)]+\)$/g, '').trim();
                 if (cleanName) {
                     state.characters.add(cleanName);
+                    console.log(`  → Found character "${cleanName}" in Scene ${sceneIndex + 1}`);
                 }
             }
         }
     });
 
-    console.log(`Extracted ${state.characters.size} characters:`, Array.from(state.characters));
+    console.log(`✓ Extracted ${state.characters.size} unique characters:`, Array.from(state.characters));
 }
 
 /**
@@ -156,8 +159,11 @@ function extractCharactersFromScenes() {
  * Creates cast profiles and populates characterTabs for the UI
  */
 function initializeCharacterTabs() {
+    console.log('Initializing character tabs...');
+
     // Convert Set to Array for character tabs
     const characterArray = Array.from(state.characters);
+    console.log(`  Converting ${characterArray.length} characters to tabs`);
 
     // Create cast profiles for each character if they don't exist
     characterArray.forEach(character => {
@@ -168,13 +174,14 @@ function initializeCharacterTabs() {
                 scenes: [],
                 lookStates: []
             };
+            console.log(`  → Created cast profile for "${character}"`);
         }
     });
 
     // Populate character tabs with all characters
     state.characterTabs = characterArray;
 
-    console.log(`Initialized ${state.characterTabs.length} character tabs`);
+    console.log(`✓ Initialized ${state.characterTabs.length} character tabs:`, state.characterTabs);
 }
 
 /**
@@ -325,8 +332,12 @@ export function loadProjectData() {
 
             // Initialize character tabs from cast profiles
             state.characterTabs = Object.keys(state.castProfiles);
+            console.log(`✓ Loaded ${state.characterTabs.length} character tabs from saved project:`, state.characterTabs);
 
             console.log('Project loaded successfully:', project.name);
+            console.log(`  Scenes: ${state.scenes.length}`);
+            console.log(`  Characters: ${state.characterTabs.length}`);
+            console.log(`  Tags: ${Object.keys(state.scriptTags).length} scenes with tags`);
 
             // If we have scenes, render the script
             if (state.scenes.length > 0 && project.scriptContent) {

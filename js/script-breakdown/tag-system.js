@@ -111,9 +111,12 @@ function showTagInfo(tag) {
 export function showTagPopup() {
     if (!currentSelection) return;
 
-    // Populate popup
-    const popup = document.getElementById('tagPopup');
-    if (!popup) return;
+    // Populate popup - use correct ID 'tag-popup' (with hyphen)
+    const popup = document.getElementById('tag-popup');
+    if (!popup) {
+        console.error('❌ tag-popup element not found');
+        return;
+    }
 
     const selectedTextEl = document.getElementById('tagSelectedText');
     const contextEl = document.getElementById('tagContext');
@@ -157,7 +160,7 @@ export function showTagPopup() {
  * Close tag popup
  */
 export function closeTagPopup() {
-    const popup = document.getElementById('tagPopup');
+    const popup = document.getElementById('tag-popup');
     if (popup) popup.classList.remove('active');
     currentSelection = null;
 
@@ -208,6 +211,11 @@ export function saveTag() {
         return;
     }
 
+    console.log('Creating new tag...');
+    console.log(`  Category: ${category}`);
+    console.log(`  Character: ${character || 'none'}`);
+    console.log(`  Selected text: ${currentSelection.selectedText.substring(0, 50)}...`);
+
     // Create tag object
     const tag = {
         id: generateId(),
@@ -231,6 +239,7 @@ export function saveTag() {
         state.scriptTags[state.currentScene] = [];
     }
     state.scriptTags[state.currentScene].push(tag);
+    console.log(`✓ Tag stored (Scene ${state.currentScene} now has ${state.scriptTags[state.currentScene].length} tag(s))`);
 
     // Apply highlight
     applyHighlight(tag);
@@ -345,6 +354,8 @@ export function handleTextSelection(e) {
         return;
     }
 
+    console.log('✓ Text selection detected:', selectedText.substring(0, 50) + (selectedText.length > 50 ? '...' : ''));
+
     // Get the full context (sentence or paragraph)
     const range = selection.getRangeAt(0);
     const container = range.commonAncestorContainer;
@@ -370,6 +381,9 @@ export function handleTextSelection(e) {
         element: element,
         range: range
     };
+
+    console.log('  Detected character:', detectedCharacter || 'none');
+    console.log('  Opening tag popup...');
 
     showTagPopup();
 }
@@ -409,9 +423,13 @@ function escapeHtml(text) {
  * Initialize text selection handler
  */
 export function initializeTagSystem() {
-    const scriptContent = document.getElementById('scriptContent');
+    // IMPORTANT: The correct element ID is 'script-content' (with hyphen)
+    const scriptContent = document.getElementById('script-content');
     if (scriptContent) {
         scriptContent.addEventListener('mouseup', handleTextSelection);
+        console.log('✓ Text selection event listener attached to script-content');
+    } else {
+        console.error('❌ script-content element not found - manual tagging will not work');
     }
 
     // Close popups on Escape
