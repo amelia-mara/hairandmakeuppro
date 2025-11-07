@@ -4527,6 +4527,153 @@
             margin-bottom: 10px;
         }
 
+        /* Look Detail Modal Styles */
+        .look-detail-header {
+            margin-bottom: 24px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid var(--glass-border);
+        }
+
+        .look-detail-name {
+            font-size: 1.5em;
+            font-weight: 700;
+            color: var(--accent-gold);
+            margin-bottom: 12px;
+        }
+
+        .look-detail-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .detail-meta-item {
+            display: flex;
+            gap: 8px;
+            font-size: 0.875em;
+        }
+
+        .meta-label {
+            font-weight: 600;
+            color: var(--text-muted);
+            min-width: 100px;
+        }
+
+        .meta-value {
+            color: var(--text-light);
+        }
+
+        .detail-section {
+            margin-bottom: 24px;
+        }
+
+        .detail-section-title {
+            font-size: 0.8125em;
+            font-weight: 700;
+            color: var(--accent-gold);
+            letter-spacing: 1px;
+            margin-bottom: 14px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .detail-section-content {
+            font-size: 0.875em;
+            color: var(--text-light);
+            line-height: 1.6;
+        }
+
+        .appearance-detail-field {
+            margin-bottom: 14px;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border-left: 2px solid rgba(201, 169, 97, 0.5);
+            border-radius: 4px;
+        }
+
+        .appearance-detail-field strong {
+            display: block;
+            color: var(--accent-gold);
+            margin-bottom: 6px;
+            font-size: 0.875em;
+        }
+
+        .appearance-detail-field .field-content {
+            font-size: 0.875em;
+            color: var(--text-light);
+            line-height: 1.6;
+        }
+
+        .evidence-group {
+            margin-bottom: 16px;
+        }
+
+        .evidence-group-label {
+            font-size: 0.875em;
+            font-weight: 600;
+            color: var(--text-light);
+            margin-bottom: 8px;
+        }
+
+        .evidence-ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .evidence-ul li {
+            padding: 8px 12px;
+            margin-bottom: 6px;
+            background: rgba(0, 0, 0, 0.2);
+            border-left: 2px solid var(--accent-blue);
+            border-radius: 4px;
+            font-size: 0.8125em;
+            color: var(--text-light);
+            line-height: 1.5;
+        }
+
+        .no-evidence {
+            padding: 12px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.875em;
+            font-style: italic;
+        }
+
+        .scenes-with-look {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .scene-detail-item {
+            padding: 10px 12px;
+            background: rgba(28, 25, 22, 0.4);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            gap: 8px;
+        }
+
+        .scene-detail-item:hover {
+            background: rgba(28, 25, 22, 0.6);
+            border-color: var(--accent-gold);
+        }
+
+        .scene-detail-number {
+            font-weight: 600;
+            color: var(--accent-gold);
+            font-size: 0.8125em;
+            white-space: nowrap;
+        }
+
+        .scene-detail-heading {
+            color: var(--text-light);
+            font-size: 0.8125em;
+        }
+
         /* Import Modal */
         .import-modal .modal-content {
             max-width: 900px;
@@ -5010,6 +5157,89 @@
             <div class="modal-actions">
                 <button class="modal-btn" onclick="closeEditLook()">Cancel</button>
                 <button class="modal-btn primary" onclick="saveLookState()">💾 Save Look State</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Look Detail Modal -->
+    <div class="modal" id="lookDetailModal">
+        <div class="modal-content" style="max-width: 800px; max-height: 90vh; display: flex; flex-direction: column;">
+            <div class="modal-header">
+                <h3 id="lookDetailTitle">Look Details</h3>
+                <button class="modal-close" onclick="closeLookDetail()">×</button>
+            </div>
+
+            <div style="flex: 1; overflow-y: auto; padding: 20px;">
+                <!-- Look Header Info -->
+                <div class="look-detail-header">
+                    <h2 class="look-detail-name" id="lookDetailName">Look Name</h2>
+                    <div class="look-detail-meta">
+                        <div class="detail-meta-item">
+                            <span class="meta-label">Scenes:</span>
+                            <span class="meta-value" id="lookDetailScenes">1, 2, 3, 4, 5 (5 scenes)</span>
+                        </div>
+                        <div class="detail-meta-item">
+                            <span class="meta-label">Story Time:</span>
+                            <span class="meta-value" id="lookDetailStoryTime">Day 1 - Morning to Afternoon</span>
+                        </div>
+                        <div class="detail-meta-item">
+                            <span class="meta-label">Complexity:</span>
+                            <span class="meta-value" id="lookDetailComplexity">🟢 LOW</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Appearance Section -->
+                <div class="detail-section">
+                    <div class="detail-section-title">━━━ APPEARANCE ━━━</div>
+                    <div id="lookDetailAppearance">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+
+                <!-- Script Evidence Section -->
+                <div class="detail-section" id="lookDetailEvidenceSection">
+                    <div class="detail-section-title">━━━ SCRIPT EVIDENCE ━━━</div>
+
+                    <div class="evidence-group" id="lookDetailQuotesGroup" style="display: none;">
+                        <div class="evidence-group-label">Script Quotes:</div>
+                        <ul class="evidence-ul" id="lookDetailQuotes">
+                            <!-- Populated dynamically -->
+                        </ul>
+                    </div>
+
+                    <div class="evidence-group" id="lookDetailImplicationsGroup" style="display: none;">
+                        <div class="evidence-group-label">Implications:</div>
+                        <ul class="evidence-ul" id="lookDetailImplications">
+                            <!-- Populated dynamically -->
+                        </ul>
+                    </div>
+
+                    <div class="no-evidence" id="lookDetailNoEvidence">
+                        <em>No script evidence recorded</em>
+                    </div>
+                </div>
+
+                <!-- Story Context Section -->
+                <div class="detail-section" id="lookDetailContextSection">
+                    <div class="detail-section-title">━━━ STORY CONTEXT ━━━</div>
+                    <div class="detail-section-content" id="lookDetailContext">
+                        <em>No story context provided</em>
+                    </div>
+                </div>
+
+                <!-- Scenes List Section -->
+                <div class="detail-section">
+                    <div class="detail-section-title">━━━ SCENES WITH THIS LOOK ━━━</div>
+                    <div class="scenes-with-look" id="lookDetailScenesList">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="modal-btn primary" onclick="editLookFromDetail()">Edit This Look</button>
+                <button class="modal-btn" onclick="closeLookDetail()">Close</button>
             </div>
         </div>
     </div>
@@ -6562,16 +6792,172 @@ This is it. Today's the day."></textarea>
         }
 
         function expandLookDetails(lookId, button) {
-            const card = button.closest('.look-state-timeline-card');
-            const details = card.querySelector('.look-expanded-details');
+            // Get current character from the timeline
+            const characterNameEl = document.querySelector('.character-name-title');
+            const character = characterNameEl ? characterNameEl.textContent : currentLookCharacter;
 
-            if (details.style.display === 'none') {
-                details.style.display = 'block';
-                button.textContent = 'Hide Details ▲';
-            } else {
-                details.style.display = 'none';
-                button.textContent = 'View Details ▼';
+            // Open the detail modal instead of inline expansion
+            openLookDetail(character, lookId);
+        }
+
+        // ========== LOOK DETAIL MODAL ==========
+
+        let currentDetailLookId = null;
+        let currentDetailCharacter = null;
+
+        function openLookDetail(character, lookId) {
+            currentDetailCharacter = character;
+            currentDetailLookId = lookId;
+
+            // Find the look
+            const looks = characterLooks[character] || [];
+            const look = looks.find(l => l.id === lookId);
+
+            if (!look) {
+                alert('Look not found');
+                return;
             }
+
+            // Populate header
+            document.getElementById('lookDetailName').textContent = look.lookName || 'Untitled Look';
+
+            // Scenes
+            const sceneNumbers = (look.scenes || []).sort((a, b) => a - b);
+            const sceneRangeText = formatSceneRange(look.scenes);
+            document.getElementById('lookDetailScenes').textContent = `${sceneRangeText} (${sceneNumbers.length} scenes)`;
+
+            // Story Time
+            document.getElementById('lookDetailStoryTime').textContent = look.storyTime || 'Not specified';
+
+            // Complexity
+            const complexityIcon = getComplexityIcon(look.complexity);
+            const complexityText = look.complexity?.toUpperCase() || 'LOW';
+            document.getElementById('lookDetailComplexity').textContent = `${complexityIcon} ${complexityText}`;
+
+            // Appearance
+            const appearanceContainer = document.getElementById('lookDetailAppearance');
+            let appearanceHTML = '';
+
+            if (look.appearance?.hair) {
+                appearanceHTML += `
+                    <div class="appearance-detail-field">
+                        <strong>💇 Hair:</strong>
+                        <div class="field-content">${look.appearance.hair}</div>
+                    </div>
+                `;
+            }
+
+            if (look.appearance?.makeup) {
+                appearanceHTML += `
+                    <div class="appearance-detail-field">
+                        <strong>💄 Makeup:</strong>
+                        <div class="field-content">${look.appearance.makeup}</div>
+                    </div>
+                `;
+            }
+
+            if (look.appearance?.sfx) {
+                appearanceHTML += `
+                    <div class="appearance-detail-field">
+                        <strong>🩸 SFX Makeup:</strong>
+                        <div class="field-content">${look.appearance.sfx}</div>
+                    </div>
+                `;
+            }
+
+            if (look.appearance?.wardrobe) {
+                appearanceHTML += `
+                    <div class="appearance-detail-field">
+                        <strong>👔 Wardrobe:</strong>
+                        <div class="field-content">${look.appearance.wardrobe}</div>
+                    </div>
+                `;
+            }
+
+            if (look.appearance?.physicalState) {
+                appearanceHTML += `
+                    <div class="appearance-detail-field">
+                        <strong>🏃 Physical State:</strong>
+                        <div class="field-content">${look.appearance.physicalState}</div>
+                    </div>
+                `;
+            }
+
+            if (!appearanceHTML) {
+                appearanceHTML = '<em style="color: var(--text-muted);">No appearance details defined</em>';
+            }
+
+            appearanceContainer.innerHTML = appearanceHTML;
+
+            // Script Evidence
+            const hasQuotes = look.scriptEvidence?.quotes && look.scriptEvidence.quotes.length > 0;
+            const hasImplications = look.scriptEvidence?.implications && look.scriptEvidence.implications.length > 0;
+
+            if (hasQuotes) {
+                const quotesContainer = document.getElementById('lookDetailQuotes');
+                quotesContainer.innerHTML = look.scriptEvidence.quotes.map(quote => `<li>"${quote}"</li>`).join('');
+                document.getElementById('lookDetailQuotesGroup').style.display = 'block';
+            } else {
+                document.getElementById('lookDetailQuotesGroup').style.display = 'none';
+            }
+
+            if (hasImplications) {
+                const implicationsContainer = document.getElementById('lookDetailImplications');
+                implicationsContainer.innerHTML = look.scriptEvidence.implications.map(impl => `<li>${impl}</li>`).join('');
+                document.getElementById('lookDetailImplicationsGroup').style.display = 'block';
+            } else {
+                document.getElementById('lookDetailImplicationsGroup').style.display = 'none';
+            }
+
+            document.getElementById('lookDetailNoEvidence').style.display = (hasQuotes || hasImplications) ? 'none' : 'block';
+
+            // Story Context
+            if (look.storyContext && look.storyContext.trim()) {
+                document.getElementById('lookDetailContext').innerHTML = look.storyContext;
+            } else {
+                document.getElementById('lookDetailContext').innerHTML = '<em>No story context provided</em>';
+            }
+
+            // Scenes List
+            const scenesListContainer = document.getElementById('lookDetailScenesList');
+            let scenesHTML = '';
+
+            sceneNumbers.forEach(sceneNum => {
+                const sceneIndex = scenes.findIndex(s => s.number === sceneNum);
+                if (sceneIndex !== -1) {
+                    const scene = scenes[sceneIndex];
+                    scenesHTML += `
+                        <div class="scene-detail-item" onclick="jumpToSceneFromTimeline(${sceneIndex})">
+                            <span class="scene-detail-number">Scene ${scene.number}:</span>
+                            <span class="scene-detail-heading">${scene.heading}</span>
+                        </div>
+                    `;
+                }
+            });
+
+            scenesListContainer.innerHTML = scenesHTML;
+
+            // Show modal
+            document.getElementById('lookDetailModal').classList.add('active');
+        }
+
+        function closeLookDetail() {
+            document.getElementById('lookDetailModal').classList.remove('active');
+            currentDetailLookId = null;
+            currentDetailCharacter = null;
+        }
+
+        function editLookFromDetail() {
+            if (!currentDetailCharacter || !currentDetailLookId) return;
+
+            // Close detail modal
+            closeLookDetail();
+
+            // Set current character for edit modal
+            currentLookCharacter = currentDetailCharacter;
+
+            // Open edit modal
+            openEditLook(currentDetailCharacter, currentDetailLookId);
         }
 
         function jumpToSceneFromTimeline(sceneIndex) {
