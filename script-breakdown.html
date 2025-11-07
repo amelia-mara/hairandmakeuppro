@@ -1858,6 +1858,130 @@
             margin: 0 4px;
         }
 
+        /* Sticky Scene Navigation */
+        .breakdown-scene-nav-sticky {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 10px 14px;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg,
+                rgba(212, 175, 122, 0.12) 0%,
+                rgba(28, 25, 22, 0.95) 50%,
+                rgba(212, 175, 122, 0.08) 100%
+            );
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .scene-nav-btn-compact {
+            padding: 8px 14px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-light);
+            font-size: 0.75em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            min-width: 100px;
+        }
+
+        .scene-nav-btn-compact:hover:not(.disabled) {
+            background: rgba(212, 175, 122, 0.15);
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+        }
+
+        .scene-nav-btn-compact.disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .scene-nav-current-compact {
+            flex: 1;
+            text-align: center;
+            font-size: 0.95em;
+            font-weight: 700;
+            color: var(--accent-gold);
+            letter-spacing: 0.5px;
+        }
+
+        /* Scene Info Collapsible Section */
+        .scene-info-section {
+            margin-bottom: 16px;
+            background: rgba(28, 25, 22, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .scene-info-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .scene-info-header:hover {
+            background: rgba(212, 175, 122, 0.08);
+        }
+
+        .scene-info-title {
+            font-size: 0.8125em;
+            font-weight: 600;
+            color: var(--text-light);
+        }
+
+        .scene-info-toggle {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 0.75em;
+            cursor: pointer;
+            padding: 0;
+            transition: transform 0.2s ease;
+        }
+
+        .scene-info-content {
+            display: none;
+            padding: 0 14px 14px;
+        }
+
+        .scene-info-section.expanded .scene-info-content {
+            display: block;
+        }
+
+        .scene-info-section.expanded .scene-info-toggle {
+            transform: rotate(90deg);
+        }
+
+        /* Cast Member Preview (shown when collapsed) */
+        .cast-member-preview {
+            padding: 8px 14px;
+            font-size: 0.75em;
+            color: var(--text-muted);
+            background: rgba(0, 0, 0, 0.2);
+            border-top: 1px solid rgba(212, 175, 122, 0.1);
+            line-height: 1.4;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .cast-member-card.expanded .cast-member-preview {
+            display: none;
+        }
+
         /* Compact AI Controls */
         .ai-controls-compact {
             display: flex;
@@ -6488,33 +6612,20 @@ OUTPUT FORMAT (JSON only):
             const nextScene = hasNext ? scenes[currentScene + 1] : null;
 
             let html = `
-                <!-- SCENE NAVIGATION BAR -->
-                <div class="breakdown-scene-nav">
-                    <button class="scene-nav-btn ${!hasPrevious ? 'disabled' : ''}"
+                <!-- SCENE NAVIGATION BAR - STICKY AT TOP -->
+                <div class="breakdown-scene-nav-sticky">
+                    <button class="scene-nav-btn-compact ${!hasPrevious ? 'disabled' : ''}"
                             onclick="navigateToScene(${currentScene - 1})"
                             ${!hasPrevious ? 'disabled' : ''}>
-                        <span class="nav-arrow">←</span>
-                        <span class="nav-text">
-                            ${hasPrevious ? `Scene ${previousScene.number}` : 'No Previous'}
-                        </span>
+                        ← ${hasPrevious ? `Scene ${previousScene.number}` : ''}
                     </button>
-
-                    <div class="scene-nav-current">
-                        <div class="nav-scene-number">Scene ${scene.number}</div>
-                        <div class="nav-scene-heading">${scene.heading}</div>
-                        <div class="nav-scene-meta">
-                            ${scene.storyDay ? `<span>${scene.storyDay}</span>` : ''}
-                            ${scene.timeOfDay ? `<span>• ${scene.timeOfDay}</span>` : ''}
-                        </div>
+                    <div class="scene-nav-current-compact">
+                        SCENE ${scene.number}
                     </div>
-
-                    <button class="scene-nav-btn ${!hasNext ? 'disabled' : ''}"
+                    <button class="scene-nav-btn-compact ${!hasNext ? 'disabled' : ''}"
                             onclick="navigateToScene(${currentScene + 1})"
                             ${!hasNext ? 'disabled' : ''}>
-                        <span class="nav-text">
-                            ${hasNext ? `Scene ${nextScene.number}` : 'No Next'}
-                        </span>
-                        <span class="nav-arrow">→</span>
+                        ${hasNext ? `Scene ${nextScene.number}` : ''} →
                     </button>
                 </div>
 
@@ -6529,51 +6640,59 @@ OUTPUT FORMAT (JSON only):
                     <div class="synopsis-display">${scene.synopsis || 'Click Generate to create synopsis...'}</div>
                 </div>
 
-                <!-- SCENE INFORMATION - COMPACT 3-COLUMN -->
-                <div class="scene-info-compact">
-                    <div class="info-row">
-                        <div class="info-field">
-                            <label>Story Day</label>
-                            <input type="text"
-                                   value="${scene.storyDay || ''}"
-                                   placeholder="Day 1..."
-                                   onchange="updateSceneMetadata(${currentScene}, 'storyDay', this.value)">
-                        </div>
-                        <div class="info-field">
-                            <label>Time</label>
-                            <select onchange="updateSceneMetadata(${currentScene}, 'timeOfDay', this.value)">
-                                <option value="">-- Time --</option>
-                                <option value="Day" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Day' ? 'selected' : ''}>Day</option>
-                                <option value="Morning" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Morning' ? 'selected' : ''}>Morning</option>
-                                <option value="Afternoon" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Afternoon' ? 'selected' : ''}>Afternoon</option>
-                                <option value="Evening" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Evening' ? 'selected' : ''}>Evening</option>
-                                <option value="Night" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Night' ? 'selected' : ''}>Night</option>
-                            </select>
-                        </div>
-                        <div class="info-field">
-                            <label>INT/EXT</label>
-                            <select onchange="updateSceneMetadata(${currentScene}, 'intExt', this.value)">
-                                <option value="">-- Type --</option>
-                                <option value="INT" ${scene.intExt === 'INT' ? 'selected' : ''}>INT</option>
-                                <option value="EXT" ${scene.intExt === 'EXT' ? 'selected' : ''}>EXT</option>
-                                <option value="INT/EXT" ${scene.intExt === 'INT/EXT' ? 'selected' : ''}>INT/EXT</option>
-                            </select>
-                        </div>
+                <!-- SCENE INFORMATION - COLLAPSIBLE -->
+                <div class="scene-info-section" id="sceneInfoSection">
+                    <div class="scene-info-header" onclick="toggleSceneInfo()">
+                        <span class="scene-info-title">Scene Info ${(scene.storyDay && scene.timeOfDay && scene.intExt && scene.location) ? '✓' : '⚠'}</span>
+                        <button class="scene-info-toggle">▶</button>
                     </div>
-                    <div class="info-row">
-                        <div class="info-field full-width">
-                            <label>Location</label>
-                            <input type="text"
-                                   value="${scene.location || extractLocation(scene.heading) || ''}"
-                                   placeholder="FERRY"
-                                   onchange="updateSceneMetadata(${currentScene}, 'location', this.value)">
+                    <div class="scene-info-content">
+                        <div class="scene-info-compact">
+                            <div class="info-row">
+                                <div class="info-field">
+                                    <label>Story Day</label>
+                                    <input type="text"
+                                           value="${scene.storyDay || ''}"
+                                           placeholder="Day 1..."
+                                           onchange="updateSceneMetadata(${currentScene}, 'storyDay', this.value)">
+                                </div>
+                                <div class="info-field">
+                                    <label>Time</label>
+                                    <select onchange="updateSceneMetadata(${currentScene}, 'timeOfDay', this.value)">
+                                        <option value="">-- Time --</option>
+                                        <option value="Day" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Day' ? 'selected' : ''}>Day</option>
+                                        <option value="Morning" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Morning' ? 'selected' : ''}>Morning</option>
+                                        <option value="Afternoon" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Afternoon' ? 'selected' : ''}>Afternoon</option>
+                                        <option value="Evening" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Evening' ? 'selected' : ''}>Evening</option>
+                                        <option value="Night" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Night' ? 'selected' : ''}>Night</option>
+                                    </select>
+                                </div>
+                                <div class="info-field">
+                                    <label>INT/EXT</label>
+                                    <select onchange="updateSceneMetadata(${currentScene}, 'intExt', this.value)">
+                                        <option value="">-- Type --</option>
+                                        <option value="INT" ${scene.intExt === 'INT' ? 'selected' : ''}>INT</option>
+                                        <option value="EXT" ${scene.intExt === 'EXT' ? 'selected' : ''}>EXT</option>
+                                        <option value="INT/EXT" ${scene.intExt === 'INT/EXT' ? 'selected' : ''}>INT/EXT</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="info-row">
+                                <div class="info-field full-width">
+                                    <label>Location</label>
+                                    <input type="text"
+                                           value="${scene.location || extractLocation(scene.heading) || ''}"
+                                           placeholder="FERRY"
+                                           onchange="updateSceneMetadata(${currentScene}, 'location', this.value)">
+                                </div>
+                            </div>
+                            <div class="ai-detect-row">
+                                <button class="ai-btn-compact" onclick="detectAIElements(${currentScene})" title="Auto-detect cast & elements">
+                                    🔍 Auto-Detect Elements
+                                </button>
+                                <div class="ai-status" id="aiStatus"></div>
+                            </div>
                         </div>
-                    </div>
-                    <div class="ai-detect-row">
-                        <button class="ai-btn-compact" onclick="detectAIElements(${currentScene})" title="Auto-detect cast & elements">
-                            🔍 Auto-Detect Elements
-                        </button>
-                        <div class="ai-status" id="aiStatus"></div>
                     </div>
                 </div>
 
@@ -6592,13 +6711,23 @@ OUTPUT FORMAT (JSON only):
                     <div style="margin: 24px 0;">
                         <div class="section-title" style="margin-bottom: 16px;">
                             <span class="section-icon" style="background: rgba(251, 191, 36, 0.5);"></span>
-                            Cast in This Scene
+                            CAST (${cast.length})
                         </div>
 
                         ${cast.map(castMember => {
                             const profile = castProfiles[castMember] || {};
                             const state = characterStates[currentScene]?.[castMember] || {};
                             const activeEvents = getActiveEventsForScene(castMember, currentScene);
+
+                            // Create inline preview for collapsed state
+                            const hairPreview = (state.hair || '').substring(0, 40);
+                            const makeupPreview = (state.makeup || '').substring(0, 40);
+                            const sfxPreview = (state.sfx || '').substring(0, 40);
+                            const previewParts = [];
+                            if (hairPreview) previewParts.push(`💇 ${hairPreview}${state.hair && state.hair.length > 40 ? '...' : ''}`);
+                            if (makeupPreview) previewParts.push(`💄 ${makeupPreview}${state.makeup && state.makeup.length > 40 ? '...' : ''}`);
+                            if (sfxPreview) previewParts.push(`🩸 ${sfxPreview}${state.sfx && state.sfx.length > 40 ? '...' : ''}`);
+                            const inlinePreview = previewParts.length > 0 ? previewParts.join(' • ') : '';
 
                             return `
                                 <div class="cast-member-card" id="castCard${castMember.replace(/\s/g, '')}">
@@ -6611,6 +6740,8 @@ OUTPUT FORMAT (JSON only):
                                             <span class="cast-member-toggle"></span>
                                         </div>
                                     </div>
+
+                                    ${inlinePreview ? `<div class="cast-member-preview">${inlinePreview}</div>` : ''}
 
                                     <div class="cast-member-body">
                                         <div class="cast-member-base">
@@ -7656,6 +7787,23 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`;
             const card = document.getElementById('castCard' + cardId);
             if (card) {
                 card.classList.toggle('expanded');
+            }
+        }
+
+        // Toggle Scene Info section expand/collapse
+        function toggleSceneInfo() {
+            const section = document.getElementById('sceneInfoSection');
+            if (!section) return;
+
+            const isExpanded = section.classList.contains('expanded');
+            const toggle = section.querySelector('.scene-info-toggle');
+
+            if (isExpanded) {
+                section.classList.remove('expanded');
+                if (toggle) toggle.textContent = '▶';
+            } else {
+                section.classList.add('expanded');
+                if (toggle) toggle.textContent = '▼';
             }
         }
 
