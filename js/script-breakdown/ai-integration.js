@@ -526,8 +526,8 @@ export async function generateAllSynopses() {
     // Reset cancellation flag
     batchCancelled = false;
 
-    // Open progress modal
-    openProgressModal('Generating All Synopses', state.scenes.length);
+    // Show corner progress notification
+    showCornerProgress('Generating All Synopses', state.scenes.length);
 
     let successCount = 0;
     let errorCount = 0;
@@ -535,12 +535,12 @@ export async function generateAllSynopses() {
 
     for (let i = 0; i < state.scenes.length; i++) {
         if (batchCancelled) {
-            updateProgressModal(i, state.scenes.length, `Cancelled at scene ${i + 1}`, false);
+            updateCornerProgress(i, state.scenes.length, `Cancelled at scene ${i + 1}`);
             break;
         }
 
         const scene = state.scenes[i];
-        updateProgressModal(i + 1, state.scenes.length, `Generating synopsis for Scene ${scene.number}...`, false);
+        updateCornerProgress(i + 1, state.scenes.length, `Generating synopsis for Scene ${scene.number}...`);
 
         try {
             const synopsis = await generateAISynopsis(i);
@@ -555,12 +555,12 @@ export async function generateAllSynopses() {
             state.sceneBreakdowns[i].synopsis = synopsis;
 
             successCount++;
-            updateProgressDetails(`✓ Scene ${scene.number} completed`);
+            updateCornerProgress(i + 1, state.scenes.length, `Generating synopsis for Scene ${scene.number}...`, `Scene ${scene.number} completed`);
         } catch (error) {
             console.error(`Error generating synopsis for scene ${i}:`, error);
             errorCount++;
             errors.push(`Scene ${scene.number}: ${error.message}`);
-            updateProgressDetails(`✗ Scene ${scene.number} failed: ${error.message}`);
+            updateCornerProgress(i + 1, state.scenes.length, `Generating synopsis for Scene ${scene.number}...`, `✗ Scene ${scene.number} failed`);
         }
 
         // Small delay to avoid rate limiting
@@ -574,13 +574,12 @@ export async function generateAllSynopses() {
     // Show completion message
     const message = batchCancelled
         ? `Processing cancelled. ${successCount} synopses generated, ${errorCount} failed.`
-        : `Complete! ${successCount} synopses generated successfully. ${errorCount > 0 ? `${errorCount} failed.` : ''}`;
+        : `Complete! ${successCount} synopses generated successfully.`;
 
-    updateProgressModal(state.scenes.length, state.scenes.length, message, true);
+    updateCornerProgress(state.scenes.length, state.scenes.length, message, 'Processing complete');
 
-    if (errors.length > 0 && errors.length <= 5) {
-        updateProgressDetails(`Errors:\n${errors.join('\n')}`);
-    }
+    // Auto-close after 3 seconds
+    setTimeout(closeCornerProgress, 3000);
 
     // Refresh UI if we're viewing a scene
     if (state.currentScene !== null) {
@@ -604,8 +603,8 @@ export async function autoTagScript() {
     // Reset cancellation flag
     batchCancelled = false;
 
-    // Open progress modal
-    openProgressModal('Auto-Tagging Script', state.scenes.length);
+    // Show corner progress notification
+    showCornerProgress('Auto-Tagging Script', state.scenes.length);
 
     let successCount = 0;
     let errorCount = 0;
@@ -617,13 +616,13 @@ export async function autoTagScript() {
 
     for (let i = 0; i < state.scenes.length; i++) {
         if (batchCancelled) {
-            updateProgressModal(i, state.scenes.length, `Cancelled at scene ${i + 1}`, false);
+            updateCornerProgress(i, state.scenes.length, `Cancelled at scene ${i + 1}`);
             break;
         }
 
         const scene = state.scenes[i];
         console.log(`\n📋 Processing scene ${i + 1}/${state.scenes.length} (Scene #${scene.number})`);
-        updateProgressModal(i + 1, state.scenes.length, `Auto-detecting elements in Scene ${scene.number}...`, false);
+        updateCornerProgress(i + 1, state.scenes.length, `Auto-detecting elements in Scene ${scene.number}...`);
 
         try {
             const result = await detectAIElements(i);
@@ -732,12 +731,12 @@ export async function autoTagScript() {
 
             const tagCount = state.scriptTags[i] ? state.scriptTags[i].length : 0;
             console.log(`✓ Scene ${scene.number} complete: ${sceneTagsCreated} tags created (total in scene: ${tagCount})`);
-            updateProgressDetails(`✓ Scene ${scene.number}: ${sceneTagsCreated} tags created`);
+            updateCornerProgress(i + 1, state.scenes.length, `Auto-detecting elements in Scene ${scene.number}...`, `Scene ${scene.number}: ${sceneTagsCreated} tags created`);
         } catch (error) {
             console.error(`Error auto-tagging scene ${i}:`, error);
             errorCount++;
             errors.push(`Scene ${scene.number}: ${error.message}`);
-            updateProgressDetails(`✗ Scene ${scene.number} failed: ${error.message}`);
+            updateCornerProgress(i + 1, state.scenes.length, `Auto-detecting elements in Scene ${scene.number}...`, `✗ Scene ${scene.number} failed`);
         }
 
         // Small delay to avoid rate limiting
@@ -790,13 +789,12 @@ export async function autoTagScript() {
     // Show completion message
     const message = batchCancelled
         ? `Processing cancelled. ${successCount} scenes tagged, ${errorCount} failed.`
-        : `Complete! ${successCount} scenes auto-tagged. ${totalTags} total tags created. ${errorCount > 0 ? `${errorCount} failed.` : ''}`;
+        : `Complete! ${totalTags} total tags created across ${successCount} scenes.`;
 
-    updateProgressModal(state.scenes.length, state.scenes.length, message, true);
+    updateCornerProgress(state.scenes.length, state.scenes.length, message, 'Processing complete');
 
-    if (errors.length > 0 && errors.length <= 5) {
-        updateProgressDetails(`Errors:\n${errors.join('\n')}`);
-    }
+    // Auto-close after 3 seconds
+    setTimeout(closeCornerProgress, 3000);
 
     // Refresh UI if we're viewing a scene
     if (state.currentScene !== null) {
@@ -810,6 +808,66 @@ export async function autoTagScript() {
  */
 export function cancelBatchProcessing() {
     batchCancelled = true;
+}
+
+// ============================================================================
+// CORNER PROGRESS NOTIFICATION UTILITIES
+// ============================================================================
+
+/**
+ * Show corner progress notification
+ */
+function showCornerProgress(title, total) {
+    const corner = document.getElementById('corner-progress');
+    if (!corner) return;
+
+    document.getElementById('corner-progress-title').textContent = title;
+    document.getElementById('corner-progress-message').textContent = 'Starting...';
+    document.getElementById('corner-progress-fill').style.width = '0%';
+    document.getElementById('corner-progress-label').textContent = `0 / ${total}`;
+    document.getElementById('corner-progress-details').innerHTML = '';
+
+    corner.style.display = 'block';
+    corner.classList.remove('minimized');
+}
+
+/**
+ * Update corner progress notification
+ */
+function updateCornerProgress(current, total, message, details = '') {
+    const percentage = (current / total) * 100;
+
+    const messageEl = document.getElementById('corner-progress-message');
+    const fillEl = document.getElementById('corner-progress-fill');
+    const labelEl = document.getElementById('corner-progress-label');
+
+    if (messageEl) messageEl.textContent = message;
+    if (fillEl) fillEl.style.width = percentage + '%';
+    if (labelEl) labelEl.textContent = `${current} / ${total}`;
+
+    if (details) {
+        const detailsDiv = document.getElementById('corner-progress-details');
+        if (detailsDiv) {
+            detailsDiv.innerHTML += `<div>✓ ${details}</div>`;
+            detailsDiv.scrollTop = detailsDiv.scrollHeight;
+        }
+    }
+}
+
+/**
+ * Close corner progress notification
+ */
+function closeCornerProgress() {
+    const corner = document.getElementById('corner-progress');
+    if (corner) corner.style.display = 'none';
+}
+
+/**
+ * Toggle corner progress minimized state
+ */
+function toggleCornerProgress() {
+    const corner = document.getElementById('corner-progress');
+    if (corner) corner.classList.toggle('minimized');
 }
 
 // ============================================================================
@@ -896,3 +954,4 @@ window.generateAllSynopses = generateAllSynopses;
 window.autoTagScript = autoTagScript;
 window.cancelBatchProcessing = cancelBatchProcessing;
 window.closeProgressModal = closeProgressModal;
+window.toggleCornerProgress = toggleCornerProgress;
