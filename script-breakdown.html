@@ -3549,6 +3549,134 @@
             background: linear-gradient(135deg, rgba(102, 126, 234, 0.25), rgba(118, 75, 162, 0.25));
         }
 
+        /* Look State Badge and Sections in Breakdown Panel */
+        .events-badge {
+            display: inline-block;
+            margin-left: 8px;
+            padding: 2px 6px;
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            border-radius: 10px;
+            font-size: 0.7em;
+            font-weight: 600;
+            color: #ef4444;
+        }
+
+        .look-state-section {
+            margin-bottom: 12px;
+            padding: 10px;
+            background: rgba(212, 175, 122, 0.08);
+            border: 1px solid rgba(212, 175, 122, 0.2);
+            border-radius: 6px;
+        }
+
+        .look-state-section-title {
+            font-size: 0.625em;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--accent-gold);
+            margin-bottom: 10px;
+            letter-spacing: 0.1em;
+            text-align: center;
+            opacity: 0.7;
+        }
+
+        .look-state-info {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .look-state-name-badge {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 10px;
+            background: rgba(212, 175, 122, 0.12);
+            border: 1px solid rgba(212, 175, 122, 0.3);
+            border-radius: 6px;
+        }
+
+        .look-name-text {
+            font-size: 0.8125em;
+            font-weight: 600;
+            color: var(--accent-gold);
+        }
+
+        .look-complexity-mini {
+            font-size: 0.6875em;
+            font-weight: 600;
+            color: var(--text-muted);
+            padding: 2px 6px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+        }
+
+        .look-state-meta {
+            font-size: 0.6875em;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        .look-must-match {
+            font-size: 0.75em;
+            color: var(--text-light);
+            line-height: 1.4;
+            padding: 6px 0;
+        }
+
+        .look-must-match strong {
+            color: var(--accent-gold);
+            font-weight: 600;
+        }
+
+        .view-look-details-btn {
+            width: 100%;
+            padding: 6px 10px;
+            background: rgba(212, 175, 122, 0.1);
+            border: 1px solid rgba(212, 175, 122, 0.3);
+            border-radius: 6px;
+            color: var(--accent-gold);
+            font-size: 0.6875em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            margin-top: 4px;
+        }
+
+        .view-look-details-btn:hover {
+            background: rgba(212, 175, 122, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .scene-override-section {
+            margin-top: 12px;
+            padding: 10px;
+            background: rgba(102, 126, 234, 0.05);
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            border-radius: 6px;
+        }
+
+        .scene-override-title {
+            font-size: 0.625em;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--accent-blue);
+            margin-bottom: 8px;
+            letter-spacing: 0.1em;
+            text-align: center;
+            opacity: 0.7;
+        }
+
+        .scene-override-note {
+            font-size: 0.6875em;
+            color: var(--text-muted);
+            font-style: italic;
+            text-align: center;
+            line-height: 1.4;
+        }
+
         /* Timeline View Modes */
         .timeline-view-modes {
             display: flex;
@@ -8006,6 +8134,13 @@ OUTPUT FORMAT (JSON only):
         }
         
         // Render breakdown panel
+        // Helper function to get look state for a character in a scene
+        function getLookStateForScene(character, sceneIndex) {
+            const looks = characterLooks[character] || [];
+            const sceneNumber = scenes[sceneIndex]?.number;
+            return looks.find(look => look.scenes && look.scenes.includes(sceneNumber));
+        }
+
         function renderBreakdownPanel() {
             const container = document.getElementById('breakdownPanel');
 
@@ -8148,21 +8283,35 @@ OUTPUT FORMAT (JSON only):
                             const state = characterStates[currentScene]?.[castMember] || {};
                             const activeEvents = getActiveEventsForScene(castMember, currentScene);
 
+                            // Get look state for this character in this scene
+                            const lookState = getLookStateForScene(castMember, currentScene);
+
                             // Create inline preview for collapsed state
-                            const hairPreview = (state.hair || '').substring(0, 40);
-                            const makeupPreview = (state.makeup || '').substring(0, 40);
-                            const sfxPreview = (state.sfx || '').substring(0, 40);
-                            const previewParts = [];
-                            if (hairPreview) previewParts.push(`💇 ${hairPreview}${state.hair && state.hair.length > 40 ? '...' : ''}`);
-                            if (makeupPreview) previewParts.push(`💄 ${makeupPreview}${state.makeup && state.makeup.length > 40 ? '...' : ''}`);
-                            if (sfxPreview) previewParts.push(`🩸 ${sfxPreview}${state.sfx && state.sfx.length > 40 ? '...' : ''}`);
-                            const inlinePreview = previewParts.length > 0 ? previewParts.join(' • ') : '';
+                            let inlinePreview = '';
+                            if (lookState) {
+                                // Show look state info when collapsed
+                                const complexityIcon = getComplexityIcon(lookState.complexity);
+                                const sceneRangeText = formatSceneRange(lookState.scenes);
+                                inlinePreview = `Look: ${lookState.lookName} (${complexityIcon} ${lookState.complexity?.toUpperCase() || 'LOW'})<br>
+                                    <span style="font-size: 0.85em; opacity: 0.8;">${sceneRangeText}</span>`;
+                            } else {
+                                // Fallback to scene-specific preview if no look state
+                                const hairPreview = (state.hair || '').substring(0, 40);
+                                const makeupPreview = (state.makeup || '').substring(0, 40);
+                                const sfxPreview = (state.sfx || '').substring(0, 40);
+                                const previewParts = [];
+                                if (hairPreview) previewParts.push(`💇 ${hairPreview}${state.hair && state.hair.length > 40 ? '...' : ''}`);
+                                if (makeupPreview) previewParts.push(`💄 ${makeupPreview}${state.makeup && state.makeup.length > 40 ? '...' : ''}`);
+                                if (sfxPreview) previewParts.push(`🩸 ${sfxPreview}${state.sfx && state.sfx.length > 40 ? '...' : ''}`);
+                                inlinePreview = previewParts.length > 0 ? previewParts.join(' • ') : '';
+                            }
 
                             return `
                                 <div class="cast-member-card" id="castCard${castMember.replace(/\s/g, '')}">
                                     <div class="cast-member-header" onclick="toggleCastCard('${castMember.replace(/\s/g, '')}')">
                                         <span class="cast-member-name">${castMember}</span>
                                         <div class="header-actions">
+                                            ${activeEvents.length > 0 ? `<span class="events-badge">⚡${activeEvents.length}</span>` : ''}
                                             <button class="ai-mini-btn" onclick="event.stopPropagation(); aiFillCharacterFields('${castMember}')">
                                                 ✨ AI Fill
                                             </button>
@@ -8176,6 +8325,42 @@ OUTPUT FORMAT (JSON only):
                                         <div class="cast-member-base">
                                             Base: ${profile.baseDescription || 'No base description set'}
                                         </div>
+
+                                        ${lookState ? `
+                                            <div class="look-state-section">
+                                                <div class="look-state-section-title">━━━ LOOK STATE ━━━</div>
+                                                <div class="look-state-info">
+                                                    <div class="look-state-name-badge">
+                                                        <span class="look-name-text">${lookState.lookName}</span>
+                                                        <span class="look-complexity-mini">${getComplexityIcon(lookState.complexity)} ${lookState.complexity?.toUpperCase() || 'LOW'}</span>
+                                                    </div>
+                                                    <div class="look-state-meta">
+                                                        ${formatSceneRange(lookState.scenes)} • ${lookState.scenes?.length || 0} scenes total
+                                                    </div>
+                                                    ${lookState.appearance ? `
+                                                        <div class="look-must-match">
+                                                            <strong>Must match:</strong>
+                                                            ${[
+                                                                lookState.appearance.hair ? `hair (${lookState.appearance.hair.substring(0, 40)}${lookState.appearance.hair.length > 40 ? '...' : ''})` : '',
+                                                                lookState.appearance.makeup ? `makeup (${lookState.appearance.makeup.substring(0, 40)}${lookState.appearance.makeup.length > 40 ? '...' : ''})` : '',
+                                                                lookState.appearance.sfx ? `sfx (${lookState.appearance.sfx.substring(0, 40)}${lookState.appearance.sfx.length > 40 ? '...' : ''})` : '',
+                                                                lookState.appearance.wardrobe ? `wardrobe (${lookState.appearance.wardrobe.substring(0, 40)}${lookState.appearance.wardrobe.length > 40 ? '...' : ''})` : ''
+                                                            ].filter(Boolean).join(', ')}
+                                                        </div>
+                                                    ` : ''}
+                                                    <button class="view-look-details-btn" onclick="event.stopPropagation(); openLookDetail('${castMember}', '${lookState.id}')">
+                                                        View Look Details
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <div class="scene-override-section">
+                                                <div class="scene-override-title">━━━ SCENE-SPECIFIC OVERRIDES ━━━</div>
+                                                <div class="scene-override-note">
+                                                    Fields below override the look state for this scene only
+                                                </div>
+                                            </div>
+                                        ` : ''}
 
                                         ${activeEvents.length > 0 ? `
                                             <div class="active-events-section">
@@ -8249,9 +8434,15 @@ OUTPUT FORMAT (JSON only):
                                         </div>
 
                                         <div class="cast-member-actions">
-                                            <button class="view-timeline-btn" onclick="openCastProfile('${castMember}')">
-                                                📊 View ${castMember}'s Timeline
-                                            </button>
+                                            ${lookState ? `
+                                                <button class="view-timeline-btn" onclick="switchCharacterTab('${castMember}')">
+                                                    📊 View Character Timeline
+                                                </button>
+                                            ` : `
+                                                <button class="view-timeline-btn" onclick="openCastProfile('${castMember}')">
+                                                    📊 View ${castMember}'s Timeline
+                                                </button>
+                                            `}
                                         </div>
                                     </div>
                                 </div>
