@@ -71,9 +71,13 @@ export function renderScript() {
     if (inScene) html += '</div>';
     container.innerHTML = html;
 
+    // DIAGNOSTIC: Log script rendering
+    console.log('✓ Script rendered with', sceneIdx, 'scenes');
+
     // Reapply highlights after rendering
     import('./tag-system.js').then(module => {
         if (module.renderAllHighlights) {
+            console.log('✓ Calling renderAllHighlights after script render');
             module.renderAllHighlights();
         }
     });

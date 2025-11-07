@@ -109,6 +109,11 @@ export async function processScript() {
     // Create character tabs and profiles for extracted characters
     initializeCharacterTabs();
 
+    // DIAGNOSTIC: Log after script processing
+    console.log('✓ Script imported, scenes parsed:', state.scenes.length);
+    console.log('✓ Characters detected:', Array.from(state.characters));
+    console.log('✓ Character tabs initialized:', state.characterTabs.length);
+
     // Load and render
     loadScript(text);
 
