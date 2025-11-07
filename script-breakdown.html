@@ -4881,6 +4881,7 @@ This is it. Today's the day."></textarea>
         let castProfiles = {};
         let characterStates = {}; // { sceneIndex: { characterName: { tags: [], notes: '' } } }
         let characterLooks = {}; // { characterName: [{ id, lookName, scenes: [], storyTime, appearance: {}, scriptEvidence: {}, complexity, mustMatchScenes, storyContext }] }
+        let lookTransitions = []; // [{ id, character, fromLookId, toLookId, transitionScene, scriptEvent, scriptQuote, visualChanges: [], visibility, speed, storySignificance }]
         let continuityEvents = {}; // { characterName: [{ id, type, description, startScene, endScene, progression: [] }] }
         let sceneTimeline = {}; // { sceneIndex: { day: 1, time: "Morning", label: "Day 1 - Morning" } }
         let scriptText = '';
@@ -5124,6 +5125,7 @@ This is it. Today's the day."></textarea>
                 if (currentProject.castProfiles) castProfiles = currentProject.castProfiles;
                 if (currentProject.characterStates) characterStates = currentProject.characterStates;
                 if (currentProject.characterLooks) characterLooks = currentProject.characterLooks;
+                if (currentProject.lookTransitions) lookTransitions = currentProject.lookTransitions;
                 if (currentProject.continuityEvents) continuityEvents = currentProject.continuityEvents;
                 if (currentProject.sceneTimeline) sceneTimeline = currentProject.sceneTimeline;
                 if (currentProject.scriptTags) scriptTags = currentProject.scriptTags;
@@ -8805,6 +8807,121 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`;
             }
         }
 
+        // ========== LOOK TRANSITION HELPER FUNCTIONS ==========
+
+        /**
+         * Get all transitions for a specific character
+         * @param {string} character - Character name
+         * @returns {Array} Array of transition objects for this character
+         */
+        function getTransitionsForCharacter(character) {
+            return lookTransitions.filter(transition => transition.character === character);
+        }
+
+        /**
+         * Find a specific transition between two looks
+         * @param {string} character - Character name
+         * @param {string} fromLookId - Starting look ID
+         * @param {string} toLookId - Ending look ID
+         * @returns {Object|null} Transition object or null if not found
+         */
+        function findTransition(character, fromLookId, toLookId) {
+            return lookTransitions.find(transition =>
+                transition.character === character &&
+                transition.fromLookId === fromLookId &&
+                transition.toLookId === toLookId
+            ) || null;
+        }
+
+        /**
+         * Get all transitions that occur in a specific scene
+         * @param {number} sceneNumber - Scene number
+         * @returns {Array} Array of transitions that occur in this scene
+         */
+        function getTransitionsInScene(sceneNumber) {
+            return lookTransitions.filter(transition => transition.transitionScene === sceneNumber);
+        }
+
+        /**
+         * Get transitions from a specific look
+         * @param {string} character - Character name
+         * @param {string} lookId - Look ID to find transitions from
+         * @returns {Array} Array of transitions starting from this look
+         */
+        function getTransitionsFromLook(character, lookId) {
+            return lookTransitions.filter(transition =>
+                transition.character === character &&
+                transition.fromLookId === lookId
+            );
+        }
+
+        /**
+         * Get transitions to a specific look
+         * @param {string} character - Character name
+         * @param {string} lookId - Look ID to find transitions to
+         * @returns {Array} Array of transitions ending at this look
+         */
+        function getTransitionsToLook(character, lookId) {
+            return lookTransitions.filter(transition =>
+                transition.character === character &&
+                transition.toLookId === lookId
+            );
+        }
+
+        /**
+         * Add a new transition
+         * @param {Object} transitionData - Transition object with all required fields
+         * @returns {string} ID of the created transition
+         */
+        function addTransition(transitionData) {
+            const transition = {
+                id: transitionData.id || 'trans-' + Date.now(),
+                character: transitionData.character,
+                fromLookId: transitionData.fromLookId,
+                toLookId: transitionData.toLookId,
+                transitionScene: transitionData.transitionScene,
+                scriptEvent: transitionData.scriptEvent || '',
+                scriptQuote: transitionData.scriptQuote || '',
+                visualChanges: transitionData.visualChanges || [],
+                visibility: transitionData.visibility || 'on-screen',
+                speed: transitionData.speed || 'sudden',
+                storySignificance: transitionData.storySignificance || ''
+            };
+
+            lookTransitions.push(transition);
+            saveProject();
+            return transition.id;
+        }
+
+        /**
+         * Update an existing transition
+         * @param {string} transitionId - ID of transition to update
+         * @param {Object} updates - Object with fields to update
+         * @returns {boolean} Success status
+         */
+        function updateTransition(transitionId, updates) {
+            const index = lookTransitions.findIndex(t => t.id === transitionId);
+            if (index === -1) return false;
+
+            lookTransitions[index] = { ...lookTransitions[index], ...updates };
+            saveProject();
+            return true;
+        }
+
+        /**
+         * Delete a transition
+         * @param {string} transitionId - ID of transition to delete
+         * @returns {boolean} Success status
+         */
+        function deleteTransition(transitionId) {
+            const index = lookTransitions.findIndex(t => t.id === transitionId);
+            if (index === -1) return false;
+
+            lookTransitions.splice(index, 1);
+            saveProject();
+            return true;
+        }
+
         // Render script
         function renderScript() {
             if (!scriptText) return;
@@ -8981,6 +9098,7 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`;
             currentProject.castProfiles = castProfiles;
             currentProject.characterStates = characterStates;
             currentProject.characterLooks = characterLooks;
+            currentProject.lookTransitions = lookTransitions;
             currentProject.continuityEvents = continuityEvents;
             currentProject.sceneTimeline = sceneTimeline;
             currentProject.scenes = scenes;
