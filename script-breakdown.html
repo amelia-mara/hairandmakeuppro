@@ -4226,6 +4226,307 @@
             font-style: italic;
         }
 
+        /* Look State Timeline Styles */
+        .look-state-timeline {
+            padding: 20px 0;
+        }
+
+        .timeline-title {
+            font-size: 0.875em;
+            font-weight: 700;
+            color: var(--accent-gold);
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+            padding-left: 4px;
+        }
+
+        .manage-looks-btn {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, rgba(201, 169, 97, 0.15), rgba(184, 150, 81, 0.15));
+            border: 1px solid rgba(201, 169, 97, 0.4);
+            border-radius: 8px;
+            color: var(--accent-gold);
+            font-size: 0.875em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .manage-looks-btn:hover {
+            background: linear-gradient(135deg, rgba(201, 169, 97, 0.25), rgba(184, 150, 81, 0.25));
+            border-color: var(--accent-gold);
+            transform: translateY(-1px);
+        }
+
+        /* Look State Timeline Card */
+        .look-state-timeline-card {
+            background: rgba(28, 25, 22, 0.4);
+            border: 1px solid var(--glass-border);
+            border-left: 3px solid rgba(201, 169, 97, 0.6);
+            border-radius: 8px;
+            margin-bottom: 16px;
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+
+        .look-state-timeline-card:hover {
+            border-left-color: var(--accent-gold);
+            background: rgba(28, 25, 22, 0.6);
+        }
+
+        .look-card-header {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .look-card-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .look-name {
+            font-size: 1em;
+            font-weight: 700;
+            color: var(--text-light);
+        }
+
+        .complexity-badge {
+            padding: 4px 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .look-card-body {
+            padding: 14px 16px;
+        }
+
+        .look-info-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-size: 0.8125em;
+        }
+
+        .look-info-row.complexity-warning {
+            color: var(--accent-gold);
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: var(--text-muted);
+            min-width: 90px;
+        }
+
+        .info-value {
+            color: var(--text-light);
+        }
+
+        .appearance-preview {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--glass-border);
+        }
+
+        .preview-line {
+            padding: 4px 0;
+            font-size: 0.75em;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        .look-card-actions {
+            display: flex;
+            gap: 8px;
+            padding: 12px 16px;
+            border-top: 1px solid var(--glass-border);
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .look-card-btn {
+            flex: 1;
+            padding: 8px 14px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-light);
+            font-size: 0.8125em;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .look-card-btn:hover {
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+        }
+
+        .look-card-btn.primary {
+            background: linear-gradient(135deg, rgba(201, 169, 97, 0.2), rgba(184, 150, 81, 0.2));
+            border-color: rgba(201, 169, 97, 0.4);
+            color: var(--accent-gold);
+        }
+
+        .look-card-btn.primary:hover {
+            background: linear-gradient(135deg, rgba(201, 169, 97, 0.3), rgba(184, 150, 81, 0.3));
+            border-color: var(--accent-gold);
+        }
+
+        .look-expanded-details {
+            padding: 16px;
+            background: rgba(0, 0, 0, 0.3);
+            border-top: 1px solid var(--glass-border);
+        }
+
+        .detail-field {
+            margin-bottom: 10px;
+            font-size: 0.8125em;
+            color: var(--text-light);
+            line-height: 1.5;
+        }
+
+        .detail-field strong {
+            color: var(--accent-gold);
+        }
+
+        /* Transition Card */
+        .transition-card {
+            background: rgba(102, 126, 234, 0.08);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            border-radius: 8px;
+            padding: 14px 16px;
+            margin-bottom: 16px;
+            position: relative;
+        }
+
+        .transition-card.undefined {
+            background: rgba(239, 68, 68, 0.08);
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+
+        .transition-card-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .transition-icon {
+            font-size: 1.2em;
+        }
+
+        .transition-scene-label {
+            font-size: 0.75em;
+            font-weight: 700;
+            color: var(--accent-blue);
+            letter-spacing: 0.5px;
+        }
+
+        .transition-card.undefined .transition-scene-label {
+            color: #ef4444;
+        }
+
+        .transition-event {
+            font-size: 0.875em;
+            font-weight: 600;
+            color: var(--text-light);
+            margin-bottom: 8px;
+        }
+
+        .transition-quote {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-left: 2px solid var(--accent-blue);
+            border-radius: 4px;
+            margin-bottom: 8px;
+        }
+
+        .quote-icon {
+            font-size: 0.875em;
+            color: var(--accent-blue);
+        }
+
+        .transition-quote {
+            font-size: 0.8125em;
+            color: var(--text-muted);
+            font-style: italic;
+            line-height: 1.4;
+        }
+
+        .transition-changes {
+            margin: 10px 0;
+        }
+
+        .change-item {
+            padding: 6px 10px;
+            margin-bottom: 4px;
+            background: rgba(0, 0, 0, 0.2);
+            border-left: 2px solid var(--accent-blue);
+            border-radius: 4px;
+            font-size: 0.75em;
+            color: var(--text-light);
+        }
+
+        .change-more {
+            padding: 4px 10px;
+            font-size: 0.75em;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        .edit-transition-mini-btn {
+            padding: 6px 12px;
+            background: rgba(102, 126, 234, 0.15);
+            border: 1px solid rgba(102, 126, 234, 0.4);
+            border-radius: 6px;
+            color: var(--accent-blue);
+            font-size: 0.75em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .edit-transition-mini-btn:hover {
+            background: rgba(102, 126, 234, 0.25);
+            border-color: var(--accent-blue);
+        }
+
+        /* No Looks Fallback */
+        .no-looks-message {
+            padding: 20px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.875em;
+        }
+
+        .story-day-card-simple {
+            background: rgba(28, 25, 22, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 14px;
+            margin-bottom: 12px;
+        }
+
+        .story-day-card-simple .day-label {
+            font-size: 0.875em;
+            font-weight: 600;
+            color: var(--accent-gold);
+            margin-bottom: 8px;
+        }
+
+        .story-day-card-simple .scene-count {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+
         /* Import Modal */
         .import-modal .modal-content {
             max-width: 900px;
@@ -6023,15 +6324,13 @@ This is it. Today's the day."></textarea>
 
         function renderCharacterTimeline(character) {
             const profile = castProfiles[character] || {};
-            const storyDays = getStoryDaysForCharacter(character);
-
-            // Calculate total scenes
-            const totalScenes = storyDays.reduce((sum, day) => sum + day.scenes.length, 0);
-
-            // Get continuity events for this character
+            const looks = characterLooks[character] || [];
             const events = continuityEvents[character] || [];
 
-            // Build HTML - Story Day Card Timeline
+            // Check if character has look states defined
+            const hasLooks = looks.length > 0;
+
+            // Build HTML - Look State Timeline
             let html = `
                 <div class="character-timeline-view">
                     <!-- Header -->
@@ -6041,13 +6340,15 @@ This is it. Today's the day."></textarea>
                             <div class="character-base-info">${profile.baseDescription || '<em style="opacity: 0.6;">No description yet</em>'}</div>
                         </div>
                         <div class="timeline-stats">
+                            ${hasLooks ? `
+                                <div class="stat">
+                                    <span class="stat-value">${looks.length}</span>
+                                    <span class="stat-label">Look States</span>
+                                </div>
+                            ` : ''}
                             <div class="stat">
-                                <span class="stat-value">${storyDays.length}</span>
-                                <span class="stat-label">Story Days</span>
-                            </div>
-                            <div class="stat">
-                                <span class="stat-value">${totalScenes}</span>
-                                <span class="stat-label">Scenes</span>
+                                <span class="stat-value">${getTransitionsForCharacter(character).length}</span>
+                                <span class="stat-label">Transitions</span>
                             </div>
                             <div class="stat">
                                 <span class="stat-value">${events.length}</span>
@@ -6056,76 +6357,178 @@ This is it. Today's the day."></textarea>
                         </div>
                     </div>
 
-                    <!-- Timeline Controls -->
+                    <!-- Manage Look States Button -->
                     <div class="timeline-controls">
-                        <button class="nav-btn" onclick="scrollToPreviousDay()">← Previous Day</button>
-                        <div class="view-mode-switcher">
-                            <button class="mode-btn active">Timeline</button>
-                        </div>
-                        <button class="nav-btn" onclick="scrollToNextDay()">Next Day →</button>
+                        <button class="manage-looks-btn" onclick="openManageLooks('${character}')">
+                            📊 Manage Look States
+                        </button>
                     </div>
-
-                    <!-- Story Day Cards -->
-                    <div class="story-day-timeline">
             `;
 
-            storyDays.forEach(dayData => {
-                const aggregated = aggregateStoryDay(character, dayData);
-                const activeEvents = getActiveEventsForDay(character, dayData.label);
-                const hasImage = profile.storyDayImages?.[dayData.label];
+            if (hasLooks) {
+                // LOOK STATE TIMELINE
+                html += `<div class="look-state-timeline">`;
+                html += `<div class="timeline-title">CHARACTER JOURNEY</div>`;
+
+                // Sort looks chronologically
+                const sortedLooks = [...looks].sort((a, b) => {
+                    const firstSceneA = Math.min(...(a.scenes || [Infinity]));
+                    const firstSceneB = Math.min(...(b.scenes || [Infinity]));
+                    return firstSceneA - firstSceneB;
+                });
+
+                sortedLooks.forEach((look, index) => {
+                    const previousLook = index > 0 ? sortedLooks[index - 1] : null;
+
+                    // TRANSITION CARD (if not first look)
+                    if (previousLook) {
+                        const transition = findTransition(character, previousLook.id, look.id);
+                        if (transition) {
+                            html += `
+                                <div class="transition-card">
+                                    <div class="transition-card-header">
+                                        <span class="transition-icon">⚡</span>
+                                        <span class="transition-scene-label">TRANSITION in Scene ${transition.transitionScene}</span>
+                                    </div>
+                                    <div class="transition-event">${transition.scriptEvent || 'Transition event not defined'}</div>
+                                    ${transition.scriptQuote ? `
+                                        <div class="transition-quote">
+                                            <span class="quote-icon">📝</span>
+                                            "${transition.scriptQuote}"
+                                        </div>
+                                    ` : ''}
+                                    ${transition.visualChanges && transition.visualChanges.length > 0 ? `
+                                        <div class="transition-changes">
+                                            ${transition.visualChanges.slice(0, 3).map(change => `
+                                                <div class="change-item">${change}</div>
+                                            `).join('')}
+                                            ${transition.visualChanges.length > 3 ? `
+                                                <div class="change-more">+${transition.visualChanges.length - 3} more...</div>
+                                            ` : ''}
+                                        </div>
+                                    ` : ''}
+                                    <button class="edit-transition-mini-btn" onclick="openTransitionEditor('${character}', '${look.id}')">
+                                        Edit Transition
+                                    </button>
+                                </div>
+                            `;
+                        } else {
+                            // Show placeholder if transition not defined
+                            html += `
+                                <div class="transition-card undefined">
+                                    <div class="transition-card-header">
+                                        <span class="transition-icon">⚠️</span>
+                                        <span class="transition-scene-label">TRANSITION NOT DEFINED</span>
+                                    </div>
+                                    <button class="edit-transition-mini-btn" onclick="openTransitionEditor('${character}', '${look.id}')">
+                                        Define Transition
+                                    </button>
+                                </div>
+                            `;
+                        }
+                    }
+
+                    // LOOK STATE CARD
+                    const sceneNumbers = (look.scenes || []).sort((a, b) => a - b);
+                    const sceneRangeText = formatSceneRange(look.scenes);
+                    const complexityIcon = getComplexityIcon(look.complexity);
+
+                    // Build appearance preview
+                    const appearancePreviews = [];
+                    if (look.appearance?.hair) {
+                        const preview = look.appearance.hair.substring(0, 40);
+                        appearancePreviews.push(`💇 ${preview}${look.appearance.hair.length > 40 ? '...' : ''}`);
+                    }
+                    if (look.appearance?.makeup) {
+                        const preview = look.appearance.makeup.substring(0, 40);
+                        appearancePreviews.push(`💄 ${preview}${look.appearance.makeup.length > 40 ? '...' : ''}`);
+                    }
+                    if (look.appearance?.sfx) {
+                        const preview = look.appearance.sfx.substring(0, 40);
+                        appearancePreviews.push(`🩸 ${preview}${look.appearance.sfx.length > 40 ? '...' : ''}`);
+                    }
+                    if (look.appearance?.wardrobe) {
+                        const preview = look.appearance.wardrobe.substring(0, 40);
+                        appearancePreviews.push(`👔 ${preview}${look.appearance.wardrobe.length > 40 ? '...' : ''}`);
+                    }
+
+                    html += `
+                        <div class="look-state-timeline-card">
+                            <div class="look-card-header">
+                                <div class="look-card-title">
+                                    <span class="look-name">${look.lookName || 'Untitled Look'}</span>
+                                    <span class="complexity-badge">${complexityIcon} ${look.complexity?.toUpperCase() || 'LOW'}</span>
+                                </div>
+                            </div>
+
+                            <div class="look-card-body">
+                                <div class="look-info-row">
+                                    <span class="info-label">Scenes:</span>
+                                    <span class="info-value">${sceneRangeText} (${look.scenes?.length || 0} scenes)</span>
+                                </div>
+
+                                ${look.storyTime ? `
+                                    <div class="look-info-row">
+                                        <span class="info-label">Story Time:</span>
+                                        <span class="info-value">${look.storyTime}</span>
+                                    </div>
+                                ` : ''}
+
+                                ${look.mustMatchScenes ? `
+                                    <div class="look-info-row complexity-warning">
+                                        <span class="info-label">Complexity:</span>
+                                        <span class="info-value">${complexityIcon} ${look.complexity?.toUpperCase()} (${look.mustMatchScenes} scenes must match exactly)</span>
+                                    </div>
+                                ` : ''}
+
+                                ${appearancePreviews.length > 0 ? `
+                                    <div class="appearance-preview">
+                                        ${appearancePreviews.map(preview => `
+                                            <div class="preview-line">${preview}</div>
+                                        `).join('')}
+                                    </div>
+                                ` : ''}
+                            </div>
+
+                            <div class="look-card-actions">
+                                <button class="look-card-btn" onclick="expandLookDetails('${look.id}', this)">
+                                    View Details ▼
+                                </button>
+                                <button class="look-card-btn primary" onclick="editLook('${look.id}'); currentLookCharacter='${character}';">
+                                    Edit Look
+                                </button>
+                            </div>
+
+                            <div class="look-expanded-details" style="display: none;">
+                                ${look.appearance?.hair ? `<div class="detail-field"><strong>💇 Hair:</strong> ${look.appearance.hair}</div>` : ''}
+                                ${look.appearance?.makeup ? `<div class="detail-field"><strong>💄 Makeup:</strong> ${look.appearance.makeup}</div>` : ''}
+                                ${look.appearance?.sfx ? `<div class="detail-field"><strong>🩸 SFX:</strong> ${look.appearance.sfx}</div>` : ''}
+                                ${look.appearance?.wardrobe ? `<div class="detail-field"><strong>👔 Wardrobe:</strong> ${look.appearance.wardrobe}</div>` : ''}
+                                ${look.appearance?.physicalState ? `<div class="detail-field"><strong>🏃 Physical State:</strong> ${look.appearance.physicalState}</div>` : ''}
+                                ${look.storyContext ? `<div class="detail-field"><strong>Story Context:</strong> ${look.storyContext}</div>` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += `</div>`;
+
+            } else {
+                // FALLBACK: Show scene-by-scene if no looks defined
+                const storyDays = getStoryDaysForCharacter(character);
 
                 html += `
-                    <div class="story-day-card" data-day-label="${dayData.label}">
-                        <div class="day-card-header">
+                    <div class="no-looks-message">
+                        <p>No look states defined. Showing scene-by-scene breakdown:</p>
+                    </div>
+                    <div class="story-day-timeline">
+                `;
+
+                storyDays.forEach(dayData => {
+                    html += `
+                        <div class="story-day-card-simple" data-day-label="${dayData.label}">
                             <div class="day-label">${dayData.label}</div>
                             <div class="scene-count">${dayData.scenes.length} scene${dayData.scenes.length !== 1 ? 's' : ''}</div>
-                        </div>
-
-                        <div class="reference-image-zone">
-                            ${hasImage ? `
-                                <img src="${profile.storyDayImages[dayData.label]}" class="day-reference-image" />
-                                <div class="image-overlay">
-                                    <button class="change-image-btn">Change Photo</button>
-                                </div>
-                            ` : `
-                                <div class="image-placeholder">
-                                    <span class="upload-icon">📷</span>
-                                    <span class="upload-text">+ Upload Reference</span>
-                                </div>
-                            `}
-                        </div>
-
-                        <div class="look-summary">
-                            <div class="look-field ${aggregated.hair ? '' : 'empty'}">
-                                <span class="field-icon">💇</span>
-                                <span class="field-text">${aggregated.hair || '—'}</span>
-                            </div>
-                            <div class="look-field ${aggregated.makeup ? '' : 'empty'}">
-                                <span class="field-icon">💄</span>
-                                <span class="field-text">${aggregated.makeup || '—'}</span>
-                            </div>
-                            <div class="look-field ${aggregated.sfx ? 'has-event' : 'empty'}">
-                                <span class="field-icon">🩸</span>
-                                <span class="field-text">${aggregated.sfx || '—'} ${aggregated.sfx && activeEvents.length > 0 ? '<span class="event-indicator">⚡</span>' : ''}</span>
-                            </div>
-                            <div class="look-field ${aggregated.wardrobe ? '' : 'empty'}">
-                                <span class="field-icon">👔</span>
-                                <span class="field-text">${aggregated.wardrobe || '—'}</span>
-                            </div>
-                        </div>
-
-                        ${activeEvents.length > 0 ? `
-                            <div class="active-events-badge">
-                                <span class="event-icon">⚡</span>
-                                <span class="event-text">${activeEvents.length} active event${activeEvents.length !== 1 ? 's' : ''}</span>
-                            </div>
-                        ` : ''}
-
-                        <button class="expand-day-btn" onclick="toggleDayExpansion(this)">
-                            View Scenes ▼
-                        </button>
-
-                        <div class="expanded-scene-list" style="display: none;">
                             ${dayData.scenes.map(({ scene, index }) => {
                                 const state = characterStates[index]?.[character] || {};
                                 const lookDetails = [];
@@ -6147,16 +6550,28 @@ This is it. Today's the day."></textarea>
                                 `;
                             }).join('')}
                         </div>
-                    </div>
-                `;
-            });
+                    `;
+                });
 
-            html += `
-                    </div>
-                </div>
-            `;
+                html += `</div>`;
+            }
+
+            html += `</div>`;
 
             return html;
+        }
+
+        function expandLookDetails(lookId, button) {
+            const card = button.closest('.look-state-timeline-card');
+            const details = card.querySelector('.look-expanded-details');
+
+            if (details.style.display === 'none') {
+                details.style.display = 'block';
+                button.textContent = 'Hide Details ▲';
+            } else {
+                details.style.display = 'none';
+                button.textContent = 'View Details ▼';
+            }
         }
 
         function jumpToSceneFromTimeline(sceneIndex) {
