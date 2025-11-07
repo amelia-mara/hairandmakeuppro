@@ -4280,6 +4280,256 @@
             line-height: 1.4;
         }
 
+        /* Validation System */
+        .validation-count-badge {
+            display: inline-block;
+            margin-left: 10px;
+            padding: 4px 10px;
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: 700;
+            color: #ef4444;
+        }
+
+        .validation-info-box {
+            padding: 12px;
+            background: rgba(102, 126, 234, 0.1);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            border-radius: 6px;
+            font-size: 0.8125em;
+            color: var(--text-light);
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+
+        .validation-success {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            padding: 40px;
+            background: rgba(34, 197, 94, 0.1);
+            border: 2px solid rgba(34, 197, 94, 0.3);
+            border-radius: 8px;
+        }
+
+        .validation-success-icon {
+            font-size: 3em;
+            color: #22c55e;
+            margin-bottom: 12px;
+        }
+
+        .validation-success-text {
+            font-size: 1em;
+            color: var(--text-light);
+            font-weight: 600;
+        }
+
+        .issue-group {
+            margin-bottom: 20px;
+        }
+
+        .issue-group-title {
+            font-size: 0.8125em;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-light);
+            margin-bottom: 12px;
+            letter-spacing: 0.05em;
+        }
+
+        .validation-issue-card {
+            background: rgba(28, 25, 22, 0.4);
+            border: 1px solid var(--glass-border);
+            border-left: 3px solid;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+
+        .validation-issue-card.error {
+            border-left-color: #ef4444;
+            background: rgba(239, 68, 68, 0.05);
+        }
+
+        .validation-issue-card.warning {
+            border-left-color: #f59e0b;
+            background: rgba(245, 158, 11, 0.05);
+        }
+
+        .validation-issue-card.info {
+            border-left-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        .issue-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .issue-icon {
+            font-size: 1.2em;
+            flex-shrink: 0;
+        }
+
+        .issue-message {
+            flex: 1;
+            font-size: 0.875em;
+            color: var(--text-light);
+            line-height: 1.4;
+        }
+
+        .issue-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .fix-btn {
+            padding: 6px 12px;
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.3), rgba(22, 163, 74, 0.3));
+            border: 1px solid #22c55e;
+            border-radius: 4px;
+            color: #22c55e;
+            font-size: 0.75em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .fix-btn:hover {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.4), rgba(22, 163, 74, 0.4));
+            transform: translateY(-1px);
+        }
+
+        .goto-scene-btn {
+            padding: 6px 12px;
+            background: rgba(102, 126, 234, 0.2);
+            border: 1px solid var(--accent-blue);
+            border-radius: 4px;
+            color: var(--accent-blue);
+            font-size: 0.75em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .goto-scene-btn:hover {
+            background: rgba(102, 126, 234, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .cannot-fix-note {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            font-style: italic;
+            align-self: center;
+        }
+
+        /* Validation Alert in Character Timeline */
+        .validation-alert {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            margin: 16px 0;
+            border-radius: 8px;
+            border: 2px solid;
+        }
+
+        .validation-alert.error {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.4);
+        }
+
+        .validation-alert.warning {
+            background: rgba(245, 158, 11, 0.1);
+            border-color: rgba(245, 158, 11, 0.4);
+        }
+
+        .validation-alert.success {
+            background: rgba(34, 197, 94, 0.1);
+            border-color: rgba(34, 197, 94, 0.3);
+        }
+
+        .validation-alert-icon {
+            font-size: 1.5em;
+            flex-shrink: 0;
+        }
+
+        .validation-alert.error .validation-alert-icon {
+            color: #ef4444;
+        }
+
+        .validation-alert.warning .validation-alert-icon {
+            color: #f59e0b;
+        }
+
+        .validation-alert.success .validation-alert-icon {
+            color: #22c55e;
+        }
+
+        .validation-alert-content {
+            flex: 1;
+        }
+
+        .validation-alert-title {
+            font-size: 0.875em;
+            font-weight: 700;
+            color: var(--text-light);
+            margin-bottom: 2px;
+        }
+
+        .validation-alert-desc {
+            font-size: 0.75em;
+            color: var(--text-muted);
+        }
+
+        .view-issues-btn {
+            padding: 6px 12px;
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            border-radius: 6px;
+            color: #ef4444;
+            font-size: 0.75em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .validation-alert.warning .view-issues-btn {
+            background: rgba(245, 158, 11, 0.2);
+            border-color: rgba(245, 158, 11, 0.4);
+            color: #f59e0b;
+        }
+
+        .view-issues-btn:hover {
+            transform: translateY(-1px);
+            filter: brightness(1.2);
+        }
+
+        .validate-btn {
+            padding: 8px 16px;
+            background: rgba(102, 126, 234, 0.2);
+            border: 1px solid var(--accent-blue);
+            border-radius: 8px;
+            color: var(--accent-blue);
+            font-size: 0.875em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .validate-btn:hover {
+            background: rgba(102, 126, 234, 0.3);
+            transform: translateY(-1px);
+        }
+
         /* Cast Profile Modal */
         .cast-profile-modal .modal-content {
             max-width: 600px;
@@ -5861,6 +6111,36 @@
         </div>
     </div>
 
+    <!-- Validation Issues Modal -->
+    <div class="modal" id="validationModal">
+        <div class="modal-content" style="max-width: 900px; max-height: 90vh; display: flex; flex-direction: column;">
+            <div class="modal-header">
+                <h3>
+                    <span>Validation Issues - </span>
+                    <span id="validationCharacterName">Character Name</span>
+                    <span class="validation-count-badge" id="validationIssueCount">0</span>
+                </h3>
+                <button class="modal-close" onclick="closeValidation()">×</button>
+            </div>
+
+            <div style="flex: 1; overflow-y: auto; padding: 20px;">
+                <div class="validation-info-box">
+                    <strong>What this checks:</strong> This tool validates that look states and transitions are
+                    consistent with scene data. It catches missing look assignments, scene overlaps, gaps, and
+                    transition mismatches.
+                </div>
+
+                <div id="validationIssuesList">
+                    <!-- Issues will be populated here -->
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="modal-btn" onclick="closeValidation()">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Import Script Modal -->
     <div class="modal import-modal" id="importModal">
         <div class="modal-content">
@@ -7084,6 +7364,11 @@ This is it. Today's the day."></textarea>
             // Check if character has look states defined
             const hasLooks = looks.length > 0;
 
+            // Run validation
+            const validationIssues = hasLooks ? validateCharacterContinuity(character) : [];
+            const hasErrors = validationIssues.filter(i => i.severity === 'error').length > 0;
+            const hasWarnings = validationIssues.filter(i => i.severity === 'warning').length > 0;
+
             // Build HTML - Look State Timeline
             let html = `
                 <div class="character-timeline-view">
@@ -7111,11 +7396,44 @@ This is it. Today's the day."></textarea>
                         </div>
                     </div>
 
+                    ${hasLooks && validationIssues.length > 0 ? `
+                        <!-- Validation Alert -->
+                        <div class="validation-alert ${hasErrors ? 'error' : 'warning'}">
+                            <div class="validation-alert-icon">${hasErrors ? '🔴' : '⚠️'}</div>
+                            <div class="validation-alert-content">
+                                <div class="validation-alert-title">
+                                    ${validationIssues.length} Issue${validationIssues.length !== 1 ? 's' : ''} Found
+                                </div>
+                                <div class="validation-alert-desc">
+                                    ${hasErrors ? `${validationIssues.filter(i => i.severity === 'error').length} error(s), ` : ''}
+                                    ${hasWarnings ? `${validationIssues.filter(i => i.severity === 'warning').length} warning(s)` : ''}
+                                </div>
+                            </div>
+                            <button class="view-issues-btn" onclick="showValidationIssues('${character}')">
+                                View Issues
+                            </button>
+                        </div>
+                    ` : hasLooks ? `
+                        <!-- Validation Success -->
+                        <div class="validation-alert success">
+                            <div class="validation-alert-icon">✓</div>
+                            <div class="validation-alert-content">
+                                <div class="validation-alert-title">No Issues</div>
+                                <div class="validation-alert-desc">Look states are consistent</div>
+                            </div>
+                        </div>
+                    ` : ''}
+
                     <!-- Manage Look States Button -->
                     <div class="timeline-controls">
                         <button class="manage-looks-btn" onclick="openManageLooks('${character}')">
                             📊 Manage Look States
                         </button>
+                        ${hasLooks ? `
+                            <button class="validate-btn" onclick="showValidationIssues('${character}')">
+                                🔍 Validate
+                            </button>
+                        ` : ''}
                     </div>
             `;
 
@@ -10493,6 +10811,348 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`;
             }
 
             alert(`✓ Created ${created} look state${created !== 1 ? 's' : ''} from suggestions!`);
+        }
+
+        // Look State Validation System
+        // Check if a character appears in a specific scene
+        function sceneHasCharacter(sceneIndex, character) {
+            const breakdown = sceneBreakdowns[sceneIndex];
+            if (!breakdown || !breakdown.cast) return false;
+            return breakdown.cast.includes(character);
+        }
+
+        // Validate character continuity and look state consistency
+        function validateCharacterContinuity(character) {
+            const issues = [];
+            const looks = characterLooks[character] || [];
+            const transitions = getTransitionsForCharacter(character);
+
+            // Build a map of scene -> looks for quick lookup
+            const sceneLookMap = new Map(); // scene number -> array of look IDs
+            looks.forEach(look => {
+                look.scenes?.forEach(sceneNum => {
+                    if (!sceneLookMap.has(sceneNum)) {
+                        sceneLookMap.set(sceneNum, []);
+                    }
+                    sceneLookMap.get(sceneNum).push(look.id);
+                });
+            });
+
+            // Check 1: Every scene where character appears should have a look assigned
+            scenes.forEach((scene, sceneIndex) => {
+                if (sceneHasCharacter(sceneIndex, character)) {
+                    const looksForScene = sceneLookMap.get(scene.number) || [];
+
+                    if (looksForScene.length === 0) {
+                        issues.push({
+                            id: `missing_${scene.number}`,
+                            type: 'missing_look',
+                            severity: 'warning',
+                            sceneIndex: sceneIndex,
+                            sceneNumber: scene.number,
+                            message: `Scene ${scene.number}: No look state assigned`,
+                            autoFixable: looks.length > 0
+                        });
+                    }
+
+                    // Check 2: No scene overlap (scene in multiple looks)
+                    if (looksForScene.length > 1) {
+                        const lookNames = looksForScene.map(lookId =>
+                            looks.find(l => l.id === lookId)?.lookName || 'Unknown'
+                        ).join(', ');
+
+                        issues.push({
+                            id: `overlap_${scene.number}`,
+                            type: 'overlap',
+                            severity: 'error',
+                            sceneIndex: sceneIndex,
+                            sceneNumber: scene.number,
+                            message: `Scene ${scene.number}: Appears in ${looksForScene.length} different look states (${lookNames})`,
+                            autoFixable: false,
+                            affectedLooks: looksForScene
+                        });
+                    }
+                }
+            });
+
+            // Check 3: Scene gaps - character appears in non-consecutive scenes without looks
+            const sortedLooks = [...looks].sort((a, b) => {
+                const firstA = Math.min(...(a.scenes || [Infinity]));
+                const firstB = Math.min(...(b.scenes || [Infinity]));
+                return firstA - firstB;
+            });
+
+            sortedLooks.forEach((look, index) => {
+                if (index < sortedLooks.length - 1) {
+                    const currentLookLastScene = Math.max(...look.scenes);
+                    const nextLookFirstScene = Math.min(...sortedLooks[index + 1].scenes);
+
+                    // Check scenes between this look and next look
+                    for (let sceneNum = currentLookLastScene + 1; sceneNum < nextLookFirstScene; sceneNum++) {
+                        const sceneIndex = scenes.findIndex(s => s.number === sceneNum);
+                        if (sceneIndex >= 0 && sceneHasCharacter(sceneIndex, character)) {
+                            issues.push({
+                                id: `gap_${sceneNum}`,
+                                type: 'gap',
+                                severity: 'warning',
+                                sceneIndex: sceneIndex,
+                                sceneNumber: sceneNum,
+                                message: `Scene ${sceneNum}: Character appears but no look state covers this scene (gap between "${look.lookName}" and "${sortedLooks[index + 1].lookName}")`,
+                                autoFixable: true,
+                                fromLook: look.id,
+                                toLook: sortedLooks[index + 1].id
+                            });
+                        }
+                    }
+                }
+            });
+
+            // Check 4: Transition scenes match look boundaries
+            transitions.forEach(transition => {
+                const fromLook = looks.find(l => l.id === transition.fromLookId);
+                const toLook = looks.find(l => l.id === transition.toLookId);
+
+                if (!fromLook || !toLook) return;
+
+                const transitionSceneNum = transition.transitionScene;
+                const fromLookHasScene = fromLook.scenes?.includes(transitionSceneNum);
+                const toLookHasScene = toLook.scenes?.includes(transitionSceneNum);
+
+                // Transition scene should be in the "to" look, not the "from" look
+                if (!toLookHasScene) {
+                    issues.push({
+                        id: `transition_mismatch_${transitionSceneNum}`,
+                        type: 'transition_mismatch',
+                        severity: 'warning',
+                        sceneIndex: scenes.findIndex(s => s.number === transitionSceneNum),
+                        sceneNumber: transitionSceneNum,
+                        message: `Transition defined for Scene ${transitionSceneNum}, but "${toLook.lookName}" doesn't start there`,
+                        autoFixable: true,
+                        transitionId: transition.id,
+                        toLookId: toLook.id
+                    });
+                }
+            });
+
+            // Check 5: Look states with no scenes
+            looks.forEach(look => {
+                if (!look.scenes || look.scenes.length === 0) {
+                    issues.push({
+                        id: `empty_look_${look.id}`,
+                        type: 'empty_look',
+                        severity: 'info',
+                        message: `Look "${look.lookName}" has no scenes assigned`,
+                        autoFixable: false,
+                        lookId: look.id
+                    });
+                }
+            });
+
+            return issues;
+        }
+
+        // Auto-fix validation issues
+        function autoFixIssue(character, issue) {
+            const looks = characterLooks[character] || [];
+
+            switch (issue.type) {
+                case 'missing_look':
+                    // Add scene to nearest look (chronologically)
+                    if (looks.length === 0) return false;
+
+                    const sortedLooks = [...looks].sort((a, b) => {
+                        const firstA = Math.min(...(a.scenes || [Infinity]));
+                        const firstB = Math.min(...(b.scenes || [Infinity]));
+                        return firstA - firstB;
+                    });
+
+                    // Find the nearest look
+                    let closestLook = sortedLooks[0];
+                    let minDistance = Infinity;
+
+                    sortedLooks.forEach(look => {
+                        const lookScenes = look.scenes || [];
+                        lookScenes.forEach(sceneNum => {
+                            const distance = Math.abs(sceneNum - issue.sceneNumber);
+                            if (distance < minDistance) {
+                                minDistance = distance;
+                                closestLook = look;
+                            }
+                        });
+                    });
+
+                    // Add scene to closest look
+                    if (!closestLook.scenes) closestLook.scenes = [];
+                    if (!closestLook.scenes.includes(issue.sceneNumber)) {
+                        closestLook.scenes.push(issue.sceneNumber);
+                        closestLook.scenes.sort((a, b) => a - b);
+                        saveProject();
+                        return true;
+                    }
+                    break;
+
+                case 'gap':
+                    // Extend the "from" look to include the gap scene
+                    const fromLook = looks.find(l => l.id === issue.fromLook);
+                    if (fromLook) {
+                        if (!fromLook.scenes) fromLook.scenes = [];
+                        if (!fromLook.scenes.includes(issue.sceneNumber)) {
+                            fromLook.scenes.push(issue.sceneNumber);
+                            fromLook.scenes.sort((a, b) => a - b);
+                            saveProject();
+                            return true;
+                        }
+                    }
+                    break;
+
+                case 'transition_mismatch':
+                    // Add transition scene to the "to" look
+                    const toLook = looks.find(l => l.id === issue.toLookId);
+                    if (toLook) {
+                        if (!toLook.scenes) toLook.scenes = [];
+                        if (!toLook.scenes.includes(issue.sceneNumber)) {
+                            toLook.scenes.push(issue.sceneNumber);
+                            toLook.scenes.sort((a, b) => a - b);
+                            saveProject();
+                            return true;
+                        }
+                    }
+                    break;
+            }
+
+            return false;
+        }
+
+        // Show validation issues modal
+        let currentValidationIssues = [];
+
+        function showValidationIssues(character) {
+            currentValidationIssues = validateCharacterContinuity(character);
+
+            document.getElementById('validationCharacterName').textContent = character;
+            document.getElementById('validationIssueCount').textContent = currentValidationIssues.length;
+
+            renderValidationIssues();
+
+            document.getElementById('validationModal').classList.add('active');
+        }
+
+        function closeValidation() {
+            document.getElementById('validationModal').classList.remove('active');
+            currentValidationIssues = [];
+        }
+
+        function renderValidationIssues() {
+            const container = document.getElementById('validationIssuesList');
+
+            if (currentValidationIssues.length === 0) {
+                container.innerHTML = `
+                    <div class="validation-success">
+                        <div class="validation-success-icon">✓</div>
+                        <div class="validation-success-text">No issues found! Look states and transitions are consistent.</div>
+                    </div>
+                `;
+                return;
+            }
+
+            // Group by severity
+            const errors = currentValidationIssues.filter(i => i.severity === 'error');
+            const warnings = currentValidationIssues.filter(i => i.severity === 'warning');
+            const info = currentValidationIssues.filter(i => i.severity === 'info');
+
+            let html = '';
+
+            if (errors.length > 0) {
+                html += `<div class="issue-group"><div class="issue-group-title">🔴 Errors (${errors.length})</div>`;
+                errors.forEach((issue, idx) => {
+                    html += renderIssueCard(issue, idx);
+                });
+                html += `</div>`;
+            }
+
+            if (warnings.length > 0) {
+                html += `<div class="issue-group"><div class="issue-group-title">⚠️ Warnings (${warnings.length})</div>`;
+                warnings.forEach((issue, idx) => {
+                    html += renderIssueCard(issue, idx);
+                });
+                html += `</div>`;
+            }
+
+            if (info.length > 0) {
+                html += `<div class="issue-group"><div class="issue-group-title">ℹ️ Info (${info.length})</div>`;
+                info.forEach((issue, idx) => {
+                    html += renderIssueCard(issue, idx);
+                });
+                html += `</div>`;
+            }
+
+            container.innerHTML = html;
+        }
+
+        function renderIssueCard(issue, index) {
+            const severityIcon = issue.severity === 'error' ? '🔴' :
+                                issue.severity === 'warning' ? '⚠️' : 'ℹ️';
+
+            return `
+                <div class="validation-issue-card ${issue.severity}">
+                    <div class="issue-header">
+                        <span class="issue-icon">${severityIcon}</span>
+                        <span class="issue-message">${issue.message}</span>
+                    </div>
+                    ${issue.autoFixable ? `
+                        <div class="issue-actions">
+                            <button class="fix-btn" onclick="fixAndRefreshValidation(${index})">
+                                🔧 Auto-Fix
+                            </button>
+                            ${issue.sceneIndex !== undefined ? `
+                                <button class="goto-scene-btn" onclick="goToScene(${issue.sceneIndex}); closeValidation();">
+                                    Go to Scene
+                                </button>
+                            ` : ''}
+                        </div>
+                    ` : `
+                        <div class="issue-actions">
+                            <span class="cannot-fix-note">Manual fix required</span>
+                            ${issue.sceneIndex !== undefined ? `
+                                <button class="goto-scene-btn" onclick="goToScene(${issue.sceneIndex}); closeValidation();">
+                                    Go to Scene
+                                </button>
+                            ` : ''}
+                        </div>
+                    `}
+                </div>
+            `;
+        }
+
+        function fixAndRefreshValidation(issueIndex) {
+            const issue = currentValidationIssues[issueIndex];
+            const character = document.getElementById('validationCharacterName').textContent;
+
+            const fixed = autoFixIssue(character, issue);
+
+            if (fixed) {
+                // Refresh validation
+                currentValidationIssues = validateCharacterContinuity(character);
+                document.getElementById('validationIssueCount').textContent = currentValidationIssues.length;
+                renderValidationIssues();
+
+                // Refresh timeline if open
+                const timelineContainer = document.getElementById(`timeline-${character}`);
+                if (timelineContainer) {
+                    renderCharacterTimeline(character);
+                }
+
+                // Refresh manage looks if open
+                if (document.getElementById('manageLooksModal').classList.contains('active')) {
+                    renderLooksList(character);
+                }
+            } else {
+                alert('Could not auto-fix this issue.');
+            }
+        }
+
+        function goToScene(sceneIndex) {
+            selectScene(sceneIndex);
         }
 
         function renderLooksList(character) {
