@@ -3831,8 +3831,6 @@ This is it. Today's the day."></textarea>
                     rightSidebar.innerHTML = `
                         <div class="workspace-tabs">
                             <div class="workspace-tab active" onclick="switchTab('breakdown')">Scene Breakdown</div>
-                            <div class="workspace-tab" onclick="switchTab('cast')">Cast in Scene</div>
-                            <div class="workspace-tab" onclick="switchTab('tags')">Tags</div>
                         </div>
 
                         <div class="workspace-content">
@@ -3843,30 +3841,12 @@ This is it. Today's the day."></textarea>
                                     <div class="empty-desc">Choose a scene to view and edit its breakdown</div>
                                 </div>
                             </div>
-
-                            <div class="tab-panel" id="castPanel">
-                                <div class="empty-state">
-                                    <div class="empty-icon">👥</div>
-                                    <div class="empty-title">Select a Scene</div>
-                                    <div class="empty-desc">Choose a scene to view its cast members</div>
-                                </div>
-                            </div>
-
-                            <div class="tab-panel" id="tagsPanel">
-                                <div class="empty-state">
-                                    <div class="empty-icon">🏷️</div>
-                                    <div class="empty-title">Select a Scene</div>
-                                    <div class="empty-desc">Choose a scene to view its tags</div>
-                                </div>
-                            </div>
                         </div>
                     `;
 
                     // Re-render panels if scene is selected
                     if (currentScene !== null) {
                         renderBreakdownPanel();
-                        renderCastPanel();
-                        renderTagsPanel();
                     }
                 }
 
