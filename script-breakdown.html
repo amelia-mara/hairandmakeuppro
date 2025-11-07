@@ -20,11 +20,10 @@
                 <h1 class="page-title" id="projectTitle">Script Breakdown</h1>
             </div>
             <div class="toolbar">
-                <button class="toolbar-btn" onclick="openMergeCharactersModal()">🔗 Merge Characters</button>
-                <button class="toolbar-btn" onclick="generateAllSynopses()">✨ Generate All Synopses</button>
-                <button class="toolbar-btn" onclick="autoTagScript()">🏷️ Auto Tag Script</button>
-                <button class="toolbar-btn" onclick="openSettingsModal()">⚙️ AI Settings</button>
-                <button class="toolbar-btn" onclick="exportData()">Export Data</button>
+                <button class="toolbar-btn" onclick="generateAllSynopses()">Generate All Synopses</button>
+                <button class="toolbar-btn" onclick="autoTagScript()">Auto Tag Script</button>
+                <button class="toolbar-btn" onclick="openSettingsModal()">AI Settings</button>
+                <button class="toolbar-btn" onclick="window.location.href='generate-breakdown.html'">Generate Breakdown</button>
                 <button class="toolbar-btn" onclick="openImportModal()">Import Script</button>
                 <div id="auto-save-indicator" class="auto-save-indicator" style="display: none;">
                     <span class="save-icon">✓</span>
@@ -46,8 +45,8 @@
                 </div>
                 <div class="scene-list" id="scene-list">
                     <div class="empty-state">
-                        <div class="empty-icon">🎬</div>
-                        <div class="empty-desc">No scenes yet</div>
+                        <div class="empty-title">No Scenes</div>
+                        <div class="empty-desc">Import a screenplay to begin</div>
                     </div>
                 </div>
             </div>
@@ -57,7 +56,7 @@
                 <!-- Tab Bar -->
                 <div class="center-tabs">
                     <div class="center-tab active" data-tab="script" onclick="switchCenterTab('script')">
-                        📄 Script
+                        Script
                     </div>
                     <!-- Character tabs generated dynamically -->
                 </div>
@@ -89,7 +88,6 @@
                             <div class="script-container">
                                 <div class="script-content" id="script-content">
                                     <div class="empty-state">
-                                        <div class="empty-icon">📄</div>
                                         <div class="empty-title">No Script Loaded</div>
                                         <div class="empty-desc">Import your screenplay to begin</div>
                                     </div>
@@ -106,12 +104,12 @@
             <div class="right-sidebar">
                 <div class="workspace-header">
                     <div class="workspace-title">SCENE BREAKDOWN</div>
+                    <button class="workspace-action-btn" onclick="openMergeCharactersModal()" title="Merge duplicate character names">Merge Characters</button>
                 </div>
 
                 <div class="workspace-content">
                     <div class="tab-panel active" id="breakdown-panel">
                         <div class="empty-state">
-                            <div class="empty-icon">📋</div>
                             <div class="empty-title">Select a Scene</div>
                             <div class="empty-desc">Choose a scene to view and edit its breakdown</div>
                         </div>
@@ -165,7 +163,7 @@
             <div class="modal-section">
                 <label class="modal-label">API Key (for local testing only)</label>
                 <input type="password" class="modal-input" id="api-key" placeholder="Enter API key...">
-                <div class="modal-note">⚠️ API key will be stored in localStorage. Use serverless deployment for production.</div>
+                <div class="modal-note">Warning: API key will be stored in localStorage. Use serverless deployment for production.</div>
             </div>
 
             <div class="modal-section">
@@ -235,7 +233,7 @@
             <div class="modal-section">
                 <label class="modal-label">Continuity Note</label>
                 <textarea class="modal-textarea" id="continuity-note-text" rows="4" placeholder="Describe the appearance or condition for this category..."></textarea>
-                <div class="modal-note">💡 Tip: Leave blank to remove this note</div>
+                <div class="modal-note">Note: Leave blank to remove this note</div>
             </div>
 
             <div class="modal-actions">
@@ -286,10 +284,10 @@
 
     <!-- Tag Context Menu (right-click on tags) -->
     <div class="tag-context-menu" id="tag-context-menu" style="display: none;">
-        <div class="context-menu-item" onclick="editTagFromContext()">✏️ Edit</div>
-        <div class="context-menu-item" onclick="removeTagFromContext()">🗑️ Delete</div>
-        <div class="context-menu-item" onclick="linkToContinuityFromContext()">🔗 Link to Event</div>
-        <div class="context-menu-item" onclick="jumpToTagsTab()">→ Go to Tags</div>
+        <div class="context-menu-item" onclick="editTagFromContext()">Edit</div>
+        <div class="context-menu-item" onclick="removeTagFromContext()">Delete</div>
+        <div class="context-menu-item" onclick="linkToContinuityFromContext()">Link to Event</div>
+        <div class="context-menu-item" onclick="jumpToTagsTab()">Go to Tags</div>
     </div>
 
     <!-- Tag Tooltip (hover on tags) -->

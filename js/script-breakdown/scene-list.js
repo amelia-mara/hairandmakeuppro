@@ -15,16 +15,16 @@ import { getSceneType, getSceneTypeLabel } from './utils.js';
 
 // Element categories for counting
 const categories = [
-    { id: 'cast', name: 'Cast Members', icon: '👤' },
-    { id: 'hair', name: 'Hair', icon: '💇' },
-    { id: 'makeup', name: 'Makeup', icon: '💄' },
-    { id: 'sfx', name: 'SFX Makeup', icon: '🩸' },
-    { id: 'health', name: 'Health/Illness', icon: '🤒' },
-    { id: 'injuries', name: 'Injuries/Wounds', icon: '🩹' },
-    { id: 'stunts', name: 'Stunts/Action', icon: '🎬' },
-    { id: 'weather', name: 'Weather Effects', icon: '🌦️' },
-    { id: 'wardrobe', name: 'Costume/Wardrobe', icon: '👔' },
-    { id: 'extras', name: 'Supporting Artists', icon: '👥' }
+    { id: 'cast', name: 'Cast Members' },
+    { id: 'hair', name: 'Hair' },
+    { id: 'makeup', name: 'Makeup' },
+    { id: 'sfx', name: 'SFX Makeup' },
+    { id: 'health', name: 'Health/Illness' },
+    { id: 'injuries', name: 'Injuries/Wounds' },
+    { id: 'stunts', name: 'Stunts/Action' },
+    { id: 'weather', name: 'Weather Effects' },
+    { id: 'wardrobe', name: 'Costume/Wardrobe' },
+    { id: 'extras', name: 'Supporting Artists' }
 ];
 
 /**
@@ -32,14 +32,23 @@ const categories = [
  * Shows scene cards with metadata, cast, and element counts
  */
 export function renderSceneList() {
-    const container = document.getElementById('sceneList');
-    if (!container) return;
+    const container = document.getElementById('scene-list');
+    if (!container) {
+        console.error('Scene list container not found');
+        return;
+    }
+
+    // Update scene count
+    const sceneCountEl = document.getElementById('scene-count');
+    if (sceneCountEl) {
+        sceneCountEl.textContent = state.scenes.length;
+    }
 
     if (state.scenes.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
-                <div class="empty-icon">🎬</div>
-                <div class="empty-desc">No scenes detected</div>
+                <div class="empty-title">No Scenes</div>
+                <div class="empty-desc">Import a screenplay to begin</div>
             </div>
         `;
         return;
