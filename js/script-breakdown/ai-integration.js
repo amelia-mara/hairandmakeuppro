@@ -223,7 +223,7 @@ export async function detectAIElements(sceneIndex) {
     const scene = state.scenes[sceneIndex];
     const sceneText = scene.content || scene.text || '';
 
-    const prompt = `You are a script breakdown assistant. Analyze this scene and extract breakdown information in JSON format.
+    const prompt = `You are a script breakdown assistant for hair and makeup departments. Analyze this scene and extract ALL relevant tags for continuity tracking.
 
 Scene Heading: ${scene.heading}
 
@@ -233,20 +233,91 @@ ${sceneText}
 Return ONLY valid JSON with this structure:
 {
   "cast": ["Character Name 1", "Character Name 2"],
-  "hair": ["Description of hair needs"],
-  "makeup": ["Description of makeup needs"],
-  "sfx": ["Description of special effects/prosthetics"],
-  "wardrobe": ["Description of wardrobe/costume needs"]
+  "hair": ["Hairstyle description 1", "Hair change description 2"],
+  "makeup": ["Makeup description 1", "Makeup need 2"],
+  "sfx": ["Special effect 1", "Prosthetic 2"],
+  "health": ["Health condition 1", "Appearance description 2"],
+  "injuries": ["Injury 1", "Wound description 2"],
+  "stunts": ["Stunt action 1", "Physical activity 2"],
+  "weather": ["Weather effect 1", "Environmental impact 2"],
+  "wardrobe": ["Costume description 1", "Wardrobe change 2"],
+  "extras": ["Background performer 1", "Crowd description 2"]
 }
 
-Rules:
-- Cast: Only speaking characters or named characters
-- Hair: Specific hair styling, wigs, or notable hair elements
-- Makeup: Beauty makeup, character makeup, aging, bruising, etc.
-- SFX: Prosthetics, wounds, blood, special makeup effects
-- Wardrobe: Costume changes, specific costume details
+DETAILED DETECTION RULES:
 
-Return ONLY the JSON, no explanation.`;
+CAST:
+- All speaking characters with names
+- Named characters who appear but don't speak
+- DO NOT include generic roles like "Waiter" or "Guard" unless they have significant interaction
+
+HAIR:
+- Specific hairstyles mentioned (bun, ponytail, curls, straight, etc.)
+- Hair color or length descriptions
+- Hair being wet, messy, disheveled, windblown
+- Hair changes (takes down her hair, puts hair up, cuts hair)
+- Wigs or hair pieces mentioned
+
+MAKEUP:
+- Beauty makeup mentioned (natural look, glamorous, etc.)
+- Makeup application or removal scenes
+- Aged appearance, youthful appearance
+- Specific makeup mentions (lipstick, eye makeup, etc.)
+- Makeup running or smudged
+
+SFX (Special Effects Makeup):
+- Wounds, cuts, gashes, lacerations
+- Blood (on face, body, clothing)
+- Bruises, black eyes, swelling
+- Burns, scars, tattoos
+- Prosthetics, creature makeup
+- Aging effects requiring prosthetics
+- Dirt, grime, or filth requiring special application
+
+HEALTH:
+- Illness (fever, pale, sickly, clammy)
+- Exhaustion, tiredness (bags under eyes, pale)
+- Sweating profusely, flushed
+- Drugged or intoxicated appearance
+- Malnourished or gaunt appearance
+
+INJURIES:
+- Recent injuries mentioned (bandages, stitches)
+- Healing wounds or scars
+- Limping, favoring a body part
+- Physical trauma visible on face/body
+- Medical devices (casts, braces, eye patches)
+
+STUNTS:
+- Fight scenes, physical altercations
+- Falls, jumps, or dangerous physical activity
+- Car chases or vehicle stunts
+- Running, climbing, athletic activities
+- Any action that might affect hair/makeup continuity
+
+WEATHER:
+- Rain (hair/makeup getting wet)
+- Wind (affecting hair)
+- Snow (on hair, face, clothing)
+- Extreme heat (sweating, flushed)
+- Mud, dirt, or environmental elements
+
+WARDROBE:
+- Specific costume descriptions
+- Costume changes within scene
+- Wardrobe malfunctions or tears
+- Getting dressed or undressed
+- Removing or adding clothing items (jacket, hat, etc.)
+
+EXTRAS:
+- Background performers with specific looks
+- Crowd descriptions requiring coordination
+- Period-specific crowd appearances
+
+Be THOROUGH - extract EVERY relevant detail. Multiple items per category are expected.
+Each description should be specific enough for continuity tracking.
+
+Return ONLY the JSON, no explanation or commentary.`;
 
     try {
         const response = await callAI(prompt, 600);
@@ -265,7 +336,12 @@ Return ONLY the JSON, no explanation.`;
                 hair: elements.hair || [],
                 makeup: elements.makeup || [],
                 sfx: elements.sfx || [],
-                wardrobe: elements.wardrobe || []
+                health: elements.health || [],
+                injuries: elements.injuries || [],
+                stunts: elements.stunts || [],
+                weather: elements.weather || [],
+                wardrobe: elements.wardrobe || [],
+                extras: elements.extras || []
             }
         };
     } catch (error) {
@@ -537,6 +613,8 @@ export async function autoTagScript() {
     const errors = [];
     const allCategories = ['cast', 'hair', 'makeup', 'sfx', 'health', 'injuries', 'stunts', 'weather', 'wardrobe', 'extras'];
 
+    console.log('📋 Will detect categories:', allCategories.join(', '));
+
     for (let i = 0; i < state.scenes.length; i++) {
         if (batchCancelled) {
             updateProgressModal(i, state.scenes.length, `Cancelled at scene ${i + 1}`, false);
@@ -554,7 +632,12 @@ export async function autoTagScript() {
                 hair: result.elements?.hair?.length || 0,
                 makeup: result.elements?.makeup?.length || 0,
                 sfx: result.elements?.sfx?.length || 0,
-                wardrobe: result.elements?.wardrobe?.length || 0
+                health: result.elements?.health?.length || 0,
+                injuries: result.elements?.injuries?.length || 0,
+                stunts: result.elements?.stunts?.length || 0,
+                weather: result.elements?.weather?.length || 0,
+                wardrobe: result.elements?.wardrobe?.length || 0,
+                extras: result.elements?.extras?.length || 0
             });
 
             // Initialize breakdown if it doesn't exist
@@ -682,9 +765,17 @@ export async function autoTagScript() {
     console.log(`\n✅ AUTO-TAGGING COMPLETE`);
     console.log(`📊 Summary:`);
     console.log(`  - Scenes processed: ${successCount}`);
-    console.log(`  - Tags created: ${totalTagsCreated}`);
+    console.log(`  - Tags created this run: ${totalTagsCreated}`);
     console.log(`  - Total tags in state: ${totalTags}`);
     console.log(`  - Errors: ${errorCount}`);
+
+    // DIAGNOSTIC: Show tag count per scene
+    console.log(`\n📋 Tags per scene:`);
+    Object.keys(state.scriptTags).forEach(sceneIndex => {
+        const tags = state.scriptTags[sceneIndex];
+        const sceneNum = state.scenes[sceneIndex]?.number || sceneIndex;
+        console.log(`  Scene ${sceneNum} (index ${sceneIndex}): ${tags.length} tags`);
+    });
 
     // DIAGNOSTIC: Show sample of tags created
     if (state.scriptTags[0]) {
