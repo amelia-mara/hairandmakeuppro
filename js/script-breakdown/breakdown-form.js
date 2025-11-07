@@ -1,0 +1,693 @@
+/**
+ * breakdown-form.js
+ * Right panel scene breakdown form
+ *
+ * Responsibilities:
+ * - Render cast list with character details
+ * - Render elements (hair, makeup, SFX, wardrobe, etc.)
+ * - Handle add/remove elements
+ * - Display scene metadata and navigation
+ * - Show look states and transition indicators
+ * - Handle AI fill for character fields
+ */
+
+import { state } from './main.js';
+import { formatSceneRange, getComplexityIcon, extractLocation, detectTimeOfDay, detectIntExt } from './utils.js';
+import { generateAISynopsis, detectAIElements, generateDescription } from './ai-integration.js';
+
+// Element categories
+const categories = [
+    { id: 'cast', name: 'Cast Members', color: '#fbbf24', icon: '👤' },
+    { id: 'hair', name: 'Hair', color: '#a855f7', icon: '💇' },
+    { id: 'makeup', name: 'Makeup (Beauty)', color: '#ec4899', icon: '💄' },
+    { id: 'sfx', name: 'SFX Makeup', color: '#ef4444', icon: '🩸' },
+    { id: 'health', name: 'Health/Illness', color: '#f59e0b', icon: '🤒' },
+    { id: 'injuries', name: 'Injuries/Wounds', color: '#dc2626', icon: '🩹' },
+    { id: 'stunts', name: 'Stunts/Action', color: '#f97316', icon: '🎬' },
+    { id: 'weather', name: 'Weather Effects', color: '#38bdf8', icon: '🌦️' },
+    { id: 'wardrobe', name: 'Costume/Wardrobe', color: '#34d399', icon: '👔' },
+    { id: 'extras', name: 'Supporting Artists', color: '#9ca3af', icon: '👥' }
+];
+
+// Current element category for add modal
+let currentElementCategory = null;
+
+/**
+ * Render the breakdown panel for the current scene
+ */
+export function renderBreakdownPanel() {
+    const container = document.getElementById('breakdownPanel');
+    if (!container) return;
+
+    if (state.currentScene === null) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">📋</div>
+                <div class="empty-title">Select a Scene</div>
+                <div class="empty-desc">Choose a scene to view and edit its breakdown</div>
+            </div>
+        `;
+        return;
+    }
+
+    const scene = state.scenes[state.currentScene];
+    const breakdown = state.sceneBreakdowns[state.currentScene] || {};
+    const cast = breakdown.cast || [];
+
+    // Count tagged elements
+    const sceneTags = state.scriptTags[state.currentScene] || [];
+    const tagCounts = {};
+    sceneTags.forEach(tag => {
+        if (!tagCounts[tag.category]) tagCounts[tag.category] = 0;
+        tagCounts[tag.category]++;
+    });
+
+    // Scene navigation data
+    const hasPrevious = state.currentScene > 0;
+    const hasNext = state.currentScene < state.scenes.length - 1;
+    const previousScene = hasPrevious ? state.scenes[state.currentScene - 1] : null;
+    const nextScene = hasNext ? state.scenes[state.currentScene + 1] : null;
+
+    // Check for transitions in this scene
+    const sceneTransitions = getSceneTransitions(state.currentScene);
+
+    let html = `
+        <!-- SCENE NAVIGATION BAR - STICKY AT TOP -->
+        <div class="breakdown-scene-nav-sticky">
+            <button class="scene-nav-btn-compact ${!hasPrevious ? 'disabled' : ''}"
+                    onclick="navigateToScene(${state.currentScene - 1})"
+                    ${!hasPrevious ? 'disabled' : ''}>
+                ← ${hasPrevious ? `Scene ${previousScene.number}` : ''}
+            </button>
+            <div class="scene-nav-current-compact">
+                SCENE ${scene.number}
+            </div>
+            <button class="scene-nav-btn-compact ${!hasNext ? 'disabled' : ''}"
+                    onclick="navigateToScene(${state.currentScene + 1})"
+                    ${!hasNext ? 'disabled' : ''}>
+                ${hasNext ? `Scene ${nextScene.number}` : ''} →
+            </button>
+        </div>
+
+        ${sceneTransitions.length > 0 ? renderTransitionBanner(sceneTransitions) : ''}
+
+        <!-- SYNOPSIS SECTION -->
+        <div class="breakdown-synopsis-section">
+            <div class="section-header">
+                <span>Synopsis</span>
+                <button class="ai-btn-compact" onclick="handleGenerateAISynopsis(${state.currentScene})" title="Generate synopsis with AI">
+                    ✨ Generate
+                </button>
+            </div>
+            <div class="synopsis-display">${escapeHtml(scene.synopsis) || 'Click Generate to create synopsis...'}</div>
+        </div>
+
+        <!-- SCENE INFORMATION - COLLAPSIBLE -->
+        ${renderSceneInfoSection(scene)}
+
+        <!-- TAGGED ELEMENTS PILLS -->
+        ${Object.keys(tagCounts).length > 0 ? `
+            <div class="tagged-pills">
+                ${Object.entries(tagCounts).map(([cat, count]) => {
+                    const category = categories.find(c => c.id === cat);
+                    return `<div class="tagged-pill">${category?.icon || '📌'} ${category?.name || cat}: ${count}</div>`;
+                }).join('')}
+            </div>
+        ` : ''}
+
+        <!-- CAST IN THIS SCENE -->
+        ${renderCastSection(cast)}
+    `;
+
+    // Render all category sections EXCEPT cast (handled separately above)
+    categories.filter(cat => cat.id !== 'cast').forEach(cat => {
+        const elements = breakdown[cat.id] || [];
+
+        // ONLY render if category has elements
+        if (elements.length > 0) {
+            html += renderCategorySection(cat, elements);
+        }
+    });
+
+    container.innerHTML = html;
+}
+
+/**
+ * Render transition banner for scenes with transitions
+ */
+function renderTransitionBanner(sceneTransitions) {
+    return `
+        <div class="transition-scene-banner">
+            <div class="transition-banner-header">
+                <span class="transition-banner-icon">⚡</span>
+                <span class="transition-banner-title">TRANSITION SCENE</span>
+            </div>
+            <div class="transition-banner-list">
+                ${sceneTransitions.map(t => {
+                    const characterLooksList = state.characterLooks[t.character] || [];
+                    const fromLook = characterLooksList.find(l => l.id === t.fromLookId);
+                    const toLook = characterLooksList.find(l => l.id === t.toLookId);
+
+                    return `
+                        <div class="transition-banner-item">
+                            <div class="transition-character-line">
+                                <strong>${escapeHtml(t.character)}:</strong>
+                                <span class="transition-looks">${escapeHtml(fromLook?.lookName || 'Previous')} → ${escapeHtml(toLook?.lookName || 'New Look')}</span>
+                            </div>
+                            ${t.scriptEvent ? `
+                                <div class="transition-event-line">
+                                    Event: ${escapeHtml(t.scriptEvent.substring(0, 60))}${t.scriptEvent.length > 60 ? '...' : ''}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Render scene information section
+ */
+function renderSceneInfoSection(scene) {
+    return `
+        <div class="scene-info-section" id="sceneInfoSection">
+            <div class="scene-info-header" onclick="toggleSceneInfo()">
+                <span class="scene-info-title">Scene Info ${(scene.storyDay && scene.timeOfDay && scene.intExt && scene.location) ? '✓' : '⚠'}</span>
+                <button class="scene-info-toggle">▶</button>
+            </div>
+            <div class="scene-info-content">
+                <div class="scene-info-compact">
+                    <div class="info-row">
+                        <div class="info-field">
+                            <label>Story Day</label>
+                            <input type="text"
+                                   value="${escapeHtml(scene.storyDay || '')}"
+                                   placeholder="Day 1..."
+                                   onchange="updateSceneMetadata(${state.currentScene}, 'storyDay', this.value)">
+                        </div>
+                        <div class="info-field">
+                            <label>Time</label>
+                            <select onchange="updateSceneMetadata(${state.currentScene}, 'timeOfDay', this.value)">
+                                <option value="">-- Time --</option>
+                                <option value="Day" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Day' ? 'selected' : ''}>Day</option>
+                                <option value="Morning" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Morning' ? 'selected' : ''}>Morning</option>
+                                <option value="Afternoon" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Afternoon' ? 'selected' : ''}>Afternoon</option>
+                                <option value="Evening" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Evening' ? 'selected' : ''}>Evening</option>
+                                <option value="Night" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Night' ? 'selected' : ''}>Night</option>
+                            </select>
+                        </div>
+                        <div class="info-field">
+                            <label>INT/EXT</label>
+                            <select onchange="updateSceneMetadata(${state.currentScene}, 'intExt', this.value)">
+                                <option value="">-- Type --</option>
+                                <option value="INT" ${scene.intExt === 'INT' ? 'selected' : ''}>INT</option>
+                                <option value="EXT" ${scene.intExt === 'EXT' ? 'selected' : ''}>EXT</option>
+                                <option value="INT/EXT" ${scene.intExt === 'INT/EXT' ? 'selected' : ''}>INT/EXT</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-field full-width">
+                            <label>Location</label>
+                            <input type="text"
+                                   value="${escapeHtml(scene.location || extractLocation(scene.heading) || '')}"
+                                   placeholder="FERRY"
+                                   onchange="updateSceneMetadata(${state.currentScene}, 'location', this.value)">
+                        </div>
+                    </div>
+                    <div class="ai-detect-row">
+                        <button class="ai-btn-compact" onclick="handleDetectAIElements(${state.currentScene})" title="Auto-detect cast & elements">
+                            🔍 Auto-Detect Elements
+                        </button>
+                        <div class="ai-status" id="aiStatus"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Render cast section
+ */
+function renderCastSection(cast) {
+    if (cast.length === 0) {
+        return `
+            <div style="margin: 24px 0;">
+                <div class="empty-state-small">
+                    <div class="empty-icon-small">👥</div>
+                    <div class="empty-text-small">No cast members in this scene. Use AI detection or add manually.</div>
+                </div>
+                <button class="add-element-btn" style="width: 100%; margin-top: 12px;" onclick="openAddElement('cast')">
+                    + Add Cast Member to Scene
+                </button>
+            </div>
+        `;
+    }
+
+    return `
+        <div style="margin: 24px 0;">
+            <div class="section-title" style="margin-bottom: 16px;">
+                <span class="section-icon" style="background: rgba(251, 191, 36, 0.5);"></span>
+                CAST (${cast.length})
+            </div>
+
+            ${cast.map(castMember => renderCastMemberCard(castMember)).join('')}
+
+            <button class="add-element-btn" style="width: 100%; margin-top: 12px;" onclick="openAddElement('cast')">
+                + Add Cast Member to Scene
+            </button>
+        </div>
+    `;
+}
+
+/**
+ * Render cast member card
+ */
+function renderCastMemberCard(castMember) {
+    const profile = state.castProfiles[castMember] || {};
+    const characterState = state.characterStates[state.currentScene]?.[castMember] || {};
+
+    // Get look state for this character in this scene
+    const lookState = getLookStateForScene(castMember, state.currentScene);
+
+    // Check if this character is transitioning in this scene
+    const characterTransition = getTransitionForScene(castMember, state.currentScene);
+
+    // Create inline preview for collapsed state
+    let inlinePreview = '';
+    if (characterTransition) {
+        const characterLooksList = state.characterLooks[castMember] || [];
+        const fromLook = characterLooksList.find(l => l.id === characterTransition.fromLookId);
+        const toLook = characterLooksList.find(l => l.id === characterTransition.toLookId);
+        inlinePreview = `⚡ <strong>LOOK CHANGES:</strong> ${escapeHtml(fromLook?.lookName || 'Previous')} → ${escapeHtml(toLook?.lookName || 'New Look')}`;
+    } else if (lookState) {
+        const complexityIcon = getComplexityIcon(lookState.complexity);
+        const sceneRangeText = formatSceneRange(lookState.scenes);
+        inlinePreview = `Look: ${escapeHtml(lookState.lookName)} (${complexityIcon} ${(lookState.complexity || 'low').toUpperCase()})<br>
+            <span style="font-size: 0.85em; opacity: 0.8;">${sceneRangeText}</span>`;
+    }
+
+    return `
+        <div class="cast-member-card" id="castCard${castMember.replace(/\s/g, '')}">
+            <div class="cast-member-header" onclick="toggleCastCard('${castMember.replace(/\s/g, '')}')">
+                <span class="cast-member-name">${escapeHtml(castMember)}</span>
+                <div class="header-actions">
+                    <button class="remove-cast-btn" onclick="event.stopPropagation(); removeElement('cast', '${escapeHtml(castMember).replace(/'/g, "\\'")}')">×</button>
+                    <span class="cast-member-toggle">▶</span>
+                </div>
+            </div>
+
+            ${inlinePreview ? `<div class="cast-member-preview">${inlinePreview}</div>` : ''}
+
+            <div class="cast-member-body">
+                <div class="cast-member-base">
+                    Base: ${escapeHtml(profile.baseDescription) || 'No base description set'}
+                </div>
+
+                ${lookState ? `
+                    <div class="look-state-section">
+                        <div class="look-state-section-title">━━━ LOOK STATE ━━━</div>
+                        <div class="look-state-info">
+                            <div class="look-state-name-badge">
+                                <span class="look-name-text">${escapeHtml(lookState.lookName)}</span>
+                                <span class="look-complexity-mini">${getComplexityIcon(lookState.complexity)} ${(lookState.complexity || 'low').toUpperCase()}</span>
+                            </div>
+                            <div class="look-state-meta">
+                                ${formatSceneRange(lookState.scenes)} • ${(lookState.scenes || []).length} scenes total
+                            </div>
+                        </div>
+                    </div>
+                ` : ''}
+
+                <div class="department-fields">
+                    <div class="department-field">
+                        <label class="department-label">Hair</label>
+                        <input type="text"
+                               class="department-input"
+                               value="${escapeHtml(characterState.hair || '')}"
+                               placeholder="Hairstyle, condition, changes..."
+                               oninput="updateCharacterField('${escapeHtml(castMember).replace(/'/g, "\\'")}', 'hair', this.value)">
+                    </div>
+
+                    <div class="department-field">
+                        <label class="department-label">Makeup</label>
+                        <input type="text"
+                               class="department-input"
+                               value="${escapeHtml(characterState.makeup || '')}"
+                               placeholder="Makeup look, details..."
+                               oninput="updateCharacterField('${escapeHtml(castMember).replace(/'/g, "\\'")}', 'makeup', this.value)">
+                    </div>
+
+                    <div class="department-field">
+                        <label class="department-label">SFX</label>
+                        <input type="text"
+                               class="department-input"
+                               value="${escapeHtml(characterState.sfx || '')}"
+                               placeholder="Injuries, wounds, prosthetics..."
+                               oninput="updateCharacterField('${escapeHtml(castMember).replace(/'/g, "\\'")}', 'sfx', this.value)">
+                    </div>
+
+                    <div class="department-field">
+                        <label class="department-label">Wardrobe</label>
+                        <input type="text"
+                               class="department-input"
+                               value="${escapeHtml(characterState.wardrobe || '')}"
+                               placeholder="Costume description, accessories..."
+                               oninput="updateCharacterField('${escapeHtml(castMember).replace(/'/g, "\\'")}', 'wardrobe', this.value)">
+                    </div>
+
+                    <div class="department-field">
+                        <label class="department-label">Notes</label>
+                        <input type="text"
+                               class="department-input"
+                               value="${escapeHtml(characterState.notes || '')}"
+                               placeholder="Additional notes..."
+                               oninput="updateCharacterField('${escapeHtml(castMember).replace(/'/g, "\\'")}', 'notes', this.value)">
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Render category section
+ */
+function renderCategorySection(cat, elements) {
+    return `
+        <div class="breakdown-section has-content"
+             id="category-${cat.id}"
+             data-category="${cat.id}">
+            <div class="section-header" onclick="toggleCategory('${cat.id}')">
+                <div class="section-header-left">
+                    <span class="section-icon" style="background: ${cat.color}"></span>
+                    <span class="section-title">${cat.icon} ${cat.name}</span>
+                    <span class="category-count has-items">${elements.length}</span>
+                </div>
+                <button class="category-toggle" onclick="event.stopPropagation();">▶</button>
+            </div>
+            <div class="section-content">
+                <div class="element-list">
+                    ${elements.map(el => `
+                        <div class="element-item">
+                            <div class="element-text">${escapeHtml(el)}</div>
+                            <button class="element-remove" onclick="removeElement('${cat.id}', '${escapeHtml(el).replace(/'/g, "\\'")}')">×</button>
+                        </div>
+                    `).join('')}
+                </div>
+                <button class="add-element-btn" style="width: 100%; margin-top: 8px;" onclick="openAddElement('${cat.id}')">+ Add ${cat.name}</button>
+            </div>
+        </div>
+    `;
+}
+
+// ============================================================================
+// ADD/REMOVE ELEMENTS
+// ============================================================================
+
+/**
+ * Open add element modal
+ */
+export function openAddElement(categoryId) {
+    currentElementCategory = categoryId;
+    const modal = document.getElementById('addElementModal');
+    if (!modal) return;
+
+    modal.classList.add('active');
+    const input = document.getElementById('elementInput');
+    if (input) {
+        input.value = '';
+        input.focus();
+    }
+}
+
+/**
+ * Close add element modal
+ */
+function closeAddElementModal() {
+    const modal = document.getElementById('addElementModal');
+    if (modal) modal.classList.remove('active');
+    currentElementCategory = null;
+}
+
+/**
+ * Confirm add element
+ */
+export function confirmAddElement() {
+    const input = document.getElementById('elementInput');
+    if (!input) return;
+
+    const value = input.value.trim();
+    if (!value || !currentElementCategory) return;
+
+    if (!state.sceneBreakdowns[state.currentScene]) {
+        state.sceneBreakdowns[state.currentScene] = {};
+    }
+    if (!state.sceneBreakdowns[state.currentScene][currentElementCategory]) {
+        state.sceneBreakdowns[state.currentScene][currentElementCategory] = [];
+    }
+
+    // Check for duplicates
+    if (state.sceneBreakdowns[state.currentScene][currentElementCategory].includes(value)) {
+        alert('This element already exists in this scene');
+        return;
+    }
+
+    state.sceneBreakdowns[state.currentScene][currentElementCategory].push(value);
+
+    // If adding cast, create profile
+    if (currentElementCategory === 'cast') {
+        if (!state.castProfiles[value]) {
+            state.castProfiles[value] = {
+                name: value,
+                baseDescription: '',
+                scenes: []
+            };
+        }
+        if (!state.castProfiles[value].scenes.includes(state.scenes[state.currentScene].number)) {
+            state.castProfiles[value].scenes.push(state.scenes[state.currentScene].number);
+        }
+    }
+
+    // Re-render and save
+    renderBreakdownPanel();
+    import('./scene-list.js').then(module => module.renderSceneList());
+    import('./export-handlers.js').then(module => module.saveProject());
+
+    closeAddElementModal();
+}
+
+/**
+ * Remove element from scene
+ */
+export function removeElement(categoryId, element) {
+    if (!state.sceneBreakdowns[state.currentScene] || !state.sceneBreakdowns[state.currentScene][categoryId]) return;
+
+    state.sceneBreakdowns[state.currentScene][categoryId] = state.sceneBreakdowns[state.currentScene][categoryId].filter(e => e !== element);
+
+    // If removing cast, update profile
+    if (categoryId === 'cast' && state.castProfiles[element]) {
+        state.castProfiles[element].scenes = state.castProfiles[element].scenes.filter(s => s !== state.scenes[state.currentScene].number);
+    }
+
+    // Re-render and save
+    renderBreakdownPanel();
+    import('./scene-list.js').then(module => module.renderSceneList());
+    import('./export-handlers.js').then(module => module.saveProject());
+}
+
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+/**
+ * Get transitions for a specific scene
+ */
+function getSceneTransitions(sceneIndex) {
+    return state.lookTransitions.filter(t => t.transitionScene === sceneIndex + 1);
+}
+
+/**
+ * Get look state for character in specific scene
+ */
+function getLookStateForScene(character, sceneIndex) {
+    const looks = state.characterLooks[character] || [];
+    return looks.find(look => (look.scenes || []).includes(sceneIndex + 1));
+}
+
+/**
+ * Get transition for character in specific scene
+ */
+function getTransitionForScene(character, sceneIndex) {
+    return state.lookTransitions.find(t =>
+        t.character === character &&
+        t.transitionScene === sceneIndex + 1
+    );
+}
+
+/**
+ * Toggle cast card expanded state
+ */
+window.toggleCastCard = function(cardId) {
+    const card = document.getElementById(`castCard${cardId}`);
+    if (!card) return;
+
+    const body = card.querySelector('.cast-member-body');
+    const toggle = card.querySelector('.cast-member-toggle');
+
+    if (body.style.display === 'block') {
+        body.style.display = 'none';
+        toggle.textContent = '▶';
+    } else {
+        body.style.display = 'block';
+        toggle.textContent = '▼';
+    }
+};
+
+/**
+ * Toggle category expanded state
+ */
+window.toggleCategory = function(categoryId) {
+    const section = document.getElementById(`category-${categoryId}`);
+    if (!section) return;
+
+    const content = section.querySelector('.section-content');
+    const toggle = section.querySelector('.category-toggle');
+    const isExpanded = section.classList.contains('expanded');
+
+    if (isExpanded) {
+        section.classList.remove('expanded');
+        content.style.display = 'none';
+        toggle.textContent = '▶';
+    } else {
+        section.classList.add('expanded');
+        content.style.display = 'block';
+        toggle.textContent = '▼';
+    }
+};
+
+/**
+ * Toggle scene info section
+ */
+window.toggleSceneInfo = function() {
+    const section = document.getElementById('sceneInfoSection');
+    if (!section) return;
+
+    const content = section.querySelector('.scene-info-content');
+    const toggle = section.querySelector('.scene-info-toggle');
+
+    if (content.style.display === 'block') {
+        content.style.display = 'none';
+        toggle.textContent = '▶';
+    } else {
+        content.style.display = 'block';
+        toggle.textContent = '▼';
+    }
+};
+
+/**
+ * Update character field
+ */
+window.updateCharacterField = function(character, field, value) {
+    if (!state.characterStates[state.currentScene]) {
+        state.characterStates[state.currentScene] = {};
+    }
+    if (!state.characterStates[state.currentScene][character]) {
+        state.characterStates[state.currentScene][character] = {};
+    }
+
+    state.characterStates[state.currentScene][character][field] = value;
+
+    // Auto-save
+    import('./export-handlers.js').then(module => module.saveProject());
+};
+
+/**
+ * Handle generate AI synopsis
+ */
+window.handleGenerateAISynopsis = async function(sceneIndex) {
+    try {
+        const status = document.getElementById('aiStatus');
+        if (status) status.textContent = 'Generating synopsis...';
+
+        const synopsis = await generateAISynopsis(sceneIndex);
+        state.scenes[sceneIndex].synopsis = synopsis;
+
+        renderBreakdownPanel();
+        import('./scene-list.js').then(module => module.renderSceneList());
+        import('./export-handlers.js').then(module => module.saveProject());
+
+        if (status) status.textContent = '✓ Synopsis generated';
+        setTimeout(() => { if (status) status.textContent = ''; }, 2000);
+    } catch (error) {
+        console.error('Error generating synopsis:', error);
+        const status = document.getElementById('aiStatus');
+        if (status) status.textContent = '✗ Error: ' + error.message;
+    }
+};
+
+/**
+ * Handle detect AI elements
+ */
+window.handleDetectAIElements = async function(sceneIndex) {
+    try {
+        const status = document.getElementById('aiStatus');
+        if (status) status.textContent = 'Detecting elements...';
+
+        const detected = await detectAIElements(sceneIndex);
+
+        // Merge detected elements
+        if (!state.sceneBreakdowns[sceneIndex]) {
+            state.sceneBreakdowns[sceneIndex] = {};
+        }
+
+        // Add detected cast
+        if (detected.cast) {
+            state.sceneBreakdowns[sceneIndex].cast = [...new Set([...(state.sceneBreakdowns[sceneIndex].cast || []), ...detected.cast])];
+        }
+
+        // Add detected elements
+        if (detected.elements) {
+            Object.keys(detected.elements).forEach(key => {
+                if (!state.sceneBreakdowns[sceneIndex][key]) {
+                    state.sceneBreakdowns[sceneIndex][key] = [];
+                }
+                state.sceneBreakdowns[sceneIndex][key] = [...new Set([...state.sceneBreakdowns[sceneIndex][key], ...detected.elements[key]])];
+            });
+        }
+
+        renderBreakdownPanel();
+        import('./scene-list.js').then(module => module.renderSceneList());
+        import('./export-handlers.js').then(module => module.saveProject());
+
+        if (status) status.textContent = '✓ Elements detected';
+        setTimeout(() => { if (status) status.textContent = ''; }, 2000);
+    } catch (error) {
+        console.error('Error detecting elements:', error);
+        const status = document.getElementById('aiStatus');
+        if (status) status.textContent = '✗ Error: ' + error.message;
+    }
+};
+
+/**
+ * Escape HTML to prevent XSS
+ */
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// ============================================================================
+// EXPOSE GLOBAL FUNCTIONS
+// ============================================================================
+
+window.openAddElement = openAddElement;
+window.closeAddElementModal = closeAddElementModal;
+window.confirmAddElement = confirmAddElement;
+window.removeElement = removeElement;
+window.renderBreakdownPanel = renderBreakdownPanel;

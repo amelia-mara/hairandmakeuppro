@@ -1,0 +1,145 @@
+/**
+ * scene-list.js
+ * Left sidebar scene navigation
+ *
+ * Responsibilities:
+ * - Render scene cards with metadata
+ * - Show scene synopsis, cast, and elements summary
+ * - Handle scene selection clicks
+ * - Display scene type indicators (INT/EXT, DAY/NIGHT)
+ * - Show expanded details for active scene
+ */
+
+import { state, selectScene } from './main.js';
+import { getSceneType, getSceneTypeLabel } from './utils.js';
+
+// Element categories for counting
+const categories = [
+    { id: 'cast', name: 'Cast Members', icon: '👤' },
+    { id: 'hair', name: 'Hair', icon: '💇' },
+    { id: 'makeup', name: 'Makeup', icon: '💄' },
+    { id: 'sfx', name: 'SFX Makeup', icon: '🩸' },
+    { id: 'health', name: 'Health/Illness', icon: '🤒' },
+    { id: 'injuries', name: 'Injuries/Wounds', icon: '🩹' },
+    { id: 'stunts', name: 'Stunts/Action', icon: '🎬' },
+    { id: 'weather', name: 'Weather Effects', icon: '🌦️' },
+    { id: 'wardrobe', name: 'Costume/Wardrobe', icon: '👔' },
+    { id: 'extras', name: 'Supporting Artists', icon: '👥' }
+];
+
+/**
+ * Render the scene list in the left sidebar
+ * Shows scene cards with metadata, cast, and element counts
+ */
+export function renderSceneList() {
+    const container = document.getElementById('sceneList');
+    if (!container) return;
+
+    if (state.scenes.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">🎬</div>
+                <div class="empty-desc">No scenes detected</div>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = state.scenes.map((scene, index) => {
+        const sceneType = getSceneType(scene.heading);
+        const sceneTypeLabel = getSceneTypeLabel(sceneType);
+        const breakdown = state.sceneBreakdowns[index] || {};
+        const cast = breakdown.cast || [];
+        const isActive = state.currentScene === index;
+
+        // Count elements (excluding cast)
+        let elementCounts = [];
+        categories.forEach(cat => {
+            const items = breakdown[cat.id] || [];
+            if (items.length > 0 && cat.id !== 'cast') {
+                elementCounts.push(`${cat.name}: ${items.length}`);
+            }
+        });
+
+        return `
+            <div class="scene-item ${sceneType} ${isActive ? 'active' : ''}" onclick="selectScene(${index})">
+                <div class="scene-header">
+                    <div class="scene-number">${scene.number}</div>
+                    <div class="scene-info">
+                        <div class="scene-heading">${escapeHtml(scene.heading)}</div>
+                        <div class="scene-meta">
+                            <span class="scene-type-indicator ${sceneType}">${sceneTypeLabel}</span>
+                        </div>
+                    </div>
+                </div>
+
+                ${isActive ? renderExpandedDetails(scene, cast, elementCounts) : ''}
+            </div>
+        `;
+    }).join('');
+}
+
+/**
+ * Render expanded details for the active scene
+ */
+function renderExpandedDetails(scene, cast, elementCounts) {
+    return `
+        <div class="scene-expanded">
+            <!-- READ-ONLY METADATA OVERVIEW -->
+            <div class="scene-metadata-overview">
+                ${scene.storyDay ? `
+                    <div class="metadata-pill">
+                        <span class="metadata-pill-icon">📅</span>
+                        <span class="metadata-pill-text">${escapeHtml(scene.storyDay)}</span>
+                    </div>
+                ` : ''}
+                ${scene.timeOfDay ? `
+                    <div class="metadata-pill">
+                        <span class="metadata-pill-icon">🕐</span>
+                        <span class="metadata-pill-text">${escapeHtml(scene.timeOfDay)}</span>
+                    </div>
+                ` : ''}
+                ${scene.location ? `
+                    <div class="metadata-pill">
+                        <span class="metadata-pill-icon">📍</span>
+                        <span class="metadata-pill-text">${escapeHtml(scene.location)}</span>
+                    </div>
+                ` : ''}
+            </div>
+
+            ${scene.synopsis
+                ? `<div class="scene-synopsis">${escapeHtml(scene.synopsis)}</div>`
+                : `<div class="scene-synopsis placeholder">No synopsis yet</div>`
+            }
+
+            ${cast.length > 0 ? `
+                <div class="scene-cast-list">
+                    ${cast.map(c => `<div class="cast-chip">${escapeHtml(c)}</div>`).join('')}
+                </div>
+            ` : ''}
+
+            ${elementCounts.length > 0 ? `
+                <div class="element-summary">
+                    ${elementCounts.slice(0, 3).map(e => `<div class="element-count">${escapeHtml(e)}</div>`).join('')}
+                </div>
+            ` : ''}
+        </div>
+    `;
+}
+
+/**
+ * Escape HTML to prevent XSS
+ */
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// ============================================================================
+// EXPOSE GLOBAL FUNCTIONS
+// ============================================================================
+
+// Make functions available globally for HTML onclick handlers (legacy support)
+window.renderSceneList = renderSceneList;
