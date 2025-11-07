@@ -570,10 +570,72 @@ export async function autoTagScript() {
                 });
             }
 
+            // CRITICAL FIX: Create tag objects in scriptTags for highlighting
+            if (!state.scriptTags[i]) {
+                state.scriptTags[i] = [];
+            }
+
+            // Create tags for cast members
+            if (result.cast && result.cast.length > 0) {
+                result.cast.forEach(castMember => {
+                    const tag = {
+                        id: `tag-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                        sceneIndex: i,
+                        sceneNumber: scene.number,
+                        category: 'cast',
+                        selectedText: castMember,
+                        fullContext: `Cast member: ${castMember}`,
+                        character: castMember,
+                        created: Date.now()
+                    };
+                    state.scriptTags[i].push(tag);
+                });
+            }
+
+            // Create tags for other elements (hair, makeup, SFX, wardrobe)
+            if (result.elements) {
+                Object.keys(result.elements).forEach(category => {
+                    if (result.elements[category] && result.elements[category].length > 0) {
+                        result.elements[category].forEach(description => {
+                            // Try to detect character from description
+                            let detectedCharacter = null;
+                            if (result.cast) {
+                                for (const castMember of result.cast) {
+                                    if (description.toLowerCase().includes(castMember.toLowerCase())) {
+                                        detectedCharacter = castMember;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            const tag = {
+                                id: `tag-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                                sceneIndex: i,
+                                sceneNumber: scene.number,
+                                category: category,
+                                selectedText: description.substring(0, 100), // Truncate long descriptions
+                                fullContext: description,
+                                character: detectedCharacter,
+                                created: Date.now()
+                            };
+                            state.scriptTags[i].push(tag);
+                        });
+                    }
+                });
+            }
+
             successCount++;
             const detectedCount = (result.cast?.length || 0) +
                                  Object.values(result.elements || {}).reduce((sum, arr) => sum + (arr?.length || 0), 0);
-            updateProgressDetails(`✓ Scene ${scene.number}: ${detectedCount} elements detected`);
+            const tagCount = state.scriptTags[i] ? state.scriptTags[i].length : 0;
+            updateProgressDetails(`✓ Scene ${scene.number}: ${detectedCount} elements, ${tagCount} tags created`);
+
+            // DIAGNOSTIC: Log what was detected
+            console.log(`✓ Scene ${scene.number} auto-tagged:`, {
+                cast: result.cast?.length || 0,
+                elements: detectedCount,
+                tagsCreated: tagCount
+            });
         } catch (error) {
             console.error(`Error auto-tagging scene ${i}:`, error);
             errorCount++;
@@ -593,6 +655,18 @@ export async function autoTagScript() {
     const { renderSceneList } = await import('./scene-list.js');
     renderSceneList();
 
+    // Refresh character tabs in case new characters were detected
+    const { renderCharacterTabs, renderCharacterTabPanels } = await import('./character-panel.js');
+
+    // Update character tabs array from characters set
+    state.characterTabs = Array.from(state.characters);
+    renderCharacterTabs();
+    renderCharacterTabPanels();
+
+    // Count total tags created
+    const totalTags = Object.values(state.scriptTags).reduce((sum, tags) => sum + (tags?.length || 0), 0);
+    console.log(`✓ Total tags created across all scenes: ${totalTags}`);
+
     // Apply all highlights to script
     const { renderAllHighlights } = await import('./tag-system.js');
     renderAllHighlights();
@@ -600,7 +674,7 @@ export async function autoTagScript() {
     // Show completion message
     const message = batchCancelled
         ? `Processing cancelled. ${successCount} scenes tagged, ${errorCount} failed.`
-        : `Complete! ${successCount} scenes auto-tagged successfully. ${errorCount > 0 ? `${errorCount} failed.` : ''}`;
+        : `Complete! ${successCount} scenes auto-tagged. ${totalTags} total tags created. ${errorCount > 0 ? `${errorCount} failed.` : ''}`;
 
     updateProgressModal(state.scenes.length, state.scenes.length, message, true);
 
