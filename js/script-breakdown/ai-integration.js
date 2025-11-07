@@ -427,7 +427,274 @@ Return only the description, no additional commentary.`;
     }
 }
 
+// ============================================================================
+// BATCH PROCESSING FUNCTIONS
+// ============================================================================
+
+// Track cancellation state
+let batchCancelled = false;
+
+/**
+ * Generate synopses for all scenes in the script
+ */
+export async function generateAllSynopses() {
+    if (!state.scenes || state.scenes.length === 0) {
+        alert('No scenes loaded. Please import a script first.');
+        return;
+    }
+
+    // Reset cancellation flag
+    batchCancelled = false;
+
+    // Open progress modal
+    openProgressModal('Generating All Synopses', state.scenes.length);
+
+    let successCount = 0;
+    let errorCount = 0;
+    const errors = [];
+
+    for (let i = 0; i < state.scenes.length; i++) {
+        if (batchCancelled) {
+            updateProgressModal(i, state.scenes.length, `Cancelled at scene ${i + 1}`, false);
+            break;
+        }
+
+        const scene = state.scenes[i];
+        updateProgressModal(i + 1, state.scenes.length, `Generating synopsis for Scene ${scene.number}...`, false);
+
+        try {
+            const synopsis = await generateAISynopsis(i);
+
+            // Save synopsis to scene
+            state.scenes[i].synopsis = synopsis;
+
+            // Also save to sceneBreakdowns if it exists
+            if (!state.sceneBreakdowns[i]) {
+                state.sceneBreakdowns[i] = {};
+            }
+            state.sceneBreakdowns[i].synopsis = synopsis;
+
+            successCount++;
+            updateProgressDetails(`✓ Scene ${scene.number} completed`);
+        } catch (error) {
+            console.error(`Error generating synopsis for scene ${i}:`, error);
+            errorCount++;
+            errors.push(`Scene ${scene.number}: ${error.message}`);
+            updateProgressDetails(`✗ Scene ${scene.number} failed: ${error.message}`);
+        }
+
+        // Small delay to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
+    // Save project data
+    const { saveProject } = await import('./export-handlers.js');
+    saveProject();
+
+    // Show completion message
+    const message = batchCancelled
+        ? `Processing cancelled. ${successCount} synopses generated, ${errorCount} failed.`
+        : `Complete! ${successCount} synopses generated successfully. ${errorCount > 0 ? `${errorCount} failed.` : ''}`;
+
+    updateProgressModal(state.scenes.length, state.scenes.length, message, true);
+
+    if (errors.length > 0 && errors.length <= 5) {
+        updateProgressDetails(`Errors:\n${errors.join('\n')}`);
+    }
+
+    // Refresh UI if we're viewing a scene
+    if (state.currentScene !== null) {
+        const { renderBreakdownPanel } = await import('./breakdown-form.js');
+        renderBreakdownPanel();
+    }
+}
+
+/**
+ * Auto-tag the entire script with AI detection
+ */
+export async function autoTagScript() {
+    if (!state.scenes || state.scenes.length === 0) {
+        alert('No scenes loaded. Please import a script first.');
+        return;
+    }
+
+    // Reset cancellation flag
+    batchCancelled = false;
+
+    // Open progress modal
+    openProgressModal('Auto-Tagging Script', state.scenes.length);
+
+    let successCount = 0;
+    let errorCount = 0;
+    const errors = [];
+    const allCategories = ['cast', 'hair', 'makeup', 'sfx', 'health', 'injuries', 'stunts', 'weather', 'wardrobe', 'extras'];
+
+    for (let i = 0; i < state.scenes.length; i++) {
+        if (batchCancelled) {
+            updateProgressModal(i, state.scenes.length, `Cancelled at scene ${i + 1}`, false);
+            break;
+        }
+
+        const scene = state.scenes[i];
+        updateProgressModal(i + 1, state.scenes.length, `Auto-detecting elements in Scene ${scene.number}...`, false);
+
+        try {
+            const result = await detectAIElements(i);
+
+            // Initialize breakdown if it doesn't exist
+            if (!state.sceneBreakdowns[i]) {
+                state.sceneBreakdowns[i] = {};
+            }
+
+            // Save detected elements
+            const breakdown = state.sceneBreakdowns[i];
+
+            // Cast members
+            if (result.cast && result.cast.length > 0) {
+                breakdown.cast = [...new Set([...(breakdown.cast || []), ...result.cast])];
+
+                // Add to global characters set
+                result.cast.forEach(char => state.characters.add(char));
+            }
+
+            // Other elements
+            if (result.elements) {
+                Object.keys(result.elements).forEach(category => {
+                    if (result.elements[category] && result.elements[category].length > 0) {
+                        breakdown[category] = [...new Set([...(breakdown[category] || []), ...result.elements[category]])];
+                    }
+                });
+            }
+
+            successCount++;
+            const detectedCount = (result.cast?.length || 0) +
+                                 Object.values(result.elements || {}).reduce((sum, arr) => sum + (arr?.length || 0), 0);
+            updateProgressDetails(`✓ Scene ${scene.number}: ${detectedCount} elements detected`);
+        } catch (error) {
+            console.error(`Error auto-tagging scene ${i}:`, error);
+            errorCount++;
+            errors.push(`Scene ${scene.number}: ${error.message}`);
+            updateProgressDetails(`✗ Scene ${scene.number} failed: ${error.message}`);
+        }
+
+        // Small delay to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
+    // Save project data
+    const { saveProject } = await import('./export-handlers.js');
+    saveProject();
+
+    // Refresh scene list to show tagged indicators
+    const { renderSceneList } = await import('./scene-list.js');
+    renderSceneList();
+
+    // Show completion message
+    const message = batchCancelled
+        ? `Processing cancelled. ${successCount} scenes tagged, ${errorCount} failed.`
+        : `Complete! ${successCount} scenes auto-tagged successfully. ${errorCount > 0 ? `${errorCount} failed.` : ''}`;
+
+    updateProgressModal(state.scenes.length, state.scenes.length, message, true);
+
+    if (errors.length > 0 && errors.length <= 5) {
+        updateProgressDetails(`Errors:\n${errors.join('\n')}`);
+    }
+
+    // Refresh UI if we're viewing a scene
+    if (state.currentScene !== null) {
+        const { renderBreakdownPanel } = await import('./breakdown-form.js');
+        renderBreakdownPanel();
+    }
+}
+
+/**
+ * Cancel batch processing
+ */
+export function cancelBatchProcessing() {
+    batchCancelled = true;
+}
+
+// ============================================================================
+// PROGRESS MODAL UTILITIES
+// ============================================================================
+
+/**
+ * Open progress modal
+ */
+function openProgressModal(title, total) {
+    const modal = document.getElementById('progress-modal');
+    const titleEl = document.getElementById('progress-title');
+    const messageEl = document.getElementById('progress-message');
+    const labelEl = document.getElementById('progress-label');
+    const fillEl = document.getElementById('progress-fill');
+    const detailsEl = document.getElementById('progress-details');
+    const cancelBtn = document.getElementById('progress-cancel-btn');
+    const doneBtn = document.getElementById('progress-done-btn');
+
+    if (!modal) return;
+
+    titleEl.textContent = title;
+    messageEl.textContent = 'Starting batch processing...';
+    labelEl.textContent = `0 / ${total}`;
+    fillEl.style.width = '0%';
+    detailsEl.textContent = '';
+    cancelBtn.style.display = 'inline-block';
+    doneBtn.style.display = 'none';
+
+    modal.style.display = 'flex';
+}
+
+/**
+ * Update progress modal
+ */
+function updateProgressModal(current, total, message, isDone) {
+    const messageEl = document.getElementById('progress-message');
+    const labelEl = document.getElementById('progress-label');
+    const fillEl = document.getElementById('progress-fill');
+    const cancelBtn = document.getElementById('progress-cancel-btn');
+    const doneBtn = document.getElementById('progress-done-btn');
+
+    if (messageEl) messageEl.textContent = message;
+    if (labelEl) labelEl.textContent = `${current} / ${total}`;
+    if (fillEl) {
+        const percentage = (current / total) * 100;
+        fillEl.style.width = `${percentage}%`;
+    }
+
+    if (isDone) {
+        if (cancelBtn) cancelBtn.style.display = 'none';
+        if (doneBtn) doneBtn.style.display = 'inline-block';
+    }
+}
+
+/**
+ * Update progress details
+ */
+function updateProgressDetails(detail) {
+    const detailsEl = document.getElementById('progress-details');
+    if (!detailsEl) return;
+
+    // Keep last 5 details
+    const lines = detailsEl.textContent.split('\n').filter(l => l.trim());
+    lines.push(detail);
+    if (lines.length > 5) lines.shift();
+
+    detailsEl.textContent = lines.join('\n');
+}
+
+/**
+ * Close progress modal
+ */
+function closeProgressModal() {
+    const modal = document.getElementById('progress-modal');
+    if (modal) modal.style.display = 'none';
+}
+
 // Expose functions globally for HTML onclick handlers
 window.openSettingsModal = openSettingsModal;
 window.closeSettingsModal = closeSettingsModal;
 window.saveSettings = saveSettings;
+window.generateAllSynopses = generateAllSynopses;
+window.autoTagScript = autoTagScript;
+window.cancelBatchProcessing = cancelBatchProcessing;
+window.closeProgressModal = closeProgressModal;
