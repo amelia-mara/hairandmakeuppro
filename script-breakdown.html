@@ -306,32 +306,49 @@
         /* Center Panel Tabs */
         .center-tabs {
             display: flex;
-            align-items: center;
+            flex-wrap: wrap;
+            align-items: flex-start;
             gap: 4px;
+            row-gap: 6px;
             padding: 8px 12px;
             background:
                 linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 0%, transparent 100%),
                 linear-gradient(135deg, rgba(212, 175, 122, 0.08) 0%, rgba(18, 16, 14, 0.85) 50%, rgba(212, 175, 122, 0.05) 100%);
             backdrop-filter: blur(24px) saturate(180%);
             border-bottom: 1px solid var(--glass-border);
-            overflow-x: auto;
-            overflow-y: hidden;
+            overflow: visible;
         }
 
         .center-tab {
-            padding: 8px 16px;
+            padding: 6px 12px;
             background: rgba(28, 25, 22, 0.3);
             border: 1px solid var(--glass-border);
-            border-radius: 8px 8px 0 0;
+            border-radius: 6px;
             color: var(--text-muted);
-            font-size: 0.8125em;
+            font-size: 0.75em;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s ease;
             white-space: nowrap;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
+            min-width: fit-content;
+            max-width: 150px;
+        }
+
+        .center-tab[data-tab="script"] {
+            padding: 6px 14px;
+            font-size: 0.8125em;
+            font-weight: 700;
+            order: -1;
+        }
+
+        .center-tab > span:first-child {
+            max-width: 120px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         .center-tab:hover {
@@ -347,40 +364,17 @@
         }
 
         .center-tab-close {
-            margin-left: 4px;
-            padding: 2px 4px;
+            margin-left: 2px;
+            padding: 2px 3px;
             border-radius: 3px;
             opacity: 0.6;
+            font-size: 0.9em;
             transition: all 0.2s ease;
         }
 
         .center-tab-close:hover {
             opacity: 1;
             background: rgba(255, 255, 255, 0.1);
-        }
-
-        .center-tab-spacer {
-            flex: 1;
-        }
-
-        .center-tab-add {
-            width: 32px;
-            height: 32px;
-            background: linear-gradient(135deg, rgba(212, 175, 122, 0.15), rgba(212, 175, 122, 0.08));
-            border: 1px solid var(--accent-gold);
-            border-radius: 6px;
-            color: var(--accent-gold);
-            font-size: 1.25em;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .center-tab-add:hover {
-            background: linear-gradient(135deg, rgba(212, 175, 122, 0.25), rgba(212, 175, 122, 0.15));
-            transform: scale(1.05);
         }
 
         .center-tab-content {
@@ -1066,45 +1060,29 @@
             padding: 1px 2px;
         }
 
-        /* Cast Member Highlighting - Enhanced */
+        /* Cast Member Highlighting - Normalized */
         .tag-highlight[data-category="cast"] {
-            background: rgba(251, 191, 36, 0.25);
-            border-bottom: 2px solid #fbbf24;
-            font-weight: 700;
-            letter-spacing: 0.02em;
-            color: #fbbf24;
-            padding: 2px 3px;
-        }
-
-        .tag-highlight[data-category="cast"]:hover {
-            background: rgba(251, 191, 36, 0.35);
-            border-bottom-width: 3px;
+            background: rgba(251, 191, 36, 0.2);
         }
 
         /* Special styling for character introductions */
         .tag-highlight[data-category="cast"][data-introduction="true"] {
-            background: rgba(251, 191, 36, 0.4);
-            border: 2px solid #fbbf24;
-            padding: 3px 6px;
-            border-radius: 3px;
-            box-shadow: 0 0 8px rgba(251, 191, 36, 0.3);
-        }
-
-        .tag-highlight[data-category="cast"]::before {
-            content: '👤 ';
-            font-size: 0.8em;
-            margin-right: 2px;
+            background: rgba(251, 191, 36, 0.25);
+            border: 1px solid rgba(251, 191, 36, 0.4);
+            padding: 2px 4px;
+            border-radius: 2px;
+            box-shadow: 0 0 4px rgba(251, 191, 36, 0.2);
         }
 
         /* Other categories */
         .tag-highlight[data-category="hair"] { background: rgba(168, 85, 247, 0.2); }
         .tag-highlight[data-category="makeup"] { background: rgba(236, 72, 153, 0.2); }
         .tag-highlight[data-category="sfx"] { background: rgba(239, 68, 68, 0.2); }
+        .tag-highlight[data-category="health"] { background: rgba(245, 158, 11, 0.2); }
+        .tag-highlight[data-category="injuries"] { background: rgba(220, 38, 38, 0.2); }
+        .tag-highlight[data-category="stunts"] { background: rgba(249, 115, 22, 0.2); }
+        .tag-highlight[data-category="weather"] { background: rgba(56, 189, 248, 0.2); }
         .tag-highlight[data-category="wardrobe"] { background: rgba(52, 211, 153, 0.2); }
-        .tag-highlight[data-category="props"] { background: rgba(251, 146, 60, 0.2); }
-        .tag-highlight[data-category="vehicles"] { background: rgba(56, 189, 248, 0.2); }
-        .tag-highlight[data-category="vfx"] { background: rgba(167, 139, 250, 0.2); }
-        .tag-highlight[data-category="stunts"] { background: rgba(245, 158, 11, 0.2); }
         .tag-highlight[data-category="extras"] { background: rgba(156, 163, 175, 0.2); }
 
         .tag-highlight:hover {
@@ -1787,13 +1765,13 @@
             to { transform: rotate(360deg); }
         }
 
-        /* Scene Navigation Bar */
+        /* Scene Navigation Bar - Ultra Compact */
         .breakdown-scene-nav {
             display: flex;
             align-items: center;
-            gap: 12px;
-            padding: 16px;
-            margin-bottom: 20px;
+            gap: 8px;
+            padding: 6px 8px;
+            margin-bottom: 8px;
             background: linear-gradient(135deg,
                 rgba(212, 175, 122, 0.08) 0%,
                 rgba(28, 25, 22, 0.6) 50%,
@@ -1801,23 +1779,24 @@
             );
             backdrop-filter: blur(16px);
             border: 1px solid var(--glass-border);
-            border-radius: 12px;
+            border-radius: 8px;
         }
 
         .scene-nav-btn {
             display: flex;
             align-items: center;
-            gap: 8px;
-            padding: 10px 16px;
+            gap: 4px;
+            padding: 6px 10px;
             background: rgba(0, 0, 0, 0.3);
             border: 1px solid var(--glass-border);
-            border-radius: 8px;
+            border-radius: 6px;
             color: var(--text-light);
-            font-size: 0.8125em;
+            font-size: 0.6875em;
             font-weight: 500;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
             white-space: nowrap;
+            height: 32px;
         }
 
         .scene-nav-btn:hover:not(.disabled) {
@@ -1852,25 +1831,25 @@
         .scene-nav-current {
             flex: 1;
             text-align: center;
-            padding: 8px 16px;
+            padding: 2px 6px;
         }
 
         .nav-scene-number {
-            font-size: 1em;
-            font-weight: 700;
+            font-size: 0.8125em;
+            font-weight: 600;
             color: var(--accent-gold);
-            margin-bottom: 4px;
+            margin-bottom: 1px;
         }
 
         .nav-scene-heading {
-            font-size: 0.8125em;
+            font-size: 0.6875em;
             color: var(--text-light);
-            margin-bottom: 4px;
-            line-height: 1.3;
+            margin-bottom: 1px;
+            line-height: 1.1;
         }
 
         .nav-scene-meta {
-            font-size: 0.75em;
+            font-size: 0.625em;
             color: var(--text-muted);
             font-style: italic;
         }
@@ -1943,6 +1922,76 @@
             font-size: 0.75em;
             color: var(--text-muted);
             font-style: italic;
+        }
+
+        /* Visual Summary Dashboard */
+        .breakdown-quick-summary {
+            margin-bottom: 16px;
+            padding: 12px;
+            background: rgba(28, 25, 22, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+        }
+
+        .quick-summary-title {
+            font-size: 0.75em;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 10px;
+        }
+
+        .quick-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        .summary-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .summary-badge:hover {
+            background: rgba(0, 0, 0, 0.4);
+            transform: translateY(-1px);
+        }
+
+        .summary-badge.empty {
+            opacity: 0.4;
+            cursor: default;
+        }
+
+        .summary-badge.empty:hover {
+            background: rgba(0, 0, 0, 0.2);
+            transform: none;
+        }
+
+        .badge-icon {
+            font-size: 1em;
+        }
+
+        .badge-label {
+            flex: 1;
+            font-size: 0.7em;
+            font-weight: 500;
+            color: var(--text-light);
+        }
+
+        .badge-count {
+            font-size: 0.75em;
+            font-weight: 700;
+            padding: 2px 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
         }
 
         /* Scene Detail Fields (for cast profile modal) */
@@ -2514,18 +2563,45 @@
         }
 
         .breakdown-section {
-            margin-bottom: 24px;
+            margin-bottom: 8px;
+            background: rgba(28, 25, 22, 0.2);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            overflow: hidden;
+            transition: all 0.2s ease;
         }
-        
+
+        .breakdown-section.expanded {
+            margin-bottom: 12px;
+        }
+
+        .breakdown-section.has-content {
+            border-color: rgba(212, 175, 122, 0.2);
+        }
+
         .section-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 12px;
+            padding: 10px 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: rgba(0, 0, 0, 0.2);
         }
-        
+
+        .section-header:hover {
+            background: rgba(212, 175, 122, 0.08);
+        }
+
+        .section-header-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+        }
+
         .section-title {
-            font-size: 0.8125em;
+            font-size: 0.75em;
             font-weight: 600;
             text-transform: uppercase;
             color: var(--text-light);
@@ -2533,11 +2609,47 @@
             align-items: center;
             gap: 8px;
         }
-        
+
         .section-icon {
             width: 10px;
             height: 10px;
             border-radius: 50%;
+        }
+
+        .category-count {
+            font-size: 0.7em;
+            font-weight: 700;
+            padding: 2px 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            color: var(--text-muted);
+        }
+
+        .category-count.has-items {
+            background: rgba(212, 175, 122, 0.3);
+            color: var(--accent-gold);
+        }
+
+        .category-toggle {
+            padding: 4px 8px;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 0.7em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .section-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            padding: 0 12px;
+        }
+
+        .breakdown-section.expanded .section-content {
+            max-height: 2000px;
+            padding: 0 12px 12px 12px;
         }
         
         .add-element-btn {
@@ -3642,8 +3754,6 @@
                         📄 Script
                     </div>
                     <!-- Character tabs generated dynamically here -->
-                    <div class="center-tab-spacer"></div>
-                    <button class="center-tab-add" onclick="openAddCharacterModal()">+</button>
                 </div>
 
                 <!-- Tab Content Container -->
@@ -3652,16 +3762,16 @@
                     <div class="center-tab-panel active" id="scriptTabPanel">
                         <div class="script-toolbar">
                             <div class="color-legend">
-                                <span class="legend-item"><span class="legend-color" style="background: rgba(251, 191, 36, 0.4);"></span>Cast</span>
-                                <span class="legend-item"><span class="legend-color" style="background: rgba(168, 85, 247, 0.4);"></span>Hair</span>
-                                <span class="legend-item"><span class="legend-color" style="background: rgba(236, 72, 153, 0.4);"></span>Makeup</span>
-                                <span class="legend-item"><span class="legend-color" style="background: rgba(239, 68, 68, 0.4);"></span>SFX</span>
-                                <span class="legend-item"><span class="legend-color" style="background: rgba(52, 211, 153, 0.4);"></span>Wardrobe</span>
-                                <span class="legend-item"><span class="legend-color" style="background: rgba(251, 146, 60, 0.4);"></span>Props</span>
-                                <span class="legend-item"><span class="legend-color" style="background: rgba(56, 189, 248, 0.4);"></span>Vehicles</span>
-                                <span class="legend-item"><span class="legend-color" style="background: rgba(167, 139, 250, 0.4);"></span>VFX</span>
-                                <span class="legend-item"><span class="legend-color" style="background: rgba(245, 158, 11, 0.4);"></span>Stunts</span>
-                                <span class="legend-item"><span class="legend-color" style="background: rgba(156, 163, 175, 0.4);"></span>Extras</span>
+                                <span class="legend-item"><span class="legend-color" style="background: #fbbf24;"></span>Cast</span>
+                                <span class="legend-item"><span class="legend-color" style="background: #a855f7;"></span>Hair</span>
+                                <span class="legend-item"><span class="legend-color" style="background: #ec4899;"></span>Makeup</span>
+                                <span class="legend-item"><span class="legend-color" style="background: #ef4444;"></span>SFX</span>
+                                <span class="legend-item"><span class="legend-color" style="background: #f59e0b;"></span>Health</span>
+                                <span class="legend-item"><span class="legend-color" style="background: #dc2626;"></span>Injuries</span>
+                                <span class="legend-item"><span class="legend-color" style="background: #f97316;"></span>Stunts</span>
+                                <span class="legend-item"><span class="legend-color" style="background: #38bdf8;"></span>Weather</span>
+                                <span class="legend-item"><span class="legend-color" style="background: #34d399;"></span>Wardrobe</span>
+                                <span class="legend-item"><span class="legend-color" style="background: #9ca3af;"></span>Extras</span>
                             </div>
                             <div class="view-controls">
                                 <button class="view-btn" onclick="zoomIn()">Zoom In</button>
@@ -3957,6 +4067,7 @@ This is it. Today's the day."></textarea>
                     <option value="stunts">🎬 Stunts/Action</option>
                     <option value="weather">🌦️ Weather Effects</option>
                     <option value="wardrobe">👔 Costume/Wardrobe</option>
+                    <option value="extras">👥 Supporting Artists (Extras)</option>
                 </select>
             </div>
 
@@ -4014,18 +4125,6 @@ This is it. Today's the day."></textarea>
         </div>
         <div class="context-menu-item" onclick="linkToContinuityFromContext()">
             ⚡ Link to Continuity
-        </div>
-    </div>
-
-    <!-- Add Character Modal -->
-    <div class="modal" id="addCharacterModal">
-        <div class="modal-content">
-            <div class="modal-title">Add Character Tab</div>
-            <input type="text" class="modal-input" id="addCharacterInput" placeholder="Character name..." onkeydown="if(event.key === 'Enter') confirmAddCharacter()">
-            <div class="modal-actions">
-                <button class="modal-btn" onclick="closeAddCharacterModal()">Cancel</button>
-                <button class="modal-btn primary" onclick="confirmAddCharacter()">Add Tab</button>
-            </div>
         </div>
     </div>
 
@@ -4096,7 +4195,8 @@ This is it. Today's the day."></textarea>
             { id: 'injuries', name: 'Injuries/Wounds', color: '#dc2626', icon: '🩹' },
             { id: 'stunts', name: 'Stunts/Action', color: '#f97316', icon: '🎬' },
             { id: 'weather', name: 'Weather Effects', color: '#38bdf8', icon: '🌦️' },
-            { id: 'wardrobe', name: 'Costume/Wardrobe', color: '#34d399', icon: '👔' }
+            { id: 'wardrobe', name: 'Costume/Wardrobe', color: '#34d399', icon: '👔' },
+            { id: 'extras', name: 'Supporting Artists', color: '#9ca3af', icon: '👥' }
         ];
         
         // Continuity event types
@@ -4560,25 +4660,16 @@ This is it. Today's the day."></textarea>
             const tabsContainer = document.querySelector('.center-tabs');
             if (!tabsContainer) return;
 
-            // Keep script tab, remove old character tabs
+            // Keep script tab
             const scriptTab = tabsContainer.querySelector('[data-tab="script"]');
-            const addButton = tabsContainer.querySelector('.center-tab-add');
-            const spacer = tabsContainer.querySelector('.center-tab-spacer');
 
-            // Clear between script tab and spacer
-            const childrenToRemove = [];
-            let foundScript = false;
-            let foundSpacer = false;
+            // Remove everything except script tab
+            tabsContainer.innerHTML = '';
+            if (scriptTab) {
+                tabsContainer.appendChild(scriptTab);
+            }
 
-            Array.from(tabsContainer.children).forEach(child => {
-                if (child === scriptTab) foundScript = true;
-                else if (child === spacer) foundSpacer = true;
-                else if (foundScript && !foundSpacer) childrenToRemove.push(child);
-            });
-
-            childrenToRemove.forEach(child => child.remove());
-
-            // Add character tabs
+            // Add character tabs (auto-generated from sceneBreakdowns)
             characterTabs.forEach(character => {
                 const tab = document.createElement('div');
                 tab.className = 'center-tab';
@@ -4588,8 +4679,7 @@ This is it. Today's the day."></textarea>
                     <span>👤 ${character}</span>
                     <span class="center-tab-close" onclick="event.stopPropagation(); removeCharacterTab('${character.replace(/'/g, "\\'")}')">×</span>
                 `;
-
-                tabsContainer.insertBefore(tab, spacer);
+                tabsContainer.appendChild(tab);
             });
 
             // Create tab panels for each character
@@ -5191,47 +5281,6 @@ This is it. Today's the day."></textarea>
             }, 100);
         }
 
-        // Add Character Modal Functions
-        function openAddCharacterModal() {
-            document.getElementById('addCharacterModal').classList.add('active');
-            document.getElementById('addCharacterInput').value = '';
-            document.getElementById('addCharacterInput').focus();
-        }
-
-        function closeAddCharacterModal() {
-            document.getElementById('addCharacterModal').classList.remove('active');
-        }
-
-        function confirmAddCharacter() {
-            const name = document.getElementById('addCharacterInput').value.trim().toUpperCase();
-            if (!name) return;
-
-            // Add to characters set
-            characters.add(name);
-
-            // Initialize profile if doesn't exist
-            if (!castProfiles[name]) {
-                castProfiles[name] = {
-                    name: name,
-                    baseDescription: '',
-                    scenes: []
-                };
-            }
-
-            // Add tab
-            if (!characterTabs.includes(name)) {
-                characterTabs.push(name);
-                characterTabs.sort();
-                renderCharacterTabs();
-            }
-
-            // Switch to new tab
-            switchCenterTab(`character-${name}`);
-
-            closeAddCharacterModal();
-            saveProject();
-        }
-
         // Merge Characters Modal
         function openMergeCharactersModal() {
             // Get all cast members
@@ -5751,6 +5800,9 @@ Only for character appearance/condition elements:
 - wardrobe: costume damage, blood/dirt on clothes (NOT full costume descriptions)
   Example: "torn shirt", "blood-stained jacket", "muddy jeans"
 
+- extras: background performers, crowds, non-speaking roles
+  Example: "crowd of onlookers", "busy restaurant patrons", "pedestrians"
+
 IMPORTANT RULES:
 1. ALWAYS find cast members first
 2. For each element, provide the exact short text snippet (2-5 words)
@@ -5811,11 +5863,11 @@ OUTPUT FORMAT (JSON only):
                         hair: [],
                         makeup: [],
                         sfx: [],
-                        wardrobe: [],
-                        props: [],
-                        vehicles: [],
-                        vfx: [],
+                        health: [],
+                        injuries: [],
                         stunts: [],
+                        weather: [],
+                        wardrobe: [],
                         extras: []
                     };
                 }
@@ -6338,20 +6390,30 @@ OUTPUT FORMAT (JSON only):
                     <div class="ai-status" id="aiStatus"></div>
                 </div>
 
+                <!-- VISUAL SUMMARY DASHBOARD -->
+                <div class="breakdown-quick-summary">
+                    <div class="quick-summary-title">Tagged Elements</div>
+                    <div class="quick-summary-grid">
+                        ${categories.map(cat => {
+                            const count = (breakdown[cat.id] || []).length;
+                            const isEmpty = count === 0;
+                            return `
+                                <div class="summary-badge ${isEmpty ? 'empty' : ''}"
+                                     style="border-color: ${cat.color}"
+                                     onclick="${isEmpty ? '' : `jumpToCategory('${cat.id}')`}">
+                                    <span class="badge-icon">${cat.icon}</span>
+                                    <span class="badge-label">${cat.name}</span>
+                                    <span class="badge-count">${count}</span>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+
                 <!-- SYNOPSIS DISPLAY -->
                 ${scene.synopsis ? `
                     <div class="breakdown-synopsis">
                         ${scene.synopsis}
-                    </div>
-                ` : ''}
-
-                <!-- CAST IN SCENE -->
-                ${cast.length > 0 ? `
-                    <div class="breakdown-cast-section">
-                        <div class="breakdown-section-label">Cast in Scene</div>
-                        <div class="breakdown-cast-chips">
-                            ${cast.map(c => `<div class="breakdown-cast-chip">${c}</div>`).join('')}
-                        </div>
                     </div>
                 ` : ''}
 
@@ -6551,25 +6613,35 @@ OUTPUT FORMAT (JSON only):
                 `}
             `;
 
-            categories.forEach(cat => {
+            // Render all category sections EXCEPT cast (handled separately above)
+            categories.filter(cat => cat.id !== 'cast').forEach(cat => {
                 const elements = breakdown[cat.id] || [];
+                const hasContent = elements.length > 0;
+                const isExpanded = hasContent; // Auto-expand categories with content
+
                 html += `
-                    <div class="breakdown-section">
-                        <div class="section-header">
-                            <div class="section-title">
+                    <div class="breakdown-section ${hasContent ? 'has-content' : ''} ${isExpanded ? 'expanded' : ''}"
+                         id="category-${cat.id}"
+                         data-category="${cat.id}">
+                        <div class="section-header" onclick="toggleCategory('${cat.id}')">
+                            <div class="section-header-left">
                                 <span class="section-icon" style="background: ${cat.color}"></span>
-                                ${cat.name}
+                                <span class="section-title">${cat.icon} ${cat.name}</span>
+                                <span class="category-count ${hasContent ? 'has-items' : ''}">${elements.length}</span>
                             </div>
-                            <button class="add-element-btn" onclick="openAddElement('${cat.id}')">+ Add</button>
+                            <button class="category-toggle" onclick="event.stopPropagation();">${isExpanded ? '▼' : '▶'}</button>
                         </div>
-                        <div class="element-list">
-                            ${elements.length === 0 ? `<div class="empty-state"><div class="empty-desc">No ${cat.name.toLowerCase()} yet</div></div>` : ''}
-                            ${elements.map(el => `
-                                <div class="element-item">
-                                    <div class="element-text">${el}</div>
-                                    <button class="element-remove" onclick="removeElement('${cat.id}', '${el.replace(/'/g, "\\'")}')">×</button>
-                                </div>
-                            `).join('')}
+                        <div class="section-content">
+                            <div class="element-list">
+                                ${elements.length === 0 ? `<div class="empty-hint" style="text-align: center; padding: 8px; color: var(--text-muted); font-size: 0.75em;">+ Click to add ${cat.name.toLowerCase()}</div>` : ''}
+                                ${elements.map(el => `
+                                    <div class="element-item">
+                                        <div class="element-text">${el}</div>
+                                        <button class="element-remove" onclick="removeElement('${cat.id}', '${el.replace(/'/g, "\\'")}')">×</button>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            <button class="add-element-btn" style="width: 100%; margin-top: 8px;" onclick="openAddElement('${cat.id}')">+ Add ${cat.name}</button>
                         </div>
                     </div>
                 `;
@@ -7482,6 +7554,44 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`;
             }
         }
 
+        // Toggle category section expand/collapse
+        function toggleCategory(categoryId) {
+            const section = document.getElementById('category-' + categoryId);
+            if (!section) return;
+
+            const isExpanded = section.classList.contains('expanded');
+            const toggle = section.querySelector('.category-toggle');
+
+            if (isExpanded) {
+                section.classList.remove('expanded');
+                if (toggle) toggle.textContent = '▶';
+            } else {
+                section.classList.add('expanded');
+                if (toggle) toggle.textContent = '▼';
+            }
+        }
+
+        // Jump to category and expand it
+        function jumpToCategory(categoryId) {
+            const section = document.getElementById('category-' + categoryId);
+            if (!section) return;
+
+            // Expand if not already expanded
+            if (!section.classList.contains('expanded')) {
+                toggleCategory(categoryId);
+            }
+
+            // Scroll to section
+            section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            // Highlight briefly
+            section.style.transition = 'background 0.3s ease';
+            section.style.background = 'rgba(212, 175, 122, 0.15)';
+            setTimeout(() => {
+                section.style.background = '';
+            }, 1000);
+        }
+
         // Update character field in scene
         // Auto-save when character fields change
         function updateCharacterField(character, field, value) {
@@ -8104,11 +8214,11 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`;
                     hair: [],
                     makeup: [],
                     sfx: [],
-                    wardrobe: [],
-                    props: [],
-                    vehicles: [],
-                    vfx: [],
+                    health: [],
+                    injuries: [],
                     stunts: [],
+                    weather: [],
+                    wardrobe: [],
                     extras: []
                 };
             }
