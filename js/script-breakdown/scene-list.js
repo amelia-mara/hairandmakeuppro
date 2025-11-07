@@ -32,8 +32,17 @@ const categories = [
  * Shows scene cards with metadata, cast, and element counts
  */
 export function renderSceneList() {
-    const container = document.getElementById('sceneList');
-    if (!container) return;
+    const container = document.getElementById('scene-list');
+    if (!container) {
+        console.error('Scene list container not found');
+        return;
+    }
+
+    // Update scene count
+    const sceneCountEl = document.getElementById('scene-count');
+    if (sceneCountEl) {
+        sceneCountEl.textContent = state.scenes.length;
+    }
 
     if (state.scenes.length === 0) {
         container.innerHTML = `

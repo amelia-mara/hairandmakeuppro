@@ -90,6 +90,17 @@ export async function init() {
         // Mark as initialized
         state.isInitialized = true;
 
+        // Check if script exists - if not, auto-open import modal
+        const hasScript = state.currentProject?.scriptContent && state.scenes.length > 0;
+        if (!hasScript) {
+            console.log('No script found - opening import modal');
+            // Use setTimeout to ensure DOM is ready
+            setTimeout(async () => {
+                const { openImportModal } = await import('./export-handlers.js');
+                openImportModal();
+            }, 100);
+        }
+
         console.log('Application initialized successfully');
     } catch (error) {
         console.error('Error initializing application:', error);

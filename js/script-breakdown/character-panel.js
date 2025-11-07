@@ -782,3 +782,8 @@ window.saveContinuityNote = async function() {
 window.switchCenterTab = switchCenterTab;
 window.renderCharacterTabs = renderCharacterTabs;
 window.renderCharacterTabPanels = renderCharacterTabPanels;
+
+// Stub function for merge characters modal (not yet implemented)
+window.openMergeCharactersModal = function() {
+    alert('Character merge functionality coming soon!');
+};
