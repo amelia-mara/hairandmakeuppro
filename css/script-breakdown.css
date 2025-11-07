@@ -1822,9 +1822,13 @@
         
         /* Workspace Header (Replaces Tab System) */
         .workspace-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
             padding: 16px 20px;
             border-bottom: 1px solid var(--glass-border);
             background: rgba(0, 0, 0, 0.2);
+            gap: 12px;
         }
 
         .workspace-title {
@@ -1833,6 +1837,29 @@
             text-transform: uppercase;
             color: var(--text-muted);
             letter-spacing: 0.05em;
+        }
+
+        .workspace-action-btn {
+            padding: 6px 12px;
+            font-size: 0.75em;
+            font-weight: 500;
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .workspace-action-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+        }
+
+        .workspace-action-btn:active {
+            transform: scale(0.98);
         }
 
         /* Legacy Tab System (kept for character tabs) */

@@ -37,7 +37,7 @@ export function renderCharacterTabs() {
         tab.setAttribute('data-tab', `character-${character}`);
         tab.onclick = () => switchCenterTab(`character-${character}`);
         tab.innerHTML = `
-            <span>👤 ${escapeHtml(character)}</span>
+            <span>${escapeHtml(character)}</span>
             <span class="center-tab-close" onclick="event.stopPropagation(); removeCharacterTab('${escapeHtml(character).replace(/'/g, "\\'")}')">×</span>
         `;
         tabsContainer.appendChild(tab);
@@ -116,7 +116,6 @@ function updateRightPanelContext() {
                 <div class="workspace-content">
                     <div class="tab-panel active" id="breakdownPanel">
                         <div class="empty-state">
-                            <div class="empty-icon">📋</div>
                             <div class="empty-title">Select a Scene</div>
                             <div class="empty-desc">Choose a scene to view and edit its breakdown</div>
                         </div>
@@ -157,7 +156,7 @@ function renderCharacterQuickEditor(character) {
     rightSidebar.innerHTML = `
         <div class="workspace-tabs">
             <div class="workspace-tab active">
-                👤 ${escapeHtml(character)}
+                ${escapeHtml(character)}
             </div>
         </div>
 
@@ -355,7 +354,6 @@ function renderUndefinedTransitionCard(character, lookId) {
     return `
         <div class="transition-card undefined">
             <div class="transition-card-header">
-                <span class="transition-icon">⚠️</span>
                 <span class="transition-scene-label">TRANSITION NOT DEFINED</span>
             </div>
             <button class="edit-transition-mini-btn" onclick="alert('Define transition feature coming soon')">
@@ -376,19 +374,19 @@ function renderLookStateCard(look) {
     const appearancePreviews = [];
     if (look.appearance?.hair) {
         const preview = look.appearance.hair.substring(0, 40);
-        appearancePreviews.push(`💇 ${preview}${look.appearance.hair.length > 40 ? '...' : ''}`);
+        appearancePreviews.push(`Hair: ${preview}${look.appearance.hair.length > 40 ? '...' : ''}`);
     }
     if (look.appearance?.makeup) {
         const preview = look.appearance.makeup.substring(0, 40);
-        appearancePreviews.push(`💄 ${preview}${look.appearance.makeup.length > 40 ? '...' : ''}`);
+        appearancePreviews.push(`Makeup: ${preview}${look.appearance.makeup.length > 40 ? '...' : ''}`);
     }
     if (look.appearance?.sfx) {
         const preview = look.appearance.sfx.substring(0, 40);
-        appearancePreviews.push(`🩸 ${preview}${look.appearance.sfx.length > 40 ? '...' : ''}`);
+        appearancePreviews.push(`SFX: ${preview}${look.appearance.sfx.length > 40 ? '...' : ''}`);
     }
     if (look.appearance?.wardrobe) {
         const preview = look.appearance.wardrobe.substring(0, 40);
-        appearancePreviews.push(`👔 ${preview}${look.appearance.wardrobe.length > 40 ? '...' : ''}`);
+        appearancePreviews.push(`Wardrobe: ${preview}${look.appearance.wardrobe.length > 40 ? '...' : ''}`);
     }
 
     return `
@@ -448,7 +446,6 @@ function renderStoryDayContinuityTimeline(character) {
     if (characterScenes.length === 0) {
         return `
             <div class="empty-state" style="margin-top: 40px;">
-                <div class="empty-icon">📋</div>
                 <div class="empty-title">No Scenes Found</div>
                 <div class="empty-desc">This character doesn't appear in any scenes yet.</div>
             </div>

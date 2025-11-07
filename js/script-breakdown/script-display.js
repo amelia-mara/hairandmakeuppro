@@ -26,7 +26,7 @@ export function renderScript() {
     if (!scriptText) {
         const container = document.getElementById('script-content');
         if (container) {
-            container.innerHTML = '<div class="empty-state"><div class="empty-icon">📄</div><div class="empty-title">No Script Loaded</div><div class="empty-desc">Import your screenplay to begin</div></div>';
+            container.innerHTML = '<div class="empty-state"><div class="empty-title">No Script Loaded</div><div class="empty-desc">Import your screenplay to begin</div></div>';
         }
         return;
     }
