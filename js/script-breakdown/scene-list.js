@@ -32,6 +32,8 @@ const categories = [
  * Shows scene cards with metadata, cast, and element counts
  */
 export function renderSceneList() {
+    log('renderSceneList', 'Rendering scene list', { sceneCount: state.scenes.length });
+
     const container = document.getElementById('scene-list');
     if (!container) {
         console.error('Scene list container not found');
@@ -54,12 +56,29 @@ export function renderSceneList() {
         return;
     }
 
+    // Count scenes with synopses
+    const synopsisCount = state.scenes.filter(s => s.synopsis).length;
+    log('renderSceneList', 'Synopsis status', {
+        withSynopsis: synopsisCount,
+        total: state.scenes.length
+    });
+
     container.innerHTML = state.scenes.map((scene, index) => {
         const sceneType = getSceneType(scene.heading);
         const sceneTypeLabel = getSceneTypeLabel(sceneType);
         const breakdown = state.sceneBreakdowns[index] || {};
         const cast = breakdown.cast || [];
         const isActive = state.currentScene === index;
+
+        // Log first few scenes for debugging
+        if (index < 5) {
+            log('renderSceneList', `Scene ${index}`, {
+                number: scene.number,
+                heading: scene.heading?.substring(0, 30),
+                hasSynopsis: !!scene.synopsis,
+                synopsisPreview: scene.synopsis?.substring(0, 30)
+            });
+        }
 
         // Count elements (excluding cast)
         let elementCounts = [];
@@ -86,6 +105,8 @@ export function renderSceneList() {
             </div>
         `;
     }).join('');
+
+    log('renderSceneList', 'Render complete');
 }
 
 /**

@@ -10,6 +10,26 @@
  * - Set up event listeners for core UI interactions
  */
 
+// ============================================================================
+// DEBUG UTILITY
+// ============================================================================
+
+// Debug utility
+window.DEBUG = true;
+
+function log(context, message, data = null) {
+  if (!window.DEBUG) return;
+
+  const timestamp = new Date().toISOString().substr(11, 8);
+  console.log(`[${timestamp}] ${context}:`, message, data || '');
+}
+
+window.log = log;
+
+// ============================================================================
+// IMPORTS
+// ============================================================================
+
 import { renderSceneList } from './scene-list.js';
 import { renderScript, zoomIn, zoomOut } from './script-display.js';
 import { renderBreakdownPanel } from './breakdown-form.js';

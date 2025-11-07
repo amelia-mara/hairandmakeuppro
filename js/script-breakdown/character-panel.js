@@ -241,7 +241,10 @@ function getMainCharacters(maxCount = 8) {
         .slice(0, maxCount) // Limit to maxCount
         .map(([name, count]) => name);
 
-    console.log(`Main characters (5+ scenes, max ${maxCount}):`, mainCharacters);
+    log('getMainCharacters', 'Main characters', {
+        total: mainCharacters.length,
+        list: mainCharacters
+    });
 
     return mainCharacters;
 }
@@ -253,13 +256,16 @@ function getMainCharacters(maxCount = 8) {
 function getSupportingCharacters() {
     const characterSceneCounts = getCharacterSceneCounts();
 
-    // Filter characters appearing in 2-4 scenes
+    // Supporting characters: 2-4 appearances
     const supportingCharacters = Array.from(characterSceneCounts.entries())
         .filter(([name, count]) => count >= 2 && count < 5)
         .sort((a, b) => b[1] - a[1]) // Sort by scene count (descending)
         .map(([name, count]) => name);
 
-    console.log(`Supporting characters (2-4 scenes):`, supportingCharacters);
+    log('getSupportingCharacters', 'Supporting characters', {
+        total: supportingCharacters.length,
+        list: supportingCharacters
+    });
 
     return supportingCharacters;
 }
@@ -322,16 +328,26 @@ import { formatSceneRange, getComplexityIcon } from './utils.js';
  * Shows script tab + main character tabs + supporting dropdown
  */
 export function renderCharacterTabs() {
-    console.log('🔄 Rendering character tabs with file divider system...');
+    log('renderCharacterTabs', 'Starting character tab generation');
 
     // Run aggressive deduplication first
     aggressiveDeduplicate();
 
-    // Get filtered character lists
+    // Get main characters (5+ appearances)
     const mainCharacters = getMainCharacters(8); // Max 8 main tabs
     const supportingCharacters = getSupportingCharacters();
 
-    console.log(`Generating tabs: ${mainCharacters.length} main, ${supportingCharacters.length} supporting`);
+    log('renderCharacterTabs', 'Characters detected', {
+        main: mainCharacters.length,
+        supporting: supportingCharacters.length,
+        mainList: mainCharacters,
+        supportingList: supportingCharacters
+    });
+
+    if (mainCharacters.length === 0) {
+        log('renderCharacterTabs', 'WARNING: No main characters detected!');
+        return;
+    }
 
     const tabsContainer = document.querySelector('.center-tabs');
     if (!tabsContainer) {
@@ -371,6 +387,8 @@ export function renderCharacterTabs() {
         `;
 
         tabsContainer.appendChild(tab);
+
+        log('renderCharacterTabs', `Created tab for ${charName}`);
 
         // Create corresponding panel (if it doesn't exist)
         createCharacterPanel(charId, charName);
@@ -419,7 +437,9 @@ export function renderCharacterTabs() {
     // Update state.characterTabs to reflect new list (main + supporting)
     state.characterTabs = [...mainCharacters, ...supportingCharacters];
 
-    console.log(`✓ Rendered ${mainCharacters.length} main tabs + ${supportingCharacters.length} supporting (dropdown)`);
+    log('renderCharacterTabs', 'Complete', {
+        tabsCreated: mainCharacters.length
+    });
 }
 
 /**

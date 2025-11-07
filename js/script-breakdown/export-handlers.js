@@ -74,6 +74,8 @@ export function closeImportModal() {
  * Process script from import modal
  */
 export async function processScript() {
+    log('processScript', 'Starting script import');
+
     const scriptInput = document.getElementById('script-input');
     if (!scriptInput) {
         console.error('Script input element not found');
@@ -86,7 +88,7 @@ export async function processScript() {
         return;
     }
 
-    console.log('Processing script import...');
+    log('processScript', 'Script text loaded', { length: text.length });
 
     // Store script text
     if (!state.currentProject) {
@@ -101,26 +103,33 @@ export async function processScript() {
 
     // Detect scenes
     state.scenes = detectScenes(text);
-    console.log(`Found ${state.scenes.length} scenes`);
+    log('processScript', 'Scenes parsed', { count: state.scenes.length });
 
     // Extract characters from scenes
     extractCharactersFromScenes();
 
+    const characters = Array.from(state.characters);
+    log('processScript', 'Characters extracted', {
+        count: characters.length,
+        list: characters
+    });
+
     // Create character tabs and profiles for extracted characters
     initializeCharacterTabs();
 
-    // DIAGNOSTIC: Log after script processing
-    console.log('✓ Script imported, scenes parsed:', state.scenes.length);
-    console.log('✓ Characters detected:', Array.from(state.characters));
-    console.log('✓ Character tabs initialized:', state.characterTabs.length);
+    log('processScript', 'Character tabs initialized');
 
     // Load and render
     loadScript(text);
+
+    log('processScript', 'Script rendering complete');
 
     // Close modal after a brief delay
     setTimeout(() => {
         closeImportModal();
     }, 500);
+
+    log('processScript', 'Script processing complete');
 }
 
 /**
@@ -479,16 +488,28 @@ export function detectScenes(text) {
  * @param {string} text - Script text
  */
 function loadScript(text) {
+    log('loadScript', 'Starting UI render');
+
     // If project already has scenes, use those
     if (state.currentProject.scenes && Array.isArray(state.currentProject.scenes) && state.currentProject.scenes.length > 0) {
         state.scenes = state.currentProject.scenes;
     }
 
-    // Render UI
+    // Render scene list
     renderSceneList();
+    log('loadScript', 'Scene list rendered');
+
+    // CRITICAL: Generate character tabs
     renderCharacterTabs();
+    log('loadScript', 'Character tabs generated');
+
+    // Render character tab panels
     renderCharacterTabPanels();
+    log('loadScript', 'Character panels rendered');
+
+    // Render script
     renderScript();
+    log('loadScript', 'Script rendered');
 
     // Select first scene
     if (state.scenes.length > 0) {
@@ -497,6 +518,7 @@ function loadScript(text) {
 
     // Auto-save
     saveProject();
+    log('loadScript', 'Data saved');
 }
 
 /**

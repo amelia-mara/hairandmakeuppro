@@ -192,6 +192,8 @@ export async function generateAISynopsis(sceneIndex) {
     const scene = state.scenes[sceneIndex];
     const sceneText = scene.content || scene.text || '';
 
+    log('generateSynopsis', `Generating for scene`, { heading: scene.heading });
+
     const prompt = `You are a script breakdown assistant. Analyze this scene and provide a concise synopsis for quick scanning.
 
 Scene Heading: ${scene.heading}
@@ -207,6 +209,7 @@ Provide only the synopsis, no additional commentary.`;
 
     try {
         const synopsis = await callAI(prompt, 200);
+        log('generateSynopsis', 'Generated', { length: synopsis.trim().length });
         return synopsis.trim();
     } catch (error) {
         console.error('Error generating synopsis:', error);
@@ -518,13 +521,15 @@ let batchCancelled = false;
  * Generate synopses for all scenes in the script
  */
 export async function generateAllSynopses(event) {
+    const button = event?.currentTarget;
+
+    log('generateAllSynopses', 'Starting', { totalScenes: state.scenes.length });
+
     if (!state.scenes || state.scenes.length === 0) {
-        alert('No scenes loaded. Please import a script first.');
+        alert('No scenes to process. Please import a script first.');
         return;
     }
 
-    // Get the button element from the event
-    const button = event?.currentTarget;
     if (!button) {
         console.error('Button element not found in event');
         return;
@@ -540,6 +545,7 @@ export async function generateAllSynopses(event) {
     let errorCount = 0;
     const errors = [];
 
+    // Process each scene
     for (let i = 0; i < state.scenes.length; i++) {
         if (batchCancelled) {
             resetButton(button);
@@ -548,24 +554,36 @@ export async function generateAllSynopses(event) {
         }
 
         const scene = state.scenes[i];
+
+        log('generateAllSynopses', `Processing scene ${i}`, {
+            sceneNumber: scene.number,
+            heading: scene.heading
+        });
+
+        // Update progress
         updateButtonProgress(button, i + 1, `Scene ${i + 1} / ${state.scenes.length}`);
 
         try {
+            // Generate synopsis
             const synopsis = await generateAISynopsis(i);
 
-            // Save synopsis to scene
+            // CRITICAL: Store using array index
             state.scenes[i].synopsis = synopsis;
 
-            // Also save to sceneBreakdowns if it exists
+            // Also save to sceneBreakdowns
             if (!state.sceneBreakdowns[i]) {
                 state.sceneBreakdowns[i] = {};
             }
             state.sceneBreakdowns[i].synopsis = synopsis;
 
+            log('generateAllSynopses', `✓ Scene ${i} synopsis saved`, {
+                preview: synopsis.substring(0, 50)
+            });
+
             successCount++;
-            console.log(`✓ Scene ${scene.number} synopsis generated`);
         } catch (error) {
             console.error(`Error generating synopsis for scene ${i}:`, error);
+            state.scenes[i].synopsis = "Error generating synopsis.";
             errorCount++;
             errors.push(`Scene ${scene.number}: ${error.message}`);
         }
@@ -574,16 +592,30 @@ export async function generateAllSynopses(event) {
         await new Promise(resolve => setTimeout(resolve, 500));
     }
 
+    // Verify all scenes have synopses
+    const synopsisCount = state.scenes.filter(s => s.synopsis).length;
+    log('generateAllSynopses', 'Complete', {
+        total: state.scenes.length,
+        withSynopsis: synopsisCount
+    });
+
     // Deduplicate all characters after synopsis generation
     console.log('🔄 Running character deduplication...');
     const { deduplicateAllCharacters } = await import('./character-panel.js');
     deduplicateAllCharacters();
 
+    // CRITICAL: Re-render scene list to show synopses
+    log('generateAllSynopses', 'Re-rendering scene list');
+    const { renderSceneList } = await import('./scene-list.js');
+    renderSceneList();
+
     // Save project data
     const { saveProject } = await import('./export-handlers.js');
     saveProject();
 
-    // Complete with success
+    log('generateAllSynopses', 'Data saved to storage');
+
+    // Show completion
     const successMessage = errorCount > 0
         ? `${successCount} Synopses Created (${errorCount} errors)`
         : `${successCount} Synopses Created`;
