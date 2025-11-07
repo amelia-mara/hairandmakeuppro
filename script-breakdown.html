@@ -3921,6 +3921,51 @@
             color: var(--text-light);
         }
 
+        /* Transition Indicator in Look Card */
+        .transition-indicator {
+            background: rgba(102, 126, 234, 0.1);
+            border-bottom: 1px solid rgba(102, 126, 234, 0.3);
+            padding: 10px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .transition-info {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .transition-icon {
+            font-size: 1.1em;
+            color: var(--accent-blue);
+        }
+
+        .transition-text {
+            font-size: 0.75em;
+            color: var(--text-light);
+            line-height: 1.3;
+        }
+
+        .transition-text strong {
+            color: var(--accent-blue);
+            font-weight: 600;
+        }
+
+        .transition-edit-btn {
+            background: rgba(102, 126, 234, 0.15) !important;
+            border-color: rgba(102, 126, 234, 0.4) !important;
+            color: var(--accent-blue) !important;
+        }
+
+        .transition-edit-btn:hover {
+            background: rgba(102, 126, 234, 0.25) !important;
+            border-color: var(--accent-blue) !important;
+        }
+
         /* Edit Look State Modal */
         .modal-section {
             margin-bottom: 20px;
@@ -4141,6 +4186,44 @@
         .evidence-remove-btn:hover {
             background: rgba(239, 68, 68, 0.35);
             border-color: #ef4444;
+        }
+
+        /* Transition Editor Modal Specific */
+        .transition-looks-display {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+        }
+
+        .transition-look-box {
+            flex: 1;
+        }
+
+        .read-only-display {
+            padding: 10px 12px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-light);
+            font-size: 0.875em;
+            font-weight: 600;
+        }
+
+        .transition-arrow {
+            font-size: 1.5em;
+            color: var(--accent-gold);
+            font-weight: 700;
+        }
+
+        .field-hint {
+            margin-top: 6px;
+            font-size: 0.75em;
+            color: var(--text-muted);
+            font-style: italic;
         }
 
         /* Import Modal */
@@ -4626,6 +4709,99 @@
             <div class="modal-actions">
                 <button class="modal-btn" onclick="closeEditLook()">Cancel</button>
                 <button class="modal-btn primary" onclick="saveLookState()">💾 Save Look State</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transition Editor Modal -->
+    <div class="modal" id="transitionEditorModal">
+        <div class="modal-content" style="max-width: 800px; max-height: 90vh; display: flex; flex-direction: column;">
+            <div class="modal-header">
+                <h3 id="transitionEditorTitle">Edit Look Transition</h3>
+                <button class="modal-close" onclick="closeTransitionEditor()">×</button>
+            </div>
+
+            <div style="flex: 1; overflow-y: auto; padding: 20px;">
+                <!-- From/To Look (Read-only) -->
+                <div class="modal-section">
+                    <div class="transition-looks-display">
+                        <div class="transition-look-box">
+                            <label class="modal-label">From Look</label>
+                            <div class="read-only-display" id="transitionFromLook">Look 1</div>
+                        </div>
+                        <div class="transition-arrow">→</div>
+                        <div class="transition-look-box">
+                            <label class="modal-label">To Look</label>
+                            <div class="read-only-display" id="transitionToLook">Look 2</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Transition Scene -->
+                <div class="modal-section">
+                    <label class="modal-label">Transition Scene</label>
+                    <select class="modal-select" id="transitionScene">
+                        <!-- Populated dynamically -->
+                    </select>
+                </div>
+
+                <!-- Script Event -->
+                <div class="modal-section">
+                    <label class="modal-label">Script Event</label>
+                    <input type="text" class="modal-input" id="transitionScriptEvent" placeholder="e.g., Caught in rainstorm, Fight scene, Changed clothes">
+                </div>
+
+                <!-- Script Quote -->
+                <div class="modal-section">
+                    <label class="modal-label">Script Quote</label>
+                    <textarea class="modal-textarea" id="transitionScriptQuote" rows="3" placeholder="Direct quote from script describing the event..."></textarea>
+                </div>
+
+                <!-- Visual Changes -->
+                <div class="modal-section">
+                    <label class="modal-label">Visual Changes</label>
+                    <div class="evidence-subsection">
+                        <div class="subsection-header">
+                            <span class="subsection-label">Describe specific changes</span>
+                            <button class="add-item-btn" onclick="addVisualChange()">+ Add Change</button>
+                        </div>
+                        <div class="evidence-list" id="visualChangesList">
+                            <div class="empty-evidence">No visual changes added yet</div>
+                        </div>
+                    </div>
+                    <div class="field-hint">Example: "Hair: neat bun → wet and tangled"</div>
+                </div>
+
+                <!-- Visibility -->
+                <div class="modal-section">
+                    <label class="modal-label">Visibility</label>
+                    <select class="modal-select" id="transitionVisibility">
+                        <option value="on-screen">👁️ On-Screen - Audience sees the change happen</option>
+                        <option value="off-screen">🚪 Off-Screen - Change happens between scenes</option>
+                        <option value="implied">💭 Implied - Suggested but not shown</option>
+                    </select>
+                </div>
+
+                <!-- Speed -->
+                <div class="modal-section">
+                    <label class="modal-label">Speed of Change</label>
+                    <select class="modal-select" id="transitionSpeed">
+                        <option value="instant">⚡ Instant - Happens in a moment</option>
+                        <option value="sudden">🔥 Sudden - Quick but visible</option>
+                        <option value="gradual">🕐 Gradual - Takes time across scenes</option>
+                    </select>
+                </div>
+
+                <!-- Story Significance -->
+                <div class="modal-section">
+                    <label class="modal-label">Story Significance</label>
+                    <textarea class="modal-textarea" id="transitionStorySignificance" rows="3" placeholder="What does this visual change represent? How does it reflect the character's journey?"></textarea>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="modal-btn" onclick="closeTransitionEditor()">Cancel</button>
+                <button class="modal-btn primary" onclick="saveTransition()">💾 Save Transition</button>
             </div>
         </div>
     </div>
@@ -8457,14 +8633,53 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`;
                 return;
             }
 
+            // Sort looks by their first scene number for chronological order
+            const sortedLooks = [...looks].sort((a, b) => {
+                const firstSceneA = Math.min(...(a.scenes || [Infinity]));
+                const firstSceneB = Math.min(...(b.scenes || [Infinity]));
+                return firstSceneA - firstSceneB;
+            });
+
             let html = '';
-            looks.forEach(look => {
+            sortedLooks.forEach((look, index) => {
                 const sceneRangeText = formatSceneRange(look.scenes);
                 const complexityIcon = getComplexityIcon(look.complexity);
                 const hasAppearanceData = Object.values(look.appearance || {}).some(v => v && v.trim());
 
+                // Check if there's a transition to this look
+                const previousLook = index > 0 ? sortedLooks[index - 1] : null;
+                let transitionInfo = null;
+                if (previousLook) {
+                    const transition = findTransition(character, previousLook.id, look.id);
+                    const firstScene = Math.min(...(look.scenes || []));
+                    transitionInfo = {
+                        exists: !!transition,
+                        fromLookName: previousLook.lookName,
+                        fromLookId: previousLook.id,
+                        toLookId: look.id,
+                        scene: transition?.transitionScene || firstScene,
+                        event: transition?.scriptEvent || 'Not defined'
+                    };
+                }
+
                 html += `
                     <div class="look-state-card">
+                        ${transitionInfo ? `
+                            <div class="transition-indicator">
+                                <div class="transition-info">
+                                    <span class="transition-icon">⚡</span>
+                                    <span class="transition-text">
+                                        TRANSITION from "${transitionInfo.fromLookName}" in Scene ${transitionInfo.scene}:
+                                        <strong>${transitionInfo.event}</strong>
+                                    </span>
+                                </div>
+                                <button class="look-action-btn transition-edit-btn"
+                                        onclick="openTransitionEditor('${character}', '${look.id}')"
+                                        title="${transitionInfo.exists ? 'Edit Transition' : 'Define Transition'}">
+                                    ⚡ ${transitionInfo.exists ? 'Edit' : 'Define'}
+                                </button>
+                            </div>
+                        ` : ''}
                         <div class="look-state-header">
                             <div class="look-state-title">
                                 <span class="look-state-name">${look.lookName || 'Untitled Look'}</span>
@@ -8920,6 +9135,173 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`;
             lookTransitions.splice(index, 1);
             saveProject();
             return true;
+        }
+
+        // ========== TRANSITION EDITOR MODAL ==========
+
+        let currentTransitionCharacter = null;
+        let currentTransitionToLookId = null;
+        let currentTransitionFromLookId = null;
+        let currentTransitionId = null;
+        let currentVisualChanges = [];
+
+        function openTransitionEditor(character, toLookId) {
+            currentTransitionCharacter = character;
+            currentTransitionToLookId = toLookId;
+
+            // Find the looks
+            const looks = characterLooks[character] || [];
+            const sortedLooks = [...looks].sort((a, b) => {
+                const firstSceneA = Math.min(...(a.scenes || [Infinity]));
+                const firstSceneB = Math.min(...(b.scenes || [Infinity]));
+                return firstSceneA - firstSceneB;
+            });
+
+            const toLookIndex = sortedLooks.findIndex(l => l.id === toLookId);
+            const toLook = sortedLooks[toLookIndex];
+            const fromLook = toLookIndex > 0 ? sortedLooks[toLookIndex - 1] : null;
+
+            if (!fromLook || !toLook) {
+                alert('Cannot create transition: Previous look not found.');
+                return;
+            }
+
+            currentTransitionFromLookId = fromLook.id;
+
+            // Check if transition exists
+            const existingTransition = findTransition(character, fromLook.id, toLook.id);
+            currentTransitionId = existingTransition?.id || null;
+
+            // Set modal title
+            document.getElementById('transitionEditorTitle').textContent =
+                existingTransition ? 'Edit Look Transition' : 'Define Look Transition';
+
+            // Populate read-only look names
+            document.getElementById('transitionFromLook').textContent = fromLook.lookName || 'Untitled Look';
+            document.getElementById('transitionToLook').textContent = toLook.lookName || 'Untitled Look';
+
+            // Populate transition scene dropdown
+            const sceneSelect = document.getElementById('transitionScene');
+            sceneSelect.innerHTML = '';
+
+            // Add scenes between the last scene of fromLook and first scene of toLook
+            const fromLastScene = Math.max(...(fromLook.scenes || []));
+            const toFirstScene = Math.min(...(toLook.scenes || []));
+
+            scenes.forEach((scene, index) => {
+                const sceneNumber = scene.number;
+                // Include scenes from fromLastScene to toFirstScene
+                if (sceneNumber >= fromLastScene && sceneNumber <= toFirstScene) {
+                    const option = document.createElement('option');
+                    option.value = sceneNumber;
+                    option.textContent = `Scene ${sceneNumber}: ${scene.heading.substring(0, 40)}...`;
+                    sceneSelect.appendChild(option);
+                }
+            });
+
+            // Set default to first scene of toLook
+            sceneSelect.value = existingTransition?.transitionScene || toFirstScene;
+
+            // Populate other fields
+            document.getElementById('transitionScriptEvent').value = existingTransition?.scriptEvent || '';
+            document.getElementById('transitionScriptQuote').value = existingTransition?.scriptQuote || '';
+            document.getElementById('transitionVisibility').value = existingTransition?.visibility || 'on-screen';
+            document.getElementById('transitionSpeed').value = existingTransition?.speed || 'sudden';
+            document.getElementById('transitionStorySignificance').value = existingTransition?.storySignificance || '';
+
+            // Render visual changes
+            renderVisualChanges(existingTransition?.visualChanges || []);
+
+            // Show modal
+            document.getElementById('transitionEditorModal').classList.add('active');
+        }
+
+        function closeTransitionEditor() {
+            document.getElementById('transitionEditorModal').classList.remove('active');
+            currentTransitionCharacter = null;
+            currentTransitionToLookId = null;
+            currentTransitionFromLookId = null;
+            currentTransitionId = null;
+            currentVisualChanges = [];
+        }
+
+        // Visual Changes Management
+        function renderVisualChanges(changes = []) {
+            currentVisualChanges = [...changes];
+            const container = document.getElementById('visualChangesList');
+
+            if (currentVisualChanges.length === 0) {
+                container.innerHTML = '<div class="empty-evidence">No visual changes added yet</div>';
+                return;
+            }
+
+            let html = '';
+            currentVisualChanges.forEach((change, index) => {
+                html += `
+                    <div class="evidence-item">
+                        <div class="evidence-text">${change}</div>
+                        <button class="evidence-remove-btn" onclick="removeVisualChange(${index})">×</button>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function addVisualChange() {
+            const change = prompt('Enter visual change (e.g., "Hair: neat bun → wet and tangled"):');
+            if (change && change.trim()) {
+                currentVisualChanges.push(change.trim());
+                renderVisualChanges(currentVisualChanges);
+            }
+        }
+
+        function removeVisualChange(index) {
+            currentVisualChanges.splice(index, 1);
+            renderVisualChanges(currentVisualChanges);
+        }
+
+        function saveTransition() {
+            if (!currentTransitionCharacter || !currentTransitionFromLookId || !currentTransitionToLookId) {
+                alert('Missing transition information');
+                return;
+            }
+
+            // Get form values
+            const transitionScene = parseInt(document.getElementById('transitionScene').value);
+            const scriptEvent = document.getElementById('transitionScriptEvent').value.trim();
+            const scriptQuote = document.getElementById('transitionScriptQuote').value.trim();
+            const visibility = document.getElementById('transitionVisibility').value;
+            const speed = document.getElementById('transitionSpeed').value;
+            const storySignificance = document.getElementById('transitionStorySignificance').value.trim();
+
+            const transitionData = {
+                character: currentTransitionCharacter,
+                fromLookId: currentTransitionFromLookId,
+                toLookId: currentTransitionToLookId,
+                transitionScene: transitionScene,
+                scriptEvent: scriptEvent,
+                scriptQuote: scriptQuote,
+                visualChanges: currentVisualChanges,
+                visibility: visibility,
+                speed: speed,
+                storySignificance: storySignificance
+            };
+
+            if (currentTransitionId) {
+                // Update existing transition
+                transitionData.id = currentTransitionId;
+                updateTransition(currentTransitionId, transitionData);
+            } else {
+                // Create new transition
+                addTransition(transitionData);
+            }
+
+            // Refresh the looks list to show updated transition
+            renderLooksList(currentTransitionCharacter);
+
+            // Close editor
+            closeTransitionEditor();
         }
 
         // Render script
