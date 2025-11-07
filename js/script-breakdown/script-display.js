@@ -70,6 +70,13 @@ export function renderScript() {
 
     if (inScene) html += '</div>';
     container.innerHTML = html;
+
+    // Reapply highlights after rendering
+    import('./tag-system.js').then(module => {
+        if (module.renderAllHighlights) {
+            module.renderAllHighlights();
+        }
+    });
 }
 
 /**

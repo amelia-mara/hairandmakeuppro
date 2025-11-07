@@ -114,7 +114,7 @@ function updateRightPanelContext() {
                 </div>
 
                 <div class="workspace-content">
-                    <div class="tab-panel active" id="breakdownPanel">
+                    <div class="tab-panel active" id="breakdown-panel">
                         <div class="empty-state">
                             <div class="empty-title">Select a Scene</div>
                             <div class="empty-desc">Choose a scene to view and edit its breakdown</div>
