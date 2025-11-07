@@ -21,6 +21,8 @@
             </div>
             <div class="toolbar">
                 <button class="toolbar-btn" onclick="openMergeCharactersModal()">🔗 Merge Characters</button>
+                <button class="toolbar-btn" onclick="generateAllSynopses()">✨ Generate All Synopses</button>
+                <button class="toolbar-btn" onclick="autoTagScript()">🏷️ Auto Tag Script</button>
                 <button class="toolbar-btn" onclick="openSettingsModal()">⚙️ AI Settings</button>
                 <button class="toolbar-btn" onclick="exportData()">Export Data</button>
                 <button class="toolbar-btn" onclick="openImportModal()">Import Script</button>
@@ -178,6 +180,33 @@
             <div class="modal-actions">
                 <button class="modal-btn" onclick="closeSettingsModal()">Cancel</button>
                 <button class="modal-btn primary" onclick="saveSettings()">Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress Modal -->
+    <div class="modal" id="progress-modal" style="display: none;">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-title" id="progress-title">Processing...</div>
+
+            <div class="modal-section">
+                <div class="progress-message" id="progress-message">Starting batch processing...</div>
+
+                <div class="continuity-progress" style="margin: 20px 0;">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress-fill" style="width: 0%;"></div>
+                    </div>
+                    <div class="progress-label" id="progress-label">0 / 0</div>
+                </div>
+
+                <div class="progress-details" id="progress-details" style="font-size: 0.85em; color: var(--text-muted); margin-top: 8px;">
+                    <!-- Details shown here -->
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="modal-btn" id="progress-cancel-btn" onclick="cancelBatchProcessing()">Cancel</button>
+                <button class="modal-btn primary" id="progress-done-btn" style="display: none;" onclick="closeProgressModal()">Done</button>
             </div>
         </div>
     </div>

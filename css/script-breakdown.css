@@ -2387,6 +2387,32 @@
             font-style: italic;
         }
 
+        .synopsis-textarea {
+            width: 100%;
+            min-height: 80px;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            color: var(--text-light);
+            font-size: 0.8125em;
+            line-height: 1.5;
+            font-family: inherit;
+            resize: vertical;
+            transition: all 0.2s ease;
+        }
+
+        .synopsis-textarea:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+            background: rgba(212, 175, 122, 0.08);
+        }
+
+        .synopsis-textarea::placeholder {
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
         /* Scene Info Compact 3-Column Layout */
         .scene-info-compact {
             background: rgba(212, 175, 122, 0.08);
@@ -4736,6 +4762,25 @@
         .modal-textarea:focus {
             outline: none;
             border-color: var(--accent-gold);
+        }
+
+        .progress-message {
+            font-size: 0.875em;
+            color: var(--text-light);
+            margin-bottom: 12px;
+        }
+
+        .progress-details {
+            font-size: 0.85em;
+            color: var(--text-muted);
+            margin-top: 8px;
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            font-family: 'Courier Prime', monospace;
+            white-space: pre-line;
+            max-height: 120px;
+            overflow-y: auto;
         }
 
         .modal-select {
