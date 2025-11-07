@@ -8,7 +8,204 @@
  * - Display look states and continuity events
  * - Handle tab switching between script and characters
  * - Show story day cards and scene breakdowns
+ * - Character name normalization and deduplication
  */
+
+// ============================================================================
+// CHARACTER MANAGER - Normalization and Deduplication
+// ============================================================================
+
+/**
+ * CharacterManager class
+ * Handles character name normalization and deduplication
+ *
+ * Resolves:
+ * - Case variations: "GWEN LAWSON" vs "Gwen Lawson" vs "gwen lawson"
+ * - Full name vs first name: "Gwen Lawson" vs "Gwen"
+ * - Different extraction methods creating separate entries
+ */
+class CharacterManager {
+    constructor() {
+        this.characters = new Map(); // Canonical name -> character data
+        this.aliases = new Map();     // All variations -> canonical name
+    }
+
+    /**
+     * Add a character name, handling all variations and deduplication
+     * @param {string} rawName - The character name to add
+     * @returns {string|null} - The canonical name, or null if invalid
+     */
+    addCharacter(rawName) {
+        if (!rawName || typeof rawName !== 'string') return null;
+
+        const cleaned = rawName.trim();
+        if (!cleaned) return null;
+
+        // Check if we already know this name (any variation)
+        const canonical = this.aliases.get(cleaned.toLowerCase());
+        if (canonical) {
+            // Already exists, return canonical name
+            this.characters.get(canonical).count++;
+            return canonical;
+        }
+
+        // Check if this matches an existing character's first name
+        const firstName = cleaned.split(' ')[0];
+        const matchingFull = this.findFullNameMatch(firstName);
+
+        if (matchingFull) {
+            // This is a short version of an existing full name
+            this.addAlias(cleaned, matchingFull);
+            this.characters.get(matchingFull).count++;
+            return matchingFull;
+        }
+
+        // Check if any existing character is the short version of this name
+        if (cleaned.split(' ').length > 1) {
+            const existingShort = this.findByFirstName(firstName);
+            if (existingShort) {
+                // Upgrade the short name to the full name
+                this.upgradeToFullName(existingShort, cleaned);
+                return cleaned;
+            }
+        }
+
+        // New character - normalize to title case
+        const normalized = this.normalizeCase(cleaned);
+
+        // Add to registry
+        this.characters.set(normalized, {
+            name: normalized,
+            count: 1,
+            appearances: []
+        });
+
+        // Add all case variations as aliases
+        this.addAlias(cleaned, normalized);
+        this.addAlias(cleaned.toUpperCase(), normalized);
+        this.addAlias(cleaned.toLowerCase(), normalized);
+        this.addAlias(normalized, normalized);
+
+        return normalized;
+    }
+
+    /**
+     * Convert to title case: "GWEN LAWSON" → "Gwen Lawson"
+     * @param {string} name - The name to normalize
+     * @returns {string} - The normalized name
+     */
+    normalizeCase(name) {
+        return name.split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .join(' ');
+    }
+
+    /**
+     * Add an alias mapping
+     * @param {string} variation - The variation to map
+     * @param {string} canonicalName - The canonical name to map to
+     */
+    addAlias(variation, canonicalName) {
+        this.aliases.set(variation.toLowerCase(), canonicalName);
+    }
+
+    /**
+     * Find if a first name matches any existing full name
+     * @param {string} firstName - The first name to check
+     * @returns {string|null} - The matching full name, or null
+     */
+    findFullNameMatch(firstName) {
+        const lowerFirst = firstName.toLowerCase();
+
+        for (const [canonical, data] of this.characters.entries()) {
+            const parts = canonical.split(' ');
+            if (parts.length > 1 && parts[0].toLowerCase() === lowerFirst) {
+                return canonical;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Find character by first name only
+     * @param {string} firstName - The first name to find
+     * @returns {string|null} - The character name, or null
+     */
+    findByFirstName(firstName) {
+        const lowerFirst = firstName.toLowerCase();
+
+        for (const [canonical, data] of this.characters.entries()) {
+            const parts = canonical.split(' ');
+            if (parts[0].toLowerCase() === lowerFirst) {
+                return canonical;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Upgrade a short name to full name
+     * @param {string} oldName - The short name
+     * @param {string} newName - The full name
+     */
+    upgradeToFullName(oldName, newName) {
+        const data = this.characters.get(oldName);
+        this.characters.delete(oldName);
+
+        const normalized = this.normalizeCase(newName);
+        this.characters.set(normalized, data);
+        data.name = normalized;
+
+        // Update all aliases pointing to old name
+        for (const [alias, canonical] of this.aliases.entries()) {
+            if (canonical === oldName) {
+                this.aliases.set(alias, normalized);
+            }
+        }
+
+        // Add new aliases for full name
+        this.addAlias(newName, normalized);
+        this.addAlias(newName.toUpperCase(), normalized);
+        this.addAlias(newName.toLowerCase(), normalized);
+    }
+
+    /**
+     * Get canonical name for any variation
+     * @param {string} rawName - The name to look up
+     * @returns {string|null} - The canonical name, or null
+     */
+    getCanonicalName(rawName) {
+        if (!rawName) return null;
+
+        const lower = rawName.trim().toLowerCase();
+        return this.aliases.get(lower) || null;
+    }
+
+    /**
+     * Get all characters as sorted array
+     * @returns {string[]} - Array of canonical character names
+     */
+    getAllCharacters() {
+        return Array.from(this.characters.values())
+            .sort((a, b) => b.count - a.count)
+            .map(data => data.name);
+    }
+
+    /**
+     * Clear all data
+     */
+    clear() {
+        this.characters.clear();
+        this.aliases.clear();
+    }
+}
+
+// Create global instance
+window.characterManager = new CharacterManager();
+
+// ============================================================================
+// CHARACTER TAB RENDERING
+// ============================================================================
 
 import { state } from './main.js';
 import { formatSceneRange, getComplexityIcon } from './utils.js';
@@ -793,12 +990,142 @@ window.saveContinuityNote = async function() {
 };
 
 // ============================================================================
+// CHARACTER DEDUPLICATION AND REGENERATION
+// ============================================================================
+
+/**
+ * Deduplicate all character names across all scenes
+ * Rebuilds character manager from scratch and normalizes all references
+ */
+export function deduplicateAllCharacters() {
+    console.log('🔄 Deduplicating character names across all scenes...');
+
+    // Rebuild character manager from scratch
+    window.characterManager.clear();
+
+    // First pass: collect all unique names from scenes
+    state.scenes.forEach((scene, index) => {
+        // Process cast in scene breakdowns
+        const breakdown = state.sceneBreakdowns[index];
+        if (breakdown && breakdown.cast) {
+            breakdown.cast = breakdown.cast.map(char =>
+                window.characterManager.addCharacter(char)
+            ).filter(Boolean);
+
+            // Remove duplicates within scene
+            breakdown.cast = [...new Set(breakdown.cast)];
+        }
+
+        // Process character names in script tags
+        if (state.scriptTags[index]) {
+            state.scriptTags[index] = state.scriptTags[index].map(tag => {
+                if (tag.character) {
+                    tag.character = window.characterManager.getCanonicalName(tag.character) ||
+                                   window.characterManager.addCharacter(tag.character);
+                }
+                // Also normalize cast category tags
+                if (tag.category === 'cast' && tag.selectedText) {
+                    const canonical = window.characterManager.getCanonicalName(tag.selectedText) ||
+                                     window.characterManager.addCharacter(tag.selectedText);
+                    tag.selectedText = canonical;
+                    tag.character = canonical;
+                }
+                return tag;
+            });
+        }
+
+        // Process character states
+        if (state.characterStates[index]) {
+            const newStates = {};
+            Object.keys(state.characterStates[index]).forEach(char => {
+                const canonical = window.characterManager.getCanonicalName(char) ||
+                                 window.characterManager.addCharacter(char);
+                newStates[canonical] = state.characterStates[index][char];
+            });
+            state.characterStates[index] = newStates;
+        }
+    });
+
+    // Update global characters set
+    state.characters.clear();
+    window.characterManager.getAllCharacters().forEach(char => {
+        state.characters.add(char);
+    });
+
+    // Update cast profiles with canonical names
+    const newProfiles = {};
+    Object.keys(state.castProfiles).forEach(char => {
+        const canonical = window.characterManager.getCanonicalName(char) ||
+                         window.characterManager.addCharacter(char);
+        newProfiles[canonical] = state.castProfiles[char];
+        if (newProfiles[canonical].name) {
+            newProfiles[canonical].name = canonical;
+        }
+    });
+    state.castProfiles = newProfiles;
+
+    // Update character looks with canonical names
+    const newLooks = {};
+    Object.keys(state.characterLooks).forEach(char => {
+        const canonical = window.characterManager.getCanonicalName(char) ||
+                         window.characterManager.addCharacter(char);
+        newLooks[canonical] = state.characterLooks[char];
+    });
+    state.characterLooks = newLooks;
+
+    // Update continuity events with canonical names
+    const newEvents = {};
+    Object.keys(state.continuityEvents).forEach(char => {
+        const canonical = window.characterManager.getCanonicalName(char) ||
+                         window.characterManager.addCharacter(char);
+        newEvents[canonical] = state.continuityEvents[char];
+    });
+    state.continuityEvents = newEvents;
+
+    // Update look transitions
+    state.lookTransitions = state.lookTransitions.map(transition => {
+        if (transition.character) {
+            transition.character = window.characterManager.getCanonicalName(transition.character) ||
+                                  window.characterManager.addCharacter(transition.character);
+        }
+        return transition;
+    });
+
+    console.log('✓ Deduplication complete');
+    console.log('✓ Unique characters:', window.characterManager.getAllCharacters());
+
+    // Regenerate character tabs
+    regenerateCharacterTabs();
+}
+
+/**
+ * Regenerate character tabs with deduplicated names
+ * Removes all existing character tabs and creates fresh ones
+ */
+export function regenerateCharacterTabs() {
+    const characters = window.characterManager.getAllCharacters();
+
+    console.log('🔄 Regenerating character tabs for:', characters);
+
+    // Update state.characterTabs with deduplicated list
+    state.characterTabs = characters;
+
+    // Render tabs and panels
+    renderCharacterTabs();
+    renderCharacterTabPanels();
+
+    console.log('✓ Character tabs regenerated');
+}
+
+// ============================================================================
 // EXPOSE GLOBAL FUNCTIONS
 // ============================================================================
 
 window.switchCenterTab = switchCenterTab;
 window.renderCharacterTabs = renderCharacterTabs;
 window.renderCharacterTabPanels = renderCharacterTabPanels;
+window.deduplicateAllCharacters = deduplicateAllCharacters;
+window.regenerateCharacterTabs = regenerateCharacterTabs;
 
 // Stub function for merge characters modal (not yet implemented)
 window.openMergeCharactersModal = function() {

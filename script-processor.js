@@ -325,22 +325,46 @@ class ScriptProcessor {
         return transitions.some(t => text.toUpperCase().includes(t));
     }
 
-    // Extract characters
+    // Extract characters - now uses CharacterManager for normalization
     extractCharacters(scenes) {
-        const characters = new Set();
-        
-        scenes.forEach(scene => {
-            scene.elements.forEach(element => {
-                if (element.type === this.scriptTypes.CHARACTER) {
-                    const name = element.text.replace(/\s*\([^)]+\)$/, '').trim();
-                    if (name && name !== name.toLowerCase()) {
-                        characters.add(name);
+        // Use CharacterManager if available (for deduplication and normalization)
+        const useCharacterManager = typeof window !== 'undefined' && window.characterManager;
+
+        if (useCharacterManager) {
+            console.log('📝 Extracting characters using CharacterManager for normalization...');
+
+            scenes.forEach(scene => {
+                scene.elements.forEach(element => {
+                    if (element.type === this.scriptTypes.CHARACTER) {
+                        const name = element.text.replace(/\s*\([^)]+\)$/, '').trim();
+                        if (name && name !== name.toLowerCase()) {
+                            // Add to CharacterManager (handles deduplication and normalization)
+                            window.characterManager.addCharacter(name);
+                        }
                     }
-                }
+                });
             });
-        });
-        
-        return Array.from(characters).sort();
+
+            // Return deduplicated, normalized list
+            return window.characterManager.getAllCharacters();
+        } else {
+            // Fallback to original behavior if CharacterManager not available
+            console.log('📝 Extracting characters (CharacterManager not available)...');
+            const characters = new Set();
+
+            scenes.forEach(scene => {
+                scene.elements.forEach(element => {
+                    if (element.type === this.scriptTypes.CHARACTER) {
+                        const name = element.text.replace(/\s*\([^)]+\)$/, '').trim();
+                        if (name && name !== name.toLowerCase()) {
+                            characters.add(name);
+                        }
+                    }
+                });
+            });
+
+            return Array.from(characters).sort();
+        }
     }
 
     // Format to HTML
