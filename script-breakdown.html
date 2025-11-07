@@ -3921,6 +3921,228 @@
             color: var(--text-light);
         }
 
+        /* Edit Look State Modal */
+        .modal-section {
+            margin-bottom: 20px;
+        }
+
+        .modal-label {
+            display: block;
+            font-size: 0.8125em;
+            font-weight: 600;
+            color: var(--text-light);
+            margin-bottom: 8px;
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 10px 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-light);
+            font-size: 0.875em;
+        }
+
+        .modal-input:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+        }
+
+        .modal-textarea {
+            width: 100%;
+            padding: 10px 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-light);
+            font-size: 0.875em;
+            resize: vertical;
+        }
+
+        .modal-textarea:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+        }
+
+        .modal-select {
+            width: 100%;
+            padding: 10px 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-light);
+            font-size: 0.875em;
+            cursor: pointer;
+        }
+
+        .modal-select:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+        }
+
+        /* Scene Checkboxes */
+        .scene-checkboxes {
+            max-height: 250px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 8px;
+        }
+
+        .scene-checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px;
+            margin-bottom: 6px;
+            background: rgba(28, 25, 22, 0.4);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .scene-checkbox-item:hover {
+            background: rgba(28, 25, 22, 0.6);
+            border-color: var(--accent-gold);
+        }
+
+        .scene-checkbox {
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+        }
+
+        .scene-checkbox-label {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .scene-number {
+            font-size: 0.75em;
+            font-weight: 600;
+            color: var(--accent-gold);
+        }
+
+        .scene-heading {
+            font-size: 0.75em;
+            color: var(--text-muted);
+        }
+
+        .selected-count {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        /* Appearance Fields */
+        .appearance-field {
+            margin-bottom: 14px;
+        }
+
+        .field-sublabel {
+            display: block;
+            font-size: 0.75em;
+            font-weight: 500;
+            color: var(--text-light);
+            margin-bottom: 6px;
+        }
+
+        /* Script Evidence */
+        .evidence-subsection {
+            margin-bottom: 16px;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+        }
+
+        .subsection-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .subsection-label {
+            font-size: 0.8125em;
+            font-weight: 600;
+            color: var(--text-light);
+        }
+
+        .add-item-btn {
+            padding: 4px 10px;
+            background: rgba(201, 169, 97, 0.15);
+            border: 1px solid rgba(201, 169, 97, 0.3);
+            border-radius: 4px;
+            color: var(--accent-gold);
+            font-size: 0.75em;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .add-item-btn:hover {
+            background: rgba(201, 169, 97, 0.25);
+            border-color: var(--accent-gold);
+        }
+
+        .evidence-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .empty-evidence {
+            padding: 10px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.75em;
+            font-style: italic;
+        }
+
+        .evidence-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 8px;
+            padding: 8px 10px;
+            background: rgba(28, 25, 22, 0.5);
+            border: 1px solid var(--glass-border);
+            border-radius: 4px;
+        }
+
+        .evidence-text {
+            flex: 1;
+            font-size: 0.8125em;
+            color: var(--text-light);
+            line-height: 1.4;
+        }
+
+        .evidence-remove-btn {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 4px;
+            color: #ef4444;
+            font-size: 1em;
+            font-weight: 700;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .evidence-remove-btn:hover {
+            background: rgba(239, 68, 68, 0.35);
+            border-color: #ef4444;
+        }
+
         /* Import Modal */
         .import-modal .modal-content {
             max-width: 900px;
@@ -4295,6 +4517,115 @@
             <div class="modal-actions">
                 <button class="modal-btn primary" onclick="addNewLook()">+ Add Look State</button>
                 <button class="modal-btn" onclick="closeManageLooks()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Look State Modal -->
+    <div class="modal" id="editLookModal">
+        <div class="modal-content" style="max-width: 900px; max-height: 90vh; display: flex; flex-direction: column;">
+            <div class="modal-header">
+                <h3 id="editLookTitle">Edit Look State</h3>
+                <button class="modal-close" onclick="closeEditLook()">×</button>
+            </div>
+
+            <div style="flex: 1; overflow-y: auto; padding: 20px;">
+                <!-- Look Name -->
+                <div class="modal-section">
+                    <label class="modal-label">Look Name</label>
+                    <input type="text" class="modal-input" id="lookName" placeholder="e.g., Clean Professional, Post-Fight Injured, Casual Weekend">
+                </div>
+
+                <!-- Scene Selection -->
+                <div class="modal-section">
+                    <label class="modal-label">Scenes (select all that apply)</label>
+                    <div class="scene-checkboxes" id="sceneCheckboxes">
+                        <!-- Populated dynamically -->
+                    </div>
+                    <div class="selected-count" id="selectedScenesCount">0 scenes selected</div>
+                </div>
+
+                <!-- Story Time -->
+                <div class="modal-section">
+                    <label class="modal-label">Story Time / Timeline Context</label>
+                    <input type="text" class="modal-input" id="lookStoryTime" placeholder="e.g., Day 1 - Morning to Afternoon, Week 2, 5 years later">
+                </div>
+
+                <!-- Appearance Fields -->
+                <div class="modal-section">
+                    <label class="modal-label">Appearance Details</label>
+
+                    <div class="appearance-field">
+                        <label class="field-sublabel">💇 Hair</label>
+                        <textarea class="modal-textarea" id="lookHair" rows="2" placeholder="Hairstyle, color, condition, changes..."></textarea>
+                    </div>
+
+                    <div class="appearance-field">
+                        <label class="field-sublabel">💄 Makeup</label>
+                        <textarea class="modal-textarea" id="lookMakeup" rows="2" placeholder="Makeup look, style, specific details..."></textarea>
+                    </div>
+
+                    <div class="appearance-field">
+                        <label class="field-sublabel">🩸 SFX Makeup</label>
+                        <textarea class="modal-textarea" id="lookSfx" rows="2" placeholder="Injuries, wounds, bruises, prosthetics..."></textarea>
+                    </div>
+
+                    <div class="appearance-field">
+                        <label class="field-sublabel">👔 Wardrobe</label>
+                        <textarea class="modal-textarea" id="lookWardrobe" rows="2" placeholder="Costume description, accessories, condition..."></textarea>
+                    </div>
+
+                    <div class="appearance-field">
+                        <label class="field-sublabel">🏃 Physical State</label>
+                        <textarea class="modal-textarea" id="lookPhysicalState" rows="2" placeholder="Energy level, posture, movement, overall condition..."></textarea>
+                    </div>
+                </div>
+
+                <!-- Script Evidence -->
+                <div class="modal-section">
+                    <label class="modal-label">Script Evidence</label>
+
+                    <div class="evidence-subsection">
+                        <div class="subsection-header">
+                            <span class="subsection-label">Direct Quotes</span>
+                            <button class="add-item-btn" onclick="addScriptQuote()">+ Add Quote</button>
+                        </div>
+                        <div class="evidence-list" id="scriptQuotesList">
+                            <div class="empty-evidence">No quotes added yet</div>
+                        </div>
+                    </div>
+
+                    <div class="evidence-subsection">
+                        <div class="subsection-header">
+                            <span class="subsection-label">Implications</span>
+                            <button class="add-item-btn" onclick="addImplication()">+ Add Implication</button>
+                        </div>
+                        <div class="evidence-list" id="implicationsList">
+                            <div class="empty-evidence">No implications added yet</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Complexity -->
+                <div class="modal-section">
+                    <label class="modal-label">Complexity Level</label>
+                    <select class="modal-select" id="lookComplexity">
+                        <option value="low">🟢 Low - Simple, easy to replicate</option>
+                        <option value="medium">🟡 Medium - Moderate detail and effort</option>
+                        <option value="high">🔴 High - Complex, requires significant time/skill</option>
+                    </select>
+                </div>
+
+                <!-- Story Context -->
+                <div class="modal-section">
+                    <label class="modal-label">Story Context / Notes</label>
+                    <textarea class="modal-textarea" id="lookStoryContext" rows="3" placeholder="Additional context about this look, why it matters, what happened before/after..."></textarea>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="modal-btn" onclick="closeEditLook()">Cancel</button>
+                <button class="modal-btn primary" onclick="saveLookState()">💾 Save Look State</button>
             </div>
         </div>
     </div>
@@ -8218,50 +8549,15 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`;
         function addNewLook() {
             if (!currentLookCharacter) return;
 
-            const newLook = {
-                id: 'look-' + Date.now(),
-                lookName: 'New Look State',
-                scenes: [],
-                storyTime: '',
-                appearance: {
-                    hair: '',
-                    makeup: '',
-                    sfx: '',
-                    wardrobe: '',
-                    physicalState: ''
-                },
-                scriptEvidence: {
-                    quotes: [],
-                    implications: []
-                },
-                complexity: 'low',
-                mustMatchScenes: 0,
-                storyContext: ''
-            };
-
-            if (!characterLooks[currentLookCharacter]) {
-                characterLooks[currentLookCharacter] = [];
-            }
-
-            characterLooks[currentLookCharacter].push(newLook);
-            saveProject();
-            renderLooksList(currentLookCharacter);
-
-            // TODO: Open edit modal for the new look
-            console.log('New look created:', newLook.id);
+            // Open edit modal for new look (no lookId)
+            openEditLook(currentLookCharacter, null);
         }
 
         function editLook(lookId) {
             if (!currentLookCharacter) return;
 
-            const looks = characterLooks[currentLookCharacter] || [];
-            const look = looks.find(l => l.id === lookId);
-
-            if (!look) return;
-
-            // TODO: Open edit modal with look data
-            console.log('Edit look:', lookId, look);
-            alert('Edit Look functionality coming soon!\nLook ID: ' + lookId);
+            // Open edit modal for existing look
+            openEditLook(currentLookCharacter, lookId);
         }
 
         function deleteLook(lookId) {
@@ -8276,6 +8572,236 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`;
                 looks.splice(index, 1);
                 saveProject();
                 renderLooksList(currentLookCharacter);
+            }
+        }
+
+        // ========== EDIT LOOK STATE MODAL ==========
+
+        let currentEditingLook = null;
+        let currentEditingLookCharacter = null;
+
+        function openEditLook(character, lookId = null) {
+            currentEditingLookCharacter = character;
+            currentEditingLook = lookId;
+
+            // Set modal title
+            const isNew = lookId === null;
+            document.getElementById('editLookTitle').textContent = isNew ? 'Create New Look State' : 'Edit Look State';
+
+            // Get the look data if editing existing
+            let lookData = null;
+            if (!isNew) {
+                const looks = characterLooks[character] || [];
+                lookData = looks.find(l => l.id === lookId);
+            }
+
+            // Populate form fields
+            document.getElementById('lookName').value = lookData?.lookName || '';
+            document.getElementById('lookStoryTime').value = lookData?.storyTime || '';
+            document.getElementById('lookHair').value = lookData?.appearance?.hair || '';
+            document.getElementById('lookMakeup').value = lookData?.appearance?.makeup || '';
+            document.getElementById('lookSfx').value = lookData?.appearance?.sfx || '';
+            document.getElementById('lookWardrobe').value = lookData?.appearance?.wardrobe || '';
+            document.getElementById('lookPhysicalState').value = lookData?.appearance?.physicalState || '';
+            document.getElementById('lookComplexity').value = lookData?.complexity || 'low';
+            document.getElementById('lookStoryContext').value = lookData?.storyContext || '';
+
+            // Render scene checkboxes
+            renderSceneCheckboxes(lookData?.scenes || []);
+
+            // Render script evidence lists
+            renderScriptQuotes(lookData?.scriptEvidence?.quotes || []);
+            renderImplications(lookData?.scriptEvidence?.implications || []);
+
+            // Show modal
+            document.getElementById('editLookModal').classList.add('active');
+        }
+
+        function closeEditLook() {
+            document.getElementById('editLookModal').classList.remove('active');
+            currentEditingLook = null;
+            currentEditingLookCharacter = null;
+        }
+
+        function renderSceneCheckboxes(selectedScenes = []) {
+            const container = document.getElementById('sceneCheckboxes');
+            let html = '';
+
+            scenes.forEach((scene, index) => {
+                const sceneNumber = scene.number;
+                const isChecked = selectedScenes.includes(sceneNumber);
+                const heading = scene.heading.length > 50 ? scene.heading.substring(0, 50) + '...' : scene.heading;
+
+                html += `
+                    <label class="scene-checkbox-item">
+                        <input type="checkbox"
+                               class="scene-checkbox"
+                               value="${sceneNumber}"
+                               ${isChecked ? 'checked' : ''}
+                               onchange="updateSceneCount()">
+                        <span class="scene-checkbox-label">
+                            <span class="scene-number">Scene ${sceneNumber}</span>
+                            <span class="scene-heading">${heading}</span>
+                        </span>
+                    </label>
+                `;
+            });
+
+            container.innerHTML = html;
+            updateSceneCount();
+        }
+
+        function updateSceneCount() {
+            const checkboxes = document.querySelectorAll('.scene-checkbox:checked');
+            const count = checkboxes.length;
+            document.getElementById('selectedScenesCount').textContent = `${count} scene${count !== 1 ? 's' : ''} selected`;
+        }
+
+        function getSelectedScenes() {
+            const checkboxes = document.querySelectorAll('.scene-checkbox:checked');
+            return Array.from(checkboxes).map(cb => parseInt(cb.value));
+        }
+
+        // Script Quotes Management
+        let currentQuotes = [];
+
+        function renderScriptQuotes(quotes = []) {
+            currentQuotes = [...quotes];
+            const container = document.getElementById('scriptQuotesList');
+
+            if (currentQuotes.length === 0) {
+                container.innerHTML = '<div class="empty-evidence">No quotes added yet</div>';
+                return;
+            }
+
+            let html = '';
+            currentQuotes.forEach((quote, index) => {
+                html += `
+                    <div class="evidence-item">
+                        <div class="evidence-text">${quote}</div>
+                        <button class="evidence-remove-btn" onclick="removeScriptQuote(${index})">×</button>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function addScriptQuote() {
+            const quote = prompt('Enter script quote:');
+            if (quote && quote.trim()) {
+                currentQuotes.push(quote.trim());
+                renderScriptQuotes(currentQuotes);
+            }
+        }
+
+        function removeScriptQuote(index) {
+            currentQuotes.splice(index, 1);
+            renderScriptQuotes(currentQuotes);
+        }
+
+        // Implications Management
+        let currentImplications = [];
+
+        function renderImplications(implications = []) {
+            currentImplications = [...implications];
+            const container = document.getElementById('implicationsList');
+
+            if (currentImplications.length === 0) {
+                container.innerHTML = '<div class="empty-evidence">No implications added yet</div>';
+                return;
+            }
+
+            let html = '';
+            currentImplications.forEach((implication, index) => {
+                html += `
+                    <div class="evidence-item">
+                        <div class="evidence-text">${implication}</div>
+                        <button class="evidence-remove-btn" onclick="removeImplication(${index})">×</button>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function addImplication() {
+            const implication = prompt('Enter implication from script:');
+            if (implication && implication.trim()) {
+                currentImplications.push(implication.trim());
+                renderImplications(currentImplications);
+            }
+        }
+
+        function removeImplication(index) {
+            currentImplications.splice(index, 1);
+            renderImplications(currentImplications);
+        }
+
+        function saveLookState() {
+            if (!currentEditingLookCharacter) return;
+
+            // Validate required fields
+            const lookName = document.getElementById('lookName').value.trim();
+            if (!lookName) {
+                alert('Please enter a look name');
+                return;
+            }
+
+            const selectedScenes = getSelectedScenes();
+            if (selectedScenes.length === 0) {
+                alert('Please select at least one scene');
+                return;
+            }
+
+            // Build the look object
+            const lookData = {
+                id: currentEditingLook || 'look-' + Date.now(),
+                lookName: lookName,
+                scenes: selectedScenes,
+                storyTime: document.getElementById('lookStoryTime').value.trim(),
+                appearance: {
+                    hair: document.getElementById('lookHair').value.trim(),
+                    makeup: document.getElementById('lookMakeup').value.trim(),
+                    sfx: document.getElementById('lookSfx').value.trim(),
+                    wardrobe: document.getElementById('lookWardrobe').value.trim(),
+                    physicalState: document.getElementById('lookPhysicalState').value.trim()
+                },
+                scriptEvidence: {
+                    quotes: currentQuotes,
+                    implications: currentImplications
+                },
+                complexity: document.getElementById('lookComplexity').value,
+                mustMatchScenes: selectedScenes.length,
+                storyContext: document.getElementById('lookStoryContext').value.trim()
+            };
+
+            // Initialize character looks array if needed
+            if (!characterLooks[currentEditingLookCharacter]) {
+                characterLooks[currentEditingLookCharacter] = [];
+            }
+
+            // Update or add the look
+            const looks = characterLooks[currentEditingLookCharacter];
+            if (currentEditingLook) {
+                // Update existing
+                const index = looks.findIndex(l => l.id === currentEditingLook);
+                if (index !== -1) {
+                    looks[index] = lookData;
+                }
+            } else {
+                // Add new
+                looks.push(lookData);
+            }
+
+            // Save and refresh
+            saveProject();
+            renderLooksList(currentEditingLookCharacter);
+            closeEditLook();
+
+            // If manage looks modal is open, keep it open
+            if (document.getElementById('manageLooksModal').classList.contains('active')) {
+                // Already open, just refreshed
             }
         }
 
