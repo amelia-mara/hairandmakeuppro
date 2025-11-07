@@ -14,7 +14,7 @@ import { state, selectScene, showAutoSaveIndicator } from './main.js';
 import { renderScript } from './script-display.js';
 import { renderSceneList } from './scene-list.js';
 import { renderCharacterTabs, renderCharacterTabPanels } from './character-panel.js';
-import { detectTimeOfDay, detectIntExt, extractLocation } from './utils.js';
+import { detectTimeOfDay, detectIntExt, extractLocation, extractStoryDay } from './utils.js';
 
 /**
  * Export project data as JSON file
@@ -440,10 +440,10 @@ export function detectScenes(text) {
                     heading: trimmed,
                     lineNumber: index,
                     synopsis: null,
-                    storyDay: '',
-                    timeOfDay: detectTimeOfDay(trimmed, sceneIndex),
+                    storyDay: extractStoryDay(trimmed),
+                    timeOfDay: detectTimeOfDay(trimmed),
                     intExt: detectIntExt(trimmed),
-                    location: extractLocation(trimmed, sceneIndex),
+                    location: extractLocation(trimmed),
                     content: '',
                     characters: {}
                 });

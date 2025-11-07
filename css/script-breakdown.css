@@ -293,7 +293,200 @@
             border-radius: 3px;
             color: #8b9cec;
         }
-        
+
+        /* ============================================================================ */
+        /* NEW SCENE CARD DESIGN - Expandable Overview */
+        /* ============================================================================ */
+
+        .scene-card {
+            background: rgba(30, 30, 30, 0.6);
+            border: 1px solid rgba(217, 164, 65, 0.2);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .scene-card:hover {
+            background: rgba(40, 40, 40, 0.8);
+            border-color: rgba(217, 164, 65, 0.4);
+        }
+
+        .scene-card.selected {
+            background: rgba(217, 164, 65, 0.1);
+            border-color: var(--accent-gold);
+            box-shadow: 0 0 12px rgba(217, 164, 65, 0.2);
+        }
+
+        .scene-card .scene-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+        }
+
+        .scene-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(217, 164, 65, 0.1);
+            border: 1px solid rgba(217, 164, 65, 0.3);
+            border-radius: 6px;
+            flex-shrink: 0;
+        }
+
+        .scene-title-section {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .scene-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .scene-card .scene-meta {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .scene-location-badge,
+        .scene-day-badge {
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            background: rgba(217, 164, 65, 0.15);
+            color: var(--accent-gold);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .scene-expand-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            cursor: pointer;
+            padding: 8px;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .scene-expand-btn:hover {
+            color: var(--accent-gold);
+            transform: scale(1.1);
+        }
+
+        /* Scene Overview (expanded state) */
+        .scene-overview {
+            border-top: 1px solid rgba(217, 164, 65, 0.2);
+            padding: 16px;
+            background: rgba(20, 20, 20, 0.4);
+        }
+
+        .overview-section {
+            margin-bottom: 16px;
+        }
+
+        .overview-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .overview-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--accent-gold);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .overview-content {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .synopsis-text {
+            font-style: italic;
+        }
+
+        .synopsis-text em {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+
+        /* Scene Details Grid */
+        .scene-details-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .detail-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8rem;
+        }
+
+        .detail-label {
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .detail-value {
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        /* Cast Tags */
+        .cast-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .cast-tag {
+            font-size: 0.75rem;
+            padding: 4px 10px;
+            background: rgba(251, 191, 36, 0.15);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            border-radius: 12px;
+            color: #fbbf24;
+        }
+
+        /* Tag Summary */
+        .tag-summary {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .tag-count-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.7rem;
+            padding: 4px 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid;
+            border-radius: 10px;
+            color: var(--text-secondary);
+        }
+
+        .tag-color-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+        }
+
         /* Center Panel - Script */
         .center-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: rgba(232, 230, 227, 0.02); }
 
