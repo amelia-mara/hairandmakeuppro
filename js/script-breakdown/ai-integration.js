@@ -517,17 +517,24 @@ let batchCancelled = false;
 /**
  * Generate synopses for all scenes in the script
  */
-export async function generateAllSynopses() {
+export async function generateAllSynopses(event) {
     if (!state.scenes || state.scenes.length === 0) {
         alert('No scenes loaded. Please import a script first.');
+        return;
+    }
+
+    // Get the button element from the event
+    const button = event?.currentTarget;
+    if (!button) {
+        console.error('Button element not found in event');
         return;
     }
 
     // Reset cancellation flag
     batchCancelled = false;
 
-    // Show corner progress notification
-    showCornerProgress('Generating All Synopses', state.scenes.length);
+    // Start button progress
+    startButtonProgress(button, state.scenes.length);
 
     let successCount = 0;
     let errorCount = 0;
@@ -535,12 +542,13 @@ export async function generateAllSynopses() {
 
     for (let i = 0; i < state.scenes.length; i++) {
         if (batchCancelled) {
-            updateCornerProgress(i, state.scenes.length, `Cancelled at scene ${i + 1}`);
-            break;
+            resetButton(button);
+            alert(`Processing cancelled. ${successCount} synopses generated, ${errorCount} failed.`);
+            return;
         }
 
         const scene = state.scenes[i];
-        updateCornerProgress(i + 1, state.scenes.length, `Generating synopsis for Scene ${scene.number}...`);
+        updateButtonProgress(button, i + 1, `Scene ${i + 1} / ${state.scenes.length}`);
 
         try {
             const synopsis = await generateAISynopsis(i);
@@ -555,12 +563,11 @@ export async function generateAllSynopses() {
             state.sceneBreakdowns[i].synopsis = synopsis;
 
             successCount++;
-            updateCornerProgress(i + 1, state.scenes.length, `Generating synopsis for Scene ${scene.number}...`, `Scene ${scene.number} completed`);
+            console.log(`✓ Scene ${scene.number} synopsis generated`);
         } catch (error) {
             console.error(`Error generating synopsis for scene ${i}:`, error);
             errorCount++;
             errors.push(`Scene ${scene.number}: ${error.message}`);
-            updateCornerProgress(i + 1, state.scenes.length, `Generating synopsis for Scene ${scene.number}...`, `✗ Scene ${scene.number} failed`);
         }
 
         // Small delay to avoid rate limiting
@@ -576,15 +583,12 @@ export async function generateAllSynopses() {
     const { saveProject } = await import('./export-handlers.js');
     saveProject();
 
-    // Show completion message
-    const message = batchCancelled
-        ? `Processing cancelled. ${successCount} synopses generated, ${errorCount} failed.`
-        : `Complete! ${successCount} synopses generated successfully.`;
+    // Complete with success
+    const successMessage = errorCount > 0
+        ? `${successCount} Synopses Created (${errorCount} errors)`
+        : `${successCount} Synopses Created`;
 
-    updateCornerProgress(state.scenes.length, state.scenes.length, message, 'Processing complete');
-
-    // Auto-close after 3 seconds
-    setTimeout(closeCornerProgress, 3000);
+    completeButtonProgress(button, successMessage);
 
     // Refresh UI if we're viewing a scene
     if (state.currentScene !== null) {
@@ -596,9 +600,16 @@ export async function generateAllSynopses() {
 /**
  * Auto-tag the entire script with AI detection
  */
-export async function autoTagScript() {
+export async function autoTagScript(event) {
     if (!state.scenes || state.scenes.length === 0) {
         alert('No scenes loaded. Please import a script first.');
+        return;
+    }
+
+    // Get the button element from the event
+    const button = event?.currentTarget;
+    if (!button) {
+        console.error('Button element not found in event');
         return;
     }
 
@@ -608,8 +619,8 @@ export async function autoTagScript() {
     // Reset cancellation flag
     batchCancelled = false;
 
-    // Show corner progress notification
-    showCornerProgress('Auto-Tagging Script', state.scenes.length);
+    // Start button progress
+    startButtonProgress(button, state.scenes.length);
 
     let successCount = 0;
     let errorCount = 0;
@@ -621,13 +632,14 @@ export async function autoTagScript() {
 
     for (let i = 0; i < state.scenes.length; i++) {
         if (batchCancelled) {
-            updateCornerProgress(i, state.scenes.length, `Cancelled at scene ${i + 1}`);
-            break;
+            resetButton(button);
+            alert(`Processing cancelled. ${successCount} scenes tagged, ${errorCount} failed.`);
+            return;
         }
 
         const scene = state.scenes[i];
         console.log(`\n📋 Processing scene ${i + 1}/${state.scenes.length} (Scene #${scene.number})`);
-        updateCornerProgress(i + 1, state.scenes.length, `Auto-detecting elements in Scene ${scene.number}...`);
+        updateButtonProgress(button, i + 1, `Scene ${i + 1} / ${state.scenes.length}`);
 
         try {
             const result = await detectAIElements(i);
@@ -747,12 +759,10 @@ export async function autoTagScript() {
 
             const tagCount = state.scriptTags[i] ? state.scriptTags[i].length : 0;
             console.log(`✓ Scene ${scene.number} complete: ${sceneTagsCreated} tags created (total in scene: ${tagCount})`);
-            updateCornerProgress(i + 1, state.scenes.length, `Auto-detecting elements in Scene ${scene.number}...`, `Scene ${scene.number}: ${sceneTagsCreated} tags created`);
         } catch (error) {
             console.error(`Error auto-tagging scene ${i}:`, error);
             errorCount++;
             errors.push(`Scene ${scene.number}: ${error.message}`);
-            updateCornerProgress(i + 1, state.scenes.length, `Auto-detecting elements in Scene ${scene.number}...`, `✗ Scene ${scene.number} failed`);
         }
 
         // Small delay to avoid rate limiting
@@ -799,15 +809,12 @@ export async function autoTagScript() {
     const { renderAllHighlights } = await import('./tag-system.js');
     renderAllHighlights();
 
-    // Show completion message
-    const message = batchCancelled
-        ? `Processing cancelled. ${successCount} scenes tagged, ${errorCount} failed.`
-        : `Complete! ${totalTags} total tags created across ${successCount} scenes.`;
+    // Complete with success
+    const successMessage = errorCount > 0
+        ? `${totalTags} Tags Created (${errorCount} errors)`
+        : `${totalTags} Tags Created`;
 
-    updateCornerProgress(state.scenes.length, state.scenes.length, message, 'Processing complete');
-
-    // Auto-close after 3 seconds
-    setTimeout(closeCornerProgress, 3000);
+    completeButtonProgress(button, successMessage);
 
     // Refresh UI if we're viewing a scene
     if (state.currentScene !== null) {
@@ -824,63 +831,98 @@ export function cancelBatchProcessing() {
 }
 
 // ============================================================================
-// CORNER PROGRESS NOTIFICATION UTILITIES
+// INLINE BUTTON PROGRESS BAR UTILITIES
 // ============================================================================
 
 /**
- * Show corner progress notification
+ * Transform a button into a progress bar
  */
-function showCornerProgress(title, total) {
-    const corner = document.getElementById('corner-progress');
-    if (!corner) return;
+function startButtonProgress(buttonElement, totalSteps) {
+    // Add processing class
+    buttonElement.classList.add('processing');
 
-    document.getElementById('corner-progress-title').textContent = title;
-    document.getElementById('corner-progress-message').textContent = 'Starting...';
-    document.getElementById('corner-progress-fill').style.width = '0%';
-    document.getElementById('corner-progress-label').textContent = `0 / ${total}`;
-    document.getElementById('corner-progress-details').innerHTML = '';
+    // Store original text
+    buttonElement.dataset.originalText = buttonElement.textContent;
 
-    corner.style.display = 'block';
-    corner.classList.remove('minimized');
+    // Create progress bar
+    const progressBar = document.createElement('div');
+    progressBar.className = 'toolbar-btn-progress';
+    buttonElement.prepend(progressBar);
+
+    // Update button text
+    const textSpan = document.createElement('span');
+    textSpan.className = 'toolbar-btn-text';
+    textSpan.innerHTML = `
+        <span class="toolbar-btn-spinner"></span>
+        <span class="progress-text">0 / ${totalSteps}</span>
+    `;
+    buttonElement.innerHTML = '';
+    buttonElement.appendChild(progressBar);
+    buttonElement.appendChild(textSpan);
+
+    // Store reference for updates
+    buttonElement._progressBar = progressBar;
+    buttonElement._progressText = textSpan.querySelector('.progress-text');
+    buttonElement._totalSteps = totalSteps;
 }
 
 /**
- * Update corner progress notification
+ * Update button progress
  */
-function updateCornerProgress(current, total, message, details = '') {
-    const percentage = (current / total) * 100;
+function updateButtonProgress(buttonElement, currentStep, message = null) {
+    if (!buttonElement._progressBar) return;
 
-    const messageEl = document.getElementById('corner-progress-message');
-    const fillEl = document.getElementById('corner-progress-fill');
-    const labelEl = document.getElementById('corner-progress-label');
+    const percentage = (currentStep / buttonElement._totalSteps) * 100;
+    buttonElement._progressBar.style.width = percentage + '%';
 
-    if (messageEl) messageEl.textContent = message;
-    if (fillEl) fillEl.style.width = percentage + '%';
-    if (labelEl) labelEl.textContent = `${current} / ${total}`;
-
-    if (details) {
-        const detailsDiv = document.getElementById('corner-progress-details');
-        if (detailsDiv) {
-            detailsDiv.innerHTML += `<div>✓ ${details}</div>`;
-            detailsDiv.scrollTop = detailsDiv.scrollHeight;
-        }
+    if (buttonElement._progressText) {
+        const displayMessage = message || `${currentStep} / ${buttonElement._totalSteps}`;
+        buttonElement._progressText.textContent = displayMessage;
     }
 }
 
 /**
- * Close corner progress notification
+ * Complete button progress with success state
  */
-function closeCornerProgress() {
-    const corner = document.getElementById('corner-progress');
-    if (corner) corner.style.display = 'none';
+function completeButtonProgress(buttonElement, successMessage = 'Complete') {
+    if (!buttonElement._progressBar) return;
+
+    // Full progress
+    buttonElement._progressBar.style.width = '100%';
+
+    // Show success state
+    buttonElement.classList.remove('processing');
+    buttonElement.classList.add('success');
+
+    const textSpan = buttonElement.querySelector('.toolbar-btn-text');
+    if (textSpan) {
+        textSpan.innerHTML = successMessage;
+    }
+
+    // Reset after 2 seconds
+    setTimeout(() => {
+        resetButton(buttonElement);
+    }, 2000);
 }
 
 /**
- * Toggle corner progress minimized state
+ * Reset button to original state
  */
-function toggleCornerProgress() {
-    const corner = document.getElementById('corner-progress');
-    if (corner) corner.classList.toggle('minimized');
+function resetButton(buttonElement) {
+    buttonElement.classList.remove('processing', 'success');
+
+    // Remove progress elements
+    const progressBar = buttonElement.querySelector('.toolbar-btn-progress');
+    if (progressBar) progressBar.remove();
+
+    // Restore original text
+    const originalText = buttonElement.dataset.originalText || buttonElement.textContent;
+    buttonElement.innerHTML = originalText;
+
+    // Clean up stored references
+    delete buttonElement._progressBar;
+    delete buttonElement._progressText;
+    delete buttonElement._totalSteps;
 }
 
 // ============================================================================
@@ -967,4 +1009,7 @@ window.generateAllSynopses = generateAllSynopses;
 window.autoTagScript = autoTagScript;
 window.cancelBatchProcessing = cancelBatchProcessing;
 window.closeProgressModal = closeProgressModal;
-window.toggleCornerProgress = toggleCornerProgress;
+window.startButtonProgress = startButtonProgress;
+window.updateButtonProgress = updateButtonProgress;
+window.completeButtonProgress = completeButtonProgress;
+window.resetButton = resetButton;

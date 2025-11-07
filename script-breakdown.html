@@ -20,8 +20,8 @@
                 <h1 class="page-title" id="projectTitle">Script Breakdown</h1>
             </div>
             <div class="toolbar">
-                <button class="toolbar-btn" onclick="generateAllSynopses()">Generate All Synopses</button>
-                <button class="toolbar-btn" onclick="autoTagScript()">Auto Tag Script</button>
+                <button class="toolbar-btn" onclick="generateAllSynopses(event)">Generate All Synopses</button>
+                <button class="toolbar-btn" onclick="autoTagScript(event)">Auto Tag Script</button>
                 <button class="toolbar-btn" onclick="reviewCharacters()">Review Characters</button>
                 <button class="toolbar-btn" onclick="openSettingsModal()">AI Settings</button>
                 <button class="toolbar-btn" onclick="window.location.href='generate-breakdown.html'">Generate Breakdown</button>
@@ -315,7 +315,8 @@
     <!-- Tag Tooltip (hover on tags) -->
     <div class="tag-tooltip" id="tag-tooltip" style="display: none;"></div>
 
-    <!-- Corner Progress Notification -->
+    <!-- Corner Progress Notification (Replaced with inline button progress) -->
+    <!--
     <div class="corner-progress" id="corner-progress" style="display: none;">
         <div class="corner-progress-header">
             <div class="corner-progress-title" id="corner-progress-title">Processing...</div>
@@ -331,6 +332,7 @@
             <div class="corner-progress-details" id="corner-progress-details"></div>
         </div>
     </div>
+    -->
 
     <!-- ============================================================================ -->
     <!-- JAVASCRIPT MODULES -->
