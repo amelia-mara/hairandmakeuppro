@@ -1757,23 +1757,25 @@
         /* Color Legend */
         .color-legend {
             display: flex;
-            gap: 12px;
+            gap: 8px;
             align-items: center;
         }
 
         .legend-item {
             display: flex;
             align-items: center;
-            gap: 4px;
+            gap: 3px;
             font-size: 0.7em;
             color: var(--text-muted);
+            white-space: nowrap;
         }
 
         .legend-color {
-            width: 12px;
-            height: 12px;
+            width: 8px;
+            height: 8px;
             border-radius: 2px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            flex-shrink: 0;
         }
 
         /* Context Menu */
