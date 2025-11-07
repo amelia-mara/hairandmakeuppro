@@ -3829,7 +3829,98 @@
             font-size: 0.75em;
             color: var(--accent-blue);
         }
-        
+
+        /* Manage Looks Modal */
+        .looks-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .look-state-card {
+            background: rgba(28, 25, 22, 0.4);
+            border: 1px solid var(--glass-border);
+            border-left: 3px solid rgba(201, 169, 97, 0.5);
+            border-radius: 8px;
+            padding: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .look-state-card:hover {
+            background: rgba(28, 25, 22, 0.6);
+            border-left-color: var(--accent-gold);
+        }
+
+        .look-state-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .look-state-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .look-state-name {
+            font-size: 0.95em;
+            font-weight: 600;
+            color: var(--text-light);
+        }
+
+        .complexity-indicator {
+            font-size: 1.1em;
+        }
+
+        .look-state-actions {
+            display: flex;
+            gap: 6px;
+        }
+
+        .look-action-btn {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            padding: 4px 8px;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .look-action-btn:hover {
+            background: rgba(201, 169, 97, 0.2);
+            border-color: var(--accent-gold);
+        }
+
+        .look-action-btn.delete:hover {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: #ef4444;
+        }
+
+        .look-state-details {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .look-detail-row {
+            display: flex;
+            gap: 8px;
+            font-size: 0.8125em;
+        }
+
+        .look-detail-label {
+            color: var(--text-muted);
+            font-weight: 500;
+            min-width: 100px;
+        }
+
+        .look-detail-value {
+            color: var(--text-light);
+        }
+
         /* Import Modal */
         .import-modal .modal-content {
             max-width: 900px;
@@ -4176,12 +4267,38 @@
 
             <div class="modal-actions">
                 <button class="print-lookbook-btn" onclick="printLookbook()">📄 Print Lookbook</button>
+                <button class="modal-btn" onclick="openManageLooks(currentCastMember)">📊 Manage Look States</button>
                 <button class="modal-btn" onclick="closeCastProfile()">Close</button>
                 <button class="modal-btn primary" onclick="saveCastProfile()">💾 Save All</button>
             </div>
         </div>
     </div>
-    
+
+    <!-- Manage Looks Modal -->
+    <div class="modal" id="manageLooksModal">
+        <div class="modal-content" style="max-width: 800px; max-height: 90vh; display: flex; flex-direction: column;">
+            <div class="modal-header">
+                <h3 id="manageLooksTitle">Look States - [Character Name]</h3>
+                <button class="modal-close" onclick="closeManageLooks()">×</button>
+            </div>
+
+            <div style="flex: 1; overflow-y: auto; padding: 20px;">
+                <div class="looks-list" id="looksList">
+                    <!-- Look states will be populated here -->
+                    <div class="empty-state-small">
+                        <div class="empty-icon-small">👔</div>
+                        <div class="empty-text-small">No look states defined yet. Click "+ Add Look State" to create one.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="modal-btn primary" onclick="addNewLook()">+ Add Look State</button>
+                <button class="modal-btn" onclick="closeManageLooks()">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Import Script Modal -->
     <div class="modal import-modal" id="importModal">
         <div class="modal-content">
@@ -7974,7 +8091,194 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`;
             renderCastPanel();
             alert('Profile saved!');
         }
-        
+
+        // ========== MANAGE LOOKS FUNCTIONS ==========
+
+        let currentLookCharacter = null;
+
+        function openManageLooks(character) {
+            currentLookCharacter = character;
+            document.getElementById('manageLooksTitle').textContent = `Look States - ${character}`;
+
+            renderLooksList(character);
+
+            document.getElementById('manageLooksModal').classList.add('active');
+        }
+
+        function closeManageLooks() {
+            document.getElementById('manageLooksModal').classList.remove('active');
+            currentLookCharacter = null;
+        }
+
+        function renderLooksList(character) {
+            const looks = characterLooks[character] || [];
+            const container = document.getElementById('looksList');
+
+            if (looks.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state-small">
+                        <div class="empty-icon-small">👔</div>
+                        <div class="empty-text-small">No look states defined yet. Click "+ Add Look State" to create one.</div>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            looks.forEach(look => {
+                const sceneRangeText = formatSceneRange(look.scenes);
+                const complexityIcon = getComplexityIcon(look.complexity);
+                const hasAppearanceData = Object.values(look.appearance || {}).some(v => v && v.trim());
+
+                html += `
+                    <div class="look-state-card">
+                        <div class="look-state-header">
+                            <div class="look-state-title">
+                                <span class="look-state-name">${look.lookName || 'Untitled Look'}</span>
+                                <span class="complexity-indicator">${complexityIcon}</span>
+                            </div>
+                            <div class="look-state-actions">
+                                <button class="look-action-btn" onclick="editLook('${look.id}')" title="Edit">✏️</button>
+                                <button class="look-action-btn delete" onclick="deleteLook('${look.id}')" title="Delete">🗑️</button>
+                            </div>
+                        </div>
+                        <div class="look-state-details">
+                            <div class="look-detail-row">
+                                <span class="look-detail-label">Scenes:</span>
+                                <span class="look-detail-value">${sceneRangeText}</span>
+                            </div>
+                            ${look.storyTime ? `
+                                <div class="look-detail-row">
+                                    <span class="look-detail-label">Story Time:</span>
+                                    <span class="look-detail-value">${look.storyTime}</span>
+                                </div>
+                            ` : ''}
+                            ${hasAppearanceData ? `
+                                <div class="look-detail-row">
+                                    <span class="look-detail-label">Defined:</span>
+                                    <span class="look-detail-value">${getDefinedFields(look.appearance)}</span>
+                                </div>
+                            ` : ''}
+                            ${look.mustMatchScenes ? `
+                                <div class="look-detail-row">
+                                    <span class="look-detail-label">Must Match:</span>
+                                    <span class="look-detail-value">${look.mustMatchScenes} scenes</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function formatSceneRange(scenes) {
+            if (!scenes || scenes.length === 0) return 'No scenes';
+
+            const sorted = [...scenes].sort((a, b) => a - b);
+            const ranges = [];
+            let start = sorted[0];
+            let end = sorted[0];
+
+            for (let i = 1; i < sorted.length; i++) {
+                if (sorted[i] === end + 1) {
+                    end = sorted[i];
+                } else {
+                    ranges.push(start === end ? `${start}` : `${start}-${end}`);
+                    start = sorted[i];
+                    end = sorted[i];
+                }
+            }
+            ranges.push(start === end ? `${start}` : `${start}-${end}`);
+
+            return 'Scenes ' + ranges.join(', ');
+        }
+
+        function getComplexityIcon(complexity) {
+            switch (complexity) {
+                case 'low': return '🟢';
+                case 'medium': return '🟡';
+                case 'high': return '🔴';
+                default: return '⚪';
+            }
+        }
+
+        function getDefinedFields(appearance) {
+            if (!appearance) return 'None';
+            const fields = [];
+            if (appearance.hair) fields.push('Hair');
+            if (appearance.makeup) fields.push('Makeup');
+            if (appearance.sfx) fields.push('SFX');
+            if (appearance.wardrobe) fields.push('Wardrobe');
+            if (appearance.physicalState) fields.push('Physical State');
+            return fields.length > 0 ? fields.join(', ') : 'None';
+        }
+
+        function addNewLook() {
+            if (!currentLookCharacter) return;
+
+            const newLook = {
+                id: 'look-' + Date.now(),
+                lookName: 'New Look State',
+                scenes: [],
+                storyTime: '',
+                appearance: {
+                    hair: '',
+                    makeup: '',
+                    sfx: '',
+                    wardrobe: '',
+                    physicalState: ''
+                },
+                scriptEvidence: {
+                    quotes: [],
+                    implications: []
+                },
+                complexity: 'low',
+                mustMatchScenes: 0,
+                storyContext: ''
+            };
+
+            if (!characterLooks[currentLookCharacter]) {
+                characterLooks[currentLookCharacter] = [];
+            }
+
+            characterLooks[currentLookCharacter].push(newLook);
+            saveProject();
+            renderLooksList(currentLookCharacter);
+
+            // TODO: Open edit modal for the new look
+            console.log('New look created:', newLook.id);
+        }
+
+        function editLook(lookId) {
+            if (!currentLookCharacter) return;
+
+            const looks = characterLooks[currentLookCharacter] || [];
+            const look = looks.find(l => l.id === lookId);
+
+            if (!look) return;
+
+            // TODO: Open edit modal with look data
+            console.log('Edit look:', lookId, look);
+            alert('Edit Look functionality coming soon!\nLook ID: ' + lookId);
+        }
+
+        function deleteLook(lookId) {
+            if (!currentLookCharacter) return;
+
+            if (!confirm('Are you sure you want to delete this look state?')) return;
+
+            const looks = characterLooks[currentLookCharacter] || [];
+            const index = looks.findIndex(l => l.id === lookId);
+
+            if (index !== -1) {
+                looks.splice(index, 1);
+                saveProject();
+                renderLooksList(currentLookCharacter);
+            }
+        }
+
         // Render script
         function renderScript() {
             if (!scriptText) return;
