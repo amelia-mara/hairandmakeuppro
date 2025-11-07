@@ -567,6 +567,11 @@ export async function generateAllSynopses() {
         await new Promise(resolve => setTimeout(resolve, 500));
     }
 
+    // Deduplicate all characters after synopsis generation
+    console.log('🔄 Running character deduplication...');
+    const { deduplicateAllCharacters } = await import('./character-panel.js');
+    deduplicateAllCharacters();
+
     // Save project data
     const { saveProject } = await import('./export-handlers.js');
     saveProject();
@@ -647,12 +652,17 @@ export async function autoTagScript() {
             // Save detected elements
             const breakdown = state.sceneBreakdowns[i];
 
-            // Cast members
+            // Cast members - normalize through CharacterManager
             if (result.cast && result.cast.length > 0) {
-                breakdown.cast = [...new Set([...(breakdown.cast || []), ...result.cast])];
+                // Normalize all character names
+                const normalizedCast = result.cast.map(char =>
+                    window.characterManager.addCharacter(char)
+                ).filter(Boolean);
+
+                breakdown.cast = [...new Set([...(breakdown.cast || []), ...normalizedCast])];
 
                 // Add to global characters set
-                result.cast.forEach(char => state.characters.add(char));
+                normalizedCast.forEach(char => state.characters.add(char));
             }
 
             // Other elements
@@ -671,23 +681,27 @@ export async function autoTagScript() {
 
             let sceneTagsCreated = 0;
 
-            // Create tags for cast members
+            // Create tags for cast members - normalize through CharacterManager
             if (result.cast && result.cast.length > 0) {
                 console.log(`  Creating ${result.cast.length} cast tags...`);
                 result.cast.forEach(castMember => {
+                    // Normalize character name
+                    const canonicalName = window.characterManager.getCanonicalName(castMember) ||
+                                         window.characterManager.addCharacter(castMember);
+
                     const tag = {
                         id: `tag-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                         sceneIndex: i,
                         sceneNumber: scene.number,
                         category: 'cast',
-                        selectedText: castMember,
-                        fullContext: `Cast member: ${castMember}`,
-                        character: castMember,
+                        selectedText: canonicalName,
+                        fullContext: `Cast member: ${canonicalName}`,
+                        character: canonicalName,
                         created: Date.now()
                     };
                     state.scriptTags[i].push(tag);
                     sceneTagsCreated++;
-                    console.log(`    ✓ Cast tag: "${castMember}"`);
+                    console.log(`    ✓ Cast tag: "${canonicalName}"`);
                 });
             }
 
@@ -697,12 +711,14 @@ export async function autoTagScript() {
                     if (result.elements[category] && result.elements[category].length > 0) {
                         console.log(`  Creating ${result.elements[category].length} ${category} tags...`);
                         result.elements[category].forEach(description => {
-                            // Try to detect character from description
+                            // Try to detect character from description and normalize
                             let detectedCharacter = null;
                             if (result.cast) {
                                 for (const castMember of result.cast) {
                                     if (description.toLowerCase().includes(castMember.toLowerCase())) {
-                                        detectedCharacter = castMember;
+                                        // Normalize the detected character name
+                                        detectedCharacter = window.characterManager.getCanonicalName(castMember) ||
+                                                          window.characterManager.addCharacter(castMember);
                                         break;
                                     }
                                 }
@@ -743,6 +759,11 @@ export async function autoTagScript() {
         await new Promise(resolve => setTimeout(resolve, 500));
     }
 
+    // Deduplicate all characters after tagging
+    console.log('🔄 Running character deduplication...');
+    const { deduplicateAllCharacters } = await import('./character-panel.js');
+    deduplicateAllCharacters();
+
     // Save project data
     const { saveProject } = await import('./export-handlers.js');
     saveProject();
@@ -750,14 +771,6 @@ export async function autoTagScript() {
     // Refresh scene list to show tagged indicators
     const { renderSceneList } = await import('./scene-list.js');
     renderSceneList();
-
-    // Refresh character tabs in case new characters were detected
-    const { renderCharacterTabs, renderCharacterTabPanels } = await import('./character-panel.js');
-
-    // Update character tabs array from characters set
-    state.characterTabs = Array.from(state.characters);
-    renderCharacterTabs();
-    renderCharacterTabPanels();
 
     // Count total tags created
     const totalTags = Object.values(state.scriptTags).reduce((sum, tags) => sum + (tags?.length || 0), 0);
