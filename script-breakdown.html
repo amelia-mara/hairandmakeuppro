@@ -581,6 +581,375 @@
             color: var(--text-muted);
         }
 
+        /* Story Day Cards - Visual Timeline */
+        .timeline-header {
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .timeline-stats {
+            display: flex;
+            gap: 32px;
+            margin-top: 16px;
+        }
+
+        .stat {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: 700;
+            color: var(--accent-gold);
+        }
+
+        .stat-label {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .timeline-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 12px 0;
+        }
+
+        .nav-btn {
+            padding: 8px 16px;
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            color: var(--text-muted);
+            font-size: 0.8125em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .nav-btn:hover {
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+            background: rgba(212, 175, 122, 0.05);
+        }
+
+        .view-mode-switcher {
+            display: flex;
+            gap: 4px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 4px;
+            border-radius: 8px;
+        }
+
+        .mode-btn {
+            padding: 6px 16px;
+            background: transparent;
+            border: none;
+            border-radius: 6px;
+            color: var(--text-muted);
+            font-size: 0.8125em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .mode-btn.active {
+            background: var(--accent-gold);
+            color: var(--bg-dark);
+        }
+
+        .story-day-timeline {
+            display: flex;
+            gap: 16px;
+            overflow-x: auto;
+            padding: 24px 0;
+            scroll-snap-type: x mandatory;
+        }
+
+        .story-day-card {
+            min-width: 320px;
+            max-width: 320px;
+            background: linear-gradient(135deg,
+                rgba(212, 175, 122, 0.08) 0%,
+                rgba(28, 25, 22, 0.6) 50%,
+                rgba(212, 175, 122, 0.05) 100%
+            );
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 16px;
+            scroll-snap-align: start;
+            transition: all 0.3s ease;
+        }
+
+        .story-day-card:hover {
+            border-color: var(--accent-gold);
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(212, 175, 122, 0.2);
+        }
+
+        .day-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .day-label {
+            font-size: 0.9375em;
+            font-weight: 700;
+            color: var(--accent-gold);
+        }
+
+        .scene-count {
+            font-size: 0.75em;
+            color: var(--text-muted);
+        }
+
+        .reference-image-zone {
+            width: 100%;
+            height: 200px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px dashed var(--glass-border);
+            border-radius: 8px;
+            margin-bottom: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+
+        .reference-image-zone:hover {
+            border-color: var(--accent-gold);
+            background: rgba(212, 175, 122, 0.08);
+        }
+
+        .image-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-muted);
+        }
+
+        .upload-icon {
+            font-size: 2em;
+            opacity: 0.5;
+        }
+
+        .upload-text {
+            font-size: 0.8125em;
+            font-weight: 500;
+        }
+
+        .day-reference-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .image-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .reference-image-zone:hover .image-overlay {
+            opacity: 1;
+        }
+
+        .change-image-btn {
+            padding: 8px 16px;
+            background: var(--accent-gold);
+            color: var(--bg-dark);
+            border: none;
+            border-radius: 6px;
+            font-size: 0.875em;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .look-summary {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .look-field {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            padding: 6px 8px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            font-size: 0.8125em;
+        }
+
+        .look-field.has-event {
+            background: rgba(212, 175, 122, 0.15);
+            border-left: 3px solid var(--accent-gold);
+        }
+
+        .look-field.empty {
+            opacity: 0.5;
+        }
+
+        .field-icon {
+            font-size: 1.1em;
+            line-height: 1;
+        }
+
+        .field-text {
+            flex: 1;
+            color: var(--text-light);
+            line-height: 1.4;
+        }
+
+        .event-indicator {
+            margin-left: 4px;
+            color: var(--accent-gold);
+            font-size: 0.9em;
+        }
+
+        .active-events-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            background: rgba(212, 175, 122, 0.2);
+            border: 1px solid rgba(212, 175, 122, 0.4);
+            border-radius: 6px;
+            font-size: 0.75em;
+            color: var(--accent-gold);
+            margin-bottom: 12px;
+        }
+
+        .event-icon {
+            font-size: 1.1em;
+        }
+
+        .expand-day-btn {
+            width: 100%;
+            padding: 8px;
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-muted);
+            font-size: 0.8125em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .expand-day-btn:hover {
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+            background: rgba(212, 175, 122, 0.05);
+        }
+
+        .expanded-scene-list {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--glass-border);
+        }
+
+        .scene-item {
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .scene-item:hover {
+            background: rgba(212, 175, 122, 0.15);
+            transform: translateX(4px);
+        }
+
+        .scene-number {
+            font-size: 0.75em;
+            font-weight: 700;
+            color: var(--accent-gold);
+            margin-bottom: 2px;
+        }
+
+        .scene-heading {
+            font-size: 0.8125em;
+            font-weight: 600;
+            color: var(--text-light);
+            margin-bottom: 4px;
+        }
+
+        .scene-look-detail {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        .no-events-badge {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            font-style: italic;
+            margin-bottom: 12px;
+        }
+
+        .event-badge {
+            padding: 6px 10px;
+            background: rgba(212, 175, 122, 0.15);
+            border: 1px solid rgba(212, 175, 122, 0.3);
+            border-radius: 6px;
+            font-size: 0.75em;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .event-badge.fresh {
+            border-left: 3px solid #ff6b6b;
+        }
+
+        .event-badge.healing {
+            border-left: 3px solid #e8a87c;
+        }
+
+        .event-badge.healed {
+            border-left: 3px solid #52c186;
+        }
+
+        .event-badge-icon {
+            font-size: 1.1em;
+        }
+
+        .event-badge-text {
+            flex: 1;
+            color: var(--text-light);
+        }
+
+        .event-badge-stage {
+            font-size: 0.85em;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
         .script-toolbar {
             display: flex;
             align-items: center;
@@ -3813,7 +4182,14 @@ This is it. Today's the day."></textarea>
             if (tabName === 'script') {
                 document.getElementById('scriptTabPanel')?.classList.add('active');
             } else {
-                document.getElementById(`characterTab-${tabName.replace('character-', '')}`)?.classList.add('active');
+                const character = tabName.replace('character-', '');
+                document.getElementById(`characterTab-${character}`)?.classList.add('active');
+
+                // Setup image upload handlers and load existing images for character timeline
+                setTimeout(() => {
+                    setupDayImageUpload();
+                    loadDayImages(character);
+                }, 100);
             }
 
             // Update right panel context
@@ -4002,154 +4378,348 @@ This is it. Today's the day."></textarea>
             }
         }
 
-        function renderCharacterTimeline(character) {
-            const profile = castProfiles[character] || {};
+        // ===== STORY DAY TIMELINE HELPER FUNCTIONS =====
 
-            // Get all scenes this character appears in
-            const characterScenes = [];
+        // Group scenes by story day for a character
+        function getStoryDaysForCharacter(character) {
+            const storyDays = new Map();
+
             scenes.forEach((scene, index) => {
                 const breakdown = sceneBreakdowns[index] || {};
-                if (breakdown.cast && breakdown.cast.includes(character)) {
-                    characterScenes.push({ scene, index });
+
+                // Only include scenes where character appears
+                if (!breakdown.cast || !breakdown.cast.includes(character)) return;
+
+                const dayLabel = scene.storyDay || `Scene ${scene.number}`;
+
+                if (!storyDays.has(dayLabel)) {
+                    storyDays.set(dayLabel, {
+                        label: dayLabel,
+                        scenes: [],
+                        timeOfDay: scene.timeOfDay || 'Unknown'
+                    });
+                }
+
+                storyDays.get(dayLabel).scenes.push({
+                    scene: scene,
+                    index: index,
+                    breakdown: breakdown
+                });
+            });
+
+            return Array.from(storyDays.values());
+        }
+
+        // Aggregate look data for a story day
+        function aggregateStoryDay(character, storyDayData) {
+            const { scenes: dayScenes } = storyDayData;
+
+            // Find the most detailed entry for each department field
+            const aggregated = {
+                hair: '',
+                makeup: '',
+                sfx: '',
+                wardrobe: '',
+                notes: ''
+            };
+
+            dayScenes.forEach(({ index }) => {
+                const state = characterStates[index]?.[character] || {};
+
+                // Use the longest/most detailed description
+                if (state.hair && state.hair.length > aggregated.hair.length) {
+                    aggregated.hair = state.hair;
+                }
+                if (state.makeup && state.makeup.length > aggregated.makeup.length) {
+                    aggregated.makeup = state.makeup;
+                }
+                if (state.sfx && state.sfx.length > aggregated.sfx.length) {
+                    aggregated.sfx = state.sfx;
+                }
+                if (state.wardrobe && state.wardrobe.length > aggregated.wardrobe.length) {
+                    aggregated.wardrobe = state.wardrobe;
+                }
+                if (state.notes && state.notes.length > aggregated.notes.length) {
+                    aggregated.notes = state.notes;
                 }
             });
 
-            // Group scenes by Story Day
-            const scenesByDay = {};
-            characterScenes.forEach(({ scene, index }) => {
-                const day = scene.storyDay || 'Unassigned';
-                if (!scenesByDay[day]) scenesByDay[day] = [];
-                scenesByDay[day].push({ scene, index });
+            return aggregated;
+        }
+
+        // Get active events for a specific story day
+        function getActiveEventsForDay(character, dayLabel) {
+            const events = continuityEvents[character] || [];
+
+            // Find scenes in this story day
+            const dayScenes = scenes.filter(s => (s.storyDay || `Scene ${s.number}`) === dayLabel);
+            const daySceneIndices = dayScenes.map(s => scenes.indexOf(s));
+
+            // Filter events that are active in ANY scene of this day
+            return events.filter(event => {
+                return daySceneIndices.some(sceneIdx => {
+                    return sceneIdx >= event.startScene &&
+                           (event.endScene === null || sceneIdx <= event.endScene);
+                });
             });
+        }
+
+        // Calculate event progress for a story day
+        function calculateEventProgress(event, dayLabel) {
+            const dayScenes = scenes.filter(s => (s.storyDay || `Scene ${s.number}`) === dayLabel);
+            if (dayScenes.length === 0) return 0;
+
+            const firstSceneIndex = scenes.indexOf(dayScenes[0]);
+            const totalScenes = event.endScene !== null
+                ? (event.endScene - event.startScene + 1)
+                : (scenes.length - event.startScene);
+            const currentScene = firstSceneIndex - event.startScene;
+
+            return Math.round((currentScene / totalScenes) * 100);
+        }
+
+        // Get event stage label
+        function getEventStageLabel(progress) {
+            if (progress < 33) return { label: 'Fresh', class: 'fresh' };
+            if (progress < 75) return { label: 'Healing', class: 'healing' };
+            return { label: 'Healed', class: 'healed' };
+        }
+
+        // Setup image upload for story day cards
+        function setupDayImageUpload() {
+            document.querySelectorAll('.reference-image-zone').forEach(zone => {
+                zone.onclick = function() {
+                    const character = activeCenterTab.replace('character-', '');
+                    const dayLabel = this.closest('.story-day-card').dataset.dayLabel;
+
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = 'image/*';
+                    input.onchange = function(e) {
+                        const file = e.target.files[0];
+                        if (file) {
+                            // Check file size (max 2MB)
+                            if (file.size > 2 * 1024 * 1024) {
+                                alert('Image too large. Please use an image under 2MB.');
+                                return;
+                            }
+
+                            const reader = new FileReader();
+                            reader.onload = function(e) {
+                                const base64 = e.target.result;
+                                saveDayImage(character, dayLabel, base64);
+                                updateImageDisplay(zone, base64);
+                            };
+                            reader.readAsDataURL(file);
+                        }
+                    };
+                    input.click();
+                };
+            });
+        }
+
+        // Save image to character profile
+        function saveDayImage(character, dayLabel, base64) {
+            if (!castProfiles[character]) {
+                castProfiles[character] = { name: character };
+            }
+            if (!castProfiles[character].storyDayImages) {
+                castProfiles[character].storyDayImages = {};
+            }
+
+            castProfiles[character].storyDayImages[dayLabel] = base64;
+            saveProject();
+        }
+
+        // Update image display in card
+        function updateImageDisplay(zone, base64) {
+            zone.innerHTML = `
+                <img src="${base64}" class="day-reference-image" />
+                <div class="image-overlay">
+                    <button class="change-image-btn">Change Photo</button>
+                </div>
+            `;
+        }
+
+        // Load existing images on render
+        function loadDayImages(character) {
+            const profile = castProfiles[character];
+            if (!profile || !profile.storyDayImages) return;
+
+            Object.keys(profile.storyDayImages).forEach(dayLabel => {
+                const zone = document.querySelector(`[data-day-label="${dayLabel}"] .reference-image-zone`);
+                if (zone) {
+                    updateImageDisplay(zone, profile.storyDayImages[dayLabel]);
+                }
+            });
+        }
+
+        // Toggle day card expansion
+        function toggleDayExpansion(btn) {
+            const card = btn.closest('.story-day-card');
+            const expandedList = card.querySelector('.expanded-scene-list');
+
+            if (expandedList.style.display === 'none' || !expandedList.style.display) {
+                expandedList.style.display = 'block';
+                btn.textContent = 'Hide Scenes ▲';
+            } else {
+                expandedList.style.display = 'none';
+                btn.textContent = 'View Scenes ▼';
+            }
+        }
+
+        // Navigate to previous day
+        function scrollToPreviousDay() {
+            const timeline = document.querySelector('.story-day-timeline');
+            if (!timeline) return;
+            const cardWidth = 336; // 320px card + 16px gap
+            timeline.scrollBy({ left: -cardWidth, behavior: 'smooth' });
+        }
+
+        // Navigate to next day
+        function scrollToNextDay() {
+            const timeline = document.querySelector('.story-day-timeline');
+            if (!timeline) return;
+            const cardWidth = 336;
+            timeline.scrollBy({ left: cardWidth, behavior: 'smooth' });
+        }
+
+        // ===== END STORY DAY TIMELINE HELPER FUNCTIONS =====
+
+        function renderCharacterTimeline(character) {
+            const profile = castProfiles[character] || {};
+            const storyDays = getStoryDaysForCharacter(character);
+
+            // Calculate total scenes
+            const totalScenes = storyDays.reduce((sum, day) => sum + day.scenes.length, 0);
 
             // Get continuity events for this character
             const events = continuityEvents[character] || [];
 
-            // Build HTML
+            // Build HTML - Story Day Card Timeline
             let html = `
                 <div class="character-timeline-view">
-                    <div class="character-header">
-                        <div class="character-name-title">${character}</div>
-                        <div class="character-base-info">
-                            ${profile.baseDescription || '<em style="opacity: 0.6;">No base description yet</em>'}
+                    <!-- Header -->
+                    <div class="timeline-header">
+                        <div class="character-info">
+                            <div class="character-name-title">${character}</div>
+                            <div class="character-base-info">${profile.baseDescription || '<em style="opacity: 0.6;">No description yet</em>'}</div>
                         </div>
-                        <div class="character-stats">
-                            <div class="character-stat">
-                                <span>📋</span>
-                                <span class="character-stat-value">${characterScenes.length}</span>
-                                <span>scenes</span>
+                        <div class="timeline-stats">
+                            <div class="stat">
+                                <span class="stat-value">${storyDays.length}</span>
+                                <span class="stat-label">Story Days</span>
                             </div>
-                            <div class="character-stat">
-                                <span>⚡</span>
-                                <span class="character-stat-value">${events.length}</span>
-                                <span>continuity events</span>
+                            <div class="stat">
+                                <span class="stat-value">${totalScenes}</span>
+                                <span class="stat-label">Scenes</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-value">${events.length}</span>
+                                <span class="stat-label">Events</span>
                             </div>
                         </div>
                     </div>
+
+                    <!-- Timeline Controls -->
+                    <div class="timeline-controls">
+                        <button class="nav-btn" onclick="scrollToPreviousDay()">← Previous Day</button>
+                        <div class="view-mode-switcher">
+                            <button class="mode-btn active">Timeline</button>
+                        </div>
+                        <button class="nav-btn" onclick="scrollToNextDay()">Next Day →</button>
+                    </div>
+
+                    <!-- Story Day Cards -->
+                    <div class="story-day-timeline">
             `;
 
-            // Continuity Events Section
-            if (events.length > 0) {
-                html += `
-                    <div class="timeline-continuity-events">
-                        <div class="timeline-continuity-title">
-                            <span>⚡</span>
-                            <span>Continuity Events</span>
-                        </div>
-                `;
-
-                events.forEach(event => {
-                    const eventType = eventTypes.find(t => t.id === event.type) || eventTypes[eventTypes.length - 1];
-                    const startScene = scenes[event.startScene]?.number || '?';
-                    const endScene = event.endScene !== null ? (scenes[event.endScene]?.number || '?') : 'Ongoing';
-
-                    html += `
-                        <div class="timeline-event-card">
-                            <div class="timeline-event-header">
-                                <span class="timeline-event-icon">${eventType.icon}</span>
-                                <span class="timeline-event-description">${event.description}</span>
-                            </div>
-                            <div class="timeline-event-range">Scenes ${startScene} → ${endScene}</div>
-                        </div>
-                    `;
-                });
-
-                html += `</div>`;
-            }
-
-            // Timeline by Story Day
-            Object.keys(scenesByDay).sort().forEach(day => {
-                const dayScenesData = scenesByDay[day];
+            storyDays.forEach(dayData => {
+                const aggregated = aggregateStoryDay(character, dayData);
+                const activeEvents = getActiveEventsForDay(character, dayData.label);
+                const hasImage = profile.storyDayImages?.[dayData.label];
 
                 html += `
-                    <div class="timeline-section">
-                        <div class="timeline-section-header">
-                            <span class="timeline-section-title">${day === 'Unassigned' ? '📅 Unassigned' : '📅 ' + day}</span>
-                            <span class="timeline-section-count">${dayScenesData.length} scene${dayScenesData.length !== 1 ? 's' : ''}</span>
+                    <div class="story-day-card" data-day-label="${dayData.label}">
+                        <div class="day-card-header">
+                            <div class="day-label">${dayData.label}</div>
+                            <div class="scene-count">${dayData.scenes.length} scene${dayData.scenes.length !== 1 ? 's' : ''}</div>
                         </div>
-                        <div class="timeline-scene-list">
-                `;
 
-                dayScenesData.forEach(({ scene, index }) => {
-                    const sceneType = getSceneType(scene.heading);
-
-                    // Check for active continuity events
-                    const activeEvents = events.filter(event => {
-                        return event.startScene <= index &&
-                               (event.endScene === null || event.endScene >= index);
-                    });
-
-                    // Count tags for this scene + character
-                    const sceneTags = scriptTags[index] || [];
-                    const characterTags = sceneTags.filter(t => t.character === character);
-
-                    // Get breakdown data for this scene + character
-                    const breakdown = sceneBreakdowns[index] || {};
-
-                    // Aggregate tag summaries by category
-                    const tagSummary = {};
-                    characterTags.forEach(tag => {
-                        if (!tagSummary[tag.category]) tagSummary[tag.category] = [];
-                        tagSummary[tag.category].push(tag.selectedText);
-                    });
-
-                    // Build quick preview of what's in this scene
-                    const previewParts = [];
-                    if (tagSummary.hair?.length) previewParts.push(`💇 ${tagSummary.hair.length} hair`);
-                    if (tagSummary.makeup?.length) previewParts.push(`💄 ${tagSummary.makeup.length} makeup`);
-                    if (tagSummary.sfx?.length) previewParts.push(`🩸 ${tagSummary.sfx.length} SFX`);
-                    if (tagSummary.wardrobe?.length) previewParts.push(`👔 ${tagSummary.wardrobe.length} wardrobe`);
-
-                    html += `
-                        <div class="timeline-scene-item" onclick="jumpToSceneFromTimeline(${index})">
-                            <div class="timeline-scene-number">${scene.number}</div>
-                            <div class="timeline-scene-info">
-                                <div class="timeline-scene-heading">${scene.heading}</div>
-                                <div class="timeline-scene-meta">
-                                    <span class="scene-type-indicator ${sceneType}">${getSceneTypeLabel(sceneType)}</span>
-                                    ${scene.location ? `<span>📍 ${scene.location}</span>` : ''}
+                        <div class="reference-image-zone">
+                            ${hasImage ? `
+                                <img src="${profile.storyDayImages[dayData.label]}" class="day-reference-image" />
+                                <div class="image-overlay">
+                                    <button class="change-image-btn">Change Photo</button>
                                 </div>
-                                ${previewParts.length > 0 ? `
-                                    <div style="font-size: 0.7em; color: var(--text-muted); margin-top: 4px;">
-                                        ${previewParts.slice(0, 2).join(' • ')}
-                                    </div>
-                                ` : ''}
+                            ` : `
+                                <div class="image-placeholder">
+                                    <span class="upload-icon">📷</span>
+                                    <span class="upload-text">+ Upload Reference</span>
+                                </div>
+                            `}
+                        </div>
+
+                        <div class="look-summary">
+                            <div class="look-field ${aggregated.hair ? '' : 'empty'}">
+                                <span class="field-icon">💇</span>
+                                <span class="field-text">${aggregated.hair || '—'}</span>
                             </div>
-                            <div class="timeline-scene-badges">
-                                ${characterTags.length > 0 ? `<span class="timeline-badge">${characterTags.length} tags</span>` : ''}
-                                ${activeEvents.length > 0 ? `<span class="timeline-badge continuity">⚡ ${activeEvents.length}</span>` : ''}
+                            <div class="look-field ${aggregated.makeup ? '' : 'empty'}">
+                                <span class="field-icon">💄</span>
+                                <span class="field-text">${aggregated.makeup || '—'}</span>
+                            </div>
+                            <div class="look-field ${aggregated.sfx ? 'has-event' : 'empty'}">
+                                <span class="field-icon">🩸</span>
+                                <span class="field-text">${aggregated.sfx || '—'} ${aggregated.sfx && activeEvents.length > 0 ? '<span class="event-indicator">⚡</span>' : ''}</span>
+                            </div>
+                            <div class="look-field ${aggregated.wardrobe ? '' : 'empty'}">
+                                <span class="field-icon">👔</span>
+                                <span class="field-text">${aggregated.wardrobe || '—'}</span>
                             </div>
                         </div>
-                    `;
-                });
 
-                html += `
+                        ${activeEvents.length > 0 ? `
+                            <div class="active-events-badge">
+                                <span class="event-icon">⚡</span>
+                                <span class="event-text">${activeEvents.length} active event${activeEvents.length !== 1 ? 's' : ''}</span>
+                            </div>
+                        ` : ''}
+
+                        <button class="expand-day-btn" onclick="toggleDayExpansion(this)">
+                            View Scenes ▼
+                        </button>
+
+                        <div class="expanded-scene-list" style="display: none;">
+                            ${dayData.scenes.map(({ scene, index }) => {
+                                const state = characterStates[index]?.[character] || {};
+                                const lookDetails = [];
+                                if (state.hair) lookDetails.push(`Hair: ${state.hair}`);
+                                if (state.makeup) lookDetails.push(`Makeup: ${state.makeup}`);
+                                if (state.sfx) lookDetails.push(`SFX: ${state.sfx}`);
+                                if (state.wardrobe) lookDetails.push(`Wardrobe: ${state.wardrobe}`);
+
+                                return `
+                                    <div class="scene-item" onclick="jumpToSceneFromTimeline(${index})">
+                                        <div class="scene-number">Scene ${scene.number}</div>
+                                        <div class="scene-heading">${scene.heading}</div>
+                                        ${lookDetails.length > 0 ? `
+                                            <div class="scene-look-detail">
+                                                ${lookDetails.slice(0, 2).join(' | ')}
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                `;
+                            }).join('')}
                         </div>
                     </div>
                 `;
             });
 
-            html += `</div>`;
+            html += `
+                    </div>
+                </div>
+            `;
 
             return html;
         }
