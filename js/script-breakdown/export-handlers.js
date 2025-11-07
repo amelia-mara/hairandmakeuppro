@@ -124,12 +124,55 @@ export async function processScript() {
 }
 
 /**
- * Extract characters from all scenes
+ * Extract characters from all scenes with smart filtering
  */
 function extractCharactersFromScenes() {
     state.characters = new Set();
+    const characterMap = new Map(); // Track character counts and variations
 
     console.log(`Extracting characters from ${state.scenes.length} scenes...`);
+
+    // Exclusion patterns for false positives
+    const excludePatterns = [
+        /^\d+$/,                    // Pure numbers (15, 23, 24)
+        /^\d+[A-Z]?$/,              // Scene numbers with optional letter (15A, 23B)
+        /^CUT TO/i,                 // Transitions
+        /^FADE/i,                   // Transitions
+        /^DISSOLVE/i,               // Transitions
+        /^BACK TO/i,                // Stage directions
+        /^MOMENTS LATER/i,          // Time indicators
+        /^LATER/i,                  // Time indicators
+        /^CONTINUED/i,              // Screenplay formatting
+        /^CONT'D$/i,                // Continued
+        /^INT\./i,                  // Location markers
+        /^EXT\./i,                  // Location markers
+        /^INT\/EXT/i,               // Location markers
+        /^[*]+$/,                   // Just asterisks
+        /^\.\.\.$/,                 // Just ellipsis
+        /\d{2,}/,                   // Contains 2+ digits (scene numbers)
+        /^\(.+\)$/,                 // Entirely in parentheses
+        /^V\.O\.$/i,                // Voice over only
+        /^O\.S\.$/i,                // Off screen only
+        /^O\.C\.$/i,                // Off camera only
+        /^[:\-–—]+$/,               // Just punctuation
+        /^THE END$/i,               // Script end marker
+        /^TITLE/i,                  // Title cards
+        /^SUPER/i,                  // Supers
+        /^MONTAGE/i,                // Montage
+        /^SERIES OF SHOTS/i,        // Series of shots
+        /^INTERCUT/i,               // Intercut
+        /^INSERT/i,                 // Insert shots
+        /^FLASHBACK/i,              // Flashback
+        /^FLASH FORWARD/i           // Flash forward
+    ];
+
+    // Generic roles that are often one-offs (optional to exclude)
+    const genericRoles = new Set([
+        'FERRY CAPTAIN', 'CREW MEMBER', 'TAXI DRIVER', 'WAITER', 'WAITRESS',
+        'BARTENDER', 'RECEPTIONIST', 'NURSE', 'DOCTOR', 'OFFICER', 'POLICE OFFICER',
+        'MAN', 'WOMAN', 'BOY', 'GIRL', 'CHILD', 'GUARD', 'SOLDIER',
+        'CLERK', 'ASSISTANT', 'AGENT', 'VOICE', 'ANNOUNCER'
+    ]);
 
     state.scenes.forEach((scene, sceneIndex) => {
         const lines = scene.content.split('\n');
@@ -142,21 +185,110 @@ function extractCharactersFromScenes() {
             if (line === line.toUpperCase() &&
                 line.length > 0 &&
                 line.length < 30 &&
-                !line.includes('.') &&
                 nextLine &&
                 nextLine !== nextLine.toUpperCase()) {
 
                 // Remove parentheticals like (V.O.) or (CONT'D)
-                const cleanName = line.replace(/\s*\([^)]+\)$/g, '').trim();
-                if (cleanName) {
-                    state.characters.add(cleanName);
-                    console.log(`  → Found character "${cleanName}" in Scene ${sceneIndex + 1}`);
+                let cleanName = line.replace(/\s*\([^)]+\)$/g, '').trim();
+
+                // Skip if empty after cleaning
+                if (!cleanName) continue;
+
+                // Skip if matches any exclude pattern
+                if (excludePatterns.some(pattern => pattern.test(cleanName))) {
+                    console.log(`  ✗ Excluded "${cleanName}" (matches exclusion pattern)`);
+                    continue;
+                }
+
+                // Skip if too short (single letter) - likely an error
+                if (cleanName.length < 2) {
+                    console.log(`  ✗ Excluded "${cleanName}" (too short)`);
+                    continue;
+                }
+
+                // Normalize the name (convert to title case)
+                const normalizedName = normalizeCharacterName(cleanName);
+
+                // Track character appearances
+                if (characterMap.has(normalizedName)) {
+                    characterMap.get(normalizedName).count++;
+                } else {
+                    characterMap.set(normalizedName, {
+                        originalName: cleanName,
+                        count: 1,
+                        isGeneric: genericRoles.has(cleanName)
+                    });
                 }
             }
         }
     });
 
+    // Filter characters: must appear at least 2 times OR not be generic
+    characterMap.forEach((data, normalizedName) => {
+        // Include if: appears 2+ times, OR appears once but is not a generic role
+        if (data.count >= 2 || !data.isGeneric) {
+            state.characters.add(normalizedName);
+            console.log(`  → Character "${normalizedName}" (${data.count} appearances)`);
+        } else {
+            console.log(`  ✗ Excluded "${normalizedName}" (generic role, only ${data.count} appearance)`);
+        }
+    });
+
     console.log(`✓ Extracted ${state.characters.size} unique characters:`, Array.from(state.characters));
+
+    // Create alias map to merge name variations (e.g., "Gwen" -> "Gwen Lawson")
+    const aliasMap = createCharacterAliasMap();
+
+    // Apply aliases to existing scene breakdowns
+    if (aliasMap.size > 0) {
+        Object.keys(state.sceneBreakdowns).forEach(sceneIndex => {
+            const breakdown = state.sceneBreakdowns[sceneIndex];
+            if (breakdown.cast) {
+                breakdown.cast = breakdown.cast.map(char => aliasMap.get(char) || char);
+            }
+        });
+        console.log(`✓ Applied character aliases to existing breakdowns`);
+    }
+}
+
+/**
+ * Normalize character name to title case and handle variations
+ * "GWEN LAWSON" -> "Gwen Lawson"
+ * "GWEN" -> "Gwen"
+ * Also builds an alias map to handle "Gwen" referring to "Gwen Lawson"
+ */
+function normalizeCharacterName(name) {
+    return name.split(' ')
+        .map(word => word.charAt(0) + word.slice(1).toLowerCase())
+        .join(' ');
+}
+
+/**
+ * Create character alias map to handle name variations
+ * Maps short names to full names: "Gwen" -> "Gwen Lawson"
+ * Call this after extractCharactersFromScenes() to resolve aliases
+ */
+function createCharacterAliasMap() {
+    const aliasMap = new Map();
+    const characters = Array.from(state.characters);
+
+    // First, add all full names (2+ words) to the map
+    const fullNames = characters.filter(name => name.split(' ').length > 1);
+
+    // For each full name, create alias for first name
+    fullNames.forEach(fullName => {
+        const firstName = fullName.split(' ')[0];
+
+        // If we have a single-word character that matches this first name, merge them
+        if (characters.includes(firstName)) {
+            console.log(`  → Merging "${firstName}" into "${fullName}"`);
+            state.characters.delete(firstName);
+            aliasMap.set(firstName, fullName);
+        }
+    });
+
+    console.log(`✓ Created ${aliasMap.size} character aliases`);
+    return aliasMap;
 }
 
 /**
@@ -235,8 +367,15 @@ export function detectScenes(text) {
         }
 
         scene.content = lines.slice(startLine, endLine).join('\n');
+
+        // DIAGNOSTIC: Verify scene content
+        console.log(`  Scene ${scene.number} content length: ${scene.content.length} characters`);
+        if (!scene.content || scene.content.trim().length === 0) {
+            console.warn(`  ⚠ Warning: Scene ${scene.number} has no content!`);
+        }
     });
 
+    console.log(`✓ Scene content extracted for ${detected.length} scenes`);
     return detected;
 }
 
