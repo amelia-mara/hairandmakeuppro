@@ -1771,13 +1771,13 @@
             to { transform: rotate(360deg); }
         }
 
-        /* Scene Navigation Bar */
+        /* Scene Navigation Bar - Ultra Compact */
         .breakdown-scene-nav {
             display: flex;
             align-items: center;
-            gap: 12px;
-            padding: 8px;
-            margin-bottom: 12px;
+            gap: 8px;
+            padding: 6px 8px;
+            margin-bottom: 8px;
             background: linear-gradient(135deg,
                 rgba(212, 175, 122, 0.08) 0%,
                 rgba(28, 25, 22, 0.6) 50%,
@@ -1785,23 +1785,24 @@
             );
             backdrop-filter: blur(16px);
             border: 1px solid var(--glass-border);
-            border-radius: 12px;
+            border-radius: 8px;
         }
 
         .scene-nav-btn {
             display: flex;
             align-items: center;
-            gap: 6px;
-            padding: 8px 12px;
+            gap: 4px;
+            padding: 6px 10px;
             background: rgba(0, 0, 0, 0.3);
             border: 1px solid var(--glass-border);
-            border-radius: 8px;
+            border-radius: 6px;
             color: var(--text-light);
-            font-size: 0.75em;
+            font-size: 0.6875em;
             font-weight: 500;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
             white-space: nowrap;
+            height: 32px;
         }
 
         .scene-nav-btn:hover:not(.disabled) {
@@ -1836,25 +1837,25 @@
         .scene-nav-current {
             flex: 1;
             text-align: center;
-            padding: 4px 8px;
+            padding: 2px 6px;
         }
 
         .nav-scene-number {
-            font-size: 0.875em;
+            font-size: 0.8125em;
             font-weight: 600;
             color: var(--accent-gold);
-            margin-bottom: 2px;
+            margin-bottom: 1px;
         }
 
         .nav-scene-heading {
-            font-size: 0.75em;
+            font-size: 0.6875em;
             color: var(--text-light);
-            margin-bottom: 2px;
-            line-height: 1.2;
+            margin-bottom: 1px;
+            line-height: 1.1;
         }
 
         .nav-scene-meta {
-            font-size: 0.6875em;
+            font-size: 0.625em;
             color: var(--text-muted);
             font-style: italic;
         }
@@ -1927,6 +1928,76 @@
             font-size: 0.75em;
             color: var(--text-muted);
             font-style: italic;
+        }
+
+        /* Visual Summary Dashboard */
+        .breakdown-quick-summary {
+            margin-bottom: 16px;
+            padding: 12px;
+            background: rgba(28, 25, 22, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+        }
+
+        .quick-summary-title {
+            font-size: 0.75em;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 10px;
+        }
+
+        .quick-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        .summary-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .summary-badge:hover {
+            background: rgba(0, 0, 0, 0.4);
+            transform: translateY(-1px);
+        }
+
+        .summary-badge.empty {
+            opacity: 0.4;
+            cursor: default;
+        }
+
+        .summary-badge.empty:hover {
+            background: rgba(0, 0, 0, 0.2);
+            transform: none;
+        }
+
+        .badge-icon {
+            font-size: 1em;
+        }
+
+        .badge-label {
+            flex: 1;
+            font-size: 0.7em;
+            font-weight: 500;
+            color: var(--text-light);
+        }
+
+        .badge-count {
+            font-size: 0.75em;
+            font-weight: 700;
+            padding: 2px 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
         }
 
         /* Scene Detail Fields (for cast profile modal) */
@@ -2498,18 +2569,45 @@
         }
 
         .breakdown-section {
-            margin-bottom: 24px;
+            margin-bottom: 8px;
+            background: rgba(28, 25, 22, 0.2);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            overflow: hidden;
+            transition: all 0.2s ease;
         }
-        
+
+        .breakdown-section.expanded {
+            margin-bottom: 12px;
+        }
+
+        .breakdown-section.has-content {
+            border-color: rgba(212, 175, 122, 0.2);
+        }
+
         .section-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 12px;
+            padding: 10px 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: rgba(0, 0, 0, 0.2);
         }
-        
+
+        .section-header:hover {
+            background: rgba(212, 175, 122, 0.08);
+        }
+
+        .section-header-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+        }
+
         .section-title {
-            font-size: 0.8125em;
+            font-size: 0.75em;
             font-weight: 600;
             text-transform: uppercase;
             color: var(--text-light);
@@ -2517,11 +2615,47 @@
             align-items: center;
             gap: 8px;
         }
-        
+
         .section-icon {
             width: 10px;
             height: 10px;
             border-radius: 50%;
+        }
+
+        .category-count {
+            font-size: 0.7em;
+            font-weight: 700;
+            padding: 2px 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            color: var(--text-muted);
+        }
+
+        .category-count.has-items {
+            background: rgba(212, 175, 122, 0.3);
+            color: var(--accent-gold);
+        }
+
+        .category-toggle {
+            padding: 4px 8px;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 0.7em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .section-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            padding: 0 12px;
+        }
+
+        .breakdown-section.expanded .section-content {
+            max-height: 2000px;
+            padding: 0 12px 12px 12px;
         }
         
         .add-element-btn {
@@ -6327,6 +6461,26 @@ OUTPUT FORMAT (JSON only):
                     <div class="ai-status" id="aiStatus"></div>
                 </div>
 
+                <!-- VISUAL SUMMARY DASHBOARD -->
+                <div class="breakdown-quick-summary">
+                    <div class="quick-summary-title">Tagged Elements</div>
+                    <div class="quick-summary-grid">
+                        ${categories.map(cat => {
+                            const count = (breakdown[cat.id] || []).length;
+                            const isEmpty = count === 0;
+                            return `
+                                <div class="summary-badge ${isEmpty ? 'empty' : ''}"
+                                     style="border-color: ${cat.color}"
+                                     onclick="${isEmpty ? '' : `jumpToCategory('${cat.id}')`}">
+                                    <span class="badge-icon">${cat.icon}</span>
+                                    <span class="badge-label">${cat.name}</span>
+                                    <span class="badge-count">${count}</span>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+
                 <!-- SYNOPSIS DISPLAY -->
                 ${scene.synopsis ? `
                     <div class="breakdown-synopsis">
@@ -6530,25 +6684,35 @@ OUTPUT FORMAT (JSON only):
                 `}
             `;
 
-            categories.forEach(cat => {
+            // Render all category sections EXCEPT cast (handled separately above)
+            categories.filter(cat => cat.id !== 'cast').forEach(cat => {
                 const elements = breakdown[cat.id] || [];
+                const hasContent = elements.length > 0;
+                const isExpanded = hasContent; // Auto-expand categories with content
+
                 html += `
-                    <div class="breakdown-section">
-                        <div class="section-header">
-                            <div class="section-title">
+                    <div class="breakdown-section ${hasContent ? 'has-content' : ''} ${isExpanded ? 'expanded' : ''}"
+                         id="category-${cat.id}"
+                         data-category="${cat.id}">
+                        <div class="section-header" onclick="toggleCategory('${cat.id}')">
+                            <div class="section-header-left">
                                 <span class="section-icon" style="background: ${cat.color}"></span>
-                                ${cat.name}
+                                <span class="section-title">${cat.icon} ${cat.name}</span>
+                                <span class="category-count ${hasContent ? 'has-items' : ''}">${elements.length}</span>
                             </div>
-                            <button class="add-element-btn" onclick="openAddElement('${cat.id}')">+ Add</button>
+                            <button class="category-toggle" onclick="event.stopPropagation();">${isExpanded ? '▼' : '▶'}</button>
                         </div>
-                        <div class="element-list">
-                            ${elements.length === 0 ? `<div class="empty-state"><div class="empty-desc">No ${cat.name.toLowerCase()} yet</div></div>` : ''}
-                            ${elements.map(el => `
-                                <div class="element-item">
-                                    <div class="element-text">${el}</div>
-                                    <button class="element-remove" onclick="removeElement('${cat.id}', '${el.replace(/'/g, "\\'")}')">×</button>
-                                </div>
-                            `).join('')}
+                        <div class="section-content">
+                            <div class="element-list">
+                                ${elements.length === 0 ? `<div class="empty-hint" style="text-align: center; padding: 8px; color: var(--text-muted); font-size: 0.75em;">+ Click to add ${cat.name.toLowerCase()}</div>` : ''}
+                                ${elements.map(el => `
+                                    <div class="element-item">
+                                        <div class="element-text">${el}</div>
+                                        <button class="element-remove" onclick="removeElement('${cat.id}', '${el.replace(/'/g, "\\'")}')">×</button>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            <button class="add-element-btn" style="width: 100%; margin-top: 8px;" onclick="openAddElement('${cat.id}')">+ Add ${cat.name}</button>
                         </div>
                     </div>
                 `;
@@ -7459,6 +7623,44 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`;
             if (card) {
                 card.classList.toggle('expanded');
             }
+        }
+
+        // Toggle category section expand/collapse
+        function toggleCategory(categoryId) {
+            const section = document.getElementById('category-' + categoryId);
+            if (!section) return;
+
+            const isExpanded = section.classList.contains('expanded');
+            const toggle = section.querySelector('.category-toggle');
+
+            if (isExpanded) {
+                section.classList.remove('expanded');
+                if (toggle) toggle.textContent = '▶';
+            } else {
+                section.classList.add('expanded');
+                if (toggle) toggle.textContent = '▼';
+            }
+        }
+
+        // Jump to category and expand it
+        function jumpToCategory(categoryId) {
+            const section = document.getElementById('category-' + categoryId);
+            if (!section) return;
+
+            // Expand if not already expanded
+            if (!section.classList.contains('expanded')) {
+                toggleCategory(categoryId);
+            }
+
+            // Scroll to section
+            section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            // Highlight briefly
+            section.style.transition = 'background 0.3s ease';
+            section.style.background = 'rgba(212, 175, 122, 0.15)';
+            setTimeout(() => {
+                section.style.background = '';
+            }, 1000);
         }
 
         // Update character field in scene
