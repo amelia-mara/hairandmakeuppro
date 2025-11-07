@@ -306,32 +306,49 @@
         /* Center Panel Tabs */
         .center-tabs {
             display: flex;
-            align-items: center;
+            flex-wrap: wrap;
+            align-items: flex-start;
             gap: 4px;
+            row-gap: 6px;
             padding: 8px 12px;
             background:
                 linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 0%, transparent 100%),
                 linear-gradient(135deg, rgba(212, 175, 122, 0.08) 0%, rgba(18, 16, 14, 0.85) 50%, rgba(212, 175, 122, 0.05) 100%);
             backdrop-filter: blur(24px) saturate(180%);
             border-bottom: 1px solid var(--glass-border);
-            overflow-x: auto;
-            overflow-y: hidden;
+            overflow: visible;
         }
 
         .center-tab {
-            padding: 8px 16px;
+            padding: 6px 12px;
             background: rgba(28, 25, 22, 0.3);
             border: 1px solid var(--glass-border);
-            border-radius: 8px 8px 0 0;
+            border-radius: 6px;
             color: var(--text-muted);
-            font-size: 0.8125em;
+            font-size: 0.75em;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s ease;
             white-space: nowrap;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
+            min-width: fit-content;
+            max-width: 150px;
+        }
+
+        .center-tab[data-tab="script"] {
+            padding: 6px 14px;
+            font-size: 0.8125em;
+            font-weight: 700;
+            order: -1;
+        }
+
+        .center-tab > span:first-child {
+            max-width: 120px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         .center-tab:hover {
@@ -347,40 +364,17 @@
         }
 
         .center-tab-close {
-            margin-left: 4px;
-            padding: 2px 4px;
+            margin-left: 2px;
+            padding: 2px 3px;
             border-radius: 3px;
             opacity: 0.6;
+            font-size: 0.9em;
             transition: all 0.2s ease;
         }
 
         .center-tab-close:hover {
             opacity: 1;
             background: rgba(255, 255, 255, 0.1);
-        }
-
-        .center-tab-spacer {
-            flex: 1;
-        }
-
-        .center-tab-add {
-            width: 32px;
-            height: 32px;
-            background: linear-gradient(135deg, rgba(212, 175, 122, 0.15), rgba(212, 175, 122, 0.08));
-            border: 1px solid var(--accent-gold);
-            border-radius: 6px;
-            color: var(--accent-gold);
-            font-size: 1.25em;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .center-tab-add:hover {
-            background: linear-gradient(135deg, rgba(212, 175, 122, 0.25), rgba(212, 175, 122, 0.15));
-            transform: scale(1.05);
         }
 
         .center-tab-content {
@@ -3760,8 +3754,6 @@
                         📄 Script
                     </div>
                     <!-- Character tabs generated dynamically here -->
-                    <div class="center-tab-spacer"></div>
-                    <button class="center-tab-add" onclick="openAddCharacterModal()">+</button>
                 </div>
 
                 <!-- Tab Content Container -->
@@ -4133,18 +4125,6 @@ This is it. Today's the day."></textarea>
         </div>
         <div class="context-menu-item" onclick="linkToContinuityFromContext()">
             ⚡ Link to Continuity
-        </div>
-    </div>
-
-    <!-- Add Character Modal -->
-    <div class="modal" id="addCharacterModal">
-        <div class="modal-content">
-            <div class="modal-title">Add Character Tab</div>
-            <input type="text" class="modal-input" id="addCharacterInput" placeholder="Character name..." onkeydown="if(event.key === 'Enter') confirmAddCharacter()">
-            <div class="modal-actions">
-                <button class="modal-btn" onclick="closeAddCharacterModal()">Cancel</button>
-                <button class="modal-btn primary" onclick="confirmAddCharacter()">Add Tab</button>
-            </div>
         </div>
     </div>
 
@@ -4680,25 +4660,16 @@ This is it. Today's the day."></textarea>
             const tabsContainer = document.querySelector('.center-tabs');
             if (!tabsContainer) return;
 
-            // Keep script tab, remove old character tabs
+            // Keep script tab
             const scriptTab = tabsContainer.querySelector('[data-tab="script"]');
-            const addButton = tabsContainer.querySelector('.center-tab-add');
-            const spacer = tabsContainer.querySelector('.center-tab-spacer');
 
-            // Clear between script tab and spacer
-            const childrenToRemove = [];
-            let foundScript = false;
-            let foundSpacer = false;
+            // Remove everything except script tab
+            tabsContainer.innerHTML = '';
+            if (scriptTab) {
+                tabsContainer.appendChild(scriptTab);
+            }
 
-            Array.from(tabsContainer.children).forEach(child => {
-                if (child === scriptTab) foundScript = true;
-                else if (child === spacer) foundSpacer = true;
-                else if (foundScript && !foundSpacer) childrenToRemove.push(child);
-            });
-
-            childrenToRemove.forEach(child => child.remove());
-
-            // Add character tabs
+            // Add character tabs (auto-generated from sceneBreakdowns)
             characterTabs.forEach(character => {
                 const tab = document.createElement('div');
                 tab.className = 'center-tab';
@@ -4708,8 +4679,7 @@ This is it. Today's the day."></textarea>
                     <span>👤 ${character}</span>
                     <span class="center-tab-close" onclick="event.stopPropagation(); removeCharacterTab('${character.replace(/'/g, "\\'")}')">×</span>
                 `;
-
-                tabsContainer.insertBefore(tab, spacer);
+                tabsContainer.appendChild(tab);
             });
 
             // Create tab panels for each character
@@ -5309,47 +5279,6 @@ This is it. Today's the day."></textarea>
                     sceneEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
             }, 100);
-        }
-
-        // Add Character Modal Functions
-        function openAddCharacterModal() {
-            document.getElementById('addCharacterModal').classList.add('active');
-            document.getElementById('addCharacterInput').value = '';
-            document.getElementById('addCharacterInput').focus();
-        }
-
-        function closeAddCharacterModal() {
-            document.getElementById('addCharacterModal').classList.remove('active');
-        }
-
-        function confirmAddCharacter() {
-            const name = document.getElementById('addCharacterInput').value.trim().toUpperCase();
-            if (!name) return;
-
-            // Add to characters set
-            characters.add(name);
-
-            // Initialize profile if doesn't exist
-            if (!castProfiles[name]) {
-                castProfiles[name] = {
-                    name: name,
-                    baseDescription: '',
-                    scenes: []
-                };
-            }
-
-            // Add tab
-            if (!characterTabs.includes(name)) {
-                characterTabs.push(name);
-                characterTabs.sort();
-                renderCharacterTabs();
-            }
-
-            // Switch to new tab
-            switchCenterTab(`character-${name}`);
-
-            closeAddCharacterModal();
-            saveProject();
         }
 
         // Merge Characters Modal
