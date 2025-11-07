@@ -84,6 +84,9 @@ export async function init() {
         // Set up event listeners
         setupEventListeners();
 
+        // Initialize tag system (CRITICAL: must be called to enable manual tagging)
+        await initializeTagSystem();
+
         // Render initial UI
         renderInitialUI();
 
@@ -105,6 +108,18 @@ export async function init() {
     } catch (error) {
         console.error('Error initializing application:', error);
         alert('Failed to initialize application. Please refresh the page.');
+    }
+}
+
+/**
+ * Initialize the tag system
+ * Sets up event listeners for manual text selection and tagging
+ */
+async function initializeTagSystem() {
+    const { initializeTagSystem: initTags } = await import('./tag-system.js');
+    if (initTags) {
+        initTags();
+        console.log('Tag system initialized');
     }
 }
 
