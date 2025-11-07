@@ -16,16 +16,16 @@ import { callAI } from './ai-integration.js';
 
 // Element categories for tagging
 const categories = [
-    { id: 'cast', name: 'Cast Members', color: '#fbbf24', icon: '👤' },
-    { id: 'hair', name: 'Hair', color: '#a855f7', icon: '💇' },
-    { id: 'makeup', name: 'Makeup (Beauty)', color: '#ec4899', icon: '💄' },
-    { id: 'sfx', name: 'SFX Makeup', color: '#ef4444', icon: '🩸' },
-    { id: 'health', name: 'Health/Illness', color: '#f59e0b', icon: '🤒' },
-    { id: 'injuries', name: 'Injuries/Wounds', color: '#dc2626', icon: '🩹' },
-    { id: 'stunts', name: 'Stunts/Action', color: '#f97316', icon: '🎬' },
-    { id: 'weather', name: 'Weather Effects', color: '#38bdf8', icon: '🌦️' },
-    { id: 'wardrobe', name: 'Costume/Wardrobe', color: '#34d399', icon: '👔' },
-    { id: 'extras', name: 'Supporting Artists', color: '#9ca3af', icon: '👥' }
+    { id: 'cast', name: 'Cast Members', color: '#fbbf24' },
+    { id: 'hair', name: 'Hair', color: '#a855f7' },
+    { id: 'makeup', name: 'Makeup (Beauty)', color: '#ec4899' },
+    { id: 'sfx', name: 'SFX Makeup', color: '#ef4444' },
+    { id: 'health', name: 'Health/Illness', color: '#f59e0b' },
+    { id: 'injuries', name: 'Injuries/Wounds', color: '#dc2626' },
+    { id: 'stunts', name: 'Stunts/Action', color: '#f97316' },
+    { id: 'weather', name: 'Weather Effects', color: '#38bdf8' },
+    { id: 'wardrobe', name: 'Costume/Wardrobe', color: '#34d399' },
+    { id: 'extras', name: 'Supporting Artists', color: '#9ca3af' }
 ];
 
 // Current text selection

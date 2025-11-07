@@ -17,16 +17,16 @@ import { generateAISynopsis, detectAIElements, generateDescription } from './ai-
 
 // Element categories
 const categories = [
-    { id: 'cast', name: 'Cast Members', color: '#fbbf24', icon: '👤' },
-    { id: 'hair', name: 'Hair', color: '#a855f7', icon: '💇' },
-    { id: 'makeup', name: 'Makeup (Beauty)', color: '#ec4899', icon: '💄' },
-    { id: 'sfx', name: 'SFX Makeup', color: '#ef4444', icon: '🩸' },
-    { id: 'health', name: 'Health/Illness', color: '#f59e0b', icon: '🤒' },
-    { id: 'injuries', name: 'Injuries/Wounds', color: '#dc2626', icon: '🩹' },
-    { id: 'stunts', name: 'Stunts/Action', color: '#f97316', icon: '🎬' },
-    { id: 'weather', name: 'Weather Effects', color: '#38bdf8', icon: '🌦️' },
-    { id: 'wardrobe', name: 'Costume/Wardrobe', color: '#34d399', icon: '👔' },
-    { id: 'extras', name: 'Supporting Artists', color: '#9ca3af', icon: '👥' }
+    { id: 'cast', name: 'Cast Members', color: '#fbbf24' },
+    { id: 'hair', name: 'Hair', color: '#a855f7' },
+    { id: 'makeup', name: 'Makeup (Beauty)', color: '#ec4899' },
+    { id: 'sfx', name: 'SFX Makeup', color: '#ef4444' },
+    { id: 'health', name: 'Health/Illness', color: '#f59e0b' },
+    { id: 'injuries', name: 'Injuries/Wounds', color: '#dc2626' },
+    { id: 'stunts', name: 'Stunts/Action', color: '#f97316' },
+    { id: 'weather', name: 'Weather Effects', color: '#38bdf8' },
+    { id: 'wardrobe', name: 'Costume/Wardrobe', color: '#34d399' },
+    { id: 'extras', name: 'Supporting Artists', color: '#9ca3af' }
 ];
 
 // Current element category for add modal
@@ -42,7 +42,6 @@ export function renderBreakdownPanel() {
     if (state.currentScene === null) {
         container.innerHTML = `
             <div class="empty-state">
-                <div class="empty-icon">📋</div>
                 <div class="empty-title">Select a Scene</div>
                 <div class="empty-desc">Choose a scene to view and edit its breakdown</div>
             </div>
@@ -104,7 +103,7 @@ export function renderBreakdownPanel() {
                           placeholder="Enter scene synopsis or click Generate to create with AI..."
                           oninput="updateSynopsis(${state.currentScene}, this.value)">${escapeHtml(scene.synopsis) || ''}</textarea>
                 <button class="ai-btn-compact" onclick="handleGenerateAISynopsis(${state.currentScene})" title="Generate synopsis with AI" style="margin-top: 8px; width: 100%;">
-                    ✨ Generate with AI
+                    Generate with AI
                 </button>
             </div>
         </div>
@@ -117,7 +116,7 @@ export function renderBreakdownPanel() {
             <div class="tagged-pills">
                 ${Object.entries(tagCounts).map(([cat, count]) => {
                     const category = categories.find(c => c.id === cat);
-                    return `<div class="tagged-pill">${category?.icon || '📌'} ${category?.name || cat}: ${count}</div>`;
+                    return `<div class="tagged-pill">${category?.name || cat}: ${count}</div>`;
                 }).join('')}
             </div>
         ` : ''}
@@ -244,7 +243,6 @@ function renderCastSection(cast) {
         return `
             <div style="margin: 24px 0;">
                 <div class="empty-state-small">
-                    <div class="empty-icon-small">👥</div>
                     <div class="empty-text-small">No cast members in this scene. Use AI detection or add manually.</div>
                 </div>
                 <button class="add-element-btn" style="width: 100%; margin-top: 12px;" onclick="openAddElement('cast')">
@@ -382,7 +380,7 @@ function renderCastMemberCard(castMember, index = 0) {
                 </div>
 
                 <button class="ai-btn-compact" onclick="handleAIFillCharacter(${state.currentScene}, '${escapeHtml(castMember).replace(/'/g, "\\'")}');" style="width: 100%; margin-top: 12px;" title="Auto-fill fields with AI">
-                    ✨ AI Fill Character Fields
+                    AI Fill Character Fields
                 </button>
             </div>
         </div>
@@ -400,7 +398,7 @@ function renderCategorySection(cat, elements) {
             <div class="section-header" onclick="toggleCategory('${cat.id}')">
                 <div class="section-header-left">
                     <span class="section-icon" style="background: ${cat.color}"></span>
-                    <span class="section-title">${cat.icon} ${cat.name}</span>
+                    <span class="section-title">${cat.name}</span>
                     <span class="category-count has-items">${elements.length}</span>
                 </div>
                 <button class="category-toggle" onclick="event.stopPropagation();">▶</button>

@@ -47,13 +47,16 @@ export function exportData() {
  * Open import modal
  */
 export function openImportModal() {
-    const modal = document.getElementById('importModal');
-    if (!modal) return;
+    const modal = document.getElementById('import-modal');
+    if (!modal) {
+        console.error('Import modal not found');
+        return;
+    }
 
-    modal.classList.add('active');
+    modal.style.display = 'flex';
 
     // Pre-fill with current script if available
-    const scriptInput = document.getElementById('scriptInput');
+    const scriptInput = document.getElementById('script-input');
     if (scriptInput && state.currentProject?.scriptContent) {
         scriptInput.value = state.currentProject.scriptContent;
     }
@@ -62,17 +65,20 @@ export function openImportModal() {
 /**
  * Close import modal
  */
-function closeImportModal() {
-    const modal = document.getElementById('importModal');
-    if (modal) modal.classList.remove('active');
+export function closeImportModal() {
+    const modal = document.getElementById('import-modal');
+    if (modal) modal.style.display = 'none';
 }
 
 /**
  * Process script from import modal
  */
 export async function processScript() {
-    const scriptInput = document.getElementById('scriptInput');
-    if (!scriptInput) return;
+    const scriptInput = document.getElementById('script-input');
+    if (!scriptInput) {
+        console.error('Script input element not found');
+        return;
+    }
 
     const text = scriptInput.value;
     if (!text.trim()) {
@@ -80,18 +86,7 @@ export async function processScript() {
         return;
     }
 
-    const btn = document.getElementById('importBtn');
-    const status = document.getElementById('importStatus');
-
-    if (btn) {
-        btn.disabled = true;
-        btn.textContent = 'Processing...';
-    }
-
-    if (status) {
-        status.style.display = 'block';
-        status.textContent = '📝 Importing script and detecting scenes...';
-    }
+    console.log('Processing script import...');
 
     // Store script text
     if (!state.currentProject) {
@@ -106,24 +101,51 @@ export async function processScript() {
 
     // Detect scenes
     state.scenes = detectScenes(text);
+    console.log(`Found ${state.scenes.length} scenes`);
 
-    if (status) {
-        status.textContent = `✅ Found ${state.scenes.length} scenes. Ready!`;
-    }
+    // Extract characters from scenes
+    extractCharactersFromScenes();
 
     // Load and render
     loadScript(text);
 
+    // Close modal after a brief delay
     setTimeout(() => {
         closeImportModal();
-        if (btn) {
-            btn.disabled = false;
-            btn.textContent = 'Import & Analyze';
+    }, 500);
+}
+
+/**
+ * Extract characters from all scenes
+ */
+function extractCharactersFromScenes() {
+    state.characters = new Set();
+
+    state.scenes.forEach(scene => {
+        const lines = scene.content.split('\n');
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            const nextLine = i < lines.length - 1 ? lines[i + 1].trim() : '';
+
+            // Character name detection: all caps, short line, followed by dialogue
+            if (line === line.toUpperCase() &&
+                line.length > 0 &&
+                line.length < 30 &&
+                !line.includes('.') &&
+                nextLine &&
+                nextLine !== nextLine.toUpperCase()) {
+
+                // Remove parentheticals like (V.O.) or (CONT'D)
+                const cleanName = line.replace(/\s*\([^)]+\)$/g, '').trim();
+                if (cleanName) {
+                    state.characters.add(cleanName);
+                }
+            }
         }
-        if (status) {
-            status.style.display = 'none';
-        }
-    }, 1000);
+    });
+
+    console.log(`Extracted ${state.characters.size} characters:`, Array.from(state.characters));
 }
 
 /**

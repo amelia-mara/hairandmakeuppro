@@ -24,15 +24,18 @@ export function renderScript() {
     const scriptText = state.currentProject?.scriptContent || '';
 
     if (!scriptText) {
-        const container = document.getElementById('scriptContent');
+        const container = document.getElementById('script-content');
         if (container) {
-            container.innerHTML = '<div class="empty-state"><div class="empty-icon">📄</div><div class="empty-desc">No script loaded</div></div>';
+            container.innerHTML = '<div class="empty-state"><div class="empty-title">No Script Loaded</div><div class="empty-desc">Import your screenplay to begin</div></div>';
         }
         return;
     }
 
-    const container = document.getElementById('scriptContent');
-    if (!container) return;
+    const container = document.getElementById('script-content');
+    if (!container) {
+        console.error('Script container element not found');
+        return;
+    }
 
     const lines = scriptText.split('\n');
     let html = '';
