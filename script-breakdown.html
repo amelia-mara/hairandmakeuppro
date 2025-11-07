@@ -1145,13 +1145,28 @@
             box-shadow: var(--shadow-sm), inset -1px 0 0 rgba(255, 255, 255, 0.03);
         }
         
-        /* Tab System */
+        /* Workspace Header (Replaces Tab System) */
+        .workspace-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--glass-border);
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .workspace-title {
+            font-size: 0.875em;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            letter-spacing: 0.05em;
+        }
+
+        /* Legacy Tab System (kept for character tabs) */
         .workspace-tabs {
             display: flex;
             border-bottom: 1px solid var(--glass-border);
             background: rgba(0, 0, 0, 0.2);
         }
-        
+
         .workspace-tab {
             flex: 1;
             padding: 14px 16px;
@@ -1165,12 +1180,12 @@
             text-transform: uppercase;
             letter-spacing: 0.05em;
         }
-        
+
         .workspace-tab:hover {
             color: var(--text-light);
             background: rgba(212, 175, 122, 0.05);
         }
-        
+
         .workspace-tab.active {
             color: var(--accent-gold);
             border-bottom-color: var(--accent-gold);
@@ -2086,6 +2101,506 @@
             border-color: var(--accent-blue);
             border-style: solid;
         }
+
+        /* Continuity Progress Bar */
+        .continuity-progress {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 8px 0;
+        }
+
+        .progress-bar {
+            flex: 1;
+            height: 8px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg,
+                #ef4444 0%,
+                #f59e0b 50%,
+                #10b981 100%
+            );
+            transition: width 0.3s ease;
+        }
+
+        .progress-label {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            min-width: 80px;
+            text-align: right;
+        }
+
+        /* Event Badge Styling */
+        .event-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75em;
+            font-weight: 600;
+        }
+
+        .event-badge.fresh {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.4);
+        }
+
+        .event-badge.healing {
+            background: rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
+            border: 1px solid rgba(245, 158, 11, 0.4);
+        }
+
+        .event-badge.healed {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.4);
+        }
+
+        /* Story Day Card Styling */
+        .story-day-cards-container {
+            display: flex;
+            gap: 16px;
+            overflow-x: auto;
+            padding: 16px;
+            margin-bottom: 24px;
+        }
+
+        .story-day-card {
+            min-width: 280px;
+            max-width: 280px;
+            background: linear-gradient(135deg,
+                rgba(212, 175, 122, 0.08) 0%,
+                rgba(28, 25, 22, 0.5) 50%,
+                rgba(212, 175, 122, 0.05) 100%
+            );
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .story-day-card:hover {
+            border-color: var(--accent-gold);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(212, 175, 122, 0.15);
+        }
+
+        .day-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .day-label {
+            font-size: 0.875em;
+            font-weight: 700;
+            color: var(--accent-gold);
+        }
+
+        .scene-count {
+            font-size: 0.75em;
+            color: var(--text-muted);
+        }
+
+        .reference-image {
+            width: 100%;
+            height: 180px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .reference-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .upload-btn {
+            position: absolute;
+            background: rgba(201, 169, 97, 0.9);
+            color: var(--bg-dark);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.875em;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .upload-btn:hover {
+            background: var(--accent-gold);
+            transform: scale(1.05);
+        }
+
+        .look-details {
+            margin-bottom: 12px;
+        }
+
+        .detail-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 6px;
+            font-size: 0.75em;
+        }
+
+        .detail-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .detail-label {
+            font-weight: 700;
+            color: var(--text-muted);
+            min-width: 70px;
+        }
+
+        .detail-value {
+            color: var(--text-light);
+            flex: 1;
+        }
+
+        .active-events {
+            margin-bottom: 12px;
+        }
+
+        .expand-btn {
+            width: 100%;
+            padding: 8px;
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-muted);
+            font-size: 0.75em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 600;
+        }
+
+        .expand-btn:hover {
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+            background: rgba(212, 175, 122, 0.05);
+        }
+
+        .expanded-scenes {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--glass-border);
+        }
+
+        .scene-detail {
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+            margin-bottom: 6px;
+            font-size: 0.75em;
+        }
+
+        .scene-detail strong {
+            color: var(--accent-gold);
+        }
+
+        .scene-look {
+            margin-top: 4px;
+            color: var(--text-muted);
+            font-size: 0.95em;
+        }
+
+        /* Cast Member Expandable Card in Scene Breakdown */
+        .cast-member-card {
+            background: rgba(28, 25, 22, 0.4);
+            border: 1px solid var(--glass-border);
+            border-left: 3px solid rgba(251, 191, 36, 0.4);
+            border-radius: 8px;
+            margin-bottom: 12px;
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+
+        .cast-member-card:hover {
+            border-left-color: #fbbf24;
+            background: rgba(28, 25, 22, 0.6);
+        }
+
+        .cast-member-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 14px;
+            cursor: pointer;
+        }
+
+        .cast-member-name {
+            font-size: 0.9375em;
+            font-weight: 600;
+            color: #fbbf24;
+        }
+
+        .cast-member-toggle {
+            font-size: 0.75em;
+            color: var(--text-muted);
+        }
+
+        .cast-member-body {
+            padding: 0 14px 14px;
+            display: none;
+        }
+
+        .cast-member-card.expanded .cast-member-body {
+            display: block;
+        }
+
+        .cast-member-card.expanded .cast-member-toggle::before {
+            content: '▼ ';
+        }
+
+        .cast-member-toggle::before {
+            content: '▶ ';
+        }
+
+        .cast-member-base {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            font-style: italic;
+        }
+
+        .active-events-section {
+            margin-bottom: 12px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+        }
+
+        .active-events-title {
+            font-size: 0.6875em;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            letter-spacing: 0.05em;
+        }
+
+        .event-item {
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .event-item:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .event-name {
+            font-size: 0.75em;
+            font-weight: 600;
+            color: var(--text-light);
+            margin-bottom: 4px;
+        }
+
+        .event-timeline-info {
+            font-size: 0.6875em;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .department-fields {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .department-field {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .department-label {
+            font-size: 0.6875em;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .department-input {
+            width: 100%;
+            padding: 8px 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-light);
+            font-size: 0.8125em;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .department-input:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+        }
+
+        .cast-member-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .view-timeline-btn {
+            flex: 1;
+            padding: 8px 12px;
+            background: linear-gradient(135deg, rgba(212, 175, 122, 0.15), rgba(212, 175, 122, 0.1));
+            border: 1px solid var(--accent-gold);
+            border-radius: 6px;
+            color: var(--accent-gold);
+            font-size: 0.75em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+
+        .view-timeline-btn:hover {
+            background: linear-gradient(135deg, rgba(212, 175, 122, 0.25), rgba(212, 175, 122, 0.15));
+            transform: translateY(-1px);
+        }
+
+        .ai-fill-btn {
+            flex: 1;
+            padding: 8px 12px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(118, 75, 162, 0.15));
+            border: 1px solid var(--accent-blue);
+            border-radius: 6px;
+            color: var(--accent-blue);
+            font-size: 0.75em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+
+        .ai-fill-btn:hover {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.25), rgba(118, 75, 162, 0.25));
+        }
+
+        /* Timeline View Modes */
+        .timeline-view-modes {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            padding: 12px;
+            background: rgba(212, 175, 122, 0.05);
+            border-radius: 8px;
+        }
+
+        .view-mode-btn {
+            flex: 1;
+            padding: 8px 12px;
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-muted);
+            font-size: 0.75em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+
+        .view-mode-btn:hover {
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+        }
+
+        .view-mode-btn.active {
+            background: var(--accent-gold);
+            color: var(--bg-dark);
+            border-color: var(--accent-gold);
+        }
+
+        /* Reference Images Section */
+        .reference-images-section {
+            padding: 20px 24px;
+            border-top: 1px solid var(--glass-border);
+        }
+
+        .reference-images-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 12px;
+        }
+
+        .reference-image-item {
+            position: relative;
+            aspect-ratio: 1;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .reference-image-item:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(212, 175, 122, 0.3);
+        }
+
+        .reference-image-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .reference-image-item.upload-placeholder {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px dashed var(--glass-border);
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .reference-image-item.upload-placeholder:hover {
+            border-color: var(--accent-gold);
+            background: rgba(212, 175, 122, 0.05);
+        }
+
+        .print-lookbook-btn {
+            padding: 10px 16px;
+            background: linear-gradient(135deg, rgba(212, 175, 122, 0.2), rgba(212, 175, 122, 0.1));
+            border: 1px solid var(--accent-gold);
+            border-radius: 8px;
+            color: var(--accent-gold);
+            font-size: 0.875em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .print-lookbook-btn:hover {
+            background: linear-gradient(135deg, rgba(212, 175, 122, 0.3), rgba(212, 175, 122, 0.2));
+            transform: translateY(-1px);
+        }
         
         .cast-tags {
             display: flex;
@@ -2502,73 +3017,17 @@
             
             <!-- Right Sidebar - Workspace -->
             <div class="right-sidebar">
-                <div class="workspace-tabs">
-                    <div class="workspace-tab active" onclick="switchTab('breakdown')">Scene Breakdown</div>
-                    <div class="workspace-tab" onclick="switchTab('cast')">Cast in Scene</div>
-                    <div class="workspace-tab" onclick="switchTab('tags')">Tags</div>
+                <div class="workspace-header">
+                    <div class="workspace-title">SCENE BREAKDOWN</div>
                 </div>
-                
+
                 <div class="workspace-content">
-                    <!-- Tab 1: Scene Breakdown -->
+                    <!-- Scene Breakdown Tab (Only Tab) -->
                     <div class="tab-panel active" id="breakdownPanel">
                         <div class="empty-state">
                             <div class="empty-icon">📋</div>
                             <div class="empty-title">Select a Scene</div>
                             <div class="empty-desc">Choose a scene to view and edit its breakdown</div>
-                        </div>
-                    </div>
-                    
-                    <!-- Tab 2: Cast in Scene -->
-                    <div class="tab-panel" id="castPanel">
-                        <div class="empty-state">
-                            <div class="empty-icon">👥</div>
-                            <div class="empty-title">Select a Scene</div>
-                            <div class="empty-desc">Choose a scene to view its cast members</div>
-                        </div>
-                    </div>
-
-                    <!-- Tab 3: Tags -->
-                    <div class="tab-panel" id="tagsPanel">
-                        <div class="tags-header">
-                            <div class="tags-title">Script Tags</div>
-
-                            <div class="tags-filters">
-                                <select class="tags-filter" id="sceneFilter" onchange="filterTags()">
-                                    <option value="all">All Scenes</option>
-                                    <option value="current">Current Scene Only</option>
-                                </select>
-
-                                <select class="tags-filter" id="characterFilter" onchange="filterTags()">
-                                    <option value="all">All Characters</option>
-                                </select>
-
-                                <select class="tags-filter" id="categoryFilter" onchange="filterTags()">
-                                    <option value="all">All Categories</option>
-                                    <option value="cast">Cast</option>
-                                    <option value="hair">Hair</option>
-                                    <option value="makeup">Makeup (Beauty)</option>
-                                    <option value="sfx">SFX Makeup</option>
-                                    <option value="wardrobe">Wardrobe</option>
-                                    <option value="props">Props</option>
-                                    <option value="vehicles">Vehicles</option>
-                                    <option value="vfx">VFX</option>
-                                    <option value="stunts">Stunts</option>
-                                    <option value="extras">Extras</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="tags-stats">
-                            <span class="tag-stat">Total: <strong id="totalTagsCount">0</strong></span>
-                            <span class="tag-stat">Continuity: <strong id="continuityTagsCount">0</strong></span>
-                        </div>
-
-                        <div class="tags-content" id="tagsContent">
-                            <div class="empty-state">
-                                <div class="empty-icon">🏷️</div>
-                                <div class="empty-title">No Tags Yet</div>
-                                <div class="empty-desc">Select text in the script to create tags</div>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -2604,9 +3063,9 @@
         </div>
     </div>
     
-    <!-- Cast Profile Modal -->
+    <!-- Cast Profile Modal - Enhanced Visual Timeline & Lookbook -->
     <div class="modal" id="castProfileModal">
-        <div class="modal-content" style="max-width: 800px; max-height: 90vh; display: flex; flex-direction: column;">
+        <div class="modal-content" style="max-width: 900px; max-height: 90vh; display: flex; flex-direction: column;">
             <div class="modal-header">
                 <div class="modal-title" id="castProfileTitle">Cast Profile</div>
                 <button class="modal-close" onclick="closeCastProfile()">×</button>
@@ -2622,38 +3081,56 @@
                 </div>
             </div>
 
-            <!-- Continuity Events Section -->
-            <div class="profile-continuity-section">
-                <div class="profile-section-header">
-                    <span class="profile-section-title">Continuity Events</span>
-                    <button class="profile-add-btn" onclick="addContinuityEvent()">+ Add Event</button>
+            <div style="flex: 1; overflow-y: auto;">
+                <!-- Visual Timeline Section -->
+                <div style="padding: 20px 24px; border-bottom: 1px solid var(--glass-border);">
+                    <div class="profile-section-header">
+                        <span class="profile-section-title">📸 Visual Timeline</span>
+                    </div>
+
+                    <div class="story-day-cards-container" id="storyDayCardsContainer">
+                        <!-- Story day cards populated dynamically -->
+                    </div>
+
+                    <div style="display: flex; justify-content: center; gap: 12px; margin-top: 12px;">
+                        <button class="modal-btn" onclick="navigatePreviousDay()">← Previous Day</button>
+                        <button class="modal-btn" onclick="navigateNextDay()">Next Day →</button>
+                    </div>
                 </div>
 
-                <div class="continuity-events-container" id="continuityEventsContainer">
-                    <div class="empty-state-small">
-                        <div class="empty-icon-small">⚡</div>
-                        <div class="empty-text-small">No continuity events yet. Click "+ Add Event" to create one.</div>
+                <!-- Continuity Events Section -->
+                <div class="profile-continuity-section">
+                    <div class="profile-section-header">
+                        <span class="profile-section-title">⚡ Continuity Events</span>
+                        <button class="profile-add-btn" onclick="addContinuityEvent()">+ Add Event</button>
+                    </div>
+
+                    <div class="continuity-events-container" id="continuityEventsContainer">
+                        <div class="empty-state-small">
+                            <div class="empty-icon-small">⚡</div>
+                            <div class="empty-text-small">No continuity events yet. Click "+ Add Event" to create one.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reference Images Section -->
+                <div class="reference-images-section">
+                    <div class="profile-section-header">
+                        <span class="profile-section-title">📸 Reference Images</span>
+                    </div>
+
+                    <div class="reference-images-grid" id="referenceImagesGrid">
+                        <div class="reference-image-item upload-placeholder" onclick="uploadReferenceImage()">
+                            + Upload
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Scene-by-Scene Quick View -->
-            <div class="profile-scenes-section" style="flex: 1; overflow-y: auto;">
-                <div class="profile-section-header">
-                    <span class="profile-section-title">Scene-by-Scene Quick View</span>
-                    <button class="profile-filter-btn" onclick="toggleEventScenes()" id="filterEventsBtn">
-                        Show Only Event Scenes
-                    </button>
-                </div>
-
-                <div class="scenes-quick-view" id="scenesQuickView">
-                    <!-- Populated dynamically -->
-                </div>
-            </div>
-
             <div class="modal-actions">
+                <button class="print-lookbook-btn" onclick="printLookbook()">📄 Print Lookbook</button>
                 <button class="modal-btn" onclick="closeCastProfile()">Close</button>
-                <button class="modal-btn primary" onclick="saveCastProfile()">Save All</button>
+                <button class="modal-btn primary" onclick="saveCastProfile()">💾 Save All</button>
             </div>
         </div>
     </div>
@@ -4415,23 +4892,15 @@ IMPORTANT:
             return lines.slice(startLine, endLine).join('\n');
         }
         
-        // Switch tabs
+        // Switch tabs (Legacy function - now simplified since we removed Cast and Tags tabs)
         function switchTab(tab) {
-            activeTab = tab;
+            // Only breakdown tab remains - this function is kept for backward compatibility
+            activeTab = 'breakdown';
 
-            document.querySelectorAll('.workspace-tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-
-            if (tab === 'breakdown') {
-                document.querySelectorAll('.workspace-tab')[0].classList.add('active');
-                document.getElementById('breakdownPanel').classList.add('active');
-            } else if (tab === 'cast') {
-                document.querySelectorAll('.workspace-tab')[1].classList.add('active');
-                document.getElementById('castPanel').classList.add('active');
-            } else if (tab === 'tags') {
-                document.querySelectorAll('.workspace-tab')[2].classList.add('active');
-                document.getElementById('tagsPanel').classList.add('active');
-                renderTagsPanel();
+            // Ensure breakdown panel is always active
+            const breakdownPanel = document.getElementById('breakdownPanel');
+            if (breakdownPanel) {
+                breakdownPanel.classList.add('active');
             }
         }
         
@@ -4685,6 +5154,131 @@ IMPORTANT:
                         <div class="breakdown-hint">Auto-extracted: ${extractLocation(scene.heading) || 'Not detected'}</div>
                     </div>
                 </div>
+
+                <!-- CAST IN THIS SCENE - Enhanced with Expandable Cards -->
+                ${cast.length > 0 ? `
+                    <div style="margin: 24px 0;">
+                        <div class="section-title" style="margin-bottom: 16px;">
+                            <span class="section-icon" style="background: rgba(251, 191, 36, 0.5);"></span>
+                            Cast in This Scene
+                        </div>
+
+                        ${cast.map(castMember => {
+                            const profile = castProfiles[castMember] || {};
+                            const state = characterStates[currentScene]?.[castMember] || {};
+                            const activeEvents = getActiveEventsForScene(castMember, currentScene);
+
+                            return `
+                                <div class="cast-member-card" id="castCard${castMember.replace(/\s/g, '')}">
+                                    <div class="cast-member-header" onclick="toggleCastCard('${castMember.replace(/\s/g, '')}')">
+                                        <span class="cast-member-name">${castMember}</span>
+                                        <span class="cast-member-toggle"></span>
+                                    </div>
+
+                                    <div class="cast-member-body">
+                                        <div class="cast-member-base">
+                                            Base: ${profile.baseDescription || 'No base description set'}
+                                        </div>
+
+                                        ${activeEvents.length > 0 ? `
+                                            <div class="active-events-section">
+                                                <div class="active-events-title">⚡ Active Events</div>
+                                                ${activeEvents.map(event => {
+                                                    const progress = calculateEventProgress(event, currentScene);
+                                                    const stage = getEventStageLabel(progress);
+                                                    return `
+                                                        <div class="event-item">
+                                                            <div class="event-name">• ${event.description} (Sc ${event.startScene}-${event.endScene})</div>
+                                                            <div class="event-timeline-info">
+                                                                ${sceneTimeline[currentScene]?.label || 'Scene ' + scenes[currentScene].number}: ${stage.label} stage
+                                                            </div>
+                                                            <div class="continuity-progress">
+                                                                <div class="progress-bar">
+                                                                    <div class="progress-fill" style="width: ${progress}%;"></div>
+                                                                </div>
+                                                                <div class="progress-label">${progress}% healed</div>
+                                                            </div>
+                                                        </div>
+                                                    `;
+                                                }).join('')}
+                                            </div>
+                                        ` : ''}
+
+                                        <div class="department-fields">
+                                            <div class="department-field">
+                                                <label class="department-label">Hair</label>
+                                                <input type="text"
+                                                       class="department-input"
+                                                       value="${state.hair || ''}"
+                                                       placeholder="Hairstyle, condition, changes..."
+                                                       onchange="updateCharacterField('${castMember}', 'hair', this.value)">
+                                            </div>
+
+                                            <div class="department-field">
+                                                <label class="department-label">Makeup</label>
+                                                <input type="text"
+                                                       class="department-input"
+                                                       value="${state.makeup || ''}"
+                                                       placeholder="Makeup look, details..."
+                                                       onchange="updateCharacterField('${castMember}', 'makeup', this.value)">
+                                            </div>
+
+                                            <div class="department-field">
+                                                <label class="department-label">SFX</label>
+                                                <input type="text"
+                                                       class="department-input"
+                                                       value="${state.sfx || ''}"
+                                                       placeholder="Injuries, wounds, prosthetics..."
+                                                       onchange="updateCharacterField('${castMember}', 'sfx', this.value)">
+                                            </div>
+
+                                            <div class="department-field">
+                                                <label class="department-label">Wardrobe</label>
+                                                <input type="text"
+                                                       class="department-input"
+                                                       value="${state.wardrobe || ''}"
+                                                       placeholder="Costume description, accessories..."
+                                                       onchange="updateCharacterField('${castMember}', 'wardrobe', this.value)">
+                                            </div>
+
+                                            <div class="department-field">
+                                                <label class="department-label">Notes</label>
+                                                <input type="text"
+                                                       class="department-input"
+                                                       value="${state.notes || ''}"
+                                                       placeholder="Additional notes..."
+                                                       onchange="updateCharacterField('${castMember}', 'notes', this.value)">
+                                            </div>
+                                        </div>
+
+                                        <div class="cast-member-actions">
+                                            <button class="view-timeline-btn" onclick="openCastProfile('${castMember}')">
+                                                📊 View ${castMember}'s Timeline
+                                            </button>
+                                            <button class="ai-fill-btn" onclick="aiFillCharacterFields('${castMember}')">
+                                                ✨ AI Fill Fields
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+
+                        <button class="add-element-btn" style="width: 100%; margin-top: 12px;" onclick="openAddElement('cast')">
+                            + Add Cast Member to Scene
+                        </button>
+                    </div>
+                ` : `
+                    <div style="margin: 24px 0;">
+                        <div class="empty-state-small">
+                            <div class="empty-icon-small">👥</div>
+                            <div class="empty-text-small">No cast members in this scene. Use AI detection or add manually.</div>
+                        </div>
+                        <button class="add-element-btn" style="width: 100%; margin-top: 12px;" onclick="openAddElement('cast')">
+                            + Add Cast Member to Scene
+                        </button>
+                    </div>
+                `}
             `;
 
             categories.forEach(cat => {
@@ -4714,113 +5308,10 @@ IMPORTANT:
             container.innerHTML = html;
         }
         
-        // Render cast panel
+        // Render cast panel (DEPRECATED - functionality moved to Scene Breakdown panel)
         function renderCastPanel() {
-            const container = document.getElementById('castPanel');
-            
-            if (currentScene === null) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-icon">👥</div>
-                        <div class="empty-title">Select a Scene</div>
-                        <div class="empty-desc">Choose a scene to view its cast members</div>
-                    </div>
-                `;
-                return;
-            }
-            
-            const scene = scenes[currentScene];
-            const breakdown = sceneBreakdowns[currentScene] || {};
-            const cast = breakdown.cast || [];
-            
-            if (cast.length === 0) {
-                container.innerHTML = `
-                    <div class="breakdown-header">
-                        <div class="breakdown-scene-title">Scene ${scene.number}</div>
-                        <div class="breakdown-scene-heading">${scene.heading}</div>
-                    </div>
-                    <div class="empty-state">
-                        <div class="empty-icon">👥</div>
-                        <div class="empty-title">No Cast Members</div>
-                        <div class="empty-desc">Generate AI synopsis or add cast manually in Scene Breakdown tab</div>
-                    </div>
-                `;
-                return;
-            }
-            
-            let html = `
-                <div class="breakdown-header">
-                    <div class="breakdown-scene-title">Scene ${scene.number} Cast</div>
-                    <div class="breakdown-scene-heading">${cast.length} character${cast.length !== 1 ? 's' : ''} in this scene</div>
-                </div>
-                
-                <div class="cast-grid">
-            `;
-            
-            cast.forEach(castMember => {
-                const profile = castProfiles[castMember] || { baseDescription: '', makeup: '', wardrobe: '' };
-                const state = characterStates[currentScene] ? (characterStates[currentScene][castMember] || {}) : {};
-                const tags = state.tags || [];
-                const activeEvents = getActiveEvents(castMember, currentScene);
-                
-                html += `
-                    <div class="cast-card">
-                        <div class="cast-card-header">
-                            <div class="cast-name">${castMember}</div>
-                            <button class="profile-btn" onclick="openCastProfile('${castMember.replace(/'/g, "\\'")}')">Profile</button>
-                        </div>
-                        ${profile.baseDescription ? `
-                            <div class="cast-base-desc">${profile.baseDescription}</div>
-                        ` : ''}
-                        
-                        ${activeEvents.length > 0 ? `
-                            <div class="active-states">
-                                <div class="active-states-title">⚡ Active Continuity</div>
-                                ${activeEvents.map(event => {
-                                    const eventType = eventTypes.find(t => t.id === event.type);
-                                    const icon = eventType ? eventType.icon : '⚡';
-                                    const currentStage = getCurrentStage(event, currentScene);
-                                    const sceneProgress = event.endScene !== null ? 
-                                        `Scene ${event.startScene + 1} → ${event.endScene + 1}` : 
-                                        `Scene ${event.startScene + 1} → Ongoing`;
-                                    
-                                    return `
-                                        <div class="continuity-item">
-                                            <div class="continuity-icon">${icon}</div>
-                                            <div class="continuity-content">
-                                                <div class="continuity-desc">${event.description}</div>
-                                                <div class="continuity-stage">${currentStage}</div>
-                                                <div class="continuity-timeline">${sceneProgress}</div>
-                                            </div>
-                                            <div class="continuity-actions">
-                                                <button class="continuity-edit-btn" onclick="editContinuityEvent('${castMember.replace(/'/g, "\\'")}', ${event.id})">Edit</button>
-                                                <button class="element-remove" onclick="deleteContinuityEvent('${castMember.replace(/'/g, "\\'")}', ${event.id})">×</button>
-                                            </div>
-                                        </div>
-                                    `;
-                                }).join('')}
-                            </div>
-                        ` : ''}
-                        
-                        <button class="add-continuity-btn" onclick="openContinuityModal('${castMember.replace(/'/g, "\\'")}')">
-                            + Add Continuity Event
-                        </button>
-                        
-                        <div class="cast-tags">
-                            ${tags.map(tag => `
-                                <div class="character-tag ${tag.isWound ? 'wound' : ''}">
-                                    ${tag.text}
-                                    <button class="element-remove" style="margin-left: 4px;" onclick="removeTag('${castMember.replace(/'/g, "\\'")}', '${tag.text.replace(/'/g, "\\'")}')">×</button>
-                                </div>
-                            `).join('')}
-                            <button class="add-tag-btn" onclick="openAddTag('${castMember.replace(/'/g, "\\'")}')">+ Quick Tag</button>
-                        </div>
-                    </div>
-                `;
-            });
-            
-            html += '</div>';
-            container.innerHTML = html;
+            // No-op: Cast functionality is now integrated into the Scene Breakdown panel
+            // This function is kept for backward compatibility with existing code that calls it
         }
         
         // Add element
@@ -5258,16 +5749,523 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`;
         
         function deleteContinuityEvent(character, eventId) {
             if (!confirm('Delete this continuity event?')) return;
-            
+
             continuityEvents[character] = continuityEvents[character].filter(e => e.id !== eventId);
-            
+
             saveProject();
             renderCastPanel();
         }
-        
+
+        // ========== NEW: Story Day Aggregation & Visual Timeline Functions ==========
+
+        // Get all unique story days for a character
+        function getStoryDaysForCharacter(character) {
+            const storyDays = new Map();
+
+            scenes.forEach((scene, index) => {
+                const breakdown = sceneBreakdowns[index] || {};
+                const timeline = sceneTimeline[index] || {};
+
+                if (breakdown.cast && breakdown.cast.includes(character)) {
+                    const dayLabel = timeline.label || `Scene ${scene.number}`;
+                    const storyDay = timeline.day || index + 1;
+                    const timeOfDay = timeline.time || 'Unknown';
+
+                    if (!storyDays.has(dayLabel)) {
+                        storyDays.set(dayLabel, {
+                            label: dayLabel,
+                            day: storyDay,
+                            time: timeOfDay,
+                            scenes: []
+                        });
+                    }
+
+                    storyDays.get(dayLabel).scenes.push({ scene, index, breakdown });
+                }
+            });
+
+            return Array.from(storyDays.values());
+        }
+
+        // Aggregate look data for a story day
+        function aggregateStoryDay(character, storyDayData) {
+            const { scenes: dayScenes } = storyDayData;
+
+            // Find the most detailed entry for each department
+            const aggregated = {
+                hair: '',
+                makeup: '',
+                sfx: '',
+                wardrobe: '',
+                notes: ''
+            };
+
+            dayScenes.forEach(({ index }) => {
+                const state = characterStates[index]?.[character] || {};
+                if (state.hair && state.hair.length > aggregated.hair.length) {
+                    aggregated.hair = state.hair;
+                }
+                if (state.makeup && state.makeup.length > aggregated.makeup.length) {
+                    aggregated.makeup = state.makeup;
+                }
+                if (state.sfx && state.sfx.length > aggregated.sfx.length) {
+                    aggregated.sfx = state.sfx;
+                }
+                if (state.wardrobe && state.wardrobe.length > aggregated.wardrobe.length) {
+                    aggregated.wardrobe = state.wardrobe;
+                }
+                if (state.notes && state.notes.length > aggregated.notes.length) {
+                    aggregated.notes = state.notes;
+                }
+            });
+
+            return aggregated;
+        }
+
+        // Get active continuity events for a specific story day/scene index
+        function getActiveEventsForScene(character, sceneIndex) {
+            if (!continuityEvents[character]) return [];
+
+            return continuityEvents[character].filter(event => {
+                const startIdx = scenes.findIndex(s => s.number === event.startScene);
+                const endIdx = scenes.findIndex(s => s.number === event.endScene);
+                return sceneIndex >= startIdx && sceneIndex <= endIdx;
+            });
+        }
+
+        // Calculate event progress percentage
+        function calculateEventProgress(event, sceneIndex) {
+            const startIdx = scenes.findIndex(s => s.number === event.startScene);
+            const endIdx = scenes.findIndex(s => s.number === event.endScene);
+            const totalScenes = endIdx - startIdx + 1;
+            const currentScene = sceneIndex - startIdx + 1;
+            return Math.round((currentScene / totalScenes) * 100);
+        }
+
+        // Get event stage label
+        function getEventStageLabel(progress) {
+            if (progress < 33) return { label: 'Fresh', class: 'fresh' };
+            if (progress < 75) return { label: 'Healing', class: 'healing' };
+            return { label: 'Healed', class: 'healed' };
+        }
+
+        // Render story day cards in the cast profile modal
+        function renderStoryDayCards(character) {
+            const container = document.getElementById('storyDayCardsContainer');
+            const storyDays = getStoryDaysForCharacter(character);
+            const profile = castProfiles[character] || {};
+
+            if (storyDays.length === 0) {
+                container.innerHTML = '<div class="empty-state-small"><div class="empty-text-small">No scenes found for this character.</div></div>';
+                return;
+            }
+
+            container.innerHTML = storyDays.map((dayData, dayIndex) => {
+                const aggregated = aggregateStoryDay(character, dayData);
+                const firstSceneIndex = dayData.scenes[0].index;
+                const activeEvents = getActiveEventsForScene(character, firstSceneIndex);
+                const imageKey = dayData.label;
+                const image = profile.storyDayImages?.[imageKey];
+
+                return `
+                    <div class="story-day-card" data-day-index="${dayIndex}">
+                        <div class="day-header">
+                            <span class="day-label">${dayData.label}</span>
+                            <span class="scene-count">${dayData.scenes.length} scene${dayData.scenes.length > 1 ? 's' : ''}</span>
+                        </div>
+
+                        <div class="reference-image" onclick="uploadStoryDayImage('${character}', '${imageKey}')">
+                            ${image ? `<img src="${image}" alt="${dayData.label}" />` : ''}
+                            <button class="upload-btn">+ Upload</button>
+                        </div>
+
+                        <div class="look-details">
+                            <div class="detail-row">
+                                <span class="detail-label">Hair:</span>
+                                <span class="detail-value">${aggregated.hair || '—'}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Makeup:</span>
+                                <span class="detail-value">${aggregated.makeup || '—'}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">SFX:</span>
+                                <span class="detail-value">${aggregated.sfx || '—'}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Wardrobe:</span>
+                                <span class="detail-value">${aggregated.wardrobe || '—'}</span>
+                            </div>
+                        </div>
+
+                        <div class="active-events">
+                            ${activeEvents.length > 0
+                                ? activeEvents.map(event => {
+                                    const progress = calculateEventProgress(event, firstSceneIndex);
+                                    const stage = getEventStageLabel(progress);
+                                    return `<span class="event-badge ${stage.class}">⚡ ${event.description}</span>`;
+                                }).join(' ')
+                                : '<span class="event-badge" style="background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid var(--glass-border);">No active events</span>'
+                            }
+                        </div>
+
+                        <button class="expand-btn" onclick="expandDayCard(${dayIndex}, '${character}')">
+                            View Scenes ▼
+                        </button>
+
+                        <div class="expanded-scenes" id="expandedScenes${dayIndex}" style="display: none;">
+                            ${dayData.scenes.map(({ scene, index }) => {
+                                const state = characterStates[index]?.[character] || {};
+                                return `
+                                    <div class="scene-detail" onclick="jumpToScene(${index})">
+                                        <strong>Scene ${scene.number}:</strong> ${scene.heading}
+                                        <div class="scene-look">
+                                            ${state.hair ? 'Hair: ' + state.hair : ''}
+                                            ${state.makeup ? ' | Makeup: ' + state.makeup : ''}
+                                            ${state.sfx ? ' | SFX: ' + state.sfx : ''}
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Expand/collapse day card
+        function expandDayCard(dayIndex, character) {
+            const expandedDiv = document.getElementById(`expandedScenes${dayIndex}`);
+            if (expandedDiv.style.display === 'none') {
+                expandedDiv.style.display = 'block';
+            } else {
+                expandedDiv.style.display = 'none';
+            }
+        }
+
+        // Jump to scene from character timeline
+        function jumpToScene(sceneIndex) {
+            // Close the cast profile modal
+            closeCastProfile();
+
+            // Switch to script tab
+            switchCenterTab('script');
+
+            // Select the scene
+            selectScene(sceneIndex);
+
+            // Scroll to the scene in the script viewer
+            setTimeout(() => {
+                const sceneElement = document.getElementById(`scene-${scenes[sceneIndex].number}`);
+                if (sceneElement) {
+                    sceneElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }, 100);
+        }
+
+        // Upload story day image
+        function uploadStoryDayImage(character, dayLabel) {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const base64 = e.target.result;
+                        saveStoryDayImage(character, dayLabel, base64);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+            input.click();
+        }
+
+        // Save story day image
+        function saveStoryDayImage(character, dayLabel, base64) {
+            if (!castProfiles[character]) {
+                castProfiles[character] = { name: character };
+            }
+            if (!castProfiles[character].storyDayImages) {
+                castProfiles[character].storyDayImages = {};
+            }
+            castProfiles[character].storyDayImages[dayLabel] = base64;
+            saveProject();
+            renderStoryDayCards(character);
+        }
+
+        // Upload reference image
+        function uploadReferenceImage() {
+            if (!currentCastMember) return;
+
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.multiple = true;
+            input.onchange = function(e) {
+                const files = Array.from(e.target.files);
+                files.forEach(file => {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const base64 = e.target.result;
+                        saveReferenceImage(currentCastMember, base64);
+                    };
+                    reader.readAsDataURL(file);
+                });
+            };
+            input.click();
+        }
+
+        // Save reference image
+        function saveReferenceImage(character, base64) {
+            if (!castProfiles[character]) {
+                castProfiles[character] = { name: character };
+            }
+            if (!castProfiles[character].referenceImages) {
+                castProfiles[character].referenceImages = [];
+            }
+            castProfiles[character].referenceImages.push({
+                id: Date.now(),
+                url: base64
+            });
+            saveProject();
+            renderReferenceImages(character);
+        }
+
+        // Render reference images
+        function renderReferenceImages(character) {
+            const container = document.getElementById('referenceImagesGrid');
+            const profile = castProfiles[character] || {};
+            const images = profile.referenceImages || [];
+
+            container.innerHTML = images.map(img => `
+                <div class="reference-image-item">
+                    <img src="${img.url}" alt="Reference" onclick="viewImageFullscreen('${img.url}')" />
+                </div>
+            `).join('') + `
+                <div class="reference-image-item upload-placeholder" onclick="uploadReferenceImage()">
+                    + Upload
+                </div>
+            `;
+        }
+
+        // View image fullscreen (simple implementation)
+        function viewImageFullscreen(url) {
+            window.open(url, '_blank');
+        }
+
+        // Navigate days in timeline
+        let currentDayOffset = 0;
+
+        function navigatePreviousDay() {
+            if (currentDayOffset > 0) {
+                currentDayOffset--;
+                updateDayNavigation();
+            }
+        }
+
+        function navigateNextDay() {
+            const storyDays = getStoryDaysForCharacter(currentCastMember);
+            if (currentDayOffset < storyDays.length - 3) {
+                currentDayOffset++;
+                updateDayNavigation();
+            }
+        }
+
+        function updateDayNavigation() {
+            // This would scroll the story day cards container
+            const container = document.getElementById('storyDayCardsContainer');
+            const cardWidth = 296; // 280px + 16px gap
+            container.scrollTo({
+                left: currentDayOffset * cardWidth,
+                behavior: 'smooth'
+            });
+        }
+
+        // Print lookbook
+        function printLookbook() {
+            if (!currentCastMember) return;
+
+            const character = currentCastMember;
+            const profile = castProfiles[character] || {};
+            const storyDays = getStoryDaysForCharacter(character);
+
+            const printHTML = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>${character} - Lookbook</title>
+                    <style>
+                        @page { size: A4; margin: 20mm; }
+                        body {
+                            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+                            color: #1a1a1a;
+                            line-height: 1.6;
+                        }
+                        .lookbook-header {
+                            text-align: center;
+                            margin-bottom: 40px;
+                            padding-bottom: 20px;
+                            border-bottom: 2px solid #d4af7a;
+                        }
+                        .lookbook-header h1 {
+                            margin: 0;
+                            font-size: 2.5em;
+                            color: #d4af7a;
+                        }
+                        .base-description {
+                            font-style: italic;
+                            color: #666;
+                            margin-top: 10px;
+                        }
+                        .day-card {
+                            page-break-inside: avoid;
+                            margin-bottom: 30px;
+                            border: 1px solid #ddd;
+                            border-radius: 8px;
+                            padding: 20px;
+                        }
+                        .day-header {
+                            font-size: 1.5em;
+                            font-weight: 700;
+                            color: #d4af7a;
+                            margin-bottom: 15px;
+                        }
+                        .reference-image {
+                            width: 100%;
+                            max-height: 400px;
+                            object-fit: cover;
+                            border-radius: 6px;
+                            margin-bottom: 15px;
+                        }
+                        .look-details {
+                            display: grid;
+                            grid-template-columns: auto 1fr;
+                            gap: 8px 16px;
+                        }
+                        .detail-label {
+                            font-weight: 700;
+                            color: #666;
+                        }
+                        .detail-value {
+                            color: #1a1a1a;
+                        }
+                        .scenes-list {
+                            margin-top: 15px;
+                            padding-top: 15px;
+                            border-top: 1px solid #eee;
+                            font-size: 0.9em;
+                            color: #666;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="lookbook-header">
+                        <h1>${character}</h1>
+                        <p class="base-description">${profile.baseDescription || 'No base description'}</p>
+                    </div>
+                    ${storyDays.map(dayData => {
+                        const aggregated = aggregateStoryDay(character, dayData);
+                        const imageKey = dayData.label;
+                        const image = profile.storyDayImages?.[imageKey];
+
+                        return `
+                            <div class="day-card">
+                                <div class="day-header">${dayData.label}</div>
+                                ${image ? `<img src="${image}" class="reference-image" />` : ''}
+                                <div class="look-details">
+                                    <span class="detail-label">Hair:</span>
+                                    <span class="detail-value">${aggregated.hair || '—'}</span>
+                                    <span class="detail-label">Makeup:</span>
+                                    <span class="detail-value">${aggregated.makeup || '—'}</span>
+                                    <span class="detail-label">SFX:</span>
+                                    <span class="detail-value">${aggregated.sfx || '—'}</span>
+                                    <span class="detail-label">Wardrobe:</span>
+                                    <span class="detail-value">${aggregated.wardrobe || '—'}</span>
+                                </div>
+                                <div class="scenes-list">
+                                    Scenes: ${dayData.scenes.map(s => s.scene.number).join(', ')}
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </body>
+                </html>
+            `;
+
+            const printWindow = window.open('', '', 'width=800,height=600');
+            printWindow.document.write(printHTML);
+            printWindow.document.close();
+            setTimeout(() => printWindow.print(), 250);
+        }
+
+        // ========== END: New Visual Timeline Functions ==========
+
+        // ========== Cast Member Card Functions ==========
+
+        // Toggle cast member card expanded/collapsed
+        function toggleCastCard(cardId) {
+            const card = document.getElementById('castCard' + cardId);
+            if (card) {
+                card.classList.toggle('expanded');
+            }
+        }
+
+        // Update character field in scene
+        function updateCharacterField(character, field, value) {
+            if (!characterStates[currentScene]) {
+                characterStates[currentScene] = {};
+            }
+            if (!characterStates[currentScene][character]) {
+                characterStates[currentScene][character] = {};
+            }
+            characterStates[currentScene][character][field] = value;
+            saveProject();
+        }
+
+        // AI fill character fields (simple implementation - extracts from existing tags)
+        function aiFillCharacterFields(character) {
+            const sceneTags = scriptTags[currentScene] || [];
+            const characterTags = sceneTags.filter(tag => tag.character === character);
+
+            if (characterTags.length === 0) {
+                alert('No tags found for ' + character + ' in this scene. Tag some text first!');
+                return;
+            }
+
+            if (!characterStates[currentScene]) {
+                characterStates[currentScene] = {};
+            }
+            if (!characterStates[currentScene][character]) {
+                characterStates[currentScene][character] = {};
+            }
+
+            // Group tags by category
+            characterTags.forEach(tag => {
+                const field = tag.category;
+                const currentValue = characterStates[currentScene][character][field] || '';
+                const newValue = tag.text;
+
+                // Append if not already present
+                if (!currentValue.includes(newValue)) {
+                    characterStates[currentScene][character][field] =
+                        currentValue ? currentValue + ', ' + newValue : newValue;
+                }
+            });
+
+            saveProject();
+            renderBreakdownPanel();
+            alert('Fields filled from tags for ' + character);
+        }
+
+        // ========== END: Cast Member Card Functions ==========
+
         // Cast profiles
         function openCastProfile(castMember) {
             currentCastMember = castMember;
+            currentDayOffset = 0; // Reset day navigation
+
             const profile = castProfiles[castMember] || {
                 name: castMember,
                 baseDescription: ''
@@ -5290,11 +6288,14 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`;
             document.querySelector('.scenes-list').textContent =
                 `${sceneNumbers} (${characterScenes.length} scenes)`;
 
-            // Render continuity events
+            // Render NEW visual timeline with story day cards
+            renderStoryDayCards(castMember);
+
+            // Render continuity events (enhanced with progress bars)
             renderContinuityEvents(castMember);
 
-            // Render scene quick view
-            renderSceneQuickView(castMember, characterScenes);
+            // Render reference images
+            renderReferenceImages(castMember);
 
             document.getElementById('castProfileModal').classList.add('active');
         }
@@ -5888,115 +6889,8 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`;
         }
 
         function renderTagsPanel() {
-            const content = document.getElementById('tagsContent');
-            if (!content) return;
-
-            // Get all tags
-            const allTags = Object.values(scriptTags).flat();
-
-            if (allTags.length === 0) {
-                content.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-icon">🏷️</div>
-                        <div class="empty-title">No Tags Yet</div>
-                        <div class="empty-desc">Select text in the script to create tags</div>
-                    </div>
-                `;
-                return;
-            }
-
-            // Update stats
-            document.getElementById('totalTagsCount').textContent = allTags.length;
-            document.getElementById('continuityTagsCount').textContent = allTags.filter(t => t.continuityEventId).length;
-
-            // Apply filters
-            const sceneFilter = document.getElementById('sceneFilter')?.value || 'all';
-            const characterFilter = document.getElementById('characterFilter')?.value || 'all';
-            const categoryFilter = document.getElementById('categoryFilter')?.value || 'all';
-
-            let filteredTags = allTags;
-
-            if (sceneFilter === 'current') {
-                filteredTags = filteredTags.filter(t => t.sceneIndex === currentScene);
-            } else if (sceneFilter !== 'all') {
-                filteredTags = filteredTags.filter(t => t.sceneNumber === parseInt(sceneFilter));
-            }
-
-            if (characterFilter !== 'all') {
-                filteredTags = filteredTags.filter(t => t.character === characterFilter);
-            }
-
-            if (categoryFilter !== 'all') {
-                filteredTags = filteredTags.filter(t => t.category === categoryFilter);
-            }
-
-            // Group by category
-            const grouped = {};
-            categories.forEach(cat => {
-                grouped[cat.id] = filteredTags.filter(t => t.category === cat.id);
-            });
-
-            // Render
-            let html = '';
-
-            categories.forEach(cat => {
-                if (grouped[cat.id].length === 0) return;
-
-                // Group by character within category
-                const byCharacter = {};
-                grouped[cat.id].forEach(tag => {
-                    const char = tag.character || 'General';
-                    if (!byCharacter[char]) byCharacter[char] = [];
-                    byCharacter[char].push(tag);
-                });
-
-                html += `
-                    <div class="tags-category-group">
-                        <div class="tags-category-header">
-                            <span class="category-icon" style="background: ${cat.color};">${cat.icon}</span>
-                            <span class="category-name">${cat.name}</span>
-                            <span class="category-count">${grouped[cat.id].length} tags</span>
-                        </div>
-                        <div class="tags-by-character">
-                `;
-
-                Object.keys(byCharacter).forEach(char => {
-                    html += `
-                        <div class="character-tags-group">
-                            <div class="character-tags-name">${char}</div>
-                    `;
-
-                    byCharacter[char].forEach(tag => {
-                        const continuityBadge = tag.continuityEventId ? '<span class="tag-badge continuity">⚡ Continuity</span>' : '';
-
-                        html += `
-                            <div class="tag-card" onclick="jumpToTag('${tag.id}')">
-                                <div class="tag-card-header">
-                                    <div class="tag-card-text">${tag.selectedText}</div>
-                                    <div class="tag-card-badges">
-                                        <span class="tag-badge scene">Sc. ${tag.sceneNumber}</span>
-                                        ${continuityBadge}
-                                    </div>
-                                </div>
-                                <div class="tag-card-context">${tag.fullContext}</div>
-                                <div class="tag-card-actions">
-                                    <button class="tag-action-btn" onclick="event.stopPropagation(); editTag('${tag.id}')">Edit</button>
-                                    <button class="tag-action-btn" onclick="event.stopPropagation(); deleteTag('${tag.id}')">Delete</button>
-                                </div>
-                            </div>
-                        `;
-                    });
-
-                    html += `</div>`;
-                });
-
-                html += `
-                        </div>
-                    </div>
-                `;
-            });
-
-            content.innerHTML = html;
+            // No-op: Tags tab has been removed
+            // This function is kept for backward compatibility with existing code that calls it
         }
 
         function filterTags() {
@@ -6504,6 +7398,10 @@ IMPORTANT: Respond with ONLY the description text, no JSON, no formatting, just 
                     ? Math.abs(event.endScene - event.startScene) + 1
                     : 1;
 
+                // Calculate overall progress (assuming linear progression)
+                const overallProgress = 100; // Full span from start to end
+                const midPoint = Math.floor(sceneCount / 2);
+
                 html += `
                     <div class="continuity-event-card">
                         <div class="event-card-header">
@@ -6516,6 +7414,13 @@ IMPORTANT: Respond with ONLY the description text, no JSON, no formatting, just 
                         <div class="event-card-meta">
                             <div>Scenes ${startScene} → ${endScene} (${sceneCount} scenes)</div>
                             ${timeline ? `<div>${timeline}</div>` : ''}
+                        </div>
+
+                        <div class="continuity-progress" style="margin: 12px 0;">
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${overallProgress}%;"></div>
+                            </div>
+                            <div class="progress-label">${sceneCount} scene${sceneCount !== 1 ? 's' : ''}</div>
                         </div>
 
                         ${event.progression && event.progression.length > 0 ? `
