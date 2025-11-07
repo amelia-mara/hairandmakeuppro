@@ -1043,6 +1043,202 @@
         .script-parenthetical { margin: 0 0 4px; width: 55%; margin-left: 22.5%; color: #333; font-style: italic; }
         .script-transition { text-align: right; margin: 24px 0; font-weight: 600; color: #000; text-transform: uppercase; }
 
+        /* Story Day Continuity Timeline */
+        .continuity-timeline-container {
+            padding: 20px;
+        }
+
+        .timeline-intro {
+            margin-bottom: 32px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .timeline-title {
+            font-size: 1.25em;
+            font-weight: 700;
+            color: var(--accent-gold);
+            margin-bottom: 8px;
+            letter-spacing: 0.05em;
+        }
+
+        .timeline-description {
+            font-size: 0.875em;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+
+        .story-day-group {
+            margin-bottom: 32px;
+        }
+
+        .story-day-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: rgba(212, 175, 122, 0.1);
+            border-left: 4px solid var(--accent-gold);
+            border-radius: 6px;
+            margin-bottom: 16px;
+        }
+
+        .story-day-label {
+            font-size: 1em;
+            font-weight: 700;
+            color: var(--accent-gold);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .story-day-count {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .story-day-scenes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .continuity-scene-card {
+            flex: 1 1 calc(50% - 8px);
+            min-width: 300px;
+            max-width: calc(50% - 8px);
+            background: rgba(28, 25, 22, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 16px;
+            transition: all 0.2s ease;
+        }
+
+        .continuity-scene-card:hover {
+            border-color: var(--accent-gold);
+            box-shadow: 0 4px 16px rgba(212, 175, 122, 0.15);
+        }
+
+        .continuity-scene-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--glass-border);
+            cursor: pointer;
+        }
+
+        .scene-number-badge {
+            padding: 4px 10px;
+            background: linear-gradient(135deg, var(--accent-gold), #b89651);
+            color: #0a0908;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 0.75em;
+            flex-shrink: 0;
+        }
+
+        .scene-location {
+            font-size: 0.875em;
+            font-weight: 600;
+            color: var(--text-light);
+        }
+
+        .continuity-states {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .continuity-state {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            padding: 12px;
+        }
+
+        .continuity-state.entering {
+            border: 1px solid rgba(102, 126, 234, 0.3);
+        }
+
+        .continuity-state.during {
+            border: 1px solid rgba(212, 175, 122, 0.3);
+        }
+
+        .state-label {
+            font-size: 0.6875em;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+        }
+
+        .state-notes {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .continuity-note {
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 0.8125em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            gap: 8px;
+        }
+
+        .continuity-note:hover {
+            transform: translateX(2px);
+            filter: brightness(1.1);
+        }
+
+        .note-category {
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .note-text {
+            color: var(--text-light);
+            line-height: 1.4;
+        }
+
+        .no-notes {
+            font-size: 0.8125em;
+            color: var(--text-muted);
+            font-style: italic;
+            padding: 4px 0;
+        }
+
+        .add-continuity-note-btn {
+            margin-top: 4px;
+            padding: 6px 12px;
+            background: rgba(212, 175, 122, 0.1);
+            border: 1px solid var(--glass-border);
+            border-radius: 4px;
+            color: var(--text-muted);
+            font-size: 0.75em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 600;
+        }
+
+        .add-continuity-note-btn:hover {
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+            background: rgba(212, 175, 122, 0.15);
+        }
+
+        /* Responsive adjustments for continuity timeline */
+        @media (max-width: 1400px) {
+            .continuity-scene-card {
+                flex: 1 1 100%;
+                max-width: 100%;
+            }
+        }
+
         /* Tag Highlighting System */
         .tag-highlight {
             position: relative;

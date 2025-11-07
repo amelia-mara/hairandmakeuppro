@@ -315,8 +315,8 @@ export function renderCharacterTimeline(character) {
         html += `</div>`;
 
     } else {
-        // FALLBACK: Show scene-by-scene if no looks defined
-        html += renderSceneBySceneView(character);
+        // FALLBACK: Show story day continuity timeline if no looks defined
+        html += renderStoryDayContinuityTimeline(character);
     }
 
     html += `</div>`;
@@ -432,9 +432,11 @@ function renderLookStateCard(look) {
 }
 
 /**
- * Render scene-by-scene view (fallback when no look states)
+ * Render story day continuity timeline
+ * Shows character's journey organized by story days with entering/exiting states
  */
-function renderSceneBySceneView(character) {
+function renderStoryDayContinuityTimeline(character) {
+    // Get all scenes this character appears in
     const characterScenes = [];
     state.scenes.forEach((scene, index) => {
         const breakdown = state.sceneBreakdowns[index] || {};
@@ -443,19 +445,203 @@ function renderSceneBySceneView(character) {
         }
     });
 
-    return `
-        <div class="no-looks-message">
-            <p>No look states defined. Showing all ${characterScenes.length} scenes:</p>
-        </div>
-        <div class="story-day-timeline">
-            ${characterScenes.map(({ scene, index }) => `
-                <div class="scene-item" onclick="navigateToScene(${index})" style="cursor: pointer;">
-                    <div class="scene-number">Scene ${scene.number}</div>
-                    <div class="scene-heading">${escapeHtml(scene.heading)}</div>
+    if (characterScenes.length === 0) {
+        return `
+            <div class="empty-state" style="margin-top: 40px;">
+                <div class="empty-icon">📋</div>
+                <div class="empty-title">No Scenes Found</div>
+                <div class="empty-desc">This character doesn't appear in any scenes yet.</div>
+            </div>
+        `;
+    }
+
+    // Group scenes by story day
+    const scenesByDay = {};
+    characterScenes.forEach(({ scene, index }) => {
+        const storyDay = scene.storyDay || 'Unassigned';
+        if (!scenesByDay[storyDay]) {
+            scenesByDay[storyDay] = [];
+        }
+        scenesByDay[storyDay].push({ scene, index });
+    });
+
+    // Sort days (natural sort for "Day 1", "Day 2", etc.)
+    const sortedDays = Object.keys(scenesByDay).sort((a, b) => {
+        if (a === 'Unassigned') return 1;
+        if (b === 'Unassigned') return -1;
+
+        const numA = parseInt(a.match(/\d+/)?.[0] || 0);
+        const numB = parseInt(b.match(/\d+/)?.[0] || 0);
+        return numA - numB;
+    });
+
+    // Check if any continuity data exists
+    const hasAnyData = characterScenes.some(({ index }) => {
+        const charState = state.characterStates[index]?.[character];
+        return charState && (charState.hair || charState.makeup || charState.sfx || charState.wardrobe);
+    });
+
+    let html = `
+        <div class="continuity-timeline-container">
+            <div class="timeline-intro">
+                <h3 class="timeline-title">STORY DAY CONTINUITY</h3>
+                <p class="timeline-description">
+                    Track ${escapeHtml(character)}'s appearance changes scene-by-scene.
+                    Fill in scene breakdowns to auto-populate this timeline.
+                </p>
+            </div>
+    `;
+
+    if (!hasAnyData) {
+        html += `
+            <div class="empty-state-small" style="margin: 20px 0;">
+                <div class="empty-icon-small">📝</div>
+                <div class="empty-text-small">
+                    No continuity data yet. Complete scene breakdowns (Hair, Makeup, SFX, Wardrobe fields) to populate this timeline.
                 </div>
-            `).join('')}
+            </div>
+        `;
+    }
+
+    // Render each story day
+    sortedDays.forEach(day => {
+        const dayScenes = scenesByDay[day];
+
+        html += `
+            <div class="story-day-group">
+                <div class="story-day-header">
+                    <span class="story-day-label">${escapeHtml(day)}</span>
+                    <span class="story-day-count">${dayScenes.length} scene${dayScenes.length !== 1 ? 's' : ''}</span>
+                </div>
+
+                <div class="story-day-scenes">
+                    ${dayScenes.map(({ scene, index }) => renderContinuitySceneCard(scene, index, character, characterScenes)).join('')}
+                </div>
+            </div>
+        `;
+    });
+
+    html += `</div>`;
+    return html;
+}
+
+/**
+ * Render a single scene card with continuity states
+ */
+function renderContinuitySceneCard(scene, sceneIndex, character, allCharacterScenes) {
+    // Get current scene's character state (DURING/EXITS)
+    const currentState = state.characterStates[sceneIndex]?.[character] || {};
+
+    // Get previous scene's state (ENTERS - what they looked like at end of previous scene)
+    const previousSceneIndex = findPreviousSceneIndex(sceneIndex, allCharacterScenes);
+    const enteringState = previousSceneIndex !== null
+        ? state.characterStates[previousSceneIndex]?.[character] || {}
+        : null;
+
+    // Extract location from heading (e.g., "INT. FERRY - DAY" -> "FERRY")
+    const locationMatch = scene.heading.match(/(?:INT\.|EXT\.|INT\/EXT\.?)\s+(.+?)(?:\s+-\s+|\s*$)/i);
+    const location = locationMatch ? locationMatch[1].trim() : scene.heading;
+
+    // Build entering notes (from previous scene)
+    const enteringNotes = [];
+    if (enteringState) {
+        if (enteringState.hair) enteringNotes.push({ category: 'hair', text: enteringState.hair });
+        if (enteringState.makeup) enteringNotes.push({ category: 'makeup', text: enteringState.makeup });
+        if (enteringState.sfx) enteringNotes.push({ category: 'sfx', text: enteringState.sfx });
+        if (enteringState.wardrobe) enteringNotes.push({ category: 'wardrobe', text: enteringState.wardrobe });
+    }
+
+    // Build during/exits notes (from current scene)
+    const duringNotes = [];
+    if (currentState.hair) duringNotes.push({ category: 'hair', text: currentState.hair });
+    if (currentState.makeup) duringNotes.push({ category: 'makeup', text: currentState.makeup });
+    if (currentState.sfx) duringNotes.push({ category: 'sfx', text: currentState.sfx });
+    if (currentState.wardrobe) duringNotes.push({ category: 'wardrobe', text: currentState.wardrobe });
+
+    return `
+        <div class="continuity-scene-card">
+            <div class="continuity-scene-header" onclick="navigateToScene(${sceneIndex})">
+                <span class="scene-number-badge">Scene ${scene.number}</span>
+                <span class="scene-location">${escapeHtml(location)}</span>
+            </div>
+
+            <div class="continuity-states">
+                <!-- ENTERING STATE -->
+                <div class="continuity-state entering">
+                    <div class="state-label">ENTERS:</div>
+                    <div class="state-notes">
+                        ${enteringNotes.length > 0
+                            ? enteringNotes.map(note => renderContinuityNote(note, sceneIndex, character, 'entering')).join('')
+                            : '<div class="no-notes">—</div>'
+                        }
+                    </div>
+                </div>
+
+                <!-- DURING/EXITING STATE -->
+                <div class="continuity-state during">
+                    <div class="state-label">DURING/EXITS:</div>
+                    <div class="state-notes">
+                        ${duringNotes.length > 0
+                            ? duringNotes.map(note => renderContinuityNote(note, sceneIndex, character, 'during')).join('')
+                            : '<div class="no-notes">No changes noted</div>'
+                        }
+                        <button class="add-continuity-note-btn"
+                                onclick="openContinuityEditModal(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}')">
+                            + Add Note
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     `;
+}
+
+/**
+ * Render a single continuity note with category color coding
+ */
+function renderContinuityNote(note, sceneIndex, character, phase) {
+    const colors = {
+        hair: '#a855f7',
+        makeup: '#ec4899',
+        sfx: '#ef4444',
+        wardrobe: '#34d399',
+        health: '#f59e0b',
+        injuries: '#dc2626',
+        stunts: '#f97316'
+    };
+
+    const categoryLabels = {
+        hair: 'Hair',
+        makeup: 'Makeup',
+        sfx: 'SFX',
+        wardrobe: 'Wardrobe',
+        health: 'Health',
+        injuries: 'Injuries',
+        stunts: 'Stunts'
+    };
+
+    const color = colors[note.category] || '#9ca3af';
+    const label = categoryLabels[note.category] || note.category;
+
+    return `
+        <div class="continuity-note"
+             style="border-left: 3px solid ${color}; background: linear-gradient(90deg, ${color}15, transparent);"
+             onclick="openContinuityEditModal(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', '${note.category}')">
+            <span class="note-category" style="color: ${color};">${label}:</span>
+            <span class="note-text">${escapeHtml(note.text)}</span>
+        </div>
+    `;
+}
+
+/**
+ * Find the previous scene index where this character appears
+ */
+function findPreviousSceneIndex(currentIndex, allCharacterScenes) {
+    const currentSceneInList = allCharacterScenes.findIndex(s => s.index === currentIndex);
+    if (currentSceneInList > 0) {
+        return allCharacterScenes[currentSceneInList - 1].index;
+    }
+    return null;
 }
 
 /**
@@ -507,6 +693,86 @@ window.removeCharacterTab = function(character) {
             switchCenterTab('script');
         }
     }
+};
+
+/**
+ * Open continuity edit modal
+ */
+window.openContinuityEditModal = function(sceneIndex, character, category = '') {
+    const modal = document.getElementById('continuity-edit-modal');
+    if (!modal) return;
+
+    const scene = state.scenes[sceneIndex];
+    const currentState = state.characterStates[sceneIndex]?.[character] || {};
+
+    // Set modal data
+    modal.dataset.sceneIndex = sceneIndex;
+    modal.dataset.character = character;
+
+    // Update modal title
+    document.getElementById('continuity-modal-title').textContent = `Edit Continuity - Scene ${scene.number}`;
+    document.getElementById('continuity-modal-character').textContent = character;
+
+    // Set category selector
+    const categorySelect = document.getElementById('continuity-category');
+    categorySelect.value = category || 'hair';
+
+    // Set note text
+    const noteTextarea = document.getElementById('continuity-note-text');
+    if (category) {
+        noteTextarea.value = currentState[category] || '';
+    } else {
+        noteTextarea.value = '';
+    }
+
+    // Show modal
+    modal.style.display = 'flex';
+    noteTextarea.focus();
+};
+
+/**
+ * Close continuity edit modal
+ */
+window.closeContinuityEditModal = function() {
+    const modal = document.getElementById('continuity-edit-modal');
+    if (modal) modal.style.display = 'none';
+};
+
+/**
+ * Save continuity note
+ */
+window.saveContinuityNote = async function() {
+    const modal = document.getElementById('continuity-edit-modal');
+    const sceneIndex = parseInt(modal.dataset.sceneIndex);
+    const character = modal.dataset.character;
+
+    const category = document.getElementById('continuity-category').value;
+    const noteText = document.getElementById('continuity-note-text').value.trim();
+
+    // Initialize structures if needed
+    if (!state.characterStates[sceneIndex]) {
+        state.characterStates[sceneIndex] = {};
+    }
+    if (!state.characterStates[sceneIndex][character]) {
+        state.characterStates[sceneIndex][character] = {};
+    }
+
+    // Save or delete note
+    if (noteText) {
+        state.characterStates[sceneIndex][character][category] = noteText;
+    } else {
+        delete state.characterStates[sceneIndex][character][category];
+    }
+
+    // Save project
+    const { saveProject } = await import('./export-handlers.js');
+    saveProject();
+
+    // Refresh character timeline
+    renderCharacterTabPanels();
+
+    // Close modal
+    closeContinuityEditModal();
 };
 
 // ============================================================================
