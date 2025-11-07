@@ -192,12 +192,16 @@ export async function generateAISynopsis(sceneIndex) {
     const scene = state.scenes[sceneIndex];
     const sceneText = scene.content || scene.text || '';
 
-    const prompt = `You are a script breakdown assistant. Analyze this scene and provide a brief synopsis (2-3 sentences) focusing on the main action and key moments for hair/makeup continuity.
+    const prompt = `You are a script breakdown assistant. Analyze this scene and provide a concise synopsis for quick scanning.
 
 Scene Heading: ${scene.heading}
 
 Scene Text:
 ${sceneText}
+
+Write a synopsis in EXACTLY 2-4 sentences. Be concise and focus on key actions and character interactions only.
+Maximum length: 250 characters total.
+Focus on visual and continuity elements relevant to hair/makeup departments.
 
 Provide only the synopsis, no additional commentary.`;
 
@@ -588,6 +592,10 @@ export async function autoTagScript() {
     // Refresh scene list to show tagged indicators
     const { renderSceneList } = await import('./scene-list.js');
     renderSceneList();
+
+    // Apply all highlights to script
+    const { renderAllHighlights } = await import('./tag-system.js');
+    renderAllHighlights();
 
     // Show completion message
     const message = batchCancelled

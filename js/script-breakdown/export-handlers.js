@@ -106,6 +106,9 @@ export async function processScript() {
     // Extract characters from scenes
     extractCharactersFromScenes();
 
+    // Create character tabs and profiles for extracted characters
+    initializeCharacterTabs();
+
     // Load and render
     loadScript(text);
 
@@ -146,6 +149,32 @@ function extractCharactersFromScenes() {
     });
 
     console.log(`Extracted ${state.characters.size} characters:`, Array.from(state.characters));
+}
+
+/**
+ * Initialize character tabs and profiles from extracted characters
+ * Creates cast profiles and populates characterTabs for the UI
+ */
+function initializeCharacterTabs() {
+    // Convert Set to Array for character tabs
+    const characterArray = Array.from(state.characters);
+
+    // Create cast profiles for each character if they don't exist
+    characterArray.forEach(character => {
+        if (!state.castProfiles[character]) {
+            state.castProfiles[character] = {
+                name: character,
+                baseDescription: '',
+                scenes: [],
+                lookStates: []
+            };
+        }
+    });
+
+    // Populate character tabs with all characters
+    state.characterTabs = characterArray;
+
+    console.log(`Initialized ${state.characterTabs.length} character tabs`);
 }
 
 /**
