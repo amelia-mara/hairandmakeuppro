@@ -266,9 +266,45 @@ export function saveTag() {
  * @param {Object} tag - Tag object
  */
 export function applyHighlight(tag) {
-    // Find the element and highlight the text
-    const element = document.getElementById(tag.elementId);
-    if (!element) return;
+    let element = null;
+
+    // MANUAL TAGS: Have elementId pointing to specific DOM element
+    if (tag.elementId) {
+        element = document.getElementById(tag.elementId);
+        if (!element) {
+            console.warn(`Element ${tag.elementId} not found for manual tag`);
+            return;
+        }
+    }
+    // AI TAGS: Don't have elementId, need to search for text in the scene
+    else {
+        // Find the scene container
+        const sceneContainer = document.querySelector(`.script-scene[data-scene-index="${tag.sceneIndex}"]`);
+        if (!sceneContainer) {
+            console.warn(`Scene ${tag.sceneIndex} container not found for AI tag`);
+            return;
+        }
+
+        // Search all text elements in the scene for the selected text
+        const textElements = sceneContainer.querySelectorAll('.script-action, .script-dialogue, .script-character, .script-parenthetical');
+
+        for (const el of textElements) {
+            if (el.textContent.includes(tag.selectedText)) {
+                element = el;
+                // Cache the elementId for future use
+                if (!el.id) {
+                    el.id = `element-${generateId()}`;
+                }
+                tag.elementId = el.id;
+                break;
+            }
+        }
+
+        if (!element) {
+            console.warn(`Could not find text "${tag.selectedText.substring(0, 30)}..." in scene ${tag.sceneIndex}`);
+            return;
+        }
+    }
 
     // Find and wrap the selected text
     const text = element.innerHTML;
@@ -324,25 +360,41 @@ function addTagToBreakdown(tag) {
  * Called after script rendering to apply all saved tags
  */
 export function renderAllHighlights() {
-    console.log('Rendering all highlights...');
-    console.log('Script tags:', state.scriptTags);
+    console.log('🎨 Rendering all highlights...');
+    console.log('📋 Script tags state:', state.scriptTags);
+    console.log('📊 Total scenes with tags:', Object.keys(state.scriptTags).length);
 
     // Wait for script to be fully rendered
     setTimeout(() => {
         let totalHighlighted = 0;
+        let totalAttempted = 0;
 
         Object.keys(state.scriptTags).forEach(sceneIndex => {
             const sceneTags = state.scriptTags[sceneIndex];
-            console.log(`Scene ${sceneIndex} has ${sceneTags.length} tags`);
+            console.log(`\n📄 Scene ${sceneIndex} has ${sceneTags.length} tags to apply`);
 
             sceneTags.forEach((tag, index) => {
-                console.log(`Applying highlight ${index + 1}:`, tag.selectedText);
-                applyHighlight(tag);
-                totalHighlighted++;
+                totalAttempted++;
+                console.log(`  Highlight ${index + 1}/${sceneTags.length}:`);
+                console.log(`    - Text: "${tag.selectedText.substring(0, 40)}..."`);
+                console.log(`    - Category: ${tag.category}`);
+                console.log(`    - Has elementId: ${!!tag.elementId}`);
+                console.log(`    - Scene index: ${tag.sceneIndex}`);
+
+                try {
+                    applyHighlight(tag);
+                    totalHighlighted++;
+                    console.log(`    ✓ Highlight applied successfully`);
+                } catch (error) {
+                    console.error(`    ✗ Error applying highlight:`, error);
+                }
             });
         });
 
-        console.log(`✓ Applied ${totalHighlighted} highlights`);
+        console.log(`\n✅ Highlight Rendering Complete:`);
+        console.log(`   - Total tags attempted: ${totalAttempted}`);
+        console.log(`   - Successfully highlighted: ${totalHighlighted}`);
+        console.log(`   - Failed: ${totalAttempted - totalHighlighted}`);
     }, 800);
 }
 
