@@ -70,7 +70,7 @@
         .back-link:hover { color: var(--accent-gold); }
         .page-title { font-size: 1.125em; font-weight: 600; }
         
-        .toolbar { display: flex; gap: 8px; }
+        .toolbar { display: flex; gap: 8px; align-items: center; }
         .toolbar-btn {
             padding: 8px 16px;
             background: transparent;
@@ -83,6 +83,32 @@
             transition: all 0.3s ease;
         }
         .toolbar-btn:hover { border-color: var(--accent-gold); color: var(--accent-gold); background: rgba(201, 169, 97, 0.05); }
+
+        .auto-save-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: rgba(34, 197, 94, 0.15);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            border-radius: 6px;
+            color: #4ade80;
+            font-size: 0.75em;
+            font-weight: 500;
+            animation: fadeInOut 1.5s ease-in-out;
+        }
+
+        .auto-save-indicator .save-icon {
+            font-size: 1.1em;
+            font-weight: 700;
+        }
+
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translateY(-4px); }
+            20% { opacity: 1; transform: translateY(0); }
+            80% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-4px); }
+        }
         
         .main-content { display: flex; flex: 1; overflow: hidden; }
         
@@ -581,6 +607,375 @@
             color: var(--text-muted);
         }
 
+        /* Story Day Cards - Visual Timeline */
+        .timeline-header {
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .timeline-stats {
+            display: flex;
+            gap: 32px;
+            margin-top: 16px;
+        }
+
+        .stat {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: 700;
+            color: var(--accent-gold);
+        }
+
+        .stat-label {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .timeline-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 12px 0;
+        }
+
+        .nav-btn {
+            padding: 8px 16px;
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            color: var(--text-muted);
+            font-size: 0.8125em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .nav-btn:hover {
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+            background: rgba(212, 175, 122, 0.05);
+        }
+
+        .view-mode-switcher {
+            display: flex;
+            gap: 4px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 4px;
+            border-radius: 8px;
+        }
+
+        .mode-btn {
+            padding: 6px 16px;
+            background: transparent;
+            border: none;
+            border-radius: 6px;
+            color: var(--text-muted);
+            font-size: 0.8125em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .mode-btn.active {
+            background: var(--accent-gold);
+            color: var(--bg-dark);
+        }
+
+        .story-day-timeline {
+            display: flex;
+            gap: 16px;
+            overflow-x: auto;
+            padding: 24px 0;
+            scroll-snap-type: x mandatory;
+        }
+
+        .story-day-card {
+            min-width: 320px;
+            max-width: 320px;
+            background: linear-gradient(135deg,
+                rgba(212, 175, 122, 0.08) 0%,
+                rgba(28, 25, 22, 0.6) 50%,
+                rgba(212, 175, 122, 0.05) 100%
+            );
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 16px;
+            scroll-snap-align: start;
+            transition: all 0.3s ease;
+        }
+
+        .story-day-card:hover {
+            border-color: var(--accent-gold);
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(212, 175, 122, 0.2);
+        }
+
+        .day-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .day-label {
+            font-size: 0.9375em;
+            font-weight: 700;
+            color: var(--accent-gold);
+        }
+
+        .scene-count {
+            font-size: 0.75em;
+            color: var(--text-muted);
+        }
+
+        .reference-image-zone {
+            width: 100%;
+            height: 200px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px dashed var(--glass-border);
+            border-radius: 8px;
+            margin-bottom: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+
+        .reference-image-zone:hover {
+            border-color: var(--accent-gold);
+            background: rgba(212, 175, 122, 0.08);
+        }
+
+        .image-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-muted);
+        }
+
+        .upload-icon {
+            font-size: 2em;
+            opacity: 0.5;
+        }
+
+        .upload-text {
+            font-size: 0.8125em;
+            font-weight: 500;
+        }
+
+        .day-reference-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .image-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .reference-image-zone:hover .image-overlay {
+            opacity: 1;
+        }
+
+        .change-image-btn {
+            padding: 8px 16px;
+            background: var(--accent-gold);
+            color: var(--bg-dark);
+            border: none;
+            border-radius: 6px;
+            font-size: 0.875em;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .look-summary {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .look-field {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            padding: 6px 8px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            font-size: 0.8125em;
+        }
+
+        .look-field.has-event {
+            background: rgba(212, 175, 122, 0.15);
+            border-left: 3px solid var(--accent-gold);
+        }
+
+        .look-field.empty {
+            opacity: 0.5;
+        }
+
+        .field-icon {
+            font-size: 1.1em;
+            line-height: 1;
+        }
+
+        .field-text {
+            flex: 1;
+            color: var(--text-light);
+            line-height: 1.4;
+        }
+
+        .event-indicator {
+            margin-left: 4px;
+            color: var(--accent-gold);
+            font-size: 0.9em;
+        }
+
+        .active-events-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            background: rgba(212, 175, 122, 0.2);
+            border: 1px solid rgba(212, 175, 122, 0.4);
+            border-radius: 6px;
+            font-size: 0.75em;
+            color: var(--accent-gold);
+            margin-bottom: 12px;
+        }
+
+        .event-icon {
+            font-size: 1.1em;
+        }
+
+        .expand-day-btn {
+            width: 100%;
+            padding: 8px;
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-muted);
+            font-size: 0.8125em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .expand-day-btn:hover {
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+            background: rgba(212, 175, 122, 0.05);
+        }
+
+        .expanded-scene-list {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--glass-border);
+        }
+
+        .scene-item {
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .scene-item:hover {
+            background: rgba(212, 175, 122, 0.15);
+            transform: translateX(4px);
+        }
+
+        .scene-number {
+            font-size: 0.75em;
+            font-weight: 700;
+            color: var(--accent-gold);
+            margin-bottom: 2px;
+        }
+
+        .scene-heading {
+            font-size: 0.8125em;
+            font-weight: 600;
+            color: var(--text-light);
+            margin-bottom: 4px;
+        }
+
+        .scene-look-detail {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        .no-events-badge {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            font-style: italic;
+            margin-bottom: 12px;
+        }
+
+        .event-badge {
+            padding: 6px 10px;
+            background: rgba(212, 175, 122, 0.15);
+            border: 1px solid rgba(212, 175, 122, 0.3);
+            border-radius: 6px;
+            font-size: 0.75em;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .event-badge.fresh {
+            border-left: 3px solid #ff6b6b;
+        }
+
+        .event-badge.healing {
+            border-left: 3px solid #e8a87c;
+        }
+
+        .event-badge.healed {
+            border-left: 3px solid #52c186;
+        }
+
+        .event-badge-icon {
+            font-size: 1.1em;
+        }
+
+        .event-badge-text {
+            flex: 1;
+            color: var(--text-light);
+        }
+
+        .event-badge-stage {
+            font-size: 0.85em;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
         .script-toolbar {
             display: flex;
             align-items: center;
@@ -671,7 +1066,37 @@
             padding: 1px 2px;
         }
 
-        .tag-highlight[data-category="cast"] { background: rgba(251, 191, 36, 0.2); }
+        /* Cast Member Highlighting - Enhanced */
+        .tag-highlight[data-category="cast"] {
+            background: rgba(251, 191, 36, 0.25);
+            border-bottom: 2px solid #fbbf24;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            color: #fbbf24;
+            padding: 2px 3px;
+        }
+
+        .tag-highlight[data-category="cast"]:hover {
+            background: rgba(251, 191, 36, 0.35);
+            border-bottom-width: 3px;
+        }
+
+        /* Special styling for character introductions */
+        .tag-highlight[data-category="cast"][data-introduction="true"] {
+            background: rgba(251, 191, 36, 0.4);
+            border: 2px solid #fbbf24;
+            padding: 3px 6px;
+            border-radius: 3px;
+            box-shadow: 0 0 8px rgba(251, 191, 36, 0.3);
+        }
+
+        .tag-highlight[data-category="cast"]::before {
+            content: '👤 ';
+            font-size: 0.8em;
+            margin-right: 2px;
+        }
+
+        /* Other categories */
         .tag-highlight[data-category="hair"] { background: rgba(168, 85, 247, 0.2); }
         .tag-highlight[data-category="makeup"] { background: rgba(236, 72, 153, 0.2); }
         .tag-highlight[data-category="sfx"] { background: rgba(239, 68, 68, 0.2); }
@@ -829,6 +1254,90 @@
             gap: 8px;
             padding: 16px 20px;
             border-top: 1px solid var(--glass-border);
+        }
+
+        /* Tag Tooltip */
+        .tag-tooltip {
+            position: fixed;
+            max-width: 400px;
+            background: linear-gradient(135deg,
+                rgba(212, 175, 122, 0.15) 0%,
+                rgba(18, 16, 14, 0.98) 50%,
+                rgba(212, 175, 122, 0.1) 100%
+            );
+            backdrop-filter: blur(24px) saturate(180%);
+            border: 1px solid var(--accent-gold);
+            border-radius: 8px;
+            padding: 16px;
+            z-index: 3000;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .tooltip-header {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+            align-items: center;
+        }
+
+        .tooltip-category {
+            padding: 3px 8px;
+            background: rgba(212, 175, 122, 0.3);
+            border-radius: 4px;
+            font-size: 0.75em;
+            font-weight: 700;
+            color: var(--accent-gold);
+        }
+
+        .tooltip-character {
+            font-size: 0.8125em;
+            color: var(--text-muted);
+        }
+
+        .tooltip-text {
+            font-size: 0.9375em;
+            font-weight: 600;
+            color: var(--text-light);
+            margin-bottom: 8px;
+        }
+
+        .tooltip-context {
+            font-size: 0.8125em;
+            color: var(--text-muted);
+            line-height: 1.5;
+            margin-bottom: 12px;
+            font-family: 'Courier Prime', monospace;
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+        }
+
+        .tooltip-actions {
+            display: flex;
+            gap: 6px;
+            justify-content: flex-end;
+        }
+
+        .tooltip-actions button {
+            padding: 6px 12px;
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            border-radius: 4px;
+            color: var(--text-muted);
+            font-size: 0.75em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .tooltip-actions button:hover {
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
         }
 
         /* Margin Indicators */
@@ -1276,6 +1785,164 @@
         
         @keyframes spin {
             to { transform: rotate(360deg); }
+        }
+
+        /* Scene Navigation Bar */
+        .breakdown-scene-nav {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg,
+                rgba(212, 175, 122, 0.08) 0%,
+                rgba(28, 25, 22, 0.6) 50%,
+                rgba(212, 175, 122, 0.05) 100%
+            );
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+        }
+
+        .scene-nav-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            color: var(--text-light);
+            font-size: 0.8125em;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .scene-nav-btn:hover:not(.disabled) {
+            background: rgba(212, 175, 122, 0.15);
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+            transform: translateX(0);
+        }
+
+        .scene-nav-btn:hover:not(.disabled):first-child {
+            transform: translateX(-2px);
+        }
+
+        .scene-nav-btn:hover:not(.disabled):last-child {
+            transform: translateX(2px);
+        }
+
+        .scene-nav-btn.disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .nav-arrow {
+            font-size: 1.1em;
+            font-weight: 700;
+        }
+
+        .nav-text {
+            font-size: 0.875em;
+        }
+
+        .scene-nav-current {
+            flex: 1;
+            text-align: center;
+            padding: 8px 16px;
+        }
+
+        .nav-scene-number {
+            font-size: 1em;
+            font-weight: 700;
+            color: var(--accent-gold);
+            margin-bottom: 4px;
+        }
+
+        .nav-scene-heading {
+            font-size: 0.8125em;
+            color: var(--text-light);
+            margin-bottom: 4px;
+            line-height: 1.3;
+        }
+
+        .nav-scene-meta {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        .nav-scene-meta span {
+            margin: 0 4px;
+        }
+
+        /* Compact AI Controls */
+        .ai-controls-compact {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 20px;
+            padding: 12px;
+            background: rgba(28, 25, 22, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+        }
+
+        .ai-btn-compact {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.12), rgba(118, 75, 162, 0.12));
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            border-radius: 6px;
+            color: var(--accent-blue);
+            font-size: 0.75em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .ai-btn-compact:hover {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.25), rgba(118, 75, 162, 0.25));
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .ai-btn-compact:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .ai-btn-compact .btn-icon {
+            font-size: 1em;
+        }
+
+        .ai-btn-compact .btn-text {
+            font-size: 0.95em;
+        }
+
+        .ai-btn-compact .spinner {
+            width: 12px;
+            height: 12px;
+            border: 2px solid var(--accent-blue);
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        .ai-controls-spacer {
+            flex: 1;
+        }
+
+        .ai-status {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            font-style: italic;
         }
 
         /* Scene Detail Fields (for cast profile modal) */
@@ -2941,6 +3608,10 @@
                 <button class="toolbar-btn" onclick="openSettingsModal()">⚙️ AI Settings</button>
                 <button class="toolbar-btn" onclick="exportData()">Export Data</button>
                 <button class="toolbar-btn" onclick="openImportModal()">Import Script</button>
+                <div id="autoSaveIndicator" class="auto-save-indicator" style="display: none;">
+                    <span class="save-icon">✓</span>
+                    <span class="save-text">Saved</span>
+                </div>
             </div>
         </div>
         
@@ -3462,24 +4133,152 @@ This is it. Today's the day."></textarea>
             const exactMatch = existingCast.find(c => normalizeCastName(c) === normalized);
             if (exactMatch) return exactMatch;
 
-            // Check if name is a first name of an existing cast member
-            // e.g., "Sarah" matches "SARAH CONNOR"
-            const firstNameMatch = existingCast.find(c => {
-                const parts = normalizeCastName(c).split(/\s+/);
-                return parts[0] === normalized || parts.includes(normalized);
-            });
-            if (firstNameMatch) return firstNameMatch;
+            // Split into parts for partial matching
+            const nameParts = normalized.split(/\s+/);
+            const firstName = nameParts[0];
 
-            // Check if existing cast member is first name of this name
-            // e.g., "SARAH" exists, new name is "SARAH CONNOR"
-            const reverseMatch = existingCast.find(c => {
-                const existingNormalized = normalizeCastName(c);
-                const parts = normalized.split(/\s+/);
-                return parts[0] === existingNormalized || parts.includes(existingNormalized);
-            });
-            if (reverseMatch) return reverseMatch;
+            for (let existing of existingCast) {
+                const existingParts = normalizeCastName(existing).split(/\s+/);
+                const existingFirstName = existingParts[0];
+
+                // If first names match
+                if (firstName === existingFirstName) {
+                    // Prefer the longer, more complete name
+                    if (nameParts.length > existingParts.length) {
+                        // New name is more complete, suggest using it to replace existing
+                        return existing; // Return existing to merge into
+                    } else {
+                        // Existing name is more complete or equal
+                        return existing;
+                    }
+                }
+
+                // Check if new name contains all parts of existing name
+                if (existingParts.every(part => nameParts.includes(part))) {
+                    return existing;
+                }
+
+                // Check if existing name contains all parts of new name
+                if (nameParts.every(part => existingParts.includes(part))) {
+                    return existing;
+                }
+            }
 
             return null;
+        }
+
+        function mergeCharacterNames(oldName, newName) {
+            // Use the longer name as it's likely more complete
+            const oldNormalized = normalizeCastName(oldName);
+            const newNormalized = normalizeCastName(newName);
+
+            if (newNormalized.length > oldNormalized.length) {
+                return newName;
+            }
+            return oldName;
+        }
+
+        function renameCharacterEverywhere(oldName, newName) {
+            console.log(`Renaming "${oldName}" to "${newName}" everywhere`);
+
+            // Update all scene breakdowns
+            Object.keys(sceneBreakdowns).forEach(sceneIndex => {
+                const breakdown = sceneBreakdowns[sceneIndex];
+                if (breakdown.cast) {
+                    const index = breakdown.cast.indexOf(oldName);
+                    if (index !== -1) {
+                        breakdown.cast[index] = newName;
+                    }
+                }
+            });
+
+            // Update character states
+            Object.keys(characterStates).forEach(sceneIndex => {
+                if (characterStates[sceneIndex][oldName]) {
+                    characterStates[sceneIndex][newName] = characterStates[sceneIndex][oldName];
+                    delete characterStates[sceneIndex][oldName];
+                }
+            });
+
+            // Update continuity events
+            if (continuityEvents[oldName]) {
+                continuityEvents[newName] = continuityEvents[oldName];
+                delete continuityEvents[oldName];
+            }
+
+            // Update cast profiles
+            if (castProfiles[oldName]) {
+                castProfiles[newName] = castProfiles[oldName];
+                castProfiles[newName].name = newName;
+                delete castProfiles[oldName];
+            }
+
+            // Update script tags
+            Object.keys(scriptTags).forEach(sceneIndex => {
+                scriptTags[sceneIndex].forEach(tag => {
+                    if (tag.character === oldName) {
+                        tag.character = newName;
+                    }
+                });
+            });
+
+            // Update scene.characters data
+            scenes.forEach(scene => {
+                if (scene.characters && scene.characters[oldName]) {
+                    scene.characters[newName] = scene.characters[oldName];
+                    delete scene.characters[oldName];
+                }
+            });
+        }
+
+        function cleanupDuplicateCharacters() {
+            console.log('Checking for duplicate characters...');
+
+            // Get all unique cast members across all scenes
+            const allCast = new Set();
+            Object.values(sceneBreakdowns).forEach(breakdown => {
+                if (breakdown.cast) {
+                    breakdown.cast.forEach(member => allCast.add(member));
+                }
+            });
+
+            const castArray = Array.from(allCast);
+            const merges = [];
+
+            // Find duplicates
+            for (let i = 0; i < castArray.length; i++) {
+                for (let j = i + 1; j < castArray.length; j++) {
+                    const name1 = castArray[i];
+                    const name2 = castArray[j];
+
+                    const normalized1 = normalizeCastName(name1);
+                    const normalized2 = normalizeCastName(name2);
+
+                    // Check if they're the same person
+                    const parts1 = normalized1.split(/\s+/);
+                    const parts2 = normalized2.split(/\s+/);
+
+                    // If first names match, they're likely the same person
+                    if (parts1[0] === parts2[0]) {
+                        // Use the longer name
+                        const keepName = parts1.length >= parts2.length ? name1 : name2;
+                        const removeName = keepName === name1 ? name2 : name1;
+
+                        merges.push({ keep: keepName, remove: removeName });
+                    }
+                }
+            }
+
+            // Apply merges
+            merges.forEach(({ keep, remove }) => {
+                console.log(`Merging "${remove}" into "${keep}"`);
+                renameCharacterEverywhere(remove, keep);
+            });
+
+            if (merges.length > 0) {
+                console.log(`✓ Merged ${merges.length} duplicate character(s)`);
+                saveProject();
+            }
         }
 
         // Initialize
@@ -3513,6 +4312,9 @@ This is it. Today's the day."></textarea>
                 if (currentProject.sceneTimeline) sceneTimeline = currentProject.sceneTimeline;
                 if (currentProject.scriptTags) scriptTags = currentProject.scriptTags;
 
+                // Clean up duplicate characters on load
+                cleanupDuplicateCharacters();
+
                 // Initialize character tabs with loaded data
                 initializeCharacterTabs();
 
@@ -3521,8 +4323,26 @@ This is it. Today's the day."></textarea>
             }
             
             document.getElementById('sceneSearch').addEventListener('input', handleSceneSearch);
+
+            // Keyboard shortcuts for scene navigation
+            document.addEventListener('keydown', (e) => {
+                // Alt+Left Arrow: Previous scene
+                if (e.altKey && e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    if (currentScene !== null && currentScene > 0) {
+                        navigateToScene(currentScene - 1);
+                    }
+                }
+                // Alt+Right Arrow: Next scene
+                if (e.altKey && e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    if (currentScene !== null && currentScene < scenes.length - 1) {
+                        navigateToScene(currentScene + 1);
+                    }
+                }
+            });
         }
-        
+
         // Settings Modal
         function openSettingsModal() {
             document.getElementById('aiProvider').value = aiProvider;
@@ -3813,7 +4633,14 @@ This is it. Today's the day."></textarea>
             if (tabName === 'script') {
                 document.getElementById('scriptTabPanel')?.classList.add('active');
             } else {
-                document.getElementById(`characterTab-${tabName.replace('character-', '')}`)?.classList.add('active');
+                const character = tabName.replace('character-', '');
+                document.getElementById(`characterTab-${character}`)?.classList.add('active');
+
+                // Setup image upload handlers and load existing images for character timeline
+                setTimeout(() => {
+                    setupDayImageUpload();
+                    loadDayImages(character);
+                }, 100);
             }
 
             // Update right panel context
@@ -4002,154 +4829,348 @@ This is it. Today's the day."></textarea>
             }
         }
 
-        function renderCharacterTimeline(character) {
-            const profile = castProfiles[character] || {};
+        // ===== STORY DAY TIMELINE HELPER FUNCTIONS =====
 
-            // Get all scenes this character appears in
-            const characterScenes = [];
+        // Group scenes by story day for a character
+        function getStoryDaysForCharacter(character) {
+            const storyDays = new Map();
+
             scenes.forEach((scene, index) => {
                 const breakdown = sceneBreakdowns[index] || {};
-                if (breakdown.cast && breakdown.cast.includes(character)) {
-                    characterScenes.push({ scene, index });
+
+                // Only include scenes where character appears
+                if (!breakdown.cast || !breakdown.cast.includes(character)) return;
+
+                const dayLabel = scene.storyDay || `Scene ${scene.number}`;
+
+                if (!storyDays.has(dayLabel)) {
+                    storyDays.set(dayLabel, {
+                        label: dayLabel,
+                        scenes: [],
+                        timeOfDay: scene.timeOfDay || 'Unknown'
+                    });
+                }
+
+                storyDays.get(dayLabel).scenes.push({
+                    scene: scene,
+                    index: index,
+                    breakdown: breakdown
+                });
+            });
+
+            return Array.from(storyDays.values());
+        }
+
+        // Aggregate look data for a story day
+        function aggregateStoryDay(character, storyDayData) {
+            const { scenes: dayScenes } = storyDayData;
+
+            // Find the most detailed entry for each department field
+            const aggregated = {
+                hair: '',
+                makeup: '',
+                sfx: '',
+                wardrobe: '',
+                notes: ''
+            };
+
+            dayScenes.forEach(({ index }) => {
+                const state = characterStates[index]?.[character] || {};
+
+                // Use the longest/most detailed description
+                if (state.hair && state.hair.length > aggregated.hair.length) {
+                    aggregated.hair = state.hair;
+                }
+                if (state.makeup && state.makeup.length > aggregated.makeup.length) {
+                    aggregated.makeup = state.makeup;
+                }
+                if (state.sfx && state.sfx.length > aggregated.sfx.length) {
+                    aggregated.sfx = state.sfx;
+                }
+                if (state.wardrobe && state.wardrobe.length > aggregated.wardrobe.length) {
+                    aggregated.wardrobe = state.wardrobe;
+                }
+                if (state.notes && state.notes.length > aggregated.notes.length) {
+                    aggregated.notes = state.notes;
                 }
             });
 
-            // Group scenes by Story Day
-            const scenesByDay = {};
-            characterScenes.forEach(({ scene, index }) => {
-                const day = scene.storyDay || 'Unassigned';
-                if (!scenesByDay[day]) scenesByDay[day] = [];
-                scenesByDay[day].push({ scene, index });
+            return aggregated;
+        }
+
+        // Get active events for a specific story day
+        function getActiveEventsForDay(character, dayLabel) {
+            const events = continuityEvents[character] || [];
+
+            // Find scenes in this story day
+            const dayScenes = scenes.filter(s => (s.storyDay || `Scene ${s.number}`) === dayLabel);
+            const daySceneIndices = dayScenes.map(s => scenes.indexOf(s));
+
+            // Filter events that are active in ANY scene of this day
+            return events.filter(event => {
+                return daySceneIndices.some(sceneIdx => {
+                    return sceneIdx >= event.startScene &&
+                           (event.endScene === null || sceneIdx <= event.endScene);
+                });
             });
+        }
+
+        // Calculate event progress for a story day
+        function calculateEventProgress(event, dayLabel) {
+            const dayScenes = scenes.filter(s => (s.storyDay || `Scene ${s.number}`) === dayLabel);
+            if (dayScenes.length === 0) return 0;
+
+            const firstSceneIndex = scenes.indexOf(dayScenes[0]);
+            const totalScenes = event.endScene !== null
+                ? (event.endScene - event.startScene + 1)
+                : (scenes.length - event.startScene);
+            const currentScene = firstSceneIndex - event.startScene;
+
+            return Math.round((currentScene / totalScenes) * 100);
+        }
+
+        // Get event stage label
+        function getEventStageLabel(progress) {
+            if (progress < 33) return { label: 'Fresh', class: 'fresh' };
+            if (progress < 75) return { label: 'Healing', class: 'healing' };
+            return { label: 'Healed', class: 'healed' };
+        }
+
+        // Setup image upload for story day cards
+        function setupDayImageUpload() {
+            document.querySelectorAll('.reference-image-zone').forEach(zone => {
+                zone.onclick = function() {
+                    const character = activeCenterTab.replace('character-', '');
+                    const dayLabel = this.closest('.story-day-card').dataset.dayLabel;
+
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = 'image/*';
+                    input.onchange = function(e) {
+                        const file = e.target.files[0];
+                        if (file) {
+                            // Check file size (max 2MB)
+                            if (file.size > 2 * 1024 * 1024) {
+                                alert('Image too large. Please use an image under 2MB.');
+                                return;
+                            }
+
+                            const reader = new FileReader();
+                            reader.onload = function(e) {
+                                const base64 = e.target.result;
+                                saveDayImage(character, dayLabel, base64);
+                                updateImageDisplay(zone, base64);
+                            };
+                            reader.readAsDataURL(file);
+                        }
+                    };
+                    input.click();
+                };
+            });
+        }
+
+        // Save image to character profile
+        function saveDayImage(character, dayLabel, base64) {
+            if (!castProfiles[character]) {
+                castProfiles[character] = { name: character };
+            }
+            if (!castProfiles[character].storyDayImages) {
+                castProfiles[character].storyDayImages = {};
+            }
+
+            castProfiles[character].storyDayImages[dayLabel] = base64;
+            saveProject();
+        }
+
+        // Update image display in card
+        function updateImageDisplay(zone, base64) {
+            zone.innerHTML = `
+                <img src="${base64}" class="day-reference-image" />
+                <div class="image-overlay">
+                    <button class="change-image-btn">Change Photo</button>
+                </div>
+            `;
+        }
+
+        // Load existing images on render
+        function loadDayImages(character) {
+            const profile = castProfiles[character];
+            if (!profile || !profile.storyDayImages) return;
+
+            Object.keys(profile.storyDayImages).forEach(dayLabel => {
+                const zone = document.querySelector(`[data-day-label="${dayLabel}"] .reference-image-zone`);
+                if (zone) {
+                    updateImageDisplay(zone, profile.storyDayImages[dayLabel]);
+                }
+            });
+        }
+
+        // Toggle day card expansion
+        function toggleDayExpansion(btn) {
+            const card = btn.closest('.story-day-card');
+            const expandedList = card.querySelector('.expanded-scene-list');
+
+            if (expandedList.style.display === 'none' || !expandedList.style.display) {
+                expandedList.style.display = 'block';
+                btn.textContent = 'Hide Scenes ▲';
+            } else {
+                expandedList.style.display = 'none';
+                btn.textContent = 'View Scenes ▼';
+            }
+        }
+
+        // Navigate to previous day
+        function scrollToPreviousDay() {
+            const timeline = document.querySelector('.story-day-timeline');
+            if (!timeline) return;
+            const cardWidth = 336; // 320px card + 16px gap
+            timeline.scrollBy({ left: -cardWidth, behavior: 'smooth' });
+        }
+
+        // Navigate to next day
+        function scrollToNextDay() {
+            const timeline = document.querySelector('.story-day-timeline');
+            if (!timeline) return;
+            const cardWidth = 336;
+            timeline.scrollBy({ left: cardWidth, behavior: 'smooth' });
+        }
+
+        // ===== END STORY DAY TIMELINE HELPER FUNCTIONS =====
+
+        function renderCharacterTimeline(character) {
+            const profile = castProfiles[character] || {};
+            const storyDays = getStoryDaysForCharacter(character);
+
+            // Calculate total scenes
+            const totalScenes = storyDays.reduce((sum, day) => sum + day.scenes.length, 0);
 
             // Get continuity events for this character
             const events = continuityEvents[character] || [];
 
-            // Build HTML
+            // Build HTML - Story Day Card Timeline
             let html = `
                 <div class="character-timeline-view">
-                    <div class="character-header">
-                        <div class="character-name-title">${character}</div>
-                        <div class="character-base-info">
-                            ${profile.baseDescription || '<em style="opacity: 0.6;">No base description yet</em>'}
+                    <!-- Header -->
+                    <div class="timeline-header">
+                        <div class="character-info">
+                            <div class="character-name-title">${character}</div>
+                            <div class="character-base-info">${profile.baseDescription || '<em style="opacity: 0.6;">No description yet</em>'}</div>
                         </div>
-                        <div class="character-stats">
-                            <div class="character-stat">
-                                <span>📋</span>
-                                <span class="character-stat-value">${characterScenes.length}</span>
-                                <span>scenes</span>
+                        <div class="timeline-stats">
+                            <div class="stat">
+                                <span class="stat-value">${storyDays.length}</span>
+                                <span class="stat-label">Story Days</span>
                             </div>
-                            <div class="character-stat">
-                                <span>⚡</span>
-                                <span class="character-stat-value">${events.length}</span>
-                                <span>continuity events</span>
+                            <div class="stat">
+                                <span class="stat-value">${totalScenes}</span>
+                                <span class="stat-label">Scenes</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-value">${events.length}</span>
+                                <span class="stat-label">Events</span>
                             </div>
                         </div>
                     </div>
+
+                    <!-- Timeline Controls -->
+                    <div class="timeline-controls">
+                        <button class="nav-btn" onclick="scrollToPreviousDay()">← Previous Day</button>
+                        <div class="view-mode-switcher">
+                            <button class="mode-btn active">Timeline</button>
+                        </div>
+                        <button class="nav-btn" onclick="scrollToNextDay()">Next Day →</button>
+                    </div>
+
+                    <!-- Story Day Cards -->
+                    <div class="story-day-timeline">
             `;
 
-            // Continuity Events Section
-            if (events.length > 0) {
-                html += `
-                    <div class="timeline-continuity-events">
-                        <div class="timeline-continuity-title">
-                            <span>⚡</span>
-                            <span>Continuity Events</span>
-                        </div>
-                `;
-
-                events.forEach(event => {
-                    const eventType = eventTypes.find(t => t.id === event.type) || eventTypes[eventTypes.length - 1];
-                    const startScene = scenes[event.startScene]?.number || '?';
-                    const endScene = event.endScene !== null ? (scenes[event.endScene]?.number || '?') : 'Ongoing';
-
-                    html += `
-                        <div class="timeline-event-card">
-                            <div class="timeline-event-header">
-                                <span class="timeline-event-icon">${eventType.icon}</span>
-                                <span class="timeline-event-description">${event.description}</span>
-                            </div>
-                            <div class="timeline-event-range">Scenes ${startScene} → ${endScene}</div>
-                        </div>
-                    `;
-                });
-
-                html += `</div>`;
-            }
-
-            // Timeline by Story Day
-            Object.keys(scenesByDay).sort().forEach(day => {
-                const dayScenesData = scenesByDay[day];
+            storyDays.forEach(dayData => {
+                const aggregated = aggregateStoryDay(character, dayData);
+                const activeEvents = getActiveEventsForDay(character, dayData.label);
+                const hasImage = profile.storyDayImages?.[dayData.label];
 
                 html += `
-                    <div class="timeline-section">
-                        <div class="timeline-section-header">
-                            <span class="timeline-section-title">${day === 'Unassigned' ? '📅 Unassigned' : '📅 ' + day}</span>
-                            <span class="timeline-section-count">${dayScenesData.length} scene${dayScenesData.length !== 1 ? 's' : ''}</span>
+                    <div class="story-day-card" data-day-label="${dayData.label}">
+                        <div class="day-card-header">
+                            <div class="day-label">${dayData.label}</div>
+                            <div class="scene-count">${dayData.scenes.length} scene${dayData.scenes.length !== 1 ? 's' : ''}</div>
                         </div>
-                        <div class="timeline-scene-list">
-                `;
 
-                dayScenesData.forEach(({ scene, index }) => {
-                    const sceneType = getSceneType(scene.heading);
-
-                    // Check for active continuity events
-                    const activeEvents = events.filter(event => {
-                        return event.startScene <= index &&
-                               (event.endScene === null || event.endScene >= index);
-                    });
-
-                    // Count tags for this scene + character
-                    const sceneTags = scriptTags[index] || [];
-                    const characterTags = sceneTags.filter(t => t.character === character);
-
-                    // Get breakdown data for this scene + character
-                    const breakdown = sceneBreakdowns[index] || {};
-
-                    // Aggregate tag summaries by category
-                    const tagSummary = {};
-                    characterTags.forEach(tag => {
-                        if (!tagSummary[tag.category]) tagSummary[tag.category] = [];
-                        tagSummary[tag.category].push(tag.selectedText);
-                    });
-
-                    // Build quick preview of what's in this scene
-                    const previewParts = [];
-                    if (tagSummary.hair?.length) previewParts.push(`💇 ${tagSummary.hair.length} hair`);
-                    if (tagSummary.makeup?.length) previewParts.push(`💄 ${tagSummary.makeup.length} makeup`);
-                    if (tagSummary.sfx?.length) previewParts.push(`🩸 ${tagSummary.sfx.length} SFX`);
-                    if (tagSummary.wardrobe?.length) previewParts.push(`👔 ${tagSummary.wardrobe.length} wardrobe`);
-
-                    html += `
-                        <div class="timeline-scene-item" onclick="jumpToSceneFromTimeline(${index})">
-                            <div class="timeline-scene-number">${scene.number}</div>
-                            <div class="timeline-scene-info">
-                                <div class="timeline-scene-heading">${scene.heading}</div>
-                                <div class="timeline-scene-meta">
-                                    <span class="scene-type-indicator ${sceneType}">${getSceneTypeLabel(sceneType)}</span>
-                                    ${scene.location ? `<span>📍 ${scene.location}</span>` : ''}
+                        <div class="reference-image-zone">
+                            ${hasImage ? `
+                                <img src="${profile.storyDayImages[dayData.label]}" class="day-reference-image" />
+                                <div class="image-overlay">
+                                    <button class="change-image-btn">Change Photo</button>
                                 </div>
-                                ${previewParts.length > 0 ? `
-                                    <div style="font-size: 0.7em; color: var(--text-muted); margin-top: 4px;">
-                                        ${previewParts.slice(0, 2).join(' • ')}
-                                    </div>
-                                ` : ''}
+                            ` : `
+                                <div class="image-placeholder">
+                                    <span class="upload-icon">📷</span>
+                                    <span class="upload-text">+ Upload Reference</span>
+                                </div>
+                            `}
+                        </div>
+
+                        <div class="look-summary">
+                            <div class="look-field ${aggregated.hair ? '' : 'empty'}">
+                                <span class="field-icon">💇</span>
+                                <span class="field-text">${aggregated.hair || '—'}</span>
                             </div>
-                            <div class="timeline-scene-badges">
-                                ${characterTags.length > 0 ? `<span class="timeline-badge">${characterTags.length} tags</span>` : ''}
-                                ${activeEvents.length > 0 ? `<span class="timeline-badge continuity">⚡ ${activeEvents.length}</span>` : ''}
+                            <div class="look-field ${aggregated.makeup ? '' : 'empty'}">
+                                <span class="field-icon">💄</span>
+                                <span class="field-text">${aggregated.makeup || '—'}</span>
+                            </div>
+                            <div class="look-field ${aggregated.sfx ? 'has-event' : 'empty'}">
+                                <span class="field-icon">🩸</span>
+                                <span class="field-text">${aggregated.sfx || '—'} ${aggregated.sfx && activeEvents.length > 0 ? '<span class="event-indicator">⚡</span>' : ''}</span>
+                            </div>
+                            <div class="look-field ${aggregated.wardrobe ? '' : 'empty'}">
+                                <span class="field-icon">👔</span>
+                                <span class="field-text">${aggregated.wardrobe || '—'}</span>
                             </div>
                         </div>
-                    `;
-                });
 
-                html += `
+                        ${activeEvents.length > 0 ? `
+                            <div class="active-events-badge">
+                                <span class="event-icon">⚡</span>
+                                <span class="event-text">${activeEvents.length} active event${activeEvents.length !== 1 ? 's' : ''}</span>
+                            </div>
+                        ` : ''}
+
+                        <button class="expand-day-btn" onclick="toggleDayExpansion(this)">
+                            View Scenes ▼
+                        </button>
+
+                        <div class="expanded-scene-list" style="display: none;">
+                            ${dayData.scenes.map(({ scene, index }) => {
+                                const state = characterStates[index]?.[character] || {};
+                                const lookDetails = [];
+                                if (state.hair) lookDetails.push(`Hair: ${state.hair}`);
+                                if (state.makeup) lookDetails.push(`Makeup: ${state.makeup}`);
+                                if (state.sfx) lookDetails.push(`SFX: ${state.sfx}`);
+                                if (state.wardrobe) lookDetails.push(`Wardrobe: ${state.wardrobe}`);
+
+                                return `
+                                    <div class="scene-item" onclick="jumpToSceneFromTimeline(${index})">
+                                        <div class="scene-number">Scene ${scene.number}</div>
+                                        <div class="scene-heading">${scene.heading}</div>
+                                        ${lookDetails.length > 0 ? `
+                                            <div class="scene-look-detail">
+                                                ${lookDetails.slice(0, 2).join(' | ')}
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                `;
+                            }).join('')}
                         </div>
                     </div>
                 `;
             });
 
-            html += `</div>`;
+            html += `
+                    </div>
+                </div>
+            `;
 
             return html;
         }
@@ -4528,13 +5549,13 @@ This is it. Today's the day."></textarea>
                 
                 const prompt = `Analyze this screenplay scene and provide:
 1. A brief 1-2 sentence synopsis of what happens
-2. ALL cast members in the scene - including characters mentioned by name, even if not in dialogue
+2. ALL cast members in the scene - USE FULL NAMES when available
 
-IMPORTANT: Look for character names in:
-- ALL CAPS dialogue headers (standard format)
-- Proper nouns in action lines (e.g., "Peter walks in", "She turns around")
-- Character descriptions with names in parentheses
-- Any person referred to by name in the scene
+IMPORTANT CHARACTER NAMING RULES:
+- If a character has a full name (e.g., "EMMA HART"), always use the FULL NAME
+- If you see "Emma" or "EMMA" and context suggests it's the same person as "EMMA HART", use "EMMA HART"
+- Use the MOST COMPLETE name form you can find in the scene
+- Look for names in: dialogue headers, action lines, character descriptions
 
 Scene heading: ${scene.heading}
 
@@ -4544,16 +5565,13 @@ ${content}
 Respond in JSON format:
 {
   "synopsis": "brief description",
-  "cast": ["CHARACTER1", "CHARACTER2", "She", "Peter"]
+  "cast": ["EMMA HART", "SARAH CHEN"]
 }
 
-Examples of names to catch:
-- "JOHN" (all caps dialogue)
-- "Peter" (proper noun in action line)
-- "She" or "He" (if used as a character name)
-- "SARAH (30s, tired)" (name with description)
-
-Include ALL people mentioned by name in the scene.
+Examples:
+- If you see "EMMA HART" anywhere in the script, always use "EMMA HART" (not just "EMMA")
+- If you see "DR. WILSON" or "Dr. Wilson", use "DR. WILSON"
+- Prefer full names over shortened versions
 
 IMPORTANT: Respond ONLY with valid JSON. Do not include any text outside the JSON structure.`;
 
@@ -4577,29 +5595,77 @@ IMPORTANT: Respond ONLY with valid JSON. Do not include any text outside the JSO
                 }
                 
                 result.cast.forEach(castMember => {
-                    // Normalize the name
                     const normalizedName = normalizeCastName(castMember);
                     if (!normalizedName) return;
 
-                    // Check if this character already exists under a different name
                     const existingCast = sceneBreakdowns[sceneIndex].cast || [];
                     const matchingMember = findMatchingCastMember(normalizedName, existingCast);
 
-                    const finalName = matchingMember || normalizedName;
+                    if (matchingMember) {
+                        // Character already exists - use existing name
+                        const finalName = matchingMember;
 
-                    if (!sceneBreakdowns[sceneIndex].cast.includes(finalName)) {
-                        sceneBreakdowns[sceneIndex].cast.push(finalName);
-                    }
+                        // Update to longer name if new name is more complete
+                        const betterName = mergeCharacterNames(matchingMember, normalizedName);
+                        if (betterName !== matchingMember) {
+                            // Rename everywhere
+                            renameCharacterEverywhere(matchingMember, betterName);
+                        }
 
-                    if (!castProfiles[finalName]) {
-                        castProfiles[finalName] = {
-                            name: finalName,
-                            baseDescription: '',
-                            scenes: []
-                        };
-                    }
-                    if (!castProfiles[finalName].scenes.includes(scene.number)) {
-                        castProfiles[finalName].scenes.push(scene.number);
+                        if (!castProfiles[finalName]) {
+                            castProfiles[finalName] = {
+                                name: finalName,
+                                baseDescription: '',
+                                scenes: []
+                            };
+                        }
+                        if (!castProfiles[finalName].scenes.includes(scene.number)) {
+                            castProfiles[finalName].scenes.push(scene.number);
+                        }
+                    } else {
+                        // New character - check ALL existing cast globally for matches
+                        const allExistingCast = new Set();
+                        Object.values(sceneBreakdowns).forEach(breakdown => {
+                            if (breakdown.cast) {
+                                breakdown.cast.forEach(c => allExistingCast.add(c));
+                            }
+                        });
+
+                        const globalMatch = findMatchingCastMember(normalizedName, Array.from(allExistingCast));
+
+                        if (globalMatch) {
+                            // Match found in other scenes - use that name
+                            const finalName = globalMatch;
+
+                            // Update to longer name if new name is more complete
+                            const betterName = mergeCharacterNames(globalMatch, normalizedName);
+                            if (betterName !== globalMatch) {
+                                renameCharacterEverywhere(globalMatch, betterName);
+                            }
+
+                            if (!sceneBreakdowns[sceneIndex].cast.includes(finalName)) {
+                                sceneBreakdowns[sceneIndex].cast.push(finalName);
+                            }
+                            if (!castProfiles[finalName].scenes.includes(scene.number)) {
+                                castProfiles[finalName].scenes.push(scene.number);
+                            }
+                        } else {
+                            // Truly new character
+                            if (!sceneBreakdowns[sceneIndex].cast.includes(normalizedName)) {
+                                sceneBreakdowns[sceneIndex].cast.push(normalizedName);
+                            }
+
+                            if (!castProfiles[normalizedName]) {
+                                castProfiles[normalizedName] = {
+                                    name: normalizedName,
+                                    baseDescription: '',
+                                    scenes: []
+                                };
+                            }
+                            if (!castProfiles[normalizedName].scenes.includes(scene.number)) {
+                                castProfiles[normalizedName].scenes.push(scene.number);
+                            }
+                        }
                     }
                 });
                 
@@ -4634,54 +5700,97 @@ IMPORTANT: Respond ONLY with valid JSON. Do not include any text outside the JSO
             try {
                 console.log('Starting AI element detection...');
 
-                const prompt = `Analyze this screenplay scene and identify production elements with their exact text from the scene:
+                const prompt = `You are a professional script breakdown assistant. Analyze this scene and identify ALL elements needed for production planning.
+
+⚠️ CRITICAL: Find CAST MEMBERS FIRST before any other elements.
 
 Scene heading: ${scene.heading}
 
 Scene content:
 ${content}
 
-For each element you find, provide:
-1. The category (hair, makeup, sfx, health, injuries, stunts, weather, wardrobe)
-2. The exact text snippet from the scene (2-5 words)
-3. The full sentence/context where it appears
-4. The character it relates to (if applicable, look for ALL CAPS names)
+IDENTIFICATION PRIORITY:
 
-Categories to look for (MAKEUP DEPARTMENT FOCUS ONLY):
-- hair: hairstyles, hair changes, wigs, beards, facial hair, messy hair, styled hair
-- makeup: foundation, lipstick, eye shadow, natural makeup, stage makeup (beauty makeup only)
-- sfx: wounds, blood, prosthetics, scars, bruising, dirt, grime (special makeup effects)
-- health: illness symptoms, pale complexion, fever, exhaustion, dark circles
-- injuries: cuts, broken bones, black eyes, swelling, bandages
-- stunts: fights, falls, impacts that would affect appearance
-- weather: rain-soaked, wind-blown, sun-burned, frozen, sweating
-- wardrobe: costume damage, torn clothes, bloodstains on clothes, dirt on costume
+🎭 PRIORITY 1 - CAST MEMBERS (MOST IMPORTANT):
+Find EVERY person mentioned in this scene by name:
+- Character names in dialogue headers (ALL CAPS format)
+- Character names in action lines (proper nouns)
+- People with descriptions in parentheses: "GWEN LAWSON (30s, tired)"
+- Any person referred to by name in the narrative
 
-IGNORE: Props, vehicles, VFX, background extras, or anything that doesn't affect character appearance.
+For cast members:
+- Use the MOST COMPLETE name form (e.g., "GWEN LAWSON" not just "GWEN")
+- If this appears to be a character introduction (first time with description), note it
+- Capture the exact name as it appears
+- Include the full sentence for context
 
-Respond in JSON format:
+💄 PRIORITY 2 - MAKEUP DEPARTMENT ELEMENTS:
+Only for character appearance/condition elements:
+
+- hair: hairstyles, hair changes, hair conditions, wigs, beards
+  Example: "disheveled hair", "tied back in bun", "beard trimmed"
+
+- makeup: beauty makeup only (foundation, lipstick, eye makeup, stage makeup)
+  Example: "natural makeup", "heavy stage makeup", "lipstick smudged"
+
+- sfx: special effects makeup (wounds, blood, prosthetics, scars, bruises, dirt, grime)
+  Example: "black eye", "bleeding wound", "covered in dirt"
+
+- health: illness symptoms, complexion changes, fatigue indicators
+  Example: "pale complexion", "dark circles under eyes", "feverish"
+
+- injuries: cuts, broken bones, swelling, bandages
+  Example: "broken arm in cast", "cut on forehead", "swollen eye"
+
+- stunts: fights, falls, impacts that affect appearance
+  Example: "thrown against wall", "punch to face"
+
+- weather: weather effects on appearance
+  Example: "rain-soaked", "windswept hair", "sunburned"
+
+- wardrobe: costume damage, blood/dirt on clothes (NOT full costume descriptions)
+  Example: "torn shirt", "blood-stained jacket", "muddy jeans"
+
+IMPORTANT RULES:
+1. ALWAYS find cast members first
+2. For each element, provide the exact short text snippet (2-5 words)
+3. Include the full sentence as context
+4. Assign elements to specific characters when possible
+5. Mark if a cast member appears to be introduced in this scene
+
+OUTPUT FORMAT (JSON only):
 {
   "tags": [
     {
-      "category": "sfx",
-      "text": "black eye",
-      "context": "John has a fresh black eye from the fight.",
-      "character": "JOHN"
+      "category": "cast",
+      "text": "GWEN LAWSON",
+      "context": "GWEN LAWSON (30s, exhausted) enters the taxi and sits heavily.",
+      "character": "GWEN LAWSON",
+      "isIntroduction": true
     },
     {
-      "category": "props",
-      "text": "coffee cup",
-      "context": "She sets down her coffee cup on the desk.",
-      "character": "SARAH"
+      "category": "cast",
+      "text": "PETER",
+      "context": "PETER coughs violently, covering his mouth.",
+      "character": "PETER",
+      "isIntroduction": false
+    },
+    {
+      "category": "sfx",
+      "text": "coughs violently",
+      "context": "PETER coughs violently, covering his mouth.",
+      "character": "PETER"
+    },
+    {
+      "category": "hair",
+      "text": "disheveled",
+      "context": "Her hair is disheveled from the wind.",
+      "character": "GWEN LAWSON"
     }
   ]
 }
 
-IMPORTANT:
-- Use exact text from the scene
-- Include full sentence for context
-- Only include items explicitly mentioned
-- Respond ONLY with valid JSON`;
+⚠️ RESPOND WITH ONLY VALID JSON. NO OTHER TEXT.`;
 
                 const responseText = await callAI(prompt, 1000);
                 console.log('Element detection response:', responseText);
@@ -4718,37 +5827,88 @@ IMPORTANT:
                         // Validate character is actual cast before assigning
                         const isActualCast = sceneBreakdowns[sceneIndex].cast?.includes(aiTag.character);
 
-                        // Create tag object
-                        const tag = {
-                            id: Date.now() + Math.random(),
-                            sceneIndex: sceneIndex,
-                            sceneNumber: scene.number,
-                            category: aiTag.category,
-                            selectedText: aiTag.text,
-                            fullContext: aiTag.context,
-                            character: isActualCast ? aiTag.character : null, // Only assign if actual cast
-                            continuityType: 'oneoff',
-                            continuityEventId: null,
-                            elementId: `ai-tag-${Date.now()}-${Math.random()}`,
-                            created: Date.now(),
-                            aiGenerated: true
-                        };
+                        // Special handling for CAST category
+                        if (aiTag.category === 'cast') {
+                            const castName = normalizeCastName(aiTag.text);
 
-                        // Add to scriptTags
-                        scriptTags[sceneIndex].push(tag);
-
-                        // Add to breakdown (not cast!)
-                        const categoryKey = aiTag.category;
-                        if (sceneBreakdowns[sceneIndex][categoryKey]) {
-                            if (!sceneBreakdowns[sceneIndex][categoryKey].includes(aiTag.text)) {
-                                sceneBreakdowns[sceneIndex][categoryKey].push(aiTag.text);
+                            // Add to scene breakdown if not already there
+                            if (!sceneBreakdowns[sceneIndex].cast) {
+                                sceneBreakdowns[sceneIndex].cast = [];
                             }
+
+                            // Check for existing match
+                            const existingMatch = findMatchingCastMember(
+                                castName,
+                                sceneBreakdowns[sceneIndex].cast
+                            );
+
+                            const finalName = existingMatch || castName;
+
+                            if (!sceneBreakdowns[sceneIndex].cast.includes(finalName)) {
+                                sceneBreakdowns[sceneIndex].cast.push(finalName);
+                            }
+
+                            // Initialize cast profile if needed
+                            if (!castProfiles[finalName]) {
+                                castProfiles[finalName] = {
+                                    name: finalName,
+                                    baseDescription: aiTag.isIntroduction ? aiTag.context : '',
+                                    scenes: []
+                                };
+                            }
+
+                            if (!castProfiles[finalName].scenes.includes(scene.number)) {
+                                castProfiles[finalName].scenes.push(scene.number);
+                            }
+
+                            // Create tag for highlighting
+                            const tag = {
+                                id: Date.now() + Math.random(),
+                                sceneIndex: sceneIndex,
+                                sceneNumber: scene.number,
+                                category: 'cast',
+                                selectedText: aiTag.text,
+                                fullContext: aiTag.context,
+                                character: finalName,
+                                isIntroduction: aiTag.isIntroduction || false,
+                                continuityType: 'oneoff',
+                                continuityEventId: null,
+                                elementId: `ai-tag-${Date.now()}-${Math.random()}`,
+                                created: Date.now(),
+                                aiGenerated: true
+                            };
+
+                            scriptTags[sceneIndex].push(tag);
+                            tagsCreated++;
+
+                        } else {
+                            // Non-cast element - existing logic
+                            const tag = {
+                                id: Date.now() + Math.random(),
+                                sceneIndex: sceneIndex,
+                                sceneNumber: scene.number,
+                                category: aiTag.category,
+                                selectedText: aiTag.text,
+                                fullContext: aiTag.context,
+                                character: isActualCast ? aiTag.character : null,
+                                continuityType: 'oneoff',
+                                continuityEventId: null,
+                                elementId: `ai-tag-${Date.now()}-${Math.random()}`,
+                                created: Date.now(),
+                                aiGenerated: true
+                            };
+
+                            scriptTags[sceneIndex].push(tag);
+
+                            const categoryKey = aiTag.category;
+                            if (sceneBreakdowns[sceneIndex][categoryKey]) {
+                                if (!sceneBreakdowns[sceneIndex][categoryKey].includes(aiTag.text)) {
+                                    sceneBreakdowns[sceneIndex][categoryKey].push(aiTag.text);
+                                }
+                            }
+
+                            tagsCreated++;
                         }
-
-                        // DON'T add character to cast here - that should only come from AI Synopsis
-                        // Cast members must be added via generateAISynopsis() or manual breakdown editing
-
-                        tagsCreated++;
                     });
                 }
 
@@ -4762,6 +5922,9 @@ IMPORTANT:
                     renderCastPanel();
                     renderTagsPanel();
                 }
+
+                // Refresh character tabs if new characters were added
+                initializeCharacterTabs();
 
                 // CRITICAL: Apply highlights after a delay to ensure DOM is ready
                 setTimeout(() => {
@@ -4840,9 +6003,14 @@ IMPORTANT:
                         // Create regex that matches whole word/phrase
                         const regex = new RegExp(`(${escapedText})`, 'gi');
 
+                        // ADD INTRODUCTION ATTRIBUTE FOR CAST TAGS
+                        const introAttr = tag.category === 'cast' && tag.isIntroduction
+                            ? ' data-introduction="true"'
+                            : '';
+
                         // Replace with highlighted version
                         const highlightedHTML = innerHTML.replace(regex,
-                            `<span class="tag-highlight" data-tag-id="${tag.id}" data-category="${tag.category}" onclick="event.stopPropagation();" oncontextmenu="showTagContextMenu(event, '${tag.id}'); return false;">$1</span>`
+                            `<span class="tag-highlight" data-tag-id="${tag.id}" data-category="${tag.category}"${introAttr} data-character="${tag.character || ''}" onclick="handleTagClick(event, '${tag.id}')" oncontextmenu="showTagContextMenu(event, '${tag.id}'); return false;">$1</span>`
                         );
 
                         element.innerHTML = highlightedHTML;
@@ -4858,17 +6026,82 @@ IMPORTANT:
             }, 100); // Small delay to ensure DOM is ready
         }
         
+        // Handle clicking on highlighted tags
+        function handleTagClick(event, tagId) {
+            event.stopPropagation();
+
+            // Find the tag
+            let tag = null;
+            for (let sceneIndex in scriptTags) {
+                const found = scriptTags[sceneIndex].find(t => t.id.toString() === tagId || t.id === tagId);
+                if (found) {
+                    tag = found;
+                    break;
+                }
+            }
+
+            if (!tag) return;
+
+            // If it's a cast member, open their character tab
+            if (tag.category === 'cast' && tag.character) {
+                switchCenterTab(`character-${tag.character}`);
+            } else {
+                // For other tags, show the tag popup with info
+                showTagInfo(tag);
+            }
+        }
+
+        // Show tag info in a tooltip
+        function showTagInfo(tag) {
+            const existing = document.getElementById('tagTooltip');
+            if (existing) existing.remove();
+
+            const tooltip = document.createElement('div');
+            tooltip.id = 'tagTooltip';
+            tooltip.className = 'tag-tooltip';
+            tooltip.innerHTML = `
+                <div class="tooltip-header">
+                    <span class="tooltip-category">${tag.category.toUpperCase()}</span>
+                    ${tag.character ? `<span class="tooltip-character">→ ${tag.character}</span>` : ''}
+                </div>
+                <div class="tooltip-text">${tag.selectedText}</div>
+                <div class="tooltip-context">${tag.fullContext}</div>
+                <div class="tooltip-actions">
+                    <button onclick="document.getElementById('tagTooltip').remove()">Close</button>
+                </div>
+            `;
+
+            document.body.appendChild(tooltip);
+
+            // Position near cursor
+            const highlight = document.querySelector(`[data-tag-id="${tag.id}"]`);
+            if (highlight) {
+                const rect = highlight.getBoundingClientRect();
+                tooltip.style.position = 'fixed';
+                tooltip.style.left = rect.left + 'px';
+                tooltip.style.top = (rect.bottom + 10) + 'px';
+                tooltip.style.zIndex = '3000';
+            }
+
+            // Auto-close after 5 seconds
+            setTimeout(() => {
+                if (document.getElementById('tagTooltip')) {
+                    document.getElementById('tagTooltip').remove();
+                }
+            }, 5000);
+        }
+
         // Extract scene content
         function extractSceneContent(scene) {
             const lines = scriptText.split('\n');
             const startLine = scene.lineNumber;
             let endLine = lines.length;
-            
+
             const sceneIndex = scenes.indexOf(scene);
             if (sceneIndex < scenes.length - 1) {
                 endLine = scenes[sceneIndex + 1].lineNumber;
             }
-            
+
             return lines.slice(startLine, endLine).join('\n');
         }
         
@@ -4985,6 +6218,28 @@ IMPORTANT:
             saveProject();
         }
 
+        function navigateToScene(sceneIndex) {
+            if (sceneIndex < 0 || sceneIndex >= scenes.length) return;
+
+            // Auto-save current scene before switching
+            if (currentScene !== null) {
+                saveProject();
+            }
+
+            // Select new scene
+            selectScene(sceneIndex);
+
+            // Scroll to scene in script (if on script tab)
+            if (activeCenterTab === 'script') {
+                setTimeout(() => {
+                    const sceneEl = document.getElementById(`scene-${scenes[sceneIndex].number}`);
+                    if (sceneEl) {
+                        sceneEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }, 100);
+            }
+        }
+
         function selectScene(index) {
             // Auto-save previous scene before switching
             if (currentScene !== null && currentScene !== index) {
@@ -5032,20 +6287,55 @@ IMPORTANT:
                 tagCounts[tag.category]++;
             });
 
+            // Scene navigation data
+            const hasPrevious = currentScene > 0;
+            const hasNext = currentScene < scenes.length - 1;
+            const previousScene = hasPrevious ? scenes[currentScene - 1] : null;
+            const nextScene = hasNext ? scenes[currentScene + 1] : null;
+
             let html = `
-                <!-- AI CONTROLS AT TOP -->
-                <div class="ai-controls">
-                    <button class="ai-btn" onclick="generateAISynopsis(${currentScene})">✨ Generate AI Synopsis</button>
-                    <button class="ai-btn" onclick="detectAIElements(${currentScene})">🔍 Detect Elements with AI</button>
-                    <button class="ai-btn" style="background: linear-gradient(135deg, rgba(82, 193, 134, 0.15), rgba(52, 211, 153, 0.15)); border-color: var(--success); color: var(--success);" onclick="saveSceneBreakdown()">
-                        💾 Save Scene
+                <!-- SCENE NAVIGATION BAR -->
+                <div class="breakdown-scene-nav">
+                    <button class="scene-nav-btn ${!hasPrevious ? 'disabled' : ''}"
+                            onclick="navigateToScene(${currentScene - 1})"
+                            ${!hasPrevious ? 'disabled' : ''}>
+                        <span class="nav-arrow">←</span>
+                        <span class="nav-text">
+                            ${hasPrevious ? `Scene ${previousScene.number}` : 'No Previous'}
+                        </span>
+                    </button>
+
+                    <div class="scene-nav-current">
+                        <div class="nav-scene-number">Scene ${scene.number}</div>
+                        <div class="nav-scene-heading">${scene.heading}</div>
+                        <div class="nav-scene-meta">
+                            ${scene.storyDay ? `<span>${scene.storyDay}</span>` : ''}
+                            ${scene.timeOfDay ? `<span>• ${scene.timeOfDay}</span>` : ''}
+                        </div>
+                    </div>
+
+                    <button class="scene-nav-btn ${!hasNext ? 'disabled' : ''}"
+                            onclick="navigateToScene(${currentScene + 1})"
+                            ${!hasNext ? 'disabled' : ''}>
+                        <span class="nav-text">
+                            ${hasNext ? `Scene ${nextScene.number}` : 'No Next'}
+                        </span>
+                        <span class="nav-arrow">→</span>
                     </button>
                 </div>
 
-                <!-- SCENE HEADER -->
-                <div class="breakdown-header">
-                    <div class="breakdown-scene-title">Scene ${scene.number}</div>
-                    <div class="breakdown-scene-heading">${scene.heading}</div>
+                <!-- COMPACT AI CONTROLS -->
+                <div class="ai-controls-compact">
+                    <button class="ai-btn-compact" onclick="generateAISynopsis(${currentScene})" title="Generate synopsis with AI">
+                        <span class="btn-icon">✨</span>
+                        <span class="btn-text">Synopsis</span>
+                    </button>
+                    <button class="ai-btn-compact" onclick="detectAIElements(${currentScene})" title="Auto-detect cast & elements">
+                        <span class="btn-icon">🔍</span>
+                        <span class="btn-text">Detect</span>
+                    </button>
+                    <div class="ai-controls-spacer"></div>
+                    <div class="ai-status" id="aiStatus"></div>
                 </div>
 
                 <!-- SYNOPSIS DISPLAY -->
@@ -5191,7 +6481,7 @@ IMPORTANT:
                                                        class="department-input"
                                                        value="${state.hair || ''}"
                                                        placeholder="Hairstyle, condition, changes..."
-                                                       onchange="updateCharacterField('${castMember}', 'hair', this.value)">
+                                                       oninput="updateCharacterField('${castMember}', 'hair', this.value)">
                                             </div>
 
                                             <div class="department-field">
@@ -5200,7 +6490,7 @@ IMPORTANT:
                                                        class="department-input"
                                                        value="${state.makeup || ''}"
                                                        placeholder="Makeup look, details..."
-                                                       onchange="updateCharacterField('${castMember}', 'makeup', this.value)">
+                                                       oninput="updateCharacterField('${castMember}', 'makeup', this.value)">
                                             </div>
 
                                             <div class="department-field">
@@ -5209,7 +6499,7 @@ IMPORTANT:
                                                        class="department-input"
                                                        value="${state.sfx || ''}"
                                                        placeholder="Injuries, wounds, prosthetics..."
-                                                       onchange="updateCharacterField('${castMember}', 'sfx', this.value)">
+                                                       oninput="updateCharacterField('${castMember}', 'sfx', this.value)">
                                             </div>
 
                                             <div class="department-field">
@@ -5218,7 +6508,7 @@ IMPORTANT:
                                                        class="department-input"
                                                        value="${state.wardrobe || ''}"
                                                        placeholder="Costume description, accessories..."
-                                                       onchange="updateCharacterField('${castMember}', 'wardrobe', this.value)">
+                                                       oninput="updateCharacterField('${castMember}', 'wardrobe', this.value)">
                                             </div>
 
                                             <div class="department-field">
@@ -5227,7 +6517,7 @@ IMPORTANT:
                                                        class="department-input"
                                                        value="${state.notes || ''}"
                                                        placeholder="Additional notes..."
-                                                       onchange="updateCharacterField('${castMember}', 'notes', this.value)">
+                                                       oninput="updateCharacterField('${castMember}', 'notes', this.value)">
                                             </div>
                                         </div>
 
@@ -6193,6 +7483,7 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`;
         }
 
         // Update character field in scene
+        // Auto-save when character fields change
         function updateCharacterField(character, field, value) {
             if (!characterStates[currentScene]) {
                 characterStates[currentScene] = {};
@@ -6201,7 +7492,24 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`;
                 characterStates[currentScene][character] = {};
             }
             characterStates[currentScene][character][field] = value;
-            saveProject();
+
+            // Auto-save after 1 second delay (debounced)
+            clearTimeout(window.autoSaveTimeout);
+            window.autoSaveTimeout = setTimeout(() => {
+                saveProject();
+                showAutoSaveIndicator();
+            }, 1000);
+        }
+
+        // Show brief save confirmation
+        function showAutoSaveIndicator() {
+            const indicator = document.getElementById('autoSaveIndicator');
+            if (indicator) {
+                indicator.style.display = 'flex';
+                setTimeout(() => {
+                    indicator.style.display = 'none';
+                }, 1500);
+            }
         }
 
         // AI fill character fields (simple implementation - extracts from existing tags)
