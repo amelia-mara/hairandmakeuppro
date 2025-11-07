@@ -138,6 +138,28 @@ export function detectIntExt(heading) {
 }
 
 /**
+ * Extract story day from scene heading
+ * Looks for patterns like "DAY 1", "DAY 2", "D1", "D2", etc.
+ */
+export function extractStoryDay(heading) {
+    const upper = heading.toUpperCase();
+
+    // Look for "DAY 1", "DAY 2", etc.
+    const dayMatch = upper.match(/DAY\s+(\d+)/);
+    if (dayMatch) {
+        return `Day ${dayMatch[1]}`;
+    }
+
+    // Look for "D1", "D2", etc. (common shorthand)
+    const dMatch = upper.match(/\bD(\d+)\b/);
+    if (dMatch) {
+        return `Day ${dMatch[1]}`;
+    }
+
+    return '';
+}
+
+/**
  * Format scene list as ranges (e.g., [1,2,3,5,6,7] => "1-3, 5-7")
  */
 export function formatSceneRange(scenes) {
