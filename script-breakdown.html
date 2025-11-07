@@ -1040,7 +1040,37 @@
             padding: 1px 2px;
         }
 
-        .tag-highlight[data-category="cast"] { background: rgba(251, 191, 36, 0.2); }
+        /* Cast Member Highlighting - Enhanced */
+        .tag-highlight[data-category="cast"] {
+            background: rgba(251, 191, 36, 0.25);
+            border-bottom: 2px solid #fbbf24;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            color: #fbbf24;
+            padding: 2px 3px;
+        }
+
+        .tag-highlight[data-category="cast"]:hover {
+            background: rgba(251, 191, 36, 0.35);
+            border-bottom-width: 3px;
+        }
+
+        /* Special styling for character introductions */
+        .tag-highlight[data-category="cast"][data-introduction="true"] {
+            background: rgba(251, 191, 36, 0.4);
+            border: 2px solid #fbbf24;
+            padding: 3px 6px;
+            border-radius: 3px;
+            box-shadow: 0 0 8px rgba(251, 191, 36, 0.3);
+        }
+
+        .tag-highlight[data-category="cast"]::before {
+            content: '👤 ';
+            font-size: 0.8em;
+            margin-right: 2px;
+        }
+
+        /* Other categories */
         .tag-highlight[data-category="hair"] { background: rgba(168, 85, 247, 0.2); }
         .tag-highlight[data-category="makeup"] { background: rgba(236, 72, 153, 0.2); }
         .tag-highlight[data-category="sfx"] { background: rgba(239, 68, 68, 0.2); }
@@ -1198,6 +1228,90 @@
             gap: 8px;
             padding: 16px 20px;
             border-top: 1px solid var(--glass-border);
+        }
+
+        /* Tag Tooltip */
+        .tag-tooltip {
+            position: fixed;
+            max-width: 400px;
+            background: linear-gradient(135deg,
+                rgba(212, 175, 122, 0.15) 0%,
+                rgba(18, 16, 14, 0.98) 50%,
+                rgba(212, 175, 122, 0.1) 100%
+            );
+            backdrop-filter: blur(24px) saturate(180%);
+            border: 1px solid var(--accent-gold);
+            border-radius: 8px;
+            padding: 16px;
+            z-index: 3000;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .tooltip-header {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+            align-items: center;
+        }
+
+        .tooltip-category {
+            padding: 3px 8px;
+            background: rgba(212, 175, 122, 0.3);
+            border-radius: 4px;
+            font-size: 0.75em;
+            font-weight: 700;
+            color: var(--accent-gold);
+        }
+
+        .tooltip-character {
+            font-size: 0.8125em;
+            color: var(--text-muted);
+        }
+
+        .tooltip-text {
+            font-size: 0.9375em;
+            font-weight: 600;
+            color: var(--text-light);
+            margin-bottom: 8px;
+        }
+
+        .tooltip-context {
+            font-size: 0.8125em;
+            color: var(--text-muted);
+            line-height: 1.5;
+            margin-bottom: 12px;
+            font-family: 'Courier Prime', monospace;
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+        }
+
+        .tooltip-actions {
+            display: flex;
+            gap: 6px;
+            justify-content: flex-end;
+        }
+
+        .tooltip-actions button {
+            padding: 6px 12px;
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            border-radius: 4px;
+            color: var(--text-muted);
+            font-size: 0.75em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .tooltip-actions button:hover {
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
         }
 
         /* Margin Indicators */
@@ -5380,54 +5494,97 @@ IMPORTANT: Respond ONLY with valid JSON. Do not include any text outside the JSO
             try {
                 console.log('Starting AI element detection...');
 
-                const prompt = `Analyze this screenplay scene and identify production elements with their exact text from the scene:
+                const prompt = `You are a professional script breakdown assistant. Analyze this scene and identify ALL elements needed for production planning.
+
+⚠️ CRITICAL: Find CAST MEMBERS FIRST before any other elements.
 
 Scene heading: ${scene.heading}
 
 Scene content:
 ${content}
 
-For each element you find, provide:
-1. The category (hair, makeup, sfx, health, injuries, stunts, weather, wardrobe)
-2. The exact text snippet from the scene (2-5 words)
-3. The full sentence/context where it appears
-4. The character it relates to (if applicable, look for ALL CAPS names)
+IDENTIFICATION PRIORITY:
 
-Categories to look for (MAKEUP DEPARTMENT FOCUS ONLY):
-- hair: hairstyles, hair changes, wigs, beards, facial hair, messy hair, styled hair
-- makeup: foundation, lipstick, eye shadow, natural makeup, stage makeup (beauty makeup only)
-- sfx: wounds, blood, prosthetics, scars, bruising, dirt, grime (special makeup effects)
-- health: illness symptoms, pale complexion, fever, exhaustion, dark circles
-- injuries: cuts, broken bones, black eyes, swelling, bandages
-- stunts: fights, falls, impacts that would affect appearance
-- weather: rain-soaked, wind-blown, sun-burned, frozen, sweating
-- wardrobe: costume damage, torn clothes, bloodstains on clothes, dirt on costume
+🎭 PRIORITY 1 - CAST MEMBERS (MOST IMPORTANT):
+Find EVERY person mentioned in this scene by name:
+- Character names in dialogue headers (ALL CAPS format)
+- Character names in action lines (proper nouns)
+- People with descriptions in parentheses: "GWEN LAWSON (30s, tired)"
+- Any person referred to by name in the narrative
 
-IGNORE: Props, vehicles, VFX, background extras, or anything that doesn't affect character appearance.
+For cast members:
+- Use the MOST COMPLETE name form (e.g., "GWEN LAWSON" not just "GWEN")
+- If this appears to be a character introduction (first time with description), note it
+- Capture the exact name as it appears
+- Include the full sentence for context
 
-Respond in JSON format:
+💄 PRIORITY 2 - MAKEUP DEPARTMENT ELEMENTS:
+Only for character appearance/condition elements:
+
+- hair: hairstyles, hair changes, hair conditions, wigs, beards
+  Example: "disheveled hair", "tied back in bun", "beard trimmed"
+
+- makeup: beauty makeup only (foundation, lipstick, eye makeup, stage makeup)
+  Example: "natural makeup", "heavy stage makeup", "lipstick smudged"
+
+- sfx: special effects makeup (wounds, blood, prosthetics, scars, bruises, dirt, grime)
+  Example: "black eye", "bleeding wound", "covered in dirt"
+
+- health: illness symptoms, complexion changes, fatigue indicators
+  Example: "pale complexion", "dark circles under eyes", "feverish"
+
+- injuries: cuts, broken bones, swelling, bandages
+  Example: "broken arm in cast", "cut on forehead", "swollen eye"
+
+- stunts: fights, falls, impacts that affect appearance
+  Example: "thrown against wall", "punch to face"
+
+- weather: weather effects on appearance
+  Example: "rain-soaked", "windswept hair", "sunburned"
+
+- wardrobe: costume damage, blood/dirt on clothes (NOT full costume descriptions)
+  Example: "torn shirt", "blood-stained jacket", "muddy jeans"
+
+IMPORTANT RULES:
+1. ALWAYS find cast members first
+2. For each element, provide the exact short text snippet (2-5 words)
+3. Include the full sentence as context
+4. Assign elements to specific characters when possible
+5. Mark if a cast member appears to be introduced in this scene
+
+OUTPUT FORMAT (JSON only):
 {
   "tags": [
     {
-      "category": "sfx",
-      "text": "black eye",
-      "context": "John has a fresh black eye from the fight.",
-      "character": "JOHN"
+      "category": "cast",
+      "text": "GWEN LAWSON",
+      "context": "GWEN LAWSON (30s, exhausted) enters the taxi and sits heavily.",
+      "character": "GWEN LAWSON",
+      "isIntroduction": true
     },
     {
-      "category": "props",
-      "text": "coffee cup",
-      "context": "She sets down her coffee cup on the desk.",
-      "character": "SARAH"
+      "category": "cast",
+      "text": "PETER",
+      "context": "PETER coughs violently, covering his mouth.",
+      "character": "PETER",
+      "isIntroduction": false
+    },
+    {
+      "category": "sfx",
+      "text": "coughs violently",
+      "context": "PETER coughs violently, covering his mouth.",
+      "character": "PETER"
+    },
+    {
+      "category": "hair",
+      "text": "disheveled",
+      "context": "Her hair is disheveled from the wind.",
+      "character": "GWEN LAWSON"
     }
   ]
 }
 
-IMPORTANT:
-- Use exact text from the scene
-- Include full sentence for context
-- Only include items explicitly mentioned
-- Respond ONLY with valid JSON`;
+⚠️ RESPOND WITH ONLY VALID JSON. NO OTHER TEXT.`;
 
                 const responseText = await callAI(prompt, 1000);
                 console.log('Element detection response:', responseText);
@@ -5464,37 +5621,88 @@ IMPORTANT:
                         // Validate character is actual cast before assigning
                         const isActualCast = sceneBreakdowns[sceneIndex].cast?.includes(aiTag.character);
 
-                        // Create tag object
-                        const tag = {
-                            id: Date.now() + Math.random(),
-                            sceneIndex: sceneIndex,
-                            sceneNumber: scene.number,
-                            category: aiTag.category,
-                            selectedText: aiTag.text,
-                            fullContext: aiTag.context,
-                            character: isActualCast ? aiTag.character : null, // Only assign if actual cast
-                            continuityType: 'oneoff',
-                            continuityEventId: null,
-                            elementId: `ai-tag-${Date.now()}-${Math.random()}`,
-                            created: Date.now(),
-                            aiGenerated: true
-                        };
+                        // Special handling for CAST category
+                        if (aiTag.category === 'cast') {
+                            const castName = normalizeCastName(aiTag.text);
 
-                        // Add to scriptTags
-                        scriptTags[sceneIndex].push(tag);
-
-                        // Add to breakdown (not cast!)
-                        const categoryKey = aiTag.category;
-                        if (sceneBreakdowns[sceneIndex][categoryKey]) {
-                            if (!sceneBreakdowns[sceneIndex][categoryKey].includes(aiTag.text)) {
-                                sceneBreakdowns[sceneIndex][categoryKey].push(aiTag.text);
+                            // Add to scene breakdown if not already there
+                            if (!sceneBreakdowns[sceneIndex].cast) {
+                                sceneBreakdowns[sceneIndex].cast = [];
                             }
+
+                            // Check for existing match
+                            const existingMatch = findMatchingCastMember(
+                                castName,
+                                sceneBreakdowns[sceneIndex].cast
+                            );
+
+                            const finalName = existingMatch || castName;
+
+                            if (!sceneBreakdowns[sceneIndex].cast.includes(finalName)) {
+                                sceneBreakdowns[sceneIndex].cast.push(finalName);
+                            }
+
+                            // Initialize cast profile if needed
+                            if (!castProfiles[finalName]) {
+                                castProfiles[finalName] = {
+                                    name: finalName,
+                                    baseDescription: aiTag.isIntroduction ? aiTag.context : '',
+                                    scenes: []
+                                };
+                            }
+
+                            if (!castProfiles[finalName].scenes.includes(scene.number)) {
+                                castProfiles[finalName].scenes.push(scene.number);
+                            }
+
+                            // Create tag for highlighting
+                            const tag = {
+                                id: Date.now() + Math.random(),
+                                sceneIndex: sceneIndex,
+                                sceneNumber: scene.number,
+                                category: 'cast',
+                                selectedText: aiTag.text,
+                                fullContext: aiTag.context,
+                                character: finalName,
+                                isIntroduction: aiTag.isIntroduction || false,
+                                continuityType: 'oneoff',
+                                continuityEventId: null,
+                                elementId: `ai-tag-${Date.now()}-${Math.random()}`,
+                                created: Date.now(),
+                                aiGenerated: true
+                            };
+
+                            scriptTags[sceneIndex].push(tag);
+                            tagsCreated++;
+
+                        } else {
+                            // Non-cast element - existing logic
+                            const tag = {
+                                id: Date.now() + Math.random(),
+                                sceneIndex: sceneIndex,
+                                sceneNumber: scene.number,
+                                category: aiTag.category,
+                                selectedText: aiTag.text,
+                                fullContext: aiTag.context,
+                                character: isActualCast ? aiTag.character : null,
+                                continuityType: 'oneoff',
+                                continuityEventId: null,
+                                elementId: `ai-tag-${Date.now()}-${Math.random()}`,
+                                created: Date.now(),
+                                aiGenerated: true
+                            };
+
+                            scriptTags[sceneIndex].push(tag);
+
+                            const categoryKey = aiTag.category;
+                            if (sceneBreakdowns[sceneIndex][categoryKey]) {
+                                if (!sceneBreakdowns[sceneIndex][categoryKey].includes(aiTag.text)) {
+                                    sceneBreakdowns[sceneIndex][categoryKey].push(aiTag.text);
+                                }
+                            }
+
+                            tagsCreated++;
                         }
-
-                        // DON'T add character to cast here - that should only come from AI Synopsis
-                        // Cast members must be added via generateAISynopsis() or manual breakdown editing
-
-                        tagsCreated++;
                     });
                 }
 
@@ -5508,6 +5716,9 @@ IMPORTANT:
                     renderCastPanel();
                     renderTagsPanel();
                 }
+
+                // Refresh character tabs if new characters were added
+                initializeCharacterTabs();
 
                 // CRITICAL: Apply highlights after a delay to ensure DOM is ready
                 setTimeout(() => {
@@ -5586,9 +5797,14 @@ IMPORTANT:
                         // Create regex that matches whole word/phrase
                         const regex = new RegExp(`(${escapedText})`, 'gi');
 
+                        // ADD INTRODUCTION ATTRIBUTE FOR CAST TAGS
+                        const introAttr = tag.category === 'cast' && tag.isIntroduction
+                            ? ' data-introduction="true"'
+                            : '';
+
                         // Replace with highlighted version
                         const highlightedHTML = innerHTML.replace(regex,
-                            `<span class="tag-highlight" data-tag-id="${tag.id}" data-category="${tag.category}" onclick="event.stopPropagation();" oncontextmenu="showTagContextMenu(event, '${tag.id}'); return false;">$1</span>`
+                            `<span class="tag-highlight" data-tag-id="${tag.id}" data-category="${tag.category}"${introAttr} data-character="${tag.character || ''}" onclick="handleTagClick(event, '${tag.id}')" oncontextmenu="showTagContextMenu(event, '${tag.id}'); return false;">$1</span>`
                         );
 
                         element.innerHTML = highlightedHTML;
@@ -5604,17 +5820,82 @@ IMPORTANT:
             }, 100); // Small delay to ensure DOM is ready
         }
         
+        // Handle clicking on highlighted tags
+        function handleTagClick(event, tagId) {
+            event.stopPropagation();
+
+            // Find the tag
+            let tag = null;
+            for (let sceneIndex in scriptTags) {
+                const found = scriptTags[sceneIndex].find(t => t.id.toString() === tagId || t.id === tagId);
+                if (found) {
+                    tag = found;
+                    break;
+                }
+            }
+
+            if (!tag) return;
+
+            // If it's a cast member, open their character tab
+            if (tag.category === 'cast' && tag.character) {
+                switchCenterTab(`character-${tag.character}`);
+            } else {
+                // For other tags, show the tag popup with info
+                showTagInfo(tag);
+            }
+        }
+
+        // Show tag info in a tooltip
+        function showTagInfo(tag) {
+            const existing = document.getElementById('tagTooltip');
+            if (existing) existing.remove();
+
+            const tooltip = document.createElement('div');
+            tooltip.id = 'tagTooltip';
+            tooltip.className = 'tag-tooltip';
+            tooltip.innerHTML = `
+                <div class="tooltip-header">
+                    <span class="tooltip-category">${tag.category.toUpperCase()}</span>
+                    ${tag.character ? `<span class="tooltip-character">→ ${tag.character}</span>` : ''}
+                </div>
+                <div class="tooltip-text">${tag.selectedText}</div>
+                <div class="tooltip-context">${tag.fullContext}</div>
+                <div class="tooltip-actions">
+                    <button onclick="document.getElementById('tagTooltip').remove()">Close</button>
+                </div>
+            `;
+
+            document.body.appendChild(tooltip);
+
+            // Position near cursor
+            const highlight = document.querySelector(`[data-tag-id="${tag.id}"]`);
+            if (highlight) {
+                const rect = highlight.getBoundingClientRect();
+                tooltip.style.position = 'fixed';
+                tooltip.style.left = rect.left + 'px';
+                tooltip.style.top = (rect.bottom + 10) + 'px';
+                tooltip.style.zIndex = '3000';
+            }
+
+            // Auto-close after 5 seconds
+            setTimeout(() => {
+                if (document.getElementById('tagTooltip')) {
+                    document.getElementById('tagTooltip').remove();
+                }
+            }, 5000);
+        }
+
         // Extract scene content
         function extractSceneContent(scene) {
             const lines = scriptText.split('\n');
             const startLine = scene.lineNumber;
             let endLine = lines.length;
-            
+
             const sceneIndex = scenes.indexOf(scene);
             if (sceneIndex < scenes.length - 1) {
                 endLine = scenes[sceneIndex + 1].lineNumber;
             }
-            
+
             return lines.slice(startLine, endLine).join('\n');
         }
         
