@@ -22,6 +22,7 @@
             <div class="toolbar">
                 <button class="toolbar-btn" onclick="generateAllSynopses()">Generate All Synopses</button>
                 <button class="toolbar-btn" onclick="autoTagScript()">Auto Tag Script</button>
+                <button class="toolbar-btn" onclick="reviewCharacters()">Review Characters</button>
                 <button class="toolbar-btn" onclick="openSettingsModal()">AI Settings</button>
                 <button class="toolbar-btn" onclick="window.location.href='generate-breakdown.html'">Generate Breakdown</button>
                 <button class="toolbar-btn" onclick="openImportModal()">Import Script</button>
@@ -239,6 +240,30 @@
             <div class="modal-actions">
                 <button class="modal-btn" onclick="closeContinuityEditModal()">Cancel</button>
                 <button class="modal-btn primary" onclick="saveContinuityNote()">Save Note</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Character Review Modal -->
+    <div class="modal" id="character-review-modal" style="display: none;">
+        <div class="modal-content" style="max-width: 700px; max-height: 80vh;">
+            <div class="modal-title">Review Detected Characters</div>
+
+            <div class="modal-section">
+                <div class="modal-note" style="margin-bottom: 16px;">
+                    Select which characters to include in your breakdown. Characters are detected using strict screenplay formatting rules.
+                </div>
+
+                <div class="character-review-list" id="character-review-list" style="max-height: 400px; overflow-y: auto;">
+                    <!-- Character review items generated here -->
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="modal-btn" onclick="closeCharacterReviewModal()">Cancel</button>
+                <button class="modal-btn" onclick="selectAllCharacters()">Select All</button>
+                <button class="modal-btn" onclick="deselectAllCharacters()">Deselect All</button>
+                <button class="modal-btn primary" onclick="confirmCharacterSelection()">Confirm Selection</button>
             </div>
         </div>
     </div>
