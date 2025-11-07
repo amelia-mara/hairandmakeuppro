@@ -36,7 +36,7 @@ let currentElementCategory = null;
  * Render the breakdown panel for the current scene
  */
 export function renderBreakdownPanel() {
-    const container = document.getElementById('breakdownPanel');
+    const container = document.getElementById('breakdown-panel');
     if (!container) return;
 
     if (state.currentScene === null) {
@@ -91,15 +91,22 @@ export function renderBreakdownPanel() {
 
         ${sceneTransitions.length > 0 ? renderTransitionBanner(sceneTransitions) : ''}
 
-        <!-- SYNOPSIS SECTION -->
-        <div class="breakdown-synopsis-section">
-            <div class="section-header">
-                <span>Synopsis</span>
-                <button class="ai-btn-compact" onclick="handleGenerateAISynopsis(${state.currentScene})" title="Generate synopsis with AI">
-                    ✨ Generate
+        <!-- SYNOPSIS SECTION - EXPANDABLE -->
+        <div class="breakdown-section expanded" id="synopsis-section">
+            <div class="section-header" onclick="toggleSection('synopsis-section')">
+                <div class="section-header-left">
+                    <span class="section-title">📝 Synopsis</span>
+                </div>
+                <button class="category-toggle">▼</button>
+            </div>
+            <div class="section-content" style="display: block;">
+                <textarea class="synopsis-textarea"
+                          placeholder="Enter scene synopsis or click Generate to create with AI..."
+                          oninput="updateSynopsis(${state.currentScene}, this.value)">${escapeHtml(scene.synopsis) || ''}</textarea>
+                <button class="ai-btn-compact" onclick="handleGenerateAISynopsis(${state.currentScene})" title="Generate synopsis with AI" style="margin-top: 8px; width: 100%;">
+                    ✨ Generate with AI
                 </button>
             </div>
-            <div class="synopsis-display">${escapeHtml(scene.synopsis) || 'Click Generate to create synopsis...'}</div>
         </div>
 
         <!-- SCENE INFORMATION - COLLAPSIBLE -->
@@ -174,10 +181,10 @@ function renderSceneInfoSection(scene) {
     return `
         <div class="scene-info-section" id="sceneInfoSection">
             <div class="scene-info-header" onclick="toggleSceneInfo()">
-                <span class="scene-info-title">Scene Info ${(scene.storyDay && scene.timeOfDay && scene.intExt && scene.location) ? '✓' : '⚠'}</span>
+                <span class="scene-info-title">ℹ️ Scene Info ${(scene.storyDay && scene.timeOfDay && scene.intExt && scene.location) ? '✓' : '⚠'}</span>
                 <button class="scene-info-toggle">▶</button>
             </div>
-            <div class="scene-info-content">
+            <div class="scene-info-content" style="display: none;">
                 <div class="scene-info-compact">
                     <div class="info-row">
                         <div class="info-field">
@@ -254,7 +261,7 @@ function renderCastSection(cast) {
                 CAST (${cast.length})
             </div>
 
-            ${cast.map(castMember => renderCastMemberCard(castMember)).join('')}
+            ${cast.map((castMember, index) => renderCastMemberCard(castMember, index)).join('')}
 
             <button class="add-element-btn" style="width: 100%; margin-top: 12px;" onclick="openAddElement('cast')">
                 + Add Cast Member to Scene
@@ -266,7 +273,7 @@ function renderCastSection(cast) {
 /**
  * Render cast member card
  */
-function renderCastMemberCard(castMember) {
+function renderCastMemberCard(castMember, index = 0) {
     const profile = state.castProfiles[castMember] || {};
     const characterState = state.characterStates[state.currentScene]?.[castMember] || {};
 
@@ -290,19 +297,24 @@ function renderCastMemberCard(castMember) {
             <span style="font-size: 0.85em; opacity: 0.8;">${sceneRangeText}</span>`;
     }
 
+    // First cast member expanded by default
+    const isExpanded = index === 0;
+    const toggleIcon = isExpanded ? '▼' : '▶';
+    const bodyDisplay = isExpanded ? 'block' : 'none';
+
     return `
         <div class="cast-member-card" id="castCard${castMember.replace(/\s/g, '')}">
             <div class="cast-member-header" onclick="toggleCastCard('${castMember.replace(/\s/g, '')}')">
                 <span class="cast-member-name">${escapeHtml(castMember)}</span>
                 <div class="header-actions">
                     <button class="remove-cast-btn" onclick="event.stopPropagation(); removeElement('cast', '${escapeHtml(castMember).replace(/'/g, "\\'")}')">×</button>
-                    <span class="cast-member-toggle">▶</span>
+                    <span class="cast-member-toggle">${toggleIcon}</span>
                 </div>
             </div>
 
             ${inlinePreview ? `<div class="cast-member-preview">${inlinePreview}</div>` : ''}
 
-            <div class="cast-member-body">
+            <div class="cast-member-body" style="display: ${bodyDisplay};">
                 <div class="cast-member-base">
                     Base: ${escapeHtml(profile.baseDescription) || 'No base description set'}
                 </div>
@@ -368,6 +380,10 @@ function renderCastMemberCard(castMember) {
                                oninput="updateCharacterField('${escapeHtml(castMember).replace(/'/g, "\\'")}', 'notes', this.value)">
                     </div>
                 </div>
+
+                <button class="ai-btn-compact" onclick="handleAIFillCharacter(${state.currentScene}, '${escapeHtml(castMember).replace(/'/g, "\\'")}');" style="width: 100%; margin-top: 12px;" title="Auto-fill fields with AI">
+                    ✨ AI Fill Character Fields
+                </button>
             </div>
         </div>
     `;
@@ -667,6 +683,99 @@ window.handleDetectAIElements = async function(sceneIndex) {
         setTimeout(() => { if (status) status.textContent = ''; }, 2000);
     } catch (error) {
         console.error('Error detecting elements:', error);
+        const status = document.getElementById('aiStatus');
+        if (status) status.textContent = '✗ Error: ' + error.message;
+    }
+};
+
+/**
+ * Update synopsis
+ */
+window.updateSynopsis = function(sceneIndex, value) {
+    if (!state.scenes[sceneIndex]) return;
+
+    state.scenes[sceneIndex].synopsis = value;
+
+    // Also save to sceneBreakdowns
+    if (!state.sceneBreakdowns[sceneIndex]) {
+        state.sceneBreakdowns[sceneIndex] = {};
+    }
+    state.sceneBreakdowns[sceneIndex].synopsis = value;
+
+    // Auto-save
+    import('./export-handlers.js').then(module => module.saveProject());
+};
+
+/**
+ * Toggle expandable section
+ */
+window.toggleSection = function(sectionId) {
+    const section = document.getElementById(sectionId);
+    if (!section) return;
+
+    const content = section.querySelector('.section-content');
+    const toggle = section.querySelector('.category-toggle');
+    const isExpanded = section.classList.contains('expanded');
+
+    if (isExpanded) {
+        section.classList.remove('expanded');
+        content.style.display = 'none';
+        toggle.textContent = '▶';
+    } else {
+        section.classList.add('expanded');
+        content.style.display = 'block';
+        toggle.textContent = '▼';
+    }
+};
+
+/**
+ * Handle AI Fill for character in current scene
+ */
+window.handleAIFillCharacter = async function(sceneIndex, character) {
+    try {
+        const status = document.getElementById('aiStatus');
+        if (status) status.textContent = `Generating breakdown for ${character}...`;
+
+        const scene = state.scenes[sceneIndex];
+        const sceneText = scene.content || scene.text || '';
+
+        // Generate descriptions for all categories
+        const categories = ['hair', 'makeup', 'sfx', 'wardrobe'];
+        const descriptions = {};
+
+        for (const category of categories) {
+            const description = await generateDescription(sceneIndex, character, category);
+            if (description) {
+                descriptions[category] = description;
+            }
+            // Small delay to avoid rate limiting
+            await new Promise(resolve => setTimeout(resolve, 300));
+        }
+
+        // Update character state
+        if (!state.characterStates[sceneIndex]) {
+            state.characterStates[sceneIndex] = {};
+        }
+        if (!state.characterStates[sceneIndex][character]) {
+            state.characterStates[sceneIndex][character] = {};
+        }
+
+        // Merge with existing data (don't overwrite if field already has content)
+        Object.keys(descriptions).forEach(category => {
+            if (!state.characterStates[sceneIndex][character][category] ||
+                state.characterStates[sceneIndex][character][category].trim() === '') {
+                state.characterStates[sceneIndex][character][category] = descriptions[category];
+            }
+        });
+
+        // Re-render and save
+        renderBreakdownPanel();
+        import('./export-handlers.js').then(module => module.saveProject());
+
+        if (status) status.textContent = `✓ ${character} breakdown generated`;
+        setTimeout(() => { if (status) status.textContent = ''; }, 2000);
+    } catch (error) {
+        console.error('Error filling character fields:', error);
         const status = document.getElementById('aiStatus');
         if (status) status.textContent = '✗ Error: ' + error.message;
     }
