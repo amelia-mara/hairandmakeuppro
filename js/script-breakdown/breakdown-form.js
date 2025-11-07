@@ -61,6 +61,13 @@ export function renderBreakdownPanel() {
         tagCounts[tag.category]++;
     });
 
+    // DIAGNOSTIC: Log breakdown rendering
+    console.log(`✓ Rendering breakdown for scene ${scene.number}:`, {
+        cast: cast.length,
+        tags: sceneTags.length,
+        tagCounts
+    });
+
     // Scene navigation data
     const hasPrevious = state.currentScene > 0;
     const hasNext = state.currentScene < state.scenes.length - 1;

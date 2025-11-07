@@ -118,18 +118,17 @@ export function showTagPopup() {
         return;
     }
 
-    const selectedTextEl = document.getElementById('tagSelectedText');
-    const contextEl = document.getElementById('tagContext');
-    const categoryEl = document.getElementById('tagCategory');
-    const characterSelect = document.getElementById('tagCharacter');
+    // FIX: Use kebab-case IDs to match HTML
+    const selectedTextEl = document.getElementById('tag-selected-text');
+    const categoryEl = document.getElementById('tag-category');
+    const characterSelect = document.getElementById('tag-character');
 
     if (selectedTextEl) selectedTextEl.textContent = currentSelection.selectedText;
-    if (contextEl) contextEl.value = currentSelection.fullContext;
-    if (categoryEl) categoryEl.value = 'makeup'; // Default to makeup
+    if (categoryEl) categoryEl.value = 'cast'; // Default to cast
 
     // Reset character field
-    const characterField = document.getElementById('characterField');
-    if (characterField) characterField.style.display = 'none';
+    const characterField = document.getElementById('tag-character-field');
+    if (characterField) characterField.style.display = 'block'; // Show by default for cast
 
     // Populate character dropdown
     if (characterSelect) {
@@ -164,30 +163,33 @@ export function closeTagPopup() {
     if (popup) popup.classList.remove('active');
     currentSelection = null;
 
-    // Reset form
-    const categoryEl = document.getElementById('tagCategory');
-    const characterEl = document.getElementById('tagCharacter');
-    const contextEl = document.getElementById('tagContext');
+    // Reset form - FIX: Use kebab-case IDs
+    const categoryEl = document.getElementById('tag-category');
+    const characterEl = document.getElementById('tag-character');
 
-    if (categoryEl) categoryEl.value = 'makeup';
+    if (categoryEl) categoryEl.value = 'cast';
     if (characterEl) characterEl.value = '';
-    if (contextEl) contextEl.value = '';
 }
 
 /**
  * Handle category change in tag popup
  */
 function handleCategoryChange() {
-    const category = document.getElementById('tagCategory')?.value;
-    const characterField = document.getElementById('characterField');
+    // FIX: Use kebab-case IDs
+    const category = document.getElementById('tag-category')?.value;
+    const characterField = document.getElementById('tag-character-field');
 
-    // Show character field for hair, makeup, sfx, wardrobe
-    if (['hair', 'makeup', 'sfx', 'wardrobe'].includes(category)) {
+    // Show character field for categories that need it
+    const needsCharacter = ['cast', 'hair', 'makeup', 'sfx', 'wardrobe', 'injuries', 'health', 'stunts'];
+    if (needsCharacter.includes(category)) {
         if (characterField) characterField.style.display = 'block';
     } else {
         if (characterField) characterField.style.display = 'none';
     }
 }
+
+// Expose handleCategoryChange to window for HTML onclick
+window.handleCategoryChange = handleCategoryChange;
 
 /**
  * Save tag
@@ -195,26 +197,29 @@ function handleCategoryChange() {
 export function saveTag() {
     if (!currentSelection || state.currentScene === null) return;
 
-    const categoryEl = document.getElementById('tagCategory');
-    const characterEl = document.getElementById('tagCharacter');
-    const contextEl = document.getElementById('tagContext');
+    // FIX: Use kebab-case IDs
+    const categoryEl = document.getElementById('tag-category');
+    const characterEl = document.getElementById('tag-character');
 
-    if (!categoryEl || !characterEl || !contextEl) return;
-
-    const category = categoryEl.value;
-    const character = characterEl.value;
-    const context = contextEl.value;
-
-    // Validate: makeup/wardrobe must have character
-    if ((category === 'makeup' || category === 'wardrobe') && !character) {
-        alert('Please select a character for makeup/wardrobe tags');
+    if (!categoryEl || !characterEl) {
+        console.error('❌ Tag form elements not found');
         return;
     }
 
-    console.log('Creating new tag...');
+    const category = categoryEl.value;
+    const character = characterEl.value;
+
+    // Validate: certain categories must have character
+    const needsCharacter = ['cast', 'hair', 'makeup', 'sfx', 'wardrobe'];
+    if (needsCharacter.includes(category) && !character) {
+        alert(`Please select a character for ${category} tags`);
+        return;
+    }
+
+    console.log('✓ Creating new tag...');
     console.log(`  Category: ${category}`);
     console.log(`  Character: ${character || 'none'}`);
-    console.log(`  Selected text: ${currentSelection.selectedText.substring(0, 50)}...`);
+    console.log(`  Selected text: "${currentSelection.selectedText.substring(0, 50)}${currentSelection.selectedText.length > 50 ? '...' : '"'}`);
 
     // Create tag object
     const tag = {
@@ -223,7 +228,7 @@ export function saveTag() {
         sceneNumber: state.scenes[state.currentScene].number,
         category: category,
         selectedText: currentSelection.selectedText,
-        fullContext: context,
+        fullContext: currentSelection.fullContext, // Full context from selection
         character: character || null,
         elementId: currentSelection.element.id || `element-${generateId()}`,
         created: Date.now()
@@ -439,10 +444,13 @@ export function initializeTagSystem() {
         }
     });
 
-    // Handle category change
-    const categoryEl = document.getElementById('tagCategory');
+    // Handle category change - FIX: Use kebab-case ID
+    const categoryEl = document.getElementById('tag-category');
     if (categoryEl) {
         categoryEl.addEventListener('change', handleCategoryChange);
+        console.log('✓ Category change event listener attached');
+    } else {
+        console.error('❌ tag-category element not found');
     }
 }
 
