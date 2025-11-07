@@ -2243,6 +2243,148 @@
             font-weight: 600;
         }
 
+        /* Compact Synopsis Section */
+        .breakdown-synopsis-section {
+            margin-bottom: 12px;
+            padding: 12px;
+            background: rgba(212, 175, 122, 0.08);
+            border-left: 3px solid var(--accent-gold);
+            border-radius: 6px;
+        }
+
+        .breakdown-synopsis-section .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.75em;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            letter-spacing: 0.05em;
+        }
+
+        .synopsis-display {
+            font-size: 0.8125em;
+            line-height: 1.5;
+            color: var(--text-light);
+            font-style: italic;
+        }
+
+        /* Scene Info Compact 3-Column Layout */
+        .scene-info-compact {
+            background: rgba(212, 175, 122, 0.08);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 16px;
+        }
+
+        .info-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .info-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .info-field {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .info-field.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .info-field label {
+            font-size: 0.6875em;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .info-field input,
+        .info-field select {
+            padding: 6px 8px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 4px;
+            color: var(--text-light);
+            font-size: 0.8125em;
+            font-family: inherit;
+        }
+
+        .info-field input:focus,
+        .info-field select:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+            background: rgba(0, 0, 0, 0.4);
+        }
+
+        .ai-detect-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--glass-border);
+        }
+
+        /* Tagged Pills (compact, only non-empty) */
+        .tagged-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 16px;
+        }
+
+        .tagged-pill {
+            padding: 4px 10px;
+            background: rgba(102, 126, 234, 0.15);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            color: #8b9cec;
+            border-radius: 6px;
+            font-size: 0.75em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .tagged-pill:hover {
+            background: rgba(102, 126, 234, 0.25);
+            border-color: var(--accent-blue);
+        }
+
+        /* Mini AI Button in Cast Header */
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .ai-mini-btn {
+            padding: 4px 8px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(118, 75, 162, 0.15));
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            border-radius: 4px;
+            color: var(--accent-blue);
+            font-size: 0.6875em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .ai-mini-btn:hover {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.25), rgba(118, 75, 162, 0.25));
+            border-color: var(--accent-blue);
+        }
+
         /* Cast Profile Modal Redesign */
         .modal-header {
             display: flex;
@@ -6376,116 +6518,74 @@ OUTPUT FORMAT (JSON only):
                     </button>
                 </div>
 
-                <!-- COMPACT AI CONTROLS -->
-                <div class="ai-controls-compact">
-                    <button class="ai-btn-compact" onclick="generateAISynopsis(${currentScene})" title="Generate synopsis with AI">
-                        <span class="btn-icon">✨</span>
-                        <span class="btn-text">Synopsis</span>
-                    </button>
-                    <button class="ai-btn-compact" onclick="detectAIElements(${currentScene})" title="Auto-detect cast & elements">
-                        <span class="btn-icon">🔍</span>
-                        <span class="btn-text">Detect</span>
-                    </button>
-                    <div class="ai-controls-spacer"></div>
-                    <div class="ai-status" id="aiStatus"></div>
+                <!-- SYNOPSIS SECTION -->
+                <div class="breakdown-synopsis-section">
+                    <div class="section-header">
+                        <span>Synopsis</span>
+                        <button class="ai-btn-compact" onclick="generateAISynopsis(${currentScene})" title="Generate synopsis with AI">
+                            ✨ Generate
+                        </button>
+                    </div>
+                    <div class="synopsis-display">${scene.synopsis || 'Click Generate to create synopsis...'}</div>
                 </div>
 
-                <!-- VISUAL SUMMARY DASHBOARD -->
-                <div class="breakdown-quick-summary">
-                    <div class="quick-summary-title">Tagged Elements</div>
-                    <div class="quick-summary-grid">
-                        ${categories.map(cat => {
-                            const count = (breakdown[cat.id] || []).length;
-                            const isEmpty = count === 0;
-                            return `
-                                <div class="summary-badge ${isEmpty ? 'empty' : ''}"
-                                     style="border-color: ${cat.color}"
-                                     onclick="${isEmpty ? '' : `jumpToCategory('${cat.id}')`}">
-                                    <span class="badge-icon">${cat.icon}</span>
-                                    <span class="badge-label">${cat.name}</span>
-                                    <span class="badge-count">${count}</span>
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
-                </div>
-
-                <!-- SYNOPSIS DISPLAY -->
-                ${scene.synopsis ? `
-                    <div class="breakdown-synopsis">
-                        ${scene.synopsis}
-                    </div>
-                ` : ''}
-
-                <!-- TAGGED ELEMENTS SUMMARY -->
-                ${Object.keys(tagCounts).length > 0 ? `
-                    <div class="breakdown-tags-summary">
-                        <div class="breakdown-section-label">Tagged Elements</div>
-                        <div class="breakdown-tags-counts">
-                            ${Object.entries(tagCounts).map(([cat, count]) => {
-                                const category = categories.find(c => c.id === cat);
-                                return `<div class="breakdown-tag-count">${category?.icon || '📌'} ${category?.name || cat}: ${count}</div>`;
-                            }).join('')}
+                <!-- SCENE INFORMATION - COMPACT 3-COLUMN -->
+                <div class="scene-info-compact">
+                    <div class="info-row">
+                        <div class="info-field">
+                            <label>Story Day</label>
+                            <input type="text"
+                                   value="${scene.storyDay || ''}"
+                                   placeholder="Day 1..."
+                                   onchange="updateSceneMetadata(${currentScene}, 'storyDay', this.value)">
+                        </div>
+                        <div class="info-field">
+                            <label>Time</label>
+                            <select onchange="updateSceneMetadata(${currentScene}, 'timeOfDay', this.value)">
+                                <option value="">-- Time --</option>
+                                <option value="Day" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Day' ? 'selected' : ''}>Day</option>
+                                <option value="Morning" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Morning' ? 'selected' : ''}>Morning</option>
+                                <option value="Afternoon" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Afternoon' ? 'selected' : ''}>Afternoon</option>
+                                <option value="Evening" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Evening' ? 'selected' : ''}>Evening</option>
+                                <option value="Night" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Night' ? 'selected' : ''}>Night</option>
+                            </select>
+                        </div>
+                        <div class="info-field">
+                            <label>INT/EXT</label>
+                            <select onchange="updateSceneMetadata(${currentScene}, 'intExt', this.value)">
+                                <option value="">-- Type --</option>
+                                <option value="INT" ${scene.intExt === 'INT' ? 'selected' : ''}>INT</option>
+                                <option value="EXT" ${scene.intExt === 'EXT' ? 'selected' : ''}>EXT</option>
+                                <option value="INT/EXT" ${scene.intExt === 'INT/EXT' ? 'selected' : ''}>INT/EXT</option>
+                            </select>
                         </div>
                     </div>
-                ` : ''}
-
-                <!-- SCENE METADATA INPUTS -->
-                <div class="breakdown-metadata-section">
-                    <div class="section-title" style="margin-bottom: 12px;">
-                        <span class="section-icon" style="background: var(--accent-gold);"></span>
-                        Scene Information
+                    <div class="info-row">
+                        <div class="info-field full-width">
+                            <label>Location</label>
+                            <input type="text"
+                                   value="${scene.location || extractLocation(scene.heading) || ''}"
+                                   placeholder="FERRY"
+                                   onchange="updateSceneMetadata(${currentScene}, 'location', this.value)">
+                        </div>
                     </div>
-
-                    <div class="breakdown-metadata-field">
-                        <label class="breakdown-label">Story Day</label>
-                        <input type="text"
-                               class="breakdown-input"
-                               value="${scene.storyDay || ''}"
-                               placeholder="Day 1 Morning, Week 2, Flashback - 1942..."
-                               onchange="updateSceneMetadata(${currentScene}, 'storyDay', this.value)">
-                        <div class="breakdown-hint">Examples: "Day 1 Morning", "Week 2", "Flashback - 5 years ago"</div>
-                    </div>
-
-                    <div class="breakdown-metadata-field">
-                        <label class="breakdown-label">Time of Day</label>
-                        <select class="breakdown-select"
-                                onchange="updateSceneMetadata(${currentScene}, 'timeOfDay', this.value)">
-                            <option value="">-- Select Time --</option>
-                            <option value="Day" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Day' ? 'selected' : ''}>Day</option>
-                            <option value="Morning" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Morning' ? 'selected' : ''}>Morning</option>
-                            <option value="Late Morning" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Late Morning' ? 'selected' : ''}>Late Morning</option>
-                            <option value="Afternoon" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Afternoon' ? 'selected' : ''}>Afternoon</option>
-                            <option value="Late Afternoon" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Late Afternoon' ? 'selected' : ''}>Late Afternoon</option>
-                            <option value="Evening" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Evening' ? 'selected' : ''}>Evening</option>
-                            <option value="Night" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Night' ? 'selected' : ''}>Night</option>
-                            <option value="Late Night" ${(scene.timeOfDay || detectTimeOfDay(scene.heading)) === 'Late Night' ? 'selected' : ''}>Late Night</option>
-                        </select>
-                        <div class="breakdown-hint">Auto-detected: ${detectTimeOfDay(scene.heading) || 'None'}</div>
-                    </div>
-
-                    <div class="breakdown-metadata-field">
-                        <label class="breakdown-label">INT/EXT</label>
-                        <select class="breakdown-select"
-                                onchange="updateSceneMetadata(${currentScene}, 'intExt', this.value)">
-                            <option value="">-- Select Type --</option>
-                            <option value="INT" ${scene.intExt === 'INT' ? 'selected' : ''}>INT</option>
-                            <option value="EXT" ${scene.intExt === 'EXT' ? 'selected' : ''}>EXT</option>
-                            <option value="INT/EXT" ${scene.intExt === 'INT/EXT' ? 'selected' : ''}>INT/EXT</option>
-                        </select>
-                        <div class="breakdown-hint">Auto-detected: ${detectIntExt(scene.heading) || 'Not detected'}</div>
-                    </div>
-
-                    <div class="breakdown-metadata-field">
-                        <label class="breakdown-label">Location</label>
-                        <input type="text"
-                               class="breakdown-input"
-                               value="${scene.location || extractLocation(scene.heading) || ''}"
-                               placeholder="Location name..."
-                               onchange="updateSceneMetadata(${currentScene}, 'location', this.value)">
-                        <div class="breakdown-hint">Auto-extracted: ${extractLocation(scene.heading) || 'Not detected'}</div>
+                    <div class="ai-detect-row">
+                        <button class="ai-btn-compact" onclick="detectAIElements(${currentScene})" title="Auto-detect cast & elements">
+                            🔍 Auto-Detect Elements
+                        </button>
+                        <div class="ai-status" id="aiStatus"></div>
                     </div>
                 </div>
+
+                <!-- TAGGED ELEMENTS PILLS (only non-empty) -->
+                ${Object.keys(tagCounts).length > 0 ? `
+                    <div class="tagged-pills">
+                        ${Object.entries(tagCounts).map(([cat, count]) => {
+                            const category = categories.find(c => c.id === cat);
+                            return `<div class="tagged-pill" onclick="jumpToCategory('${cat}')">${category?.icon || '📌'} ${category?.name || cat}: ${count}</div>`;
+                        }).join('')}
+                    </div>
+                ` : ''}
 
                 <!-- CAST IN THIS SCENE - Enhanced with Expandable Cards -->
                 ${cast.length > 0 ? `
@@ -6504,7 +6604,12 @@ OUTPUT FORMAT (JSON only):
                                 <div class="cast-member-card" id="castCard${castMember.replace(/\s/g, '')}">
                                     <div class="cast-member-header" onclick="toggleCastCard('${castMember.replace(/\s/g, '')}')">
                                         <span class="cast-member-name">${castMember}</span>
-                                        <span class="cast-member-toggle"></span>
+                                        <div class="header-actions">
+                                            <button class="ai-mini-btn" onclick="event.stopPropagation(); aiFillCharacterFields('${castMember}')">
+                                                ✨ AI Fill
+                                            </button>
+                                            <span class="cast-member-toggle"></span>
+                                        </div>
                                     </div>
 
                                     <div class="cast-member-body">
@@ -6587,9 +6692,6 @@ OUTPUT FORMAT (JSON only):
                                             <button class="view-timeline-btn" onclick="openCastProfile('${castMember}')">
                                                 📊 View ${castMember}'s Timeline
                                             </button>
-                                            <button class="ai-fill-btn" onclick="aiFillCharacterFields('${castMember}')">
-                                                ✨ AI Fill Fields
-                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -6614,37 +6716,40 @@ OUTPUT FORMAT (JSON only):
             `;
 
             // Render all category sections EXCEPT cast (handled separately above)
+            // Only render categories that have elements (hide empty categories)
             categories.filter(cat => cat.id !== 'cast').forEach(cat => {
                 const elements = breakdown[cat.id] || [];
-                const hasContent = elements.length > 0;
-                const isExpanded = hasContent; // Auto-expand categories with content
 
-                html += `
-                    <div class="breakdown-section ${hasContent ? 'has-content' : ''} ${isExpanded ? 'expanded' : ''}"
-                         id="category-${cat.id}"
-                         data-category="${cat.id}">
-                        <div class="section-header" onclick="toggleCategory('${cat.id}')">
-                            <div class="section-header-left">
-                                <span class="section-icon" style="background: ${cat.color}"></span>
-                                <span class="section-title">${cat.icon} ${cat.name}</span>
-                                <span class="category-count ${hasContent ? 'has-items' : ''}">${elements.length}</span>
+                // ONLY render if category has elements
+                if (elements.length > 0) {
+                    const isExpanded = false; // Collapsed by default
+
+                    html += `
+                        <div class="breakdown-section has-content ${isExpanded ? 'expanded' : ''}"
+                             id="category-${cat.id}"
+                             data-category="${cat.id}">
+                            <div class="section-header" onclick="toggleCategory('${cat.id}')">
+                                <div class="section-header-left">
+                                    <span class="section-icon" style="background: ${cat.color}"></span>
+                                    <span class="section-title">${cat.icon} ${cat.name}</span>
+                                    <span class="category-count has-items">${elements.length}</span>
+                                </div>
+                                <button class="category-toggle" onclick="event.stopPropagation();">${isExpanded ? '▼' : '▶'}</button>
                             </div>
-                            <button class="category-toggle" onclick="event.stopPropagation();">${isExpanded ? '▼' : '▶'}</button>
-                        </div>
-                        <div class="section-content">
-                            <div class="element-list">
-                                ${elements.length === 0 ? `<div class="empty-hint" style="text-align: center; padding: 8px; color: var(--text-muted); font-size: 0.75em;">+ Click to add ${cat.name.toLowerCase()}</div>` : ''}
-                                ${elements.map(el => `
-                                    <div class="element-item">
-                                        <div class="element-text">${el}</div>
-                                        <button class="element-remove" onclick="removeElement('${cat.id}', '${el.replace(/'/g, "\\'")}')">×</button>
-                                    </div>
-                                `).join('')}
+                            <div class="section-content">
+                                <div class="element-list">
+                                    ${elements.map(el => `
+                                        <div class="element-item">
+                                            <div class="element-text">${el}</div>
+                                            <button class="element-remove" onclick="removeElement('${cat.id}', '${el.replace(/'/g, "\\'")}')">×</button>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                                <button class="add-element-btn" style="width: 100%; margin-top: 8px;" onclick="openAddElement('${cat.id}')">+ Add ${cat.name}</button>
                             </div>
-                            <button class="add-element-btn" style="width: 100%; margin-top: 8px;" onclick="openAddElement('${cat.id}')">+ Add ${cat.name}</button>
                         </div>
-                    </div>
-                `;
+                    `;
+                }
             });
 
             container.innerHTML = html;
