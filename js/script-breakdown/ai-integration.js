@@ -522,6 +522,9 @@ export async function autoTagScript() {
         return;
     }
 
+    console.log('🤖 Starting Auto Tag Script...');
+    console.log('📊 Total scenes to process:', state.scenes.length);
+
     // Reset cancellation flag
     batchCancelled = false;
 
@@ -530,6 +533,7 @@ export async function autoTagScript() {
 
     let successCount = 0;
     let errorCount = 0;
+    let totalTagsCreated = 0;
     const errors = [];
     const allCategories = ['cast', 'hair', 'makeup', 'sfx', 'health', 'injuries', 'stunts', 'weather', 'wardrobe', 'extras'];
 
@@ -540,10 +544,18 @@ export async function autoTagScript() {
         }
 
         const scene = state.scenes[i];
+        console.log(`\n📋 Processing scene ${i + 1}/${state.scenes.length} (Scene #${scene.number})`);
         updateProgressModal(i + 1, state.scenes.length, `Auto-detecting elements in Scene ${scene.number}...`, false);
 
         try {
             const result = await detectAIElements(i);
+            console.log(`✓ Scene ${scene.number} - AI detected:`, {
+                cast: result.cast?.length || 0,
+                hair: result.elements?.hair?.length || 0,
+                makeup: result.elements?.makeup?.length || 0,
+                sfx: result.elements?.sfx?.length || 0,
+                wardrobe: result.elements?.wardrobe?.length || 0
+            });
 
             // Initialize breakdown if it doesn't exist
             if (!state.sceneBreakdowns[i]) {
@@ -575,8 +587,11 @@ export async function autoTagScript() {
                 state.scriptTags[i] = [];
             }
 
+            let sceneTagsCreated = 0;
+
             // Create tags for cast members
             if (result.cast && result.cast.length > 0) {
+                console.log(`  Creating ${result.cast.length} cast tags...`);
                 result.cast.forEach(castMember => {
                     const tag = {
                         id: `tag-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -589,6 +604,8 @@ export async function autoTagScript() {
                         created: Date.now()
                     };
                     state.scriptTags[i].push(tag);
+                    sceneTagsCreated++;
+                    console.log(`    ✓ Cast tag: "${castMember}"`);
                 });
             }
 
@@ -596,6 +613,7 @@ export async function autoTagScript() {
             if (result.elements) {
                 Object.keys(result.elements).forEach(category => {
                     if (result.elements[category] && result.elements[category].length > 0) {
+                        console.log(`  Creating ${result.elements[category].length} ${category} tags...`);
                         result.elements[category].forEach(description => {
                             // Try to detect character from description
                             let detectedCharacter = null;
@@ -619,23 +637,19 @@ export async function autoTagScript() {
                                 created: Date.now()
                             };
                             state.scriptTags[i].push(tag);
+                            sceneTagsCreated++;
+                            console.log(`    ✓ ${category} tag: "${description.substring(0, 40)}..." ${detectedCharacter ? `(${detectedCharacter})` : ''}`);
                         });
                     }
                 });
             }
 
+            totalTagsCreated += sceneTagsCreated;
             successCount++;
-            const detectedCount = (result.cast?.length || 0) +
-                                 Object.values(result.elements || {}).reduce((sum, arr) => sum + (arr?.length || 0), 0);
-            const tagCount = state.scriptTags[i] ? state.scriptTags[i].length : 0;
-            updateProgressDetails(`✓ Scene ${scene.number}: ${detectedCount} elements, ${tagCount} tags created`);
 
-            // DIAGNOSTIC: Log what was detected
-            console.log(`✓ Scene ${scene.number} auto-tagged:`, {
-                cast: result.cast?.length || 0,
-                elements: detectedCount,
-                tagsCreated: tagCount
-            });
+            const tagCount = state.scriptTags[i] ? state.scriptTags[i].length : 0;
+            console.log(`✓ Scene ${scene.number} complete: ${sceneTagsCreated} tags created (total in scene: ${tagCount})`);
+            updateProgressDetails(`✓ Scene ${scene.number}: ${sceneTagsCreated} tags created`);
         } catch (error) {
             console.error(`Error auto-tagging scene ${i}:`, error);
             errorCount++;
@@ -665,9 +679,20 @@ export async function autoTagScript() {
 
     // Count total tags created
     const totalTags = Object.values(state.scriptTags).reduce((sum, tags) => sum + (tags?.length || 0), 0);
-    console.log(`✓ Total tags created across all scenes: ${totalTags}`);
+    console.log(`\n✅ AUTO-TAGGING COMPLETE`);
+    console.log(`📊 Summary:`);
+    console.log(`  - Scenes processed: ${successCount}`);
+    console.log(`  - Tags created: ${totalTagsCreated}`);
+    console.log(`  - Total tags in state: ${totalTags}`);
+    console.log(`  - Errors: ${errorCount}`);
+
+    // DIAGNOSTIC: Show sample of tags created
+    if (state.scriptTags[0]) {
+        console.log(`\n🔍 Sample tag from scene 0:`, state.scriptTags[0][0]);
+    }
 
     // Apply all highlights to script
+    console.log(`\n🎨 Applying highlights to script...`);
     const { renderAllHighlights } = await import('./tag-system.js');
     renderAllHighlights();
 
