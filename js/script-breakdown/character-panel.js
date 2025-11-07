@@ -59,6 +59,7 @@ export function renderCharacterTabs() {
         console.log(`  ✓ Added tab for character "${character}"`);
     });
 
+    console.log(`✓ Generating character tabs for: [${state.characterTabs.join(', ')}]`);
     console.log(`✓ Rendered ${state.characterTabs.length} character tabs`);
 }
 
