@@ -18,8 +18,13 @@ import { formatSceneRange, getComplexityIcon } from './utils.js';
  * Shows script tab plus tabs for each character
  */
 export function renderCharacterTabs() {
+    console.log(`renderCharacterTabs called with ${state.characterTabs.length} character(s):`, state.characterTabs);
+
     const tabsContainer = document.querySelector('.center-tabs');
-    if (!tabsContainer) return;
+    if (!tabsContainer) {
+        console.error('❌ .center-tabs container not found!');
+        return;
+    }
 
     // Keep script tab
     const scriptTab = tabsContainer.querySelector('[data-tab="script"]');
@@ -28,6 +33,16 @@ export function renderCharacterTabs() {
     tabsContainer.innerHTML = '';
     if (scriptTab) {
         tabsContainer.appendChild(scriptTab);
+        console.log('  ✓ Kept script tab');
+    } else {
+        console.warn('  ⚠ Script tab not found - creating new one');
+        // Create script tab if it doesn't exist
+        const newScriptTab = document.createElement('div');
+        newScriptTab.className = 'center-tab active';
+        newScriptTab.setAttribute('data-tab', 'script');
+        newScriptTab.onclick = () => switchCenterTab('script');
+        newScriptTab.innerHTML = '<span>Script</span>';
+        tabsContainer.appendChild(newScriptTab);
     }
 
     // Add character tabs (from state.characterTabs)
@@ -41,7 +56,10 @@ export function renderCharacterTabs() {
             <span class="center-tab-close" onclick="event.stopPropagation(); removeCharacterTab('${escapeHtml(character).replace(/'/g, "\\'")}')">×</span>
         `;
         tabsContainer.appendChild(tab);
+        console.log(`  ✓ Added tab for character "${character}"`);
     });
+
+    console.log(`✓ Rendered ${state.characterTabs.length} character tabs`);
 }
 
 /**
@@ -87,7 +105,8 @@ export function switchCenterTab(tabName) {
     });
 
     if (tabName === 'script') {
-        document.getElementById('scriptTabPanel')?.classList.add('active');
+        // IMPORTANT: The correct element ID is 'script-tab-panel' (with hyphens)
+        document.getElementById('script-tab-panel')?.classList.add('active');
     } else {
         const character = tabName.replace('character-', '');
         document.getElementById(`characterTab-${character}`)?.classList.add('active');
