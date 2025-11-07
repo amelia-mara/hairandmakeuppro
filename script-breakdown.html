@@ -3831,24 +3831,152 @@ This is it. Today's the day."></textarea>
             const exactMatch = existingCast.find(c => normalizeCastName(c) === normalized);
             if (exactMatch) return exactMatch;
 
-            // Check if name is a first name of an existing cast member
-            // e.g., "Sarah" matches "SARAH CONNOR"
-            const firstNameMatch = existingCast.find(c => {
-                const parts = normalizeCastName(c).split(/\s+/);
-                return parts[0] === normalized || parts.includes(normalized);
-            });
-            if (firstNameMatch) return firstNameMatch;
+            // Split into parts for partial matching
+            const nameParts = normalized.split(/\s+/);
+            const firstName = nameParts[0];
 
-            // Check if existing cast member is first name of this name
-            // e.g., "SARAH" exists, new name is "SARAH CONNOR"
-            const reverseMatch = existingCast.find(c => {
-                const existingNormalized = normalizeCastName(c);
-                const parts = normalized.split(/\s+/);
-                return parts[0] === existingNormalized || parts.includes(existingNormalized);
-            });
-            if (reverseMatch) return reverseMatch;
+            for (let existing of existingCast) {
+                const existingParts = normalizeCastName(existing).split(/\s+/);
+                const existingFirstName = existingParts[0];
+
+                // If first names match
+                if (firstName === existingFirstName) {
+                    // Prefer the longer, more complete name
+                    if (nameParts.length > existingParts.length) {
+                        // New name is more complete, suggest using it to replace existing
+                        return existing; // Return existing to merge into
+                    } else {
+                        // Existing name is more complete or equal
+                        return existing;
+                    }
+                }
+
+                // Check if new name contains all parts of existing name
+                if (existingParts.every(part => nameParts.includes(part))) {
+                    return existing;
+                }
+
+                // Check if existing name contains all parts of new name
+                if (nameParts.every(part => existingParts.includes(part))) {
+                    return existing;
+                }
+            }
 
             return null;
+        }
+
+        function mergeCharacterNames(oldName, newName) {
+            // Use the longer name as it's likely more complete
+            const oldNormalized = normalizeCastName(oldName);
+            const newNormalized = normalizeCastName(newName);
+
+            if (newNormalized.length > oldNormalized.length) {
+                return newName;
+            }
+            return oldName;
+        }
+
+        function renameCharacterEverywhere(oldName, newName) {
+            console.log(`Renaming "${oldName}" to "${newName}" everywhere`);
+
+            // Update all scene breakdowns
+            Object.keys(sceneBreakdowns).forEach(sceneIndex => {
+                const breakdown = sceneBreakdowns[sceneIndex];
+                if (breakdown.cast) {
+                    const index = breakdown.cast.indexOf(oldName);
+                    if (index !== -1) {
+                        breakdown.cast[index] = newName;
+                    }
+                }
+            });
+
+            // Update character states
+            Object.keys(characterStates).forEach(sceneIndex => {
+                if (characterStates[sceneIndex][oldName]) {
+                    characterStates[sceneIndex][newName] = characterStates[sceneIndex][oldName];
+                    delete characterStates[sceneIndex][oldName];
+                }
+            });
+
+            // Update continuity events
+            if (continuityEvents[oldName]) {
+                continuityEvents[newName] = continuityEvents[oldName];
+                delete continuityEvents[oldName];
+            }
+
+            // Update cast profiles
+            if (castProfiles[oldName]) {
+                castProfiles[newName] = castProfiles[oldName];
+                castProfiles[newName].name = newName;
+                delete castProfiles[oldName];
+            }
+
+            // Update script tags
+            Object.keys(scriptTags).forEach(sceneIndex => {
+                scriptTags[sceneIndex].forEach(tag => {
+                    if (tag.character === oldName) {
+                        tag.character = newName;
+                    }
+                });
+            });
+
+            // Update scene.characters data
+            scenes.forEach(scene => {
+                if (scene.characters && scene.characters[oldName]) {
+                    scene.characters[newName] = scene.characters[oldName];
+                    delete scene.characters[oldName];
+                }
+            });
+        }
+
+        function cleanupDuplicateCharacters() {
+            console.log('Checking for duplicate characters...');
+
+            // Get all unique cast members across all scenes
+            const allCast = new Set();
+            Object.values(sceneBreakdowns).forEach(breakdown => {
+                if (breakdown.cast) {
+                    breakdown.cast.forEach(member => allCast.add(member));
+                }
+            });
+
+            const castArray = Array.from(allCast);
+            const merges = [];
+
+            // Find duplicates
+            for (let i = 0; i < castArray.length; i++) {
+                for (let j = i + 1; j < castArray.length; j++) {
+                    const name1 = castArray[i];
+                    const name2 = castArray[j];
+
+                    const normalized1 = normalizeCastName(name1);
+                    const normalized2 = normalizeCastName(name2);
+
+                    // Check if they're the same person
+                    const parts1 = normalized1.split(/\s+/);
+                    const parts2 = normalized2.split(/\s+/);
+
+                    // If first names match, they're likely the same person
+                    if (parts1[0] === parts2[0]) {
+                        // Use the longer name
+                        const keepName = parts1.length >= parts2.length ? name1 : name2;
+                        const removeName = keepName === name1 ? name2 : name1;
+
+                        merges.push({ keep: keepName, remove: removeName });
+                    }
+                }
+            }
+
+            // Apply merges
+            merges.forEach(({ keep, remove }) => {
+                console.log(`Merging "${remove}" into "${keep}"`);
+                renameCharacterEverywhere(remove, keep);
+            });
+
+            if (merges.length > 0) {
+                console.log(`✓ Merged ${merges.length} duplicate character(s)`);
+                saveProject();
+            }
         }
 
         // Initialize
@@ -3881,6 +4009,9 @@ This is it. Today's the day."></textarea>
                 if (currentProject.continuityEvents) continuityEvents = currentProject.continuityEvents;
                 if (currentProject.sceneTimeline) sceneTimeline = currentProject.sceneTimeline;
                 if (currentProject.scriptTags) scriptTags = currentProject.scriptTags;
+
+                // Clean up duplicate characters on load
+                cleanupDuplicateCharacters();
 
                 // Initialize character tabs with loaded data
                 initializeCharacterTabs();
@@ -5098,13 +5229,13 @@ This is it. Today's the day."></textarea>
                 
                 const prompt = `Analyze this screenplay scene and provide:
 1. A brief 1-2 sentence synopsis of what happens
-2. ALL cast members in the scene - including characters mentioned by name, even if not in dialogue
+2. ALL cast members in the scene - USE FULL NAMES when available
 
-IMPORTANT: Look for character names in:
-- ALL CAPS dialogue headers (standard format)
-- Proper nouns in action lines (e.g., "Peter walks in", "She turns around")
-- Character descriptions with names in parentheses
-- Any person referred to by name in the scene
+IMPORTANT CHARACTER NAMING RULES:
+- If a character has a full name (e.g., "EMMA HART"), always use the FULL NAME
+- If you see "Emma" or "EMMA" and context suggests it's the same person as "EMMA HART", use "EMMA HART"
+- Use the MOST COMPLETE name form you can find in the scene
+- Look for names in: dialogue headers, action lines, character descriptions
 
 Scene heading: ${scene.heading}
 
@@ -5114,16 +5245,13 @@ ${content}
 Respond in JSON format:
 {
   "synopsis": "brief description",
-  "cast": ["CHARACTER1", "CHARACTER2", "She", "Peter"]
+  "cast": ["EMMA HART", "SARAH CHEN"]
 }
 
-Examples of names to catch:
-- "JOHN" (all caps dialogue)
-- "Peter" (proper noun in action line)
-- "She" or "He" (if used as a character name)
-- "SARAH (30s, tired)" (name with description)
-
-Include ALL people mentioned by name in the scene.
+Examples:
+- If you see "EMMA HART" anywhere in the script, always use "EMMA HART" (not just "EMMA")
+- If you see "DR. WILSON" or "Dr. Wilson", use "DR. WILSON"
+- Prefer full names over shortened versions
 
 IMPORTANT: Respond ONLY with valid JSON. Do not include any text outside the JSON structure.`;
 
@@ -5147,29 +5275,77 @@ IMPORTANT: Respond ONLY with valid JSON. Do not include any text outside the JSO
                 }
                 
                 result.cast.forEach(castMember => {
-                    // Normalize the name
                     const normalizedName = normalizeCastName(castMember);
                     if (!normalizedName) return;
 
-                    // Check if this character already exists under a different name
                     const existingCast = sceneBreakdowns[sceneIndex].cast || [];
                     const matchingMember = findMatchingCastMember(normalizedName, existingCast);
 
-                    const finalName = matchingMember || normalizedName;
+                    if (matchingMember) {
+                        // Character already exists - use existing name
+                        const finalName = matchingMember;
 
-                    if (!sceneBreakdowns[sceneIndex].cast.includes(finalName)) {
-                        sceneBreakdowns[sceneIndex].cast.push(finalName);
-                    }
+                        // Update to longer name if new name is more complete
+                        const betterName = mergeCharacterNames(matchingMember, normalizedName);
+                        if (betterName !== matchingMember) {
+                            // Rename everywhere
+                            renameCharacterEverywhere(matchingMember, betterName);
+                        }
 
-                    if (!castProfiles[finalName]) {
-                        castProfiles[finalName] = {
-                            name: finalName,
-                            baseDescription: '',
-                            scenes: []
-                        };
-                    }
-                    if (!castProfiles[finalName].scenes.includes(scene.number)) {
-                        castProfiles[finalName].scenes.push(scene.number);
+                        if (!castProfiles[finalName]) {
+                            castProfiles[finalName] = {
+                                name: finalName,
+                                baseDescription: '',
+                                scenes: []
+                            };
+                        }
+                        if (!castProfiles[finalName].scenes.includes(scene.number)) {
+                            castProfiles[finalName].scenes.push(scene.number);
+                        }
+                    } else {
+                        // New character - check ALL existing cast globally for matches
+                        const allExistingCast = new Set();
+                        Object.values(sceneBreakdowns).forEach(breakdown => {
+                            if (breakdown.cast) {
+                                breakdown.cast.forEach(c => allExistingCast.add(c));
+                            }
+                        });
+
+                        const globalMatch = findMatchingCastMember(normalizedName, Array.from(allExistingCast));
+
+                        if (globalMatch) {
+                            // Match found in other scenes - use that name
+                            const finalName = globalMatch;
+
+                            // Update to longer name if new name is more complete
+                            const betterName = mergeCharacterNames(globalMatch, normalizedName);
+                            if (betterName !== globalMatch) {
+                                renameCharacterEverywhere(globalMatch, betterName);
+                            }
+
+                            if (!sceneBreakdowns[sceneIndex].cast.includes(finalName)) {
+                                sceneBreakdowns[sceneIndex].cast.push(finalName);
+                            }
+                            if (!castProfiles[finalName].scenes.includes(scene.number)) {
+                                castProfiles[finalName].scenes.push(scene.number);
+                            }
+                        } else {
+                            // Truly new character
+                            if (!sceneBreakdowns[sceneIndex].cast.includes(normalizedName)) {
+                                sceneBreakdowns[sceneIndex].cast.push(normalizedName);
+                            }
+
+                            if (!castProfiles[normalizedName]) {
+                                castProfiles[normalizedName] = {
+                                    name: normalizedName,
+                                    baseDescription: '',
+                                    scenes: []
+                                };
+                            }
+                            if (!castProfiles[normalizedName].scenes.includes(scene.number)) {
+                                castProfiles[normalizedName].scenes.push(scene.number);
+                            }
+                        }
                     }
                 });
                 
