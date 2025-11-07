@@ -70,7 +70,7 @@
         .back-link:hover { color: var(--accent-gold); }
         .page-title { font-size: 1.125em; font-weight: 600; }
         
-        .toolbar { display: flex; gap: 8px; }
+        .toolbar { display: flex; gap: 8px; align-items: center; }
         .toolbar-btn {
             padding: 8px 16px;
             background: transparent;
@@ -83,6 +83,32 @@
             transition: all 0.3s ease;
         }
         .toolbar-btn:hover { border-color: var(--accent-gold); color: var(--accent-gold); background: rgba(201, 169, 97, 0.05); }
+
+        .auto-save-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: rgba(34, 197, 94, 0.15);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            border-radius: 6px;
+            color: #4ade80;
+            font-size: 0.75em;
+            font-weight: 500;
+            animation: fadeInOut 1.5s ease-in-out;
+        }
+
+        .auto-save-indicator .save-icon {
+            font-size: 1.1em;
+            font-weight: 700;
+        }
+
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translateY(-4px); }
+            20% { opacity: 1; transform: translateY(0); }
+            80% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-4px); }
+        }
         
         .main-content { display: flex; flex: 1; overflow: hidden; }
         
@@ -1761,6 +1787,164 @@
             to { transform: rotate(360deg); }
         }
 
+        /* Scene Navigation Bar */
+        .breakdown-scene-nav {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg,
+                rgba(212, 175, 122, 0.08) 0%,
+                rgba(28, 25, 22, 0.6) 50%,
+                rgba(212, 175, 122, 0.05) 100%
+            );
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+        }
+
+        .scene-nav-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            color: var(--text-light);
+            font-size: 0.8125em;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .scene-nav-btn:hover:not(.disabled) {
+            background: rgba(212, 175, 122, 0.15);
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+            transform: translateX(0);
+        }
+
+        .scene-nav-btn:hover:not(.disabled):first-child {
+            transform: translateX(-2px);
+        }
+
+        .scene-nav-btn:hover:not(.disabled):last-child {
+            transform: translateX(2px);
+        }
+
+        .scene-nav-btn.disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .nav-arrow {
+            font-size: 1.1em;
+            font-weight: 700;
+        }
+
+        .nav-text {
+            font-size: 0.875em;
+        }
+
+        .scene-nav-current {
+            flex: 1;
+            text-align: center;
+            padding: 8px 16px;
+        }
+
+        .nav-scene-number {
+            font-size: 1em;
+            font-weight: 700;
+            color: var(--accent-gold);
+            margin-bottom: 4px;
+        }
+
+        .nav-scene-heading {
+            font-size: 0.8125em;
+            color: var(--text-light);
+            margin-bottom: 4px;
+            line-height: 1.3;
+        }
+
+        .nav-scene-meta {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        .nav-scene-meta span {
+            margin: 0 4px;
+        }
+
+        /* Compact AI Controls */
+        .ai-controls-compact {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 20px;
+            padding: 12px;
+            background: rgba(28, 25, 22, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+        }
+
+        .ai-btn-compact {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.12), rgba(118, 75, 162, 0.12));
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            border-radius: 6px;
+            color: var(--accent-blue);
+            font-size: 0.75em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .ai-btn-compact:hover {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.25), rgba(118, 75, 162, 0.25));
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .ai-btn-compact:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .ai-btn-compact .btn-icon {
+            font-size: 1em;
+        }
+
+        .ai-btn-compact .btn-text {
+            font-size: 0.95em;
+        }
+
+        .ai-btn-compact .spinner {
+            width: 12px;
+            height: 12px;
+            border: 2px solid var(--accent-blue);
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        .ai-controls-spacer {
+            flex: 1;
+        }
+
+        .ai-status {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
         /* Scene Detail Fields (for cast profile modal) */
         .scene-detail-section {
             background: rgba(28, 25, 22, 0.3);
@@ -3424,6 +3608,10 @@
                 <button class="toolbar-btn" onclick="openSettingsModal()">⚙️ AI Settings</button>
                 <button class="toolbar-btn" onclick="exportData()">Export Data</button>
                 <button class="toolbar-btn" onclick="openImportModal()">Import Script</button>
+                <div id="autoSaveIndicator" class="auto-save-indicator" style="display: none;">
+                    <span class="save-icon">✓</span>
+                    <span class="save-text">Saved</span>
+                </div>
             </div>
         </div>
         
@@ -4135,8 +4323,26 @@ This is it. Today's the day."></textarea>
             }
             
             document.getElementById('sceneSearch').addEventListener('input', handleSceneSearch);
+
+            // Keyboard shortcuts for scene navigation
+            document.addEventListener('keydown', (e) => {
+                // Alt+Left Arrow: Previous scene
+                if (e.altKey && e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    if (currentScene !== null && currentScene > 0) {
+                        navigateToScene(currentScene - 1);
+                    }
+                }
+                // Alt+Right Arrow: Next scene
+                if (e.altKey && e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    if (currentScene !== null && currentScene < scenes.length - 1) {
+                        navigateToScene(currentScene + 1);
+                    }
+                }
+            });
         }
-        
+
         // Settings Modal
         function openSettingsModal() {
             document.getElementById('aiProvider').value = aiProvider;
@@ -6012,6 +6218,28 @@ OUTPUT FORMAT (JSON only):
             saveProject();
         }
 
+        function navigateToScene(sceneIndex) {
+            if (sceneIndex < 0 || sceneIndex >= scenes.length) return;
+
+            // Auto-save current scene before switching
+            if (currentScene !== null) {
+                saveProject();
+            }
+
+            // Select new scene
+            selectScene(sceneIndex);
+
+            // Scroll to scene in script (if on script tab)
+            if (activeCenterTab === 'script') {
+                setTimeout(() => {
+                    const sceneEl = document.getElementById(`scene-${scenes[sceneIndex].number}`);
+                    if (sceneEl) {
+                        sceneEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }, 100);
+            }
+        }
+
         function selectScene(index) {
             // Auto-save previous scene before switching
             if (currentScene !== null && currentScene !== index) {
@@ -6059,20 +6287,55 @@ OUTPUT FORMAT (JSON only):
                 tagCounts[tag.category]++;
             });
 
+            // Scene navigation data
+            const hasPrevious = currentScene > 0;
+            const hasNext = currentScene < scenes.length - 1;
+            const previousScene = hasPrevious ? scenes[currentScene - 1] : null;
+            const nextScene = hasNext ? scenes[currentScene + 1] : null;
+
             let html = `
-                <!-- AI CONTROLS AT TOP -->
-                <div class="ai-controls">
-                    <button class="ai-btn" onclick="generateAISynopsis(${currentScene})">✨ Generate AI Synopsis</button>
-                    <button class="ai-btn" onclick="detectAIElements(${currentScene})">🔍 Detect Elements with AI</button>
-                    <button class="ai-btn" style="background: linear-gradient(135deg, rgba(82, 193, 134, 0.15), rgba(52, 211, 153, 0.15)); border-color: var(--success); color: var(--success);" onclick="saveSceneBreakdown()">
-                        💾 Save Scene
+                <!-- SCENE NAVIGATION BAR -->
+                <div class="breakdown-scene-nav">
+                    <button class="scene-nav-btn ${!hasPrevious ? 'disabled' : ''}"
+                            onclick="navigateToScene(${currentScene - 1})"
+                            ${!hasPrevious ? 'disabled' : ''}>
+                        <span class="nav-arrow">←</span>
+                        <span class="nav-text">
+                            ${hasPrevious ? `Scene ${previousScene.number}` : 'No Previous'}
+                        </span>
+                    </button>
+
+                    <div class="scene-nav-current">
+                        <div class="nav-scene-number">Scene ${scene.number}</div>
+                        <div class="nav-scene-heading">${scene.heading}</div>
+                        <div class="nav-scene-meta">
+                            ${scene.storyDay ? `<span>${scene.storyDay}</span>` : ''}
+                            ${scene.timeOfDay ? `<span>• ${scene.timeOfDay}</span>` : ''}
+                        </div>
+                    </div>
+
+                    <button class="scene-nav-btn ${!hasNext ? 'disabled' : ''}"
+                            onclick="navigateToScene(${currentScene + 1})"
+                            ${!hasNext ? 'disabled' : ''}>
+                        <span class="nav-text">
+                            ${hasNext ? `Scene ${nextScene.number}` : 'No Next'}
+                        </span>
+                        <span class="nav-arrow">→</span>
                     </button>
                 </div>
 
-                <!-- SCENE HEADER -->
-                <div class="breakdown-header">
-                    <div class="breakdown-scene-title">Scene ${scene.number}</div>
-                    <div class="breakdown-scene-heading">${scene.heading}</div>
+                <!-- COMPACT AI CONTROLS -->
+                <div class="ai-controls-compact">
+                    <button class="ai-btn-compact" onclick="generateAISynopsis(${currentScene})" title="Generate synopsis with AI">
+                        <span class="btn-icon">✨</span>
+                        <span class="btn-text">Synopsis</span>
+                    </button>
+                    <button class="ai-btn-compact" onclick="detectAIElements(${currentScene})" title="Auto-detect cast & elements">
+                        <span class="btn-icon">🔍</span>
+                        <span class="btn-text">Detect</span>
+                    </button>
+                    <div class="ai-controls-spacer"></div>
+                    <div class="ai-status" id="aiStatus"></div>
                 </div>
 
                 <!-- SYNOPSIS DISPLAY -->
@@ -6218,7 +6481,7 @@ OUTPUT FORMAT (JSON only):
                                                        class="department-input"
                                                        value="${state.hair || ''}"
                                                        placeholder="Hairstyle, condition, changes..."
-                                                       onchange="updateCharacterField('${castMember}', 'hair', this.value)">
+                                                       oninput="updateCharacterField('${castMember}', 'hair', this.value)">
                                             </div>
 
                                             <div class="department-field">
@@ -6227,7 +6490,7 @@ OUTPUT FORMAT (JSON only):
                                                        class="department-input"
                                                        value="${state.makeup || ''}"
                                                        placeholder="Makeup look, details..."
-                                                       onchange="updateCharacterField('${castMember}', 'makeup', this.value)">
+                                                       oninput="updateCharacterField('${castMember}', 'makeup', this.value)">
                                             </div>
 
                                             <div class="department-field">
@@ -6236,7 +6499,7 @@ OUTPUT FORMAT (JSON only):
                                                        class="department-input"
                                                        value="${state.sfx || ''}"
                                                        placeholder="Injuries, wounds, prosthetics..."
-                                                       onchange="updateCharacterField('${castMember}', 'sfx', this.value)">
+                                                       oninput="updateCharacterField('${castMember}', 'sfx', this.value)">
                                             </div>
 
                                             <div class="department-field">
@@ -6245,7 +6508,7 @@ OUTPUT FORMAT (JSON only):
                                                        class="department-input"
                                                        value="${state.wardrobe || ''}"
                                                        placeholder="Costume description, accessories..."
-                                                       onchange="updateCharacterField('${castMember}', 'wardrobe', this.value)">
+                                                       oninput="updateCharacterField('${castMember}', 'wardrobe', this.value)">
                                             </div>
 
                                             <div class="department-field">
@@ -6254,7 +6517,7 @@ OUTPUT FORMAT (JSON only):
                                                        class="department-input"
                                                        value="${state.notes || ''}"
                                                        placeholder="Additional notes..."
-                                                       onchange="updateCharacterField('${castMember}', 'notes', this.value)">
+                                                       oninput="updateCharacterField('${castMember}', 'notes', this.value)">
                                             </div>
                                         </div>
 
@@ -7220,6 +7483,7 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`;
         }
 
         // Update character field in scene
+        // Auto-save when character fields change
         function updateCharacterField(character, field, value) {
             if (!characterStates[currentScene]) {
                 characterStates[currentScene] = {};
@@ -7228,7 +7492,24 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`;
                 characterStates[currentScene][character] = {};
             }
             characterStates[currentScene][character][field] = value;
-            saveProject();
+
+            // Auto-save after 1 second delay (debounced)
+            clearTimeout(window.autoSaveTimeout);
+            window.autoSaveTimeout = setTimeout(() => {
+                saveProject();
+                showAutoSaveIndicator();
+            }, 1000);
+        }
+
+        // Show brief save confirmation
+        function showAutoSaveIndicator() {
+            const indicator = document.getElementById('autoSaveIndicator');
+            if (indicator) {
+                indicator.style.display = 'flex';
+                setTimeout(() => {
+                    indicator.style.display = 'none';
+                }, 1500);
+            }
         }
 
         // AI fill character fields (simple implementation - extracts from existing tags)
