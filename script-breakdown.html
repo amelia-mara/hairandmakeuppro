@@ -4149,7 +4149,137 @@
             background: linear-gradient(135deg, #d4af7a, #c09861);
             transform: translateY(-1px);
         }
-        
+
+        .modal-btn.secondary {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.3), rgba(118, 75, 162, 0.3));
+            border-color: var(--accent-blue);
+            color: var(--accent-blue);
+        }
+
+        .modal-btn.secondary:hover {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.4), rgba(118, 75, 162, 0.4));
+            border-color: var(--accent-blue);
+            color: var(--accent-blue);
+            transform: translateY(-1px);
+        }
+
+        /* Auto-Suggest Look States Modal */
+        .suggest-info-box {
+            padding: 12px;
+            background: rgba(102, 126, 234, 0.1);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            border-radius: 6px;
+            font-size: 0.8125em;
+            color: var(--text-light);
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+
+        .suggestion-card {
+            background: rgba(28, 25, 22, 0.4);
+            border: 2px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 14px;
+            margin-bottom: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .suggestion-card.selected {
+            border-color: rgba(102, 126, 234, 0.6);
+            background: rgba(102, 126, 234, 0.08);
+        }
+
+        .suggestion-card:hover {
+            background: rgba(28, 25, 22, 0.6);
+        }
+
+        .suggestion-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .suggestion-checkbox-area {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+            cursor: pointer;
+        }
+
+        .suggestion-checkbox-area input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .suggestion-name-input {
+            flex: 1;
+            padding: 6px 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-light);
+            font-size: 0.9375em;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .suggestion-name-input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+        }
+
+        .suggestion-meta {
+            display: flex;
+            gap: 8px;
+        }
+
+        .confidence-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.6875em;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border: 1px solid;
+        }
+
+        .suggestion-scenes {
+            font-size: 0.8125em;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+
+        .suggestion-scenes strong {
+            color: var(--text-light);
+        }
+
+        .suggestion-appearance {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .suggestion-field {
+            display: flex;
+            gap: 8px;
+            font-size: 0.8125em;
+        }
+
+        .suggestion-field-label {
+            min-width: 90px;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .suggestion-field-value {
+            flex: 1;
+            color: var(--text-light);
+            line-height: 1.4;
+        }
+
         /* Cast Profile Modal */
         .cast-profile-modal .modal-content {
             max-width: 600px;
@@ -5403,6 +5533,7 @@
 
             <div class="modal-actions">
                 <button class="modal-btn primary" onclick="addNewLook()">+ Add Look State</button>
+                <button class="modal-btn secondary" onclick="openSuggestLooks(currentLookCharacter)">🔮 Auto-Suggest from Scene Data</button>
                 <button class="modal-btn" onclick="closeManageLooks()">Close</button>
             </div>
         </div>
@@ -5596,6 +5727,43 @@
             <div class="modal-actions">
                 <button class="modal-btn primary" onclick="editLookFromDetail()">Edit This Look</button>
                 <button class="modal-btn" onclick="closeLookDetail()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Suggest Looks from Scene Data Modal -->
+    <div class="modal" id="suggestLooksModal">
+        <div class="modal-content" style="max-width: 1000px; max-height: 90vh; display: flex; flex-direction: column;">
+            <div class="modal-header">
+                <h3 id="suggestLooksTitle">🔮 Auto-Suggested Look States</h3>
+                <button class="modal-close" onclick="closeSuggestLooks()">×</button>
+            </div>
+
+            <div style="flex: 1; overflow-y: auto; padding: 20px;">
+                <div class="suggest-info-box">
+                    <strong>How this works:</strong> This tool analyzes your existing scene-by-scene appearance data
+                    and groups consecutive scenes with similar descriptions. Groups of 3+ scenes with consistent
+                    appearance are suggested as look states.
+                </div>
+
+                <div id="suggestionsList">
+                    <!-- Suggestions will be populated here -->
+                </div>
+
+                <div id="noSuggestionsMessage" style="display: none;">
+                    <div class="empty-state-small">
+                        <div class="empty-icon-small">🤷</div>
+                        <div class="empty-text-small">
+                            No look states could be suggested from existing data. Try filling in more scene-by-scene
+                            appearance details, or create look states manually.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="modal-btn primary" onclick="createLookStatesFromSuggestions()">✓ Create Selected Look States</button>
+                <button class="modal-btn" onclick="closeSuggestLooks()">Cancel</button>
             </div>
         </div>
     </div>
@@ -8404,6 +8572,178 @@ OUTPUT FORMAT (JSON only):
             openTransitionEditor(transition.character, transition.id);
         }
 
+        // Look State Migration & Suggestion System
+        // Calculate similarity between two strings (Levenshtein distance-based)
+        function calculateStringSimilarity(str1, str2) {
+            if (!str1 && !str2) return 1.0; // Both empty = identical
+            if (!str1 || !str2) return 0.0; // One empty = different
+
+            const s1 = str1.toLowerCase().trim();
+            const s2 = str2.toLowerCase().trim();
+
+            if (s1 === s2) return 1.0;
+
+            // Check if one is substring of another
+            if (s1.includes(s2) || s2.includes(s1)) {
+                const shorter = Math.min(s1.length, s2.length);
+                const longer = Math.max(s1.length, s2.length);
+                return shorter / longer;
+            }
+
+            // Levenshtein distance
+            const matrix = [];
+            for (let i = 0; i <= s2.length; i++) {
+                matrix[i] = [i];
+            }
+            for (let j = 0; j <= s1.length; j++) {
+                matrix[0][j] = j;
+            }
+            for (let i = 1; i <= s2.length; i++) {
+                for (let j = 1; j <= s1.length; j++) {
+                    if (s2.charAt(i - 1) === s1.charAt(j - 1)) {
+                        matrix[i][j] = matrix[i - 1][j - 1];
+                    } else {
+                        matrix[i][j] = Math.min(
+                            matrix[i - 1][j - 1] + 1,
+                            matrix[i][j - 1] + 1,
+                            matrix[i - 1][j] + 1
+                        );
+                    }
+                }
+            }
+
+            const distance = matrix[s2.length][s1.length];
+            const maxLength = Math.max(s1.length, s2.length);
+            return 1 - (distance / maxLength);
+        }
+
+        // Calculate similarity between two appearance objects
+        function calculateAppearanceSimilarity(app1, app2) {
+            const fields = ['hair', 'makeup', 'sfx', 'wardrobe'];
+            let totalSimilarity = 0;
+            let fieldsCompared = 0;
+
+            fields.forEach(field => {
+                const val1 = app1[field] || '';
+                const val2 = app2[field] || '';
+
+                // Only compare if at least one has data
+                if (val1 || val2) {
+                    totalSimilarity += calculateStringSimilarity(val1, val2);
+                    fieldsCompared++;
+                }
+            });
+
+            return fieldsCompared > 0 ? totalSimilarity / fieldsCompared : 0;
+        }
+
+        // Suggest look states from existing scene data
+        function suggestLookStatesFromScenes(character) {
+            const suggestions = [];
+            const sceneData = [];
+
+            // Collect all scenes where character appears
+            scenes.forEach((scene, sceneIndex) => {
+                const state = characterStates[sceneIndex]?.[character];
+                if (state) {
+                    sceneData.push({
+                        sceneIndex,
+                        sceneNumber: scene.number,
+                        appearance: {
+                            hair: state.hair || '',
+                            makeup: state.makeup || '',
+                            sfx: state.sfx || '',
+                            wardrobe: state.wardrobe || ''
+                        }
+                    });
+                }
+            });
+
+            if (sceneData.length === 0) return suggestions;
+
+            // Group consecutive scenes with similar appearance
+            let currentGroup = [sceneData[0]];
+            let groupIndex = 1;
+
+            for (let i = 1; i < sceneData.length; i++) {
+                const prevAppearance = sceneData[i - 1].appearance;
+                const currAppearance = sceneData[i].appearance;
+
+                const similarity = calculateAppearanceSimilarity(prevAppearance, currAppearance);
+
+                // If similarity is high (>0.8), add to current group
+                if (similarity > 0.8) {
+                    currentGroup.push(sceneData[i]);
+                } else {
+                    // Similarity is low - this is a transition
+                    // Save current group if it has 3+ scenes
+                    if (currentGroup.length >= 3) {
+                        suggestions.push(createLookSuggestion(character, currentGroup, groupIndex++));
+                    }
+                    // Start new group
+                    currentGroup = [sceneData[i]];
+                }
+            }
+
+            // Don't forget the last group
+            if (currentGroup.length >= 3) {
+                suggestions.push(createLookSuggestion(character, currentGroup, groupIndex++));
+            }
+
+            return suggestions;
+        }
+
+        // Create a look suggestion from a group of scenes
+        function createLookSuggestion(character, sceneGroup, groupIndex) {
+            // Merge appearance data (use most common or first occurrence)
+            const mergedAppearance = {
+                hair: '',
+                makeup: '',
+                sfx: '',
+                wardrobe: ''
+            };
+
+            // For each field, find the most common value
+            const fields = ['hair', 'makeup', 'sfx', 'wardrobe'];
+            fields.forEach(field => {
+                const values = sceneGroup
+                    .map(s => s.appearance[field])
+                    .filter(v => v && v.trim());
+
+                if (values.length > 0) {
+                    // Use the longest/most detailed description
+                    mergedAppearance[field] = values.reduce((a, b) =>
+                        a.length > b.length ? a : b
+                    );
+                }
+            });
+
+            // Calculate confidence based on data consistency
+            let consistencyScore = 0;
+            fields.forEach(field => {
+                const values = sceneGroup.map(s => s.appearance[field]).filter(v => v);
+                if (values.length > 0) {
+                    const avgSimilarity = values.reduce((sum, val, idx) => {
+                        if (idx === 0) return sum;
+                        return sum + calculateStringSimilarity(values[0], val);
+                    }, 0) / Math.max(1, values.length - 1);
+                    consistencyScore += avgSimilarity;
+                }
+            });
+            consistencyScore /= fields.length;
+
+            const confidence = consistencyScore > 0.9 ? 'high' :
+                              consistencyScore > 0.7 ? 'medium' : 'low';
+
+            return {
+                suggestedName: `Look ${groupIndex}`,
+                scenes: sceneGroup.map(s => s.sceneNumber),
+                appearance: mergedAppearance,
+                confidence: confidence,
+                sceneCount: sceneGroup.length
+            };
+        }
+
         function renderBreakdownPanel() {
             const container = document.getElementById('breakdownPanel');
 
@@ -9975,6 +10315,184 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`;
         function closeManageLooks() {
             document.getElementById('manageLooksModal').classList.remove('active');
             currentLookCharacter = null;
+        }
+
+        // Auto-suggest look states from scene data
+        let currentSuggestions = [];
+        let selectedSuggestions = new Set();
+
+        function openSuggestLooks(character) {
+            currentLookCharacter = character;
+
+            // Generate suggestions
+            currentSuggestions = suggestLookStatesFromScenes(character);
+            selectedSuggestions = new Set();
+
+            // Update modal title
+            document.getElementById('suggestLooksTitle').textContent = `🔮 Auto-Suggested Look States for ${character}`;
+
+            // Render suggestions
+            renderSuggestionsList();
+
+            // Show modal
+            document.getElementById('suggestLooksModal').classList.add('active');
+        }
+
+        function closeSuggestLooks() {
+            document.getElementById('suggestLooksModal').classList.remove('active');
+            currentSuggestions = [];
+            selectedSuggestions = new Set();
+        }
+
+        function renderSuggestionsList() {
+            const container = document.getElementById('suggestionsList');
+            const noSuggestionsMsg = document.getElementById('noSuggestionsMessage');
+
+            if (currentSuggestions.length === 0) {
+                container.innerHTML = '';
+                noSuggestionsMsg.style.display = 'block';
+                return;
+            }
+
+            noSuggestionsMsg.style.display = 'none';
+
+            // Auto-select all suggestions by default
+            currentSuggestions.forEach((_, idx) => selectedSuggestions.add(idx));
+
+            let html = '';
+            currentSuggestions.forEach((suggestion, index) => {
+                const isSelected = selectedSuggestions.has(index);
+                const confidenceColor = suggestion.confidence === 'high' ? '#22c55e' :
+                                       suggestion.confidence === 'medium' ? '#f59e0b' : '#ef4444';
+                const confidenceLabel = suggestion.confidence.toUpperCase();
+
+                const hasHair = suggestion.appearance.hair && suggestion.appearance.hair.trim();
+                const hasMakeup = suggestion.appearance.makeup && suggestion.appearance.makeup.trim();
+                const hasSfx = suggestion.appearance.sfx && suggestion.appearance.sfx.trim();
+                const hasWardrobe = suggestion.appearance.wardrobe && suggestion.appearance.wardrobe.trim();
+
+                html += `
+                    <div class="suggestion-card ${isSelected ? 'selected' : ''}" data-index="${index}">
+                        <div class="suggestion-header">
+                            <div class="suggestion-checkbox-area" onclick="toggleSuggestion(${index})">
+                                <input type="checkbox"
+                                       ${isSelected ? 'checked' : ''}
+                                       onchange="toggleSuggestion(${index})"
+                                       onclick="event.stopPropagation()">
+                                <input type="text"
+                                       class="suggestion-name-input"
+                                       value="${suggestion.suggestedName}"
+                                       placeholder="Look name..."
+                                       onclick="event.stopPropagation()"
+                                       onchange="updateSuggestionName(${index}, this.value)">
+                            </div>
+                            <div class="suggestion-meta">
+                                <span class="confidence-badge" style="background: ${confidenceColor}20; border-color: ${confidenceColor}; color: ${confidenceColor};">
+                                    ${confidenceLabel} CONFIDENCE
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="suggestion-scenes">
+                            <strong>Scenes:</strong> ${formatSceneRange(suggestion.scenes)} (${suggestion.sceneCount} scenes)
+                        </div>
+
+                        <div class="suggestion-appearance">
+                            ${hasHair ? `
+                                <div class="suggestion-field">
+                                    <div class="suggestion-field-label">💇 Hair:</div>
+                                    <div class="suggestion-field-value">${suggestion.appearance.hair}</div>
+                                </div>
+                            ` : ''}
+                            ${hasMakeup ? `
+                                <div class="suggestion-field">
+                                    <div class="suggestion-field-label">💄 Makeup:</div>
+                                    <div class="suggestion-field-value">${suggestion.appearance.makeup}</div>
+                                </div>
+                            ` : ''}
+                            ${hasSfx ? `
+                                <div class="suggestion-field">
+                                    <div class="suggestion-field-label">🩸 SFX:</div>
+                                    <div class="suggestion-field-value">${suggestion.appearance.sfx}</div>
+                                </div>
+                            ` : ''}
+                            ${hasWardrobe ? `
+                                <div class="suggestion-field">
+                                    <div class="suggestion-field-label">👔 Wardrobe:</div>
+                                    <div class="suggestion-field-value">${suggestion.appearance.wardrobe}</div>
+                                </div>
+                            ` : ''}
+                            ${!hasHair && !hasMakeup && !hasSfx && !hasWardrobe ? `
+                                <div class="suggestion-field">
+                                    <em style="color: var(--text-muted);">No appearance details detected</em>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function toggleSuggestion(index) {
+            if (selectedSuggestions.has(index)) {
+                selectedSuggestions.delete(index);
+            } else {
+                selectedSuggestions.add(index);
+            }
+            renderSuggestionsList();
+        }
+
+        function updateSuggestionName(index, newName) {
+            if (currentSuggestions[index]) {
+                currentSuggestions[index].suggestedName = newName;
+            }
+        }
+
+        function createLookStatesFromSuggestions() {
+            if (selectedSuggestions.size === 0) {
+                alert('Please select at least one suggestion to create.');
+                return;
+            }
+
+            let created = 0;
+            selectedSuggestions.forEach(index => {
+                const suggestion = currentSuggestions[index];
+
+                // Create new look state
+                const newLook = {
+                    id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+                    lookName: suggestion.suggestedName,
+                    scenes: suggestion.scenes,
+                    appearance: suggestion.appearance,
+                    scriptEvidence: {
+                        quotes: [],
+                        implications: []
+                    },
+                    complexity: suggestion.confidence === 'high' ? 'low' :
+                               suggestion.confidence === 'medium' ? 'medium' : 'high',
+                    storyContext: `Auto-suggested from ${suggestion.sceneCount} consecutive scenes with similar appearance data.`
+                };
+
+                // Add to characterLooks
+                if (!characterLooks[currentLookCharacter]) {
+                    characterLooks[currentLookCharacter] = [];
+                }
+                characterLooks[currentLookCharacter].push(newLook);
+                created++;
+            });
+
+            // Save and close
+            saveProject();
+            closeSuggestLooks();
+
+            // Refresh the manage looks modal if it's open
+            if (document.getElementById('manageLooksModal').classList.contains('active')) {
+                renderLooksList(currentLookCharacter);
+            }
+
+            alert(`✓ Created ${created} look state${created !== 1 ? 's' : ''} from suggestions!`);
         }
 
         function renderLooksList(character) {
