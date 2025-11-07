@@ -1066,34 +1066,18 @@
             padding: 1px 2px;
         }
 
-        /* Cast Member Highlighting - Enhanced */
+        /* Cast Member Highlighting - Normalized */
         .tag-highlight[data-category="cast"] {
-            background: rgba(251, 191, 36, 0.25);
-            border-bottom: 2px solid #fbbf24;
-            font-weight: 700;
-            letter-spacing: 0.02em;
-            color: #fbbf24;
-            padding: 2px 3px;
-        }
-
-        .tag-highlight[data-category="cast"]:hover {
-            background: rgba(251, 191, 36, 0.35);
-            border-bottom-width: 3px;
+            background: rgba(251, 191, 36, 0.2);
         }
 
         /* Special styling for character introductions */
         .tag-highlight[data-category="cast"][data-introduction="true"] {
-            background: rgba(251, 191, 36, 0.4);
-            border: 2px solid #fbbf24;
-            padding: 3px 6px;
-            border-radius: 3px;
-            box-shadow: 0 0 8px rgba(251, 191, 36, 0.3);
-        }
-
-        .tag-highlight[data-category="cast"]::before {
-            content: '👤 ';
-            font-size: 0.8em;
-            margin-right: 2px;
+            background: rgba(251, 191, 36, 0.25);
+            border: 1px solid rgba(251, 191, 36, 0.4);
+            padding: 2px 4px;
+            border-radius: 2px;
+            box-shadow: 0 0 4px rgba(251, 191, 36, 0.2);
         }
 
         /* Other categories */
@@ -1792,8 +1776,8 @@
             display: flex;
             align-items: center;
             gap: 12px;
-            padding: 16px;
-            margin-bottom: 20px;
+            padding: 8px;
+            margin-bottom: 12px;
             background: linear-gradient(135deg,
                 rgba(212, 175, 122, 0.08) 0%,
                 rgba(28, 25, 22, 0.6) 50%,
@@ -1807,13 +1791,13 @@
         .scene-nav-btn {
             display: flex;
             align-items: center;
-            gap: 8px;
-            padding: 10px 16px;
+            gap: 6px;
+            padding: 8px 12px;
             background: rgba(0, 0, 0, 0.3);
             border: 1px solid var(--glass-border);
             border-radius: 8px;
             color: var(--text-light);
-            font-size: 0.8125em;
+            font-size: 0.75em;
             font-weight: 500;
             cursor: pointer;
             transition: all 0.3s ease;
@@ -1852,25 +1836,25 @@
         .scene-nav-current {
             flex: 1;
             text-align: center;
-            padding: 8px 16px;
+            padding: 4px 8px;
         }
 
         .nav-scene-number {
-            font-size: 1em;
-            font-weight: 700;
+            font-size: 0.875em;
+            font-weight: 600;
             color: var(--accent-gold);
-            margin-bottom: 4px;
+            margin-bottom: 2px;
         }
 
         .nav-scene-heading {
-            font-size: 0.8125em;
+            font-size: 0.75em;
             color: var(--text-light);
-            margin-bottom: 4px;
-            line-height: 1.3;
+            margin-bottom: 2px;
+            line-height: 1.2;
         }
 
         .nav-scene-meta {
-            font-size: 0.75em;
+            font-size: 0.6875em;
             color: var(--text-muted);
             font-style: italic;
         }
@@ -6342,16 +6326,6 @@ OUTPUT FORMAT (JSON only):
                 ${scene.synopsis ? `
                     <div class="breakdown-synopsis">
                         ${scene.synopsis}
-                    </div>
-                ` : ''}
-
-                <!-- CAST IN SCENE -->
-                ${cast.length > 0 ? `
-                    <div class="breakdown-cast-section">
-                        <div class="breakdown-section-label">Cast in Scene</div>
-                        <div class="breakdown-cast-chips">
-                            ${cast.map(c => `<div class="breakdown-cast-chip">${c}</div>`).join('')}
-                        </div>
                     </div>
                 ` : ''}
 
