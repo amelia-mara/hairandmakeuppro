@@ -530,6 +530,13 @@ export async function generateAllSynopses(event) {
         return;
     }
 
+    console.log('🤖 Starting Generate All Synopses...');
+    console.log(`📊 Total scenes: ${state.scenes.length}`);
+    console.log('📋 Scene array structure check:');
+    state.scenes.slice(0, 3).forEach((scene, i) => {
+        console.log(`  Scene ${i}: number=${scene.number}, heading="${scene.heading?.substring(0, 40)}...", hasSynopsis=${!!scene.synopsis}`);
+    });
+
     // Reset cancellation flag
     batchCancelled = false;
 
@@ -548,12 +555,18 @@ export async function generateAllSynopses(event) {
         }
 
         const scene = state.scenes[i];
+        console.log(`\n🔄 Processing scene INDEX ${i} (Scene #${scene.number}): "${scene.heading}"`);
+
         updateButtonProgress(button, i + 1, `Scene ${i + 1} / ${state.scenes.length}`);
 
         try {
+            console.log(`  → Calling generateAISynopsis(${i})...`);
             const synopsis = await generateAISynopsis(i);
 
-            // Save synopsis to scene
+            console.log(`  ✓ Received synopsis (${synopsis?.length || 0} chars): "${synopsis?.substring(0, 50)}..."`);
+
+            // CRITICAL: Save synopsis to scene using ARRAY INDEX (not scene.number!)
+            console.log(`  → Saving to state.scenes[${i}].synopsis...`);
             state.scenes[i].synopsis = synopsis;
 
             // Also save to sceneBreakdowns if it exists
@@ -562,10 +575,20 @@ export async function generateAllSynopses(event) {
             }
             state.sceneBreakdowns[i].synopsis = synopsis;
 
+            // VERIFY: Check that it was actually saved
+            const savedSynopsis = state.scenes[i].synopsis;
+            if (savedSynopsis === synopsis) {
+                console.log(`  ✅ VERIFIED: Synopsis saved correctly to state.scenes[${i}]`);
+            } else {
+                console.error(`  ❌ ERROR: Synopsis NOT saved correctly!`);
+                console.error(`    Expected: "${synopsis?.substring(0, 30)}..."`);
+                console.error(`    Got: "${savedSynopsis?.substring(0, 30)}..."`);
+            }
+
             successCount++;
-            console.log(`✓ Scene ${scene.number} synopsis generated`);
+            console.log(`✓ Scene ${scene.number} (index ${i}) synopsis complete`);
         } catch (error) {
-            console.error(`Error generating synopsis for scene ${i}:`, error);
+            console.error(`❌ Error generating synopsis for scene index ${i} (Scene #${scene.number}):`, error);
             errorCount++;
             errors.push(`Scene ${scene.number}: ${error.message}`);
         }
@@ -574,14 +597,52 @@ export async function generateAllSynopses(event) {
         await new Promise(resolve => setTimeout(resolve, 500));
     }
 
+    console.log('\n📊 SYNOPSIS GENERATION COMPLETE');
+    console.log(`  Success: ${successCount}`);
+    console.log(`  Errors: ${errorCount}`);
+
+    // CRITICAL: Verify all synopses before saving
+    console.log('\n🔍 VERIFICATION: Checking all synopses in state.scenes...');
+    const synopsisCheck = state.scenes.map((s, i) => ({
+        index: i,
+        number: s.number,
+        heading: s.heading?.substring(0, 30),
+        hasSynopsis: !!s.synopsis,
+        synopsisLength: s.synopsis?.length || 0,
+        synopsisPreview: s.synopsis?.substring(0, 40)
+    }));
+
+    console.table(synopsisCheck.slice(0, 10)); // Show first 10 in table format
+
+    const withSynopsis = state.scenes.filter(s => s.synopsis).length;
+    const withoutSynopsis = state.scenes.length - withSynopsis;
+    console.log(`\n📈 Summary:`);
+    console.log(`  Scenes WITH synopsis: ${withSynopsis} / ${state.scenes.length}`);
+    console.log(`  Scenes WITHOUT synopsis: ${withoutSynopsis} / ${state.scenes.length}`);
+
+    if (withoutSynopsis > 0) {
+        console.warn('⚠️ WARNING: Some scenes are missing synopses!');
+        console.warn('Missing synopsis for indices:',
+            state.scenes.map((s, i) => !s.synopsis ? i : null).filter(i => i !== null).slice(0, 10)
+        );
+    }
+
     // Deduplicate all characters after synopsis generation
-    console.log('🔄 Running character deduplication...');
+    console.log('\n🔄 Running character deduplication...');
     const { deduplicateAllCharacters } = await import('./character-panel.js');
     deduplicateAllCharacters();
 
     // Save project data
+    console.log('💾 Saving project to localStorage...');
     const { saveProject } = await import('./export-handlers.js');
     saveProject();
+    console.log('✓ Project saved');
+
+    // Refresh scene list to show synopses
+    console.log('🔄 Refreshing scene list UI...');
+    const { renderSceneList } = await import('./scene-list.js');
+    renderSceneList();
+    console.log('✓ Scene list refreshed');
 
     // Complete with success
     const successMessage = errorCount > 0
@@ -595,6 +656,9 @@ export async function generateAllSynopses(event) {
         const { renderBreakdownPanel } = await import('./breakdown-form.js');
         renderBreakdownPanel();
     }
+
+    console.log('\n✅ GENERATE ALL SYNOPSES COMPLETE');
+    console.log('💡 Run debugSceneData() in console to verify synopsis data');
 }
 
 /**
@@ -1001,6 +1065,92 @@ function closeProgressModal() {
     if (modal) modal.style.display = 'none';
 }
 
+// ============================================================================
+// DEBUGGING UTILITIES
+// ============================================================================
+
+/**
+ * Debug function to diagnose synopsis data issues
+ * Call this from browser console: debugSceneData()
+ */
+function debugSceneData() {
+    console.log('═══════════════════════════════════════════════════════════');
+    console.log('🔍 SCENE DATA DEBUG REPORT');
+    console.log('═══════════════════════════════════════════════════════════');
+    console.log(`📊 Total scenes: ${state.scenes.length}`);
+    console.log(`📊 Total sceneBreakdowns: ${Object.keys(state.sceneBreakdowns).length}`);
+
+    console.log('\n📋 DETAILED SCENE SYNOPSIS CHECK:');
+    console.log('─────────────────────────────────────────────────────────');
+
+    state.scenes.forEach((scene, index) => {
+        const breakdown = state.sceneBreakdowns[index] || {};
+        console.log(`Scene ${index}:`, {
+            sceneNumber: scene.number,
+            heading: scene.heading?.substring(0, 40) + '...',
+            hasSynopsis: !!scene.synopsis,
+            synopsisLength: scene.synopsis?.length || 0,
+            synopsisPreview: scene.synopsis?.substring(0, 60) + '...' || '(none)',
+            breakdownHasSynopsis: !!breakdown.synopsis,
+            hasCast: (breakdown.cast?.length || 0) > 0,
+            castCount: breakdown.cast?.length || 0,
+            hasTags: (scene.tags?.length || 0) > 0
+        });
+    });
+
+    console.log('\n📈 SUMMARY STATISTICS:');
+    console.log('─────────────────────────────────────────────────────────');
+
+    const withSynopsis = state.scenes.filter(s => s.synopsis).length;
+    const withoutSynopsis = state.scenes.length - withSynopsis;
+    const avgSynopsisLength = state.scenes
+        .filter(s => s.synopsis)
+        .reduce((sum, s) => sum + s.synopsis.length, 0) / (withSynopsis || 1);
+
+    console.log(`✓ Scenes WITH synopsis: ${withSynopsis} (${((withSynopsis/state.scenes.length)*100).toFixed(1)}%)`);
+    console.log(`✗ Scenes WITHOUT synopsis: ${withoutSynopsis} (${((withoutSynopsis/state.scenes.length)*100).toFixed(1)}%)`);
+    console.log(`📏 Average synopsis length: ${avgSynopsisLength.toFixed(0)} characters`);
+
+    if (withoutSynopsis > 0) {
+        const missingIndices = state.scenes
+            .map((s, i) => !s.synopsis ? i : null)
+            .filter(i => i !== null);
+
+        console.log(`\n⚠️ Missing synopsis at indices: [${missingIndices.slice(0, 20).join(', ')}${missingIndices.length > 20 ? '...' : ''}]`);
+    }
+
+    console.log('\n💾 STORAGE CHECK:');
+    console.log('─────────────────────────────────────────────────────────');
+
+    const stored = localStorage.getItem('currentProject');
+    if (stored) {
+        try {
+            const project = JSON.parse(stored);
+            const storedScenes = project.scenes || [];
+            const storedWithSynopsis = storedScenes.filter(s => s.synopsis).length;
+
+            console.log(`✓ Project found in localStorage`);
+            console.log(`  Stored scenes: ${storedScenes.length}`);
+            console.log(`  Stored scenes with synopsis: ${storedWithSynopsis}`);
+
+            if (storedWithSynopsis !== withSynopsis) {
+                console.warn('⚠️ MISMATCH: State and localStorage have different synopsis counts!');
+                console.warn(`  State: ${withSynopsis}, Storage: ${storedWithSynopsis}`);
+            } else {
+                console.log(`✓ State and localStorage match`);
+            }
+        } catch (error) {
+            console.error('❌ Error parsing stored project:', error);
+        }
+    } else {
+        console.log('❌ No project found in localStorage');
+    }
+
+    console.log('\n═══════════════════════════════════════════════════════════');
+    console.log('End of debug report');
+    console.log('═══════════════════════════════════════════════════════════\n');
+}
+
 // Expose functions globally for HTML onclick handlers
 window.openSettingsModal = openSettingsModal;
 window.closeSettingsModal = closeSettingsModal;
@@ -1013,3 +1163,4 @@ window.startButtonProgress = startButtonProgress;
 window.updateButtonProgress = updateButtonProgress;
 window.completeButtonProgress = completeButtonProgress;
 window.resetButton = resetButton;
+window.debugSceneData = debugSceneData;

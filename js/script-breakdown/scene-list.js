@@ -54,12 +54,21 @@ export function renderSceneList() {
         return;
     }
 
+    // DIAGNOSTIC: Check synopsis data before rendering
+    const synopsisCount = state.scenes.filter(s => s.synopsis).length;
+    console.log(`🎨 Rendering scene list: ${state.scenes.length} scenes, ${synopsisCount} with synopsis`);
+
     container.innerHTML = state.scenes.map((scene, index) => {
         const sceneType = getSceneType(scene.heading);
         const sceneTypeLabel = getSceneTypeLabel(sceneType);
         const breakdown = state.sceneBreakdowns[index] || {};
         const cast = breakdown.cast || [];
         const isActive = state.currentScene === index;
+
+        // DIAGNOSTIC: Log synopsis status for first few scenes
+        if (index < 5) {
+            console.log(`  Scene ${index}: hasSynopsis=${!!scene.synopsis}, synopsisLength=${scene.synopsis?.length || 0}`);
+        }
 
         // Count elements (excluding cast)
         let elementCounts = [];
@@ -92,6 +101,16 @@ export function renderSceneList() {
  * Render expanded details for the active scene
  */
 function renderExpandedDetails(scene, cast, elementCounts) {
+    // DIAGNOSTIC: Log synopsis data being rendered
+    const hasSynopsis = !!scene.synopsis;
+    const synopsisLength = scene.synopsis?.length || 0;
+    console.log(`  🔍 Rendering expanded details for scene:`, {
+        number: scene.number,
+        hasSynopsis,
+        synopsisLength,
+        synopsisPreview: scene.synopsis?.substring(0, 50) + '...' || '(none)'
+    });
+
     return `
         <div class="scene-expanded">
             <!-- READ-ONLY METADATA OVERVIEW -->
@@ -118,7 +137,7 @@ function renderExpandedDetails(scene, cast, elementCounts) {
 
             ${scene.synopsis
                 ? `<div class="scene-synopsis">${escapeHtml(scene.synopsis)}</div>`
-                : `<div class="scene-synopsis placeholder">No synopsis yet</div>`
+                : `<div class="scene-synopsis placeholder">No synopsis yet. Click "Generate All Synopses" to create.</div>`
             }
 
             ${cast.length > 0 ? `
