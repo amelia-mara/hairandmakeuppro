@@ -3677,6 +3677,234 @@
             line-height: 1.4;
         }
 
+        /* Transition Scene Banner */
+        .transition-scene-banner {
+            margin: 20px 0;
+            padding: 16px;
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.1));
+            border: 2px solid rgba(239, 68, 68, 0.4);
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.2);
+        }
+
+        .transition-banner-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .transition-banner-icon {
+            font-size: 1.5em;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
+        }
+
+        .transition-banner-title {
+            font-size: 0.9375em;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #ef4444;
+            letter-spacing: 0.1em;
+        }
+
+        .transition-banner-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .transition-banner-item {
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 6px;
+            border-left: 3px solid #ef4444;
+        }
+
+        .transition-character-line {
+            font-size: 0.8125em;
+            margin-bottom: 6px;
+            color: var(--text-light);
+        }
+
+        .transition-character-line strong {
+            color: #fbbf24;
+            font-weight: 600;
+        }
+
+        .transition-looks {
+            color: var(--text-light);
+            margin-left: 8px;
+        }
+
+        .transition-event-line {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            font-style: italic;
+            margin-bottom: 8px;
+        }
+
+        .view-transition-btn-mini {
+            width: 100%;
+            padding: 6px 10px;
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            border-radius: 4px;
+            color: #ef4444;
+            font-size: 0.6875em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .view-transition-btn-mini:hover {
+            background: rgba(239, 68, 68, 0.25);
+            transform: translateY(-1px);
+        }
+
+        /* Transition Details in Cast Card */
+        .transition-details-section {
+            margin-bottom: 12px;
+            padding: 12px;
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.05));
+            border: 2px solid rgba(239, 68, 68, 0.3);
+            border-radius: 6px;
+        }
+
+        .transition-details-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .transition-icon-large {
+            font-size: 1.2em;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .transition-title {
+            font-size: 0.75em;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #ef4444;
+            letter-spacing: 0.05em;
+        }
+
+        .transition-looks-flow {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 6px;
+        }
+
+        .transition-look-from,
+        .transition-look-to {
+            flex: 1;
+        }
+
+        .transition-look-label {
+            font-size: 0.625em;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .transition-look-name {
+            font-size: 0.8125em;
+            font-weight: 600;
+            color: var(--accent-gold);
+        }
+
+        .transition-arrow {
+            font-size: 1.5em;
+            color: #ef4444;
+            font-weight: bold;
+        }
+
+        .transition-detail-item {
+            margin-bottom: 10px;
+        }
+
+        .transition-detail-label {
+            font-size: 0.6875em;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .transition-detail-text {
+            font-size: 0.75em;
+            color: var(--text-light);
+            font-style: italic;
+            line-height: 1.4;
+        }
+
+        .transition-changes-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .transition-change-item {
+            font-size: 0.75em;
+            color: var(--text-light);
+            padding: 6px 8px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+            border-left: 2px solid #ef4444;
+        }
+
+        .transition-change-item strong {
+            color: #ef4444;
+            font-weight: 600;
+        }
+
+        .view-transition-details-btn {
+            width: 100%;
+            padding: 8px 12px;
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            border-radius: 6px;
+            color: #ef4444;
+            font-size: 0.75em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 8px;
+        }
+
+        .view-transition-details-btn:hover {
+            background: rgba(239, 68, 68, 0.25);
+            transform: translateY(-1px);
+        }
+
+        .transition-new-look-note {
+            font-size: 0.625em;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #ef4444;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(239, 68, 68, 0.2);
+            text-align: center;
+            letter-spacing: 0.1em;
+            opacity: 0.8;
+        }
+
         /* Timeline View Modes */
         .timeline-view-modes {
             display: flex;
@@ -8141,6 +8369,41 @@ OUTPUT FORMAT (JSON only):
             return looks.find(look => look.scenes && look.scenes.includes(sceneNumber));
         }
 
+        // Transition detection helper functions
+        function isTransitionScene(character, sceneIndex) {
+            const sceneNumber = scenes[sceneIndex]?.number;
+            return lookTransitions.some(t =>
+                t.character === character &&
+                t.transitionScene === sceneNumber
+            );
+        }
+
+        function getTransitionForScene(character, sceneIndex) {
+            const sceneNumber = scenes[sceneIndex]?.number;
+            return lookTransitions.find(t =>
+                t.character === character &&
+                t.transitionScene === sceneNumber
+            );
+        }
+
+        function getSceneTransitions(sceneIndex) {
+            const sceneNumber = scenes[sceneIndex]?.number;
+            return lookTransitions.filter(t => t.transitionScene === sceneNumber);
+        }
+
+        function openTransitionDetail(transitionId) {
+            const transition = lookTransitions.find(t => t.id === transitionId);
+            if (!transition) return;
+
+            // Find the from/to looks
+            const characterLooksList = characterLooks[transition.character] || [];
+            const fromLook = characterLooksList.find(l => l.id === transition.fromLookId);
+            const toLook = characterLooksList.find(l => l.id === transition.toLookId);
+
+            // Open the transition editor in view mode
+            openTransitionEditor(transition.character, transition.id);
+        }
+
         function renderBreakdownPanel() {
             const container = document.getElementById('breakdownPanel');
 
@@ -8175,6 +8438,9 @@ OUTPUT FORMAT (JSON only):
             const previousScene = hasPrevious ? scenes[currentScene - 1] : null;
             const nextScene = hasNext ? scenes[currentScene + 1] : null;
 
+            // Check for transitions in this scene
+            const sceneTransitions = getSceneTransitions(currentScene);
+
             let html = `
                 <!-- SCENE NAVIGATION BAR - STICKY AT TOP -->
                 <div class="breakdown-scene-nav-sticky">
@@ -8192,6 +8458,40 @@ OUTPUT FORMAT (JSON only):
                         ${hasNext ? `Scene ${nextScene.number}` : ''} →
                     </button>
                 </div>
+
+                ${sceneTransitions.length > 0 ? `
+                    <!-- TRANSITION SCENE BANNER -->
+                    <div class="transition-scene-banner">
+                        <div class="transition-banner-header">
+                            <span class="transition-banner-icon">⚡</span>
+                            <span class="transition-banner-title">TRANSITION SCENE</span>
+                        </div>
+                        <div class="transition-banner-list">
+                            ${sceneTransitions.map(t => {
+                                const characterLooksList = characterLooks[t.character] || [];
+                                const fromLook = characterLooksList.find(l => l.id === t.fromLookId);
+                                const toLook = characterLooksList.find(l => l.id === t.toLookId);
+
+                                return `
+                                    <div class="transition-banner-item">
+                                        <div class="transition-character-line">
+                                            <strong>${t.character}:</strong>
+                                            <span class="transition-looks">${fromLook?.lookName || 'Previous'} → ${toLook?.lookName || 'New Look'}</span>
+                                        </div>
+                                        ${t.scriptEvent ? `
+                                            <div class="transition-event-line">
+                                                Event: ${t.scriptEvent.substring(0, 60)}${t.scriptEvent.length > 60 ? '...' : ''}
+                                            </div>
+                                        ` : ''}
+                                        <button class="view-transition-btn-mini" onclick="openTransitionDetail('${t.id}')">
+                                            View Transition Details
+                                        </button>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                ` : ''}
 
                 <!-- SYNOPSIS SECTION -->
                 <div class="breakdown-synopsis-section">
@@ -8286,9 +8586,19 @@ OUTPUT FORMAT (JSON only):
                             // Get look state for this character in this scene
                             const lookState = getLookStateForScene(castMember, currentScene);
 
+                            // Check if this character is transitioning in this scene
+                            const characterTransition = getTransitionForScene(castMember, currentScene);
+
                             // Create inline preview for collapsed state
                             let inlinePreview = '';
-                            if (lookState) {
+                            if (characterTransition) {
+                                // Show transition info when transitioning
+                                const characterLooksList = characterLooks[castMember] || [];
+                                const fromLook = characterLooksList.find(l => l.id === characterTransition.fromLookId);
+                                const toLook = characterLooksList.find(l => l.id === characterTransition.toLookId);
+                                inlinePreview = `⚡ <strong>LOOK CHANGES:</strong> ${fromLook?.lookName || 'Previous'} → ${toLook?.lookName || 'New Look'}<br>
+                                    <span style="font-size: 0.85em; opacity: 0.8;">${characterTransition.scriptEvent ? characterTransition.scriptEvent.substring(0, 50) + '...' : 'See transition details'}</span>`;
+                            } else if (lookState) {
                                 // Show look state info when collapsed
                                 const complexityIcon = getComplexityIcon(lookState.complexity);
                                 const sceneRangeText = formatSceneRange(lookState.scenes);
@@ -8359,6 +8669,62 @@ OUTPUT FORMAT (JSON only):
                                                 <div class="scene-override-note">
                                                     Fields below override the look state for this scene only
                                                 </div>
+                                            </div>
+                                        ` : ''}
+
+                                        ${characterTransition ? `
+                                            <div class="transition-details-section">
+                                                <div class="transition-details-header">
+                                                    <span class="transition-icon-large">⚡</span>
+                                                    <span class="transition-title">LOOK CHANGES IN THIS SCENE</span>
+                                                </div>
+                                                ${(() => {
+                                                    const characterLooksList = characterLooks[castMember] || [];
+                                                    const fromLook = characterLooksList.find(l => l.id === characterTransition.fromLookId);
+                                                    const toLook = characterLooksList.find(l => l.id === characterTransition.toLookId);
+
+                                                    return `
+                                                        <div class="transition-looks-flow">
+                                                            <div class="transition-look-from">
+                                                                <div class="transition-look-label">FROM:</div>
+                                                                <div class="transition-look-name">${fromLook?.lookName || 'Previous Look'}</div>
+                                                            </div>
+                                                            <div class="transition-arrow">→</div>
+                                                            <div class="transition-look-to">
+                                                                <div class="transition-look-label">TO:</div>
+                                                                <div class="transition-look-name">${toLook?.lookName || 'New Look'}</div>
+                                                            </div>
+                                                        </div>
+
+                                                        ${characterTransition.scriptEvent ? `
+                                                            <div class="transition-detail-item">
+                                                                <div class="transition-detail-label">Script Event:</div>
+                                                                <div class="transition-detail-text">"${characterTransition.scriptEvent}"</div>
+                                                            </div>
+                                                        ` : ''}
+
+                                                        ${characterTransition.visualChanges && characterTransition.visualChanges.length > 0 ? `
+                                                            <div class="transition-detail-item">
+                                                                <div class="transition-detail-label">Visual Changes:</div>
+                                                                <div class="transition-changes-list">
+                                                                    ${characterTransition.visualChanges.map(change => `
+                                                                        <div class="transition-change-item">
+                                                                            <strong>${change.department}:</strong> ${change.change}
+                                                                        </div>
+                                                                    `).join('')}
+                                                                </div>
+                                                            </div>
+                                                        ` : ''}
+
+                                                        <button class="view-transition-details-btn" onclick="event.stopPropagation(); openTransitionDetail('${characterTransition.id}')">
+                                                            📋 View Full Transition Details
+                                                        </button>
+
+                                                        <div class="transition-new-look-note">
+                                                            ━━━ NEW LOOK (after transition) ━━━
+                                                        </div>
+                                                    `;
+                                                })()}
                                             </div>
                                         ` : ''}
 
