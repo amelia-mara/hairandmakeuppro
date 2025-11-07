@@ -204,6 +204,113 @@ class CharacterManager {
 window.characterManager = new CharacterManager();
 
 // ============================================================================
+// CHARACTER FILTERING AND CATEGORIZATION
+// ============================================================================
+
+/**
+ * Get character scene counts
+ * @returns {Map} - Map of character name -> scene count
+ */
+function getCharacterSceneCounts() {
+    const characterSceneCounts = new Map();
+
+    state.scenes.forEach((scene, index) => {
+        const breakdown = state.sceneBreakdowns[index];
+        if (breakdown && breakdown.cast) {
+            breakdown.cast.forEach(char => {
+                characterSceneCounts.set(char, (characterSceneCounts.get(char) || 0) + 1);
+            });
+        }
+    });
+
+    return characterSceneCounts;
+}
+
+/**
+ * Get main characters (appear in 5+ scenes)
+ * @param {number} maxCount - Maximum number of main characters to return (default 8)
+ * @returns {string[]} - Array of main character names
+ */
+function getMainCharacters(maxCount = 8) {
+    const characterSceneCounts = getCharacterSceneCounts();
+
+    // Filter characters appearing in 5+ scenes
+    const mainCharacters = Array.from(characterSceneCounts.entries())
+        .filter(([name, count]) => count >= 5)
+        .sort((a, b) => b[1] - a[1]) // Sort by scene count (descending)
+        .slice(0, maxCount) // Limit to maxCount
+        .map(([name, count]) => name);
+
+    console.log(`Main characters (5+ scenes, max ${maxCount}):`, mainCharacters);
+
+    return mainCharacters;
+}
+
+/**
+ * Get supporting characters (appear in 2-4 scenes)
+ * @returns {string[]} - Array of supporting character names
+ */
+function getSupportingCharacters() {
+    const characterSceneCounts = getCharacterSceneCounts();
+
+    // Filter characters appearing in 2-4 scenes
+    const supportingCharacters = Array.from(characterSceneCounts.entries())
+        .filter(([name, count]) => count >= 2 && count < 5)
+        .sort((a, b) => b[1] - a[1]) // Sort by scene count (descending)
+        .map(([name, count]) => name);
+
+    console.log(`Supporting characters (2-4 scenes):`, supportingCharacters);
+
+    return supportingCharacters;
+}
+
+/**
+ * Aggressive deduplication - merge all duplicate character names
+ * This runs before generating tabs to ensure no duplicates
+ */
+function aggressiveDeduplicate() {
+    console.log('🔄 Running aggressive deduplication...');
+
+    // Manual duplicate mappings for common issues
+    const duplicateMap = {
+        'gwen': 'Gwen Lawson',
+        'GWEN': 'Gwen Lawson',
+        'peter': 'Peter Lawson',
+        'PETER': 'Peter Lawson',
+        'Peter': 'Peter Lawson',
+        'inga': 'Inga Olafsson',
+        'Inga': 'Inga Olafsson',
+        'jon': 'Jon Olafsson',
+        'Jon': 'Jon Olafsson',
+    };
+
+    state.scenes.forEach((scene, index) => {
+        const breakdown = state.sceneBreakdowns[index];
+        if (breakdown && breakdown.cast) {
+            breakdown.cast = breakdown.cast.map(char =>
+                duplicateMap[char] || window.characterManager.getCanonicalName(char) || char
+            );
+
+            // Remove exact duplicates
+            breakdown.cast = [...new Set(breakdown.cast)];
+        }
+
+        // Also normalize tags
+        if (state.scriptTags[index]) {
+            state.scriptTags[index].forEach(tag => {
+                if (tag.character) {
+                    tag.character = duplicateMap[tag.character] ||
+                                   window.characterManager.getCanonicalName(tag.character) ||
+                                   tag.character;
+                }
+            });
+        }
+    });
+
+    console.log('✓ Aggressive deduplication complete');
+}
+
+// ============================================================================
 // CHARACTER TAB RENDERING
 // ============================================================================
 
@@ -211,11 +318,20 @@ import { state } from './main.js';
 import { formatSceneRange, getComplexityIcon } from './utils.js';
 
 /**
- * Render character tabs in center panel
- * Shows script tab plus tabs for each character
+ * Render character tabs in center panel with file divider system
+ * Shows script tab + main character tabs + supporting dropdown
  */
 export function renderCharacterTabs() {
-    console.log(`renderCharacterTabs called with ${state.characterTabs.length} character(s):`, state.characterTabs);
+    console.log('🔄 Rendering character tabs with file divider system...');
+
+    // Run aggressive deduplication first
+    aggressiveDeduplicate();
+
+    // Get filtered character lists
+    const mainCharacters = getMainCharacters(8); // Max 8 main tabs
+    const supportingCharacters = getSupportingCharacters();
+
+    console.log(`Generating tabs: ${mainCharacters.length} main, ${supportingCharacters.length} supporting`);
 
     const tabsContainer = document.querySelector('.center-tabs');
     if (!tabsContainer) {
@@ -223,41 +339,109 @@ export function renderCharacterTabs() {
         return;
     }
 
-    // Keep script tab
-    const scriptTab = tabsContainer.querySelector('[data-tab="script"]');
-
-    // Remove everything except script tab
+    // Clear and replace with file divider structure
+    tabsContainer.className = 'file-dividers';
     tabsContainer.innerHTML = '';
-    if (scriptTab) {
-        tabsContainer.appendChild(scriptTab);
-        console.log('  ✓ Kept script tab');
-    } else {
-        console.warn('  ⚠ Script tab not found - creating new one');
-        // Create script tab if it doesn't exist
-        const newScriptTab = document.createElement('div');
-        newScriptTab.className = 'center-tab active';
-        newScriptTab.setAttribute('data-tab', 'script');
-        newScriptTab.onclick = () => switchCenterTab('script');
-        newScriptTab.innerHTML = '<span>Script</span>';
-        tabsContainer.appendChild(newScriptTab);
-    }
 
-    // Add character tabs (from state.characterTabs)
-    state.characterTabs.forEach(character => {
+    // Add Script tab (always first)
+    const scriptTab = document.createElement('div');
+    scriptTab.className = 'file-tab active';
+    scriptTab.setAttribute('data-tab', 'script');
+    scriptTab.onclick = () => switchCenterTab('script');
+    scriptTab.innerHTML = `
+        <div class="file-tab-content">
+            <div class="file-tab-label">Script</div>
+        </div>
+    `;
+    tabsContainer.appendChild(scriptTab);
+
+    // Add main character tabs
+    mainCharacters.forEach(charName => {
+        const charId = `character-${charName.toLowerCase().replace(/\s+/g, '-')}`;
+
         const tab = document.createElement('div');
-        tab.className = 'center-tab';
-        tab.setAttribute('data-tab', `character-${character}`);
-        tab.onclick = () => switchCenterTab(`character-${character}`);
+        tab.className = 'file-tab';
+        tab.setAttribute('data-tab', charId);
+        tab.onclick = () => switchCenterTab(charId);
+
         tab.innerHTML = `
-            <span>${escapeHtml(character)}</span>
-            <span class="center-tab-close" onclick="event.stopPropagation(); removeCharacterTab('${escapeHtml(character).replace(/'/g, "\\'")}')">×</span>
+            <div class="file-tab-content">
+                <div class="file-tab-label">${escapeHtml(charName)}</div>
+            </div>
         `;
+
         tabsContainer.appendChild(tab);
-        console.log(`  ✓ Added tab for character "${character}"`);
+
+        // Create corresponding panel (if it doesn't exist)
+        createCharacterPanel(charId, charName);
     });
 
-    console.log(`✓ Generating character tabs for: [${state.characterTabs.join(', ')}]`);
-    console.log(`✓ Rendered ${state.characterTabs.length} character tabs`);
+    // Add supporting characters dropdown if there are any
+    if (supportingCharacters.length > 0) {
+        const dropdownTab = document.createElement('div');
+        dropdownTab.className = 'file-tab dropdown-tab';
+        dropdownTab.id = 'supporting-characters-tab';
+
+        dropdownTab.innerHTML = `
+            <div class="file-tab-content">
+                <div class="file-tab-label">Supporting ▼</div>
+            </div>
+            <div class="supporting-dropdown" id="supporting-dropdown" style="display: none;">
+                ${supportingCharacters.map(char => {
+                    const charId = `character-${char.toLowerCase().replace(/\s+/g, '-')}`;
+                    return `
+                        <div class="supporting-character-item" onclick="switchCenterTab('${charId}')">
+                            ${escapeHtml(char)}
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
+
+        // Toggle dropdown on click
+        const tabContent = dropdownTab.querySelector('.file-tab-content');
+        tabContent.onclick = (e) => {
+            e.stopPropagation();
+            const dropdown = dropdownTab.querySelector('.supporting-dropdown');
+            const isOpen = dropdown.style.display !== 'none';
+            dropdown.style.display = isOpen ? 'none' : 'block';
+        };
+
+        tabsContainer.appendChild(dropdownTab);
+
+        // Create panels for supporting characters too
+        supportingCharacters.forEach(char => {
+            const charId = `character-${char.toLowerCase().replace(/\s+/g, '-')}`;
+            createCharacterPanel(charId, char);
+        });
+    }
+
+    // Update state.characterTabs to reflect new list (main + supporting)
+    state.characterTabs = [...mainCharacters, ...supportingCharacters];
+
+    console.log(`✓ Rendered ${mainCharacters.length} main tabs + ${supportingCharacters.length} supporting (dropdown)`);
+}
+
+/**
+ * Create character panel if it doesn't exist
+ * @param {string} charId - Character tab ID (e.g., 'character-gwen-lawson')
+ * @param {string} charName - Character display name
+ */
+function createCharacterPanel(charId, charName) {
+    const contentContainer = document.querySelector('.center-tab-content');
+    if (!contentContainer) return;
+
+    // Check if panel already exists
+    const existingPanel = document.getElementById(`${charId}-panel`);
+    if (existingPanel) return;
+
+    // Create new panel
+    const panel = document.createElement('div');
+    panel.className = 'center-tab-panel';
+    panel.id = `${charId}-panel`;
+    panel.innerHTML = renderCharacterTimeline(charName);
+
+    contentContainer.appendChild(panel);
 }
 
 /**
@@ -291,8 +475,14 @@ export function renderCharacterTabPanels() {
 export function switchCenterTab(tabName) {
     state.activeCenterTab = tabName;
 
-    // Update tab styling
-    document.querySelectorAll('.center-tab').forEach(tab => {
+    // Close supporting dropdown if open
+    const dropdown = document.getElementById('supporting-dropdown');
+    if (dropdown) {
+        dropdown.style.display = 'none';
+    }
+
+    // Update tab styling - use file-tab instead of center-tab
+    document.querySelectorAll('.file-tab').forEach(tab => {
         tab.classList.remove('active');
     });
     document.querySelector(`[data-tab="${tabName}"]`)?.classList.add('active');
@@ -306,8 +496,8 @@ export function switchCenterTab(tabName) {
         // IMPORTANT: The correct element ID is 'script-tab-panel' (with hyphens)
         document.getElementById('script-tab-panel')?.classList.add('active');
     } else {
-        const character = tabName.replace('character-', '');
-        document.getElementById(`characterTab-${character}`)?.classList.add('active');
+        // Use the new panel ID format
+        document.getElementById(`${tabName}-panel`)?.classList.add('active');
     }
 
     // Update right panel context
@@ -1131,3 +1321,19 @@ window.regenerateCharacterTabs = regenerateCharacterTabs;
 window.openMergeCharactersModal = function() {
     alert('Character merge functionality coming soon!');
 };
+
+// ============================================================================
+// GLOBAL EVENT LISTENERS FOR FILE DIVIDER SYSTEM
+// ============================================================================
+
+/**
+ * Close dropdown when clicking elsewhere
+ */
+document.addEventListener('click', (e) => {
+    const dropdown = document.getElementById('supporting-dropdown');
+    const dropdownTab = document.getElementById('supporting-characters-tab');
+
+    if (dropdown && dropdownTab && !dropdownTab.contains(e.target)) {
+        dropdown.style.display = 'none';
+    }
+});
