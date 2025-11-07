@@ -1084,11 +1084,11 @@
         .tag-highlight[data-category="hair"] { background: rgba(168, 85, 247, 0.2); }
         .tag-highlight[data-category="makeup"] { background: rgba(236, 72, 153, 0.2); }
         .tag-highlight[data-category="sfx"] { background: rgba(239, 68, 68, 0.2); }
+        .tag-highlight[data-category="health"] { background: rgba(245, 158, 11, 0.2); }
+        .tag-highlight[data-category="injuries"] { background: rgba(220, 38, 38, 0.2); }
+        .tag-highlight[data-category="stunts"] { background: rgba(249, 115, 22, 0.2); }
+        .tag-highlight[data-category="weather"] { background: rgba(56, 189, 248, 0.2); }
         .tag-highlight[data-category="wardrobe"] { background: rgba(52, 211, 153, 0.2); }
-        .tag-highlight[data-category="props"] { background: rgba(251, 146, 60, 0.2); }
-        .tag-highlight[data-category="vehicles"] { background: rgba(56, 189, 248, 0.2); }
-        .tag-highlight[data-category="vfx"] { background: rgba(167, 139, 250, 0.2); }
-        .tag-highlight[data-category="stunts"] { background: rgba(245, 158, 11, 0.2); }
         .tag-highlight[data-category="extras"] { background: rgba(156, 163, 175, 0.2); }
 
         .tag-highlight:hover {
@@ -3636,16 +3636,16 @@
                     <div class="center-tab-panel active" id="scriptTabPanel">
                         <div class="script-toolbar">
                             <div class="color-legend">
-                                <span class="legend-item"><span class="legend-color" style="background: rgba(251, 191, 36, 0.4);"></span>Cast</span>
-                                <span class="legend-item"><span class="legend-color" style="background: rgba(168, 85, 247, 0.4);"></span>Hair</span>
-                                <span class="legend-item"><span class="legend-color" style="background: rgba(236, 72, 153, 0.4);"></span>Makeup</span>
-                                <span class="legend-item"><span class="legend-color" style="background: rgba(239, 68, 68, 0.4);"></span>SFX</span>
-                                <span class="legend-item"><span class="legend-color" style="background: rgba(52, 211, 153, 0.4);"></span>Wardrobe</span>
-                                <span class="legend-item"><span class="legend-color" style="background: rgba(251, 146, 60, 0.4);"></span>Props</span>
-                                <span class="legend-item"><span class="legend-color" style="background: rgba(56, 189, 248, 0.4);"></span>Vehicles</span>
-                                <span class="legend-item"><span class="legend-color" style="background: rgba(167, 139, 250, 0.4);"></span>VFX</span>
-                                <span class="legend-item"><span class="legend-color" style="background: rgba(245, 158, 11, 0.4);"></span>Stunts</span>
-                                <span class="legend-item"><span class="legend-color" style="background: rgba(156, 163, 175, 0.4);"></span>Extras</span>
+                                <span class="legend-item"><span class="legend-color" style="background: #fbbf24;"></span>Cast</span>
+                                <span class="legend-item"><span class="legend-color" style="background: #a855f7;"></span>Hair</span>
+                                <span class="legend-item"><span class="legend-color" style="background: #ec4899;"></span>Makeup</span>
+                                <span class="legend-item"><span class="legend-color" style="background: #ef4444;"></span>SFX</span>
+                                <span class="legend-item"><span class="legend-color" style="background: #f59e0b;"></span>Health</span>
+                                <span class="legend-item"><span class="legend-color" style="background: #dc2626;"></span>Injuries</span>
+                                <span class="legend-item"><span class="legend-color" style="background: #f97316;"></span>Stunts</span>
+                                <span class="legend-item"><span class="legend-color" style="background: #38bdf8;"></span>Weather</span>
+                                <span class="legend-item"><span class="legend-color" style="background: #34d399;"></span>Wardrobe</span>
+                                <span class="legend-item"><span class="legend-color" style="background: #9ca3af;"></span>Extras</span>
                             </div>
                             <div class="view-controls">
                                 <button class="view-btn" onclick="zoomIn()">Zoom In</button>
@@ -3941,6 +3941,7 @@ This is it. Today's the day."></textarea>
                     <option value="stunts">🎬 Stunts/Action</option>
                     <option value="weather">🌦️ Weather Effects</option>
                     <option value="wardrobe">👔 Costume/Wardrobe</option>
+                    <option value="extras">👥 Supporting Artists (Extras)</option>
                 </select>
             </div>
 
@@ -4080,7 +4081,8 @@ This is it. Today's the day."></textarea>
             { id: 'injuries', name: 'Injuries/Wounds', color: '#dc2626', icon: '🩹' },
             { id: 'stunts', name: 'Stunts/Action', color: '#f97316', icon: '🎬' },
             { id: 'weather', name: 'Weather Effects', color: '#38bdf8', icon: '🌦️' },
-            { id: 'wardrobe', name: 'Costume/Wardrobe', color: '#34d399', icon: '👔' }
+            { id: 'wardrobe', name: 'Costume/Wardrobe', color: '#34d399', icon: '👔' },
+            { id: 'extras', name: 'Supporting Artists', color: '#9ca3af', icon: '👥' }
         ];
         
         // Continuity event types
@@ -5735,6 +5737,9 @@ Only for character appearance/condition elements:
 - wardrobe: costume damage, blood/dirt on clothes (NOT full costume descriptions)
   Example: "torn shirt", "blood-stained jacket", "muddy jeans"
 
+- extras: background performers, crowds, non-speaking roles
+  Example: "crowd of onlookers", "busy restaurant patrons", "pedestrians"
+
 IMPORTANT RULES:
 1. ALWAYS find cast members first
 2. For each element, provide the exact short text snippet (2-5 words)
@@ -5795,11 +5800,11 @@ OUTPUT FORMAT (JSON only):
                         hair: [],
                         makeup: [],
                         sfx: [],
-                        wardrobe: [],
-                        props: [],
-                        vehicles: [],
-                        vfx: [],
+                        health: [],
+                        injuries: [],
                         stunts: [],
+                        weather: [],
+                        wardrobe: [],
                         extras: []
                     };
                 }
@@ -8078,11 +8083,11 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`;
                     hair: [],
                     makeup: [],
                     sfx: [],
-                    wardrobe: [],
-                    props: [],
-                    vehicles: [],
-                    vfx: [],
+                    health: [],
+                    injuries: [],
                     stunts: [],
+                    weather: [],
+                    wardrobe: [],
                     extras: []
                 };
             }
