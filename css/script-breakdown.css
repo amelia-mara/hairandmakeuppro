@@ -76,6 +76,7 @@
         }
         .toolbar-btn:hover { border-color: var(--accent-gold); color: var(--accent-gold); background: rgba(201, 169, 97, 0.05); }
 
+        /* Auto-save indicator styling removed per user preference
         .auto-save-indicator {
             display: flex;
             align-items: center;
@@ -101,6 +102,7 @@
             80% { opacity: 1; transform: translateY(0); }
             100% { opacity: 0; transform: translateY(-4px); }
         }
+        */
         
         .main-content { display: flex; flex: 1; overflow: hidden; }
         

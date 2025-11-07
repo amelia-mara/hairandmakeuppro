@@ -345,16 +345,11 @@ export function navigateToScene(sceneIndex) {
 
 /**
  * Show auto-save indicator
+ * DISABLED: Auto-save indicator removed per user preference
  */
 export function showAutoSaveIndicator() {
-    const indicator = document.getElementById('auto-save-indicator');
-    if (!indicator) return;
-
-    indicator.style.display = 'flex';
-
-    setTimeout(() => {
-        indicator.style.display = 'none';
-    }, 1500);
+    // Function disabled - auto-save indicator has been removed from UI
+    return;
 }
 
 /**
