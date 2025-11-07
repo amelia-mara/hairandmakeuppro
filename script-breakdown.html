@@ -4432,6 +4432,7 @@ This is it. Today's the day."></textarea>
         let sceneBreakdowns = {};
         let castProfiles = {};
         let characterStates = {}; // { sceneIndex: { characterName: { tags: [], notes: '' } } }
+        let characterLooks = {}; // { characterName: [{ id, lookName, scenes: [], storyTime, appearance: {}, scriptEvidence: {}, complexity, mustMatchScenes, storyContext }] }
         let continuityEvents = {}; // { characterName: [{ id, type, description, startScene, endScene, progression: [] }] }
         let sceneTimeline = {}; // { sceneIndex: { day: 1, time: "Morning", label: "Day 1 - Morning" } }
         let scriptText = '';
@@ -4674,6 +4675,7 @@ This is it. Today's the day."></textarea>
                 if (currentProject.sceneBreakdowns) sceneBreakdowns = currentProject.sceneBreakdowns;
                 if (currentProject.castProfiles) castProfiles = currentProject.castProfiles;
                 if (currentProject.characterStates) characterStates = currentProject.characterStates;
+                if (currentProject.characterLooks) characterLooks = currentProject.characterLooks;
                 if (currentProject.continuityEvents) continuityEvents = currentProject.continuityEvents;
                 if (currentProject.sceneTimeline) sceneTimeline = currentProject.sceneTimeline;
                 if (currentProject.scriptTags) scriptTags = currentProject.scriptTags;
@@ -8148,6 +8150,7 @@ Make the descriptions specific and actionable for makeup/wardrobe departments.`;
             currentProject.sceneBreakdowns = sceneBreakdowns;
             currentProject.castProfiles = castProfiles;
             currentProject.characterStates = characterStates;
+            currentProject.characterLooks = characterLooks;
             currentProject.continuityEvents = continuityEvents;
             currentProject.sceneTimeline = sceneTimeline;
             currentProject.scenes = scenes;
