@@ -77,6 +77,13 @@ export function renderBreakdownPanel() {
     // Check for transitions in this scene
     const sceneTransitions = getSceneTransitions(state.currentScene);
 
+    // Check if scene has any breakdown data (excluding synopsis)
+    const hasBreakdownData = cast.length > 0 ||
+                            categories.some(cat => {
+                                const elements = breakdown[cat.id] || [];
+                                return elements.length > 0;
+                            });
+
     let html = `
         <!-- SCENE NAVIGATION BAR - STICKY AT TOP -->
         <div class="breakdown-scene-nav-sticky">
@@ -97,23 +104,25 @@ export function renderBreakdownPanel() {
 
         ${sceneTransitions.length > 0 ? renderTransitionBanner(sceneTransitions) : ''}
 
-        <!-- SYNOPSIS SECTION - EXPANDABLE -->
-        <div class="breakdown-section expanded" id="synopsis-section">
-            <div class="section-header" onclick="toggleSection('synopsis-section')">
-                <div class="section-header-left">
-                    <span class="section-title">📝 Synopsis</span>
+        ${hasBreakdownData ? `
+            <!-- SYNOPSIS SECTION - ONLY SHOWN IF SCENE HAS BREAKDOWN DATA -->
+            <div class="breakdown-section expanded" id="synopsis-section">
+                <div class="section-header" onclick="toggleSection('synopsis-section')">
+                    <div class="section-header-left">
+                        <span class="section-title">📝 Synopsis</span>
+                    </div>
+                    <button class="category-toggle">▼</button>
                 </div>
-                <button class="category-toggle">▼</button>
+                <div class="section-content" style="display: block;">
+                    <textarea class="synopsis-textarea"
+                              placeholder="Enter scene synopsis or click Generate to create with AI..."
+                              oninput="updateSynopsis(${state.currentScene}, this.value)">${escapeHtml(scene.synopsis) || ''}</textarea>
+                    <button class="ai-btn-compact" onclick="handleGenerateAISynopsis(${state.currentScene})" title="Generate synopsis with AI" style="margin-top: 8px; width: 100%;">
+                        Generate with AI
+                    </button>
+                </div>
             </div>
-            <div class="section-content" style="display: block;">
-                <textarea class="synopsis-textarea"
-                          placeholder="Enter scene synopsis or click Generate to create with AI..."
-                          oninput="updateSynopsis(${state.currentScene}, this.value)">${escapeHtml(scene.synopsis) || ''}</textarea>
-                <button class="ai-btn-compact" onclick="handleGenerateAISynopsis(${state.currentScene})" title="Generate synopsis with AI" style="margin-top: 8px; width: 100%;">
-                    Generate with AI
-                </button>
-            </div>
-        </div>
+        ` : ''}
 
         <!-- SCENE INFORMATION - COLLAPSIBLE -->
         ${renderSceneInfoSection(scene)}

@@ -250,18 +250,49 @@
             display: block;
         }
         
+        /* Synopsis container with edit button */
+        .scene-synopsis-container {
+            position: relative;
+            margin-bottom: 10px;
+        }
+
         .scene-synopsis {
             font-size: 0.75em;
             color: var(--text-muted);
             line-height: 1.5;
-            margin-bottom: 10px;
+            padding-right: 60px; /* Make room for edit button */
             font-style: italic;
         }
-        
+
         .scene-synopsis.placeholder {
             opacity: 0.5;
         }
-        
+
+        /* Edit synopsis button in left panel */
+        .edit-synopsis-btn {
+            position: absolute;
+            top: 0;
+            right: 0;
+            padding: 4px 8px;
+            font-size: 0.7em;
+            background: rgba(212, 175, 122, 0.15);
+            border: 1px solid var(--accent-gold);
+            border-radius: 4px;
+            color: var(--accent-gold);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .edit-synopsis-btn:hover {
+            background: rgba(212, 175, 122, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .edit-synopsis-btn:active {
+            transform: translateY(0);
+        }
+
         .scene-cast-list {
             display: flex;
             flex-wrap: wrap;

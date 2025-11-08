@@ -92,6 +92,8 @@ export function renderSceneList() {
  * Render expanded details for the active scene
  */
 function renderExpandedDetails(scene, cast, elementCounts) {
+    const sceneIndex = state.scenes.indexOf(scene);
+
     return `
         <div class="scene-expanded">
             <!-- READ-ONLY METADATA OVERVIEW -->
@@ -116,10 +118,18 @@ function renderExpandedDetails(scene, cast, elementCounts) {
                 ` : ''}
             </div>
 
-            ${scene.synopsis
-                ? `<div class="scene-synopsis">${escapeHtml(scene.synopsis)}</div>`
-                : `<div class="scene-synopsis placeholder">No synopsis yet</div>`
-            }
+            <!-- SYNOPSIS WITH EDIT BUTTON -->
+            <div class="scene-synopsis-container">
+                ${scene.synopsis
+                    ? `<div class="scene-synopsis">${escapeHtml(scene.synopsis)}</div>`
+                    : `<div class="scene-synopsis placeholder">No synopsis yet</div>`
+                }
+                <button class="edit-synopsis-btn"
+                        onclick="event.stopPropagation(); openSynopsisEditor(${sceneIndex})"
+                        title="Edit synopsis">
+                    ✏️ Edit
+                </button>
+            </div>
 
             ${cast.length > 0 ? `
                 <div class="scene-cast-list">
@@ -146,9 +156,127 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+/**
+ * Open synopsis editor modal
+ * @param {number} sceneIndex - Index of the scene to edit
+ */
+function openSynopsisEditor(sceneIndex) {
+    const scene = state.scenes[sceneIndex];
+    if (!scene) return;
+
+    // Create modal if it doesn't exist
+    let modal = document.getElementById('synopsis-editor-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'synopsis-editor-modal';
+        modal.className = 'modal';
+        document.body.appendChild(modal);
+    }
+
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3>Edit Synopsis - Scene ${scene.number}</h3>
+                <button class="modal-close-btn" onclick="closeSynopsisEditor()">×</button>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom: 8px; font-size: 0.875em; color: var(--text-muted);">
+                    ${escapeHtml(scene.heading)}
+                </div>
+                <textarea id="synopsis-editor-textarea"
+                          class="modal-textarea"
+                          rows="6"
+                          placeholder="Enter scene synopsis...">${escapeHtml(scene.synopsis || '')}</textarea>
+                <button class="ai-btn-compact" onclick="generateSynopsisInEditor(${sceneIndex})" style="margin-top: 8px; width: 100%;">
+                    🤖 Generate with AI
+                </button>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn secondary" onclick="closeSynopsisEditor()">Cancel</button>
+                <button class="modal-btn primary" onclick="saveSynopsisFromEditor(${sceneIndex})">Save</button>
+            </div>
+        </div>
+    `;
+
+    modal.style.display = 'flex';
+    document.getElementById('synopsis-editor-textarea')?.focus();
+}
+
+/**
+ * Close synopsis editor modal
+ */
+function closeSynopsisEditor() {
+    const modal = document.getElementById('synopsis-editor-modal');
+    if (modal) modal.style.display = 'none';
+}
+
+/**
+ * Save synopsis from editor
+ */
+async function saveSynopsisFromEditor(sceneIndex) {
+    const textarea = document.getElementById('synopsis-editor-textarea');
+    if (!textarea) return;
+
+    const synopsis = textarea.value.trim();
+
+    // Update scene
+    state.scenes[sceneIndex].synopsis = synopsis;
+
+    // Update breakdown
+    if (!state.sceneBreakdowns[sceneIndex]) {
+        state.sceneBreakdowns[sceneIndex] = {};
+    }
+    state.sceneBreakdowns[sceneIndex].synopsis = synopsis;
+
+    // Save project
+    const { saveProject } = await import('./export-handlers.js');
+    saveProject();
+
+    // Re-render scene list
+    renderSceneList();
+
+    // Re-render breakdown panel if this is the current scene
+    if (state.currentScene === sceneIndex) {
+        const { renderBreakdownPanel } = await import('./breakdown-form.js');
+        renderBreakdownPanel();
+    }
+
+    // Close modal
+    closeSynopsisEditor();
+}
+
+/**
+ * Generate synopsis using AI in the editor
+ */
+async function generateSynopsisInEditor(sceneIndex) {
+    const textarea = document.getElementById('synopsis-editor-textarea');
+    if (!textarea) return;
+
+    try {
+        textarea.placeholder = 'Generating synopsis with AI...';
+        textarea.disabled = true;
+
+        const { generateAISynopsis } = await import('./ai-integration.js');
+        const synopsis = await generateAISynopsis(sceneIndex);
+
+        textarea.value = synopsis;
+        textarea.disabled = false;
+        textarea.focus();
+    } catch (error) {
+        console.error('Error generating synopsis:', error);
+        alert('Failed to generate synopsis: ' + error.message);
+        textarea.disabled = false;
+        textarea.placeholder = 'Enter scene synopsis...';
+    }
+}
+
 // ============================================================================
 // EXPOSE GLOBAL FUNCTIONS
 // ============================================================================
 
 // Make functions available globally for HTML onclick handlers (legacy support)
 window.renderSceneList = renderSceneList;
+window.openSynopsisEditor = openSynopsisEditor;
+window.closeSynopsisEditor = closeSynopsisEditor;
+window.saveSynopsisFromEditor = saveSynopsisFromEditor;
+window.generateSynopsisInEditor = generateSynopsisInEditor;
