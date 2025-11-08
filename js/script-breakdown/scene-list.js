@@ -92,6 +92,8 @@ export function renderSceneList() {
  * Render expanded details for the active scene
  */
 function renderExpandedDetails(scene, cast, elementCounts) {
+    const sceneIndex = state.scenes.indexOf(scene);
+
     return `
         <div class="scene-expanded">
             <!-- READ-ONLY METADATA OVERVIEW -->
@@ -116,10 +118,19 @@ function renderExpandedDetails(scene, cast, elementCounts) {
                 ` : ''}
             </div>
 
-            ${scene.synopsis
-                ? `<div class="scene-synopsis">${escapeHtml(scene.synopsis)}</div>`
-                : `<div class="scene-synopsis placeholder">No synopsis yet</div>`
-            }
+            <!-- SYNOPSIS SECTION -->
+            <div class="scene-synopsis-section">
+                <div class="scene-synopsis-header">
+                    <span class="scene-synopsis-label">📝 Synopsis</span>
+                    <button class="scene-synopsis-generate-btn" onclick="event.stopPropagation(); handleGenerateSceneSynopsis(${sceneIndex})">
+                        Generate AI
+                    </button>
+                </div>
+                ${scene.synopsis
+                    ? `<div class="scene-synopsis">${escapeHtml(scene.synopsis)}</div>`
+                    : `<div class="scene-synopsis placeholder">No synopsis yet - click Generate AI</div>`
+                }
+            </div>
 
             ${cast.length > 0 ? `
                 <div class="scene-cast-list">
@@ -147,8 +158,62 @@ function escapeHtml(text) {
 }
 
 // ============================================================================
+// SYNOPSIS GENERATION
+// ============================================================================
+
+/**
+ * Handle generating synopsis for a scene from the left sidebar
+ */
+async function handleGenerateSceneSynopsis(sceneIndex) {
+    try {
+        // Import the AI function
+        const { generateAISynopsis } = await import('./ai-integration.js');
+
+        // Show loading state - find the synopsis div and update it
+        const synopsisDiv = document.querySelector('.scene-synopsis');
+        const originalContent = synopsisDiv ? synopsisDiv.innerHTML : '';
+        if (synopsisDiv) {
+            synopsisDiv.innerHTML = 'Generating synopsis...';
+            synopsisDiv.classList.remove('placeholder');
+        }
+
+        // Generate synopsis
+        const synopsis = await generateAISynopsis(sceneIndex);
+
+        // Save to state
+        state.scenes[sceneIndex].synopsis = synopsis;
+
+        // Also save to sceneBreakdowns if it exists
+        if (!state.sceneBreakdowns[sceneIndex]) {
+            state.sceneBreakdowns[sceneIndex] = {};
+        }
+        state.sceneBreakdowns[sceneIndex].synopsis = synopsis;
+
+        // Save project
+        const { saveProject } = await import('./export-handlers.js');
+        saveProject();
+
+        // Re-render the scene list to show the new synopsis
+        renderSceneList();
+
+        // Also update breakdown panel if it's open for this scene
+        if (state.currentScene === sceneIndex) {
+            const { renderBreakdownPanel } = await import('./breakdown-form.js');
+            renderBreakdownPanel();
+        }
+    } catch (error) {
+        console.error('Error generating synopsis:', error);
+        alert('Error generating synopsis: ' + error.message);
+
+        // Re-render to restore original state
+        renderSceneList();
+    }
+}
+
+// ============================================================================
 // EXPOSE GLOBAL FUNCTIONS
 // ============================================================================
 
 // Make functions available globally for HTML onclick handlers (legacy support)
 window.renderSceneList = renderSceneList;
+window.handleGenerateSceneSynopsis = handleGenerateSceneSynopsis;

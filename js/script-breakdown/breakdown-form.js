@@ -13,7 +13,7 @@
 
 import { state } from './main.js';
 import { formatSceneRange, getComplexityIcon, extractLocation, detectTimeOfDay, detectIntExt } from './utils.js';
-import { generateAISynopsis, detectAIElements, generateDescription } from './ai-integration.js';
+import { detectAIElements, generateDescription } from './ai-integration.js';
 
 // Element categories
 const categories = [
@@ -96,24 +96,6 @@ export function renderBreakdownPanel() {
         </div>
 
         ${sceneTransitions.length > 0 ? renderTransitionBanner(sceneTransitions) : ''}
-
-        <!-- SYNOPSIS SECTION - EXPANDABLE -->
-        <div class="breakdown-section expanded" id="synopsis-section">
-            <div class="section-header" onclick="toggleSection('synopsis-section')">
-                <div class="section-header-left">
-                    <span class="section-title">📝 Synopsis</span>
-                </div>
-                <button class="category-toggle">▼</button>
-            </div>
-            <div class="section-content" style="display: block;">
-                <textarea class="synopsis-textarea"
-                          placeholder="Enter scene synopsis or click Generate to create with AI..."
-                          oninput="updateSynopsis(${state.currentScene}, this.value)">${escapeHtml(scene.synopsis) || ''}</textarea>
-                <button class="ai-btn-compact" onclick="handleGenerateAISynopsis(${state.currentScene})" title="Generate synopsis with AI" style="margin-top: 8px; width: 100%;">
-                    Generate with AI
-                </button>
-            </div>
-        </div>
 
         <!-- SCENE INFORMATION - COLLAPSIBLE -->
         ${renderSceneInfoSection(scene)}
@@ -627,30 +609,6 @@ window.updateCharacterField = function(character, field, value) {
 };
 
 /**
- * Handle generate AI synopsis
- */
-window.handleGenerateAISynopsis = async function(sceneIndex) {
-    try {
-        const status = document.getElementById('aiStatus');
-        if (status) status.textContent = 'Generating synopsis...';
-
-        const synopsis = await generateAISynopsis(sceneIndex);
-        state.scenes[sceneIndex].synopsis = synopsis;
-
-        renderBreakdownPanel();
-        import('./scene-list.js').then(module => module.renderSceneList());
-        import('./export-handlers.js').then(module => module.saveProject());
-
-        if (status) status.textContent = '✓ Synopsis generated';
-        setTimeout(() => { if (status) status.textContent = ''; }, 2000);
-    } catch (error) {
-        console.error('Error generating synopsis:', error);
-        const status = document.getElementById('aiStatus');
-        if (status) status.textContent = '✗ Error: ' + error.message;
-    }
-};
-
-/**
  * Handle detect AI elements
  */
 window.handleDetectAIElements = async function(sceneIndex) {
@@ -691,24 +649,6 @@ window.handleDetectAIElements = async function(sceneIndex) {
         const status = document.getElementById('aiStatus');
         if (status) status.textContent = '✗ Error: ' + error.message;
     }
-};
-
-/**
- * Update synopsis
- */
-window.updateSynopsis = function(sceneIndex, value) {
-    if (!state.scenes[sceneIndex]) return;
-
-    state.scenes[sceneIndex].synopsis = value;
-
-    // Also save to sceneBreakdowns
-    if (!state.sceneBreakdowns[sceneIndex]) {
-        state.sceneBreakdowns[sceneIndex] = {};
-    }
-    state.sceneBreakdowns[sceneIndex].synopsis = value;
-
-    // Auto-save
-    import('./export-handlers.js').then(module => module.saveProject());
 };
 
 /**
