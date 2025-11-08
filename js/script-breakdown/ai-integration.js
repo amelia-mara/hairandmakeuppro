@@ -199,11 +199,11 @@ Scene Heading: ${scene.heading}
 Scene Text:
 ${sceneText}
 
-Write a synopsis in EXACTLY 2-4 sentences. Be concise and focus on key actions and character interactions only.
-Maximum length: 250 characters total.
-Focus on visual and continuity elements relevant to hair/makeup departments.
+Write a synopsis in EXACTLY 20-30 words. Be extremely concise and focus only on the key action or beat of the scene.
+STRICT REQUIREMENT: The synopsis must be between 20-30 words. Count carefully.
+Focus on the primary dramatic action or event in the scene.
 
-Provide only the synopsis, no additional commentary.`;
+Provide only the synopsis text, no additional commentary or explanations.`;
 
     try {
         const synopsis = await callAI(prompt, 200);
