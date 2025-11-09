@@ -289,8 +289,8 @@ export function selectScene(index) {
 
     state.currentScene = index;
 
-    // Update scene list highlighting
-    updateSceneListSelection();
+    // Re-render scene list to show expanded details for selected scene
+    renderSceneList();
 
     // Update breakdown panel
     renderBreakdownPanel();
