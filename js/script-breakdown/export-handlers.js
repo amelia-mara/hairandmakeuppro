@@ -293,6 +293,18 @@ class CharacterDetector {
  */
 function extractCharactersFromScenes() {
     console.log(`🎭 Extracting characters from ${state.scenes.length} scenes using INTELLIGENT detection...`);
+    console.log(`📋 DEBUG: Starting character detection...`);
+
+    // DIAGNOSTIC: Log scene data
+    if (state.scenes.length === 0) {
+        console.error('❌ No scenes found! Cannot detect characters.');
+        return [];
+    }
+
+    console.log(`✓ Processing ${state.scenes.length} scenes`);
+    state.scenes.forEach((scene, idx) => {
+        console.log(`  Scene ${idx + 1}: "${scene.heading}" - ${scene.content?.length || 0} characters`);
+    });
 
     // Create new character detector
     const detector = new CharacterDetector();
@@ -333,9 +345,11 @@ function extractCharactersFromScenes() {
                           'HALLWAY', 'OFFICE', 'CAR', 'BUILDING', 'LOBBY'];
 
     let totalDetected = 0;
+    let debugSampleCount = 0;
 
     state.scenes.forEach((scene, sceneIndex) => {
         const lines = scene.content.split('\n');
+        console.log(`\n📖 Scene ${sceneIndex + 1} - Processing ${lines.length} lines`);
 
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
@@ -350,12 +364,19 @@ function extractCharactersFromScenes() {
             // Skip transitions
             if (transitionPattern.test(trimmed)) continue;
 
-            // Check indentation (character names are typically centered ~20-50 spaces)
+            // Check indentation - FIXED: More flexible with spacing (10-60 spaces OR tabs)
             const leadingSpaces = line.length - line.trimStart().length;
-            const isCentered = leadingSpaces >= 20 && leadingSpaces <= 50;
+            const hasTabs = line.startsWith('\t');
+            const isCentered = (leadingSpaces >= 10 && leadingSpaces <= 60) || hasTabs;
 
             // Must be all caps
             const isAllCaps = trimmed === trimmed.toUpperCase() && /[A-Z]/.test(trimmed);
+
+            // DEBUG: Log some ALL CAPS lines to see what we're checking
+            if (isAllCaps && debugSampleCount < 10 && trimmed.length > 2 && trimmed.length < 30) {
+                console.log(`  🔍 ALL CAPS line: "${trimmed}" (indent: ${leadingSpaces}, hasTabs: ${hasTabs}, isCentered: ${isCentered})`);
+                debugSampleCount++;
+            }
 
             if (!isCentered || !isAllCaps) continue;
 
@@ -368,13 +389,22 @@ function extractCharactersFromScenes() {
             }
 
             const nextLineIndent = nextLine ? nextLine.length - nextLine.trimStart().length : 0;
+
+            // FIXED: More flexible dialogue detection
+            // Dialogue can be indented differently (just needs to exist and not be a parenthetical)
             const hasDialogueAfter = nextLine &&
                                     nextLine.trim().length > 0 &&
-                                    nextLineIndent > 0 &&
-                                    nextLineIndent < leadingSpaces &&
-                                    !nextLine.trim().startsWith('(');
+                                    !sceneHeadingPattern.test(nextLine.trim()) &&
+                                    !transitionPattern.test(nextLine.trim()) &&
+                                    !nextLine.trim().startsWith('(') &&
+                                    !(nextLine.trim() === nextLine.trim().toUpperCase() && /[A-Z]/.test(nextLine.trim()));
 
-            if (!hasDialogueAfter) continue;
+            if (!hasDialogueAfter) {
+                if (isAllCaps && trimmed.length > 2 && trimmed.length < 30) {
+                    console.log(`  ⏭️  Skipping "${trimmed}" - no dialogue after`);
+                }
+                continue;
+            }
 
             // Extract character name
             const match = trimmed.match(characterPattern);
@@ -395,6 +425,7 @@ function extractCharactersFromScenes() {
             if (locationWords.some(word => charName.includes(word))) continue;
 
             // Add to detector
+            console.log(`  ✅ Detected character: "${charName}"`);
             const added = detector.addCharacter(charName, sceneIndex);
             if (added) {
                 totalDetected++;
@@ -405,11 +436,24 @@ function extractCharactersFromScenes() {
     // Get detected characters
     const detectedChars = detector.getCharacters();
 
-    // Filter out characters with only 1 appearance (likely errors)
-    const validCharacters = detectedChars.filter(char => char.dialogueCount >= 2);
+    // FIXED: Allow characters with just 1 appearance (changed from >= 2 to >= 1)
+    // This helps detect minor characters and can be filtered in the UI
+    const validCharacters = detectedChars.filter(char => char.dialogueCount >= 1);
 
+    console.log(`\n📊 DETECTION RESULTS:`);
     console.log(`✓ Detected ${totalDetected} character instances`);
-    console.log(`✓ Found ${validCharacters.length} unique characters after deduplication`);
+    console.log(`✓ Found ${detectedChars.length} total unique characters`);
+    console.log(`✓ ${validCharacters.length} characters after filtering`);
+
+    if (validCharacters.length === 0) {
+        console.error(`\n❌ NO CHARACTERS DETECTED!`);
+        console.error(`   This usually means:`);
+        console.error(`   1. Script formatting doesn't match expected patterns`);
+        console.error(`   2. Character names are not in ALL CAPS`);
+        console.error(`   3. Character names are not indented properly`);
+        console.error(`   4. Dialogue is not following character names`);
+        console.error(`\n   Tip: Check the debug logs above to see what ALL CAPS lines were found.`);
+    }
 
     // Store in global state for review modal
     window.detectedCharacterData = validCharacters;
@@ -421,7 +465,7 @@ function extractCharactersFromScenes() {
     // Log results
     validCharacters.forEach(char => {
         const aliases = char.aliases.filter(a => a !== char.primaryName).join(', ');
-        console.log(`  ✓ ${char.primaryName} (${char.dialogueCount} dialogues)${aliases ? ` - Also: ${aliases}` : ''}`);
+        console.log(`  ✓ ${char.primaryName} (${char.dialogueCount} dialogue${char.dialogueCount !== 1 ? 's' : ''})${aliases ? ` - Also: ${aliases}` : ''}`);
     });
 
     return validCharacters;
