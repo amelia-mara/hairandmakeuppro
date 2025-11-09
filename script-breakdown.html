@@ -20,13 +20,8 @@
                 <h1 class="page-title" id="projectTitle">Script Breakdown</h1>
             </div>
             <div class="toolbar">
-                <button class="toolbar-btn" onclick="generateAllSynopses(event)">Generate All Synopses</button>
-                <button class="toolbar-btn" onclick="autoTagScript(event)">Auto Tag Script</button>
-                <button class="toolbar-btn" onclick="reviewCharacters()">Detect & Review Characters</button>
-                <button class="toolbar-btn" onclick="openSettingsModal()">AI Settings</button>
-                <button class="toolbar-btn" onclick="window.location.href='generate-breakdown.html'">Generate Breakdown</button>
+                <button class="toolbar-btn" onclick="openToolsPanel()">Tools</button>
                 <button class="toolbar-btn" onclick="openImportModal()">Import Script</button>
-                <!-- Auto-save indicator removed per user preference -->
             </div>
         </div>
 
@@ -102,7 +97,6 @@
             <div class="right-sidebar">
                 <div class="workspace-header">
                     <div class="workspace-title">SCENE BREAKDOWN</div>
-                    <button class="workspace-action-btn" onclick="openMergeCharactersModal()" title="Merge duplicate character names">Merge Characters</button>
                 </div>
 
                 <div class="workspace-content">
@@ -258,6 +252,7 @@
 
             <div class="modal-actions">
                 <button class="modal-btn" onclick="closeCharacterReviewModal()">Cancel</button>
+                <button class="modal-btn" onclick="mergeSelectedCharacters()">Merge Selected</button>
                 <button class="modal-btn" onclick="selectAllCharacters()">Select All</button>
                 <button class="modal-btn" onclick="deselectAllCharacters()">Deselect All</button>
                 <button class="modal-btn primary" onclick="confirmCharacterSelection()">Confirm Selection</button>
@@ -350,6 +345,49 @@
         </div>
     </div>
     -->
+
+    <!-- ============================================================================ -->
+    <!-- TOOLS PANEL -->
+    <!-- ============================================================================ -->
+
+    <!-- Tools Panel (Slide-out from right) -->
+    <div class="tools-panel" id="tools-panel">
+        <div class="tools-panel-header">
+            <div class="tools-panel-title">TOOLS</div>
+            <button class="tools-panel-close" onclick="closeToolsPanel()">×</button>
+        </div>
+
+        <div class="tools-panel-content">
+            <div class="tools-section">
+                <div class="tools-section-title">SCRIPT</div>
+                <button class="tools-panel-btn" onclick="openImportModal(); closeToolsPanel();">Import Script</button>
+                <button class="tools-panel-btn" onclick="generateAllSynopses(event); closeToolsPanel();">Generate All Synopses</button>
+            </div>
+
+            <div class="tools-section">
+                <div class="tools-section-title">CHARACTERS</div>
+                <button class="tools-panel-btn" onclick="reviewCharacters(); closeToolsPanel();">Detect & Review</button>
+            </div>
+
+            <div class="tools-section">
+                <div class="tools-section-title">TAGGING</div>
+                <button class="tools-panel-btn" onclick="autoTagScript(event); closeToolsPanel();">Auto Tag Script</button>
+            </div>
+
+            <div class="tools-section">
+                <div class="tools-section-title">EXPORT</div>
+                <button class="tools-panel-btn" onclick="window.location.href='generate-breakdown.html'">Generate Breakdown</button>
+            </div>
+
+            <div class="tools-section">
+                <div class="tools-section-title">SETTINGS</div>
+                <button class="tools-panel-btn" onclick="openSettingsModal(); closeToolsPanel();">AI Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tools Panel Overlay -->
+    <div class="tools-panel-overlay" id="tools-panel-overlay" onclick="closeToolsPanel()"></div>
 
     <!-- ============================================================================ -->
     <!-- JAVASCRIPT MODULES -->
