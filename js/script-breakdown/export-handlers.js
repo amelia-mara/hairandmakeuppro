@@ -103,16 +103,13 @@ export async function processScript() {
     state.scenes = detectScenes(text);
     console.log(`Found ${state.scenes.length} scenes`);
 
-    // Extract characters from scenes
-    extractCharactersFromScenes();
-
-    // Create character tabs and profiles for extracted characters
-    initializeCharacterTabs();
+    // CRITICAL: Do NOT auto-detect characters during import
+    // User must explicitly click "Detect & Review Characters" button
+    // This ensures proper workflow separation between import and character detection
 
     // DIAGNOSTIC: Log after script processing
     console.log('✓ Script imported, scenes parsed:', state.scenes.length);
-    console.log('✓ Characters detected:', Array.from(state.characters));
-    console.log('✓ Character tabs initialized:', state.characterTabs.length);
+    console.log('⚠️ Characters NOT auto-detected - user must run "Detect & Review Characters"');
 
     // Load and render
     loadScript(text);
@@ -565,17 +562,26 @@ function normalizeCharacterNameWithAlias(rawName, aliasMap) {
 }
 
 /**
- * Initialize character tabs and profiles from extracted characters
+ * Initialize character tabs and profiles from confirmed characters
  * Creates cast profiles and populates characterTabs for the UI
+ * CRITICAL: Only uses state.confirmedCharacters (user-confirmed list)
  */
 function initializeCharacterTabs() {
-    console.log('Initializing character tabs...');
+    console.log('Initializing character tabs from confirmed characters...');
 
-    // Convert Set to Array for character tabs
-    const characterArray = Array.from(state.characters);
-    console.log(`  Converting ${characterArray.length} characters to tabs`);
+    // CRITICAL: Only use confirmed characters
+    if (!state.confirmedCharacters || state.confirmedCharacters.size === 0) {
+        console.log('⚠️ No confirmed characters - skipping tab initialization');
+        console.log('   User must run "Detect & Review Characters" first');
+        state.characterTabs = [];
+        return;
+    }
 
-    // Create cast profiles for each character if they don't exist
+    // Convert confirmed characters Set to Array
+    const characterArray = Array.from(state.confirmedCharacters);
+    console.log(`  Initializing ${characterArray.length} confirmed characters`);
+
+    // Create cast profiles for each confirmed character if they don't exist
     characterArray.forEach(character => {
         if (!state.castProfiles[character]) {
             state.castProfiles[character] = {
@@ -588,10 +594,10 @@ function initializeCharacterTabs() {
         }
     });
 
-    // Populate character tabs with all characters
+    // Populate character tabs with confirmed characters only
     state.characterTabs = characterArray;
 
-    console.log(`✓ Initialized ${state.characterTabs.length} character tabs:`, state.characterTabs);
+    console.log(`✓ Initialized ${state.characterTabs.length} character tabs from confirmed characters:`, state.characterTabs);
 }
 
 /**

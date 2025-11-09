@@ -319,19 +319,11 @@ import { formatSceneRange, getComplexityIcon } from './utils.js';
 
 /**
  * Render character tabs in center panel with file divider system
- * Shows script tab + main character tabs + supporting dropdown
+ * CRITICAL: Uses state.confirmedCharacters ONLY - tabs are only created after user confirmation
+ * Shows script tab + confirmed character tabs
  */
 export function renderCharacterTabs() {
-    console.log('🔄 Rendering character tabs with file divider system...');
-
-    // Run aggressive deduplication first
-    aggressiveDeduplicate();
-
-    // Get filtered character lists
-    const mainCharacters = getMainCharacters(8); // Max 8 main tabs
-    const supportingCharacters = getSupportingCharacters();
-
-    console.log(`Generating tabs: ${mainCharacters.length} main, ${supportingCharacters.length} supporting`);
+    console.log('🔄 Rendering character tabs from confirmed characters...');
 
     const tabsContainer = document.querySelector('.center-tabs');
     if (!tabsContainer) {
@@ -355,8 +347,19 @@ export function renderCharacterTabs() {
     `;
     tabsContainer.appendChild(scriptTab);
 
-    // Add main character tabs
-    mainCharacters.forEach(charName => {
+    // CRITICAL: Only generate tabs if characters have been confirmed
+    if (!state.confirmedCharacters || state.confirmedCharacters.size === 0) {
+        console.log('⚠️ No confirmed characters - only showing Script tab');
+        console.log('   User must run "Detect & Review Characters" and confirm selection first');
+        return;
+    }
+
+    // Convert confirmed characters Set to Array and sort alphabetically
+    const confirmedCharArray = Array.from(state.confirmedCharacters).sort();
+    console.log(`✓ Generating tabs for ${confirmedCharArray.length} confirmed characters:`, confirmedCharArray);
+
+    // Add tab for each confirmed character
+    confirmedCharArray.forEach(charName => {
         const charId = `character-${charName.toLowerCase().replace(/\s+/g, '-')}`;
 
         const tab = document.createElement('div');
@@ -376,50 +379,10 @@ export function renderCharacterTabs() {
         createCharacterPanel(charId, charName);
     });
 
-    // Add supporting characters dropdown if there are any
-    if (supportingCharacters.length > 0) {
-        const dropdownTab = document.createElement('div');
-        dropdownTab.className = 'file-tab dropdown-tab';
-        dropdownTab.id = 'supporting-characters-tab';
+    // Update state.characterTabs to reflect confirmed characters
+    state.characterTabs = confirmedCharArray;
 
-        dropdownTab.innerHTML = `
-            <div class="file-tab-content">
-                <div class="file-tab-label">Supporting ▼</div>
-            </div>
-            <div class="supporting-dropdown" id="supporting-dropdown" style="display: none;">
-                ${supportingCharacters.map(char => {
-                    const charId = `character-${char.toLowerCase().replace(/\s+/g, '-')}`;
-                    return `
-                        <div class="supporting-character-item" onclick="switchCenterTab('${charId}')">
-                            ${escapeHtml(char)}
-                        </div>
-                    `;
-                }).join('')}
-            </div>
-        `;
-
-        // Toggle dropdown on click
-        const tabContent = dropdownTab.querySelector('.file-tab-content');
-        tabContent.onclick = (e) => {
-            e.stopPropagation();
-            const dropdown = dropdownTab.querySelector('.supporting-dropdown');
-            const isOpen = dropdown.style.display !== 'none';
-            dropdown.style.display = isOpen ? 'none' : 'block';
-        };
-
-        tabsContainer.appendChild(dropdownTab);
-
-        // Create panels for supporting characters too
-        supportingCharacters.forEach(char => {
-            const charId = `character-${char.toLowerCase().replace(/\s+/g, '-')}`;
-            createCharacterPanel(charId, char);
-        });
-    }
-
-    // Update state.characterTabs to reflect new list (main + supporting)
-    state.characterTabs = [...mainCharacters, ...supportingCharacters];
-
-    console.log(`✓ Rendered ${mainCharacters.length} main tabs + ${supportingCharacters.length} supporting (dropdown)`);
+    console.log(`✓ Rendered ${confirmedCharArray.length} character tabs from confirmed characters`);
 }
 
 /**
@@ -446,26 +409,41 @@ function createCharacterPanel(charId, charName) {
 
 /**
  * Render character tab panels
- * Creates panels for each character with their timeline
+ * Creates panels for each confirmed character with their timeline
+ * CRITICAL: Only creates panels for confirmed characters
  */
 export function renderCharacterTabPanels() {
     const contentContainer = document.querySelector('.center-tab-content');
     if (!contentContainer) return;
 
     // Remove old character panels (keep script panel)
-    const panels = contentContainer.querySelectorAll('[id^="characterTab-"]');
-    panels.forEach(panel => panel.remove());
+    const panels = contentContainer.querySelectorAll('[id^="character-"]');
+    panels.forEach(panel => {
+        if (panel.id !== 'script-tab-panel') {
+            panel.remove();
+        }
+    });
 
-    // Create new panels
-    state.characterTabs.forEach(character => {
+    // Only create panels if characters have been confirmed
+    if (!state.confirmedCharacters || state.confirmedCharacters.size === 0) {
+        console.log('⚠️ No confirmed characters - no character panels created');
+        return;
+    }
+
+    // Create new panels for each confirmed character
+    const confirmedCharArray = Array.from(state.confirmedCharacters).sort();
+    confirmedCharArray.forEach(character => {
+        const charId = `character-${character.toLowerCase().replace(/\s+/g, '-')}`;
         const panel = document.createElement('div');
         panel.className = 'center-tab-panel';
-        panel.id = `characterTab-${character}`;
+        panel.id = `${charId}-panel`;
 
         panel.innerHTML = renderCharacterTimeline(character);
 
         contentContainer.appendChild(panel);
     });
+
+    console.log(`✓ Created ${confirmedCharArray.length} character panels`);
 }
 
 /**
@@ -1290,21 +1268,21 @@ export function deduplicateAllCharacters() {
 
 /**
  * Regenerate character tabs with deduplicated names
- * Removes all existing character tabs and creates fresh ones
+ * CRITICAL: This function is DEPRECATED and should not be used
+ * Character tabs should only be generated from state.confirmedCharacters after user confirmation
  */
 export function regenerateCharacterTabs() {
-    const characters = window.characterManager.getAllCharacters();
+    console.log('⚠️ regenerateCharacterTabs() called - this function is deprecated');
+    console.log('   Character tabs should only be generated from confirmed characters');
 
-    console.log('🔄 Regenerating character tabs for:', characters);
-
-    // Update state.characterTabs with deduplicated list
-    state.characterTabs = characters;
-
-    // Render tabs and panels
-    renderCharacterTabs();
-    renderCharacterTabPanels();
-
-    console.log('✓ Character tabs regenerated');
+    // Simply re-render tabs from confirmed characters
+    if (state.confirmedCharacters && state.confirmedCharacters.size > 0) {
+        renderCharacterTabs();
+        renderCharacterTabPanels();
+        console.log('✓ Character tabs re-rendered from confirmed characters');
+    } else {
+        console.log('⚠️ No confirmed characters - skipping tab generation');
+    }
 }
 
 // ============================================================================
