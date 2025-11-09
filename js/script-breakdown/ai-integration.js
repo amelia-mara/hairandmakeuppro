@@ -215,7 +215,8 @@ Provide only the synopsis text, no additional commentary or explanations.`;
 }
 
 /**
- * Detect elements using AI (cast, hair, makeup, SFX, wardrobe)
+ * Detect elements using AI with enhanced continuity tracking
+ * Captures descriptive sentences and phrases for professional hair/makeup/wardrobe continuity
  */
 export async function detectAIElements(sceneIndex) {
     if (sceneIndex < 0 || sceneIndex >= state.scenes.length) return;
@@ -223,104 +224,103 @@ export async function detectAIElements(sceneIndex) {
     const scene = state.scenes[sceneIndex];
     const sceneText = scene.content || scene.text || '';
 
-    const prompt = `You are a script breakdown assistant for hair and makeup departments. Analyze this scene and extract ALL relevant tags for continuity tracking.
+    // Get confirmed character names for validation
+    const confirmedCharNames = Array.from(state.confirmedCharacters);
+
+    const prompt = `You are analyzing a screenplay scene for production continuity, specifically for hair, makeup, wardrobe, and SFX departments.
 
 Scene Heading: ${scene.heading}
 
 Scene Text:
 ${sceneText}
 
-Return ONLY valid JSON with this structure:
+Confirmed Characters in Script: ${confirmedCharNames.join(', ')}
+
+**CRITICAL**: Your task is to identify and extract ALL descriptive information about character appearance, condition, and any changes that occur. Capture COMPLETE SENTENCES or PHRASES that describe appearance - not just keywords.
+
+**TAGGING RULES:**
+
+1. HAIR - Capture descriptive phrases about:
+   - Hairstyle: "long auburn hair", "hair tied in a messy bun", "slicked back"
+   - Condition: "windswept hair", "wet and matted", "disheveled", "perfectly styled"
+   - Changes: "cuts her hair short", "dyes it red", "removes the wig"
+   - Accessories: "wearing a hat", "headband visible"
+   - Environmental effects: "rain soaks her hair", "wind tangles his hair"
+
+2. MAKEUP - Capture phrases about:
+   - Application: "flawless makeup", "smoky eyes", "red lipstick", "natural look"
+   - Condition: "smudged mascara", "makeup running", "faded lipstick"
+   - Skin: "pale complexion", "flushed face", "tanned", "sunburned"
+   - Changes: "wipes off her makeup", "applies fresh lipstick"
+
+3. SFX (Special Effects) - Capture phrases about:
+   - Prosthetics: "wearing a fake scar", "latex appliances", "aged 30 years"
+   - Fantasy elements: "pointed ears", "alien skin texture", "vampire fangs"
+   - Transformations: "transforms into a creature", "appears elderly"
+
+4. HEALTH/ILLNESS - Capture phrases about:
+   - Condition: "looks pale and sweaty", "feverish appearance", "exhausted"
+   - Symptoms: "dark circles under eyes", "clammy skin", "shivering"
+   - Recovery: "regaining color", "looking healthier"
+
+5. INJURIES - Capture phrases about:
+   - Wounds: "bleeding cut above eyebrow", "gash on forehead", "blood trickling down face"
+   - Bruises: "black eye forming", "purple bruise on cheek"
+   - Treatment: "bandaged wound", "fresh stitches", "wrapped in gauze"
+   - Blood: "blood on face", "bloodstained shirt", "dried blood"
+
+6. STUNTS - Capture action that affects appearance:
+   - Physical action: "thrown into mud", "crashes through window"
+   - Getting messy: "covered in dirt", "splashed with water", "dust cloud hits them"
+
+7. WEATHER - Capture environmental effects on appearance:
+   - Rain: "rain soaks them", "dripping wet"
+   - Wind: "wind whips her hair"
+   - Heat/Cold: "sweat beading on forehead", "frost in his beard"
+
+8. WARDROBE - Capture clothing descriptions:
+   - Descriptions: "wearing a red vintage jacket", "torn jeans", "pristine suit"
+   - Condition: "mud-stained shirt", "ripped from the fight", "soaking wet clothes"
+   - Changes: "changes into a blue dress", "removes his jacket"
+
+9. EXTRAS - Background performers:
+   - Crowds: "packed with passengers", "dozens of pedestrians"
+   - Types: "tourists with cameras", "businessmen in suits"
+
+**OUTPUT FORMAT** (JSON only, no explanation):
 {
-  "cast": ["Character Name 1", "Character Name 2"],
-  "hair": ["Hairstyle description 1", "Hair change description 2"],
-  "makeup": ["Makeup description 1", "Makeup need 2"],
-  "sfx": ["Special effect 1", "Prosthetic 2"],
-  "health": ["Health condition 1", "Appearance description 2"],
-  "injuries": ["Injury 1", "Wound description 2"],
-  "stunts": ["Stunt action 1", "Physical activity 2"],
-  "weather": ["Weather effect 1", "Environmental impact 2"],
-  "wardrobe": ["Costume description 1", "Wardrobe change 2"],
-  "extras": ["Background performer 1", "Crowd description 2"]
+  "tags": [
+    {
+      "category": "hair|makeup|sfx|health|injuries|stunts|weather|wardrobe|extras|cast",
+      "character": "EXACT CHARACTER NAME from confirmed list or null",
+      "text": "The actual descriptive phrase from the script (complete sentence or phrase)",
+      "confidence": "high|medium|low"
+    }
+  ]
 }
 
-DETAILED DETECTION RULES:
+**IMPORTANT**:
+- Capture COMPLETE descriptive phrases, not keywords
+- Link to specific CHARACTER when possible (use exact names from confirmed list)
+- Tag the same text in MULTIPLE categories if relevant (e.g., "blood on face" = both injuries AND makeup)
+- Include contextual action if it affects appearance
+- Use "cast" category for character presence/introductions
 
-CAST:
-- All speaking characters with names
-- Named characters who appear but don't speak
-- DO NOT include generic roles like "Waiter" or "Guard" unless they have significant interaction
+Example:
+Input: "GWEN's long auburn hair whips in the wind as rain soaks her jacket."
+Output: {
+  "tags": [
+    {"category": "hair", "character": "Gwen Lawson", "text": "long auburn hair whips in the wind", "confidence": "high"},
+    {"category": "weather", "character": "Gwen Lawson", "text": "wind", "confidence": "high"},
+    {"category": "weather", "character": "Gwen Lawson", "text": "rain soaks her jacket", "confidence": "high"},
+    {"category": "wardrobe", "character": "Gwen Lawson", "text": "rain soaks her jacket", "confidence": "high"}
+  ]
+}
 
-HAIR:
-- Specific hairstyles mentioned (bun, ponytail, curls, straight, etc.)
-- Hair color or length descriptions
-- Hair being wet, messy, disheveled, windblown
-- Hair changes (takes down her hair, puts hair up, cuts hair)
-- Wigs or hair pieces mentioned
-
-MAKEUP:
-- Beauty makeup mentioned (natural look, glamorous, etc.)
-- Makeup application or removal scenes
-- Aged appearance, youthful appearance
-- Specific makeup mentions (lipstick, eye makeup, etc.)
-- Makeup running or smudged
-
-SFX (Special Effects Makeup):
-- Wounds, cuts, gashes, lacerations
-- Blood (on face, body, clothing)
-- Bruises, black eyes, swelling
-- Burns, scars, tattoos
-- Prosthetics, creature makeup
-- Aging effects requiring prosthetics
-- Dirt, grime, or filth requiring special application
-
-HEALTH:
-- Illness (fever, pale, sickly, clammy)
-- Exhaustion, tiredness (bags under eyes, pale)
-- Sweating profusely, flushed
-- Drugged or intoxicated appearance
-- Malnourished or gaunt appearance
-
-INJURIES:
-- Recent injuries mentioned (bandages, stitches)
-- Healing wounds or scars
-- Limping, favoring a body part
-- Physical trauma visible on face/body
-- Medical devices (casts, braces, eye patches)
-
-STUNTS:
-- Fight scenes, physical altercations
-- Falls, jumps, or dangerous physical activity
-- Car chases or vehicle stunts
-- Running, climbing, athletic activities
-- Any action that might affect hair/makeup continuity
-
-WEATHER:
-- Rain (hair/makeup getting wet)
-- Wind (affecting hair)
-- Snow (on hair, face, clothing)
-- Extreme heat (sweating, flushed)
-- Mud, dirt, or environmental elements
-
-WARDROBE:
-- Specific costume descriptions
-- Costume changes within scene
-- Wardrobe malfunctions or tears
-- Getting dressed or undressed
-- Removing or adding clothing items (jacket, hat, etc.)
-
-EXTRAS:
-- Background performers with specific looks
-- Crowd descriptions requiring coordination
-- Period-specific crowd appearances
-
-Be THOROUGH - extract EVERY relevant detail. Multiple items per category are expected.
-Each description should be specific enough for continuity tracking.
-
-Return ONLY the JSON, no explanation or commentary.`;
+Analyze the scene and return ALL relevant tags as JSON.`;
 
     try {
-        const response = await callAI(prompt, 600);
+        const response = await callAI(prompt, 2000); // Increased token limit for detailed responses
 
         // Parse JSON response
         const jsonMatch = response.match(/\{[\s\S]*\}/);
@@ -328,21 +328,95 @@ Return ONLY the JSON, no explanation or commentary.`;
             throw new Error('No valid JSON found in response');
         }
 
-        const elements = JSON.parse(jsonMatch[0]);
+        const data = JSON.parse(jsonMatch[0]);
 
+        // Process tags and organize by category
+        const tagsByCategory = {
+            cast: [],
+            hair: [],
+            makeup: [],
+            sfx: [],
+            health: [],
+            injuries: [],
+            stunts: [],
+            weather: [],
+            wardrobe: [],
+            extras: []
+        };
+
+        const allTags = [];
+
+        if (data.tags && Array.isArray(data.tags)) {
+            data.tags.forEach(tag => {
+                // Validate tag structure
+                if (!tag.category || !tag.text) {
+                    console.warn('Invalid tag structure:', tag);
+                    return;
+                }
+
+                // Normalize character name using CharacterManager if available
+                let normalizedCharacter = null;
+                if (tag.character) {
+                    if (window.characterManager) {
+                        normalizedCharacter = window.characterManager.getCanonicalName(tag.character) || tag.character;
+                    } else {
+                        // Fallback: try to match against confirmed characters
+                        const charUpper = tag.character.toUpperCase();
+                        for (const confirmedChar of confirmedCharNames) {
+                            if (confirmedChar.toUpperCase() === charUpper ||
+                                confirmedChar.toUpperCase().includes(charUpper) ||
+                                charUpper.includes(confirmedChar.toUpperCase())) {
+                                normalizedCharacter = confirmedChar;
+                                break;
+                            }
+                        }
+                        if (!normalizedCharacter) {
+                            normalizedCharacter = tag.character;
+                        }
+                    }
+                }
+
+                // Create structured tag object
+                const structuredTag = {
+                    category: tag.category,
+                    character: normalizedCharacter,
+                    text: tag.text,
+                    confidence: tag.confidence || 'medium',
+                    sceneIndex: sceneIndex,
+                    sceneNumber: scene.number
+                };
+
+                // Add to category array
+                if (tagsByCategory[tag.category]) {
+                    tagsByCategory[tag.category].push(structuredTag);
+                }
+
+                // Add to all tags array
+                allTags.push(structuredTag);
+            });
+        }
+
+        // Extract unique cast members
+        const cast = [...new Set(allTags
+            .filter(t => t.category === 'cast' && t.character)
+            .map(t => t.character))];
+
+        // Return in compatible format
         return {
-            cast: elements.cast || [],
+            cast: cast,
             elements: {
-                hair: elements.hair || [],
-                makeup: elements.makeup || [],
-                sfx: elements.sfx || [],
-                health: elements.health || [],
-                injuries: elements.injuries || [],
-                stunts: elements.stunts || [],
-                weather: elements.weather || [],
-                wardrobe: elements.wardrobe || [],
-                extras: elements.extras || []
-            }
+                hair: tagsByCategory.hair.map(t => t.text),
+                makeup: tagsByCategory.makeup.map(t => t.text),
+                sfx: tagsByCategory.sfx.map(t => t.text),
+                health: tagsByCategory.health.map(t => t.text),
+                injuries: tagsByCategory.injuries.map(t => t.text),
+                stunts: tagsByCategory.stunts.map(t => t.text),
+                weather: tagsByCategory.weather.map(t => t.text),
+                wardrobe: tagsByCategory.wardrobe.map(t => t.text),
+                extras: tagsByCategory.extras.map(t => t.text)
+            },
+            // Enhanced: return structured tags with character info
+            structuredTags: allTags
         };
     } catch (error) {
         console.error('Error detecting elements:', error);
@@ -599,12 +673,24 @@ export async function generateAllSynopses(event) {
 
 /**
  * Auto-tag the entire script with AI detection
+ * REQUIRES: Characters must be confirmed via "Detect & Review Characters" first
+ * This function ONLY does AI tagging - no character detection
  */
 export async function autoTagScript(event) {
     if (!state.scenes || state.scenes.length === 0) {
         alert('No scenes loaded. Please import a script first.');
         return;
     }
+
+    // CRITICAL CHECK: Ensure characters have been confirmed first
+    if (!state.confirmedCharacters || state.confirmedCharacters.size === 0) {
+        console.warn('⚠️ Auto Tag Script blocked - no confirmed characters');
+        // Show the error modal
+        openCharactersNotConfirmedModal();
+        return;
+    }
+
+    console.log('✓ Confirmed characters found:', Array.from(state.confirmedCharacters));
 
     // Get the button element from the event
     const button = event?.currentTarget;
@@ -615,6 +701,7 @@ export async function autoTagScript(event) {
 
     console.log('🤖 Starting Auto Tag Script...');
     console.log('📊 Total scenes to process:', state.scenes.length);
+    console.log('👥 Using confirmed characters:', Array.from(state.confirmedCharacters));
 
     // Reset cancellation flag
     batchCancelled = false;
@@ -686,72 +773,116 @@ export async function autoTagScript(event) {
                 });
             }
 
-            // CRITICAL FIX: Create tag objects in scriptTags for highlighting
+            // Create tag objects in scriptTags for highlighting
             if (!state.scriptTags[i]) {
                 state.scriptTags[i] = [];
             }
 
             let sceneTagsCreated = 0;
+            const existingTagTexts = new Set(); // For deduplication
 
-            // Create tags for cast members - normalize through CharacterManager
-            if (result.cast && result.cast.length > 0) {
-                console.log(`  Creating ${result.cast.length} cast tags...`);
-                result.cast.forEach(castMember => {
+            // Use enhanced structured tags if available
+            if (result.structuredTags && result.structuredTags.length > 0) {
+                console.log(`  Processing ${result.structuredTags.length} structured tags...`);
+
+                result.structuredTags.forEach(structuredTag => {
+                    // Deduplication: Create unique key for tag
+                    const dedupeKey = `${structuredTag.category}:${structuredTag.character || 'none'}:${structuredTag.text.toLowerCase()}`;
+
+                    if (existingTagTexts.has(dedupeKey)) {
+                        console.log(`    ⊘ Skipping duplicate: "${structuredTag.text.substring(0, 30)}..."`);
+                        return;
+                    }
+                    existingTagTexts.add(dedupeKey);
+
                     // Normalize character name
-                    const canonicalName = window.characterManager.getCanonicalName(castMember) ||
-                                         window.characterManager.addCharacter(castMember);
+                    let canonicalName = structuredTag.character;
+                    if (canonicalName && window.characterManager) {
+                        canonicalName = window.characterManager.getCanonicalName(canonicalName) || canonicalName;
+                    }
 
                     const tag = {
                         id: `tag-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                         sceneIndex: i,
                         sceneNumber: scene.number,
-                        category: 'cast',
-                        selectedText: canonicalName,
-                        fullContext: `Cast member: ${canonicalName}`,
+                        category: structuredTag.category,
+                        selectedText: structuredTag.text.substring(0, 150), // Capture full phrase
+                        fullContext: structuredTag.text,
                         character: canonicalName,
+                        confidence: structuredTag.confidence || 'medium',
                         created: Date.now()
                     };
+
                     state.scriptTags[i].push(tag);
                     sceneTagsCreated++;
-                    console.log(`    ✓ Cast tag: "${canonicalName}"`);
-                });
-            }
 
-            // Create tags for other elements (hair, makeup, SFX, wardrobe)
-            if (result.elements) {
-                Object.keys(result.elements).forEach(category => {
-                    if (result.elements[category] && result.elements[category].length > 0) {
-                        console.log(`  Creating ${result.elements[category].length} ${category} tags...`);
-                        result.elements[category].forEach(description => {
-                            // Try to detect character from description and normalize
-                            let detectedCharacter = null;
-                            if (result.cast) {
-                                for (const castMember of result.cast) {
-                                    if (description.toLowerCase().includes(castMember.toLowerCase())) {
-                                        // Normalize the detected character name
-                                        detectedCharacter = window.characterManager.getCanonicalName(castMember) ||
-                                                          window.characterManager.addCharacter(castMember);
-                                        break;
+                    const charInfo = canonicalName ? ` (${canonicalName})` : '';
+                    const confidenceIcon = structuredTag.confidence === 'high' ? '✓' : structuredTag.confidence === 'low' ? '?' : '•';
+                    console.log(`    ${confidenceIcon} ${structuredTag.category}: "${structuredTag.text.substring(0, 50)}..."${charInfo}`);
+                });
+            } else {
+                // Fallback to legacy format
+                console.log(`  Using legacy tag format...`);
+
+                // Create tags for cast members
+                if (result.cast && result.cast.length > 0) {
+                    result.cast.forEach(castMember => {
+                        const canonicalName = window.characterManager?.getCanonicalName(castMember) || castMember;
+
+                        const tag = {
+                            id: `tag-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                            sceneIndex: i,
+                            sceneNumber: scene.number,
+                            category: 'cast',
+                            selectedText: canonicalName,
+                            fullContext: `Cast member: ${canonicalName}`,
+                            character: canonicalName,
+                            confidence: 'high',
+                            created: Date.now()
+                        };
+                        state.scriptTags[i].push(tag);
+                        sceneTagsCreated++;
+                    });
+                }
+
+                // Create tags for other elements
+                if (result.elements) {
+                    Object.keys(result.elements).forEach(category => {
+                        if (result.elements[category] && result.elements[category].length > 0) {
+                            result.elements[category].forEach(description => {
+                                // Deduplication
+                                const dedupeKey = `${category}:none:${description.toLowerCase()}`;
+                                if (existingTagTexts.has(dedupeKey)) return;
+                                existingTagTexts.add(dedupeKey);
+
+                                // Try to detect character from description
+                                let detectedCharacter = null;
+                                if (result.cast) {
+                                    for (const castMember of result.cast) {
+                                        if (description.toLowerCase().includes(castMember.toLowerCase())) {
+                                            detectedCharacter = window.characterManager?.getCanonicalName(castMember) || castMember;
+                                            break;
+                                        }
                                     }
                                 }
-                            }
 
-                            const tag = {
-                                id: `tag-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-                                sceneIndex: i,
-                                sceneNumber: scene.number,
-                                category: category,
-                                selectedText: description.substring(0, 100), // Truncate long descriptions
-                                fullContext: description,
-                                character: detectedCharacter,
-                                created: Date.now()
-                            };
-                            state.scriptTags[i].push(tag);
-                            sceneTagsCreated++;
-                            console.log(`    ✓ ${category} tag: "${description.substring(0, 40)}..." ${detectedCharacter ? `(${detectedCharacter})` : ''}`);
-                        });
-                    }
-                });
+                                const tag = {
+                                    id: `tag-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                                    sceneIndex: i,
+                                    sceneNumber: scene.number,
+                                    category: category,
+                                    selectedText: description.substring(0, 150),
+                                    fullContext: description,
+                                    character: detectedCharacter,
+                                    confidence: 'medium',
+                                    created: Date.now()
+                                };
+                                state.scriptTags[i].push(tag);
+                                sceneTagsCreated++;
+                            });
+                        }
+                    });
+                }
             }
 
             totalTagsCreated += sceneTagsCreated;
@@ -1001,6 +1132,30 @@ function closeProgressModal() {
     if (modal) modal.style.display = 'none';
 }
 
+// ============================================================================
+// CHARACTERS NOT CONFIRMED MODAL
+// ============================================================================
+
+/**
+ * Open the characters not confirmed modal
+ */
+function openCharactersNotConfirmedModal() {
+    const modal = document.getElementById('characters-not-confirmed-modal');
+    if (modal) {
+        modal.style.display = 'flex';
+    }
+}
+
+/**
+ * Close the characters not confirmed modal
+ */
+function closeCharactersNotConfirmedModal() {
+    const modal = document.getElementById('characters-not-confirmed-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
 // Expose functions globally for HTML onclick handlers
 window.openSettingsModal = openSettingsModal;
 window.closeSettingsModal = closeSettingsModal;
@@ -1013,3 +1168,5 @@ window.startButtonProgress = startButtonProgress;
 window.updateButtonProgress = updateButtonProgress;
 window.completeButtonProgress = completeButtonProgress;
 window.resetButton = resetButton;
+window.openCharactersNotConfirmedModal = openCharactersNotConfirmedModal;
+window.closeCharactersNotConfirmedModal = closeCharactersNotConfirmedModal;
