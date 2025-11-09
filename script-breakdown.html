@@ -22,7 +22,7 @@
             <div class="toolbar">
                 <button class="toolbar-btn" onclick="generateAllSynopses(event)">Generate All Synopses</button>
                 <button class="toolbar-btn" onclick="autoTagScript(event)">Auto Tag Script</button>
-                <button class="toolbar-btn" onclick="reviewCharacters()">Review Characters</button>
+                <button class="toolbar-btn" onclick="reviewCharacters()">Detect & Review Characters</button>
                 <button class="toolbar-btn" onclick="openSettingsModal()">AI Settings</button>
                 <button class="toolbar-btn" onclick="window.location.href='generate-breakdown.html'">Generate Breakdown</button>
                 <button class="toolbar-btn" onclick="openImportModal()">Import Script</button>
@@ -261,6 +261,23 @@
                 <button class="modal-btn" onclick="selectAllCharacters()">Select All</button>
                 <button class="modal-btn" onclick="deselectAllCharacters()">Deselect All</button>
                 <button class="modal-btn primary" onclick="confirmCharacterSelection()">Confirm Selection</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Characters Not Confirmed Modal -->
+    <div class="modal" id="characters-not-confirmed-modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-title">Characters Not Confirmed</div>
+            <div class="modal-section">
+                <p>Please detect and review characters before running Auto Tag.</p>
+                <p style="margin-top: 12px; color: var(--text-muted);">
+                    Click "Detect & Review Characters" to parse your script and select which characters to track.
+                </p>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn" onclick="closeCharactersNotConfirmedModal()">Cancel</button>
+                <button class="modal-btn primary" onclick="closeCharactersNotConfirmedModal(); reviewCharacters();">Detect & Review Characters</button>
             </div>
         </div>
     </div>
