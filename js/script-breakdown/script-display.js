@@ -135,6 +135,42 @@ function escapeHtml(text) {
 }
 
 // ============================================================================
+// ZOOM CONTROLS
+// ============================================================================
+
+/**
+ * Zoom in (increase font size)
+ */
+export function zoomIn() {
+    const el = document.querySelector('.script-content');
+    if (!el) return;
+
+    const currentSize = parseFloat(window.getComputedStyle(el).fontSize);
+    const newSize = currentSize * 1.1;
+
+    // Limit maximum zoom
+    if (newSize > 24) return;
+
+    el.style.fontSize = newSize + 'px';
+}
+
+/**
+ * Zoom out (decrease font size)
+ */
+export function zoomOut() {
+    const el = document.querySelector('.script-content');
+    if (!el) return;
+
+    const currentSize = parseFloat(window.getComputedStyle(el).fontSize);
+    const newSize = currentSize * 0.9;
+
+    // Limit minimum zoom
+    if (newSize < 10) return;
+
+    el.style.fontSize = newSize + 'px';
+}
+
+// ============================================================================
 // NAVIGATION
 // ============================================================================
 
@@ -156,4 +192,6 @@ export function scrollToScene(index) {
 // ============================================================================
 
 // Make functions available globally for HTML onclick handlers (legacy support)
+window.zoomIn = zoomIn;
+window.zoomOut = zoomOut;
 window.scrollToScene = scrollToScene;
