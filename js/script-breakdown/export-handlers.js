@@ -124,67 +124,217 @@ export async function processScript() {
 }
 
 /**
- * Extract characters from all scenes with STRICT screenplay format parsing
- * Only detects properly formatted character names (centered, all caps, followed by dialogue)
+ * Character Detection Class - Handles intelligent character name extraction and deduplication
  */
-function extractCharactersFromScenes() {
-    state.characters = new Set();
-    const characterCounts = new Map(); // Track character appearance counts
-
-    // Clear CharacterManager for fresh extraction
-    if (window.characterManager) {
-        window.characterManager.clear();
+class CharacterDetector {
+    constructor() {
+        this.characters = new Map(); // Map<primaryName, characterData>
+        this.aliasMap = new Map();   // Map<alias, primaryName>
     }
 
-    console.log(`🎭 Extracting characters from ${state.scenes.length} scenes using STRICT detection...`);
+    /**
+     * Add a character or merge with existing variations
+     */
+    addCharacter(rawName, sceneIndex) {
+        // Clean the name
+        const cleaned = this.cleanName(rawName);
+        if (!cleaned) return null;
 
-    // Critical: These patterns DISQUALIFY something from being a character
+        // Split into parts for matching
+        const parts = cleaned.split(/\s+/);
+        const upperName = cleaned.toUpperCase();
+
+        // Check if this is a variation of an existing character
+        const existingPrimary = this.findMatchingCharacter(parts, upperName);
+
+        if (existingPrimary) {
+            // Update existing character
+            const char = this.characters.get(existingPrimary);
+
+            // Add alias if it's new
+            if (!char.aliases.includes(cleaned)) {
+                char.aliases.push(cleaned);
+            }
+
+            // Update to longer name if this one is more complete
+            if (cleaned.length > char.primaryName.length) {
+                // Move old primary to aliases
+                if (!char.aliases.includes(char.primaryName)) {
+                    char.aliases.push(char.primaryName);
+                }
+                // Set new primary
+                char.primaryName = cleaned;
+                // Update map
+                this.characters.set(cleaned, char);
+                this.characters.delete(existingPrimary);
+                // Update all aliases to point to new primary
+                char.aliases.forEach(alias => {
+                    this.aliasMap.set(alias.toUpperCase(), cleaned);
+                });
+                this.aliasMap.set(upperName, cleaned);
+            }
+
+            // Track dialogue count and scenes
+            char.dialogueCount++;
+            if (!char.sceneAppearances.includes(sceneIndex)) {
+                char.sceneAppearances.push(sceneIndex);
+            }
+
+            return existingPrimary;
+        } else {
+            // New character
+            const charData = {
+                primaryName: cleaned,
+                aliases: [cleaned, rawName],
+                firstScene: sceneIndex,
+                sceneAppearances: [sceneIndex],
+                dialogueCount: 1,
+                isConfirmed: false
+            };
+
+            this.characters.set(cleaned, charData);
+            this.aliasMap.set(upperName, cleaned);
+
+            // Also map parts as aliases if single word
+            if (parts.length === 1) {
+                this.aliasMap.set(upperName, cleaned);
+            }
+
+            return cleaned;
+        }
+    }
+
+    /**
+     * Clean character name - remove parentheticals and normalize
+     */
+    cleanName(rawName) {
+        if (!rawName) return null;
+
+        // Remove parentheticals: (V.O.), (O.S.), (CONT'D), etc.
+        let cleaned = rawName.replace(/\s*\((?:V\.O\.|O\.S\.|O\.C\.|CONT'D|PRE-LAP|FILTERED|.*?)\)\s*/g, '');
+
+        // Trim and normalize whitespace
+        cleaned = cleaned.trim().replace(/\s+/g, ' ');
+
+        // Convert to title case for consistency
+        cleaned = this.toTitleCase(cleaned);
+
+        return cleaned;
+    }
+
+    /**
+     * Find matching character based on name parts
+     */
+    findMatchingCharacter(parts, upperName) {
+        // Check if exact match exists in alias map
+        if (this.aliasMap.has(upperName)) {
+            return this.aliasMap.get(upperName);
+        }
+
+        // Check if this is a subset/superset of an existing character
+        for (const [primaryName, charData] of this.characters) {
+            const primaryUpper = primaryName.toUpperCase();
+            const primaryParts = primaryUpper.split(/\s+/);
+
+            // Check if new name is a subset of existing (e.g., "GWEN" vs "GWEN LAWSON")
+            if (parts.length < primaryParts.length) {
+                const isSubset = parts.every(part => primaryParts.includes(part));
+                if (isSubset) {
+                    return primaryName;
+                }
+            }
+
+            // Check if existing name is a subset of new (e.g., "GWEN" exists, found "GWEN LAWSON")
+            if (primaryParts.length < parts.length) {
+                const isSuperset = primaryParts.every(part => parts.includes(part));
+                if (isSuperset) {
+                    return primaryName;
+                }
+            }
+
+            // Check if first names match (common case)
+            if (parts[0] === primaryParts[0] && parts.length > 1 && primaryParts.length > 1) {
+                return primaryName;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Convert to title case
+     */
+    toTitleCase(str) {
+        return str.split(' ')
+            .map(word => word.charAt(0) + word.slice(1).toLowerCase())
+            .join(' ');
+    }
+
+    /**
+     * Get all detected characters sorted by importance
+     */
+    getCharacters() {
+        return Array.from(this.characters.values())
+            .sort((a, b) => b.dialogueCount - a.dialogueCount);
+    }
+
+    /**
+     * Clear all data
+     */
+    clear() {
+        this.characters.clear();
+        this.aliasMap.clear();
+    }
+}
+
+/**
+ * Extract characters from all scenes with INTELLIGENT screenplay format parsing
+ * Uses regex patterns and deduplication logic to identify unique characters
+ */
+function extractCharactersFromScenes() {
+    console.log(`🎭 Extracting characters from ${state.scenes.length} scenes using INTELLIGENT detection...`);
+
+    // Create new character detector
+    const detector = new CharacterDetector();
+
+    // Regex patterns
+    const sceneHeadingPattern = /^(?:INT\.|EXT\.|INT\.\/EXT\.|I\/E\.)/i;
+    const transitionPattern = /^(?:CUT TO:|FADE IN:|FADE OUT:|DISSOLVE TO:|BACK TO:)/i;
+    const characterPattern = /^([A-Z][A-Z\s\-'\.]+?)(?:\s*\([^\)]+\))?\s*$/;
+
+    // Invalid patterns to exclude
     const invalidPatterns = [
-        /^\d+$/,                          // Just numbers: "4", "15"
-        /^\d+\s*\./,                      // Scene numbers: "1.", "15."
-        /^(INT|EXT)\./i,                  // Scene headings start
-        /^(INT|EXT)\s/i,                  // Scene headings
-        /FADE|CUT TO|DISSOLVE/i,          // Transitions
-        /CONTINUED|CONT'D/i,              // Continuations (when alone)
-        /^BACK TO/i,                      // Transitions
+        /^\d+$/,                          // Just numbers
+        /^\d+\s*\./,                      // Scene numbers
+        /CONTINUED/i,                      // Continued
+        /^MORE$/i,                        // More
         /LATER|MEANWHILE|MOMENTS/i,       // Time indicators
         /^[*\.\-\s]+$/,                   // Just punctuation
-        /:/,                              // Contains colon (likely dialogue/action)
+        /:/,                              // Contains colon
         /DAY|NIGHT|MORNING|EVENING|DUSK|DAWN/i, // Time of day
-        /\d{2,}/,                         // Contains multiple digits
+        /\d{2,}/,                         // Multiple digits
         /[!?\.]{2,}/,                     // Multiple punctuation
-        /^(THE|A|AN)\s/i,                 // Starts with article (likely location)
-        /^V\.O\.$/i,                      // Voice over only
-        /^O\.S\.$/i,                      // Off screen only
-        /^O\.C\.$/i,                      // Off camera only
-        /^THE END$/i,                     // Script end marker
-        /^TITLE/i,                        // Title cards
-        /^SUPER/i,                        // Supers
-        /^MONTAGE/i,                      // Montage
-        /^SERIES OF SHOTS/i,              // Series of shots
-        /^INTERCUT/i,                     // Intercut
-        /^INSERT/i,                       // Insert shots
-        /^FLASHBACK/i,                    // Flashback
-        /^FLASH FORWARD/i,                // Flash forward
-        /^SMACK|^BANG|^CRASH|^BOOM|^THUD|^CLICK/i  // Sound effects
+        /^THE END$/i,                     // Script end
+        /^(?:TITLE|SUPER|MONTAGE|SERIES OF SHOTS|INTERCUT|INSERT|FLASHBACK|FLASH FORWARD)/i
     ];
 
-    // Generic roles to exclude (or mark as minor)
+    // Generic roles to exclude
     const genericRoles = new Set([
         'WAITER', 'WAITRESS', 'BARTENDER', 'DRIVER', 'TAXI DRIVER',
-        'CREW MEMBER', 'PASSENGER', 'AGENT', 'AIRLINE AGENT',
-        'RECEPTIONIST', 'NURSE', 'DOCTOR', 'OFFICER', 'GUARD',
+        'CREW MEMBER', 'PASSENGER', 'AGENT', 'RECEPTIONIST',
+        'NURSE', 'DOCTOR', 'OFFICER', 'GUARD',
         'MAN', 'WOMAN', 'BOY', 'GIRL', 'PERSON',
-        'VOICE', 'CROWD', 'ALL', 'EVERYONE'
+        'VOICE', 'CROWD', 'ALL', 'EVERYONE', 'MORE'
     ]);
 
-    // Location keywords that often appear in all caps
+    // Location keywords
     const locationWords = ['HOUSE', 'ROOM', 'STREET', 'ROAD', 'FERRY', 'TAXI',
                           'FARMHOUSE', 'AIRPORT', 'KITCHEN', 'BEDROOM', 'BATHROOM',
                           'HALLWAY', 'OFFICE', 'CAR', 'BUILDING', 'LOBBY'];
 
+    let totalDetected = 0;
+
     state.scenes.forEach((scene, sceneIndex) => {
-        // Split scene content into lines (preserve original formatting for indentation check)
         const lines = scene.content.split('\n');
 
         for (let i = 0; i < lines.length; i++) {
@@ -194,103 +344,87 @@ function extractCharactersFromScenes() {
             // Skip empty lines
             if (!trimmed) continue;
 
-            // STRICT CHECK 1: Measure indentation (character names are centered ~20-50 spaces)
+            // Skip scene headings
+            if (sceneHeadingPattern.test(trimmed)) continue;
+
+            // Skip transitions
+            if (transitionPattern.test(trimmed)) continue;
+
+            // Check indentation (character names are typically centered ~20-50 spaces)
             const leadingSpaces = line.length - line.trimStart().length;
             const isCentered = leadingSpaces >= 20 && leadingSpaces <= 50;
 
-            // STRICT CHECK 2: Must be all caps (allowing spaces, hyphens, apostrophes)
+            // Must be all caps
             const isAllCaps = trimmed === trimmed.toUpperCase() && /[A-Z]/.test(trimmed);
 
-            // STRICT CHECK 3: Check if there's dialogue following (next non-empty line)
+            if (!isCentered || !isAllCaps) continue;
+
+            // Check for dialogue following
             let nextLineIndex = i + 1;
             let nextLine = '';
-            while (nextLineIndex < lines.length) {
+            while (nextLineIndex < lines.length && !nextLine.trim()) {
                 nextLine = lines[nextLineIndex];
-                if (nextLine.trim()) break;
                 nextLineIndex++;
             }
 
-            // Dialogue should be indented less than character name (typically 10-20 spaces)
             const nextLineIndent = nextLine ? nextLine.length - nextLine.trimStart().length : 0;
             const hasDialogueAfter = nextLine &&
                                     nextLine.trim().length > 0 &&
                                     nextLineIndent > 0 &&
                                     nextLineIndent < leadingSpaces &&
-                                    !nextLine.trim().startsWith('('); // Skip if next is parenthetical
+                                    !nextLine.trim().startsWith('(');
 
-            // If not properly formatted, skip
-            if (!isCentered || !isAllCaps) continue;
+            if (!hasDialogueAfter) continue;
 
-            // Clean the potential character name
-            let charName = trimmed
-                .replace(/\(.*?\)/g, '')  // Remove (V.O.), (CONT'D), (O.S.), etc.
-                .replace(/\s+/g, ' ')     // Normalize whitespace
-                .trim();
+            // Extract character name
+            const match = trimmed.match(characterPattern);
+            if (!match) continue;
 
-            // Skip if empty after cleaning
-            if (!charName) continue;
+            let charName = match[1].trim();
 
-            // STRICT CHECK 4: Length validation (2-30 characters)
+            // Length validation
             if (charName.length < 2 || charName.length > 30) continue;
 
-            // STRICT CHECK 5: Skip if matches any invalid pattern
-            if (invalidPatterns.some(pattern => pattern.test(charName))) {
-                console.log(`  ✗ Excluded "${charName}" (invalid pattern)`);
-                continue;
+            // Skip invalid patterns
+            if (invalidPatterns.some(pattern => pattern.test(charName))) continue;
+
+            // Skip generic roles
+            if (genericRoles.has(charName.toUpperCase())) continue;
+
+            // Skip locations
+            if (locationWords.some(word => charName.includes(word))) continue;
+
+            // Add to detector
+            const added = detector.addCharacter(charName, sceneIndex);
+            if (added) {
+                totalDetected++;
             }
-
-            // STRICT CHECK 6: Skip generic roles
-            if (genericRoles.has(charName.toUpperCase())) {
-                console.log(`  ✗ Excluded "${charName}" (generic role)`);
-                continue;
-            }
-
-            // STRICT CHECK 7: Skip if it's obviously a location
-            if (locationWords.some(word => charName.includes(word))) {
-                console.log(`  ✗ Excluded "${charName}" (location keyword)`);
-                continue;
-            }
-
-            // At this point, it's LIKELY a character name
-            // Normalize through CharacterManager for deduplication and case handling
-            const normalized = window.characterManager
-                ? window.characterManager.addCharacter(charName)
-                : normalizeCharacterName(charName);
-
-            if (!normalized) continue;
-
-            // Track appearances
-            if (characterCounts.has(normalized)) {
-                characterCounts.set(normalized, characterCounts.get(normalized) + 1);
-            } else {
-                characterCounts.set(normalized, 1);
-            }
-
-            console.log(`  ✓ Found character "${normalized}" at scene ${sceneIndex + 1}, line ${i}`);
         }
     });
 
-    // STRICT CHECK 8: Only include characters that appear at least 2 times
-    // (filters out one-off mistakes)
-    const characters = Array.from(characterCounts.entries())
-        .filter(([name, count]) => count >= 2)
-        .sort((a, b) => b[1] - a[1]) // Sort by frequency
-        .map(([name, count]) => name);
+    // Get detected characters
+    const detectedChars = detector.getCharacters();
 
-    // Add to state.characters
-    characters.forEach(char => state.characters.add(char));
+    // Filter out characters with only 1 appearance (likely errors)
+    const validCharacters = detectedChars.filter(char => char.dialogueCount >= 2);
 
-    console.log("✓ Characters extracted:", characters);
-    console.log("Character appearance counts:",
-        characters.map(c => `${c}: ${characterCounts.get(c)}`).join(', ')
-    );
+    console.log(`✓ Detected ${totalDetected} character instances`);
+    console.log(`✓ Found ${validCharacters.length} unique characters after deduplication`);
 
-    // Store character counts globally for review UI
-    window.characterCounts = characterCounts;
+    // Store in global state for review modal
+    window.detectedCharacterData = validCharacters;
 
-    // NOTE: CharacterManager now handles all aliasing and normalization automatically
-    // The old createCharacterAliasMap() function is no longer needed
-    console.log('✓ Character deduplication handled by CharacterManager');
+    // Also populate state.characters for backwards compatibility
+    state.characters = new Set();
+    validCharacters.forEach(char => state.characters.add(char.primaryName));
+
+    // Log results
+    validCharacters.forEach(char => {
+        const aliases = char.aliases.filter(a => a !== char.primaryName).join(', ');
+        console.log(`  ✓ ${char.primaryName} (${char.dialogueCount} dialogues)${aliases ? ` - Also: ${aliases}` : ''}`);
+    });
+
+    return validCharacters;
 }
 
 /**
@@ -748,15 +882,14 @@ export function reviewCharacters() {
         return;
     }
 
-    console.log('🎭 Detect & Review Characters - Starting character detection...');
+    console.log('🎭 Detect & Review Characters - Starting intelligent character detection...');
 
-    // Always run character detection when this button is clicked
-    // This ensures we get the latest characters from the script
-    extractCharactersFromScenes();
+    // Run character detection with new intelligent system
+    const detectedChars = extractCharactersFromScenes();
 
-    // Store detected characters in temporary array
-    state.detectedCharacters = Array.from(state.characters);
-    console.log(`✓ Detected ${state.detectedCharacters.length} characters:`, state.detectedCharacters);
+    // Store detected characters in state
+    state.detectedCharacters = detectedChars.map(c => c.primaryName);
+    console.log(`✓ Detected ${detectedChars.length} unique characters`);
 
     const modal = document.getElementById('character-review-modal');
     const reviewList = document.getElementById('character-review-list');
@@ -766,11 +899,7 @@ export function reviewCharacters() {
         return;
     }
 
-    // Build character review list from detected characters
-    const characters = state.detectedCharacters;
-    const counts = window.characterCounts || new Map();
-
-    if (characters.length === 0) {
+    if (detectedChars.length === 0) {
         reviewList.innerHTML = `
             <div style="padding: 24px; text-align: center; color: var(--text-muted);">
                 <p>No characters detected in your script.</p>
@@ -783,18 +912,53 @@ export function reviewCharacters() {
             </div>
         `;
     } else {
-        reviewList.innerHTML = characters.map((char, index) => {
-            const count = counts.get(char) || 0;
+        reviewList.innerHTML = detectedChars.map((char, index) => {
+            // Determine confidence level
+            let confidenceLabel = '';
+            let confidenceColor = '';
+            if (char.dialogueCount >= 5) {
+                confidenceLabel = 'High confidence';
+                confidenceColor = '#10b981'; // Green
+            } else if (char.dialogueCount >= 3) {
+                confidenceLabel = 'Medium confidence';
+                confidenceColor = '#f59e0b'; // Orange
+            } else {
+                confidenceLabel = 'Low confidence';
+                confidenceColor = '#6b7280'; // Gray
+            }
+
+            // Get unique aliases (excluding primary name and duplicates)
+            const uniqueAliases = [...new Set(char.aliases)]
+                .filter(a => a !== char.primaryName && a.toUpperCase() !== char.primaryName.toUpperCase())
+                .slice(0, 3); // Show max 3 aliases
+
+            const aliasesHtml = uniqueAliases.length > 0
+                ? `<div style="font-size: 0.75em; color: var(--text-muted); margin-top: 2px;">
+                       Also appears as: ${uniqueAliases.join(', ')}
+                   </div>`
+                : '';
+
+            // Pre-select characters with 3+ dialogue instances
+            const isChecked = char.dialogueCount >= 3 ? 'checked' : '';
+
             return `
-                <div class="character-review-item" style="padding: 12px; border-bottom: 1px solid var(--border-light); display: flex; align-items: center; justify-content: space-between;">
-                    <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
-                        <input type="checkbox" checked id="char-review-${index}" data-character="${char}" style="width: 18px; height: 18px; cursor: pointer;">
-                        <label for="char-review-${index}" style="font-weight: 600; color: var(--text-primary); cursor: pointer; flex: 1;">
-                            ${char}
-                        </label>
-                        <span class="char-count" style="font-size: 0.875em; color: var(--text-muted); padding: 4px 8px; background: var(--bg-dark); border-radius: 4px;">
-                            ${count} appearance${count !== 1 ? 's' : ''}
-                        </span>
+                <div class="character-review-item" style="padding: 12px; border-bottom: 1px solid var(--border-light);">
+                    <div style="display: flex; align-items: flex-start; gap: 12px;">
+                        <input type="checkbox" ${isChecked} id="char-review-${index}" data-character="${char.primaryName}" style="width: 18px; height: 18px; cursor: pointer; margin-top: 2px;">
+                        <div style="flex: 1;">
+                            <label for="char-review-${index}" style="font-weight: 600; color: var(--text-primary); cursor: pointer; display: block;">
+                                ${char.primaryName}
+                            </label>
+                            ${aliasesHtml}
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 0.875em; color: var(--text-muted); padding: 4px 8px; background: var(--bg-dark); border-radius: 4px; margin-bottom: 4px;">
+                                ${char.dialogueCount} dialogue${char.dialogueCount !== 1 ? 's' : ''}
+                            </div>
+                            <div style="font-size: 0.75em; color: ${confidenceColor}; font-weight: 600;">
+                                ${confidenceLabel}
+                            </div>
+                        </div>
                     </div>
                 </div>
             `;
@@ -803,7 +967,7 @@ export function reviewCharacters() {
 
     // Show modal
     modal.style.display = 'flex';
-    console.log('✓ Character review modal opened');
+    console.log('✓ Character review modal opened with enhanced data');
 }
 
 /**
