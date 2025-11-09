@@ -285,46 +285,151 @@ export function applyHighlight(tag) {
             return;
         }
 
-        // Search all text elements in the scene for the selected text
-        const textElements = sceneContainer.querySelectorAll('.script-action, .script-dialogue, .script-character, .script-parenthetical');
+        // CAST TAGS: Search in character name elements first
+        if (tag.category === 'cast') {
+            // First try to find exact match in character elements
+            const characterElements = sceneContainer.querySelectorAll('.script-character');
+            for (const el of characterElements) {
+                const charName = el.textContent.trim().toUpperCase();
+                const searchName = tag.selectedText.trim().toUpperCase();
 
-        for (const el of textElements) {
-            if (el.textContent.includes(tag.selectedText)) {
-                element = el;
-                // Cache the elementId for future use
-                if (!el.id) {
-                    el.id = `element-${generateId()}`;
+                // Exact match or contains (for character names with extensions like "JOHN (V.O.)")
+                if (charName === searchName || charName.includes(searchName)) {
+                    element = el;
+                    if (!el.id) {
+                        el.id = `element-${generateId()}`;
+                    }
+                    tag.elementId = el.id;
+                    break;
                 }
-                tag.elementId = el.id;
-                break;
+            }
+
+            // If not found in character elements, try dialogue and action
+            if (!element) {
+                const textElements = sceneContainer.querySelectorAll('.script-dialogue, .script-action');
+                for (const el of textElements) {
+                    if (el.textContent.includes(tag.selectedText)) {
+                        element = el;
+                        if (!el.id) {
+                            el.id = `element-${generateId()}`;
+                        }
+                        tag.elementId = el.id;
+                        break;
+                    }
+                }
+            }
+        }
+        // OTHER TAGS: Use keyword matching for AI-generated descriptions
+        else {
+            // Extract keywords from the tag description (words longer than 3 chars)
+            const keywords = tag.selectedText.toLowerCase()
+                .split(/\s+/)
+                .filter(word => word.length > 3 && !['that', 'with', 'from', 'this', 'have'].includes(word));
+
+            // Search all text elements in the scene
+            const textElements = sceneContainer.querySelectorAll('.script-action, .script-dialogue, .script-parenthetical');
+
+            let bestMatch = null;
+            let maxMatches = 0;
+
+            // Find the element with the most keyword matches
+            for (const el of textElements) {
+                const elText = el.textContent.toLowerCase();
+                let matchCount = 0;
+
+                for (const keyword of keywords) {
+                    if (elText.includes(keyword)) {
+                        matchCount++;
+                    }
+                }
+
+                if (matchCount > maxMatches) {
+                    maxMatches = matchCount;
+                    bestMatch = el;
+                }
+            }
+
+            // Accept if at least one keyword matches
+            if (bestMatch && maxMatches > 0) {
+                element = bestMatch;
+                if (!element.id) {
+                    element.id = `element-${generateId()}`;
+                }
+                tag.elementId = element.id;
             }
         }
 
         if (!element) {
-            console.warn(`Could not find text "${tag.selectedText.substring(0, 30)}..." in scene ${tag.sceneIndex}`);
+            console.warn(`Could not find matching element for ${tag.category} tag "${tag.selectedText.substring(0, 30)}..." in scene ${tag.sceneIndex}`);
             return;
         }
     }
 
-    // Find and wrap the selected text
-    const text = element.innerHTML;
-    const selectedText = tag.selectedText;
-
     // Check if already highlighted
-    if (text.includes(`data-tag-id="${tag.id}"`)) return;
-
-    // Escape special regex characters in the selected text
-    const escapedText = selectedText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (element.innerHTML.includes(`data-tag-id="${tag.id}"`)) return;
 
     // Get category color
     const category = categories.find(c => c.id === tag.category);
     const color = category?.color || '#667eea';
 
-    // Wrap the text
-    const highlightedText = `<span class="tag-highlight" data-tag-id="${tag.id}" data-category="${tag.category}" style="background-color: ${color}33; border-bottom: 2px solid ${color};" onclick="handleTagClick(event, '${tag.id}')">${selectedText}</span>`;
+    // For CAST tags, try to highlight just the character name
+    if (tag.category === 'cast' && element.classList.contains('script-character')) {
+        const charName = element.textContent.trim();
+        const searchName = tag.selectedText.trim();
 
-    const newText = text.replace(new RegExp(escapedText, 'i'), highlightedText);
-    element.innerHTML = newText;
+        // Highlight the character name portion
+        const highlightedText = `<span class="tag-highlight" data-tag-id="${tag.id}" data-category="${tag.category}" style="background-color: ${color}33; border-bottom: 2px solid ${color}; padding: 2px 4px; border-radius: 2px;" onclick="handleTagClick(event, '${tag.id}')" title="${tag.fullContext}">${charName}</span>`;
+
+        element.innerHTML = highlightedText;
+    }
+    // For OTHER tags, find and highlight the relevant text portion
+    else {
+        const text = element.innerHTML;
+        const selectedText = tag.selectedText;
+
+        // Try to find exact match first
+        let highlightedHTML = null;
+
+        // Escape special regex characters in the selected text
+        const escapedText = selectedText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+        // Try case-insensitive match
+        const regex = new RegExp(`(${escapedText})`, 'i');
+        if (regex.test(element.textContent)) {
+            // Found exact match, highlight it
+            highlightedHTML = text.replace(regex, `<span class="tag-highlight" data-tag-id="${tag.id}" data-category="${tag.category}" style="background-color: ${color}33; border-bottom: 2px solid ${color}; padding: 2px 4px; border-radius: 2px;" onclick="handleTagClick(event, '${tag.id}')" title="${tag.fullContext}">$1</span>`);
+        } else {
+            // No exact match - highlight the first significant keyword found
+            const keywords = selectedText.toLowerCase()
+                .split(/\s+/)
+                .filter(word => word.length > 3 && !['that', 'with', 'from', 'this', 'have'].includes(word))
+                .sort((a, b) => b.length - a.length); // Sort by length, longest first
+
+            for (const keyword of keywords) {
+                const keywordEscaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const keywordRegex = new RegExp(`\\b(${keywordEscaped}\\w*)`, 'i');
+
+                if (keywordRegex.test(element.textContent)) {
+                    highlightedHTML = text.replace(keywordRegex, `<span class="tag-highlight" data-tag-id="${tag.id}" data-category="${tag.category}" style="background-color: ${color}33; border-bottom: 2px solid ${color}; padding: 2px 4px; border-radius: 2px;" onclick="handleTagClick(event, '${tag.id}')" title="${escapeHtml(tag.fullContext)} - ${escapeHtml(tag.selectedText)}">$1</span>`);
+                    break;
+                }
+            }
+        }
+
+        // If we found a match, apply it
+        if (highlightedHTML) {
+            element.innerHTML = highlightedHTML;
+        } else {
+            // Fallback: Add a subtle indicator to the entire line
+            element.style.borderLeft = `3px solid ${color}`;
+            element.style.paddingLeft = '8px';
+            element.dataset.tagId = tag.id;
+            element.dataset.category = tag.category;
+            element.title = `${tag.category.toUpperCase()}: ${tag.fullContext || tag.selectedText}`;
+            element.style.cursor = 'pointer';
+            element.onclick = (e) => handleTagClick(e, tag.id);
+        }
+    }
 }
 
 /**
