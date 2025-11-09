@@ -1934,9 +1934,9 @@
             color: var(--accent-gold);
         }
 
-        /* Color Legend - moved to right panel breakdown section */
+        /* Color Legend - Compact styling for right panel */
         .breakdown-legend {
-            padding: 16px 20px;
+            padding: 12px 16px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             background: rgba(255, 255, 255, 0.02);
         }
@@ -1950,22 +1950,25 @@
         }
 
         .legend-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 12px;
         }
 
         .legend-item {
             display: flex;
             align-items: center;
-            gap: 8px;
-            font-size: 12px;
+            gap: 6px;
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-primary);
+            white-space: nowrap;
         }
 
         .legend-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
+            width: 8px;
+            height: 8px;
+            border-radius: 2px;
             flex-shrink: 0;
         }
 
