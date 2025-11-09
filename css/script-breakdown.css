@@ -1934,7 +1934,7 @@
             color: var(--accent-gold);
         }
 
-        /* Color Legend - Compact styling for right panel */
+        /* Color Legend - Single row with original styling */
         .breakdown-legend {
             padding: 12px 16px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
@@ -1951,17 +1951,16 @@
 
         .legend-grid {
             display: flex;
-            flex-wrap: wrap;
-            gap: 8px 12px;
+            gap: 8px;
+            align-items: center;
         }
 
         .legend-item {
             display: flex;
             align-items: center;
-            gap: 6px;
-            font-size: 11px;
-            font-weight: 500;
-            color: var(--text-primary);
+            gap: 3px;
+            font-size: 0.7em;
+            color: var(--text-muted);
             white-space: nowrap;
         }
 
@@ -1969,12 +1968,12 @@
             width: 8px;
             height: 8px;
             border-radius: 2px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
             flex-shrink: 0;
         }
 
         .legend-label {
-            color: var(--text-primary);
-            font-weight: 500;
+            color: var(--text-muted);
         }
 
         /* Context Menu */
