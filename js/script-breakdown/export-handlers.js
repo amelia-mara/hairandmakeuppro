@@ -103,16 +103,13 @@ export async function processScript() {
     state.scenes = detectScenes(text);
     console.log(`Found ${state.scenes.length} scenes`);
 
-    // Extract characters from scenes
-    extractCharactersFromScenes();
-
-    // Create character tabs and profiles for extracted characters
-    initializeCharacterTabs();
+    // CRITICAL: Do NOT auto-detect characters during import
+    // User must explicitly click "Detect & Review Characters" button
+    // This ensures proper workflow separation between import and character detection
 
     // DIAGNOSTIC: Log after script processing
     console.log('✓ Script imported, scenes parsed:', state.scenes.length);
-    console.log('✓ Characters detected:', Array.from(state.characters));
-    console.log('✓ Character tabs initialized:', state.characterTabs.length);
+    console.log('⚠️ Characters NOT auto-detected - user must run "Detect & Review Characters"');
 
     // Load and render
     loadScript(text);
@@ -565,17 +562,26 @@ function normalizeCharacterNameWithAlias(rawName, aliasMap) {
 }
 
 /**
- * Initialize character tabs and profiles from extracted characters
+ * Initialize character tabs and profiles from confirmed characters
  * Creates cast profiles and populates characterTabs for the UI
+ * CRITICAL: Only uses state.confirmedCharacters (user-confirmed list)
  */
 function initializeCharacterTabs() {
-    console.log('Initializing character tabs...');
+    console.log('Initializing character tabs from confirmed characters...');
 
-    // Convert Set to Array for character tabs
-    const characterArray = Array.from(state.characters);
-    console.log(`  Converting ${characterArray.length} characters to tabs`);
+    // CRITICAL: Only use confirmed characters
+    if (!state.confirmedCharacters || state.confirmedCharacters.size === 0) {
+        console.log('⚠️ No confirmed characters - skipping tab initialization');
+        console.log('   User must run "Detect & Review Characters" first');
+        state.characterTabs = [];
+        return;
+    }
 
-    // Create cast profiles for each character if they don't exist
+    // Convert confirmed characters Set to Array
+    const characterArray = Array.from(state.confirmedCharacters);
+    console.log(`  Initializing ${characterArray.length} confirmed characters`);
+
+    // Create cast profiles for each confirmed character if they don't exist
     characterArray.forEach(character => {
         if (!state.castProfiles[character]) {
             state.castProfiles[character] = {
@@ -588,10 +594,10 @@ function initializeCharacterTabs() {
         }
     });
 
-    // Populate character tabs with all characters
+    // Populate character tabs with confirmed characters only
     state.characterTabs = characterArray;
 
-    console.log(`✓ Initialized ${state.characterTabs.length} character tabs:`, state.characterTabs);
+    console.log(`✓ Initialized ${state.characterTabs.length} character tabs from confirmed characters:`, state.characterTabs);
 }
 
 /**
@@ -933,6 +939,10 @@ export function reviewCharacters() {
 
     // Store detected characters in state
     state.detectedCharacters = detectedChars.map(c => c.primaryName);
+
+    // CRITICAL: Also store full character data globally for merge functionality
+    window.detectedCharacterData = detectedChars;
+
     console.log(`✓ Detected ${detectedChars.length} unique characters`);
 
     const modal = document.getElementById('character-review-modal');
@@ -988,7 +998,7 @@ export function reviewCharacters() {
             return `
                 <div class="character-review-item" style="padding: 12px; border-bottom: 1px solid var(--border-light);">
                     <div style="display: flex; align-items: flex-start; gap: 12px;">
-                        <input type="checkbox" ${isChecked} id="char-review-${index}" data-character="${char.primaryName}" style="width: 18px; height: 18px; cursor: pointer; margin-top: 2px;">
+                        <input type="checkbox" ${isChecked} id="char-review-${index}" data-character="${char.primaryName}" data-index="${index}" style="width: 18px; height: 18px; cursor: pointer; margin-top: 2px;">
                         <div style="flex: 1;">
                             <label for="char-review-${index}" style="font-weight: 600; color: var(--text-primary); cursor: pointer; display: block;">
                                 ${char.primaryName}
@@ -1086,6 +1096,80 @@ export function confirmCharacterSelection() {
     alert(`${selectedCharacters.size} character${selectedCharacters.size !== 1 ? 's' : ''} confirmed!\n\nCharacter tabs created. You can now run "Auto Tag Script" to detect production elements.`);
 }
 
+/**
+ * Merge selected characters in the review modal
+ */
+export function mergeSelectedCharacters() {
+    const checkboxes = document.querySelectorAll('#character-review-list input[type="checkbox"]:checked');
+
+    if (checkboxes.length < 2) {
+        alert('Please select at least 2 characters to merge');
+        return;
+    }
+
+    // Get selected character indices
+    const indices = Array.from(checkboxes).map(cb => parseInt(cb.dataset.index));
+    const characters = indices.map(i => window.detectedCharacterData[i]);
+
+    // Prompt for primary name
+    const names = characters.map(c => c.primaryName).join('\n');
+    const primaryName = prompt(`Select primary name for merged character:\n\n${names}\n\nEnter the name to use:`);
+
+    if (!primaryName || !primaryName.trim()) {
+        return;
+    }
+
+    // Merge characters
+    const merged = {
+        primaryName: primaryName.trim(),
+        aliases: [...new Set(characters.flatMap(c => c.aliases))],
+        firstScene: Math.min(...characters.map(c => c.firstScene)),
+        sceneAppearances: [...new Set(characters.flatMap(c => c.sceneAppearances))].sort((a,b) => a-b),
+        dialogueCount: characters.reduce((sum, c) => sum + c.dialogueCount, 0),
+        isConfirmed: false
+    };
+
+    console.log(`✓ Merging ${characters.length} characters into "${primaryName}"`);
+    console.log(`  Combined ${merged.dialogueCount} dialogue lines`);
+    console.log(`  Appears in ${merged.sceneAppearances.length} scenes`);
+
+    // Remove old characters and add merged one
+    window.detectedCharacterData = window.detectedCharacterData.filter((c, i) => !indices.includes(i));
+    window.detectedCharacterData.push(merged);
+
+    // Re-sort by dialogue count
+    window.detectedCharacterData.sort((a, b) => b.dialogueCount - a.dialogueCount);
+
+    // Refresh modal
+    openCharacterReviewModal(window.detectedCharacterData);
+}
+
+// ============================================================================
+// TOOLS PANEL FUNCTIONS
+// ============================================================================
+
+/**
+ * Open the tools panel
+ */
+export function openToolsPanel() {
+    const panel = document.getElementById('tools-panel');
+    const overlay = document.getElementById('tools-panel-overlay');
+
+    if (panel) panel.classList.add('active');
+    if (overlay) overlay.classList.add('active');
+}
+
+/**
+ * Close the tools panel
+ */
+export function closeToolsPanel() {
+    const panel = document.getElementById('tools-panel');
+    const overlay = document.getElementById('tools-panel-overlay');
+
+    if (panel) panel.classList.remove('active');
+    if (overlay) overlay.classList.remove('active');
+}
+
 // ============================================================================
 // EXPOSE GLOBAL FUNCTIONS
 // ============================================================================
@@ -1104,3 +1188,6 @@ window.closeCharacterReviewModal = closeCharacterReviewModal;
 window.selectAllCharacters = selectAllCharacters;
 window.deselectAllCharacters = deselectAllCharacters;
 window.confirmCharacterSelection = confirmCharacterSelection;
+window.mergeSelectedCharacters = mergeSelectedCharacters;
+window.openToolsPanel = openToolsPanel;
+window.closeToolsPanel = closeToolsPanel;
