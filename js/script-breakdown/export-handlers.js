@@ -522,6 +522,8 @@ export function saveProject() {
     state.currentProject.sceneTimeline = state.sceneTimeline;
     state.currentProject.scenes = state.scenes;
     state.currentProject.scriptTags = state.scriptTags;
+    // Save confirmedCharacters as array for JSON serialization
+    state.currentProject.confirmedCharacters = Array.from(state.confirmedCharacters);
     state.currentProject.lastModified = Date.now();
 
     // Save to localStorage
@@ -569,13 +571,29 @@ export function loadProjectData() {
             state.sceneTimeline = project.sceneTimeline || {};
             state.scriptTags = project.scriptTags || {};
 
+            // Load confirmedCharacters from saved project (or fallback to cast profiles)
+            if (project.confirmedCharacters) {
+                // If saved as array, convert to Set
+                state.confirmedCharacters = new Set(project.confirmedCharacters);
+            } else if (Object.keys(state.castProfiles).length > 0) {
+                // Migrate old projects: use cast profiles as confirmed characters
+                state.confirmedCharacters = new Set(Object.keys(state.castProfiles));
+            } else {
+                state.confirmedCharacters = new Set();
+            }
+
+            // Also populate state.characters for backwards compatibility
+            state.characters = new Set(state.confirmedCharacters);
+
             // Initialize character tabs from cast profiles
             state.characterTabs = Object.keys(state.castProfiles);
             console.log(`✓ Loaded ${state.characterTabs.length} character tabs from saved project:`, state.characterTabs);
+            console.log(`✓ Loaded ${state.confirmedCharacters.size} confirmed characters:`, Array.from(state.confirmedCharacters));
 
             console.log('Project loaded successfully:', project.name);
             console.log(`  Scenes: ${state.scenes.length}`);
             console.log(`  Characters: ${state.characterTabs.length}`);
+            console.log(`  Confirmed Characters: ${state.confirmedCharacters.size}`);
             console.log(`  Tags: ${Object.keys(state.scriptTags).length} scenes with tags`);
 
             // If we have scenes, render the script
@@ -623,6 +641,19 @@ export async function importProjectFile(file) {
         state.continuityEvents = data.continuityEvents || {};
         state.sceneTimeline = data.sceneTimeline || {};
         state.scriptTags = data.scriptTags || {};
+
+        // Load confirmedCharacters from imported project
+        if (data.project.confirmedCharacters) {
+            state.confirmedCharacters = new Set(data.project.confirmedCharacters);
+        } else if (Object.keys(state.castProfiles).length > 0) {
+            // Migrate old projects: use cast profiles as confirmed characters
+            state.confirmedCharacters = new Set(Object.keys(state.castProfiles));
+        } else {
+            state.confirmedCharacters = new Set();
+        }
+
+        // Also populate state.characters for backwards compatibility
+        state.characters = new Set(state.confirmedCharacters);
 
         // Initialize character tabs
         state.characterTabs = Object.keys(state.castProfiles);
@@ -709,6 +740,7 @@ export function renameProject(newName) {
 
 /**
  * Open character review modal to review and edit detected characters
+ * This is a LOCAL OPERATION ONLY - no AI calls, just regex parsing
  */
 export function reviewCharacters() {
     if (!state.scenes || state.scenes.length === 0) {
@@ -716,10 +748,15 @@ export function reviewCharacters() {
         return;
     }
 
-    // If characters haven't been extracted yet, do it now
-    if (!window.characterCounts || window.characterCounts.size === 0) {
-        extractCharactersFromScenes();
-    }
+    console.log('🎭 Detect & Review Characters - Starting character detection...');
+
+    // Always run character detection when this button is clicked
+    // This ensures we get the latest characters from the script
+    extractCharactersFromScenes();
+
+    // Store detected characters in temporary array
+    state.detectedCharacters = Array.from(state.characters);
+    console.log(`✓ Detected ${state.detectedCharacters.length} characters:`, state.detectedCharacters);
 
     const modal = document.getElementById('character-review-modal');
     const reviewList = document.getElementById('character-review-list');
@@ -729,29 +766,44 @@ export function reviewCharacters() {
         return;
     }
 
-    // Build character review list
-    const characters = Array.from(state.characters);
+    // Build character review list from detected characters
+    const characters = state.detectedCharacters;
     const counts = window.characterCounts || new Map();
 
-    reviewList.innerHTML = characters.map((char, index) => {
-        const count = counts.get(char) || 0;
-        return `
-            <div class="character-review-item" style="padding: 12px; border-bottom: 1px solid var(--border-light); display: flex; align-items: center; justify-content: space-between;">
-                <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
-                    <input type="checkbox" checked id="char-review-${index}" data-character="${char}" style="width: 18px; height: 18px; cursor: pointer;">
-                    <label for="char-review-${index}" style="font-weight: 600; color: var(--text-primary); cursor: pointer; flex: 1;">
-                        ${char}
-                    </label>
-                    <span class="char-count" style="font-size: 0.875em; color: var(--text-muted); padding: 4px 8px; background: var(--bg-dark); border-radius: 4px;">
-                        ${count} appearance${count !== 1 ? 's' : ''}
-                    </span>
-                </div>
+    if (characters.length === 0) {
+        reviewList.innerHTML = `
+            <div style="padding: 24px; text-align: center; color: var(--text-muted);">
+                <p>No characters detected in your script.</p>
+                <p style="margin-top: 8px; font-size: 0.875em;">
+                    Make sure your script uses proper screenplay formatting:
+                    <br>- Character names in ALL CAPS
+                    <br>- Character names centered
+                    <br>- Character names followed by dialogue
+                </p>
             </div>
         `;
-    }).join('');
+    } else {
+        reviewList.innerHTML = characters.map((char, index) => {
+            const count = counts.get(char) || 0;
+            return `
+                <div class="character-review-item" style="padding: 12px; border-bottom: 1px solid var(--border-light); display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
+                        <input type="checkbox" checked id="char-review-${index}" data-character="${char}" style="width: 18px; height: 18px; cursor: pointer;">
+                        <label for="char-review-${index}" style="font-weight: 600; color: var(--text-primary); cursor: pointer; flex: 1;">
+                            ${char}
+                        </label>
+                        <span class="char-count" style="font-size: 0.875em; color: var(--text-muted); padding: 4px 8px; background: var(--bg-dark); border-radius: 4px;">
+                            ${count} appearance${count !== 1 ? 's' : ''}
+                        </span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
 
     // Show modal
     modal.style.display = 'flex';
+    console.log('✓ Character review modal opened');
 }
 
 /**
@@ -780,6 +832,7 @@ export function deselectAllCharacters() {
 
 /**
  * Confirm character selection and update character tabs
+ * This commits the selected characters to confirmedCharacters (persisted state)
  */
 export function confirmCharacterSelection() {
     const checkboxes = document.querySelectorAll('#character-review-list input[type="checkbox"]');
@@ -799,10 +852,15 @@ export function confirmCharacterSelection() {
 
     console.log(`✓ User confirmed ${selectedCharacters.size} characters`);
 
-    // Update state.characters with selected characters only
+    // CRITICAL: Store confirmed characters in the new confirmedCharacters state
+    state.confirmedCharacters = selectedCharacters;
+
+    // Also update state.characters for backwards compatibility
     state.characters = selectedCharacters;
 
-    // Re-initialize character tabs with selected characters
+    console.log('✓ Confirmed characters saved to state.confirmedCharacters:', Array.from(state.confirmedCharacters));
+
+    // Re-initialize character tabs with confirmed characters
     initializeCharacterTabs();
 
     // Re-render character tabs and panels
@@ -816,7 +874,8 @@ export function confirmCharacterSelection() {
     closeCharacterReviewModal();
 
     // Show confirmation
-    alert(`${selectedCharacters.size} character${selectedCharacters.size !== 1 ? 's' : ''} confirmed and tabs updated`);
+    console.log(`✓ Character tabs generated for ${selectedCharacters.size} characters`);
+    alert(`${selectedCharacters.size} character${selectedCharacters.size !== 1 ? 's' : ''} confirmed!\n\nCharacter tabs created. You can now run "Auto Tag Script" to detect production elements.`);
 }
 
 // ============================================================================

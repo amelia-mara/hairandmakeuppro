@@ -29,7 +29,9 @@ export const state = {
 
     // Scene data
     scenes: [],                    // Array of scene objects
-    characters: new Set(),         // Unique character names
+    characters: new Set(),         // Unique character names (DEPRECATED - use confirmedCharacters)
+    detectedCharacters: [],        // Temporary array of detected characters (before user confirmation)
+    confirmedCharacters: new Set(), // User-approved characters (persisted)
     currentScene: null,            // Currently selected scene index
 
     // Breakdowns and profiles

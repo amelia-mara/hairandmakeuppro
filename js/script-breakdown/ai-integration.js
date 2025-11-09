@@ -599,12 +599,24 @@ export async function generateAllSynopses(event) {
 
 /**
  * Auto-tag the entire script with AI detection
+ * REQUIRES: Characters must be confirmed via "Detect & Review Characters" first
+ * This function ONLY does AI tagging - no character detection
  */
 export async function autoTagScript(event) {
     if (!state.scenes || state.scenes.length === 0) {
         alert('No scenes loaded. Please import a script first.');
         return;
     }
+
+    // CRITICAL CHECK: Ensure characters have been confirmed first
+    if (!state.confirmedCharacters || state.confirmedCharacters.size === 0) {
+        console.warn('⚠️ Auto Tag Script blocked - no confirmed characters');
+        // Show the error modal
+        openCharactersNotConfirmedModal();
+        return;
+    }
+
+    console.log('✓ Confirmed characters found:', Array.from(state.confirmedCharacters));
 
     // Get the button element from the event
     const button = event?.currentTarget;
@@ -615,6 +627,7 @@ export async function autoTagScript(event) {
 
     console.log('🤖 Starting Auto Tag Script...');
     console.log('📊 Total scenes to process:', state.scenes.length);
+    console.log('👥 Using confirmed characters:', Array.from(state.confirmedCharacters));
 
     // Reset cancellation flag
     batchCancelled = false;
@@ -1001,6 +1014,30 @@ function closeProgressModal() {
     if (modal) modal.style.display = 'none';
 }
 
+// ============================================================================
+// CHARACTERS NOT CONFIRMED MODAL
+// ============================================================================
+
+/**
+ * Open the characters not confirmed modal
+ */
+function openCharactersNotConfirmedModal() {
+    const modal = document.getElementById('characters-not-confirmed-modal');
+    if (modal) {
+        modal.style.display = 'flex';
+    }
+}
+
+/**
+ * Close the characters not confirmed modal
+ */
+function closeCharactersNotConfirmedModal() {
+    const modal = document.getElementById('characters-not-confirmed-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
 // Expose functions globally for HTML onclick handlers
 window.openSettingsModal = openSettingsModal;
 window.closeSettingsModal = closeSettingsModal;
@@ -1013,3 +1050,5 @@ window.startButtonProgress = startButtonProgress;
 window.updateButtonProgress = updateButtonProgress;
 window.completeButtonProgress = completeButtonProgress;
 window.resetButton = resetButton;
+window.openCharactersNotConfirmedModal = openCharactersNotConfirmedModal;
+window.closeCharactersNotConfirmedModal = closeCharactersNotConfirmedModal;
