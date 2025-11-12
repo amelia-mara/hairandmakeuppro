@@ -308,7 +308,102 @@
             opacity: 0.5;
             color: var(--text-muted);
         }
-        
+
+        /* Synopsis Edit Button */
+        .scene-synopsis-edit-btn {
+            padding: 4px 8px;
+            background: rgba(212, 175, 122, 0.1);
+            border: 1px solid rgba(212, 175, 122, 0.3);
+            border-radius: 4px;
+            color: var(--accent-gold);
+            cursor: pointer;
+            font-size: 0.875em;
+            transition: all 0.2s ease;
+        }
+
+        .scene-synopsis-edit-btn:hover {
+            background: rgba(212, 175, 122, 0.2);
+            border-color: var(--accent-gold);
+            box-shadow: 0 0 8px rgba(212, 175, 122, 0.2);
+            transform: scale(1.1);
+        }
+
+        .scene-synopsis-edit-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Synopsis Editing State */
+        .scene-synopsis.editing {
+            background: rgba(212, 175, 122, 0.08);
+            border: 1px solid var(--accent-gold);
+            border-radius: 4px;
+            padding: 8px;
+            outline: none;
+            font-style: normal;
+            box-shadow: 0 0 12px rgba(212, 175, 122, 0.15);
+            transition: all 0.2s ease;
+        }
+
+        .scene-synopsis.editing:focus {
+            background: rgba(212, 175, 122, 0.12);
+            box-shadow: 0 0 16px rgba(212, 175, 122, 0.25);
+        }
+
+        /* Edit Actions Container */
+        .synopsis-edit-actions {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        /* Save Button */
+        .synopsis-save-btn {
+            padding: 4px 8px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 4px;
+            color: #10b981;
+            cursor: pointer;
+            font-size: 0.875em;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .synopsis-save-btn:hover {
+            background: rgba(16, 185, 129, 0.2);
+            border-color: #10b981;
+            box-shadow: 0 0 8px rgba(16, 185, 129, 0.2);
+            transform: scale(1.05);
+        }
+
+        .synopsis-save-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Cancel Button */
+        .synopsis-cancel-btn {
+            padding: 4px 8px;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 4px;
+            color: #ef4444;
+            cursor: pointer;
+            font-size: 0.875em;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .synopsis-cancel-btn:hover {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: #ef4444;
+            box-shadow: 0 0 8px rgba(239, 68, 68, 0.2);
+            transform: scale(1.05);
+        }
+
+        .synopsis-cancel-btn:active {
+            transform: scale(0.95);
+        }
+
         .scene-cast-list {
             display: flex;
             flex-wrap: wrap;
