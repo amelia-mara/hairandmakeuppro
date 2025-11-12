@@ -932,18 +932,26 @@ export function reviewCharacters() {
         return;
     }
 
-    console.log('🎭 Detect & Review Characters - Starting intelligent character detection...');
+    let detectedChars;
 
-    // Run character detection with new intelligent system
-    const detectedChars = extractCharactersFromScenes();
+    // Check if we already have detected character data (from merge operations)
+    if (window.detectedCharacterData && window.detectedCharacterData.length > 0) {
+        console.log('🎭 Using existing detected character data (may include merges)');
+        detectedChars = window.detectedCharacterData;
+    } else {
+        console.log('🎭 Detect & Review Characters - Starting intelligent character detection...');
 
-    // Store detected characters in state
-    state.detectedCharacters = detectedChars.map(c => c.primaryName);
+        // Run character detection with new intelligent system
+        detectedChars = extractCharactersFromScenes();
 
-    // CRITICAL: Also store full character data globally for merge functionality
-    window.detectedCharacterData = detectedChars;
+        // Store detected characters in state
+        state.detectedCharacters = detectedChars.map(c => c.primaryName);
 
-    console.log(`✓ Detected ${detectedChars.length} unique characters`);
+        // CRITICAL: Also store full character data globally for merge functionality
+        window.detectedCharacterData = detectedChars;
+
+        console.log(`✓ Detected ${detectedChars.length} unique characters`);
+    }
 
     const modal = document.getElementById('character-review-modal');
     const reviewList = document.getElementById('character-review-list');
@@ -968,17 +976,17 @@ export function reviewCharacters() {
     } else {
         reviewList.innerHTML = detectedChars.map((char, index) => {
             // Determine confidence level
+            let confidenceLevel = '';
             let confidenceLabel = '';
-            let confidenceColor = '';
             if (char.dialogueCount >= 5) {
+                confidenceLevel = 'high';
                 confidenceLabel = 'High confidence';
-                confidenceColor = '#10b981'; // Green
             } else if (char.dialogueCount >= 3) {
+                confidenceLevel = 'medium';
                 confidenceLabel = 'Medium confidence';
-                confidenceColor = '#f59e0b'; // Orange
             } else {
+                confidenceLevel = 'low';
                 confidenceLabel = 'Low confidence';
-                confidenceColor = '#6b7280'; // Gray
             }
 
             // Get unique aliases (excluding primary name and duplicates)
@@ -987,7 +995,7 @@ export function reviewCharacters() {
                 .slice(0, 3); // Show max 3 aliases
 
             const aliasesHtml = uniqueAliases.length > 0
-                ? `<div style="font-size: 0.75em; color: var(--text-muted); margin-top: 2px;">
+                ? `<div class="character-aliases">
                        Also appears as: ${uniqueAliases.join(', ')}
                    </div>`
                 : '';
@@ -996,24 +1004,27 @@ export function reviewCharacters() {
             const isChecked = char.dialogueCount >= 3 ? 'checked' : '';
 
             return `
-                <div class="character-review-item" style="padding: 12px; border-bottom: 1px solid var(--border-light);">
-                    <div style="display: flex; align-items: flex-start; gap: 12px;">
-                        <input type="checkbox" ${isChecked} id="char-review-${index}" data-character="${char.primaryName}" data-index="${index}" style="width: 18px; height: 18px; cursor: pointer; margin-top: 2px;">
-                        <div style="flex: 1;">
-                            <label for="char-review-${index}" style="font-weight: 600; color: var(--text-primary); cursor: pointer; display: block;">
-                                ${char.primaryName}
-                            </label>
+                <div class="character-review-item">
+                    <label class="character-checkbox-label" for="char-review-${index}">
+                        <input type="checkbox"
+                               ${isChecked}
+                               class="character-checkbox"
+                               id="char-review-${index}"
+                               data-character="${char.primaryName}"
+                               data-index="${index}">
+                        <div class="character-info">
+                            <div class="character-name">${char.primaryName}</div>
                             ${aliasesHtml}
                         </div>
-                        <div style="text-align: right;">
-                            <div style="font-size: 0.875em; color: var(--text-muted); padding: 4px 8px; background: var(--bg-dark); border-radius: 4px; margin-bottom: 4px;">
+                        <div class="character-confidence">
+                            <div class="character-dialogue-count">
                                 ${char.dialogueCount} dialogue${char.dialogueCount !== 1 ? 's' : ''}
                             </div>
-                            <div style="font-size: 0.75em; color: ${confidenceColor}; font-weight: 600;">
+                            <div class="character-confidence-label ${confidenceLevel}">
                                 ${confidenceLabel}
                             </div>
                         </div>
-                    </div>
+                    </label>
                 </div>
             `;
         }).join('');
@@ -1140,8 +1151,8 @@ export function mergeSelectedCharacters() {
     // Re-sort by dialogue count
     window.detectedCharacterData.sort((a, b) => b.dialogueCount - a.dialogueCount);
 
-    // Refresh modal
-    openCharacterReviewModal(window.detectedCharacterData);
+    // Refresh modal - reopen with updated data
+    reviewCharacters();
 }
 
 // ============================================================================
