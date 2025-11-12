@@ -78,8 +78,16 @@ function shouldUseEnhancedWorkflow() {
     const hasNarrativeContext = window.scriptNarrativeContext &&
                                  window.scriptNarrativeContext.characters;
 
-    // Check user preference (default to enhanced if narrative context available)
-    const userPreference = localStorage.getItem('useEnhancedBreakdown');
+    // Check user preference
+    let userPreference = localStorage.getItem('useEnhancedBreakdown');
+
+    // If no preference set yet and narrative context is available, set it to true
+    if (userPreference === null && hasNarrativeContext) {
+        localStorage.setItem('useEnhancedBreakdown', 'true');
+        userPreference = 'true';
+    }
+
+    // Default to enhanced if narrative context available
     const useEnhanced = userPreference === null ? hasNarrativeContext : userPreference === 'true';
 
     return useEnhanced && typeof window.breakdownManager !== 'undefined';
