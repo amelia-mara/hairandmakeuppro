@@ -111,6 +111,9 @@ export async function processScript() {
     console.log('✓ Script imported, scenes parsed:', state.scenes.length);
     console.log('⚠️ Characters NOT auto-detected - user must run "Detect & Review Characters"');
 
+    // NEW: Run narrative analysis on full script
+    await runNarrativeAnalysis();
+
     // Load and render
     loadScript(text);
 
@@ -118,6 +121,81 @@ export async function processScript() {
     setTimeout(() => {
         closeImportModal();
     }, 500);
+}
+
+/**
+ * Run narrative analysis on imported script
+ * Analyzes entire screenplay to understand story structure
+ */
+async function runNarrativeAnalysis() {
+    try {
+        console.log('🎬 Starting narrative analysis...');
+
+        // Show progress modal
+        showProgressModal('Analyzing Script', 'Understanding narrative structure...');
+
+        // Import narrative analyzer
+        const { narrativeAnalyzer } = await import('./narrative-analyzer.js');
+
+        // Run analysis
+        const context = await narrativeAnalyzer.analyzeFullScript(state.scenes);
+
+        if (context) {
+            console.log('✅ Narrative analysis complete');
+            console.log('📊 Context:', {
+                genre: context.genre,
+                characters: context.characters?.length || 0,
+                acts: context.storyStructure?.acts?.length || 0
+            });
+        } else {
+            console.warn('⚠️ Narrative analysis returned no context');
+        }
+
+        // Close progress modal
+        closeProgressModal();
+
+    } catch (error) {
+        console.error('❌ Narrative analysis failed:', error);
+        closeProgressModal();
+        // Don't block import if analysis fails - it's optional
+    }
+}
+
+/**
+ * Show progress modal for long operations
+ */
+function showProgressModal(title, message) {
+    const modal = document.getElementById('progress-modal');
+    if (!modal) return;
+
+    const titleEl = document.getElementById('progress-title');
+    const messageEl = document.getElementById('progress-message');
+    const progressFill = document.getElementById('progress-fill');
+    const progressLabel = document.getElementById('progress-label');
+    const cancelBtn = document.getElementById('progress-cancel-btn');
+    const doneBtn = document.getElementById('progress-done-btn');
+
+    if (titleEl) titleEl.textContent = title;
+    if (messageEl) messageEl.textContent = message;
+    if (progressFill) progressFill.style.width = '0%';
+    if (progressLabel) progressLabel.textContent = '0%';
+    if (cancelBtn) cancelBtn.style.display = 'none'; // Hide cancel for analysis
+    if (doneBtn) doneBtn.style.display = 'none';
+
+    modal.style.display = 'flex';
+}
+
+/**
+ * Close progress modal
+ */
+function closeProgressModal() {
+    const modal = document.getElementById('progress-modal');
+    if (modal) {
+        // Small delay so user can see completion
+        setTimeout(() => {
+            modal.style.display = 'none';
+        }, 1000);
+    }
 }
 
 /**
