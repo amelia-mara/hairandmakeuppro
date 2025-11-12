@@ -591,26 +591,53 @@ export class SceneBreakdownManager {
      * @param {string} panel - Panel name
      */
     switchPanel(panel) {
+        const previousPanel = this.activePanel;
         this.activePanel = panel;
         // Persist active panel choice
         localStorage.setItem('breakdownActivePanel', panel);
 
         if (panel === 'classic') {
-            // Render classic breakdown view
+            // Switching TO classic view
             this.renderEnhancedBreakdown();
             setTimeout(() => {
                 const container = document.getElementById('classic-breakdown-container');
                 if (container) {
-                    const originalContainer = document.getElementById('breakdown-panel');
+                    // Clear any existing content
+                    container.innerHTML = '';
+
+                    // Create temporary div for classic breakdown
                     const tempDiv = document.createElement('div');
-                    tempDiv.id = 'breakdown-panel';
+                    tempDiv.id = 'temp-breakdown-panel';
                     container.appendChild(tempDiv);
-                    renderBreakdownPanel();
-                    originalContainer.removeAttribute('id');
-                    tempDiv.id = '';
+
+                    // Temporarily swap the breakdown panel ID
+                    const originalContainer = document.getElementById('breakdown-panel');
+                    if (originalContainer) {
+                        originalContainer.id = 'enhanced-breakdown-panel-saved';
+                        tempDiv.id = 'breakdown-panel';
+
+                        // Render classic view
+                        renderBreakdownPanel();
+                    }
                 }
             }, 0);
         } else {
+            // Switching AWAY from classic or between enhanced tabs
+            if (previousPanel === 'classic') {
+                // Restore the original breakdown panel
+                const savedContainer = document.getElementById('enhanced-breakdown-panel-saved');
+                if (savedContainer) {
+                    savedContainer.id = 'breakdown-panel';
+                }
+
+                // Remove temp classic container content
+                const classicContainer = document.getElementById('classic-breakdown-container');
+                if (classicContainer) {
+                    classicContainer.innerHTML = '';
+                }
+            }
+
+            // Re-render enhanced breakdown
             this.renderEnhancedBreakdown();
         }
     }
