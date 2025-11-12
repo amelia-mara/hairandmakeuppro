@@ -673,8 +673,7 @@ export async function generateAllSynopses(event) {
 
 /**
  * Auto-tag the entire script with AI detection
- * REQUIRES: Characters must be confirmed via "Detect & Review Characters" first
- * This function ONLY does AI tagging - no character detection
+ * Characters will be detected automatically during the tagging process
  */
 export async function autoTagScript(event) {
     if (!state.scenes || state.scenes.length === 0) {
@@ -682,15 +681,13 @@ export async function autoTagScript(event) {
         return;
     }
 
-    // CRITICAL CHECK: Ensure characters have been confirmed first
-    if (!state.confirmedCharacters || state.confirmedCharacters.size === 0) {
-        console.warn('⚠️ Auto Tag Script blocked - no confirmed characters');
-        // Show the error modal
-        openCharactersNotConfirmedModal();
-        return;
+    // Initialize confirmedCharacters if it doesn't exist
+    if (!state.confirmedCharacters) {
+        state.confirmedCharacters = new Set();
     }
 
-    console.log('✓ Confirmed characters found:', Array.from(state.confirmedCharacters));
+    console.log('✓ Starting Auto Tag Script with characters:',
+        state.confirmedCharacters.size > 0 ? Array.from(state.confirmedCharacters) : 'will detect during tagging');
 
     // Get the button element from the event
     const button = event?.currentTarget;
