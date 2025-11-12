@@ -26,7 +26,8 @@ export class SceneBreakdownManager {
         this.currentScene = null;
         this.focusCharacter = 'all';
         this.continuityStates = {};
-        this.activePanel = 'continuity';
+        // Restore active panel from localStorage, default to 'continuity'
+        this.activePanel = localStorage.getItem('breakdownActivePanel') || 'continuity';
     }
 
     /**
@@ -40,6 +41,16 @@ export class SceneBreakdownManager {
         if (!scene) {
             console.error('Scene not found:', sceneIndex);
             return;
+        }
+
+        // Restore focus character for this scene (if previously set)
+        const sceneKey = `breakdownFocusChar_scene${sceneIndex}`;
+        const savedFocusChar = localStorage.getItem(sceneKey);
+        if (savedFocusChar) {
+            this.focusCharacter = savedFocusChar;
+        } else {
+            // Default to 'all' for new scenes
+            this.focusCharacter = 'all';
         }
 
         // Get story position context
@@ -567,6 +578,11 @@ export class SceneBreakdownManager {
      */
     updateFocusCharacter(character) {
         this.focusCharacter = character;
+        // Persist focus character choice (per scene basis)
+        if (this.currentScene !== null) {
+            const sceneKey = `breakdownFocusChar_scene${this.currentScene}`;
+            localStorage.setItem(sceneKey, character);
+        }
         this.renderEnhancedBreakdown();
     }
 
@@ -576,6 +592,8 @@ export class SceneBreakdownManager {
      */
     switchPanel(panel) {
         this.activePanel = panel;
+        // Persist active panel choice
+        localStorage.setItem('breakdownActivePanel', panel);
 
         if (panel === 'classic') {
             // Render classic breakdown view
