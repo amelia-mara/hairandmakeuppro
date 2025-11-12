@@ -224,8 +224,14 @@ export async function detectAIElements(sceneIndex) {
     const scene = state.scenes[sceneIndex];
     const sceneText = scene.content || scene.text || '';
 
-    // Get confirmed character names for validation
-    const confirmedCharNames = Array.from(state.confirmedCharacters);
+    // Get confirmed character names for validation (if available)
+    const confirmedCharNames = state.confirmedCharacters && state.confirmedCharacters.size > 0
+        ? Array.from(state.confirmedCharacters)
+        : [];
+
+    const characterContext = confirmedCharNames.length > 0
+        ? `Confirmed Characters in Script: ${confirmedCharNames.join(', ')}`
+        : 'Characters will be detected automatically from the scene text.';
 
     const prompt = `You are analyzing a screenplay scene for production continuity, specifically for hair, makeup, wardrobe, and SFX departments.
 
@@ -234,7 +240,7 @@ Scene Heading: ${scene.heading}
 Scene Text:
 ${sceneText}
 
-Confirmed Characters in Script: ${confirmedCharNames.join(', ')}
+${characterContext}
 
 **CRITICAL**: Your task is to identify and extract ALL descriptive information about character appearance, condition, and any changes that occur. Capture COMPLETE SENTENCES or PHRASES that describe appearance - not just keywords.
 
@@ -673,24 +679,14 @@ export async function generateAllSynopses(event) {
 
 /**
  * Auto-tag the entire script with AI detection
- * REQUIRES: Characters must be confirmed via "Detect & Review Characters" first
- * This function ONLY does AI tagging - no character detection
+ * Starts immediately when called - no prerequisites required beyond having imported script
+ * Characters will be detected automatically during the tagging process if needed
  */
 export async function autoTagScript(event) {
     if (!state.scenes || state.scenes.length === 0) {
         alert('No scenes loaded. Please import a script first.');
         return;
     }
-
-    // CRITICAL CHECK: Ensure characters have been confirmed first
-    if (!state.confirmedCharacters || state.confirmedCharacters.size === 0) {
-        console.warn('⚠️ Auto Tag Script blocked - no confirmed characters');
-        // Show the error modal
-        openCharactersNotConfirmedModal();
-        return;
-    }
-
-    console.log('✓ Confirmed characters found:', Array.from(state.confirmedCharacters));
 
     // Get the button element from the event
     const button = event?.currentTarget;
@@ -701,7 +697,6 @@ export async function autoTagScript(event) {
 
     console.log('🤖 Starting Auto Tag Script...');
     console.log('📊 Total scenes to process:', state.scenes.length);
-    console.log('👥 Using confirmed characters:', Array.from(state.confirmedCharacters));
 
     // Reset cancellation flag
     batchCancelled = false;
