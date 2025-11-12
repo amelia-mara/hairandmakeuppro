@@ -361,21 +361,25 @@ function extractCharactersFromScenes() {
             // Skip transitions
             if (transitionPattern.test(trimmed)) continue;
 
-            // Check indentation - FIXED: More flexible with spacing (10-60 spaces OR tabs)
+            // Check indentation - VERY FLEXIBLE: Accept various indentation levels
             const leadingSpaces = line.length - line.trimStart().length;
             const hasTabs = line.startsWith('\t');
-            const isCentered = (leadingSpaces >= 10 && leadingSpaces <= 60) || hasTabs;
+            // Accept: tabs, significant indentation (5+ spaces), or even minimal indentation if followed by dialogue
+            const hasIndentation = hasTabs || leadingSpaces >= 5;
 
             // Must be all caps
             const isAllCaps = trimmed === trimmed.toUpperCase() && /[A-Z]/.test(trimmed);
 
             // DEBUG: Log some ALL CAPS lines to see what we're checking
-            if (isAllCaps && debugSampleCount < 10 && trimmed.length > 2 && trimmed.length < 30) {
-                console.log(`  🔍 ALL CAPS line: "${trimmed}" (indent: ${leadingSpaces}, hasTabs: ${hasTabs}, isCentered: ${isCentered})`);
+            if (isAllCaps && debugSampleCount < 15 && trimmed.length > 2 && trimmed.length < 30) {
+                console.log(`  🔍 ALL CAPS line: "${trimmed}" (indent: ${leadingSpaces}, hasTabs: ${hasTabs}, hasIndentation: ${hasIndentation})`);
                 debugSampleCount++;
             }
 
-            if (!isCentered || !isAllCaps) continue;
+            if (!isAllCaps) continue;
+
+            // For lines without proper indentation, we'll be extra strict about dialogue check
+            const requireStrictDialogue = !hasIndentation;
 
             // Check for dialogue following
             let nextLineIndex = i + 1;
@@ -387,19 +391,41 @@ function extractCharactersFromScenes() {
 
             const nextLineIndent = nextLine ? nextLine.length - nextLine.trimStart().length : 0;
 
-            // FIXED: More flexible dialogue detection
+            // FLEXIBLE dialogue detection
             // Dialogue can be indented differently (just needs to exist and not be a parenthetical)
-            const hasDialogueAfter = nextLine &&
+            let hasDialogueAfter = nextLine &&
                                     nextLine.trim().length > 0 &&
                                     !sceneHeadingPattern.test(nextLine.trim()) &&
                                     !transitionPattern.test(nextLine.trim()) &&
-                                    !nextLine.trim().startsWith('(') &&
                                     !(nextLine.trim() === nextLine.trim().toUpperCase() && /[A-Z]/.test(nextLine.trim()));
 
-            if (!hasDialogueAfter) {
-                if (isAllCaps && trimmed.length > 2 && trimmed.length < 30) {
-                    console.log(`  ⏭️  Skipping "${trimmed}" - no dialogue after`);
+            // Allow parentheticals if they're followed by actual dialogue
+            if (hasDialogueAfter && nextLine.trim().startsWith('(')) {
+                // Look for dialogue after parenthetical
+                let lookAhead = nextLineIndex;
+                while (lookAhead < lines.length) {
+                    const futureLinetext = lines[lookAhead].trim();
+                    if (futureLinetext && !futureLinetext.startsWith('(') && !futureLinetext.match(/^[A-Z\s]+$/)) {
+                        hasDialogueAfter = true;
+                        break;
+                    }
+                    if (futureLinetext.match(/^[A-Z\s]+$/)) {
+                        hasDialogueAfter = false;
+                        break;
+                    }
+                    lookAhead++;
                 }
+            }
+
+            // If requires strict dialogue check (no indentation), make sure it's really dialogue
+            if (requireStrictDialogue && !hasDialogueAfter) {
+                if (debugSampleCount < 15) {
+                    console.log(`  ⏭️  Skipping "${trimmed}" - no indentation and no clear dialogue`);
+                }
+                continue;
+            }
+
+            if (!hasDialogueAfter) {
                 continue;
             }
 
@@ -923,6 +949,99 @@ export function renameProject(newName) {
 // ============================================================================
 
 /**
+ * Extract characters from scene breakdowns (fallback if screenplay parsing fails)
+ * This is useful when auto-tagging has already identified cast members
+ */
+function extractCharactersFromBreakdowns() {
+    console.log('📋 Extracting characters from scene breakdowns...');
+
+    const characterMap = new Map(); // Map<characterName, data>
+
+    // Collect characters from all scene breakdowns
+    Object.keys(state.sceneBreakdowns).forEach(sceneIndex => {
+        const breakdown = state.sceneBreakdowns[sceneIndex];
+
+        if (breakdown && breakdown.cast && Array.isArray(breakdown.cast)) {
+            breakdown.cast.forEach(characterName => {
+                const cleaned = characterName.trim();
+                if (!cleaned) return;
+
+                // Normalize to title case
+                const normalized = normalizeCharacterName(cleaned);
+
+                if (!characterMap.has(normalized)) {
+                    characterMap.set(normalized, {
+                        primaryName: normalized,
+                        aliases: [cleaned, normalized],
+                        firstScene: parseInt(sceneIndex),
+                        sceneAppearances: [parseInt(sceneIndex)],
+                        dialogueCount: 1,
+                        isConfirmed: false
+                    });
+                } else {
+                    const char = characterMap.get(normalized);
+                    char.dialogueCount++;
+                    if (!char.sceneAppearances.includes(parseInt(sceneIndex))) {
+                        char.sceneAppearances.push(parseInt(sceneIndex));
+                    }
+                    if (!char.aliases.includes(cleaned)) {
+                        char.aliases.push(cleaned);
+                    }
+                }
+            });
+        }
+    });
+
+    // Also check script tags for cast category
+    if (state.scriptTags) {
+        Object.keys(state.scriptTags).forEach(sceneIndex => {
+            const tags = state.scriptTags[sceneIndex];
+            if (Array.isArray(tags)) {
+                tags.forEach(tag => {
+                    if (tag.category === 'cast' && tag.character) {
+                        const cleaned = tag.character.trim();
+                        if (!cleaned) return;
+
+                        const normalized = normalizeCharacterName(cleaned);
+
+                        if (!characterMap.has(normalized)) {
+                            characterMap.set(normalized, {
+                                primaryName: normalized,
+                                aliases: [cleaned, normalized],
+                                firstScene: parseInt(sceneIndex),
+                                sceneAppearances: [parseInt(sceneIndex)],
+                                dialogueCount: 1,
+                                isConfirmed: false
+                            });
+                        } else {
+                            const char = characterMap.get(normalized);
+                            char.dialogueCount++;
+                            if (!char.sceneAppearances.includes(parseInt(sceneIndex))) {
+                                char.sceneAppearances.push(parseInt(sceneIndex));
+                            }
+                            if (!char.aliases.includes(cleaned)) {
+                                char.aliases.push(cleaned);
+                            }
+                        }
+                    }
+                });
+            }
+        });
+    }
+
+    // Convert to array and sort by dialogue count
+    const characters = Array.from(characterMap.values())
+        .sort((a, b) => b.dialogueCount - a.dialogueCount);
+
+    console.log(`✓ Found ${characters.length} characters from breakdowns:`);
+    characters.forEach(char => {
+        console.log(`  - ${char.primaryName} (${char.dialogueCount} appearances in ${char.sceneAppearances.length} scenes)`);
+    });
+
+    return characters;
+}
+
+/**
  * Open character review modal to review and edit detected characters
  * This is a LOCAL OPERATION ONLY - no AI calls, just regex parsing
  */
@@ -935,7 +1054,16 @@ export function reviewCharacters() {
     console.log('🎭 Detect & Review Characters - Starting intelligent character detection...');
 
     // Run character detection with new intelligent system
-    const detectedChars = extractCharactersFromScenes();
+    let detectedChars = extractCharactersFromScenes();
+
+    console.log(`📊 Screenplay parsing found ${detectedChars.length} characters`);
+
+    // FALLBACK: If no characters detected from screenplay parsing, extract from auto-tag results
+    if (detectedChars.length === 0 && state.sceneBreakdowns) {
+        console.log('⚠️ No characters found via screenplay parsing - extracting from scene breakdowns...');
+        detectedChars = extractCharactersFromBreakdowns();
+        console.log(`✓ Extracted ${detectedChars.length} characters from scene breakdowns`);
+    }
 
     // Store detected characters in state
     state.detectedCharacters = detectedChars.map(c => c.primaryName);
@@ -943,7 +1071,7 @@ export function reviewCharacters() {
     // CRITICAL: Also store full character data globally for merge functionality
     window.detectedCharacterData = detectedChars;
 
-    console.log(`✓ Detected ${detectedChars.length} unique characters`);
+    console.log(`✓ Final character count: ${detectedChars.length} unique characters`);
 
     const modal = document.getElementById('character-review-modal');
     const reviewList = document.getElementById('character-review-list');
@@ -956,12 +1084,36 @@ export function reviewCharacters() {
     if (detectedChars.length === 0) {
         reviewList.innerHTML = `
             <div style="padding: 24px; text-align: center; color: var(--text-muted);">
-                <p>No characters detected in your script.</p>
-                <p style="margin-top: 8px; font-size: 0.875em;">
-                    Make sure your script uses proper screenplay formatting:
-                    <br>- Character names in ALL CAPS
-                    <br>- Character names centered
-                    <br>- Character names followed by dialogue
+                <p style="font-size: 1.1em; font-weight: 600; margin-bottom: 16px;">No characters detected</p>
+
+                <p style="margin-bottom: 16px;">
+                    Character detection works in two ways:
+                </p>
+
+                <div style="text-align: left; max-width: 500px; margin: 0 auto;">
+                    <div style="background: rgba(212, 175, 122, 0.1); padding: 12px; border-radius: 6px; margin-bottom: 12px;">
+                        <strong style="color: var(--accent-gold);">Method 1: Screenplay Parsing</strong>
+                        <div style="font-size: 0.875em; margin-top: 6px;">
+                            Requires proper screenplay formatting:
+                            <br>• Character names in ALL CAPS
+                            <br>• Character names indented/centered
+                            <br>• Dialogue following character names
+                        </div>
+                    </div>
+
+                    <div style="background: rgba(212, 175, 122, 0.1); padding: 12px; border-radius: 6px;">
+                        <strong style="color: var(--accent-gold);">Method 2: Auto-Tag Results</strong>
+                        <div style="font-size: 0.875em; margin-top: 6px;">
+                            Uses characters identified by AI during Auto-Tag
+                            <br>• Run "Auto Tag Script" first
+                            <br>• Then run "Detect & Review Characters"
+                        </div>
+                    </div>
+                </div>
+
+                <p style="margin-top: 20px; font-size: 0.875em; color: var(--text-muted);">
+                    💡 <strong>Tip:</strong> If your script doesn't use standard formatting,
+                    <br>run "Auto Tag Script" first, then try character detection again.
                 </p>
             </div>
         `;
