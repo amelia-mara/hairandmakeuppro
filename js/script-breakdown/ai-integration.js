@@ -185,10 +185,36 @@ export async function callAI(prompt, maxTokens = 500) {
 
 /**
  * Generate scene synopsis using AI
+ * Uses narrative-aware synopsis if context is available
  */
 export async function generateAISynopsis(sceneIndex) {
     if (sceneIndex < 0 || sceneIndex >= state.scenes.length) return;
 
+    // Check if narrative context is available
+    const hasNarrativeContext = window.scriptNarrativeContext;
+
+    // Use context-aware synopsis if available
+    if (hasNarrativeContext) {
+        try {
+            const { generateContextAwareSynopsis } = await import('./synopsis-generator.js');
+            const result = await generateContextAwareSynopsis(sceneIndex);
+
+            // Store additional context data if available
+            if (result.importance) {
+                state.scenes[sceneIndex].importance = result.importance;
+            }
+            if (result.narrativeSignificance) {
+                state.scenes[sceneIndex].narrativeSignificance = result.narrativeSignificance;
+            }
+
+            return result.synopsis || result;
+        } catch (error) {
+            console.warn('Context-aware synopsis failed, falling back to basic:', error);
+            // Fall through to basic synopsis
+        }
+    }
+
+    // Basic synopsis (fallback or when no context)
     const scene = state.scenes[sceneIndex];
     const sceneText = scene.content || scene.text || '';
 
@@ -217,10 +243,61 @@ Provide only the synopsis text, no additional commentary or explanations.`;
 /**
  * Detect elements using AI with enhanced continuity tracking
  * Captures descriptive sentences and phrases for professional hair/makeup/wardrobe continuity
+ * Uses narrative-aware tagging if context is available
  */
 export async function detectAIElements(sceneIndex) {
     if (sceneIndex < 0 || sceneIndex >= state.scenes.length) return;
 
+    // Check if narrative context is available
+    const hasNarrativeContext = window.scriptNarrativeContext;
+
+    // Use narrative-aware tagging if available
+    if (hasNarrativeContext) {
+        try {
+            const { performSmartAutoTag, applySmartTags } = await import('./auto-tag.js');
+            const tagsData = await performSmartAutoTag(sceneIndex);
+
+            // Convert smart tags to legacy format for compatibility
+            const cast = [];
+            const elements = {
+                hair: [],
+                makeup: [],
+                sfx: [],
+                health: [],
+                injuries: [],
+                stunts: [],
+                weather: [],
+                wardrobe: [],
+                extras: []
+            };
+
+            if (tagsData.tags) {
+                tagsData.tags.forEach(tag => {
+                    if (tag.category === 'cast' && tag.character) {
+                        if (!cast.includes(tag.character)) {
+                            cast.push(tag.character);
+                        }
+                    } else if (elements[tag.category]) {
+                        if (!elements[tag.category].includes(tag.text)) {
+                            elements[tag.category].push(tag.text);
+                        }
+                    }
+                });
+            }
+
+            return {
+                cast,
+                elements,
+                structuredTags: tagsData.tags || [],
+                method: 'narrative-aware'
+            };
+        } catch (error) {
+            console.warn('Narrative-aware tagging failed, falling back to basic:', error);
+            // Fall through to basic detection
+        }
+    }
+
+    // Basic element detection (fallback or when no context)
     const scene = state.scenes[sceneIndex];
     const sceneText = scene.content || scene.text || '';
 
