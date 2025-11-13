@@ -1337,7 +1337,7 @@ export function deselectAllCharacters() {
  * Confirm character selection and update character tabs
  * This commits the selected characters to confirmedCharacters (persisted state)
  */
-export function confirmCharacterSelection() {
+export async function confirmCharacterSelection() {
     const checkboxes = document.querySelectorAll('#character-review-list input[type="checkbox"]');
     const selectedCharacters = new Set();
 
@@ -1366,9 +1366,10 @@ export function confirmCharacterSelection() {
     // Re-initialize character tabs with confirmed characters
     initializeCharacterTabs();
 
-    // Re-render character tabs and panels
-    renderCharacterTabs();
-    renderCharacterTabPanels();
+    // Re-render character tabs and panels using refresh function
+    const { refreshCharacterTabs } = await import('./main.js');
+    refreshCharacterTabs();
+    console.log('✓ Character tabs created');
 
     // Save project
     saveProject();

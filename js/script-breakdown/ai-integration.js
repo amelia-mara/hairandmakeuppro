@@ -880,6 +880,11 @@ export async function generateAllSynopses(event) {
     const { saveProject } = await import('./export-handlers.js');
     saveProject();
 
+    // Refresh scene list to show new synopses
+    const { refreshSceneList } = await import('./main.js');
+    refreshSceneList();
+    console.log('✓ Synopses generated and UI refreshed');
+
     // Complete with success
     const successMessage = errorCount > 0
         ? `${successCount} Synopses Created (${errorCount} errors)`
@@ -1122,8 +1127,9 @@ export async function autoTagScript(event) {
     saveProject();
 
     // Refresh scene list to show tagged indicators
-    const { renderSceneList } = await import('./scene-list.js');
-    renderSceneList();
+    const { refreshSceneList } = await import('./main.js');
+    refreshSceneList();
+    console.log('✓ Tags applied and UI refreshed');
 
     // Count total tags created
     const totalTags = Object.values(state.scriptTags).reduce((sum, tags) => sum + (tags?.length || 0), 0);

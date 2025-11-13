@@ -407,6 +407,29 @@ export function getCurrentBreakdown() {
 }
 
 // ============================================================================
+// UI REFRESH FUNCTIONS
+// ============================================================================
+
+/**
+ * Force refresh scene list after changes
+ * Call this after async operations that modify scenes, synopses, or tags
+ */
+export function refreshSceneList() {
+    console.log('🔄 Refreshing scene list...');
+    renderSceneList();
+}
+
+/**
+ * Force refresh character tabs after character detection/confirmation
+ * Call this after character selection is confirmed
+ */
+export function refreshCharacterTabs() {
+    console.log('🔄 Refreshing character tabs...');
+    renderCharacterTabs();
+    renderCharacterTabPanels();
+}
+
+// ============================================================================
 // EXPOSE GLOBAL FUNCTIONS
 // ============================================================================
 
@@ -414,6 +437,8 @@ export function getCurrentBreakdown() {
 window.selectScene = selectScene;
 window.navigateToScene = navigateToScene;
 window.init = init;
+window.refreshSceneList = refreshSceneList;
+window.refreshCharacterTabs = refreshCharacterTabs;
 
 // Initialize on page load
 if (document.readyState === 'loading') {
