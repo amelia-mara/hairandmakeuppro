@@ -11,7 +11,6 @@
 
 import { state, navigateToScene } from './main.js';
 import { SuggestionStatus, ReviewStatus } from './hybrid-breakdown-manager.js';
-import { renderBreakdownPanel } from './breakdown-form.js';
 
 // ============================================================================
 // SUGGESTION ACTIONS
@@ -361,6 +360,21 @@ export function deleteItem(sceneIndex, itemId, isManual) {
 // ============================================================================
 
 /**
+ * Start review workflow
+ */
+export function startReview() {
+    const manager = window.hybridBreakdownManager;
+    if (!manager) return;
+
+    // Navigate to first scene
+    navigateToScene(0);
+    manager.setSceneReviewStatus(0, ReviewStatus.IN_PROGRESS);
+
+    showToast('Review started', 'success');
+    refreshCurrentSceneDisplay();
+}
+
+/**
  * Mark current scene as complete and move to next
  */
 export function markSceneComplete() {
@@ -429,7 +443,7 @@ export function nextScene() {
 /**
  * Generate AI suggestions for all scenes
  */
-export async function generateSuggestions(event) {
+export async function generateSuggestions() {
     const manager = window.hybridBreakdownManager;
     if (!manager) return;
 
@@ -438,226 +452,19 @@ export async function generateSuggestions(event) {
         return;
     }
 
-    if (!state.scenes || state.scenes.length === 0) {
-        showToast('No scenes available to analyze', 'warning');
-        return;
-    }
-
-    // Get button reference if called from event
-    let button = null;
-    let originalContent = '';
-
-    if (event) {
-        button = event.target.closest('.tools-panel-btn');
-        if (button) {
-            originalContent = button.innerHTML;
-            button.disabled = true;
-        }
-    }
+    // Show loading indicator
+    showLoadingModal('Generating AI suggestions...');
 
     try {
-        const totalScenes = state.scenes.length;
-
-        // Show initial progress
-        if (button) {
-            button.innerHTML = `
-                <span class="btn-progress-text">Analyzing scenes...</span>
-                <div class="btn-progress-bar">
-                    <div class="btn-progress-fill" style="width: 0%"></div>
-                </div>
-            `;
-        }
-
-        // Clear existing suggestions
-        manager.suggestedContinuity.clear();
-
-        const narrativeContext = window.scriptNarrativeContext;
-
-        // Generate suggestions for each scene
-        for (let i = 0; i < totalScenes; i++) {
-            const suggestions = await manager.generateSceneSuggestions(i, narrativeContext);
-            if (suggestions && suggestions.length > 0) {
-                manager.suggestedContinuity.set(i.toString(), suggestions);
-            }
-
-            // Update progress
-            const progress = ((i + 1) / totalScenes) * 100;
-            if (button) {
-                const fillElement = button.querySelector('.btn-progress-fill');
-                const textElement = button.querySelector('.btn-progress-text');
-                if (fillElement) fillElement.style.width = progress + '%';
-                if (textElement) textElement.textContent = `Scene ${i + 1}/${totalScenes}`;
-            }
-
-            // Small delay to prevent UI freezing
-            if (i < totalScenes - 1) {
-                await new Promise(resolve => setTimeout(resolve, 10));
-            }
-        }
-
-        manager.saveToStorage();
-
-        // Restore button
-        if (button) {
-            button.innerHTML = originalContent;
-            button.disabled = false;
-        }
-
+        await manager.generateAllSuggestions();
+        closeLoadingModal();
         showToast('AI suggestions generated', 'success');
-
-        // Display suggestions overview in right panel
-        displaySuggestionsOverview();
-
+        refreshCurrentSceneDisplay();
     } catch (error) {
-        // Restore button on error
-        if (button) {
-            button.innerHTML = originalContent;
-            button.disabled = false;
-        }
-
+        closeLoadingModal();
         showToast(`Error: ${error.message}`, 'error');
         console.error('Error generating suggestions:', error);
     }
-}
-
-/**
- * Display suggestions overview after generation
- */
-function displaySuggestionsOverview() {
-    const manager = window.hybridBreakdownManager;
-    if (!manager) return;
-
-    const panel = document.getElementById('breakdown-panel');
-    if (!panel) return;
-
-    // Calculate statistics
-    let totalSuggestions = 0;
-    let scenesWithSuggestions = 0;
-    const categoryCount = {};
-
-    for (let i = 0; i < state.scenes.length; i++) {
-        const suggestions = manager.getSuggestionsForScene(i);
-        if (suggestions.length > 0) {
-            scenesWithSuggestions++;
-            totalSuggestions += suggestions.length;
-
-            suggestions.forEach(s => {
-                categoryCount[s.category] = (categoryCount[s.category] || 0) + 1;
-            });
-        }
-    }
-
-    // Render overview
-    panel.innerHTML = `
-        <div class="suggestions-overview">
-            <div class="overview-header">
-                <h3>AI Suggestions Generated</h3>
-                <div class="overview-subtitle">
-                    ${scenesWithSuggestions} of ${state.scenes.length} scenes have suggestions
-                </div>
-            </div>
-
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-value">${totalSuggestions}</div>
-                    <div class="stat-label">Total Suggestions</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value">${scenesWithSuggestions}</div>
-                    <div class="stat-label">Scenes with Suggestions</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value">${Object.keys(categoryCount).length}</div>
-                    <div class="stat-label">Categories Found</div>
-                </div>
-            </div>
-
-            ${Object.keys(categoryCount).length > 0 ? `
-                <div class="category-breakdown">
-                    <h4>Suggestions by Category</h4>
-                    <div class="category-list">
-                        ${Object.entries(categoryCount)
-                            .sort((a, b) => b[1] - a[1])
-                            .map(([category, count]) => `
-                                <div class="category-item">
-                                    <span class="category-badge ${category}">${getCategoryLabel(category)}</span>
-                                    <span class="category-count">${count} items</span>
-                                </div>
-                            `).join('')}
-                    </div>
-                </div>
-            ` : ''}
-
-            <div class="overview-actions">
-                <button onclick="startReview()" class="btn-primary btn-large">
-                    <span class="btn-icon">🚀</span>
-                    Start Reviewing Scenes
-                </button>
-                <button onclick="clearHybridData()" class="btn-secondary">
-                    Clear All Suggestions
-                </button>
-            </div>
-
-            <div class="overview-note">
-                <strong>Next Step:</strong> Click "Start Reviewing Scenes" to go through each scene and accept, reject, or edit suggestions.
-            </div>
-        </div>
-    `;
-}
-
-/**
- * Get category label
- */
-function getCategoryLabel(category) {
-    const labels = {
-        injuries: 'Injuries',
-        hair: 'Hair',
-        makeup: 'Makeup',
-        wardrobe: 'Wardrobe',
-        condition: 'Condition',
-        props: 'Props',
-        other: 'Other'
-    };
-    return labels[category] || category;
-}
-
-/**
- * Start review workflow
- */
-export function startReview(event) {
-    const manager = window.hybridBreakdownManager;
-    if (!manager) return;
-
-    // Check if suggestions exist
-    let hasSuggestions = false;
-    for (let i = 0; i < state.scenes.length; i++) {
-        const suggestions = manager.getSuggestionsForScene(i);
-        if (suggestions.length > 0) {
-            hasSuggestions = true;
-            break;
-        }
-    }
-
-    if (!hasSuggestions) {
-        showToast('No suggestions found. Generate AI suggestions first.', 'warning');
-        return;
-    }
-
-    // Enable hybrid mode
-    localStorage.setItem('useHybridMode', 'true');
-
-    // Navigate to first scene
-    if (state.scenes.length > 0) {
-        navigateToScene(0);
-        manager.setSceneReviewStatus(0, ReviewStatus.IN_PROGRESS);
-    }
-
-    showToast('Review started - Scene 1', 'success');
-
-    // Trigger re-render to show hybrid breakdown
-    setTimeout(() => {
-        renderBreakdownPanel();
-    }, 100);
 }
 
 /**
