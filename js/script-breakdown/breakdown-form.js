@@ -1458,3 +1458,501 @@ window.closeAddElementModal = closeAddElementModal;
 window.confirmAddElement = confirmAddElement;
 window.removeElement = removeElement;
 window.renderBreakdownPanel = renderBreakdownPanel;
+
+// ============================================================================
+// COMPREHENSIVE SCENE BREAKDOWN WITH ENTER/CHANGE/EXIT WORKFLOW
+// ============================================================================
+
+/**
+ * Enhanced selectScene function with comprehensive breakdown panel
+ * This provides a dedicated workflow for tracking character states and continuity
+ */
+export function selectScene(sceneIndex) {
+    const scene = state.scenes[sceneIndex];
+    if (!scene) return;
+
+    state.currentScene = sceneIndex;
+
+    const panel = document.getElementById('breakdown-panel');
+    if (!panel) return;
+
+    const breakdown = state.sceneBreakdowns[sceneIndex] || {};
+    const cast = breakdown.cast || [];
+
+    panel.innerHTML = `
+        <div class="scene-breakdown-content">
+            <!-- Scene Header -->
+            <div class="breakdown-header">
+                <h3>Scene ${sceneIndex + 1} of ${state.scenes.length}</h3>
+                <div class="scene-heading">${escapeHtml(scene.heading || '')}</div>
+                ${window.supervisorReference?.scenes?.[sceneIndex] ?
+                    `<div class="supervisor-ref">📋 Supervisor: ${escapeHtml(window.supervisorReference.scenes[sceneIndex].day)}</div>` : ''}
+            </div>
+
+            <!-- Story Timeline Section -->
+            <div class="breakdown-section" id="timeline-section">
+                <h4 class="section-title-compact" onclick="toggleBreakdownSection('timeline-section')">
+                    <span class="section-toggle-icon">▼</span>
+                    STORY TIMELINE
+                </h4>
+                <div class="section-content-compact">
+                    ${renderStoryTimeline(scene, sceneIndex)}
+                </div>
+            </div>
+
+            <!-- Character States Section -->
+            <div class="breakdown-section" id="character-continuity-section">
+                <h4 class="section-title-compact" onclick="toggleBreakdownSection('character-continuity-section')">
+                    <span class="section-toggle-icon">▼</span>
+                    CHARACTER CONTINUITY
+                    <span class="section-count-badge">${cast.length}</span>
+                </h4>
+                <div class="section-content-compact">
+                    <div id="character-states">
+                        ${renderCharacterContinuityStates(scene, sceneIndex, cast)}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active Continuity Events -->
+            <div class="breakdown-section" id="continuity-events-section">
+                <h4 class="section-title-compact" onclick="toggleBreakdownSection('continuity-events-section')">
+                    <span class="section-toggle-icon">▼</span>
+                    CONTINUITY EVENTS
+                </h4>
+                <div class="section-content-compact">
+                    <div class="events-toolbar">
+                        <button onclick="startContinuityEvent(${sceneIndex})" class="small-btn">+ Start New Event</button>
+                        <button onclick="linkExistingEvent(${sceneIndex})" class="small-btn">Link Existing</button>
+                    </div>
+                    <div id="continuity-events">
+                        ${renderActiveContinuityEvents(scene, sceneIndex)}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <div class="breakdown-navigation">
+                <button onclick="navigateToScene(${Math.max(0, sceneIndex - 1)})"
+                        class="nav-btn-compact"
+                        ${sceneIndex === 0 ? 'disabled' : ''}>
+                    ← Previous Scene
+                </button>
+                <span class="scene-counter">${sceneIndex + 1} / ${state.scenes.length}</span>
+                <button onclick="navigateToScene(${Math.min(state.scenes.length - 1, sceneIndex + 1)})"
+                        class="nav-btn-compact"
+                        ${sceneIndex === state.scenes.length - 1 ? 'disabled' : ''}>
+                    Next Scene →
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Render story timeline fields
+ */
+function renderStoryTimeline(scene, sceneIndex) {
+    const timeline = state.sceneTimeline[sceneIndex] || {};
+    const supervisorData = window.supervisorReference?.scenes?.[sceneIndex];
+
+    return `
+        <div class="field-row">
+            <div class="field-group">
+                <label>Story Day</label>
+                <input type="text" id="story-day"
+                       value="${escapeHtml(timeline.day || scene.storyDay || '')}"
+                       placeholder="Day 1, Day 2, etc."
+                       onchange="updateSceneData(${sceneIndex}, 'storyDay', this.value)">
+                ${supervisorData?.day ?
+                    `<span class="cross-ref">Sup: ${escapeHtml(supervisorData.day)}</span>` : ''}
+            </div>
+
+            <div class="field-group">
+                <label>Time of Day</label>
+                <select id="time-of-day"
+                        onchange="updateSceneData(${sceneIndex}, 'timeOfDay', this.value)">
+                    <option value="">Select...</option>
+                    <option ${(timeline.time || scene.timeOfDay) === 'Early Morning' ? 'selected' : ''}>Early Morning</option>
+                    <option ${(timeline.time || scene.timeOfDay) === 'Morning' ? 'selected' : ''}>Morning</option>
+                    <option ${(timeline.time || scene.timeOfDay) === 'Midday' ? 'selected' : ''}>Midday</option>
+                    <option ${(timeline.time || scene.timeOfDay) === 'Afternoon' ? 'selected' : ''}>Afternoon</option>
+                    <option ${(timeline.time || scene.timeOfDay) === 'Evening' ? 'selected' : ''}>Evening</option>
+                    <option ${(timeline.time || scene.timeOfDay) === 'Night' ? 'selected' : ''}>Night</option>
+                    <option ${(timeline.time || scene.timeOfDay) === 'Late Night' ? 'selected' : ''}>Late Night</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="field-row">
+            <label class="checkbox-label">
+                <input type="checkbox"
+                       ${timeline.flashback || scene.isFlashback ? 'checked' : ''}
+                       onchange="updateSceneData(${sceneIndex}, 'isFlashback', this.checked)">
+                Flashback
+            </label>
+            <label class="checkbox-label">
+                <input type="checkbox"
+                       ${timeline.flashforward || scene.isFlashforward ? 'checked' : ''}
+                       onchange="updateSceneData(${sceneIndex}, 'isFlashforward', this.checked)">
+                Flash-forward
+            </label>
+            <label class="checkbox-label">
+                <input type="checkbox"
+                       ${timeline.dream || scene.isDream ? 'checked' : ''}
+                       onchange="updateSceneData(${sceneIndex}, 'isDream', this.checked)">
+                Dream/Fantasy
+            </label>
+        </div>
+
+        <div class="field-group">
+            <label>Time Jump</label>
+            <input type="text"
+                   value="${escapeHtml(timeline.timeJump || scene.timeJump || '')}"
+                   placeholder="e.g., '3 days later', '2 weeks earlier'"
+                   onchange="updateSceneData(${sceneIndex}, 'timeJump', this.value)">
+        </div>
+    `;
+}
+
+/**
+ * Render character continuity states with enter/change/exit workflow
+ */
+function renderCharacterContinuityStates(scene, sceneIndex, cast) {
+    if (cast.length === 0) {
+        return '<div class="empty-state">No characters in this scene. Use AI detection or add manually.</div>';
+    }
+
+    return cast.map(char => {
+        const state_data = state.characterStates[sceneIndex]?.[char] || {};
+        const prevState = getPreviousCharacterState(char, sceneIndex);
+
+        return `
+            <div class="character-continuity-card" data-character="${escapeHtml(char)}">
+                <div class="character-header" onclick="toggleCharacterCard('${escapeHtml(char).replace(/\s/g, '_')}')">
+                    <h5>${escapeHtml(char)}</h5>
+                    <button onclick="event.stopPropagation(); copyFromPreviousScene('${escapeHtml(char).replace(/'/g, "\\'")}', ${sceneIndex})"
+                            class="copy-btn"
+                            title="Copy from previous appearance">
+                        ↓
+                    </button>
+                </div>
+
+                <div class="character-card-body" id="char-card-${escapeHtml(char).replace(/\s/g, '_')}">
+                    <!-- ENTERS WITH -->
+                    <div class="continuity-phase">
+                        <label class="phase-label">Enters Scene With:</label>
+                        <div class="continuity-fields">
+                            <input type="text"
+                                   placeholder="Hair (${prevState?.hair || 'describe'})"
+                                   value="${escapeHtml(state_data.enterHair || '')}"
+                                   onchange="updateCharacterPhaseField(${sceneIndex}, '${escapeHtml(char).replace(/'/g, "\\'")}', 'enterHair', this.value)">
+                            <input type="text"
+                                   placeholder="Makeup (${prevState?.makeup || 'describe'})"
+                                   value="${escapeHtml(state_data.enterMakeup || '')}"
+                                   onchange="updateCharacterPhaseField(${sceneIndex}, '${escapeHtml(char).replace(/'/g, "\\'")}', 'enterMakeup', this.value)">
+                            <input type="text"
+                                   placeholder="Wardrobe (${prevState?.wardrobe || 'describe'})"
+                                   value="${escapeHtml(state_data.enterWardrobe || '')}"
+                                   onchange="updateCharacterPhaseField(${sceneIndex}, '${escapeHtml(char).replace(/'/g, "\\'")}', 'enterWardrobe', this.value)">
+                            <input type="text"
+                                   placeholder="Condition/Health"
+                                   value="${escapeHtml(state_data.enterCondition || '')}"
+                                   onchange="updateCharacterPhaseField(${sceneIndex}, '${escapeHtml(char).replace(/'/g, "\\'")}', 'enterCondition', this.value)">
+                        </div>
+                    </div>
+
+                    <!-- CHANGES DURING -->
+                    <div class="continuity-phase">
+                        <label class="phase-label">Changes During Scene:</label>
+                        <div class="continuity-fields">
+                            <textarea placeholder="Describe any changes that happen during the scene..."
+                                      onchange="updateCharacterPhaseField(${sceneIndex}, '${escapeHtml(char).replace(/'/g, "\\'")}', 'changes', this.value)"
+                                      >${escapeHtml(state_data.changes || '')}</textarea>
+                            <button onclick="addDetailedChange('${escapeHtml(char).replace(/'/g, "\\'")}', ${sceneIndex})"
+                                    class="add-change-btn">
+                                + Add Specific Change
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- EXITS WITH -->
+                    <div class="continuity-phase">
+                        <label class="phase-label">Exits Scene With:</label>
+                        <div class="continuity-fields">
+                            <input type="text"
+                                   placeholder="Hair"
+                                   value="${escapeHtml(state_data.exitHair || '')}"
+                                   onchange="updateCharacterPhaseField(${sceneIndex}, '${escapeHtml(char).replace(/'/g, "\\'")}', 'exitHair', this.value)">
+                            <input type="text"
+                                   placeholder="Makeup"
+                                   value="${escapeHtml(state_data.exitMakeup || '')}"
+                                   onchange="updateCharacterPhaseField(${sceneIndex}, '${escapeHtml(char).replace(/'/g, "\\'")}', 'exitMakeup', this.value)">
+                            <input type="text"
+                                   placeholder="Wardrobe"
+                                   value="${escapeHtml(state_data.exitWardrobe || '')}"
+                                   onchange="updateCharacterPhaseField(${sceneIndex}, '${escapeHtml(char).replace(/'/g, "\\'")}', 'exitWardrobe', this.value)">
+                            <input type="text"
+                                   placeholder="Condition/Health"
+                                   value="${escapeHtml(state_data.exitCondition || '')}"
+                                   onchange="updateCharacterPhaseField(${sceneIndex}, '${escapeHtml(char).replace(/'/g, "\\'")}', 'exitCondition', this.value)">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+/**
+ * Render active continuity events for the scene
+ */
+function renderActiveContinuityEvents(scene, sceneIndex) {
+    const events = Array.from(window.continuityTracker?.events?.values() || []);
+    const sceneEvents = events.filter(e =>
+        sceneIndex >= e.startScene && (!e.endScene || sceneIndex <= e.endScene)
+    );
+
+    if (sceneEvents.length === 0) {
+        return '<div class="empty-state">No active continuity events</div>';
+    }
+
+    return sceneEvents.map(event => `
+        <div class="event-card ${event.type}">
+            <div class="event-header">
+                <span class="event-type">${escapeHtml(event.type)}</span>
+                <span class="event-character">${escapeHtml(event.character)}</span>
+            </div>
+            <div class="event-body">
+                <div class="event-description">${escapeHtml(event.description)}</div>
+                <div class="event-status">
+                    Scene ${event.startScene + 1} → ${event.endScene ? `Scene ${event.endScene + 1}` : 'Ongoing'}
+                </div>
+                ${!event.endScene ? `
+                    <button onclick="endContinuityEvent('${event.id}', ${sceneIndex})" class="end-event-btn">
+                        Mark as Resolved in This Scene
+                    </button>
+                ` : ''}
+            </div>
+        </div>
+    `).join('');
+}
+
+/**
+ * Get previous character state from earlier scenes
+ */
+function getPreviousCharacterStateEnhanced(character, currentSceneIndex) {
+    for (let i = currentSceneIndex - 1; i >= 0; i--) {
+        const scene = state.scenes[i];
+        const breakdown = state.sceneBreakdowns[i];
+
+        if (breakdown?.cast?.includes(character) && state.characterStates[i]?.[character]) {
+            const charState = state.characterStates[i][character];
+
+            // Return exit state if available, otherwise enter state
+            return {
+                hair: charState.exitHair || charState.enterHair || charState.hair || '',
+                makeup: charState.exitMakeup || charState.enterMakeup || charState.makeup || '',
+                wardrobe: charState.exitWardrobe || charState.enterWardrobe || charState.wardrobe || '',
+                condition: charState.exitCondition || charState.enterCondition || ''
+            };
+        }
+    }
+    return null;
+}
+
+// ============================================================================
+// EVENT HANDLERS FOR COMPREHENSIVE BREAKDOWN
+// ============================================================================
+
+/**
+ * Toggle breakdown section expanded/collapsed
+ */
+window.toggleBreakdownSection = function(sectionId) {
+    const section = document.getElementById(sectionId);
+    if (!section) return;
+
+    const content = section.querySelector('.section-content-compact');
+    const icon = section.querySelector('.section-toggle-icon');
+
+    if (content && icon) {
+        if (content.style.display === 'none') {
+            content.style.display = 'block';
+            icon.textContent = '▼';
+        } else {
+            content.style.display = 'none';
+            icon.textContent = '▶';
+        }
+    }
+};
+
+/**
+ * Toggle character card expanded/collapsed
+ */
+window.toggleCharacterCard = function(characterId) {
+    const cardBody = document.getElementById(`char-card-${characterId}`);
+    if (cardBody) {
+        cardBody.style.display = cardBody.style.display === 'none' ? 'block' : 'none';
+    }
+};
+
+/**
+ * Copy character state from previous scene
+ */
+window.copyFromPreviousScene = function(character, sceneIndex) {
+    const prevState = getPreviousCharacterStateEnhanced(character, sceneIndex);
+    if (!prevState) {
+        alert('No previous appearance found for ' + character);
+        return;
+    }
+
+    if (!state.characterStates[sceneIndex]) {
+        state.characterStates[sceneIndex] = {};
+    }
+    if (!state.characterStates[sceneIndex][character]) {
+        state.characterStates[sceneIndex][character] = {};
+    }
+
+    state.characterStates[sceneIndex][character] = {
+        ...state.characterStates[sceneIndex][character],
+        enterHair: prevState.hair,
+        enterMakeup: prevState.makeup,
+        enterWardrobe: prevState.wardrobe,
+        enterCondition: prevState.condition
+    };
+
+    selectScene(sceneIndex); // Refresh display
+    import('./export-handlers.js').then(module => module.saveProject());
+};
+
+/**
+ * Update character phase field (enter/exit states)
+ */
+window.updateCharacterPhaseField = function(sceneIndex, character, field, value) {
+    if (!state.characterStates[sceneIndex]) {
+        state.characterStates[sceneIndex] = {};
+    }
+    if (!state.characterStates[sceneIndex][character]) {
+        state.characterStates[sceneIndex][character] = {};
+    }
+
+    state.characterStates[sceneIndex][character][field] = value;
+
+    // Auto-save
+    import('./export-handlers.js').then(module => module.saveProject());
+};
+
+/**
+ * Update scene data (timeline fields)
+ */
+window.updateSceneData = function(sceneIndex, field, value) {
+    if (!state.scenes[sceneIndex]) return;
+
+    // Update scene metadata
+    if (field === 'storyDay' || field === 'timeOfDay' || field === 'isFlashback' ||
+        field === 'isFlashforward' || field === 'isDream' || field === 'timeJump') {
+        state.scenes[sceneIndex][field] = value;
+
+        // Also update timeline
+        if (!state.sceneTimeline[sceneIndex]) {
+            state.sceneTimeline[sceneIndex] = {};
+        }
+
+        if (field === 'storyDay') {
+            state.sceneTimeline[sceneIndex].day = value;
+        } else if (field === 'timeOfDay') {
+            state.sceneTimeline[sceneIndex].time = value;
+        } else if (field === 'isFlashback') {
+            state.sceneTimeline[sceneIndex].flashback = value;
+        } else if (field === 'isFlashforward') {
+            state.sceneTimeline[sceneIndex].flashforward = value;
+        } else if (field === 'isDream') {
+            state.sceneTimeline[sceneIndex].dream = value;
+        } else if (field === 'timeJump') {
+            state.sceneTimeline[sceneIndex].timeJump = value;
+        }
+    }
+
+    // Auto-save
+    import('./export-handlers.js').then(module => module.saveProject());
+};
+
+/**
+ * Add detailed change for character
+ */
+window.addDetailedChange = function(character, sceneIndex) {
+    const description = prompt('Describe the specific change:');
+    if (!description) return;
+
+    if (!state.characterStates[sceneIndex]) {
+        state.characterStates[sceneIndex] = {};
+    }
+    if (!state.characterStates[sceneIndex][character]) {
+        state.characterStates[sceneIndex][character] = {};
+    }
+    if (!state.characterStates[sceneIndex][character].detailedChanges) {
+        state.characterStates[sceneIndex][character].detailedChanges = [];
+    }
+
+    state.characterStates[sceneIndex][character].detailedChanges.push({
+        description: description,
+        timestamp: new Date().toISOString()
+    });
+
+    selectScene(sceneIndex); // Refresh
+    import('./export-handlers.js').then(module => module.saveProject());
+};
+
+/**
+ * Start new continuity event
+ */
+window.startContinuityEvent = function(sceneIndex) {
+    const breakdown = state.sceneBreakdowns[sceneIndex];
+    const cast = breakdown?.cast || [];
+
+    if (cast.length === 0) {
+        alert('No characters in this scene. Add characters first.');
+        return;
+    }
+
+    const character = prompt(`Character name (${cast.join(', ')}):`);
+    if (!character || !cast.includes(character)) {
+        alert('Invalid character name');
+        return;
+    }
+
+    const type = prompt('Event type (injury, condition, transformation, wardrobe_change, makeup_effect):');
+    if (!type) return;
+
+    const description = prompt('Description:');
+    if (!description) return;
+
+    if (window.continuityTracker) {
+        window.continuityTracker.createEvent(sceneIndex, character, type, description);
+        selectScene(sceneIndex); // Refresh
+        import('./export-handlers.js').then(module => module.saveProject());
+    }
+};
+
+/**
+ * Link to existing event
+ */
+window.linkExistingEvent = function(sceneIndex) {
+    alert('Feature coming soon: Link this scene to an existing continuity event');
+};
+
+/**
+ * End continuity event
+ */
+window.endContinuityEvent = function(eventId, sceneIndex) {
+    if (!confirm('Mark this event as resolved in this scene?')) return;
+
+    if (window.continuityTracker) {
+        window.continuityTracker.closeEvent(eventId, sceneIndex);
+        selectScene(sceneIndex); // Refresh
+        import('./export-handlers.js').then(module => module.saveProject());
+    }
+};
+
+// Expose selectScene globally
+window.selectScene = selectScene;
