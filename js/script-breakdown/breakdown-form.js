@@ -72,8 +72,8 @@ export function renderBreakdownPanel() {
         return;
     }
 
-    // Fall back to classic breakdown rendering
-    renderClassicBreakdown();
+    // Use comprehensive breakdown rendering with data collection
+    renderSceneBreakdown(state.currentScene);
 }
 
 /**
@@ -827,6 +827,367 @@ function escapeHtml(text) {
     div.textContent = text;
     return div.innerHTML;
 }
+
+// ============================================================================
+// NEW COMPREHENSIVE DATA COLLECTION INTERFACE
+// ============================================================================
+
+/**
+ * Render comprehensive scene breakdown with data collection interface
+ * @param {number} sceneIndex - Scene index to render
+ */
+function renderSceneBreakdown(sceneIndex) {
+    const scene = state.scenes[sceneIndex];
+    const panel = document.getElementById('breakdown-panel');
+    if (!scene || !panel) return;
+
+    // Pre-populate from existing data or AI suggestions
+    const storyDay = scene.storyDay || scene.aiSuggestions?.storyDay || '';
+    const timeOfDay = scene.timeOfDay || scene.aiSuggestions?.timeOfDay || '';
+    const breakdown = state.sceneBreakdowns[sceneIndex] || {};
+    const characters = breakdown.cast || [];
+
+    panel.innerHTML = `
+        <div class="scene-breakdown-wrapper">
+            <!-- Scene Header -->
+            <div class="breakdown-scene-header">
+                <h3>Scene ${sceneIndex + 1}</h3>
+                <div class="scene-heading">${escapeHtml(scene.heading)}</div>
+            </div>
+
+            <!-- TIMELINE SECTION -->
+            <div class="breakdown-section timeline-section">
+                <h4 class="section-title">TIMELINE</h4>
+
+                <div class="field-row">
+                    <div class="field-group">
+                        <label>Story Day</label>
+                        <input type="text"
+                               id="scene-story-day"
+                               value="${escapeHtml(storyDay)}"
+                               placeholder="Day 1, Day 2, etc."
+                               onchange="updateSceneField(${sceneIndex}, 'storyDay', this.value)">
+                    </div>
+
+                    <div class="field-group">
+                        <label>Time</label>
+                        <select id="scene-time"
+                                onchange="updateSceneField(${sceneIndex}, 'timeOfDay', this.value)">
+                            <option value="">Select...</option>
+                            <option ${timeOfDay === 'Early Morning' ? 'selected' : ''}>Early Morning</option>
+                            <option ${timeOfDay === 'Morning' ? 'selected' : ''}>Morning</option>
+                            <option ${timeOfDay === 'Afternoon' ? 'selected' : ''}>Afternoon</option>
+                            <option ${timeOfDay === 'Evening' ? 'selected' : ''}>Evening</option>
+                            <option ${timeOfDay === 'Night' ? 'selected' : ''}>Night</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="field-row">
+                    <label class="checkbox-field">
+                        <input type="checkbox"
+                               ${scene.isFlashback ? 'checked' : ''}
+                               onchange="updateSceneField(${sceneIndex}, 'isFlashback', this.checked)">
+                        Flashback
+                    </label>
+                    <label class="checkbox-field">
+                        <input type="checkbox"
+                               ${scene.isFlashforward ? 'checked' : ''}
+                               onchange="updateSceneField(${sceneIndex}, 'isFlashforward', this.checked)">
+                        Flash-forward
+                    </label>
+                    <label class="checkbox-field">
+                        <input type="checkbox"
+                               ${scene.isDream ? 'checked' : ''}
+                               onchange="updateSceneField(${sceneIndex}, 'isDream', this.checked)">
+                        Dream
+                    </label>
+                </div>
+
+                <div class="field-group">
+                    <label>Time Jump</label>
+                    <input type="text"
+                           value="${escapeHtml(scene.timeJump || '')}"
+                           placeholder="e.g., '3 days later', '2 weeks earlier'"
+                           onchange="updateSceneField(${sceneIndex}, 'timeJump', this.value)">
+                </div>
+            </div>
+
+            <!-- CHARACTER CONTINUITY SECTION -->
+            <div class="breakdown-section character-section">
+                <h4 class="section-title">CHARACTER CONTINUITY</h4>
+                ${characters.length > 0 ?
+                    characters.map(char => renderCharacterFields(char, sceneIndex, scene)).join('')
+                    : '<div class="no-characters">No characters in this scene</div>'}
+            </div>
+
+            <!-- CONTINUITY EVENTS SECTION -->
+            <div class="breakdown-section events-section">
+                <h4 class="section-title">CONTINUITY EVENTS</h4>
+                <div class="event-controls">
+                    <button class="small-btn" onclick="startNewEvent(${sceneIndex})">+ Start Event</button>
+                    <button class="small-btn" onclick="linkExistingEvent(${sceneIndex})">Link Event</button>
+                </div>
+                <div id="scene-events">
+                    ${renderSceneEvents(sceneIndex)}
+                </div>
+            </div>
+
+            <!-- NAVIGATION -->
+            <div class="breakdown-nav">
+                <button onclick="navigateToScene(${sceneIndex - 1})"
+                        ${sceneIndex === 0 ? 'disabled' : ''}>
+                    ← Previous
+                </button>
+                <span>${sceneIndex + 1} / ${state.scenes.length}</span>
+                <button onclick="navigateToScene(${sceneIndex + 1})"
+                        ${sceneIndex >= state.scenes.length - 1 ? 'disabled' : ''}>
+                    Next →
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Render character continuity fields with enter/change/exit tracking
+ * @param {string} character - Character name
+ * @param {number} sceneIndex - Scene index
+ * @param {Object} scene - Scene object
+ * @returns {string} HTML for character fields
+ */
+function renderCharacterFields(character, sceneIndex, scene) {
+    const charData = state.characterStates[sceneIndex]?.[character] || {};
+    const prevScene = findPreviousCharacterAppearance(character, sceneIndex);
+
+    return `
+        <div class="character-continuity-block" data-character="${escapeHtml(character)}">
+            <div class="character-header">
+                <h5>${escapeHtml(character)}</h5>
+                <button class="copy-btn"
+                        onclick="copyFromPrevious('${escapeHtml(character).replace(/'/g, "\\'")}', ${sceneIndex})"
+                        title="Copy from previous scene">
+                    ↓ Copy Previous
+                </button>
+            </div>
+
+            <!-- ENTERS WITH -->
+            <div class="continuity-row">
+                <label class="row-label">Enters with:</label>
+                <div class="continuity-fields">
+                    <input type="text"
+                           placeholder="Hair"
+                           value="${escapeHtml(charData.enterHair || '')}"
+                           onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'enterHair', this.value)">
+                    <input type="text"
+                           placeholder="Makeup"
+                           value="${escapeHtml(charData.enterMakeup || '')}"
+                           onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'enterMakeup', this.value)">
+                    <input type="text"
+                           placeholder="Wardrobe"
+                           value="${escapeHtml(charData.enterWardrobe || '')}"
+                           onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'enterWardrobe', this.value)">
+                    <input type="text"
+                           placeholder="Condition"
+                           value="${escapeHtml(charData.enterCondition || '')}"
+                           onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'enterCondition', this.value)">
+                </div>
+            </div>
+
+            <!-- CHANGES DURING -->
+            <div class="continuity-row">
+                <label class="row-label">Changes:</label>
+                <div class="continuity-fields">
+                    <textarea placeholder="Describe any changes during the scene..."
+                              onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'changes', this.value)"
+                              >${escapeHtml(charData.changes || '')}</textarea>
+                </div>
+            </div>
+
+            <!-- EXITS WITH -->
+            <div class="continuity-row">
+                <label class="row-label">Exits with:</label>
+                <div class="continuity-fields">
+                    <input type="text"
+                           placeholder="Hair"
+                           value="${escapeHtml(charData.exitHair || '')}"
+                           onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'exitHair', this.value)">
+                    <input type="text"
+                           placeholder="Makeup"
+                           value="${escapeHtml(charData.exitMakeup || '')}"
+                           onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'exitMakeup', this.value)">
+                    <input type="text"
+                           placeholder="Wardrobe"
+                           value="${escapeHtml(charData.exitWardrobe || '')}"
+                           onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'exitWardrobe', this.value)">
+                    <input type="text"
+                           placeholder="Condition"
+                           value="${escapeHtml(charData.exitCondition || '')}"
+                           onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'exitCondition', this.value)">
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Render scene events list
+ * @param {number} sceneIndex - Scene index
+ * @returns {string} HTML for scene events
+ */
+function renderSceneEvents(sceneIndex) {
+    const events = Array.from(window.continuityTracker?.events?.values() || []);
+    const sceneEvents = events.filter(e =>
+        sceneIndex >= e.startScene && (!e.endScene || sceneIndex <= e.endScene)
+    );
+
+    if (sceneEvents.length === 0) {
+        return '<div class="no-events">No active continuity events</div>';
+    }
+
+    return sceneEvents.map(event => `
+        <div class="event-item">
+            <div class="event-header">
+                <span class="event-type">${escapeHtml(event.type)}</span>
+                <span class="event-character">${escapeHtml(event.character)}</span>
+            </div>
+            <div class="event-description">${escapeHtml(event.description)}</div>
+            <div class="event-status">
+                Scene ${event.startScene + 1} → ${event.endScene ? `Scene ${event.endScene + 1}` : 'Ongoing'}
+            </div>
+        </div>
+    `).join('');
+}
+
+/**
+ * Find previous appearance of character
+ * @param {string} character - Character name
+ * @param {number} currentSceneIndex - Current scene index
+ * @returns {Object|null} Previous character state or null
+ */
+function findPreviousCharacterAppearance(character, currentSceneIndex) {
+    for (let i = currentSceneIndex - 1; i >= 0; i--) {
+        const breakdown = state.sceneBreakdowns[i];
+        if (breakdown?.cast?.includes(character) && state.characterStates[i]?.[character]) {
+            return state.characterStates[i][character];
+        }
+    }
+    return null;
+}
+
+/**
+ * Update scene field
+ * @param {number} sceneIndex - Scene index
+ * @param {string} field - Field name
+ * @param {*} value - Field value
+ */
+window.updateSceneField = function(sceneIndex, field, value) {
+    if (!state.scenes[sceneIndex]) return;
+
+    state.scenes[sceneIndex][field] = value;
+    saveToLocalStorage();
+    console.log(`Updated scene ${sceneIndex} ${field}: ${value}`);
+};
+
+/**
+ * Update character field
+ * @param {number} sceneIndex - Scene index
+ * @param {string} character - Character name
+ * @param {string} field - Field name
+ * @param {*} value - Field value
+ */
+window.updateCharField = function(sceneIndex, character, field, value) {
+    const scene = state.scenes[sceneIndex];
+    if (!scene) return;
+
+    if (!state.characterStates[sceneIndex]) state.characterStates[sceneIndex] = {};
+    if (!state.characterStates[sceneIndex][character]) state.characterStates[sceneIndex][character] = {};
+
+    state.characterStates[sceneIndex][character][field] = value;
+    saveToLocalStorage();
+    console.log(`Updated ${character} ${field}: ${value}`);
+};
+
+/**
+ * Save to localStorage
+ */
+function saveToLocalStorage() {
+    import('./export-handlers.js').then(module => module.saveProject());
+}
+
+/**
+ * Copy character state from previous scene
+ * @param {string} character - Character name
+ * @param {number} sceneIndex - Current scene index
+ */
+window.copyFromPrevious = function(character, sceneIndex) {
+    const prevState = findPreviousCharacterAppearance(character, sceneIndex);
+    if (!prevState) {
+        alert('No previous appearance found for ' + character);
+        return;
+    }
+
+    if (!state.characterStates[sceneIndex]) {
+        state.characterStates[sceneIndex] = {};
+    }
+    if (!state.characterStates[sceneIndex][character]) {
+        state.characterStates[sceneIndex][character] = {};
+    }
+
+    // Copy exit states from previous scene to enter states of current scene
+    state.characterStates[sceneIndex][character] = {
+        ...state.characterStates[sceneIndex][character],
+        enterHair: prevState.exitHair || prevState.enterHair || prevState.hair || '',
+        enterMakeup: prevState.exitMakeup || prevState.enterMakeup || prevState.makeup || '',
+        enterWardrobe: prevState.exitWardrobe || prevState.enterWardrobe || prevState.wardrobe || '',
+        enterCondition: prevState.exitCondition || prevState.enterCondition || ''
+    };
+
+    renderSceneBreakdown(sceneIndex);
+    saveToLocalStorage();
+};
+
+/**
+ * Start new continuity event
+ * @param {number} sceneIndex - Scene index
+ */
+window.startNewEvent = function(sceneIndex) {
+    const breakdown = state.sceneBreakdowns[sceneIndex];
+    const cast = breakdown?.cast || [];
+
+    if (cast.length === 0) {
+        alert('No characters in this scene. Add characters first.');
+        return;
+    }
+
+    const character = prompt(`Character name (${cast.join(', ')}):`);
+    if (!character || !cast.includes(character)) {
+        alert('Invalid character name');
+        return;
+    }
+
+    const type = prompt('Event type (injury, condition, transformation, wardrobe_change, makeup_effect):');
+    if (!type) return;
+
+    const description = prompt('Description:');
+    if (!description) return;
+
+    if (window.continuityTracker) {
+        window.continuityTracker.createEvent(sceneIndex, character, type, description);
+        renderSceneBreakdown(sceneIndex);
+        saveToLocalStorage();
+    } else {
+        alert('Continuity tracker not available');
+    }
+};
+
+/**
+ * Link to existing event
+ * @param {number} sceneIndex - Scene index
+ */
+window.linkExistingEvent = function(sceneIndex) {
+    alert('Feature coming soon: Link this scene to an existing continuity event');
+};
 
 // ============================================================================
 // COMPREHENSIVE BREAKDOWN RENDERING (Character States & Continuity Events)
