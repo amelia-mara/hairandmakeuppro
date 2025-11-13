@@ -61,7 +61,8 @@ export const state = {
     // AI Configuration
     aiProvider: 'openai',         // 'openai' or 'anthropic'
     apiKey: '',                   // Stored in localStorage
-    openaiModel: 'gpt-4o',       // Selected model
+    openaiModel: 'gpt-4o',       // Selected OpenAI model
+    anthropicModel: 'claude-3-5-sonnet-20241022', // Selected Anthropic model
 
     // App state
     isInitialized: false,
@@ -140,8 +141,11 @@ function loadAISettings() {
     const apiKey = localStorage.getItem('apiKey');
     if (apiKey) state.apiKey = apiKey;
 
-    const model = localStorage.getItem('openaiModel');
-    if (model) state.openaiModel = model;
+    const openaiModel = localStorage.getItem('openaiModel');
+    if (openaiModel) state.openaiModel = openaiModel;
+
+    const anthropicModel = localStorage.getItem('anthropicModel');
+    if (anthropicModel) state.anthropicModel = anthropicModel;
 }
 
 /**
