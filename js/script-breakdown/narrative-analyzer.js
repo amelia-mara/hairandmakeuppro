@@ -424,3 +424,461 @@ Return ONLY valid JSON (no markdown, no explanations):
  * Global instance
  */
 export const narrativeAnalyzer = new NarrativeAnalyzer();
+
+// ============================================================================
+// PERSISTENT CONTEXT SYSTEM
+// ============================================================================
+
+/**
+ * Perform comprehensive analysis with persistent context
+ * This creates a master context that ALL future AI operations will reference
+ */
+export async function performComprehensiveAnalysis(scriptText, scriptTitle = 'Untitled') {
+    console.log('🎬 Starting comprehensive analysis with persistent context...');
+
+    const sceneCount = state.scenes?.length || 0;
+
+    const prompt = `Perform a COMPLETE breakdown analysis of this screenplay for hair/makeup/continuity department.
+This analysis will be used as reference for ALL future operations, so be extremely thorough.
+
+SCREENPLAY TITLE: ${scriptTitle}
+TOTAL SCENES: ${sceneCount}
+
+SCREENPLAY TEXT:
+${scriptText.substring(0, 100000)}
+
+Return comprehensive JSON with this EXACT structure:
+{
+    "scriptTitle": "${scriptTitle}",
+    "totalScenes": ${sceneCount},
+    "genre": "genre/tone description",
+    "storyTimeline": {
+        "totalDays": 0,
+        "dayBreakdown": [
+            {
+                "day": "Day 1",
+                "scenes": [1, 2, 3],
+                "timeProgression": ["morning", "afternoon", "evening"],
+                "events": ["key story events"]
+            }
+        ],
+        "specialTimelines": {
+            "flashbacks": [],
+            "flashforwards": [],
+            "dreams": []
+        }
+    },
+    "characters": {
+        "CHARACTER_NAME": {
+            "fullName": "Full Name",
+            "importance": 1-10,
+            "role": "protagonist/antagonist/supporting",
+            "arc": "brief character arc description",
+            "firstAppearance": 1,
+            "lastAppearance": 10,
+            "sceneList": [1, 2, 5, 10],
+            "totalScenes": 4,
+            "visualJourney": [
+                {
+                    "scene": 1,
+                    "storyDay": "Day 1",
+                    "timeOfDay": "morning",
+                    "entering": {
+                        "hair": "description",
+                        "makeup": "description",
+                        "wardrobe": "description",
+                        "overall": "general appearance"
+                    },
+                    "changes": [],
+                    "exiting": {
+                        "hair": "description",
+                        "makeup": "description",
+                        "wardrobe": "description"
+                    },
+                    "continuityNotes": "important notes"
+                }
+            ],
+            "continuityEvents": [],
+            "baseAppearance": {
+                "hair": "base hair description",
+                "makeup": "base makeup style",
+                "skinTone": "description",
+                "specialFeatures": []
+            },
+            "keyLooks": []
+        }
+    },
+    "allContinuityEvents": [],
+    "sceneSynopses": {
+        "1": "scene synopsis with continuity focus",
+        "2": "scene synopsis with continuity focus"
+    },
+    "continuityRules": [],
+    "weatherProgression": {},
+    "locationNotes": {}
+}
+
+CRITICAL: Be thorough. This is the ONLY time you'll see the full script. Return valid JSON only.`;
+
+    try {
+        const response = await callAI(prompt, 10000);
+
+        // Clean response
+        let cleanedResponse = response.trim();
+        if (cleanedResponse.startsWith('```json')) {
+            cleanedResponse = cleanedResponse.replace(/^```json\n/, '').replace(/\n```$/, '');
+        } else if (cleanedResponse.startsWith('```')) {
+            cleanedResponse = cleanedResponse.replace(/^```\n/, '').replace(/\n```$/, '');
+        }
+
+        const masterContext = JSON.parse(cleanedResponse);
+
+        // Validate structure
+        if (!masterContext.characters || !masterContext.storyTimeline) {
+            throw new Error('Invalid master context structure');
+        }
+
+        // Store in multiple places for redundancy
+        masterContext.createdAt = new Date().toISOString();
+        masterContext.scriptTitle = scriptTitle;
+
+        window.scriptMasterContext = masterContext;
+        localStorage.setItem('scriptMasterContext', JSON.stringify(masterContext));
+        sessionStorage.setItem('currentScriptContext', JSON.stringify(masterContext));
+
+        console.log('✅ Master context created successfully:', masterContext);
+
+        return masterContext;
+    } catch (error) {
+        console.error('❌ Failed to create master context:', error);
+        throw new Error(`Comprehensive analysis failed: ${error.message}`);
+    }
+}
+
+/**
+ * Create abbreviated context for token efficiency
+ */
+export function createAbbreviatedContext(masterContext) {
+    return {
+        scriptTitle: masterContext.scriptTitle,
+        totalScenes: masterContext.totalScenes,
+        characterList: Object.keys(masterContext.characters || {}),
+        storyDays: masterContext.storyTimeline?.totalDays,
+        genre: masterContext.genre,
+        majorEvents: (masterContext.allContinuityEvents || []).slice(0, 10)
+    };
+}
+
+/**
+ * Context-aware AI wrapper
+ */
+export async function callAIWithContext(task, additionalData = {}, useFullContext = false) {
+    const masterContext = window.scriptMasterContext ||
+                         JSON.parse(localStorage.getItem('scriptMasterContext') || 'null');
+
+    if (!masterContext) {
+        throw new Error('No master context found. Please analyze script first.');
+    }
+
+    const contextToUse = useFullContext ? masterContext : createAbbreviatedContext(masterContext);
+
+    const contextualPrompt = `MASTER CONTEXT (reference for all decisions):
+${JSON.stringify(contextToUse, null, 2)}
+
+CURRENT TASK:
+${task}
+
+ADDITIONAL DATA:
+${JSON.stringify(additionalData, null, 2)}
+
+Base response on master context. Maintain continuity. Return in requested format.`;
+
+    return await callAI(contextualPrompt);
+}
+
+/**
+ * Generate synopsis with context
+ */
+export async function generateContextualSynopsis(sceneIndex) {
+    const scene = state.scenes[sceneIndex];
+    if (!scene) return '';
+
+    const masterContext = window.scriptMasterContext;
+    if (masterContext?.sceneSynopses?.[sceneIndex + 1]) {
+        return masterContext.sceneSynopses[sceneIndex + 1];
+    }
+
+    const task = `Generate concise synopsis for Scene ${sceneIndex + 1} with continuity focus.
+
+Scene: ${scene.heading}
+Content: ${scene.text.substring(0, 1000)}
+
+Include: who appears, continuity notes, story context.
+Return plain text (2-3 sentences).`;
+
+    const additionalData = {
+        sceneNumber: sceneIndex + 1,
+        sceneHeading: scene.heading,
+        previousScene: sceneIndex > 0 ? {
+            heading: state.scenes[sceneIndex - 1]?.heading,
+            synopsis: state.scenes[sceneIndex - 1]?.synopsis
+        } : null
+    };
+
+    return await callAIWithContext(task, additionalData, false);
+}
+
+/**
+ * Tag scene with context
+ */
+export async function tagSceneWithContext(sceneIndex) {
+    const scene = state.scenes[sceneIndex];
+    if (!scene) return null;
+
+    const task = `Analyze Scene ${sceneIndex + 1} and identify hair/makeup/continuity elements.
+
+Scene: ${scene.heading}
+Content: ${scene.text.substring(0, 1500)}
+
+Return JSON:
+{
+    "cast": ["Character Name"],
+    "hair": [],
+    "makeup": [],
+    "sfx": [],
+    "injuries": [],
+    "health": [],
+    "wardrobe": [],
+    "weather": [],
+    "continuityNotes": []
+}
+
+Match character names exactly. Return valid JSON only.`;
+
+    const additionalData = {
+        sceneNumber: sceneIndex + 1,
+        sceneHeading: scene.heading,
+        previousTags: sceneIndex > 0 ? state.scriptTags?.[sceneIndex - 1] : null
+    };
+
+    try {
+        const response = await callAIWithContext(task, additionalData, false);
+        return JSON.parse(response);
+    } catch (error) {
+        console.error('Error tagging scene:', error);
+        return null;
+    }
+}
+
+/**
+ * Generate timeline with context
+ */
+export async function generateContextualTimeline(characterName) {
+    const masterContext = window.scriptMasterContext;
+
+    if (masterContext?.characters?.[characterName]?.visualJourney) {
+        return {
+            character: characterName,
+            timeline: masterContext.characters[characterName].visualJourney,
+            continuityEvents: masterContext.characters[characterName].continuityEvents || [],
+            totalScenes: masterContext.characters[characterName].totalScenes || 0
+        };
+    }
+
+    const task = `Create detailed visual timeline for ${characterName}.
+
+Use master context to generate scene-by-scene appearance tracking, continuity events, progression.
+
+Return JSON with timeline array and continuity events.`;
+
+    const additionalData = {
+        characterName: characterName,
+        characterScenes: masterContext?.characters?.[characterName]?.sceneList || []
+    };
+
+    try {
+        const response = await callAIWithContext(task, additionalData, true);
+        return JSON.parse(response);
+    } catch (error) {
+        console.error('Error generating timeline:', error);
+        return null;
+    }
+}
+
+/**
+ * Generate lookbook with context
+ */
+export async function generateContextualLookbook(characterName) {
+    const masterContext = window.scriptMasterContext;
+    const characterData = masterContext?.characters?.[characterName];
+
+    if (characterData) {
+        return {
+            character: characterName,
+            baseAppearance: characterData.baseAppearance || {},
+            keyLooks: characterData.keyLooks || [],
+            continuityEvents: characterData.continuityEvents || [],
+            arc: characterData.arc || '',
+            totalScenes: characterData.totalScenes || 0
+        };
+    }
+
+    const task = `Create professional lookbook for ${characterName} for hair/makeup department.
+
+Compile base appearance, key looks, continuity requirements, special needs.
+
+Return JSON with structured lookbook data.`;
+
+    try {
+        const response = await callAIWithContext(task, {characterName}, true);
+        return JSON.parse(response);
+    } catch (error) {
+        console.error('Error generating lookbook:', error);
+        return null;
+    }
+}
+
+/**
+ * Context verification
+ */
+export function verifyContext() {
+    if (!window.scriptMasterContext) {
+        const stored = localStorage.getItem('scriptMasterContext');
+        if (stored) {
+            try {
+                window.scriptMasterContext = JSON.parse(stored);
+                console.log('✅ Master context restored from localStorage');
+                return true;
+            } catch (error) {
+                console.error('❌ Failed to parse stored context:', error);
+                return false;
+            }
+        }
+
+        const sessionStored = sessionStorage.getItem('currentScriptContext');
+        if (sessionStored) {
+            try {
+                window.scriptMasterContext = JSON.parse(sessionStored);
+                console.log('✅ Master context restored from sessionStorage');
+                return true;
+            } catch (error) {
+                console.error('❌ Failed to parse session context:', error);
+                return false;
+            }
+        }
+
+        console.warn('⚠️ No master context found');
+        return false;
+    }
+
+    return true;
+}
+
+/**
+ * Get master context
+ */
+export function getMasterContext() {
+    if (verifyContext()) {
+        return window.scriptMasterContext;
+    }
+    return null;
+}
+
+/**
+ * Check if context ready
+ */
+export function isContextReady() {
+    return verifyContext() && window.contextReady === true;
+}
+
+/**
+ * Clear master context
+ */
+export function clearMasterContext() {
+    window.scriptMasterContext = null;
+    window.contextReady = false;
+    localStorage.removeItem('scriptMasterContext');
+    sessionStorage.removeItem('currentScriptContext');
+    console.log('🗑️ Master context cleared');
+}
+
+/**
+ * Populate state from master context
+ */
+export function populateFromMasterContext(context) {
+    console.log('📊 Populating from master context...');
+
+    // Pre-populate synopses
+    if (context.sceneSynopses) {
+        Object.entries(context.sceneSynopses).forEach(([sceneNum, synopsis]) => {
+            const sceneIndex = parseInt(sceneNum) - 1;
+            if (state.scenes[sceneIndex]) {
+                state.scenes[sceneIndex].synopsis = synopsis;
+            }
+        });
+    }
+
+    // Pre-populate characters
+    if (context.characters) {
+        window.confirmedCharacters = Object.keys(context.characters);
+        window.characterImportance = {};
+
+        Object.entries(context.characters).forEach(([name, data]) => {
+            window.characterImportance[name] = {
+                importance: data.importance,
+                role: data.role,
+                totalScenes: data.totalScenes,
+                arc: data.arc
+            };
+
+            if (data.baseAppearance) {
+                if (!state.castProfiles[name]) {
+                    state.castProfiles[name] = {};
+                }
+                state.castProfiles[name].baseAppearance = data.baseAppearance;
+            }
+        });
+    }
+
+    // Pre-populate timeline
+    if (context.storyTimeline?.dayBreakdown) {
+        context.storyTimeline.dayBreakdown.forEach(dayData => {
+            dayData.scenes.forEach((sceneNum, idx) => {
+                const sceneIndex = sceneNum - 1;
+                if (!state.sceneTimeline[sceneIndex]) {
+                    state.sceneTimeline[sceneIndex] = {};
+                }
+                state.sceneTimeline[sceneIndex].day = dayData.day;
+                state.sceneTimeline[sceneIndex].time = dayData.timeProgression?.[idx] || '';
+            });
+        });
+    }
+
+    console.log('✅ Application state populated from master context');
+}
+
+/**
+ * Show context status
+ */
+export function showContextStatus() {
+    const context = getMasterContext();
+    if (!context) {
+        return 'No context available';
+    }
+    return `Context loaded: ${context.scriptTitle} (${context.totalScenes} scenes, ${Object.keys(context.characters || {}).length} characters)`;
+}
+
+// Expose globals
+window.performComprehensiveAnalysis = performComprehensiveAnalysis;
+window.callAIWithContext = callAIWithContext;
+window.verifyContext = verifyContext;
+window.getMasterContext = getMasterContext;
+window.clearMasterContext = clearMasterContext;
+window.isContextReady = isContextReady;
+window.showContextStatus = showContextStatus;
+window.populateFromMasterContext = populateFromMasterContext;
+window.generateContextualSynopsis = generateContextualSynopsis;
+window.tagSceneWithContext = tagSceneWithContext;
+window.generateContextualTimeline = generateContextualTimeline;
+window.generateContextualLookbook = generateContextualLookbook;
+

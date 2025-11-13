@@ -2630,3 +2630,54 @@ window.generateCharacterLookbooks = generateCharacterLookbooks;
 window.exportTimeline = exportTimeline;
 window.exportLookbook = exportLookbook;
 window.exportBible = exportBible;
+
+/**
+ * Initialize comprehensive AI context after script import
+ * This should be called after parseScreenplay and scene setup
+ */
+window.initializeAIContext = async function() {
+    if (!state.scriptData || !state.scenes || state.scenes.length === 0) {
+        console.warn('Cannot initialize AI context: No script data loaded');
+        return false;
+    }
+
+    try {
+        // Import narrative analyzer
+        const { performComprehensiveAnalysis, populateFromMasterContext } = await import('./narrative-analyzer.js');
+
+        // Get full script text
+        const fullScriptText = state.scenes.map((scene, idx) => {
+            return `SCENE ${idx + 1}
+${scene.heading || ''}
+
+${scene.text || scene.content || ''}`;
+        }).join('\n\n═══════════════════════════\n\n');
+
+        const scriptTitle = state.scriptData?.title || state.currentProject || 'Untitled';
+
+        // Show progress
+        showToast('Creating AI context...', 'info');
+
+        // Perform comprehensive analysis
+        const masterContext = await performComprehensiveAnalysis(fullScriptText, scriptTitle);
+
+        if (masterContext) {
+            // Populate application state from context
+            populateFromMasterContext(masterContext);
+
+            // Mark context as ready
+            window.contextReady = true;
+
+            showToast('AI context created successfully', 'success');
+            console.log('✅ AI context initialized successfully');
+
+            return true;
+        }
+
+        return false;
+    } catch (error) {
+        console.error('Failed to initialize AI context:', error);
+        showToast('AI context creation failed: ' + error.message, 'error');
+        return false;
+    }
+};
