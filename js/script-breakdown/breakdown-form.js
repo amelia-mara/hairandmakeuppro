@@ -9,11 +9,13 @@
  * - Display scene metadata and navigation
  * - Show look states and transition indicators
  * - Handle AI fill for character fields
+ * - Integrate with enhanced workflow manager
  */
 
 import { state } from './main.js';
 import { formatSceneRange, getComplexityIcon, extractLocation, detectTimeOfDay, detectIntExt } from './utils.js';
 import { detectAIElements, generateDescription } from './ai-integration.js';
+import './breakdown-manager.js'; // Import enhanced workflow manager
 
 // Element categories
 const categories = [
@@ -34,6 +36,7 @@ let currentElementCategory = null;
 
 /**
  * Render the breakdown panel for the current scene
+ * Automatically uses enhanced workflow if enabled
  */
 export function renderBreakdownPanel() {
     const container = document.getElementById('breakdown-panel');
@@ -48,6 +51,54 @@ export function renderBreakdownPanel() {
         `;
         return;
     }
+
+    // Check if enhanced workflow should be used
+    const useEnhancedWorkflow = shouldUseEnhancedWorkflow();
+
+    if (useEnhancedWorkflow && window.breakdownManager) {
+        // Use enhanced workflow manager
+        window.breakdownManager.loadSceneBreakdown(state.currentScene);
+        return;
+    }
+
+    // Fall back to classic breakdown rendering
+    renderClassicBreakdown();
+}
+
+/**
+ * Check if enhanced workflow should be used
+ * @returns {boolean} True if enhanced workflow should be used
+ */
+function shouldUseEnhancedWorkflow() {
+    // Use enhanced workflow if:
+    // 1. Narrative context is available
+    // 2. User preference is enabled (stored in localStorage)
+    // 3. Breakdown manager is available
+
+    const hasNarrativeContext = window.scriptNarrativeContext &&
+                                 window.scriptNarrativeContext.characters;
+
+    // Check user preference
+    let userPreference = localStorage.getItem('useEnhancedBreakdown');
+
+    // If no preference set yet and narrative context is available, set it to true
+    if (userPreference === null && hasNarrativeContext) {
+        localStorage.setItem('useEnhancedBreakdown', 'true');
+        userPreference = 'true';
+    }
+
+    // Default to enhanced if narrative context available
+    const useEnhanced = userPreference === null ? hasNarrativeContext : userPreference === 'true';
+
+    return useEnhanced && typeof window.breakdownManager !== 'undefined';
+}
+
+/**
+ * Render classic breakdown panel
+ */
+function renderClassicBreakdown() {
+    const container = document.getElementById('breakdown-panel');
+    if (!container) return;
 
     const scene = state.scenes[state.currentScene];
     const breakdown = state.sceneBreakdowns[state.currentScene] || {};

@@ -119,15 +119,20 @@ function renderExpandedDetails(scene, cast, elementCounts) {
             </div>
 
             <!-- SYNOPSIS SECTION -->
-            <div class="scene-synopsis-section">
+            <div class="scene-synopsis-section" data-scene-index="${sceneIndex}">
                 <div class="scene-synopsis-header">
                     <span class="scene-synopsis-label">📝 Synopsis</span>
-                    <button class="scene-synopsis-generate-btn" onclick="event.stopPropagation(); handleGenerateSceneSynopsis(${sceneIndex})">
-                        Generate AI
-                    </button>
+                    ${scene.synopsis
+                        ? `<button class="scene-synopsis-edit-btn" onclick="event.stopPropagation(); handleEditSynopsis(${sceneIndex})" title="Edit synopsis">
+                            ✏️
+                        </button>`
+                        : `<button class="scene-synopsis-generate-btn" onclick="event.stopPropagation(); handleGenerateSceneSynopsis(${sceneIndex})">
+                            Generate AI
+                        </button>`
+                    }
                 </div>
                 ${scene.synopsis
-                    ? `<div class="scene-synopsis">${escapeHtml(scene.synopsis)}</div>`
+                    ? `<div class="scene-synopsis" data-original-synopsis="${escapeHtml(scene.synopsis).replace(/"/g, '&quot;')}">${escapeHtml(scene.synopsis)}</div>`
                     : `<div class="scene-synopsis placeholder">No synopsis yet - click Generate AI</div>`
                 }
             </div>
@@ -211,9 +216,147 @@ async function handleGenerateSceneSynopsis(sceneIndex) {
 }
 
 // ============================================================================
+// SYNOPSIS EDITING
+// ============================================================================
+
+/**
+ * Handle entering edit mode for a scene synopsis
+ */
+function handleEditSynopsis(sceneIndex) {
+    const synopsisSection = document.querySelector(`.scene-synopsis-section[data-scene-index="${sceneIndex}"]`);
+    if (!synopsisSection) return;
+
+    const synopsisDiv = synopsisSection.querySelector('.scene-synopsis');
+    if (!synopsisDiv) return;
+
+    // Store original text for cancel
+    const originalText = synopsisDiv.textContent;
+    synopsisDiv.setAttribute('data-original-synopsis', originalText);
+
+    // Make editable
+    synopsisDiv.contentEditable = 'true';
+    synopsisDiv.classList.add('editing');
+    synopsisDiv.focus();
+
+    // Select all text
+    const range = document.createRange();
+    range.selectNodeContents(synopsisDiv);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+
+    // Replace header buttons with save/cancel
+    const header = synopsisSection.querySelector('.scene-synopsis-header');
+    const originalButtonsHtml = header.innerHTML;
+    header.setAttribute('data-original-buttons', originalButtonsHtml);
+
+    header.innerHTML = `
+        <span class="scene-synopsis-label">📝 Synopsis</span>
+        <div class="synopsis-edit-actions">
+            <button class="synopsis-save-btn" onclick="event.stopPropagation(); handleSaveSynopsis(${sceneIndex})" title="Save (Enter)">
+                ✓
+            </button>
+            <button class="synopsis-cancel-btn" onclick="event.stopPropagation(); handleCancelSynopsis(${sceneIndex})" title="Cancel (Escape)">
+                ✗
+            </button>
+        </div>
+    `;
+
+    // Add keyboard shortcuts
+    const keydownHandler = (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSaveSynopsis(sceneIndex);
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            handleCancelSynopsis(sceneIndex);
+        }
+    };
+    synopsisDiv.addEventListener('keydown', keydownHandler);
+    synopsisDiv.setAttribute('data-has-keydown', 'true');
+}
+
+/**
+ * Handle saving edited synopsis
+ */
+async function handleSaveSynopsis(sceneIndex) {
+    const synopsisSection = document.querySelector(`.scene-synopsis-section[data-scene-index="${sceneIndex}"]`);
+    if (!synopsisSection) return;
+
+    const synopsisDiv = synopsisSection.querySelector('.scene-synopsis');
+    if (!synopsisDiv) return;
+
+    // Get the edited text
+    const newText = synopsisDiv.textContent.trim();
+
+    // Save to state
+    state.scenes[sceneIndex].synopsis = newText;
+    state.scenes[sceneIndex].synopsisManuallyEdited = true;
+
+    // Also save to sceneBreakdowns if it exists
+    if (!state.sceneBreakdowns[sceneIndex]) {
+        state.sceneBreakdowns[sceneIndex] = {};
+    }
+    state.sceneBreakdowns[sceneIndex].synopsis = newText;
+    state.sceneBreakdowns[sceneIndex].synopsisManuallyEdited = true;
+
+    // Save project
+    try {
+        const { saveProject } = await import('./export-handlers.js');
+        saveProject();
+    } catch (error) {
+        console.error('Error saving project:', error);
+    }
+
+    // Exit edit mode and re-render
+    exitEditMode(sceneIndex);
+    renderSceneList();
+
+    // Also update breakdown panel if it's open for this scene
+    if (state.currentScene === sceneIndex) {
+        try {
+            const { renderBreakdownPanel } = await import('./breakdown-form.js');
+            renderBreakdownPanel();
+        } catch (error) {
+            console.error('Error updating breakdown panel:', error);
+        }
+    }
+}
+
+/**
+ * Handle canceling synopsis edit
+ */
+function handleCancelSynopsis(sceneIndex) {
+    exitEditMode(sceneIndex);
+    renderSceneList();
+}
+
+/**
+ * Exit edit mode and restore original state
+ */
+function exitEditMode(sceneIndex) {
+    const synopsisSection = document.querySelector(`.scene-synopsis-section[data-scene-index="${sceneIndex}"]`);
+    if (!synopsisSection) return;
+
+    const synopsisDiv = synopsisSection.querySelector('.scene-synopsis');
+    if (synopsisDiv) {
+        synopsisDiv.contentEditable = 'false';
+        synopsisDiv.classList.remove('editing');
+
+        // Remove keydown listener if it was added
+        if (synopsisDiv.getAttribute('data-has-keydown')) {
+            synopsisDiv.removeAttribute('data-has-keydown');
+        }
+    }
+}
+
+// ============================================================================
 // EXPOSE GLOBAL FUNCTIONS
 // ============================================================================
 
 // Make functions available globally for HTML onclick handlers (legacy support)
 window.renderSceneList = renderSceneList;
 window.handleGenerateSceneSynopsis = handleGenerateSceneSynopsis;
+window.handleEditSynopsis = handleEditSynopsis;
+window.handleSaveSynopsis = handleSaveSynopsis;
+window.handleCancelSynopsis = handleCancelSynopsis;

@@ -316,6 +316,7 @@ function aggressiveDeduplicate() {
 
 import { state } from './main.js';
 import { formatSceneRange, getComplexityIcon } from './utils.js';
+import { buildCharacterProfile } from './character-profiles.js';
 
 /**
  * Render character tabs in center panel with file divider system
@@ -616,12 +617,43 @@ function renderCharacterQuickEditor(character) {
 }
 
 /**
+ * Render enhanced character profile with narrative context
+ * @param {string} character - Character name
+ * @returns {string} HTML for enhanced character profile
+ */
+function renderEnhancedCharacterProfile(character) {
+    try {
+        return buildCharacterProfile(character);
+    } catch (error) {
+        console.error('Error building character profile:', error);
+        return `
+            <div class="empty-state" style="margin-top: 40px;">
+                <div class="empty-title">Error Loading Profile</div>
+                <div class="empty-desc">${escapeHtml(error.message)}</div>
+            </div>
+        `;
+    }
+}
+
+/**
  * Render character timeline
  * Shows look states, transitions, and story day progression
+ * If narrative context is available, uses enhanced profile system
  * @param {string} character - Character name
  * @returns {string} HTML for character timeline
  */
 export function renderCharacterTimeline(character) {
+    // Check if narrative context is available and use enhanced profile
+    if (window.scriptNarrativeContext && window.scriptNarrativeContext.characters) {
+        try {
+            // Use enhanced profile system
+            return renderEnhancedCharacterProfile(character);
+        } catch (error) {
+            console.error('Error rendering enhanced profile, falling back to classic view:', error);
+        }
+    }
+
+    // Fallback to classic timeline view
     const profile = state.castProfiles[character] || {};
     const looks = state.characterLooks[character] || [];
     const events = state.continuityEvents[character] || [];
