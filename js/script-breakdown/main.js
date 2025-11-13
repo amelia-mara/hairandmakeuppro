@@ -18,6 +18,11 @@ import { saveProject, loadProjectData } from './export-handlers.js';
 import { openSettingsModal } from './ai-integration.js';
 import { renderAllHighlights } from './tag-system.js';
 import { debounce } from './utils.js';
+// Hybrid breakdown system imports
+import './hybrid-breakdown-manager.js';
+import './hybrid-ui.js';
+import './hybrid-renderer.js';
+import './hybrid-export.js';
 
 // ============================================================================
 // GLOBAL APPLICATION STATE
