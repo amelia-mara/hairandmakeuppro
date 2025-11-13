@@ -26,8 +26,19 @@ export function openSettingsModal() {
 
     // Load current settings into form
     document.getElementById('ai-provider').value = state.aiProvider;
-    document.getElementById('api-key').value = state.apiKey || '';
+
+    // Load OpenAI settings
+    const openaiKey = localStorage.getItem('openaiApiKey') || state.apiKey || '';
+    document.getElementById('openai-api-key').value = openaiKey;
     document.getElementById('openai-model').value = state.openaiModel;
+
+    // Load Anthropic settings
+    const anthropicKey = localStorage.getItem('anthropicApiKey') || '';
+    document.getElementById('anthropic-api-key').value = anthropicKey;
+    document.getElementById('anthropic-model').value = state.anthropicModel;
+
+    // Show correct provider settings
+    toggleProviderSettings();
 
     modal.style.display = 'flex';
 }
@@ -45,19 +56,147 @@ export function closeSettingsModal() {
  */
 export function saveSettings() {
     const provider = document.getElementById('ai-provider').value;
-    const apiKey = document.getElementById('api-key').value;
-    const model = document.getElementById('openai-model').value;
+
+    // Save provider selection
+    state.aiProvider = provider;
+    localStorage.setItem('aiProvider', provider);
+
+    // Save OpenAI settings
+    const openaiKey = document.getElementById('openai-api-key').value;
+    const openaiModel = document.getElementById('openai-model').value;
+    state.openaiModel = openaiModel;
+    localStorage.setItem('openaiApiKey', openaiKey);
+    localStorage.setItem('openaiModel', openaiModel);
+
+    // Save Anthropic settings
+    const anthropicKey = document.getElementById('anthropic-api-key').value;
+    const anthropicModel = document.getElementById('anthropic-model').value;
+    state.anthropicModel = anthropicModel;
+    localStorage.setItem('anthropicApiKey', anthropicKey);
+    localStorage.setItem('anthropicModel', anthropicModel);
+
+    // Set active API key based on provider
+    if (provider === 'anthropic') {
+        state.apiKey = anthropicKey;
+        localStorage.setItem('apiKey', anthropicKey);
+    } else {
+        state.apiKey = openaiKey;
+        localStorage.setItem('apiKey', openaiKey);
+    }
+
+    showToast('AI settings saved successfully', 'success');
+    closeSettingsModal();
+}
+
+/**
+ * Toggle provider-specific settings visibility
+ */
+export function toggleProviderSettings() {
+    const provider = document.getElementById('ai-provider').value;
+
+    // Hide all provider settings
+    const openaiSettings = document.getElementById('openai-settings');
+    const anthropicSettings = document.getElementById('anthropic-settings');
+
+    if (openaiSettings) openaiSettings.style.display = 'none';
+    if (anthropicSettings) anthropicSettings.style.display = 'none';
+
+    // Show selected provider settings
+    if (provider === 'anthropic' && anthropicSettings) {
+        anthropicSettings.style.display = 'block';
+    } else if (openaiSettings) {
+        openaiSettings.style.display = 'block';
+    }
+}
+
+/**
+ * Test API connection
+ */
+export async function testAPIConnection() {
+    const provider = document.getElementById('ai-provider').value;
+    let apiKey, model;
+
+    if (provider === 'anthropic') {
+        apiKey = document.getElementById('anthropic-api-key').value;
+        model = document.getElementById('anthropic-model').value;
+    } else {
+        apiKey = document.getElementById('openai-api-key').value;
+        model = document.getElementById('openai-model').value;
+    }
+
+    if (!apiKey) {
+        showToast('Please enter an API key first', 'warning');
+        return;
+    }
+
+    // Temporarily update state for test
+    const oldProvider = state.aiProvider;
+    const oldKey = state.apiKey;
+    const oldOpenAIModel = state.openaiModel;
+    const oldAnthropicModel = state.anthropicModel;
 
     state.aiProvider = provider;
     state.apiKey = apiKey;
-    state.openaiModel = model;
+    if (provider === 'openai') {
+        state.openaiModel = model;
+    } else {
+        state.anthropicModel = model;
+    }
 
-    // Save to localStorage
-    localStorage.setItem('aiProvider', provider);
-    localStorage.setItem('apiKey', apiKey);
-    localStorage.setItem('openaiModel', model);
+    try {
+        showToast('Testing connection...', 'info');
+        const response = await callAI('Respond with exactly: "Connection successful"', 50);
 
-    closeSettingsModal();
+        if (response && response.toLowerCase().includes('successful')) {
+            showToast(`✓ ${provider === 'anthropic' ? 'Claude' : 'OpenAI'} API connected successfully!`, 'success');
+        } else {
+            showToast('API responded but format unexpected', 'warning');
+        }
+    } catch (error) {
+        showToast(`✗ Connection failed: ${error.message}`, 'error');
+        console.error('API test error:', error);
+    }
+
+    // Restore original state
+    state.aiProvider = oldProvider;
+    state.apiKey = oldKey;
+    state.openaiModel = oldOpenAIModel;
+    state.anthropicModel = oldAnthropicModel;
+}
+
+/**
+ * Show toast notification
+ */
+function showToast(message, type = 'info') {
+    // Remove existing toasts
+    const existingToasts = document.querySelectorAll('.toast-notification');
+    existingToasts.forEach(t => t.remove());
+
+    const toast = document.createElement('div');
+    toast.className = `toast-notification toast-${type}`;
+    toast.textContent = message;
+    toast.style.cssText = `
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        padding: 12px 20px;
+        background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : type === 'warning' ? '#f59e0b' : '#3b82f6'};
+        color: white;
+        border-radius: 8px;
+        font-size: 0.9em;
+        font-weight: 500;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        z-index: 10000;
+        animation: slideIn 0.3s ease;
+    `;
+
+    document.body.appendChild(toast);
+
+    // Remove after 3 seconds
+    setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
 }
 
 // ============================================================================
@@ -153,8 +292,9 @@ export async function callAI(prompt, maxTokens = 500) {
                 "anthropic-version": "2023-06-01"
             },
             body: JSON.stringify({
-                model: "claude-sonnet-4-20250514",
+                model: state.anthropicModel || "claude-3-5-sonnet-20241022",
                 max_tokens: maxTokens,
+                temperature: 0.3, // Lower temperature for more consistent analysis
                 messages: [{
                     role: "user",
                     content: prompt
@@ -1232,6 +1372,8 @@ function closeCharactersNotConfirmedModal() {
 window.openSettingsModal = openSettingsModal;
 window.closeSettingsModal = closeSettingsModal;
 window.saveSettings = saveSettings;
+window.toggleProviderSettings = toggleProviderSettings;
+window.testAPIConnection = testAPIConnection;
 window.generateAllSynopses = generateAllSynopses;
 window.autoTagScript = autoTagScript;
 window.cancelBatchProcessing = cancelBatchProcessing;

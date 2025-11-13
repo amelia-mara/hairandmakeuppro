@@ -146,28 +146,55 @@
 
             <div class="modal-section">
                 <label class="modal-label">AI Provider</label>
-                <select class="modal-select" id="ai-provider">
+                <select class="modal-select" id="ai-provider" onchange="toggleProviderSettings()">
                     <option value="openai">OpenAI</option>
-                    <option value="anthropic">Anthropic</option>
+                    <option value="anthropic">Anthropic (Claude)</option>
                 </select>
             </div>
 
-            <div class="modal-section">
-                <label class="modal-label">API Key (for local testing only)</label>
-                <input type="password" class="modal-input" id="api-key" placeholder="Enter API key...">
-                <div class="modal-note">Warning: API key will be stored in localStorage. Use serverless deployment for production.</div>
+            <!-- OpenAI Settings -->
+            <div class="provider-settings" id="openai-settings">
+                <div class="modal-section">
+                    <label class="modal-label">OpenAI API Key</label>
+                    <input type="password" class="modal-input" id="openai-api-key" placeholder="sk-...">
+                    <div class="modal-note">For local testing only. Key stored in localStorage. Use serverless deployment for production.</div>
+                </div>
+
+                <div class="modal-section">
+                    <label class="modal-label">OpenAI Model</label>
+                    <select class="modal-select" id="openai-model">
+                        <option value="gpt-4o">GPT-4o (Recommended)</option>
+                        <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                        <option value="gpt-4">GPT-4</option>
+                        <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Faster/Cheaper)</option>
+                    </select>
+                </div>
             </div>
 
-            <div class="modal-section">
-                <label class="modal-label">OpenAI Model</label>
-                <select class="modal-select" id="openai-model">
-                    <option value="gpt-4o">GPT-4o</option>
-                    <option value="gpt-4">GPT-4</option>
-                    <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-                </select>
+            <!-- Anthropic Settings -->
+            <div class="provider-settings" id="anthropic-settings" style="display: none;">
+                <div class="modal-section">
+                    <label class="modal-label">Anthropic API Key</label>
+                    <input type="password" class="modal-input" id="anthropic-api-key" placeholder="sk-ant-api03-...">
+                    <div class="modal-note">For local testing only. Key stored in localStorage. Use serverless deployment for production.</div>
+                </div>
+
+                <div class="modal-section">
+                    <label class="modal-label">Claude Model</label>
+                    <select class="modal-select" id="anthropic-model">
+                        <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet (Recommended)</option>
+                        <option value="claude-3-opus-20240229">Claude 3 Opus (Best Quality)</option>
+                        <option value="claude-3-sonnet-20240229">Claude 3 Sonnet</option>
+                        <option value="claude-3-haiku-20240307">Claude 3 Haiku (Fastest/Cheapest)</option>
+                    </select>
+                    <div class="modal-note" style="margin-top: 8px; color: var(--accent-gold);">
+                        💡 Claude excels at narrative understanding and continuity tracking for screenplay analysis.
+                    </div>
+                </div>
             </div>
 
             <div class="modal-actions">
+                <button class="modal-btn" onclick="testAPIConnection()">🔌 Test Connection</button>
                 <button class="modal-btn" onclick="closeSettingsModal()">Cancel</button>
                 <button class="modal-btn primary" onclick="saveSettings()">Save Settings</button>
             </div>
@@ -370,6 +397,13 @@
             </div>
 
             <div class="tools-section">
+                <div class="tools-section-title">AI-ASSISTED BREAKDOWN</div>
+                <button class="tools-panel-btn" onclick="generateSuggestions(); closeToolsPanel();">Generate AI Suggestions</button>
+                <button class="tools-panel-btn" onclick="startReview(); closeToolsPanel();">Start Scene Review</button>
+                <button class="tools-panel-btn" onclick="clearHybridData(); closeToolsPanel();">Clear Hybrid Data</button>
+            </div>
+
+            <div class="tools-section">
                 <div class="tools-section-title">TAGGING</div>
                 <button class="tools-panel-btn" onclick="autoTagScript(event); closeToolsPanel();">Auto Tag Script</button>
             </div>
@@ -377,6 +411,9 @@
             <div class="tools-section">
                 <div class="tools-section-title">EXPORT</div>
                 <button class="tools-panel-btn" onclick="window.location.href='generate-breakdown.html'">Generate Breakdown</button>
+                <button class="tools-panel-btn" onclick="exportHybridBreakdownHTML(); closeToolsPanel();">Export Hybrid Report (HTML)</button>
+                <button class="tools-panel-btn" onclick="exportHybridBreakdownJSON(); closeToolsPanel();">Export Hybrid Data (JSON)</button>
+                <button class="tools-panel-btn" onclick="exportHybridContinuityCSV(); closeToolsPanel();">Export Continuity (CSV)</button>
             </div>
 
             <div class="tools-section">
