@@ -304,6 +304,43 @@
         </div>
     </div>
 
+    <!-- Script Supervisor Breakdown Upload Modal -->
+    <div class="modal" id="supervisor-breakdown-modal" style="display: none;">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-title">Upload Script Supervisor's Breakdown</div>
+
+            <div class="modal-section">
+                <div class="modal-note" style="margin-bottom: 16px;">
+                    Upload the official continuity breakdown to cross-reference story days, timelines, and continuity notes.
+                    Supported formats: PDF, Excel (.xlsx), CSV, or plain text (.txt)
+                </div>
+
+                <div class="file-upload-area" id="supervisor-file-upload-area" style="padding: 30px; text-align: center; border: 2px dashed var(--glass-border); border-radius: 12px; background: rgba(255, 255, 255, 0.02); cursor: pointer;">
+                    <div style="font-size: 48px; margin-bottom: 12px;">📋</div>
+                    <div style="color: var(--text-light); margin-bottom: 8px;">Click to upload or drag and drop</div>
+                    <div style="color: var(--text-muted); font-size: 0.875em;">PDF, XLSX, CSV, or TXT</div>
+                    <input type="file" id="supervisor-file" accept=".pdf,.xlsx,.csv,.txt" style="display: none;">
+                </div>
+
+                <div id="supervisor-file-info" style="display: none; margin-top: 16px; padding: 12px; background: rgba(201, 169, 97, 0.1); border: 1px solid var(--accent-gold); border-radius: 8px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span style="font-size: 24px;">📄</span>
+                        <div style="flex: 1;">
+                            <div id="supervisor-file-name" style="color: var(--text-light); font-weight: 500;"></div>
+                            <div id="supervisor-file-size" style="color: var(--text-muted); font-size: 0.875em;"></div>
+                        </div>
+                        <button onclick="clearSupervisorFile()" style="padding: 6px 12px; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 6px; color: #ef4444; cursor: pointer;">Remove</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="modal-btn" onclick="closeSupervisorUploadModal()">Cancel</button>
+                <button class="modal-btn primary" id="process-supervisor-btn" onclick="processSupBreakdown()" disabled>Process & Cross-Reference</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Tag Popup (for creating tags from text selection) -->
     <div class="tag-popup" id="tag-popup">
         <div class="tag-popup-header">
@@ -390,6 +427,9 @@
                 <div class="tools-section-title">SCRIPT</div>
                 <button class="tools-panel-btn" onclick="openImportModal(); closeToolsPanel();">
                     Import Script
+                </button>
+                <button class="tools-panel-btn" onclick="openSupervisorUploadModal(); closeToolsPanel();">
+                    Upload Supervisor Breakdown
                 </button>
                 <button class="tools-panel-btn" onclick="generateAllSynopses(event); closeToolsPanel();">
                     Auto Synopsis
