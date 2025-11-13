@@ -370,6 +370,13 @@
             </div>
 
             <div class="tools-section">
+                <div class="tools-section-title">AI-ASSISTED BREAKDOWN</div>
+                <button class="tools-panel-btn" onclick="generateSuggestions(); closeToolsPanel();">Generate AI Suggestions</button>
+                <button class="tools-panel-btn" onclick="startReview(); closeToolsPanel();">Start Scene Review</button>
+                <button class="tools-panel-btn" onclick="clearHybridData(); closeToolsPanel();">Clear Hybrid Data</button>
+            </div>
+
+            <div class="tools-section">
                 <div class="tools-section-title">TAGGING</div>
                 <button class="tools-panel-btn" onclick="autoTagScript(event); closeToolsPanel();">Auto Tag Script</button>
             </div>
@@ -377,6 +384,9 @@
             <div class="tools-section">
                 <div class="tools-section-title">EXPORT</div>
                 <button class="tools-panel-btn" onclick="window.location.href='generate-breakdown.html'">Generate Breakdown</button>
+                <button class="tools-panel-btn" onclick="exportHybridBreakdownHTML(); closeToolsPanel();">Export Hybrid Report (HTML)</button>
+                <button class="tools-panel-btn" onclick="exportHybridBreakdownJSON(); closeToolsPanel();">Export Hybrid Data (JSON)</button>
+                <button class="tools-panel-btn" onclick="exportHybridContinuityCSV(); closeToolsPanel();">Export Continuity (CSV)</button>
             </div>
 
             <div class="tools-section">

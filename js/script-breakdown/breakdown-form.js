@@ -16,6 +16,7 @@ import { state } from './main.js';
 import { formatSceneRange, getComplexityIcon, extractLocation, detectTimeOfDay, detectIntExt } from './utils.js';
 import { detectAIElements, generateDescription } from './ai-integration.js';
 import './breakdown-manager.js'; // Import enhanced workflow manager
+import { renderHybridSceneBreakdown } from './hybrid-renderer.js'; // Import hybrid breakdown renderer
 
 // Element categories
 const categories = [
@@ -36,7 +37,7 @@ let currentElementCategory = null;
 
 /**
  * Render the breakdown panel for the current scene
- * Automatically uses enhanced workflow if enabled
+ * Automatically uses enhanced workflow or hybrid mode if enabled
  */
 export function renderBreakdownPanel() {
     const container = document.getElementById('breakdown-panel');
@@ -52,6 +53,16 @@ export function renderBreakdownPanel() {
         return;
     }
 
+    // Check if hybrid mode should be used
+    const useHybridMode = shouldUseHybridMode();
+
+    if (useHybridMode) {
+        // Use hybrid breakdown rendering
+        const hybridHTML = renderHybridSceneBreakdown(state.currentScene);
+        container.innerHTML = hybridHTML;
+        return;
+    }
+
     // Check if enhanced workflow should be used
     const useEnhancedWorkflow = shouldUseEnhancedWorkflow();
 
@@ -63,6 +74,36 @@ export function renderBreakdownPanel() {
 
     // Fall back to classic breakdown rendering
     renderClassicBreakdown();
+}
+
+/**
+ * Check if hybrid mode should be used
+ * @returns {boolean} True if hybrid mode should be used
+ */
+function shouldUseHybridMode() {
+    // Check user preference
+    const hybridModeEnabled = localStorage.getItem('useHybridMode') === 'true';
+
+    // Check if hybrid manager exists and has suggestions
+    const hasHybridManager = typeof window.hybridBreakdownManager !== 'undefined';
+    if (!hasHybridManager) return false;
+
+    // If hybrid mode is enabled, use it
+    if (hybridModeEnabled) return true;
+
+    // Auto-enable if there are suggestions for current scene
+    if (state.currentScene !== null) {
+        const suggestions = window.hybridBreakdownManager.getSuggestionsForScene(state.currentScene);
+        const hasSuggestions = suggestions && suggestions.length > 0;
+
+        if (hasSuggestions) {
+            // Auto-enable hybrid mode if suggestions exist
+            localStorage.setItem('useHybridMode', 'true');
+            return true;
+        }
+    }
+
+    return false;
 }
 
 /**
