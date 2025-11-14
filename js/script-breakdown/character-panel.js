@@ -813,29 +813,163 @@ function renderTimelineView(characterName) {
 }
 
 /**
- * Render events view
+ * Get character continuity events with scene data
+ * @param {string} characterName - Character name
+ * @returns {Array} Array of continuity event objects
+ */
+function getCharacterContinuityEvents(characterName) {
+    const events = state.continuityEvents[characterName] || [];
+
+    // Enrich events with scene information
+    return events.map(event => {
+        const enrichedEvent = { ...event };
+
+        // Ensure event has an ID
+        if (!enrichedEvent.id) {
+            enrichedEvent.id = `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        }
+
+        return enrichedEvent;
+    });
+}
+
+/**
+ * Get color for progression stage based on severity
+ * @param {number} severity - Severity level (0-100)
+ * @returns {string} CSS color value
+ */
+function getStageColor(severity) {
+    if (severity >= 70) {
+        // High severity - red
+        return 'rgba(239, 68, 68, 0.8)';
+    } else if (severity >= 40) {
+        // Medium severity - yellow/orange
+        return 'rgba(251, 191, 36, 0.8)';
+    } else if (severity >= 10) {
+        // Low severity - light green
+        return 'rgba(132, 204, 22, 0.8)';
+    } else {
+        // Healed - green
+        return 'rgba(34, 197, 94, 0.8)';
+    }
+}
+
+/**
+ * Render progression stages for a continuity event
+ * @param {Object} event - Event object with progression data
+ * @param {string} characterName - Character name
+ * @returns {string} HTML for progression stages
+ */
+function renderProgressionStages(event, characterName) {
+    if (!event.progression || event.progression.length === 0) {
+        return `
+            <div class="progression-empty">
+                <span>No progression stages defined</span>
+                <button class="small-stage-btn" onclick="addProgressionStage('${escapeHtml(characterName).replace(/'/g, "\\'")}', '${event.id}')">
+                    + Add Stage
+                </button>
+            </div>
+        `;
+    }
+
+    const characterScenes = getCharacterScenes(characterName);
+    const totalScenes = characterScenes.length;
+
+    return `
+        <div class="progression-stages">
+            ${event.progression.map((stage, index) => {
+                const stageScenes = stage.endScene - stage.startScene + 1;
+                const width = totalScenes > 0 ? (stageScenes / totalScenes) * 100 : 0;
+                const color = getStageColor(stage.severity || 50);
+
+                return `
+                    <div class="progression-stage"
+                         style="width: ${width}%; background: ${color};"
+                         onclick="editProgressionStage('${escapeHtml(characterName).replace(/'/g, "\\'")}', '${event.id}', ${index})"
+                         title="Click to edit stage">
+                        <div class="stage-content">
+                            <span class="stage-label">${escapeHtml(stage.name || 'Stage ' + (index + 1))}</span>
+                            <span class="stage-scenes">Sc ${stage.startScene}-${stage.endScene}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('')}
+        </div>
+    `;
+}
+
+/**
+ * Render continuity events timeline
+ * @param {string} characterName - Character name
+ * @returns {string} HTML for continuity events timeline
+ */
+function renderContinuityEventsTimeline(characterName) {
+    const events = getCharacterContinuityEvents(characterName);
+
+    if (events.length === 0) {
+        return `
+            <div class="continuity-events-section">
+                <div class="empty-message">
+                    No continuity events tracked yet.
+                </div>
+                <button class="add-event-btn" onclick="addContinuityEvent('${escapeHtml(characterName).replace(/'/g, "\\'")}')">
+                    + Add Continuity Event
+                </button>
+            </div>
+        `;
+    }
+
+    return `
+        <div class="continuity-events-section">
+            ${events.map(event => `
+                <div class="event-timeline" data-event-id="${event.id}">
+                    <div class="event-timeline-header">
+                        <div class="event-info">
+                            <span class="event-type-badge">${escapeHtml(event.category || event.type || 'Event')}</span>
+                            <span class="event-name">${escapeHtml(event.description || 'Untitled Event')}</span>
+                        </div>
+                        <div class="event-meta">
+                            <span class="event-duration">
+                                ${event.startScene ? `Scene ${event.startScene}` : 'Not started'}
+                                ${event.endScene ? ` - ${event.endScene}` : ' (ongoing)'}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="progression-bar">
+                        ${renderProgressionStages(event, characterName)}
+                    </div>
+
+                    <div class="event-timeline-actions">
+                        <button class="event-action-btn" onclick="fillProgressionGaps('${escapeHtml(characterName).replace(/'/g, "\\'")}', '${event.id}')" title="Use AI to fill progression gaps">
+                            ✨ Fill Gaps with AI
+                        </button>
+                        <button class="event-action-btn" onclick="editContinuityEvent('${escapeHtml(characterName).replace(/'/g, "\\'")}', '${event.id}')" title="Edit event details">
+                            ✏️ Edit Event
+                        </button>
+                        <button class="event-action-btn danger" onclick="deleteContinuityEvent('${escapeHtml(characterName).replace(/'/g, "\\'")}', '${event.id}')" title="Delete event">
+                            🗑️ Delete
+                        </button>
+                    </div>
+                </div>
+            `).join('')}
+
+            <button class="add-event-btn" onclick="addContinuityEvent('${escapeHtml(characterName).replace(/'/g, "\\'")}')">
+                + Add Continuity Event
+            </button>
+        </div>
+    `;
+}
+
+/**
+ * Render events view with timeline visualization
  * @param {string} characterName - Character name
  * @returns {string} HTML for events view
  */
 function renderEventsView(characterName) {
-    const events = state.continuityEvents[characterName] || [];
-
     return `
         <div class="events-view">
-            <div class="view-section">
-                <h3>Continuity Events (${events.length})</h3>
-                ${events.length > 0 ? `
-                    <div class="events-list">
-                        ${events.map(event => `
-                            <div class="event-card">
-                                <div class="event-scene">Scene ${event.sceneNumber || 'Unknown'}</div>
-                                <div class="event-category">${escapeHtml(event.category || '')}</div>
-                                <div class="event-description">${escapeHtml(event.description || '')}</div>
-                            </div>
-                        `).join('')}
-                    </div>
-                ` : '<p class="empty-message">No continuity events recorded yet</p>'}
-            </div>
+            ${renderContinuityEventsTimeline(characterName)}
         </div>
     `;
 }
@@ -1074,6 +1208,235 @@ window.applyLookForward = async function(characterName, sourceSceneIndex) {
     } else {
         alert(`No following scenes found in ${storyDay}.`);
     }
+};
+
+/**
+ * Add a new continuity event for a character
+ * @param {string} characterName - Character name
+ */
+window.addContinuityEvent = async function(characterName) {
+    const eventName = prompt('Enter event name (e.g., "Bruised Left Eye", "Broken Arm"):');
+    if (!eventName || !eventName.trim()) return;
+
+    const category = prompt('Enter category (injury, health, sfx, other):', 'injury');
+    const startScene = parseInt(prompt('Enter starting scene number:', '1'));
+
+    if (isNaN(startScene)) {
+        alert('Invalid scene number');
+        return;
+    }
+
+    // Initialize continuity events if needed
+    if (!state.continuityEvents[characterName]) {
+        state.continuityEvents[characterName] = [];
+    }
+
+    // Create new event
+    const newEvent = {
+        id: `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        description: eventName.trim(),
+        category: category || 'injury',
+        startScene: startScene,
+        endScene: null,
+        progression: []
+    };
+
+    state.continuityEvents[characterName].push(newEvent);
+
+    // Save project
+    const { saveProject } = await import('./export-handlers.js');
+    saveProject();
+
+    // Refresh the view
+    const contentId = `${characterName.toLowerCase().replace(/\s+/g, '-')}-content`;
+    const contentDiv = document.getElementById(contentId);
+    if (contentDiv) {
+        contentDiv.innerHTML = renderEventsView(characterName);
+    }
+
+    alert(`Added continuity event: ${eventName}`);
+};
+
+/**
+ * Edit a continuity event
+ * @param {string} characterName - Character name
+ * @param {string} eventId - Event ID
+ */
+window.editContinuityEvent = async function(characterName, eventId) {
+    const events = state.continuityEvents[characterName] || [];
+    const event = events.find(e => e.id === eventId);
+
+    if (!event) {
+        alert('Event not found');
+        return;
+    }
+
+    const newName = prompt('Event name:', event.description);
+    if (newName === null) return;
+
+    if (newName.trim()) {
+        event.description = newName.trim();
+    }
+
+    const newCategory = prompt('Category (injury, health, sfx, other):', event.category);
+    if (newCategory && newCategory.trim()) {
+        event.category = newCategory.trim();
+    }
+
+    const newEnd = prompt('End scene (leave empty if ongoing):', event.endScene || '');
+    if (newEnd.trim()) {
+        const endScene = parseInt(newEnd);
+        if (!isNaN(endScene)) {
+            event.endScene = endScene;
+        }
+    } else {
+        event.endScene = null;
+    }
+
+    // Save project
+    const { saveProject } = await import('./export-handlers.js');
+    saveProject();
+
+    // Refresh the view
+    const contentId = `${characterName.toLowerCase().replace(/\s+/g, '-')}-content`;
+    const contentDiv = document.getElementById(contentId);
+    if (contentDiv) {
+        contentDiv.innerHTML = renderEventsView(characterName);
+    }
+};
+
+/**
+ * Delete a continuity event
+ * @param {string} characterName - Character name
+ * @param {string} eventId - Event ID
+ */
+window.deleteContinuityEvent = async function(characterName, eventId) {
+    if (!confirm('Are you sure you want to delete this continuity event?')) {
+        return;
+    }
+
+    const events = state.continuityEvents[characterName] || [];
+    const index = events.findIndex(e => e.id === eventId);
+
+    if (index !== -1) {
+        events.splice(index, 1);
+
+        // Save project
+        const { saveProject } = await import('./export-handlers.js');
+        saveProject();
+
+        // Refresh the view
+        const contentId = `${characterName.toLowerCase().replace(/\s+/g, '-')}-content`;
+        const contentDiv = document.getElementById(contentId);
+        if (contentDiv) {
+            contentDiv.innerHTML = renderEventsView(characterName);
+        }
+    }
+};
+
+/**
+ * Add a progression stage to an event
+ * @param {string} characterName - Character name
+ * @param {string} eventId - Event ID
+ */
+window.addProgressionStage = async function(characterName, eventId) {
+    const events = state.continuityEvents[characterName] || [];
+    const event = events.find(e => e.id === eventId);
+
+    if (!event) {
+        alert('Event not found');
+        return;
+    }
+
+    const stageName = prompt('Stage name (e.g., "Fresh wound", "Healing", "Scabbed over"):');
+    if (!stageName || !stageName.trim()) return;
+
+    const startScene = parseInt(prompt('Start scene:', event.startScene));
+    const endScene = parseInt(prompt('End scene:', startScene + 5));
+    const severity = parseInt(prompt('Severity (0-100, where 100 is worst):', '70'));
+
+    if (isNaN(startScene) || isNaN(endScene) || isNaN(severity)) {
+        alert('Invalid input');
+        return;
+    }
+
+    if (!event.progression) {
+        event.progression = [];
+    }
+
+    event.progression.push({
+        name: stageName.trim(),
+        startScene: startScene,
+        endScene: endScene,
+        severity: Math.max(0, Math.min(100, severity))
+    });
+
+    // Sort by start scene
+    event.progression.sort((a, b) => a.startScene - b.startScene);
+
+    // Save project
+    const { saveProject } = await import('./export-handlers.js');
+    saveProject();
+
+    // Refresh the view
+    const contentId = `${characterName.toLowerCase().replace(/\s+/g, '-')}-content`;
+    const contentDiv = document.getElementById(contentId);
+    if (contentDiv) {
+        contentDiv.innerHTML = renderEventsView(characterName);
+    }
+};
+
+/**
+ * Edit a progression stage
+ * @param {string} characterName - Character name
+ * @param {string} eventId - Event ID
+ * @param {number} stageIndex - Stage index
+ */
+window.editProgressionStage = async function(characterName, eventId, stageIndex) {
+    const events = state.continuityEvents[characterName] || [];
+    const event = events.find(e => e.id === eventId);
+
+    if (!event || !event.progression || !event.progression[stageIndex]) {
+        alert('Stage not found');
+        return;
+    }
+
+    const stage = event.progression[stageIndex];
+
+    const newName = prompt('Stage name:', stage.name);
+    if (newName === null) return;
+
+    if (newName.trim()) {
+        stage.name = newName.trim();
+    }
+
+    const newSeverity = prompt('Severity (0-100):', stage.severity);
+    if (newSeverity && newSeverity.trim()) {
+        const severity = parseInt(newSeverity);
+        if (!isNaN(severity)) {
+            stage.severity = Math.max(0, Math.min(100, severity));
+        }
+    }
+
+    // Save project
+    const { saveProject } = await import('./export-handlers.js');
+    saveProject();
+
+    // Refresh the view
+    const contentId = `${characterName.toLowerCase().replace(/\s+/g, '-')}-content`;
+    const contentDiv = document.getElementById(contentId);
+    if (contentDiv) {
+        contentDiv.innerHTML = renderEventsView(characterName);
+    }
+};
+
+/**
+ * Fill progression gaps with AI
+ * @param {string} characterName - Character name
+ * @param {string} eventId - Event ID
+ */
+window.fillProgressionGaps = function(characterName, eventId) {
+    alert('AI-powered progression gap filling is coming soon! This will analyze the event and automatically generate healing stages with appropriate severity levels.');
 };
 
 /**

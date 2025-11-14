@@ -10498,3 +10498,243 @@
 .lookbook-view .empty-message {
     margin-top: 20px;
 }
+
+/* ============================================================================ */
+/* CONTINUITY EVENTS TIMELINE */
+/* ============================================================================ */
+
+.continuity-events-section {
+    padding: 20px;
+}
+
+.event-timeline {
+    margin-bottom: 24px;
+    padding: 20px;
+    background: rgba(28, 25, 22, 0.5);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.event-timeline:hover {
+    background: rgba(28, 25, 22, 0.7);
+    border-color: rgba(212, 175, 122, 0.3);
+}
+
+.event-timeline-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.event-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+}
+
+.event-type-badge {
+    padding: 4px 10px;
+    background: rgba(212, 175, 122, 0.15);
+    border: 1px solid rgba(212, 175, 122, 0.3);
+    border-radius: 6px;
+    font-size: 0.75em;
+    font-weight: 600;
+    color: var(--accent-gold);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.event-name {
+    font-size: 1em;
+    font-weight: 600;
+    color: var(--text-light);
+}
+
+.event-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+}
+
+.event-duration {
+    font-size: 0.8125em;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+/* Progression Bar */
+.progression-bar {
+    margin: 16px 0;
+    min-height: 60px;
+    background: rgba(13, 11, 10, 0.4);
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--glass-border);
+}
+
+.progression-stages {
+    display: flex;
+    height: 60px;
+    width: 100%;
+}
+
+.progression-stage {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-right: 1px solid rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+}
+
+.progression-stage:last-child {
+    border-right: none;
+}
+
+.progression-stage:hover {
+    transform: scaleY(1.1);
+    z-index: 10;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.stage-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 8px;
+    text-align: center;
+}
+
+.stage-label {
+    font-size: 0.75em;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.95);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+.stage-scenes {
+    font-size: 0.6875em;
+    color: rgba(255, 255, 255, 0.8);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.progression-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 20px;
+    color: var(--text-muted);
+    font-size: 0.875em;
+}
+
+.small-stage-btn {
+    padding: 6px 12px;
+    background: rgba(212, 175, 122, 0.1);
+    border: 1px solid rgba(212, 175, 122, 0.3);
+    border-radius: 6px;
+    color: var(--text-light);
+    font-size: 0.8125em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.small-stage-btn:hover {
+    background: rgba(212, 175, 122, 0.2);
+    border-color: var(--accent-gold);
+    color: var(--accent-gold);
+}
+
+/* Event Actions */
+.event-timeline-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--glass-border);
+}
+
+.event-action-btn {
+    flex: 1;
+    padding: 8px 16px;
+    background: rgba(212, 175, 122, 0.1);
+    border: 1px solid rgba(212, 175, 122, 0.3);
+    border-radius: 6px;
+    color: var(--text-light);
+    font-size: 0.8125em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.event-action-btn:hover {
+    background: rgba(212, 175, 122, 0.2);
+    border-color: var(--accent-gold);
+    color: var(--accent-gold);
+    transform: translateY(-1px);
+}
+
+.event-action-btn:active {
+    transform: translateY(0);
+}
+
+.event-action-btn.danger {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+.event-action-btn.danger:hover {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: #ef4444;
+    color: #ef4444;
+}
+
+/* Add Event Button */
+.add-event-btn {
+    width: 100%;
+    padding: 14px 20px;
+    background: rgba(212, 175, 122, 0.1);
+    border: 2px dashed rgba(212, 175, 122, 0.3);
+    border-radius: 8px;
+    color: var(--text-light);
+    font-size: 0.9375em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 16px;
+}
+
+.add-event-btn:hover {
+    background: rgba(212, 175, 122, 0.15);
+    border-color: var(--accent-gold);
+    color: var(--accent-gold);
+    transform: translateY(-2px);
+}
+
+.add-event-btn:active {
+    transform: translateY(0);
+}
+
+/* Empty message in events section */
+.continuity-events-section .empty-message {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.9375em;
+    margin-bottom: 20px;
+}
