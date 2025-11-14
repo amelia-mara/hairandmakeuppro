@@ -841,9 +841,9 @@ function renderSceneBreakdown(sceneIndex) {
     const panel = document.getElementById('breakdown-panel');
     if (!scene || !panel) return;
 
-    // Pre-populate from existing data or AI suggestions
-    const storyDay = scene.storyDay || scene.aiSuggestions?.storyDay || '';
-    const timeOfDay = scene.timeOfDay || scene.aiSuggestions?.timeOfDay || '';
+    // Pre-populate from existing data, AI suggestions, or extract from heading
+    const storyDay = scene.storyDay || scene.aiSuggestions?.storyDay || scene.aiAnalysis?.storyDay || '';
+    const timeOfDay = scene.timeOfDay || scene.aiSuggestions?.timeOfDay || extractTimeFromHeading(scene.heading) || '';
     const breakdown = state.sceneBreakdowns[sceneIndex] || {};
     const characters = breakdown.cast || [];
 
@@ -856,29 +856,30 @@ function renderSceneBreakdown(sceneIndex) {
             </div>
 
             <!-- TIMELINE SECTION -->
-            <div class="breakdown-section timeline-section">
+            <div class="breakdown-section timeline-section" id="timeline-section-${sceneIndex}">
                 <h4 class="section-title">TIMELINE</h4>
 
                 <div class="field-row">
                     <div class="field-group">
                         <label>Story Day</label>
                         <input type="text"
-                               id="scene-story-day"
+                               id="story-day-${sceneIndex}"
                                value="${escapeHtml(storyDay)}"
                                placeholder="Day 1, Day 2, etc."
-                               onchange="updateSceneField(${sceneIndex}, 'storyDay', this.value)">
+                               onchange="saveTimelineField(${sceneIndex}, 'storyDay', this.value)"
+                               oninput="autoSave(${sceneIndex}, 'storyDay', this.value)">
                     </div>
 
                     <div class="field-group">
-                        <label>Time</label>
-                        <select id="scene-time"
-                                onchange="updateSceneField(${sceneIndex}, 'timeOfDay', this.value)">
+                        <label>Time of Day</label>
+                        <select id="time-of-day-${sceneIndex}"
+                                onchange="saveTimelineField(${sceneIndex}, 'timeOfDay', this.value)">
                             <option value="">Select...</option>
-                            <option ${timeOfDay === 'Early Morning' ? 'selected' : ''}>Early Morning</option>
-                            <option ${timeOfDay === 'Morning' ? 'selected' : ''}>Morning</option>
-                            <option ${timeOfDay === 'Afternoon' ? 'selected' : ''}>Afternoon</option>
-                            <option ${timeOfDay === 'Evening' ? 'selected' : ''}>Evening</option>
-                            <option ${timeOfDay === 'Night' ? 'selected' : ''}>Night</option>
+                            <option value="Early Morning" ${timeOfDay === 'Early Morning' ? 'selected' : ''}>Early Morning</option>
+                            <option value="Morning" ${timeOfDay === 'Morning' ? 'selected' : ''}>Morning</option>
+                            <option value="Afternoon" ${timeOfDay === 'Afternoon' ? 'selected' : ''}>Afternoon</option>
+                            <option value="Evening" ${timeOfDay === 'Evening' ? 'selected' : ''}>Evening</option>
+                            <option value="Night" ${timeOfDay === 'Night' ? 'selected' : ''}>Night</option>
                         </select>
                     </div>
                 </div>
@@ -887,19 +888,13 @@ function renderSceneBreakdown(sceneIndex) {
                     <label class="checkbox-field">
                         <input type="checkbox"
                                ${scene.isFlashback ? 'checked' : ''}
-                               onchange="updateSceneField(${sceneIndex}, 'isFlashback', this.checked)">
+                               onchange="saveTimelineField(${sceneIndex}, 'isFlashback', this.checked)">
                         Flashback
                     </label>
                     <label class="checkbox-field">
                         <input type="checkbox"
-                               ${scene.isFlashforward ? 'checked' : ''}
-                               onchange="updateSceneField(${sceneIndex}, 'isFlashforward', this.checked)">
-                        Flash-forward
-                    </label>
-                    <label class="checkbox-field">
-                        <input type="checkbox"
                                ${scene.isDream ? 'checked' : ''}
-                               onchange="updateSceneField(${sceneIndex}, 'isDream', this.checked)">
+                               onchange="saveTimelineField(${sceneIndex}, 'isDream', this.checked)">
                         Dream
                     </label>
                 </div>
@@ -908,8 +903,9 @@ function renderSceneBreakdown(sceneIndex) {
                     <label>Time Jump</label>
                     <input type="text"
                            value="${escapeHtml(scene.timeJump || '')}"
-                           placeholder="e.g., '3 days later', '2 weeks earlier'"
-                           onchange="updateSceneField(${sceneIndex}, 'timeJump', this.value)">
+                           placeholder="e.g., '3 days later'"
+                           onchange="saveTimelineField(${sceneIndex}, 'timeJump', this.value)"
+                           oninput="autoSave(${sceneIndex}, 'timeJump', this.value)">
                 </div>
             </div>
 
@@ -944,6 +940,80 @@ function renderSceneBreakdown(sceneIndex) {
                         ${sceneIndex >= state.scenes.length - 1 ? 'disabled' : ''}>
                     Next →
                 </button>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Render timeline section for a scene
+ * @param {number} sceneIndex - Scene index
+ * @returns {string} HTML for timeline section
+ */
+export function renderTimelineSection(sceneIndex) {
+    const scene = state.scenes[sceneIndex];
+    if (!scene) return '';
+
+    // Pre-populate from AI analysis or scene data
+    const storyDay = scene.storyDay || scene.aiAnalysis?.storyDay || scene.aiSuggestions?.storyDay || '';
+    const timeOfDay = scene.timeOfDay || scene.aiSuggestions?.timeOfDay || extractTimeFromHeading(scene.heading) || '';
+    const isFlashback = scene.isFlashback || false;
+    const isDream = scene.isDream || false;
+    const timeJump = scene.timeJump || '';
+
+    return `
+        <div class="breakdown-section timeline-section" id="timeline-section-${sceneIndex}">
+            <h4 class="section-title">TIMELINE</h4>
+            <div class="timeline-fields">
+                <div class="field-row">
+                    <div class="field-group">
+                        <label>Story Day</label>
+                        <input type="text"
+                               id="story-day-${sceneIndex}"
+                               value="${escapeHtml(storyDay)}"
+                               placeholder="Day 1, Day 2, etc."
+                               onchange="saveTimelineField(${sceneIndex}, 'storyDay', this.value)"
+                               oninput="autoSave(${sceneIndex}, 'storyDay', this.value)">
+                    </div>
+                    <div class="field-group">
+                        <label>Time of Day</label>
+                        <select id="time-of-day-${sceneIndex}"
+                                onchange="saveTimelineField(${sceneIndex}, 'timeOfDay', this.value)">
+                            <option value="">Select...</option>
+                            <option value="Early Morning" ${timeOfDay === 'Early Morning' ? 'selected' : ''}>Early Morning</option>
+                            <option value="Morning" ${timeOfDay === 'Morning' ? 'selected' : ''}>Morning</option>
+                            <option value="Afternoon" ${timeOfDay === 'Afternoon' ? 'selected' : ''}>Afternoon</option>
+                            <option value="Evening" ${timeOfDay === 'Evening' ? 'selected' : ''}>Evening</option>
+                            <option value="Night" ${timeOfDay === 'Night' ? 'selected' : ''}>Night</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="field-row">
+                    <div class="field-group checkbox-group">
+                        <label>
+                            <input type="checkbox"
+                                   ${isFlashback ? 'checked' : ''}
+                                   onchange="saveTimelineField(${sceneIndex}, 'isFlashback', this.checked)">
+                            Flashback
+                        </label>
+                    </div>
+                    <div class="field-group checkbox-group">
+                        <label>
+                            <input type="checkbox"
+                                   ${isDream ? 'checked' : ''}
+                                   onchange="saveTimelineField(${sceneIndex}, 'isDream', this.checked)">
+                            Dream
+                        </label>
+                    </div>
+                </div>
+                <div class="field-group">
+                    <label>Time Jump</label>
+                    <input type="text"
+                           value="${escapeHtml(timeJump)}"
+                           placeholder="e.g., '3 days later'"
+                           onchange="saveTimelineField(${sceneIndex}, 'timeJump', this.value)"
+                           oninput="autoSave(${sceneIndex}, 'timeJump', this.value)">
+                </div>
             </div>
         </div>
     `;
@@ -1106,6 +1176,49 @@ window.updateCharField = function(sceneIndex, character, field, value) {
     state.characterStates[sceneIndex][character][field] = value;
     saveToLocalStorage();
     console.log(`Updated ${character} ${field}: ${value}`);
+};
+
+/**
+ * Extract time of day from scene heading
+ * @param {string} heading - Scene heading text
+ * @returns {string} Time of day value
+ */
+function extractTimeFromHeading(heading) {
+    if (!heading) return '';
+    const upper = heading.toUpperCase();
+    if (upper.includes('MORNING')) return 'Morning';
+    if (upper.includes('AFTERNOON')) return 'Afternoon';
+    if (upper.includes('EVENING')) return 'Evening';
+    if (upper.includes('NIGHT')) return 'Night';
+    if (upper.includes('DAY')) return 'Afternoon';
+    return '';
+}
+
+/**
+ * Auto-save with debounce
+ * @param {number} sceneIndex - Scene index
+ * @param {string} field - Field name
+ * @param {*} value - Field value
+ */
+let saveTimeout;
+window.autoSave = function(sceneIndex, field, value) {
+    clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(() => {
+        saveTimelineField(sceneIndex, field, value);
+    }, 500);
+};
+
+/**
+ * Save timeline field
+ * @param {number} sceneIndex - Scene index
+ * @param {string} field - Field name
+ * @param {*} value - Field value
+ */
+window.saveTimelineField = function(sceneIndex, field, value) {
+    if (!state.scenes[sceneIndex]) return;
+    state.scenes[sceneIndex][field] = value;
+    saveToLocalStorage();
+    console.log(`Saved: Scene ${sceneIndex} ${field} = ${value}`);
 };
 
 /**
