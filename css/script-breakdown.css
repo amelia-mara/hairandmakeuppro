@@ -10773,3 +10773,257 @@
     font-family: 'Inter', sans-serif;
     backdrop-filter: blur(8px);
 }
+
+/* ============================================================================
+   SCENE PROCESSING BUTTONS
+   ============================================================================ */
+
+.scene-processing-section {
+    background: rgba(212, 175, 122, 0.05);
+    border: 1px solid rgba(212, 175, 122, 0.2);
+    border-radius: 8px;
+    padding: 16px;
+    margin: 12px 0;
+}
+
+.scene-processing-section.warning {
+    background: rgba(232, 168, 124, 0.08);
+    border-color: rgba(232, 168, 124, 0.3);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.processing-warning-icon {
+    font-size: 24px;
+}
+
+.processing-warning-text {
+    color: var(--warning);
+    font-size: 0.9em;
+}
+
+.processing-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.processing-title {
+    font-weight: 600;
+    color: var(--accent-gold);
+    font-size: 0.95em;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.processing-status {
+    font-size: 0.85em;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-weight: 500;
+}
+
+.processing-status.processed {
+    background: rgba(82, 193, 134, 0.2);
+    color: var(--success);
+}
+
+.processing-status.pending {
+    background: rgba(154, 143, 127, 0.2);
+    color: var(--text-muted);
+}
+
+.processing-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.processing-btn {
+    flex: 1;
+    min-width: 150px;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.processing-btn.primary {
+    background: linear-gradient(135deg, var(--accent-gold) 0%, #c9a061 100%);
+    color: #1a1816;
+}
+
+.processing-btn.primary:hover {
+    background: linear-gradient(135deg, var(--accent-gold-hover) 0%, #d4b076 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(212, 175, 122, 0.3);
+}
+
+.processing-btn.secondary {
+    background: rgba(212, 175, 122, 0.1);
+    color: var(--accent-gold);
+    border: 1px solid rgba(212, 175, 122, 0.3);
+}
+
+.processing-btn.secondary:hover {
+    background: rgba(212, 175, 122, 0.2);
+    border-color: rgba(212, 175, 122, 0.5);
+    transform: translateY(-1px);
+}
+
+.processing-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.processing-btn:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+/* Toast notifications for processing feedback */
+.toast-notification {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 0.9em;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 10000;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+}
+
+/* ============================================================================
+   WORKFLOW STATUS
+   ============================================================================ */
+
+.workflow-status {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.workflow-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.workflow-icon {
+    font-size: 18px;
+}
+
+.workflow-text {
+    font-size: 0.9em;
+    font-weight: 500;
+}
+
+/* ============================================================================
+   SCENE STATUS INDICATORS
+   ============================================================================ */
+
+.scene-item {
+    position: relative;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.scene-item.processed {
+    background: rgba(76, 175, 80, 0.05);
+}
+
+.scene-item:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.scene-item.processed:hover {
+    background: rgba(76, 175, 80, 0.08);
+}
+
+.scene-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+}
+
+.scene-status-icon {
+    width: 20px;
+    color: var(--accent-gold);
+    font-size: 16px;
+    text-align: center;
+}
+
+.scene-item.processed .scene-status-icon {
+    color: var(--success);
+}
+
+.scene-indicators {
+    display: flex;
+    gap: 4px;
+    margin-left: auto;
+}
+
+.indicator {
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.7em;
+    font-weight: bold;
+    line-height: 1;
+}
+
+.indicator.processed {
+    background: rgba(76, 175, 80, 0.2);
+    color: #4caf50;
+}
+
+.indicator.continuity {
+    background: rgba(201, 169, 97, 0.2);
+    color: var(--accent-gold);
+}
+
+.indicator.tags {
+    background: rgba(33, 150, 243, 0.2);
+    color: #2196f3;
+}
