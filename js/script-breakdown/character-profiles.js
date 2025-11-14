@@ -451,16 +451,14 @@ export function buildCharacterProfile(characterName) {
 
     // Build HTML with new sections
     let html = `
-        <div class="character-profile-panel">
+        <div class="character-profile-container">
             ${renderCharacterHeader(characterName, characterData, timelineData)}
             ${renderScriptDescriptions(characterData)}
-            ${renderPhysicalProfile(characterData)}
-            ${renderVisualIdentity(characterData)}
             ${renderCharacterJourney(characterData)}
-            ${renderContinuityGuidelines(characterData)}
-            ${renderVisualTimeline(timeline)}
-            ${renderContinuityEvents(events, characterName)}
-            ${renderTaggedElements(taggedElements, characterName)}
+            ${renderStoryPresence(characterData)}
+            ${renderExtractedElements(characterData)}
+            ${renderContinuityBreakdown(characterName, characterData)}
+            ${renderContinuityEventsSection(characterName, events)}
             ${renderActionButtons(characterName)}
         </div>
     `;
@@ -477,21 +475,40 @@ export function buildCharacterProfile(characterName) {
  */
 function renderCharacterHeader(characterName, characterData, timelineData) {
     const sceneCount = timelineData.appearances.length;
-    const importance = characterData?.importance || 5;
-    const arc = characterData?.arc || 'No arc defined';
-
-    const importanceLabel = getImportanceLabel(importance);
+    const role = characterData?.characterAnalysis?.role || 'supporting';
+    const physicalSummary = buildPhysicalSummary(characterData?.physicalProfile);
 
     return `
-        <div class="character-header">
-            <h2 class="character-name">${escapeHtml(characterName)}</h2>
-            <div class="character-meta">
-                <span class="importance-badge" data-level="${importance}">${importanceLabel}</span>
-                <span class="scene-count">${sceneCount} scene${sceneCount !== 1 ? 's' : ''}</span>
-                <span class="story-arc" title="${escapeHtml(arc)}">${escapeHtml(arc.substring(0, 40))}${arc.length > 40 ? '...' : ''}</span>
+        <div class="profile-header">
+            <div class="character-title">
+                ${escapeHtml(characterName)} - ${role.toUpperCase()}
             </div>
+            <div class="physical-summary">${physicalSummary}</div>
         </div>
     `;
+}
+
+/**
+ * Build physical profile summary line
+ * @param {Object} physicalProfile - Physical profile object
+ * @returns {string} Summary text
+ */
+function buildPhysicalSummary(physicalProfile) {
+    if (!physicalProfile) return 'No physical description available';
+
+    const parts = [];
+    if (physicalProfile.age) parts.push(`Age: ${physicalProfile.age}`);
+    if (physicalProfile.build) parts.push(`Build: ${physicalProfile.build}`);
+    if (physicalProfile.hairColor || physicalProfile.hairStyle) {
+        const hairParts = [physicalProfile.hairColor, physicalProfile.hairStyle].filter(Boolean);
+        parts.push(`Hair: ${hairParts.join(', ')}`);
+    }
+    if (physicalProfile.eyeColor) parts.push(`Eyes: ${physicalProfile.eyeColor}`);
+    if (physicalProfile.distinctiveFeatures?.length > 0) {
+        parts.push(`Distinctive: ${physicalProfile.distinctiveFeatures.join(', ')}`);
+    }
+
+    return parts.length > 0 ? parts.join(' | ') : 'No physical description available';
 }
 
 /**
@@ -520,15 +537,14 @@ function renderScriptDescriptions(characterData) {
     }
 
     return `
-        <div class="character-section script-descriptions-section">
-            <h3 class="section-title">📝 From The Script</h3>
+        <div class="profile-section script-descriptions-section">
+            <h3 class="section-title">SCRIPT DESCRIPTIONS</h3>
             <div class="script-descriptions-list">
                 ${descriptions.map(desc => `
-                    <div class="script-description-item" data-scene="${desc.sceneNumber}">
+                    <div class="description-block" data-scene="${desc.sceneNumber}">
                         <div class="description-quote">"${escapeHtml(desc.text)}"</div>
                         <div class="description-meta">
-                            <span class="scene-badge" onclick="scrollToScene(${desc.sceneNumber - 1})">Scene ${desc.sceneNumber}</span>
-                            <span class="type-badge">${desc.type}</span>
+                            <span class="scene-link" onclick="navigateToScene(${desc.sceneNumber - 1})">Scene ${desc.sceneNumber}</span>
                         </div>
                     </div>
                 `).join('')}
@@ -564,8 +580,8 @@ function renderPhysicalProfile(characterData) {
     }
 
     return `
-        <div class="character-section physical-profile-section">
-            <h3 class="section-title">👤 Physical Profile</h3>
+        <div class="profile-section physical-profile-section">
+            <h3 class="section-title">PHYSICAL PROFILE</h3>
             <div class="profile-grid">
                 ${fields.filter(f => physical[f.key]).map(field => `
                     <div class="profile-field">
@@ -600,8 +616,8 @@ function renderVisualIdentity(characterData) {
     }
 
     return `
-        <div class="character-section visual-identity-section">
-            <h3 class="section-title">🎨 Visual Identity</h3>
+        <div class="profile-section visual-identity-section">
+            <h3 class="section-title">VISUAL IDENTITY</h3>
             <div class="visual-profile-content">
                 ${visual.overallVibe ? `
                     <div class="visual-field">
@@ -660,8 +676,8 @@ function renderCharacterJourney(characterData) {
     }
 
     return `
-        <div class="character-section character-journey-section">
-            <h3 class="section-title">📈 Character Journey</h3>
+        <div class="profile-section character-journey-section">
+            <h3 class="section-title">CHARACTER OVERVIEW</h3>
             <div class="journey-content">
                 ${analysis.personality ? `
                     <div class="journey-field">
@@ -713,8 +729,8 @@ function renderContinuityGuidelines(characterData) {
     }
 
     return `
-        <div class="character-section continuity-guidelines-section">
-            <h3 class="section-title">📋 Continuity Guidelines</h3>
+        <div class="profile-section continuity-guidelines-section">
+            <h3 class="section-title">CONTINUITY GUIDELINES</h3>
             <div class="guidelines-content">
                 ${notes.keyLooks ? `
                     <div class="guideline-field">
@@ -740,24 +756,233 @@ function renderContinuityGuidelines(characterData) {
 }
 
 /**
+ * Render story presence section
+ * @param {Object} characterData - Character data
+ * @returns {string} HTML string
+ */
+function renderStoryPresence(characterData) {
+    const presence = characterData?.storyPresence;
+
+    if (!presence) return '';
+
+    const totalScenes = presence.totalScenes || 0;
+    const firstScene = presence.firstAppearance || characterData?.firstAppearance || 'Unknown';
+    const lastScene = presence.lastAppearance || characterData?.lastAppearance || 'Unknown';
+    const hasDialogue = presence.hasDialogue ? 'Has dialogue' : 'Non-speaking';
+    const speakingScenes = presence.speakingScenes?.length || 0;
+
+    return `
+        <div class="profile-section story-presence-section">
+            <h3 class="section-title">STORY PRESENCE</h3>
+            <div class="presence-grid">
+                <div class="presence-stat">
+                    <div class="stat-label">Total Scenes</div>
+                    <div class="stat-value">${totalScenes}</div>
+                </div>
+                <div class="presence-stat">
+                    <div class="stat-label">First Appearance</div>
+                    <div class="stat-value">Scene ${firstScene}</div>
+                </div>
+                <div class="presence-stat">
+                    <div class="stat-label">Last Appearance</div>
+                    <div class="stat-value">Scene ${lastScene}</div>
+                </div>
+                <div class="presence-stat">
+                    <div class="stat-label">Dialogue Status</div>
+                    <div class="stat-value">${hasDialogue}${speakingScenes > 0 ? ` (${speakingScenes} scenes)` : ''}</div>
+                </div>
+            </div>
+            ${presence.scenesPresent?.length > 0 ? `
+                <div class="scenes-list">
+                    <strong>Appears in scenes:</strong> ${presence.scenesPresent.join(', ')}
+                </div>
+            ` : ''}
+        </div>
+    `;
+}
+
+/**
+ * Render extracted elements section
+ * @param {Object} characterData - Character data
+ * @returns {string} HTML string
+ */
+function renderExtractedElements(characterData) {
+    const elements = characterData?.extractedElements;
+
+    if (!elements) return '';
+
+    const hasContent = elements.mentionedWardrobe?.length > 0 ||
+                      elements.mentionedAppearanceChanges?.length > 0 ||
+                      elements.physicalActions?.length > 0 ||
+                      elements.environmentalExposure?.length > 0;
+
+    if (!hasContent) return '';
+
+    return `
+        <div class="profile-section extracted-elements-section">
+            <h3 class="section-title">EXTRACTED CONTINUITY ELEMENTS</h3>
+            <div class="elements-list">
+                ${elements.mentionedWardrobe?.length > 0 ? `
+                    <div class="element-group">
+                        <div class="element-label">Wardrobe Mentions:</div>
+                        <div class="element-values">${elements.mentionedWardrobe.map(w => escapeHtml(w)).join(', ')}</div>
+                    </div>
+                ` : ''}
+
+                ${elements.mentionedAppearanceChanges?.length > 0 ? `
+                    <div class="element-group">
+                        <div class="element-label">Appearance Changes:</div>
+                        <div class="element-values">${elements.mentionedAppearanceChanges.map(c => escapeHtml(c)).join(', ')}</div>
+                    </div>
+                ` : ''}
+
+                ${elements.physicalActions?.length > 0 ? `
+                    <div class="element-group">
+                        <div class="element-label">Physical Actions:</div>
+                        <div class="element-values">${elements.physicalActions.map(a => escapeHtml(a)).join(', ')}</div>
+                    </div>
+                ` : ''}
+
+                ${elements.environmentalExposure?.length > 0 ? `
+                    <div class="element-group">
+                        <div class="element-label">Environmental Exposure:</div>
+                        <div class="element-values">${elements.environmentalExposure.map(e => escapeHtml(e)).join(', ')}</div>
+                    </div>
+                ` : ''}
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Render continuity breakdown with looks
+ * @param {string} characterName - Character name
+ * @param {Object} characterData - Character data from masterContext
+ * @returns {string} HTML string
+ */
+function renderContinuityBreakdown(characterName, characterData) {
+    const looks = extractCharacterLooks(characterName, characterData);
+
+    if (looks.length === 0) return '';
+
+    return `
+        <div class="profile-section continuity-breakdown-section">
+            <h3 class="section-title">CONTINUITY BREAKDOWN</h3>
+            <div class="looks-container">
+                ${looks.map((look, index) => `
+                    <div class="look-block">
+                        <div class="look-header">
+                            <div class="look-title">LOOK ${index + 1}: "${look.name}"</div>
+                            <div class="look-range">(${look.dayRange} / Scenes ${look.sceneRange})</div>
+                        </div>
+                        <div class="look-details">
+                            ${look.hair ? `<div class="detail-row"><strong>Hair:</strong> ${escapeHtml(look.hair)}</div>` : ''}
+                            ${look.makeup ? `<div class="detail-row"><strong>Makeup:</strong> ${escapeHtml(look.makeup)}</div>` : ''}
+                            ${look.wardrobe ? `<div class="detail-row"><strong>Wardrobe:</strong> ${escapeHtml(look.wardrobe)}</div>` : ''}
+                            ${look.notes ? `<div class="detail-row"><strong>Notes:</strong> ${escapeHtml(look.notes)}</div>` : ''}
+                            ${look.special ? `<div class="detail-row special"><strong>Special:</strong> ${escapeHtml(look.special)}</div>` : ''}
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Extract character looks from scene data
+ * @param {string} characterName - Character name
+ * @param {Object} characterData - Character data
+ * @returns {Array} Array of look objects
+ */
+function extractCharacterLooks(characterName, characterData) {
+    const looks = [];
+
+    // Get base appearance
+    const baseAppearance = characterData?.visualProfile?.overallVibe || 'Standard appearance';
+
+    // Collect scenes where character appears
+    const scenesPresent = characterData?.scenesPresent || [];
+
+    if (scenesPresent.length === 0) return looks;
+
+    // Group by story days and look changes
+    const scenesByDay = {};
+    scenesPresent.forEach(sceneNum => {
+        const sceneIndex = sceneNum - 1;
+        const scene = state.scenes?.[sceneIndex];
+        if (!scene) return;
+
+        const storyDay = scene.storyDay || 'Unassigned';
+        if (!scenesByDay[storyDay]) {
+            scenesByDay[storyDay] = [];
+        }
+        scenesByDay[storyDay].push(sceneNum);
+    });
+
+    // Create look for each story day (can be enhanced to detect mid-day changes)
+    Object.entries(scenesByDay).forEach(([day, scenes]) => {
+        const firstScene = Math.min(...scenes);
+        const lastScene = Math.max(...scenes);
+        const sceneRange = scenes.length === 1 ? `${firstScene}` : `${firstScene}-${lastScene}`;
+
+        looks.push({
+            name: `${day} Look`,
+            dayRange: day,
+            sceneRange: sceneRange,
+            hair: 'As per base appearance',
+            makeup: 'As per base appearance',
+            wardrobe: 'As per base appearance',
+            notes: baseAppearance
+        });
+    });
+
+    return looks;
+}
+
+/**
+ * Render continuity events section
+ * @param {string} characterName - Character name
+ * @param {Array} events - Array of event objects
+ * @returns {string} HTML string
+ */
+function renderContinuityEventsSection(characterName, events) {
+    if (events.length === 0) return '';
+
+    return `
+        <div class="profile-section continuity-events-section">
+            <h3 class="section-title">CONTINUITY EVENTS</h3>
+            <div class="events-list">
+                ${events.map(event => `
+                    <div class="event-item">
+                        <strong>Scene ${event.sceneNumber || event.scene}:</strong> ${escapeHtml(event.description || event.type)}
+                        ${event.endScene ? ` - continues through Scene ${event.endScene}` : ' - ongoing'}
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+}
+
+/**
  * Render action buttons section
  * @param {string} characterName - Character name
  * @returns {string} HTML string
  */
 function renderActionButtons(characterName) {
+    const escapedName = characterName.replace(/'/g, "\\'");
+
     return `
-        <div class="character-section action-buttons-section">
-            <div class="action-buttons">
-                <button class="action-btn" onclick="generateLookbook('${characterName}')" title="Generate visual lookbook">
-                    📖 Generate Lookbook
-                </button>
-                <button class="action-btn" onclick="viewCharacterTimeline('${characterName}')" title="View detailed timeline">
-                    📊 View Timeline
-                </button>
-                <button class="action-btn" onclick="exportCharacterProfile('${characterName}')" title="Export profile as PDF/JSON">
-                    📤 Export Profile
-                </button>
-            </div>
+        <div class="profile-actions">
+            <button class="action-btn" onclick="viewCharacterTimeline('${escapedName}')" title="View full timeline">
+                View Full Timeline
+            </button>
+            <button class="action-btn" onclick="exportCharacterProfile('${escapedName}')" title="Export profile">
+                Export Profile
+            </button>
+            <button class="action-btn" onclick="addCharacterNotes('${escapedName}')" title="Add notes">
+                Add Notes
+            </button>
         </div>
     `;
 }
@@ -1046,13 +1271,181 @@ window.generateLookbook = function(characterName) {
 };
 
 /**
- * View detailed character timeline (placeholder)
+ * View detailed character timeline
  * @param {string} characterName - Character name
  */
 window.viewCharacterTimeline = function(characterName) {
     console.log('View timeline for:', characterName);
-    // TODO: Implement detailed timeline view
-    alert(`Detailed timeline for ${characterName} - Coming soon!`);
+
+    const timelineData = buildTimelineData(characterName);
+
+    // Create modal
+    const modal = document.createElement('div');
+    modal.className = 'modal timeline-modal active';
+    modal.id = 'character-timeline-modal';
+    modal.style.display = 'flex';
+
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>${escapeHtml(characterName)} - CONTINUITY TIMELINE</h2>
+                <button class="modal-close" onclick="closeTimelineModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="timeline-scroll">
+                    ${renderTimelineDays(timelineData)}
+                </div>
+            </div>
+            <div class="modal-notes">
+                <div class="notes-section">
+                    <strong>TECHNICAL NOTES</strong>
+                    <div class="technical-notes">${timelineData.technicalNotes || 'None'}</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn" onclick="exportTimeline('${characterName.replace(/'/g, "\\'")}')">Export Timeline</button>
+                <button class="modal-btn" onclick="printTimeline('${characterName.replace(/'/g, "\\'")}')">Print for HOD Meeting</button>
+                <button class="modal-btn secondary" onclick="closeTimelineModal()">Close</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Close on background click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeTimelineModal();
+        }
+    });
+};
+
+/**
+ * Build timeline data for character
+ * @param {string} characterName - Character name
+ * @returns {Object} Timeline data
+ */
+function buildTimelineData(characterName) {
+    const characterData = window.masterContext?.characters?.[characterName];
+    const scenesPresent = characterData?.scenesPresent || [];
+
+    // Group scenes by story day
+    const scenesByDay = {};
+    scenesPresent.forEach(sceneNum => {
+        const sceneIndex = sceneNum - 1;
+        const scene = state.scenes?.[sceneIndex];
+        if (!scene) return;
+
+        const storyDay = scene.storyDay || 'Unassigned';
+        if (!scenesByDay[storyDay]) {
+            scenesByDay[storyDay] = [];
+        }
+
+        scenesByDay[storyDay].push({
+            number: sceneNum,
+            heading: scene.heading,
+            index: sceneIndex,
+            continuity: state.characterStates?.[sceneIndex]?.[characterName] || null
+        });
+    });
+
+    // Build timeline days
+    const days = Object.entries(scenesByDay).map(([dayLabel, scenes]) => {
+        return {
+            number: dayLabel,
+            look: characterData?.visualProfile?.overallVibe || 'Standard',
+            base: 'As per base appearance',
+            scenes: scenes
+        };
+    });
+
+    return {
+        days: days,
+        technicalNotes: characterData?.continuityNotes?.transformations || ''
+    };
+}
+
+/**
+ * Render timeline days
+ * @param {Object} timelineData - Timeline data
+ * @returns {string} HTML string
+ */
+function renderTimelineDays(timelineData) {
+    return timelineData.days.map(day => `
+        <div class="timeline-day">
+            <div class="day-header">
+                <strong>STORY DAY ${day.number}</strong>
+                ${day.look ? `<div class="day-meta">Look: ${escapeHtml(day.look)}</div>` : ''}
+                ${day.base ? `<div class="day-meta">Base: ${escapeHtml(day.base)}</div>` : ''}
+            </div>
+            <div class="day-scenes">
+                ${day.scenes.map(scene => renderTimelineScene(scene)).join('')}
+            </div>
+        </div>
+    `).join('');
+}
+
+/**
+ * Render timeline scene
+ * @param {Object} scene - Scene object
+ * @returns {string} HTML string
+ */
+function renderTimelineScene(scene) {
+    const hasEvent = scene.continuity && (scene.continuity.notes || scene.continuity.injuries);
+
+    return `
+        <div class="timeline-scene ${hasEvent ? 'has-event' : ''}" onclick="navigateToScene(${scene.index})">
+            <div class="scene-header">
+                <strong>Scene ${scene.number}:</strong>
+                ${escapeHtml(scene.heading)}
+            </div>
+            ${scene.continuity && (scene.continuity.enter || scene.continuity.during || scene.continuity.exit) ? `
+                <div class="scene-continuity">
+                    ${scene.continuity.enter ? `<div class="continuity-note">Enter: ${escapeHtml(scene.continuity.enter)}</div>` : ''}
+                    ${scene.continuity.during ? `<div class="continuity-note">During: ${escapeHtml(scene.continuity.during)}</div>` : ''}
+                    ${scene.continuity.exit ? `<div class="continuity-note">Exit: ${escapeHtml(scene.continuity.exit)}</div>` : ''}
+                </div>
+            ` : ''}
+            ${scene.continuity && scene.continuity.notes ? `
+                <div class="scene-event">
+                    <strong>EVENT:</strong> ${escapeHtml(scene.continuity.notes)}
+                </div>
+            ` : ''}
+        </div>
+    `;
+}
+
+/**
+ * Close timeline modal
+ */
+window.closeTimelineModal = function() {
+    const modal = document.getElementById('character-timeline-modal');
+    if (modal) {
+        modal.remove();
+    }
+};
+
+/**
+ * Export timeline (placeholder)
+ */
+window.exportTimeline = function(characterName) {
+    alert(`Export timeline for ${characterName} - Coming soon!`);
+};
+
+/**
+ * Print timeline (placeholder)
+ */
+window.printTimeline = function(characterName) {
+    alert(`Print timeline for ${characterName} - Coming soon!`);
+};
+
+/**
+ * Add character notes (placeholder)
+ * @param {string} characterName - Character name
+ */
+window.addCharacterNotes = function(characterName) {
+    console.log('Add notes for:', characterName);
+    alert(`Add notes for ${characterName} - Coming soon!`);
 };
 
 /**
