@@ -16,6 +16,7 @@ import { renderSceneList } from './scene-list.js';
 import { renderCharacterTabs, renderCharacterTabPanels } from './character-panel.js';
 import { detectTimeOfDay, detectIntExt, extractLocation } from './utils.js';
 import { callAI } from './ai-integration.js';
+import { renderAllHighlights } from './tag-system.js';
 
 /**
  * Export project data as JSON file
@@ -587,6 +588,170 @@ function createFallbackMasterContext(scriptText, scenes) {
 }
 
 /**
+ * Create tags from master context data
+ * Automatically tags character names, descriptions, and key events
+ */
+function createTagsFromMasterContext(masterContext) {
+    if (!state.scriptTags) {
+        state.scriptTags = {};
+    }
+
+    let totalTagsCreated = 0;
+
+    // Tag character descriptions in each scene
+    Object.entries(masterContext.characters || {}).forEach(([charName, charData]) => {
+        // Tag script descriptions (character introductions/mentions)
+        if (charData.scriptDescriptions && charData.scriptDescriptions.length > 0) {
+            charData.scriptDescriptions.forEach(desc => {
+                const sceneIndex = (desc.sceneNumber || 1) - 1;
+
+                if (!state.scenes[sceneIndex]) return;
+
+                // Create tag for this character description
+                const tag = {
+                    id: generateTagId(),
+                    category: 'cast',
+                    character: charName,
+                    selectedText: desc.text,
+                    fullContext: `${charName} - ${desc.type || 'description'}`,
+                    sceneIndex: sceneIndex,
+                    position: { start: 0, end: desc.text.length }, // Will be matched later
+                    importance: 8 // High importance for character descriptions
+                };
+
+                if (!state.scriptTags[sceneIndex]) {
+                    state.scriptTags[sceneIndex] = [];
+                }
+
+                state.scriptTags[sceneIndex].push(tag);
+                totalTagsCreated++;
+            });
+        }
+
+        // Tag extracted wardrobe mentions
+        if (charData.extractedElements?.mentionedWardrobe) {
+            charData.extractedElements.mentionedWardrobe.forEach((item, idx) => {
+                // Assume these are spread across character's scenes
+                const sceneIndex = charData.scenesPresent?.[idx] ?
+                    charData.scenesPresent[idx] - 1 : charData.firstAppearance - 1;
+
+                if (!state.scenes[sceneIndex]) return;
+
+                const tag = {
+                    id: generateTagId(),
+                    category: 'wardrobe',
+                    character: charName,
+                    selectedText: item,
+                    fullContext: `${charName} wardrobe: ${item}`,
+                    sceneIndex: sceneIndex,
+                    position: { start: 0, end: item.length },
+                    importance: 6
+                };
+
+                if (!state.scriptTags[sceneIndex]) {
+                    state.scriptTags[sceneIndex] = [];
+                }
+
+                state.scriptTags[sceneIndex].push(tag);
+                totalTagsCreated++;
+            });
+        }
+    });
+
+    // Tag physical interactions
+    Object.entries(masterContext.interactions || {}).forEach(([sceneKey, interaction]) => {
+        const sceneMatch = sceneKey.match(/scene_(\d+)/);
+        if (!sceneMatch) return;
+
+        const sceneIndex = parseInt(sceneMatch[1]) - 1;
+        if (!state.scenes[sceneIndex]) return;
+
+        const tag = {
+            id: generateTagId(),
+            category: interaction.type === 'fight' ? 'stunts' : 'sfx',
+            character: interaction.characters?.[0] || null,
+            selectedText: interaction.impact || interaction.type,
+            fullContext: `Physical interaction: ${interaction.type} - ${interaction.impact}`,
+            sceneIndex: sceneIndex,
+            position: { start: 0, end: 50 },
+            importance: 7
+        };
+
+        if (!state.scriptTags[sceneIndex]) {
+            state.scriptTags[sceneIndex] = [];
+        }
+
+        state.scriptTags[sceneIndex].push(tag);
+        totalTagsCreated++;
+    });
+
+    // Tag emotional beats that require makeup (crying, bruising, etc.)
+    Object.entries(masterContext.emotionalBeats || {}).forEach(([sceneKey, beat]) => {
+        const sceneMatch = sceneKey.match(/scene_(\d+)/);
+        if (!sceneMatch) return;
+
+        const sceneIndex = parseInt(sceneMatch[1]) - 1;
+        if (!state.scenes[sceneIndex]) return;
+
+        const tag = {
+            id: generateTagId(),
+            category: 'makeup',
+            character: beat.character || null,
+            selectedText: beat.visualImpact || beat.emotion,
+            fullContext: `${beat.character} - ${beat.emotion}: ${beat.visualImpact}`,
+            sceneIndex: sceneIndex,
+            position: { start: 0, end: 50 },
+            importance: 6
+        };
+
+        if (!state.scriptTags[sceneIndex]) {
+            state.scriptTags[sceneIndex] = [];
+        }
+
+        state.scriptTags[sceneIndex].push(tag);
+        totalTagsCreated++;
+    });
+
+    // Tag major events (injuries, transformations, etc.)
+    (masterContext.majorEvents || []).forEach(event => {
+        const sceneIndex = event.scene - 1;
+        if (!state.scenes[sceneIndex]) return;
+
+        let category = 'sfx';
+        if (event.type === 'fight') category = 'stunts';
+        if (event.type === 'accident') category = 'injuries';
+        if (event.type === 'weather') category = 'weather';
+
+        const tag = {
+            id: generateTagId(),
+            category: category,
+            character: event.charactersAffected?.[0] || null,
+            selectedText: event.visualImpact || event.type,
+            fullContext: `Major event: ${event.type} - ${event.visualImpact}`,
+            sceneIndex: sceneIndex,
+            position: { start: 0, end: 50 },
+            importance: 9 // Major events are high priority
+        };
+
+        if (!state.scriptTags[sceneIndex]) {
+            state.scriptTags[sceneIndex] = [];
+        }
+
+        state.scriptTags[sceneIndex].push(tag);
+        totalTagsCreated++;
+    });
+
+    console.log(`✅ Created ${totalTagsCreated} tags from master context`);
+}
+
+/**
+ * Generate unique tag ID
+ */
+function generateTagId() {
+    return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+}
+
+/**
  * Populate initial data from master context
  * Sets up the application state with the comprehensive analysis results
  * ENHANCED - Now populates all rich character data
@@ -792,12 +957,23 @@ function populateInitialData(masterContext) {
         renderCharacterTabPanels();
     }
 
+    // AUTO-CREATE TAGS from master context data
+    console.log('🏷️ Creating tags from master context data...');
+    createTagsFromMasterContext(masterContext);
+
+    // Render highlights to show tags in script
+    console.log('🎨 Applying highlights to script...');
+    setTimeout(() => {
+        renderAllHighlights();
+    }, 500); // Small delay to ensure script is rendered
+
     console.log('✅ ENHANCED initial data populated successfully:', {
         characters: characterNames.length,
         environments: Object.keys(masterContext.environments || {}).length,
         interactions: Object.keys(masterContext.interactions || {}).length,
         emotionalBeats: Object.keys(masterContext.emotionalBeats || {}).length,
-        majorEvents: masterContext.majorEvents?.length || 0
+        majorEvents: masterContext.majorEvents?.length || 0,
+        tagsCreated: Object.values(state.scriptTags || {}).reduce((sum, tags) => sum + tags.length, 0)
     });
 }
 
