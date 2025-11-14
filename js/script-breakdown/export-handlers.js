@@ -127,6 +127,13 @@ export async function processScript() {
         updateTopLoadingBar('Analyzing Script', 'Populating initial data...', 75);
         populateInitialData(masterContext);
 
+        // CRITICAL: Render character tabs immediately after data population
+        updateTopLoadingBar('Analyzing Script', 'Creating character tabs...', 90);
+        const { renderCharacterTabs, renderCharacterTabPanels } = await import('./character-panel.js');
+        renderCharacterTabs();
+        renderCharacterTabPanels();
+        console.log('✅ Character tabs created for', state.confirmedCharacters.size, 'characters');
+
         // Complete
         updateTopLoadingBar('Analysis Complete', `${state.scenes.length} scenes processed`, 100);
 
@@ -417,171 +424,190 @@ Return ONLY valid JSON (no markdown, no code fences).
  * Extracts basic character data from script text
  */
 function createFallbackMasterContext(scriptText, scenes) {
-    console.log('🔧 Creating fallback master context from manual extraction...');
+    console.log('🔧 Creating fallback master context with manual extraction...');
 
-    const characters = {};
-    const lines = scriptText.split('\n');
+    // Parse all character names from script (characters speak in CAPS)
+    const characterSet = new Set();
+    const characterFirstAppearance = {};
+    const characterLastAppearance = {};
+    const characterSceneCount = {};
+    const characterDescriptions = {};
 
-    // Extract character names from dialogue
-    const dialoguePattern = /^([A-Z][A-Z\s\.\-\']+)(\s*\([^\)]*\))?$/;
-    const characterNames = new Set();
+    scenes.forEach((scene, index) => {
+        const sceneNum = scene.number || (index + 1);
+        const content = scene.content || scene.text || '';
+        const heading = scene.heading || '';
 
-    // First pass: Find all speaking characters
-    lines.forEach((line, lineIndex) => {
-        const trimmed = line.trim();
-        const match = trimmed.match(dialoguePattern);
+        // Method 1: Find dialogue (character name followed by dialogue or parenthetical)
+        const dialoguePattern = /^([A-Z][A-Z\s\.'-]+)\s*(?:\(|:)/gm;
+        let match;
 
-        if (match) {
-            let charName = match[1].trim();
-            // Clean up character name
-            charName = charName.replace(/(\s*\(.*\)|\s*V\.O\.|CONT'D|CONT\.|O\.S\.|O\.C\.)/g, '').trim();
+        while ((match = dialoguePattern.exec(content)) !== null) {
+            const charName = match[1].trim();
+            // Filter out common false positives
+            if (charName.length > 1 &&
+                !charName.match(/^(INT|EXT|FADE|CUT|DISSOLVE|CONTINUED|THE END|TITLE|SUPER|INSERT|BACK TO)/) &&
+                !charName.match(/^\d/)) {
 
-            if (charName &&
-                charName.length > 1 &&
-                !charName.includes('INT.') &&
-                !charName.includes('EXT.') &&
-                !charName.includes('FADE') &&
-                !charName.includes('CUT TO')) {
-                characterNames.add(charName);
+                characterSet.add(charName);
+
+                if (!characterFirstAppearance[charName]) {
+                    characterFirstAppearance[charName] = sceneNum;
+                }
+                characterLastAppearance[charName] = sceneNum;
+                characterSceneCount[charName] = (characterSceneCount[charName] || 0) + 1;
             }
         }
-    });
 
-    console.log(`📋 Found ${characterNames.size} characters in dialogue`);
+        // Method 2: Look for character introductions in action lines
+        // Pattern: "CHARACTER_NAME, age, description"
+        const introPattern = /([A-Z][A-Z\s\.'-]+),\s*(?:(?:\d+|early|mid|late)\s*(?:years old|\d+s)?|a)/gi;
+        const actionLines = content.split('\n').filter(line =>
+            !line.match(/^([A-Z][A-Z\s\.'-]+)\s*(?:\(|:)/) && // Not dialogue
+            line.trim().length > 0 &&
+            !line.match(/^(INT|EXT|FADE|CUT)/) // Not scene heading
+        );
 
-    // Second pass: Find character descriptions (looking for introductions)
-    const characterDescriptions = {};
-    lines.forEach((line, lineIndex) => {
-        const trimmed = line.trim();
+        actionLines.forEach(line => {
+            const introMatch = line.match(introPattern);
+            if (introMatch) {
+                introMatch.forEach(m => {
+                    const charName = m.split(',')[0].trim();
+                    if (charName.length > 1 && charName.length < 40) {
+                        characterSet.add(charName);
 
-        // Look for character introductions: "CHARACTER_NAME (age), description"
-        for (const charName of characterNames) {
-            const descPattern = new RegExp(`${charName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\(([^)]+)\\)[,\\s]+([^.]+)`, 'i');
-            const match = trimmed.match(descPattern);
+                        // Store description
+                        if (!characterDescriptions[charName]) {
+                            characterDescriptions[charName] = [{
+                                text: line.trim(),
+                                sceneNumber: sceneNum,
+                                type: 'introduction'
+                            }];
+                        }
 
-            if (match) {
-                if (!characterDescriptions[charName]) {
-                    characterDescriptions[charName] = [];
-                }
-                characterDescriptions[charName].push({
-                    text: match[0],
-                    age: match[1],
-                    description: match[2]
+                        if (!characterFirstAppearance[charName]) {
+                            characterFirstAppearance[charName] = sceneNum;
+                        }
+                        characterLastAppearance[charName] = sceneNum;
+                    }
                 });
             }
-        }
+        });
     });
 
-    // Create character profiles
-    characterNames.forEach(charName => {
-        const descriptions = characterDescriptions[charName] || [];
-        const firstDesc = descriptions[0];
+    // Build character objects
+    const characters = {};
+    const characterArray = Array.from(characterSet).sort();
+
+    characterArray.forEach(charName => {
+        const sceneCount = characterSceneCount[charName] || 0;
+        const firstScene = characterFirstAppearance[charName] || 1;
+        const lastScene = characterLastAppearance[charName] || scenes.length;
+
+        // Determine role based on scene count
+        let role = 'background';
+        if (sceneCount >= 15) role = 'protagonist';
+        else if (sceneCount >= 8) role = 'supporting';
+        else if (sceneCount >= 3) role = 'featured';
+
+        // Build scene presence list
+        const scenesPresent = [];
+        scenes.forEach((scene, index) => {
+            const sceneNum = scene.number || (index + 1);
+            if (sceneNum >= firstScene && sceneNum <= lastScene) {
+                const content = scene.content || scene.text || '';
+                // Check if character appears in this scene
+                if (content.match(new RegExp(`^${charName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*(?:\\(|:)`, 'm'))) {
+                    scenesPresent.push(sceneNum);
+                }
+            }
+        });
 
         characters[charName] = {
-            scriptDescriptions: descriptions.map((desc, idx) => ({
-                text: desc.text,
-                sceneNumber: idx + 1,
-                type: idx === 0 ? 'introduction' : 'description'
-            })),
-
-            physicalProfile: {
-                age: firstDesc?.age || null,
-                gender: null,
-                build: null,
-                height: null,
-                hairColor: null,
-                hairStyle: null,
-                eyeColor: null,
-                skin: null,
-                distinctiveFeatures: []
-            },
-
+            scriptDescriptions: characterDescriptions[charName] || [],
+            physicalProfile: {},
             characterAnalysis: {
-                role: 'supporting',
-                relationship: null,
-                occupation: null,
-                socialClass: null,
-                personality: 'To be analyzed scene-by-scene',
-                arc: 'To be determined through breakdown',
-                emotionalJourney: null
+                role: role,
+                personality: '',
+                arc: ''
             },
-
             visualProfile: {
-                overallVibe: 'To be determined from script context',
-                styleChoices: 'To be defined during breakdown',
-                groomingHabits: null,
-                makeupNotes: null,
-                quirks: null,
-                inspirations: null
+                overallVibe: '',
+                styleChoices: ''
             },
-
             storyPresence: {
-                firstAppearance: 1,
-                lastAppearance: scenes.length,
-                totalScenes: 0,
-                scenesPresent: [],
-                hasDialogue: true,
-                speakingScenes: []
+                firstAppearance: firstScene,
+                lastAppearance: lastScene,
+                totalScenes: scenesPresent.length,
+                scenesPresent: scenesPresent,
+                hasDialogue: sceneCount > 0,
+                speakingScenes: scenesPresent
             },
-
             extractedElements: {
                 mentionedWardrobe: [],
                 mentionedAppearanceChanges: [],
                 physicalActions: [],
                 environmentalExposure: []
             },
-
             continuityNotes: {
-                keyLooks: 'To be identified during breakdown',
-                transformations: 'To be tracked scene-by-scene',
-                signature: 'To be determined',
-                importantScenes: []
+                keyLooks: '',
+                transformations: '',
+                signature: ''
             },
-
-            firstAppearance: 1,
-            lastAppearance: scenes.length,
-            sceneCount: 0,
-            scenesPresent: []
+            firstAppearance: firstScene,
+            lastAppearance: lastScene,
+            sceneCount: scenesPresent.length,
+            scenesPresent: scenesPresent
         };
     });
 
-    // Create basic master context structure
+    console.log(`✓ Fallback extraction found ${characterArray.length} characters:`, characterArray);
+
+    // Build story structure
+    const storyStructure = {
+        totalDays: Math.ceil(scenes.length / 10) || 1,
+        timeline: [],
+        flashbacks: [],
+        timeJumps: []
+    };
+
+    // Create simple day breakdown
+    const scenesPerDay = Math.ceil(scenes.length / storyStructure.totalDays);
+    for (let day = 1; day <= storyStructure.totalDays; day++) {
+        const startScene = ((day - 1) * scenesPerDay) + 1;
+        const endScene = Math.min(day * scenesPerDay, scenes.length);
+        const dayScenes = [];
+
+        for (let s = startScene; s <= endScene; s++) {
+            dayScenes.push(s);
+        }
+
+        storyStructure.timeline.push({
+            day: `Day ${day}`,
+            scenes: dayScenes,
+            description: `Scenes ${startScene}-${endScene}`
+        });
+    }
+
     const masterContext = {
-        title: 'Imported Script',
+        title: 'Untitled Script',
         totalScenes: scenes.length,
-
-        storyStructure: {
-            totalDays: 1,
-            dayBreakdown: [{
-                day: 'Day 1',
-                scenes: scenes.map((_, i) => i + 1),
-                timeProgression: 'To be determined',
-                description: 'Script imported - timeline to be analyzed'
-            }],
-            timeline: [{
-                day: 'Day 1',
-                scenes: scenes.map((_, i) => i + 1),
-                description: 'Full script'
-            }],
-            flashbacks: [],
-            timeJumps: []
-        },
-
         characters: characters,
+        storyStructure: storyStructure,
         environments: {},
         interactions: {},
         emotionalBeats: {},
         dialogueReferences: {},
         majorEvents: [],
-
-        continuityNotes: 'Fallback extraction - AI analysis failed. Character data extracted from dialogue. Complete scene-by-scene breakdown recommended.',
+        continuityNotes: 'Fallback extraction - basic character data only',
         createdAt: new Date().toISOString(),
-        analysisVersion: '1.0-fallback'
+        analysisVersion: '2.0-fallback'
     };
 
     console.log('✅ Fallback master context created:', {
         characters: Object.keys(characters).length,
-        characterNames: Object.keys(characters).join(', ')
+        scenes: scenes.length,
+        storyDays: storyStructure.totalDays
     });
 
     return masterContext;
@@ -858,6 +884,48 @@ function populateInitialData(masterContext) {
                 });
             });
         }
+    }
+
+    // CRITICAL: Pre-populate scene breakdowns with characters from master context
+    if (masterContext.characters) {
+        console.log('📋 Pre-populating scene breakdowns with characters...');
+        let scenesCastPopulated = 0;
+
+        Object.entries(masterContext.characters).forEach(([charName, charData]) => {
+            const scenesPresent = charData.scenesPresent || charData.storyPresence?.scenesPresent || [];
+
+            scenesPresent.forEach(sceneNum => {
+                const sceneIndex = sceneNum - 1;
+                if (state.scenes[sceneIndex]) {
+                    // Initialize breakdown if it doesn't exist
+                    if (!state.sceneBreakdowns[sceneIndex]) {
+                        state.sceneBreakdowns[sceneIndex] = {
+                            cast: [],
+                            hair: [],
+                            makeup: [],
+                            sfx: [],
+                            health: [],
+                            injuries: [],
+                            stunts: [],
+                            weather: [],
+                            wardrobe: [],
+                            extras: []
+                        };
+                    }
+
+                    // Add character to cast if not already present
+                    if (!state.sceneBreakdowns[sceneIndex].cast) {
+                        state.sceneBreakdowns[sceneIndex].cast = [];
+                    }
+                    if (!state.sceneBreakdowns[sceneIndex].cast.includes(charName)) {
+                        state.sceneBreakdowns[sceneIndex].cast.push(charName);
+                        scenesCastPopulated++;
+                    }
+                }
+            });
+        });
+
+        console.log(`✓ Populated ${scenesCastPopulated} character appearances across ${state.scenes.length} scenes`);
     }
 
     // Store environments affecting appearance
@@ -1805,6 +1873,25 @@ export function saveProject() {
  */
 export function loadProjectData() {
     try {
+        // CRITICAL: Load master context FIRST
+        const savedMasterContext = localStorage.getItem('masterContext') || localStorage.getItem('scriptMasterContext');
+        if (savedMasterContext) {
+            try {
+                const masterContext = JSON.parse(savedMasterContext);
+                window.masterContext = masterContext;
+                window.scriptMasterContext = masterContext;
+                console.log('✅ Master context loaded from localStorage:', {
+                    characters: Object.keys(masterContext.characters || {}).length,
+                    scenes: masterContext.totalScenes,
+                    version: masterContext.analysisVersion
+                });
+            } catch (e) {
+                console.error('❌ Failed to parse master context:', e);
+            }
+        } else {
+            console.log('⚠️ No master context found in localStorage');
+        }
+
         const savedProject = localStorage.getItem('currentProject');
 
         if (savedProject) {
@@ -1822,10 +1909,14 @@ export function loadProjectData() {
             state.sceneTimeline = project.sceneTimeline || {};
             state.scriptTags = project.scriptTags || {};
 
-            // Load confirmedCharacters from saved project (or fallback to cast profiles)
+            // Load confirmedCharacters from saved project (or fallback to master context or cast profiles)
             if (project.confirmedCharacters) {
                 // If saved as array, convert to Set
                 state.confirmedCharacters = new Set(project.confirmedCharacters);
+            } else if (window.masterContext?.characters) {
+                // Fallback: Populate from master context if available
+                state.confirmedCharacters = new Set(Object.keys(window.masterContext.characters));
+                console.log('✅ Populated confirmed characters from master context');
             } else if (Object.keys(state.castProfiles).length > 0) {
                 // Migrate old projects: use cast profiles as confirmed characters
                 state.confirmedCharacters = new Set(Object.keys(state.castProfiles));
@@ -1836,12 +1927,12 @@ export function loadProjectData() {
             // Also populate state.characters for backwards compatibility
             state.characters = new Set(state.confirmedCharacters);
 
-            // Initialize character tabs from cast profiles
-            state.characterTabs = Object.keys(state.castProfiles);
-            console.log(`✓ Loaded ${state.characterTabs.length} character tabs from saved project:`, state.characterTabs);
+            // Initialize character tabs from confirmed characters (not just cast profiles)
+            state.characterTabs = Array.from(state.confirmedCharacters);
+            console.log(`✓ Loaded ${state.characterTabs.length} character tabs from confirmed characters:`, state.characterTabs);
             console.log(`✓ Loaded ${state.confirmedCharacters.size} confirmed characters:`, Array.from(state.confirmedCharacters));
 
-            console.log('Project loaded successfully:', project.name);
+            console.log('✅ Project loaded successfully:', project.name);
             console.log(`  Scenes: ${state.scenes.length}`);
             console.log(`  Characters: ${state.characterTabs.length}`);
             console.log(`  Confirmed Characters: ${state.confirmedCharacters.size}`);
@@ -1852,7 +1943,7 @@ export function loadProjectData() {
                 loadScript(project.scriptContent);
             }
         } else {
-            console.log('No saved project found');
+            console.log('⚠️ No saved project found');
 
             // Initialize empty project
             state.currentProject = {
@@ -1862,7 +1953,7 @@ export function loadProjectData() {
             };
         }
     } catch (error) {
-        console.error('Error loading project:', error);
+        console.error('❌ Error loading project:', error);
         alert('Failed to load project: ' + error.message);
     }
 }
