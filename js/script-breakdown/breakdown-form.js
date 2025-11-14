@@ -37,7 +37,7 @@ let currentElementCategory = null;
 
 /**
  * Render the breakdown panel for the current scene
- * Automatically uses enhanced workflow or hybrid mode if enabled
+ * Uses comprehensive single-view breakdown (no tabs)
  */
 export function renderBreakdownPanel() {
     const container = document.getElementById('breakdown-panel');
@@ -53,26 +53,7 @@ export function renderBreakdownPanel() {
         return;
     }
 
-    // Check if hybrid mode should be used
-    const useHybridMode = shouldUseHybridMode();
-
-    if (useHybridMode) {
-        // Use hybrid breakdown rendering
-        const hybridHTML = renderHybridSceneBreakdown(state.currentScene);
-        container.innerHTML = hybridHTML;
-        return;
-    }
-
-    // Check if enhanced workflow should be used
-    const useEnhancedWorkflow = shouldUseEnhancedWorkflow();
-
-    if (useEnhancedWorkflow && window.breakdownManager) {
-        // Use enhanced workflow manager
-        window.breakdownManager.loadSceneBreakdown(state.currentScene);
-        return;
-    }
-
-    // Use comprehensive breakdown rendering with data collection
+    // Always use comprehensive breakdown rendering with data collection
     renderSceneBreakdown(state.currentScene);
 }
 
@@ -986,6 +967,49 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+/**
+ * Extract story day from master context timeline
+ * @param {number} sceneIndex - Scene index
+ * @returns {string} Story day (e.g., "Day 1") or empty string
+ */
+function extractStoryDay(sceneIndex) {
+    if (!window.masterContext?.storyStructure?.timeline) return '';
+
+    const timeline = window.masterContext.storyStructure.timeline;
+    const sceneNumber = state.scenes[sceneIndex]?.number;
+
+    if (!sceneNumber) return '';
+
+    // Find the day that includes this scene number
+    for (const day of timeline) {
+        if (day.scenes && day.scenes.includes(sceneNumber)) {
+            return day.day || '';
+        }
+    }
+
+    return '';
+}
+
+/**
+ * Extract time of day from scene heading
+ * @param {string} heading - Scene heading
+ * @returns {string} Time of day or empty string
+ */
+function extractTimeFromHeading(heading) {
+    if (!heading) return '';
+    const upper = heading.toUpperCase();
+
+    if (upper.includes('EARLY MORNING')) return 'Early Morning';
+    if (upper.includes('MORNING')) return 'Morning';
+    if (upper.includes('AFTERNOON')) return 'Afternoon';
+    if (upper.includes('EVENING') || upper.includes('DUSK')) return 'Evening';
+    if (upper.includes('NIGHT') || upper.includes('MIDNIGHT')) return 'Night';
+    if (upper.includes('LATE NIGHT')) return 'Late Night';
+    if (upper.includes('DAY') && !upper.includes('HOLIDAY')) return 'Afternoon';
+
+    return '';
+}
+
 // ============================================================================
 // NEW COMPREHENSIVE DATA COLLECTION INTERFACE
 // ============================================================================
@@ -1000,8 +1024,8 @@ function renderSceneBreakdown(sceneIndex) {
     if (!scene || !panel) return;
 
     // Pre-populate from existing data or AI suggestions
-    const storyDay = scene.storyDay || scene.aiSuggestions?.storyDay || '';
-    const timeOfDay = scene.timeOfDay || scene.aiSuggestions?.timeOfDay || '';
+    const storyDay = scene.storyDay || extractStoryDay(sceneIndex) || scene.aiSuggestions?.storyDay || '';
+    const timeOfDay = scene.timeOfDay || extractTimeFromHeading(scene.heading) || scene.aiSuggestions?.timeOfDay || '';
     const breakdown = state.sceneBreakdowns[sceneIndex] || {};
     const characters = breakdown.cast || [];
 
@@ -1037,6 +1061,7 @@ function renderSceneBreakdown(sceneIndex) {
                             <option ${timeOfDay === 'Afternoon' ? 'selected' : ''}>Afternoon</option>
                             <option ${timeOfDay === 'Evening' ? 'selected' : ''}>Evening</option>
                             <option ${timeOfDay === 'Night' ? 'selected' : ''}>Night</option>
+                            <option ${timeOfDay === 'Late Night' ? 'selected' : ''}>Late Night</option>
                         </select>
                     </div>
                 </div>
@@ -1108,6 +1133,39 @@ function renderSceneBreakdown(sceneIndex) {
 }
 
 /**
+ * Extract AI suggestions from tags for a character
+ * @param {number} sceneIndex - Scene index
+ * @param {string} character - Character name
+ * @returns {Object} Suggestions object
+ */
+function extractSuggestionsFromTags(sceneIndex, character) {
+    const sceneTags = state.scriptTags[sceneIndex] || [];
+    const suggestions = {
+        hair: '',
+        makeup: '',
+        wardrobe: '',
+        changes: []
+    };
+
+    sceneTags.forEach(tag => {
+        if (tag.character === character) {
+            const text = tag.selectedText || tag.notes || '';
+            if (tag.category === 'hair' && !suggestions.hair) {
+                suggestions.hair = text;
+            } else if (tag.category === 'makeup' && !suggestions.makeup) {
+                suggestions.makeup = text;
+            } else if (tag.category === 'wardrobe' && !suggestions.wardrobe) {
+                suggestions.wardrobe = text;
+            } else if (['injuries', 'sfx', 'health'].includes(tag.category)) {
+                suggestions.changes.push(text);
+            }
+        }
+    });
+
+    return suggestions;
+}
+
+/**
  * Render character continuity fields with enter/change/exit tracking
  * @param {string} character - Character name
  * @param {number} sceneIndex - Scene index
@@ -1117,6 +1175,13 @@ function renderSceneBreakdown(sceneIndex) {
 function renderCharacterFields(character, sceneIndex, scene) {
     const charData = state.characterStates[sceneIndex]?.[character] || {};
     const prevScene = findPreviousCharacterAppearance(character, sceneIndex);
+    const suggestions = extractSuggestionsFromTags(sceneIndex, character);
+
+    // Use suggestions if no data exists
+    const enterHair = charData.enterHair || suggestions.hair || '';
+    const enterMakeup = charData.enterMakeup || suggestions.makeup || '';
+    const enterWardrobe = charData.enterWardrobe || suggestions.wardrobe || '';
+    const changes = charData.changes || suggestions.changes.join('; ') || '';
 
     return `
         <div class="character-continuity-block" data-character="${escapeHtml(character)}">
@@ -1124,7 +1189,8 @@ function renderCharacterFields(character, sceneIndex, scene) {
                 <h5>${escapeHtml(character)}</h5>
                 <button class="copy-btn"
                         onclick="copyFromPrevious('${escapeHtml(character).replace(/'/g, "\\'")}', ${sceneIndex})"
-                        title="Copy from previous scene">
+                        title="Copy from previous scene"
+                        ${!prevScene ? 'disabled' : ''}>
                     ↓ Copy Previous
                 </button>
             </div>
@@ -1135,15 +1201,15 @@ function renderCharacterFields(character, sceneIndex, scene) {
                 <div class="continuity-fields">
                     <input type="text"
                            placeholder="Hair"
-                           value="${escapeHtml(charData.enterHair || '')}"
+                           value="${escapeHtml(enterHair)}"
                            onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'enterHair', this.value)">
                     <input type="text"
                            placeholder="Makeup"
-                           value="${escapeHtml(charData.enterMakeup || '')}"
+                           value="${escapeHtml(enterMakeup)}"
                            onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'enterMakeup', this.value)">
                     <input type="text"
                            placeholder="Wardrobe"
-                           value="${escapeHtml(charData.enterWardrobe || '')}"
+                           value="${escapeHtml(enterWardrobe)}"
                            onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'enterWardrobe', this.value)">
                     <input type="text"
                            placeholder="Condition"
@@ -1158,7 +1224,7 @@ function renderCharacterFields(character, sceneIndex, scene) {
                 <div class="continuity-fields">
                     <textarea placeholder="Describe any changes during the scene..."
                               onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'changes', this.value)"
-                              >${escapeHtml(charData.changes || '')}</textarea>
+                              >${escapeHtml(changes)}</textarea>
                 </div>
             </div>
 
@@ -1203,18 +1269,57 @@ function renderSceneEvents(sceneIndex) {
         return '<div class="no-events">No active continuity events</div>';
     }
 
-    return sceneEvents.map(event => `
-        <div class="event-item">
-            <div class="event-header">
-                <span class="event-type">${escapeHtml(event.type)}</span>
-                <span class="event-character">${escapeHtml(event.character)}</span>
+    return sceneEvents.map(event => {
+        const canEnd = !event.endScene && sceneIndex > event.startScene;
+        const canGenerateProgression = event.endScene && !event.progression;
+        const hasProgression = event.progression && event.progression.length > 0;
+
+        // Get current stage if progression exists
+        let currentStage = '';
+        if (hasProgression) {
+            const stageIndex = sceneIndex - event.startScene;
+            if (stageIndex >= 0 && stageIndex < event.progression.length) {
+                currentStage = event.progression[stageIndex];
+            }
+        }
+
+        return `
+            <div class="event-item">
+                <div class="event-header">
+                    <div class="event-header-left">
+                        <span class="event-type-badge event-type-${event.type}">${escapeHtml(event.type)}</span>
+                        <span class="event-character-name">${escapeHtml(event.character)}</span>
+                    </div>
+                    <div class="event-actions">
+                        ${canEnd ? `
+                            <button class="event-action-btn"
+                                    onclick="endEventAtScene('${event.id}', ${sceneIndex})"
+                                    title="End event at this scene">
+                                ✓ End Here
+                            </button>
+                        ` : ''}
+                        ${canGenerateProgression ? `
+                            <button class="event-action-btn primary"
+                                    onclick="generateEventProgression('${event.id}')"
+                                    title="Generate AI progression">
+                                ✨ Generate Progression
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+                <div class="event-description">${escapeHtml(event.description)}</div>
+                <div class="event-meta">
+                    <span class="event-range">Scene ${event.startScene + 1} → ${event.endScene ? `Scene ${event.endScene + 1}` : 'Ongoing'}</span>
+                    ${hasProgression ? `<span class="event-has-progression">📊 Has progression</span>` : ''}
+                </div>
+                ${currentStage ? `
+                    <div class="event-current-stage">
+                        <strong>Current stage:</strong> ${escapeHtml(currentStage)}
+                    </div>
+                ` : ''}
             </div>
-            <div class="event-description">${escapeHtml(event.description)}</div>
-            <div class="event-status">
-                Scene ${event.startScene + 1} → ${event.endScene ? `Scene ${event.endScene + 1}` : 'Ongoing'}
-            </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 /**
@@ -1346,6 +1451,181 @@ window.startNewEvent = function(sceneIndex) {
 window.linkExistingEvent = function(sceneIndex) {
     alert('Feature coming soon: Link this scene to an existing continuity event');
 };
+
+/**
+ * End continuity event at a specific scene
+ * @param {string} eventId - Event ID
+ * @param {number} sceneIndex - Scene index where event ends
+ */
+window.endEventAtScene = function(eventId, sceneIndex) {
+    if (!window.continuityTracker) {
+        alert('Continuity tracker not available');
+        return;
+    }
+
+    const events = Array.from(window.continuityTracker.events.values());
+    const event = events.find(e => e.id === eventId);
+
+    if (!event) {
+        alert('Event not found');
+        return;
+    }
+
+    if (confirm(`End "${event.description}" at Scene ${sceneIndex + 1}?`)) {
+        event.endScene = sceneIndex;
+        window.continuityTracker.events.set(eventId, event);
+        renderSceneBreakdown(sceneIndex);
+        saveToLocalStorage();
+
+        // Show message suggesting progression generation
+        if (confirm('Event ended successfully! Would you like to generate progression stages now?')) {
+            generateEventProgression(eventId);
+        }
+    }
+};
+
+/**
+ * Generate AI progression for a continuity event
+ * @param {string} eventId - Event ID
+ */
+window.generateEventProgression = async function(eventId) {
+    if (!window.continuityTracker) {
+        alert('Continuity tracker not available');
+        return;
+    }
+
+    const events = Array.from(window.continuityTracker.events.values());
+    const event = events.find(e => e.id === eventId);
+
+    if (!event || !event.endScene) {
+        alert('Event not found or not ended yet');
+        return;
+    }
+
+    // Import AI module
+    const { callAI } = await import('./ai-integration.js');
+
+    const totalScenes = event.endScene - event.startScene + 1;
+    const sceneNumbers = [];
+    for (let i = event.startScene; i <= event.endScene; i++) {
+        sceneNumbers.push(state.scenes[i]?.number || (i + 1));
+    }
+
+    const prompt = `Generate realistic progression stages for this continuity event:
+
+Type: ${event.type}
+Character: ${event.character}
+Description: ${event.description}
+Start Scene: ${event.startScene + 1} (Scene #${sceneNumbers[0]})
+End Scene: ${event.endScene + 1} (Scene #${sceneNumbers[sceneNumbers.length - 1]})
+Total Scenes: ${totalScenes}
+
+Please create a progression stage for each scene from start to end.
+
+Guidelines:
+- For injuries: Show realistic healing stages (fresh wound → bandaged → scabbing → healing → healed/scarred)
+- For conditions: Show progression or improvement over time
+- For transformations: Show gradual change
+- For wardrobe/makeup changes: Show how they evolve
+
+Return as JSON array with exactly ${totalScenes} entries, one per scene.
+Each entry should be a concise description (1-2 sentences) of the state at that scene.
+
+Example format:
+["Fresh cut on forehead, bleeding", "Wound cleaned and bandaged", "Bandage still on, slight bruising visible", "Bandage removed, scab forming", "Scab healing, slight scar visible"]
+
+Return ONLY the JSON array, no other text.`;
+
+    try {
+        // Show loading state
+        const currentScene = state.currentScene;
+        if (currentScene !== null) {
+            const eventsContainer = document.getElementById('scene-events');
+            if (eventsContainer) {
+                const loadingMsg = document.createElement('div');
+                loadingMsg.className = 'loading-message';
+                loadingMsg.textContent = '✨ Generating progression with AI...';
+                eventsContainer.prepend(loadingMsg);
+            }
+        }
+
+        const response = await callAI(prompt);
+
+        // Parse response
+        let progression;
+        try {
+            // Try to parse as JSON
+            progression = JSON.parse(response);
+        } catch (parseError) {
+            // If parsing fails, try to extract JSON from response
+            const jsonMatch = response.match(/\[[\s\S]*\]/);
+            if (jsonMatch) {
+                progression = JSON.parse(jsonMatch[0]);
+            } else {
+                throw new Error('Could not parse AI response as JSON');
+            }
+        }
+
+        // Validate progression
+        if (!Array.isArray(progression) || progression.length !== totalScenes) {
+            throw new Error(`Expected ${totalScenes} progression stages, got ${progression?.length || 0}`);
+        }
+
+        // Save progression to event
+        event.progression = progression;
+        window.continuityTracker.events.set(eventId, event);
+
+        // Apply progression to character states
+        applyProgressionToScenes(event);
+
+        // Save and refresh
+        saveToLocalStorage();
+        if (state.currentScene !== null) {
+            renderSceneBreakdown(state.currentScene);
+        }
+
+        alert('Progression generated successfully!');
+
+    } catch (error) {
+        console.error('Failed to generate progression:', error);
+        alert(`Error generating progression: ${error.message}`);
+
+        // Re-render to remove loading state
+        if (state.currentScene !== null) {
+            renderSceneBreakdown(state.currentScene);
+        }
+    }
+};
+
+/**
+ * Apply progression to scene character states
+ * @param {Object} event - Event with progression
+ */
+function applyProgressionToScenes(event) {
+    if (!event.progression || !Array.isArray(event.progression)) return;
+
+    for (let i = 0; i < event.progression.length; i++) {
+        const sceneIndex = event.startScene + i;
+        const stage = event.progression[i];
+
+        if (!state.characterStates[sceneIndex]) {
+            state.characterStates[sceneIndex] = {};
+        }
+        if (!state.characterStates[sceneIndex][event.character]) {
+            state.characterStates[sceneIndex][event.character] = {};
+        }
+
+        // Add progression to changes field
+        const existingChanges = state.characterStates[sceneIndex][event.character].changes || '';
+        const progressionNote = `[${event.type}] ${stage}`;
+
+        // Only add if not already there
+        if (!existingChanges.includes(progressionNote)) {
+            state.characterStates[sceneIndex][event.character].changes =
+                existingChanges ? `${existingChanges}\n${progressionNote}` : progressionNote;
+        }
+    }
+}
 
 // ============================================================================
 // COMPREHENSIVE BREAKDOWN RENDERING (Character States & Continuity Events)
