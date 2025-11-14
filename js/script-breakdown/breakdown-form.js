@@ -1020,6 +1020,35 @@ export function renderTimelineSection(sceneIndex) {
 }
 
 /**
+ * Render characters section for a scene
+ * @param {number} sceneIndex - Scene index
+ * @returns {string} HTML for characters section
+ */
+export function renderCharactersSection(sceneIndex) {
+    const scene = state.scenes[sceneIndex];
+    if (!scene) return '';
+
+    const breakdown = state.sceneBreakdowns[sceneIndex] || {};
+    const sceneCharacters = breakdown.cast || [];
+
+    return `
+        <div class="breakdown-section characters-section" id="characters-section-${sceneIndex}">
+            <div class="section-header">
+                <h4 class="section-title">CHARACTER CONTINUITY</h4>
+                <button class="add-character-btn" onclick="showAddCharacterMenu(${sceneIndex})">
+                    + Add Character
+                </button>
+            </div>
+            <div class="characters-list">
+                ${sceneCharacters.length > 0 ?
+                    sceneCharacters.map(char => renderCharacterFields(char, sceneIndex, scene)).join('')
+                    : '<div class="no-characters">No characters detected - use Add Character</div>'}
+            </div>
+        </div>
+    `;
+}
+
+/**
  * Render character continuity fields with enter/change/exit tracking
  * @param {string} character - Character name
  * @param {number} sceneIndex - Scene index
@@ -1029,6 +1058,12 @@ export function renderTimelineSection(sceneIndex) {
 function renderCharacterFields(character, sceneIndex, scene) {
     const charData = state.characterStates[sceneIndex]?.[character] || {};
     const prevScene = findPreviousCharacterAppearance(character, sceneIndex);
+    const aiSuggestions = getAISuggestionsForCharacter(character, sceneIndex);
+
+    // Create placeholder hints showing previous scene values
+    const hairPlaceholder = prevScene?.exitHair ? `Hair (prev: ${prevScene.exitHair})` : 'Hair';
+    const makeupPlaceholder = prevScene?.exitMakeup ? `Makeup (prev: ${prevScene.exitMakeup})` : 'Makeup';
+    const wardrobePlaceholder = prevScene?.exitWardrobe ? `Wardrobe (prev: ${prevScene.exitWardrobe})` : 'Wardrobe';
 
     return `
         <div class="character-continuity-block" data-character="${escapeHtml(character)}">
@@ -1036,6 +1071,7 @@ function renderCharacterFields(character, sceneIndex, scene) {
                 <h5>${escapeHtml(character)}</h5>
                 <button class="copy-btn"
                         onclick="copyFromPrevious('${escapeHtml(character).replace(/'/g, "\\'")}', ${sceneIndex})"
+                        ${!prevScene ? 'disabled' : ''}
                         title="Copy from previous scene">
                     ↓ Copy Previous
                 </button>
@@ -1046,30 +1082,30 @@ function renderCharacterFields(character, sceneIndex, scene) {
                 <label class="row-label">Enters with:</label>
                 <div class="continuity-fields">
                     <input type="text"
-                           placeholder="Hair"
-                           value="${escapeHtml(charData.enterHair || '')}"
-                           onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'enterHair', this.value)">
+                           placeholder="${escapeHtml(hairPlaceholder)}"
+                           value="${escapeHtml(charData.enterHair || aiSuggestions?.hair || '')}"
+                           onchange="saveCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'enterHair', this.value)"
+                           oninput="autoSaveChar(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'enterHair', this.value)">
                     <input type="text"
-                           placeholder="Makeup"
-                           value="${escapeHtml(charData.enterMakeup || '')}"
-                           onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'enterMakeup', this.value)">
+                           placeholder="${escapeHtml(makeupPlaceholder)}"
+                           value="${escapeHtml(charData.enterMakeup || aiSuggestions?.makeup || '')}"
+                           onchange="saveCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'enterMakeup', this.value)"
+                           oninput="autoSaveChar(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'enterMakeup', this.value)">
                     <input type="text"
-                           placeholder="Wardrobe"
-                           value="${escapeHtml(charData.enterWardrobe || '')}"
-                           onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'enterWardrobe', this.value)">
-                    <input type="text"
-                           placeholder="Condition"
-                           value="${escapeHtml(charData.enterCondition || '')}"
-                           onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'enterCondition', this.value)">
+                           placeholder="${escapeHtml(wardrobePlaceholder)}"
+                           value="${escapeHtml(charData.enterWardrobe || aiSuggestions?.wardrobe || '')}"
+                           onchange="saveCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'enterWardrobe', this.value)"
+                           oninput="autoSaveChar(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'enterWardrobe', this.value)">
                 </div>
             </div>
 
             <!-- CHANGES DURING -->
             <div class="continuity-row">
-                <label class="row-label">Changes:</label>
+                <label class="row-label">Changes during scene:</label>
                 <div class="continuity-fields">
-                    <textarea placeholder="Describe any changes during the scene..."
-                              onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'changes', this.value)"
+                    <textarea placeholder="Describe any changes (injuries, wardrobe changes, gets wet, etc.)"
+                              onchange="saveCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'changes', this.value)"
+                              oninput="autoSaveChar(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'changes', this.value)"
                               >${escapeHtml(charData.changes || '')}</textarea>
                 </div>
             </div>
@@ -1081,19 +1117,18 @@ function renderCharacterFields(character, sceneIndex, scene) {
                     <input type="text"
                            placeholder="Hair"
                            value="${escapeHtml(charData.exitHair || '')}"
-                           onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'exitHair', this.value)">
+                           onchange="saveCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'exitHair', this.value)"
+                           oninput="autoSaveChar(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'exitHair', this.value)">
                     <input type="text"
                            placeholder="Makeup"
                            value="${escapeHtml(charData.exitMakeup || '')}"
-                           onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'exitMakeup', this.value)">
+                           onchange="saveCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'exitMakeup', this.value)"
+                           oninput="autoSaveChar(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'exitMakeup', this.value)">
                     <input type="text"
                            placeholder="Wardrobe"
                            value="${escapeHtml(charData.exitWardrobe || '')}"
-                           onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'exitWardrobe', this.value)">
-                    <input type="text"
-                           placeholder="Condition"
-                           value="${escapeHtml(charData.exitCondition || '')}"
-                           onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'exitCondition', this.value)">
+                           onchange="saveCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'exitWardrobe', this.value)"
+                           oninput="autoSaveChar(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'exitWardrobe', this.value)">
                 </div>
             </div>
         </div>
@@ -1222,6 +1257,79 @@ window.saveTimelineField = function(sceneIndex, field, value) {
 };
 
 /**
+ * Auto-save character field with debounce
+ * @param {number} sceneIndex - Scene index
+ * @param {string} character - Character name
+ * @param {string} field - Field name
+ * @param {*} value - Field value
+ */
+let charSaveTimeout;
+window.autoSaveChar = function(sceneIndex, character, field, value) {
+    clearTimeout(charSaveTimeout);
+    charSaveTimeout = setTimeout(() => {
+        saveCharField(sceneIndex, character, field, value);
+    }, 500);
+};
+
+/**
+ * Save character field
+ * @param {number} sceneIndex - Scene index
+ * @param {string} character - Character name
+ * @param {string} field - Field name
+ * @param {*} value - Field value
+ */
+window.saveCharField = function(sceneIndex, character, field, value) {
+    if (!state.scenes[sceneIndex]) return;
+
+    if (!state.characterStates[sceneIndex]) state.characterStates[sceneIndex] = {};
+    if (!state.characterStates[sceneIndex][character]) state.characterStates[sceneIndex][character] = {};
+
+    state.characterStates[sceneIndex][character][field] = value;
+    saveToLocalStorage();
+    console.log(`Saved: ${character} ${field} = ${value}`);
+};
+
+/**
+ * Get AI suggestions for character in scene
+ * @param {string} character - Character name
+ * @param {number} sceneIndex - Scene index
+ * @returns {Object} AI suggestions object
+ */
+function getAISuggestionsForCharacter(character, sceneIndex) {
+    const scene = state.scenes[sceneIndex];
+    const sceneTags = state.scriptTags[sceneIndex] || [];
+
+    const suggestions = {};
+
+    // Look for tags related to this character
+    sceneTags.forEach(tag => {
+        if (tag.character === character) {
+            if (tag.category === 'hair' && tag.selectedText) {
+                suggestions.hair = tag.selectedText;
+            }
+            if (tag.category === 'makeup' && tag.selectedText) {
+                suggestions.makeup = tag.selectedText;
+            }
+            if (tag.category === 'wardrobe' && tag.selectedText) {
+                suggestions.wardrobe = tag.selectedText;
+            }
+        }
+    });
+
+    // Check AI analysis
+    if (scene.aiAnalysis?.characters) {
+        const charAnalysis = scene.aiAnalysis.characters.find(c => c.name === character);
+        if (charAnalysis) {
+            if (charAnalysis.hair) suggestions.hair = charAnalysis.hair;
+            if (charAnalysis.makeup) suggestions.makeup = charAnalysis.makeup;
+            if (charAnalysis.wardrobe) suggestions.wardrobe = charAnalysis.wardrobe;
+        }
+    }
+
+    return suggestions;
+}
+
+/**
  * Save to localStorage
  */
 function saveToLocalStorage() {
@@ -1258,6 +1366,108 @@ window.copyFromPrevious = function(character, sceneIndex) {
 
     renderSceneBreakdown(sceneIndex);
     saveToLocalStorage();
+};
+
+/**
+ * Show add character menu
+ * @param {number} sceneIndex - Scene index
+ */
+window.showAddCharacterMenu = function(sceneIndex) {
+    // Get all confirmed characters from the project
+    const allCharacters = Array.from(state.confirmedCharacters || new Set());
+
+    // Get characters already in this scene
+    const breakdown = state.sceneBreakdowns[sceneIndex] || {};
+    const sceneCharacters = breakdown.cast || [];
+
+    // Filter to available characters not already in scene
+    const availableCharacters = allCharacters.filter(c => !sceneCharacters.includes(c));
+
+    if (availableCharacters.length === 0 && allCharacters.length > 0) {
+        alert('All characters are already in this scene.');
+        return;
+    }
+
+    // Create dropdown menu
+    const menu = document.createElement('div');
+    menu.className = 'add-character-menu-overlay';
+    menu.innerHTML = `
+        <div class="add-character-menu" onclick="event.stopPropagation()">
+            <h4>Add Character to Scene</h4>
+            ${availableCharacters.length > 0 ? `
+                <div class="character-options">
+                    <label>Select from existing characters:</label>
+                    <select id="character-select">
+                        <option value="">-- Select Character --</option>
+                        ${availableCharacters.map(char => `
+                            <option value="${escapeHtml(char)}">${escapeHtml(char)}</option>
+                        `).join('')}
+                    </select>
+                </div>
+            ` : ''}
+            <div class="character-options">
+                <label>Or add new character:</label>
+                <input type="text" id="new-character-name" placeholder="Character name">
+            </div>
+            <div class="menu-actions">
+                <button class="primary-btn" onclick="addCharacterToScene(${sceneIndex})">Add Character</button>
+                <button class="cancel-btn" onclick="closeAddCharacterMenu()">Cancel</button>
+            </div>
+        </div>
+    `;
+
+    menu.onclick = () => closeAddCharacterMenu();
+    document.body.appendChild(menu);
+};
+
+/**
+ * Add character to scene
+ * @param {number} sceneIndex - Scene index
+ */
+window.addCharacterToScene = function(sceneIndex) {
+    const selectEl = document.getElementById('character-select');
+    const inputEl = document.getElementById('new-character-name');
+
+    const selectedChar = selectEl?.value || '';
+    const newChar = inputEl?.value.trim() || '';
+
+    const character = newChar || selectedChar;
+
+    if (!character) {
+        alert('Please select or enter a character name.');
+        return;
+    }
+
+    // Add to scene breakdown
+    if (!state.sceneBreakdowns[sceneIndex]) {
+        state.sceneBreakdowns[sceneIndex] = {};
+    }
+    if (!state.sceneBreakdowns[sceneIndex].cast) {
+        state.sceneBreakdowns[sceneIndex].cast = [];
+    }
+
+    if (!state.sceneBreakdowns[sceneIndex].cast.includes(character)) {
+        state.sceneBreakdowns[sceneIndex].cast.push(character);
+    }
+
+    // Add to confirmed characters if new
+    if (newChar && !state.confirmedCharacters.has(character)) {
+        state.confirmedCharacters.add(character);
+    }
+
+    closeAddCharacterMenu();
+    renderSceneBreakdown(sceneIndex);
+    saveToLocalStorage();
+};
+
+/**
+ * Close add character menu
+ */
+window.closeAddCharacterMenu = function() {
+    const menu = document.querySelector('.add-character-menu-overlay');
+    if (menu) {
+        menu.remove();
+    }
 };
 
 /**
