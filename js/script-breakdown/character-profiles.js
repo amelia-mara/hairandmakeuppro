@@ -455,6 +455,8 @@ export function buildCharacterProfile(characterName) {
             ${renderCharacterHeader(characterName, characterData, timelineData)}
             ${renderScriptDescriptions(characterData)}
             ${renderCharacterJourney(characterData)}
+            ${renderStoryPresence(characterData)}
+            ${renderExtractedElements(characterData)}
             ${renderContinuityBreakdown(characterName, characterData)}
             ${renderContinuityEventsSection(characterName, events)}
             ${renderActionButtons(characterName)}
@@ -746,6 +748,105 @@ function renderContinuityGuidelines(characterData) {
                     <div class="guideline-field">
                         <div class="guideline-label">Major Transformations</div>
                         <div class="guideline-value">${escapeHtml(notes.transformations)}</div>
+                    </div>
+                ` : ''}
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Render story presence section
+ * @param {Object} characterData - Character data
+ * @returns {string} HTML string
+ */
+function renderStoryPresence(characterData) {
+    const presence = characterData?.storyPresence;
+
+    if (!presence) return '';
+
+    const totalScenes = presence.totalScenes || 0;
+    const firstScene = presence.firstAppearance || characterData?.firstAppearance || 'Unknown';
+    const lastScene = presence.lastAppearance || characterData?.lastAppearance || 'Unknown';
+    const hasDialogue = presence.hasDialogue ? 'Has dialogue' : 'Non-speaking';
+    const speakingScenes = presence.speakingScenes?.length || 0;
+
+    return `
+        <div class="profile-section story-presence-section">
+            <h3 class="section-title">STORY PRESENCE</h3>
+            <div class="presence-grid">
+                <div class="presence-stat">
+                    <div class="stat-label">Total Scenes</div>
+                    <div class="stat-value">${totalScenes}</div>
+                </div>
+                <div class="presence-stat">
+                    <div class="stat-label">First Appearance</div>
+                    <div class="stat-value">Scene ${firstScene}</div>
+                </div>
+                <div class="presence-stat">
+                    <div class="stat-label">Last Appearance</div>
+                    <div class="stat-value">Scene ${lastScene}</div>
+                </div>
+                <div class="presence-stat">
+                    <div class="stat-label">Dialogue Status</div>
+                    <div class="stat-value">${hasDialogue}${speakingScenes > 0 ? ` (${speakingScenes} scenes)` : ''}</div>
+                </div>
+            </div>
+            ${presence.scenesPresent?.length > 0 ? `
+                <div class="scenes-list">
+                    <strong>Appears in scenes:</strong> ${presence.scenesPresent.join(', ')}
+                </div>
+            ` : ''}
+        </div>
+    `;
+}
+
+/**
+ * Render extracted elements section
+ * @param {Object} characterData - Character data
+ * @returns {string} HTML string
+ */
+function renderExtractedElements(characterData) {
+    const elements = characterData?.extractedElements;
+
+    if (!elements) return '';
+
+    const hasContent = elements.mentionedWardrobe?.length > 0 ||
+                      elements.mentionedAppearanceChanges?.length > 0 ||
+                      elements.physicalActions?.length > 0 ||
+                      elements.environmentalExposure?.length > 0;
+
+    if (!hasContent) return '';
+
+    return `
+        <div class="profile-section extracted-elements-section">
+            <h3 class="section-title">EXTRACTED CONTINUITY ELEMENTS</h3>
+            <div class="elements-list">
+                ${elements.mentionedWardrobe?.length > 0 ? `
+                    <div class="element-group">
+                        <div class="element-label">Wardrobe Mentions:</div>
+                        <div class="element-values">${elements.mentionedWardrobe.map(w => escapeHtml(w)).join(', ')}</div>
+                    </div>
+                ` : ''}
+
+                ${elements.mentionedAppearanceChanges?.length > 0 ? `
+                    <div class="element-group">
+                        <div class="element-label">Appearance Changes:</div>
+                        <div class="element-values">${elements.mentionedAppearanceChanges.map(c => escapeHtml(c)).join(', ')}</div>
+                    </div>
+                ` : ''}
+
+                ${elements.physicalActions?.length > 0 ? `
+                    <div class="element-group">
+                        <div class="element-label">Physical Actions:</div>
+                        <div class="element-values">${elements.physicalActions.map(a => escapeHtml(a)).join(', ')}</div>
+                    </div>
+                ` : ''}
+
+                ${elements.environmentalExposure?.length > 0 ? `
+                    <div class="element-group">
+                        <div class="element-label">Environmental Exposure:</div>
+                        <div class="element-values">${elements.environmentalExposure.map(e => escapeHtml(e)).join(', ')}</div>
                     </div>
                 ` : ''}
             </div>
