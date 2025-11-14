@@ -11,7 +11,7 @@
  */
 
 import { state } from './main.js';
-import { renderBreakdownPanel } from './breakdown-form.js';
+import { renderSceneBreakdown } from './breakdown-form.js';
 
 // ============================================================================
 // SCENE BREAKDOWN MANAGER CLASS
@@ -232,7 +232,7 @@ export class SceneBreakdownManager {
         }
 
         // Render the comprehensive breakdown view directly
-        renderBreakdownPanel();
+        renderSceneBreakdown(this.currentScene);
     }
 
 

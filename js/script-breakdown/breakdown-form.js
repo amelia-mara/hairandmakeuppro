@@ -836,7 +836,7 @@ function escapeHtml(text) {
  * Render comprehensive scene breakdown with data collection interface
  * @param {number} sceneIndex - Scene index to render
  */
-function renderSceneBreakdown(sceneIndex) {
+export function renderSceneBreakdown(sceneIndex) {
     const scene = state.scenes[sceneIndex];
     const panel = document.getElementById('breakdown-panel');
     if (!scene || !panel) return;
