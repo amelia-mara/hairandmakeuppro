@@ -105,29 +105,40 @@ export async function processScript() {
     console.log(`Found ${state.scenes.length} scenes`);
 
     // COMPREHENSIVE INITIAL ANALYSIS
-    showProgressModal('Analyzing Script', 'Performing deep narrative analysis...');
+    showTopLoadingBar('Analyzing Script', `Analyzing ${state.scenes.length} scenes...`, 0);
 
     try {
+        // Update progress during analysis
+        updateTopLoadingBar('Analyzing Script', 'Performing deep narrative analysis...', 25);
+
         const masterContext = await performDeepAnalysis(text, state.scenes);
+
+        // Update progress
+        updateTopLoadingBar('Analyzing Script', 'Building character profiles...', 50);
 
         // Store master context
         window.masterContext = masterContext;
         localStorage.setItem('masterContext', JSON.stringify(masterContext));
 
         // Populate initial data from master context
+        updateTopLoadingBar('Analyzing Script', 'Populating initial data...', 75);
         populateInitialData(masterContext);
+
+        // Complete
+        updateTopLoadingBar('Analysis Complete', `${state.scenes.length} scenes processed`, 100);
 
         showToast('Script imported successfully. Proceed with scene-by-scene breakdown.', 'success');
 
     } catch (error) {
         console.error('Analysis failed:', error);
         showToast('Failed to analyze script. You can still process scenes manually.', 'warning');
+        closeTopLoadingBar(0); // Close immediately on error
     }
 
     // Load and render
     loadScript(text);
 
-    closeProgressModal();
+    closeTopLoadingBar();
 
     // Update workflow status
     if (window.updateWorkflowStatus) {
@@ -655,6 +666,95 @@ function closeProgressModal() {
         }, 1000);
     }
 }
+
+// ============================================================================
+// TOP LOADING BAR (Non-blocking progress indicator)
+// ============================================================================
+
+/**
+ * Show top loading bar
+ * @param {string} message - Main message to display
+ * @param {string} details - Optional details text
+ * @param {number} progress - Optional progress percentage (0-100), omit for indeterminate
+ */
+function showTopLoadingBar(message, details = '', progress = null) {
+    const loadingBar = document.getElementById('top-loading-bar');
+    const loadingMessage = document.getElementById('top-loading-message');
+    const loadingDetails = document.getElementById('top-loading-details');
+    const loadingProgress = document.getElementById('top-loading-progress');
+
+    if (!loadingBar) return;
+
+    // Set message and details
+    if (loadingMessage) loadingMessage.textContent = message;
+    if (loadingDetails) loadingDetails.textContent = details;
+
+    // Set progress bar
+    if (loadingProgress) {
+        if (progress === null) {
+            // Indeterminate progress
+            loadingProgress.classList.add('indeterminate');
+            loadingProgress.style.width = '100%';
+        } else {
+            // Determinate progress
+            loadingProgress.classList.remove('indeterminate');
+            loadingProgress.style.width = `${Math.min(100, Math.max(0, progress))}%`;
+        }
+    }
+
+    // Show loading bar
+    loadingBar.classList.remove('closing');
+    loadingBar.style.display = 'block';
+}
+
+/**
+ * Update top loading bar
+ * @param {string} message - Main message
+ * @param {string} details - Optional details text
+ * @param {number} progress - Progress percentage (0-100), omit for indeterminate
+ */
+function updateTopLoadingBar(message, details = '', progress = null) {
+    const loadingMessage = document.getElementById('top-loading-message');
+    const loadingDetails = document.getElementById('top-loading-details');
+    const loadingProgress = document.getElementById('top-loading-progress');
+
+    if (loadingMessage && message) loadingMessage.textContent = message;
+    if (loadingDetails) loadingDetails.textContent = details || '';
+
+    if (loadingProgress && progress !== null) {
+        loadingProgress.classList.remove('indeterminate');
+        loadingProgress.style.width = `${Math.min(100, Math.max(0, progress))}%`;
+    }
+}
+
+/**
+ * Close top loading bar
+ * @param {number} delay - Optional delay in ms before closing (default 500)
+ */
+function closeTopLoadingBar(delay = 500) {
+    const loadingBar = document.getElementById('top-loading-bar');
+    if (!loadingBar) return;
+
+    setTimeout(() => {
+        loadingBar.classList.add('closing');
+        setTimeout(() => {
+            loadingBar.style.display = 'none';
+            loadingBar.classList.remove('closing');
+
+            // Reset progress bar
+            const loadingProgress = document.getElementById('top-loading-progress');
+            if (loadingProgress) {
+                loadingProgress.classList.remove('indeterminate');
+                loadingProgress.style.width = '0%';
+            }
+        }, 300); // Match CSS animation duration
+    }, delay);
+}
+
+// Make top loading bar functions globally available
+window.showTopLoadingBar = showTopLoadingBar;
+window.updateTopLoadingBar = updateTopLoadingBar;
+window.closeTopLoadingBar = closeTopLoadingBar;
 
 /**
  * Show toast notification
@@ -3098,29 +3198,35 @@ ${scene.text || scene.content || ''}`;
 
         const scriptTitle = state.scriptData?.title || state.currentProject || 'Untitled';
 
-        // Show progress
-        showToast('Creating AI context...', 'info');
+        // Show progress with top loading bar
+        showTopLoadingBar('Creating AI Context', `Analyzing ${state.scenes.length} scenes...`, 0);
 
         // Perform comprehensive analysis
+        updateTopLoadingBar('Creating AI Context', 'Performing comprehensive analysis...', 25);
         const masterContext = await performComprehensiveAnalysis(fullScriptText, scriptTitle);
 
         if (masterContext) {
             // Populate application state from context
+            updateTopLoadingBar('Creating AI Context', 'Building character profiles...', 75);
             populateFromMasterContext(masterContext);
 
             // Mark context as ready
             window.contextReady = true;
 
+            updateTopLoadingBar('Analysis Complete', 'AI context created successfully', 100);
             showToast('AI context created successfully', 'success');
             console.log('✅ AI context initialized successfully');
 
+            closeTopLoadingBar();
             return true;
         }
 
+        closeTopLoadingBar(0);
         return false;
     } catch (error) {
         console.error('Failed to initialize AI context:', error);
         showToast('AI context creation failed: ' + error.message, 'error');
+        closeTopLoadingBar(0); // Close immediately on error
         return false;
     }
 };
