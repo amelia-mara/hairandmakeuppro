@@ -25,6 +25,8 @@ import './hybrid-renderer.js';
 import './hybrid-export.js';
 // Continuity tracking and supervisor integration
 import './continuity-tracking.js';
+// Master context utilities for rich character data access
+import './master-context-utils.js';
 
 // ============================================================================
 // GLOBAL APPLICATION STATE
