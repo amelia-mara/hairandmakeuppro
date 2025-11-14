@@ -356,11 +356,21 @@ export function renderCharacterTabs() {
     }
 
     // Convert confirmed characters Set to Array and sort alphabetically
-    const confirmedCharArray = Array.from(state.confirmedCharacters).sort();
-    console.log(`✓ Generating tabs for ${confirmedCharArray.length} confirmed characters:`, confirmedCharArray);
+    const allConfirmedChars = Array.from(state.confirmedCharacters).sort();
 
-    // Add tab for each confirmed character
-    confirmedCharArray.forEach(charName => {
+    // Filter to featured characters only (exclude extras, SAs, background)
+    const featuredChars = allConfirmedChars.filter(charName => {
+        const charData = window.masterContext?.characters?.[charName];
+        const role = charData?.characterAnalysis?.role?.toLowerCase();
+
+        // Include protagonist, main, supporting - exclude extras, background, SAs
+        return role !== 'extra' && role !== 'background' && role !== 'sa';
+    });
+
+    console.log(`✓ Generating tabs for ${featuredChars.length} featured characters (filtered from ${allConfirmedChars.length} total):`, featuredChars);
+
+    // Add tab for each featured character
+    featuredChars.forEach(charName => {
         const charId = `character-${charName.toLowerCase().replace(/\s+/g, '-')}`;
 
         const tab = document.createElement('div');
@@ -380,10 +390,10 @@ export function renderCharacterTabs() {
         createCharacterPanel(charId, charName);
     });
 
-    // Update state.characterTabs to reflect confirmed characters
-    state.characterTabs = confirmedCharArray;
+    // Update state.characterTabs to reflect featured characters
+    state.characterTabs = featuredChars;
 
-    console.log(`✓ Rendered ${confirmedCharArray.length} character tabs from confirmed characters`);
+    console.log(`✓ Rendered ${featuredChars.length} character tabs from featured characters`);
 }
 
 /**
