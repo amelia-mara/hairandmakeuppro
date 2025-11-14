@@ -11181,3 +11181,342 @@
     background: rgba(33, 150, 243, 0.2);
     color: #2196f3;
 }
+
+/* ============================================================================
+   CHARACTER PROFILE COMPONENTS - Script Descriptions & Character Bible
+   ============================================================================ */
+
+/* Character Description Highlights in Script */
+.character-description {
+    background: linear-gradient(90deg, 
+        rgba(201, 169, 97, 0.2), 
+        rgba(201, 169, 97, 0.1));
+    border-left: 3px solid var(--accent-gold);
+    padding: 2px 4px;
+    cursor: pointer;
+    position: relative;
+    transition: background 0.2s;
+    border-radius: 2px;
+    margin: 0 1px;
+}
+
+.character-description:hover {
+    background: rgba(201, 169, 97, 0.3);
+}
+
+.character-description::after {
+    content: attr(title);
+    position: absolute;
+    top: -28px;
+    left: 0;
+    background: var(--accent-gold);
+    color: var(--bg-dark);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75em;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.character-description:hover::after {
+    opacity: 1;
+}
+
+/* Character Section Base Styles */
+.character-section {
+    background: var(--card-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+    backdrop-filter: blur(10px);
+}
+
+.character-section .section-title {
+    font-size: 1.1em;
+    font-weight: 600;
+    color: var(--accent-gold);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Script Descriptions Section */
+.script-descriptions-section {
+    border-left: 3px solid var(--accent-gold);
+}
+
+.script-descriptions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.script-description-item {
+    background: rgba(201, 169, 97, 0.05);
+    border: 1px solid rgba(201, 169, 97, 0.2);
+    border-radius: 6px;
+    padding: 12px;
+    transition: all 0.2s;
+}
+
+.script-description-item:hover {
+    background: rgba(201, 169, 97, 0.1);
+    border-color: rgba(201, 169, 97, 0.3);
+    transform: translateX(2px);
+}
+
+.description-quote {
+    font-style: italic;
+    color: var(--text-light);
+    line-height: 1.5;
+    margin-bottom: 8px;
+    padding-left: 12px;
+    border-left: 2px solid var(--accent-gold);
+}
+
+.description-meta {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.scene-badge, .type-badge {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    font-weight: 500;
+}
+
+.scene-badge {
+    background: rgba(102, 126, 234, 0.2);
+    color: var(--accent-blue);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.scene-badge:hover {
+    background: rgba(102, 126, 234, 0.3);
+    transform: scale(1.05);
+}
+
+.type-badge {
+    background: rgba(154, 143, 127, 0.2);
+    color: var(--text-muted);
+}
+
+/* Physical Profile Section */
+.physical-profile-section {
+    border-left: 3px solid var(--accent-blue);
+}
+
+.profile-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+}
+
+.profile-field {
+    background: rgba(255, 255, 255, 0.02);
+    padding: 8px 12px;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.profile-field.full-width {
+    grid-column: 1 / -1;
+}
+
+.field-label {
+    color: var(--text-muted);
+    font-size: 0.85em;
+    font-weight: 500;
+    display: inline-block;
+    min-width: 100px;
+}
+
+.field-value {
+    color: var(--text-light);
+    font-weight: 400;
+}
+
+/* Visual Identity Section */
+.visual-identity-section {
+    border-left: 3px solid #e8a87c;
+}
+
+.visual-profile-content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.visual-field {
+    background: rgba(232, 168, 124, 0.05);
+    padding: 12px;
+    border-radius: 6px;
+    border-left: 2px solid rgba(232, 168, 124, 0.3);
+}
+
+.visual-label {
+    color: var(--accent-gold);
+    font-size: 0.9em;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.visual-value {
+    color: var(--text-light);
+    line-height: 1.6;
+}
+
+/* Character Journey Section */
+.character-journey-section {
+    border-left: 3px solid var(--success);
+}
+
+.journey-content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.journey-field {
+    background: rgba(82, 193, 134, 0.05);
+    padding: 12px;
+    border-radius: 6px;
+    border-left: 2px solid rgba(82, 193, 134, 0.3);
+}
+
+.journey-label {
+    color: var(--success);
+    font-size: 0.9em;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.journey-value {
+    color: var(--text-light);
+    line-height: 1.6;
+}
+
+/* Continuity Guidelines Section */
+.continuity-guidelines-section {
+    border-left: 3px solid var(--warning);
+}
+
+.guidelines-content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.guideline-field {
+    background: rgba(232, 168, 124, 0.05);
+    padding: 12px;
+    border-radius: 6px;
+    border-left: 2px solid rgba(232, 168, 124, 0.3);
+}
+
+.guideline-label {
+    color: var(--warning);
+    font-size: 0.9em;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.guideline-value {
+    color: var(--text-light);
+    line-height: 1.6;
+}
+
+/* Action Buttons Section */
+.action-buttons-section {
+    background: transparent;
+    border: none;
+    padding: 12px 0;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.action-btn {
+    flex: 1;
+    min-width: 150px;
+    padding: 10px 16px;
+    background: linear-gradient(135deg, var(--glass-bg), rgba(20, 18, 16, 0.4));
+    border: 1px solid var(--glass-border);
+    border-radius: 6px;
+    color: var(--text-light);
+    font-size: 0.9em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    backdrop-filter: blur(10px);
+}
+
+.action-btn:hover {
+    background: linear-gradient(135deg, rgba(212, 175, 122, 0.15), rgba(20, 18, 16, 0.6));
+    border-color: var(--accent-gold);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(212, 175, 122, 0.2);
+}
+
+.action-btn:active {
+    transform: translateY(0);
+}
+
+/* Character Profile Panel Enhancements */
+.character-profile-panel {
+    max-width: 100%;
+    padding: 16px;
+    overflow-y: auto;
+    height: 100%;
+}
+
+.character-profile-panel .character-header {
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--glass-border);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .profile-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+    }
+
+    .action-btn {
+        min-width: 100%;
+    }
+}
+
+/* Print Styles for Character Profiles */
+@media print {
+    .character-section {
+        page-break-inside: avoid;
+        border: 1px solid #ccc;
+        margin-bottom: 20px;
+    }
+
+    .character-description {
+        background: #f0f0f0;
+        border-left: 3px solid #666;
+    }
+
+    .action-buttons-section {
+        display: none;
+    }
+}

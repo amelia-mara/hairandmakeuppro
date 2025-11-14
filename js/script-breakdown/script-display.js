@@ -81,6 +81,70 @@ export function renderScript() {
             module.renderAllHighlights();
         }
     });
+
+    // Highlight character descriptions
+    highlightCharacterDescriptions();
+}
+
+/**
+ * Highlight character descriptions in the script based on master context
+ */
+export function highlightCharacterDescriptions() {
+    const masterContext = window.scriptMasterContext;
+    if (!masterContext?.characters) {
+        return;
+    }
+
+    const scriptContent = document.getElementById('script-content');
+    if (!scriptContent) {
+        return;
+    }
+
+    // Collect all character descriptions
+    const descriptions = [];
+    Object.entries(masterContext.characters).forEach(([characterName, data]) => {
+        if (data.scriptDescriptions && Array.isArray(data.scriptDescriptions)) {
+            data.scriptDescriptions.forEach(desc => {
+                descriptions.push({
+                    text: desc.text,
+                    character: characterName,
+                    sceneNumber: desc.sceneNumber,
+                    type: desc.type
+                });
+            });
+        }
+    });
+
+    if (descriptions.length === 0) {
+        return;
+    }
+
+    // Sort by length (longest first) to avoid partial matches
+    descriptions.sort((a, b) => b.text.length - a.text.length);
+
+    // Get current HTML
+    let html = scriptContent.innerHTML;
+
+    // Highlight each description
+    descriptions.forEach(desc => {
+        const escapedText = escapeHtml(desc.text);
+        const regex = new RegExp(escapeRegex(escapedText), 'g');
+
+        const highlighted = `<span class="character-description" data-character="${escapeHtml(desc.character)}" data-scene="${desc.sceneNumber}" title="${escapeHtml(desc.character)} - ${desc.type}">${escapedText}</span>`;
+
+        html = html.replace(regex, highlighted);
+    });
+
+    scriptContent.innerHTML = html;
+
+    console.log(`✓ Highlighted ${descriptions.length} character descriptions`);
+}
+
+/**
+ * Escape special regex characters
+ */
+function escapeRegex(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 /**
@@ -195,3 +259,4 @@ export function scrollToScene(index) {
 window.zoomIn = zoomIn;
 window.zoomOut = zoomOut;
 window.scrollToScene = scrollToScene;
+window.highlightCharacterDescriptions = highlightCharacterDescriptions;
