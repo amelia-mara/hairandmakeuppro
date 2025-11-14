@@ -9930,10 +9930,14 @@
 /* ============================================================================ */
 
 .character-profile-panel {
-    display: flex;
+    display: none; /* Hidden by default */
     flex-direction: column;
     height: 100%;
     overflow: hidden;
+}
+
+.character-profile-panel.active {
+    display: flex; /* Show when active */
 }
 
 .character-profile-header {
