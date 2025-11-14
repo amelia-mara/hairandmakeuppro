@@ -540,7 +540,10 @@ function createCharacterProfilePanel(characterName) {
         </div>
 
         <div class="profile-view-tabs">
-            <button class="view-tab active" onclick="showProfileView('${escapeHtml(characterName).replace(/'/g, "\\'")}', 'lookbook')">
+            <button class="view-tab active" onclick="showProfileView('${escapeHtml(characterName).replace(/'/g, "\\'")}', 'profile')">
+                Profile
+            </button>
+            <button class="view-tab" onclick="showProfileView('${escapeHtml(characterName).replace(/'/g, "\\'")}', 'lookbook')">
                 Lookbook
             </button>
             <button class="view-tab" onclick="showProfileView('${escapeHtml(characterName).replace(/'/g, "\\'")}', 'timeline')">
@@ -553,7 +556,7 @@ function createCharacterProfilePanel(characterName) {
 
         <div class="character-profile-content" id="${escapeHtml(characterName).toLowerCase().replace(/\s+/g, '-')}-content">
             <!-- Content will be loaded here -->
-            ${renderLookbookView(characterName)}
+            ${renderProfileView(characterName)}
         </div>
     `;
 
@@ -612,11 +615,15 @@ window.showProfileView = function(characterName, viewType) {
         profilePanel.querySelectorAll('.view-tab').forEach(tab => {
             tab.classList.remove('active');
         });
-        profilePanel.querySelector(`.view-tab:nth-child(${viewType === 'lookbook' ? 1 : viewType === 'timeline' ? 2 : 3})`).classList.add('active');
+        const tabIndex = viewType === 'profile' ? 1 : viewType === 'lookbook' ? 2 : viewType === 'timeline' ? 3 : 4;
+        profilePanel.querySelector(`.view-tab:nth-child(${tabIndex})`).classList.add('active');
     }
 
     // Render the appropriate view
     switch (viewType) {
+        case 'profile':
+            contentDiv.innerHTML = renderProfileView(characterName);
+            break;
         case 'lookbook':
             contentDiv.innerHTML = renderLookbookView(characterName);
             break;
@@ -977,6 +984,80 @@ function renderEventsView(characterName) {
     return `
         <div class="events-view">
             ${renderContinuityEventsTimeline(characterName)}
+        </div>
+    `;
+}
+
+/**
+ * Render profile view with enhanced character analysis
+ * @param {string} characterName - Character name
+ * @returns {string} HTML for profile view
+ */
+function renderProfileView(characterName) {
+    // Check if narrative context is available
+    if (window.scriptNarrativeContext || window.scriptMasterContext) {
+        try {
+            // Use enhanced profile system from character-profiles.js
+            return buildCharacterProfile(characterName);
+        } catch (error) {
+            console.error('Error building enhanced profile:', error);
+            // Fall back to basic profile
+            return renderBasicProfile(characterName);
+        }
+    } else {
+        // No narrative context available - show basic profile
+        return renderBasicProfile(characterName);
+    }
+}
+
+/**
+ * Render basic profile when narrative context is not available
+ * @param {string} characterName - Character name
+ * @returns {string} HTML for basic profile
+ */
+function renderBasicProfile(characterName) {
+    const profile = state.castProfiles[characterName] || {};
+    const sceneCount = getCharacterSceneCount(characterName);
+    const role = getCharacterRole(characterName);
+
+    return `
+        <div class="profile-view">
+            <div class="view-section">
+                <h3>Character Information</h3>
+                <div class="profile-grid">
+                    <div class="profile-item">
+                        <div class="item-label">Name</div>
+                        <div class="item-value">${escapeHtml(characterName)}</div>
+                    </div>
+                    <div class="profile-item">
+                        <div class="item-label">Scenes</div>
+                        <div class="item-value">${sceneCount}</div>
+                    </div>
+                    <div class="profile-item">
+                        <div class="item-label">Role</div>
+                        <div class="item-value">${escapeHtml(role)}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="view-section">
+                <h3>Base Description</h3>
+                <div class="base-description-field">
+                    <textarea
+                        class="base-description-input"
+                        placeholder="Enter base character description (age, build, general appearance, etc.)..."
+                        onchange="updateQuickBaseDescription('${escapeHtml(characterName).replace(/'/g, "\\'")}', this.value)">${escapeHtml(profile.baseDescription || '')}</textarea>
+                </div>
+            </div>
+
+            <div class="empty-message" style="margin-top: 40px;">
+                <div class="empty-icon">📊</div>
+                <div class="empty-title">No Analysis Data Available</div>
+                <div class="empty-desc">Run script analysis to generate detailed character profile with physical descriptions, visual analysis, and narrative context.</div>
+                <button class="modal-btn primary" onclick="alert('Script analysis feature - run Initial Analysis from the workflow')">
+                    Run Analysis
+                </button>
+            </div>
         </div>
     `;
 }
@@ -2452,14 +2533,154 @@ export function regenerateCharacterTabs() {
 }
 
 // ============================================================================
+// DEBUG HELPERS - Data Flow Checking
+// ============================================================================
+
+/**
+ * Debug function to check what character data is available
+ * Usage: debugCharacterData('Gwen Lawson')
+ * @param {string} characterName - Character name to debug
+ */
+window.debugCharacterData = function(characterName) {
+    console.group(`🔍 Debug Data for ${characterName}`);
+
+    // Check master context
+    console.log('📦 Master Context:', window.scriptMasterContext);
+    if (window.scriptMasterContext?.characters) {
+        console.log('   Character in Master Context:', window.scriptMasterContext.characters[characterName]);
+    } else {
+        console.warn('   ⚠️ No master context or characters object');
+    }
+
+    // Check narrative context
+    console.log('📖 Narrative Context:', window.scriptNarrativeContext);
+    if (window.scriptNarrativeContext?.characters) {
+        const charData = window.scriptNarrativeContext.characters.find(c => c.name === characterName);
+        console.log('   Character in Narrative Context:', charData);
+    } else {
+        console.warn('   ⚠️ No narrative context or characters array');
+    }
+
+    // Check state
+    console.log('🗄️ State Data:');
+    console.log('   Cast Profile:', state.castProfiles[characterName]);
+    console.log('   Confirmed Characters:', state.confirmedCharacters);
+    console.log('   Is Confirmed:', state.confirmedCharacters?.has(characterName));
+
+    // Check scene appearances
+    const appearances = state.scenes.filter((scene, index) => {
+        const breakdown = state.sceneBreakdowns[index];
+        return breakdown?.cast?.includes(characterName);
+    });
+    console.log('🎬 Scene Appearances:', appearances.length);
+    console.log('   Scene Numbers:', appearances.map(s => s.number));
+
+    // Check character states
+    const statesCount = Object.keys(state.characterStates).filter(sceneIndex =>
+        state.characterStates[sceneIndex][characterName]
+    ).length;
+    console.log('💄 Character States Defined:', statesCount, 'scenes');
+
+    // Check localStorage
+    console.log('💾 Local Storage:');
+    console.log('   scriptMasterContext:', localStorage.getItem('scriptMasterContext') ? 'Present ✓' : 'Missing ✗');
+    console.log('   scriptNarrativeContext:', localStorage.getItem('scriptNarrativeContext') ? 'Present ✓' : 'Missing ✗');
+    console.log('   projectData:', localStorage.getItem('projectData') ? 'Present ✓' : 'Missing ✗');
+
+    // Try to parse and show what's actually in localStorage
+    if (localStorage.getItem('scriptMasterContext')) {
+        try {
+            const stored = JSON.parse(localStorage.getItem('scriptMasterContext'));
+            console.log('   Stored Master Context Characters:', Object.keys(stored.characters || {}));
+        } catch (e) {
+            console.error('   Failed to parse scriptMasterContext:', e);
+        }
+    }
+
+    console.groupEnd();
+
+    // Return summary object for easy inspection
+    return {
+        hasData: !!(window.scriptMasterContext || window.scriptNarrativeContext),
+        inMasterContext: !!window.scriptMasterContext?.characters?.[characterName],
+        inNarrativeContext: !!window.scriptNarrativeContext?.characters?.find(c => c.name === characterName),
+        sceneCount: appearances.length,
+        hasStates: statesCount > 0,
+        isConfirmed: state.confirmedCharacters?.has(characterName)
+    };
+};
+
+/**
+ * Restore data from localStorage if it's missing from window globals
+ * This ensures character data is available even after page reloads
+ */
+function restoreDataFromStorage() {
+    console.log('🔄 Checking if data needs to be restored from storage...');
+
+    // Restore master context
+    if (!window.scriptMasterContext && localStorage.getItem('scriptMasterContext')) {
+        try {
+            window.scriptMasterContext = JSON.parse(localStorage.getItem('scriptMasterContext'));
+            console.log('✓ Restored scriptMasterContext from storage');
+        } catch (e) {
+            console.error('❌ Failed to restore scriptMasterContext:', e);
+        }
+    }
+
+    // Restore narrative context
+    if (!window.scriptNarrativeContext && localStorage.getItem('scriptNarrativeContext')) {
+        try {
+            window.scriptNarrativeContext = JSON.parse(localStorage.getItem('scriptNarrativeContext'));
+            console.log('✓ Restored scriptNarrativeContext from storage');
+        } catch (e) {
+            console.error('❌ Failed to restore scriptNarrativeContext:', e);
+        }
+    }
+
+    // Restore confirmed characters
+    if ((!state.confirmedCharacters || state.confirmedCharacters.size === 0) && localStorage.getItem('projectData')) {
+        try {
+            const projectData = JSON.parse(localStorage.getItem('projectData'));
+            if (projectData.confirmedCharacters && Array.isArray(projectData.confirmedCharacters)) {
+                state.confirmedCharacters = new Set(projectData.confirmedCharacters);
+                console.log('✓ Restored confirmed characters from storage:', projectData.confirmedCharacters);
+            }
+        } catch (e) {
+            console.error('❌ Failed to restore confirmed characters:', e);
+        }
+    }
+}
+
+/**
+ * Enhanced switchCenterTab that ensures data is restored before switching
+ * Wraps the existing switchCenterTab to add data restoration
+ */
+const originalSwitchCenterTab = switchCenterTab;
+export function switchCenterTabWithRestore(tabName) {
+    // Ensure data is available before switching
+    restoreDataFromStorage();
+
+    // Call original function
+    return originalSwitchCenterTab(tabName);
+}
+
+// Call restore on page load (if not already done)
+if (typeof window !== 'undefined' && document.readyState !== 'loading') {
+    restoreDataFromStorage();
+} else if (typeof window !== 'undefined') {
+    document.addEventListener('DOMContentLoaded', restoreDataFromStorage);
+}
+
+// ============================================================================
 // EXPOSE GLOBAL FUNCTIONS
 // ============================================================================
 
-window.switchCenterTab = switchCenterTab;
+window.switchCenterTab = switchCenterTabWithRestore;
 window.renderCharacterTabs = renderCharacterTabs;
 window.renderCharacterTabPanels = renderCharacterTabPanels;
 window.deduplicateAllCharacters = deduplicateAllCharacters;
 window.regenerateCharacterTabs = regenerateCharacterTabs;
+window.restoreDataFromStorage = restoreDataFromStorage;
 
 // Stub function for merge characters modal (not yet implemented)
 window.openMergeCharactersModal = function() {
