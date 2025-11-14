@@ -9,9 +9,8 @@
  * - state object
  */
 
-import { state } from './main.js';
-import { parseScreenplay } from './parser.js';
-import { callAI } from './ai-service.js';
+// Note: We access state and other functions via window or dynamic imports
+// to avoid circular dependencies and missing module errors
 
 // ============================================================================
 // CONTEXT SYNCHRONIZATION
@@ -147,6 +146,7 @@ window.debugAllData = function() {
 
     // 5. Check state
     console.log('\n💾 state object:');
+    const state = window.state || {};
     console.log('  Scenes:', state.scenes?.length || 0);
     console.log('  Cast profiles:', Object.keys(state.castProfiles || {}).length);
     console.log('  Confirmed characters:', window.confirmedCharacters?.length || 0);
@@ -193,61 +193,79 @@ window.debugProcessScript = async function() {
     console.log('✅ 1. Script input exists');
     console.log('   Length:', scriptInput.length, 'characters');
 
-    // Parse the screenplay
+    // Use the existing processScript function
     try {
-        const scriptData = parseScreenplay(scriptInput);
-        console.log('✅ 2. Script parsed successfully');
-        console.log('   Scenes found:', scriptData.scenes?.length || 0);
-        console.log('   Title:', scriptData.title || 'Untitled');
-    } catch (error) {
-        console.error('❌ 2. Script parsing failed:', error);
-        return;
-    }
+        console.log('🤖 2. Processing script with existing handler...');
 
-    // Try comprehensive analysis
-    try {
-        console.log('🤖 3. Starting AI analysis...');
-
-        // Import narrative analyzer
-        const { performComprehensiveAnalysis } = await import('./narrative-analyzer.js');
-
-        const masterContext = await performComprehensiveAnalysis(scriptInput, scriptData.title || 'Untitled');
-
-        if (masterContext) {
-            console.log('✅ 4. AI Analysis complete');
-            console.log('   Characters found:', Object.keys(masterContext.characters || {}).length);
-
-            // Store in both places
-            window.masterContext = masterContext;
-            window.scriptMasterContext = masterContext;
-            localStorage.setItem('masterContext', JSON.stringify(masterContext));
-            localStorage.setItem('scriptMasterContext', JSON.stringify(masterContext));
-
-            console.log('✅ 5. Stored in masterContext and scriptMasterContext');
-
-            // Extract character list
-            window.confirmedCharacters = Object.keys(masterContext.characters);
-            console.log('✅ 6. Confirmed characters:', window.confirmedCharacters);
-
-            // Refresh character tabs
-            if (typeof createCharacterTabs === 'function') {
-                createCharacterTabs();
-                console.log('✅ 7. Character tabs created');
-            }
-
-            console.log('\n✅ SUCCESS! Character data is now available.');
-            console.log('   Try clicking on a character tab to view their profile.\n');
-
-            return masterContext;
+        if (typeof window.processScript === 'function') {
+            await window.processScript();
+            console.log('✅ 3. Script processed successfully');
         } else {
-            console.error('❌ 4. AI Analysis returned null');
+            console.error('❌ processScript function not available');
+            console.log('   Falling back to manual extraction...');
+            return await manualCharacterExtraction(scriptInput);
+        }
+
+        // Check if initialization succeeded
+        const state = window.state || {};
+        console.log('   Scenes found:', state.scenes?.length || 0);
+
+        // Try to initialize AI context
+        try {
+            console.log('🤖 4. Initializing AI context...');
+
+            if (typeof window.initializeAIContext === 'function') {
+                const success = await window.initializeAIContext();
+
+                if (success) {
+                    console.log('✅ 5. AI Analysis complete');
+
+                    // Check what was created
+                    const masterContext = window.scriptMasterContext || window.masterContext;
+                    if (masterContext?.characters) {
+                        console.log('   Characters found:', Object.keys(masterContext.characters).length);
+                        console.log('   Character names:', Object.keys(masterContext.characters));
+
+                        // Ensure both contexts are synced
+                        window.masterContext = masterContext;
+                        window.scriptMasterContext = masterContext;
+
+                        // Extract character list
+                        window.confirmedCharacters = Object.keys(masterContext.characters);
+                        console.log('✅ 6. Confirmed characters:', window.confirmedCharacters);
+
+                        // Refresh character tabs
+                        if (typeof window.createCharacterTabs === 'function') {
+                            window.createCharacterTabs();
+                            console.log('✅ 7. Character tabs created');
+                        }
+
+                        console.log('\n✅ SUCCESS! Character data is now available.');
+                        console.log('   Try clicking on a character tab to view their profile.\n');
+
+                        return masterContext;
+                    } else {
+                        console.warn('⚠️ AI context initialized but no characters found');
+                    }
+                } else {
+                    console.warn('⚠️ AI context initialization returned false');
+                    console.log('   Trying manual extraction...');
+                    return await manualCharacterExtraction(scriptInput);
+                }
+            } else {
+                console.warn('⚠️ initializeAIContext not available');
+                console.log('   Trying manual extraction...');
+                return await manualCharacterExtraction(scriptInput);
+            }
+        } catch (error) {
+            console.error('❌ AI Analysis failed:', error);
+            console.log('\n💡 Trying fallback manual extraction...\n');
+            return await manualCharacterExtraction(scriptInput);
         }
 
     } catch (error) {
-        console.error('❌ AI Analysis failed:', error);
+        console.error('❌ Script processing failed:', error);
         console.log('\n💡 Trying fallback manual extraction...\n');
-
-        // Fallback to manual extraction
         return await manualCharacterExtraction(scriptInput);
     }
 };
@@ -385,7 +403,7 @@ FADE OUT.`;
     }
 
     // Process it
-    const result = await debugProcessScript();
+    const result = await window.debugProcessScript();
 
     if (result) {
         console.log('\n✅ TEST SUCCESSFUL!');
@@ -408,6 +426,8 @@ FADE OUT.`;
 window.fixCharacterData = async function() {
     console.log('🔧 Attempting to fix character data...\n');
 
+    const state = window.state || {};
+
     // Check if script is loaded
     if (!state.scenes || state.scenes.length === 0) {
         console.error('❌ No script loaded. Import a script first.');
@@ -419,15 +439,8 @@ window.fixCharacterData = async function() {
         if (!window.masterContext?.characters && !window.scriptMasterContext?.characters) {
             console.log('Found character list but no profile data. Re-running analysis...');
 
-            // Get script text
-            const scriptText = state.scenes.map((scene, idx) => {
-                return `SCENE ${idx + 1}
-${scene.heading || ''}
-
-${scene.text || scene.content || ''}`;
-            }).join('\n\n');
-
-            await debugProcessScript();
+            // Use the debug process script
+            await window.debugProcessScript();
 
             console.log('✅ Analysis complete. Character data should now be available.');
             return true;
