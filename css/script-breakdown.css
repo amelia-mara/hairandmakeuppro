@@ -12257,3 +12257,78 @@
     line-height: 1.4;
     margin-left: 28px;
 }
+
+/* ============================================================================
+   STORY PRESENCE AND EXTRACTED ELEMENTS STYLING
+   ============================================================================ */
+
+/* Story Presence Section */
+.story-presence-section .presence-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.presence-stat {
+    background: rgba(36, 32, 25, 0.3);
+    padding: 12px;
+    border-radius: 4px;
+    border-left: 3px solid var(--accent-gold);
+}
+
+.stat-label {
+    font-size: 0.8em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-bottom: 5px;
+}
+
+.stat-value {
+    font-size: 1.1em;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.scenes-list {
+    background: rgba(36, 32, 25, 0.2);
+    padding: 10px 12px;
+    border-radius: 3px;
+    font-size: 0.9em;
+    line-height: 1.6;
+}
+
+.scenes-list strong {
+    color: var(--text-muted);
+    margin-right: 8px;
+}
+
+/* Extracted Elements Section */
+.extracted-elements-section .elements-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.element-group {
+    background: rgba(36, 32, 25, 0.2);
+    padding: 10px 12px;
+    border-radius: 3px;
+    border-left: 3px solid rgba(201, 169, 97, 0.5);
+}
+
+.element-label {
+    font-size: 0.85em;
+    color: var(--text-muted);
+    font-weight: 500;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.element-values {
+    color: var(--text-primary);
+    font-size: 0.95em;
+    line-height: 1.5;
+}
