@@ -1157,8 +1157,8 @@ window.applyLookForward = async function(characterName, sourceSceneIndex) {
     if (!sourceScene) return;
 
     const sourceState = state.characterStates[sourceSceneIndex]?.[characterName];
-    if (!sourceState) {
-        alert('No look data to copy from this scene.');
+    if (!sourceState || Object.keys(sourceState).length === 0) {
+        showToast('No look data to copy from this scene', 'warning');
         return;
     }
 
@@ -1204,9 +1204,9 @@ window.applyLookForward = async function(characterName, sourceSceneIndex) {
             contentDiv.innerHTML = renderLookbookView(characterName);
         }
 
-        alert(`Applied look forward to ${updatedCount} scene${updatedCount !== 1 ? 's' : ''} in ${storyDay}.`);
+        showToast(`Applied look forward to ${updatedCount} scene${updatedCount !== 1 ? 's' : ''} in ${storyDay}`, 'success');
     } else {
-        alert(`No following scenes found in ${storyDay}.`);
+        showToast(`No following scenes found in ${storyDay}`, 'info');
     }
 };
 
@@ -1435,9 +1435,177 @@ window.editProgressionStage = async function(characterName, eventId, stageIndex)
  * @param {string} characterName - Character name
  * @param {string} eventId - Event ID
  */
-window.fillProgressionGaps = function(characterName, eventId) {
-    alert('AI-powered progression gap filling is coming soon! This will analyze the event and automatically generate healing stages with appropriate severity levels.');
+window.fillProgressionGaps = async function(characterName, eventId) {
+    const events = state.continuityEvents[characterName] || [];
+    const event = events.find(e => e.id === eventId);
+
+    if (!event) {
+        showToast('Event not found', 'error');
+        return;
+    }
+
+    // Check if event has basic info
+    if (!event.startScene) {
+        showToast('Event needs a start scene before generating progression', 'error');
+        return;
+    }
+
+    // Get character scenes for context
+    const characterScenes = getCharacterScenes(characterName);
+    const sceneCount = characterScenes.length;
+    const endScene = event.endScene || Math.min(event.startScene + 20, sceneCount);
+
+    const duration = endScene - event.startScene;
+
+    if (duration < 2) {
+        showToast('Event duration too short for meaningful progression', 'error');
+        return;
+    }
+
+    try {
+        showToast('Generating progression stages with AI...', 'info');
+
+        const { callAI } = await import('./ai-integration.js');
+
+        const prompt = `You are a film continuity expert. Generate realistic healing/progression stages for a character continuity event.
+
+Event Type: ${event.category || 'injury'}
+Description: ${event.description}
+Start Scene: ${event.startScene}
+End Scene: ${endScene}
+Duration: ${duration} scenes
+
+Create 3-5 progression stages showing realistic healing/recovery over time. For each stage:
+1. Name (brief description of the stage)
+2. Start scene number
+3. End scene number
+4. Severity (0-100, where 100 is worst/most severe)
+
+Format as JSON array:
+[
+  {"name": "Fresh wound", "startScene": ${event.startScene}, "endScene": ${event.startScene + Math.floor(duration * 0.2)}, "severity": 95},
+  ...
+]
+
+Important:
+- Severity should decrease over time (healing progression)
+- Scene ranges should be continuous with no gaps
+- Be realistic for the type of injury/condition
+- Consider typical healing timelines
+- Final stage should have low severity (nearly healed)
+
+Return ONLY the JSON array, no other text.`;
+
+        const response = await callAI(prompt, 1000);
+
+        // Parse AI response
+        let progressionStages;
+        try {
+            // Try to extract JSON from response
+            const jsonMatch = response.match(/\[[\s\S]*\]/);
+            if (jsonMatch) {
+                progressionStages = JSON.parse(jsonMatch[0]);
+            } else {
+                throw new Error('No JSON found in response');
+            }
+        } catch (parseError) {
+            console.error('Failed to parse AI response:', response);
+            showToast('AI generated invalid progression data', 'error');
+            return;
+        }
+
+        // Validate progression stages
+        if (!Array.isArray(progressionStages) || progressionStages.length === 0) {
+            showToast('AI generated empty progression', 'error');
+            return;
+        }
+
+        // Ensure all stages have required fields
+        progressionStages = progressionStages.map((stage, index) => ({
+            name: stage.name || `Stage ${index + 1}`,
+            startScene: parseInt(stage.startScene) || event.startScene,
+            endScene: parseInt(stage.endScene) || event.startScene + 1,
+            severity: Math.max(0, Math.min(100, parseInt(stage.severity) || 50))
+        }));
+
+        // Sort by start scene
+        progressionStages.sort((a, b) => a.startScene - b.startScene);
+
+        // Update event with new progression
+        event.progression = progressionStages;
+
+        // Save project
+        const { saveProject } = await import('./export-handlers.js');
+        saveProject();
+
+        // Refresh the view
+        const contentId = `${characterName.toLowerCase().replace(/\s+/g, '-')}-content`;
+        const contentDiv = document.getElementById(contentId);
+        if (contentDiv) {
+            contentDiv.innerHTML = renderEventsView(characterName);
+        }
+
+        showToast(`Generated ${progressionStages.length} progression stages`, 'success');
+
+    } catch (error) {
+        console.error('Error filling progression gaps:', error);
+        showToast(`Error: ${error.message}`, 'error');
+    }
 };
+
+/**
+ * Show toast notification
+ * @param {string} message - Message to display
+ * @param {string} type - Type of toast (success, error, info)
+ */
+function showToast(message, type = 'info') {
+    // Try to use existing toast system
+    if (window.showToast && typeof window.showToast === 'function') {
+        window.showToast(message, type);
+        return;
+    }
+
+    // Fallback to simple implementation
+    const existingToast = document.getElementById('simple-toast');
+    if (existingToast) {
+        existingToast.remove();
+    }
+
+    const toast = document.createElement('div');
+    toast.id = 'simple-toast';
+    toast.textContent = message;
+
+    // Style based on type
+    const colors = {
+        success: '#22c55e',
+        error: '#ef4444',
+        info: '#d4af7a',
+        warning: '#f59e0b'
+    };
+
+    Object.assign(toast.style, {
+        position: 'fixed',
+        bottom: '24px',
+        right: '24px',
+        padding: '12px 24px',
+        background: colors[type] || colors.info,
+        color: '#fff',
+        borderRadius: '8px',
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+        zIndex: '10000',
+        fontSize: '0.875em',
+        fontWeight: '600',
+        animation: 'slideIn 0.3s ease',
+        maxWidth: '400px'
+    });
+
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
 
 /**
  * Update right panel based on active center tab
