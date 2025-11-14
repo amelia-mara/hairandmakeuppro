@@ -143,90 +143,210 @@ export async function processScript() {
 /**
  * Perform deep analysis of screenplay to create master context
  * This is the one-time comprehensive analysis that creates the foundation
- * for all future scene-by-scene operations
+ * for all future scene-by-scene operations.
+ *
+ * ENHANCED VERSION - Extracts rich character data for hair/makeup tracking
  */
 async function performDeepAnalysis(scriptText, scenes) {
-    console.log('🎬 Starting deep script analysis...');
+    console.log('🎬 Starting ENHANCED deep script analysis...');
 
-    // Truncate script text for AI prompt if too long (max ~50k chars to stay within token limits)
-    const truncatedScript = scriptText.length > 50000
-        ? scriptText.substring(0, 50000) + '\n\n[Script truncated for analysis...]'
+    // Truncate script text for AI prompt if too long (max ~80k chars to stay within token limits)
+    const truncatedScript = scriptText.length > 80000
+        ? scriptText.substring(0, 80000) + '\n\n[Script truncated for analysis...]'
         : scriptText;
 
-    const prompt = `
-Perform a COMPREHENSIVE analysis of this screenplay for hair/makeup department continuity tracking.
-This analysis will be the MASTER CONTEXT for all future operations.
+    // Add line numbers for reference extraction
+    const scriptLines = scriptText.split('\n');
 
-SCREENPLAY:
+    const prompt = `
+Perform a COMPREHENSIVE analysis of this screenplay for HAIR & MAKEUP DEPARTMENT continuity tracking.
+This analysis will be the PRIMARY SOURCE and MASTER CONTEXT for all future operations.
+
+SCREENPLAY (Total Scenes: ${scenes.length}):
 ${truncatedScript}
 
-Return detailed JSON with:
+Return detailed JSON with this EXACT structure (be extremely thorough):
 
 {
     "title": "script title",
     "totalScenes": ${scenes.length},
+
     "storyStructure": {
         "totalDays": number,
         "timeline": [
             {
                 "day": "Day 1",
-                "scenes": [1, 2, 3],
-                "description": "Introduction day"
+                "scenes": [1, 2, 3, 4, 5],
+                "description": "Introduction, setup"
             }
         ],
-        "flashbacks": [scene numbers],
+        "flashbacks": [15, 30],
         "timeJumps": [
             {
-                "afterScene": number,
-                "jump": "3 days later"
+                "afterScene": 14,
+                "jump": "3 days later",
+                "toDay": "Day 5"
             }
         ]
     },
+
     "characters": {
         "CHARACTER_NAME": {
-            "role": "protagonist/supporting/background",
-            "description": "Age, gender, physical description from script",
-            "personality": "Character traits that affect appearance",
-            "arc": "How they change through story",
-            "firstAppearance": scene number,
-            "lastAppearance": scene number,
-            "sceneCount": number,
-            "visualNotes": "Any specific visual descriptions from action lines",
-            "relationships": ["other characters they interact with"]
+            "scriptDescriptions": [
+                {
+                    "text": "EXACT quote from script describing character appearance",
+                    "sceneNumber": 1,
+                    "type": "introduction"
+                }
+            ],
+
+            "physicalProfile": {
+                "age": "52",
+                "gender": "Male",
+                "ethnicity": "Not specified",
+                "build": "Athletic/Heavyset/Slim/etc",
+                "hairColor": "Graying",
+                "hairStyle": "Unkempt",
+                "eyeColor": "Blue",
+                "distinctiveFeatures": ["Weathered face", "Scar on cheek"]
+            },
+
+            "characterAnalysis": {
+                "role": "protagonist",
+                "personality": "Haunted, determined, carrying guilt",
+                "occupation": "Former detective",
+                "socialClass": "Working class",
+                "arc": "Redemption - from broken to finding purpose",
+                "emotionalJourney": "Guilt → Determination → Acceptance"
+            },
+
+            "visualProfile": {
+                "overallVibe": "Tired detective who's been through hell",
+                "styleChoices": "Practical, worn clothing",
+                "groomingHabits": "Neglected, unkempt, stubble",
+                "makeupNotes": "Bags under eyes, weathered skin",
+                "quirks": "Rubs face when tired",
+                "inspirations": "True Detective's Rust Cohle"
+            },
+
+            "continuityNotes": {
+                "keyLooks": "Starts disheveled, cleans up for confrontation",
+                "transformations": "Gets injured in Scene 45, bruising through Act 3",
+                "signature": "Always wearing father's watch",
+                "importantScenes": [1, 15, 45, 89]
+            },
+
+            "firstAppearance": 1,
+            "lastAppearance": 98,
+            "sceneCount": 45,
+            "scenesPresent": [1, 2, 3, 5, 7, 8]
         }
     },
+
+    "environments": {
+        "scene_1": {
+            "location": "EXT. FERRY - DAY",
+            "conditions": ["windy", "ocean spray", "bright sun"],
+            "impactOnAppearance": "Hair windswept, clothes damp from spray"
+        }
+    },
+
+    "interactions": {
+        "scene_15": {
+            "type": "fight",
+            "characters": ["PETER LAWSON", "ERIK"],
+            "impact": "Peter gets cut on cheek, Erik's nose bleeding"
+        },
+        "scene_30": {
+            "type": "intimate",
+            "characters": ["GWEN", "JOHN"],
+            "impact": "Lipstick smudged, hair disheveled"
+        }
+    },
+
+    "emotionalBeats": {
+        "scene_45": {
+            "character": "GWEN",
+            "emotion": "crying",
+            "visualImpact": "Mascara running, red eyes, blotchy skin"
+        }
+    },
+
+    "dialogueReferences": {
+        "scene_8": {
+            "line": "You look like hell",
+            "character": "PETER",
+            "speaker": "GWEN",
+            "implication": "Peter needs to look exhausted/disheveled"
+        }
+    },
+
     "majorEvents": [
         {
             "scene": number,
-            "type": "fight/accident/transformation",
+            "type": "fight/accident/transformation/weather",
             "charactersAffected": ["names"],
-            "visualImpact": "injuries, wardrobe damage, etc"
+            "visualImpact": "detailed description of visual changes"
         }
     ],
-    "continuityNotes": "General observations about visual continuity needs"
+
+    "continuityNotes": "General observations about visual continuity needs across the script"
 }
 
-Be extremely thorough. Extract every character mentioned, their descriptions, and story arc.
-Identify all story days and timeline structure for continuity tracking.
-Note any visual changes (injuries, costume changes, aging, etc.) that occur.
+CRITICAL INSTRUCTIONS:
+1. Extract EXACT QUOTES from script for scriptDescriptions - don't paraphrase
+2. Keep character names EXACTLY as they appear in the script
+3. For every character that speaks or is mentioned, create a complete profile
+4. Identify ALL physical interactions that affect appearance (fights, kisses, weather, etc.)
+5. Extract dialogue that references character appearance ("you look tired", "nice haircut", etc.)
+6. Map environmental conditions that affect appearance (rain, wind, heat, mud, etc.)
+7. Track emotional beats that require specific makeup looks (crying, bruising, exhaustion)
+8. Be EXTREMELY thorough - this is the only time AI sees full script
+
+Return ONLY valid JSON (no markdown, no code fences).
 `;
 
     try {
-        const response = await callAI(prompt, 3000); // Increased token limit for comprehensive response
+        const response = await callAI(prompt, 8000); // Increased token limit for comprehensive response
+
+        // Clean response
+        let cleanedResponse = response.trim();
+        if (cleanedResponse.startsWith('```json')) {
+            cleanedResponse = cleanedResponse.replace(/^```json\n/, '').replace(/\n```$/, '');
+        } else if (cleanedResponse.startsWith('```')) {
+            cleanedResponse = cleanedResponse.replace(/^```\n/, '').replace(/\n```$/, '');
+        }
 
         // Parse JSON response
-        const jsonMatch = response.match(/\{[\s\S]*\}/);
+        const jsonMatch = cleanedResponse.match(/\{[\s\S]*\}/);
         if (!jsonMatch) {
             throw new Error('No valid JSON found in AI response');
         }
 
         const masterContext = JSON.parse(jsonMatch[0]);
 
-        console.log('✅ Master context created:', {
+        // Validate structure
+        if (!masterContext.characters) masterContext.characters = {};
+        if (!masterContext.environments) masterContext.environments = {};
+        if (!masterContext.interactions) masterContext.interactions = {};
+        if (!masterContext.emotionalBeats) masterContext.emotionalBeats = {};
+        if (!masterContext.dialogueReferences) masterContext.dialogueReferences = {};
+        if (!masterContext.majorEvents) masterContext.majorEvents = [];
+        if (!masterContext.storyStructure) masterContext.storyStructure = { totalDays: 1, timeline: [], flashbacks: [], timeJumps: [] };
+
+        // Add metadata
+        masterContext.createdAt = new Date().toISOString();
+        masterContext.analysisVersion = '2.0-enhanced';
+
+        console.log('✅ ENHANCED Master context created:', {
             title: masterContext.title,
-            characters: Object.keys(masterContext.characters || {}).length,
-            storyDays: masterContext.storyStructure?.totalDays || 0,
-            majorEvents: masterContext.majorEvents?.length || 0
+            characters: Object.keys(masterContext.characters).length,
+            storyDays: masterContext.storyStructure.totalDays,
+            majorEvents: masterContext.majorEvents.length,
+            environments: Object.keys(masterContext.environments).length,
+            interactions: Object.keys(masterContext.interactions).length,
+            emotionalBeats: Object.keys(masterContext.emotionalBeats).length,
+            dialogueReferences: Object.keys(masterContext.dialogueReferences).length
         });
 
         return masterContext;
@@ -240,9 +360,10 @@ Note any visual changes (injuries, costume changes, aging, etc.) that occur.
 /**
  * Populate initial data from master context
  * Sets up the application state with the comprehensive analysis results
+ * ENHANCED - Now populates all rich character data
  */
 function populateInitialData(masterContext) {
-    console.log('📋 Populating initial data from master context...');
+    console.log('📋 Populating initial data from ENHANCED master context...');
 
     // Update confirmed characters from master context
     if (masterContext.characters) {
@@ -253,29 +374,158 @@ function populateInitialData(masterContext) {
         console.log(`✓ Added ${characterNames.length} characters from master context`);
     }
 
-    // Create character importance mapping
+    // Create enhanced character importance mapping
     if (masterContext.characters) {
         window.characterImportance = {};
+        window.characterProfiles = {};
+
         Object.entries(masterContext.characters).forEach(([name, data]) => {
+            // Basic importance mapping
             window.characterImportance[name] = {
-                role: data.role,
-                sceneCount: data.sceneCount,
-                description: data.description,
-                visualNotes: data.visualNotes
+                role: data.characterAnalysis?.role || 'supporting',
+                sceneCount: data.sceneCount || 0,
+                firstAppearance: data.firstAppearance || 1,
+                lastAppearance: data.lastAppearance || 1
             };
+
+            // Rich character profile data
+            window.characterProfiles[name] = {
+                name: name,
+                scriptDescriptions: data.scriptDescriptions || [],
+                physicalProfile: data.physicalProfile || {},
+                characterAnalysis: data.characterAnalysis || {},
+                visualProfile: data.visualProfile || {},
+                continuityNotes: data.continuityNotes || {},
+                firstAppearance: data.firstAppearance || 1,
+                lastAppearance: data.lastAppearance || 1,
+                sceneCount: data.sceneCount || 0,
+                scenesPresent: data.scenesPresent || []
+            };
+
+            // Initialize cast profile in state if not exists
+            if (!state.castProfiles[name]) {
+                state.castProfiles[name] = {
+                    name: name,
+                    baseDescription: data.scriptDescriptions?.[0]?.text || '',
+                    physicalProfile: data.physicalProfile || {},
+                    visualProfile: data.visualProfile || {},
+                    scenes: data.scenesPresent || [],
+                    lookStates: [],
+                    continuityEvents: []
+                };
+            }
         });
+
+        console.log(`✓ Created enhanced profiles for ${characterNames.length} characters`);
     }
 
     // Store story structure for timeline tracking
     if (masterContext.storyStructure) {
         window.storyTimeline = masterContext.storyStructure;
         console.log(`✓ Story timeline mapped: ${masterContext.storyStructure.totalDays} days`);
+
+        // Pre-populate scene timeline data
+        if (masterContext.storyStructure.timeline) {
+            masterContext.storyStructure.timeline.forEach(dayData => {
+                dayData.scenes.forEach(sceneNum => {
+                    const sceneIndex = sceneNum - 1;
+                    if (state.scenes[sceneIndex]) {
+                        if (!state.sceneTimeline[sceneIndex]) {
+                            state.sceneTimeline[sceneIndex] = {};
+                        }
+                        state.sceneTimeline[sceneIndex].day = dayData.day;
+                        state.scenes[sceneIndex].storyDay = dayData.day;
+                    }
+                });
+            });
+        }
+    }
+
+    // Store environments affecting appearance
+    if (masterContext.environments) {
+        window.environmentalContext = masterContext.environments;
+        console.log(`✓ Mapped ${Object.keys(masterContext.environments).length} environmental conditions`);
+
+        // Apply environment data to scenes
+        Object.entries(masterContext.environments).forEach(([sceneKey, envData]) => {
+            const sceneMatch = sceneKey.match(/scene_(\d+)/);
+            if (sceneMatch) {
+                const sceneIndex = parseInt(sceneMatch[1]) - 1;
+                if (state.scenes[sceneIndex]) {
+                    state.scenes[sceneIndex].environment = envData;
+                }
+            }
+        });
+    }
+
+    // Store physical interactions
+    if (masterContext.interactions) {
+        window.physicalInteractions = masterContext.interactions;
+        console.log(`✓ Tracked ${Object.keys(masterContext.interactions).length} physical interactions`);
+
+        // Apply interactions to scenes
+        Object.entries(masterContext.interactions).forEach(([sceneKey, interaction]) => {
+            const sceneMatch = sceneKey.match(/scene_(\d+)/);
+            if (sceneMatch) {
+                const sceneIndex = parseInt(sceneMatch[1]) - 1;
+                if (state.scenes[sceneIndex]) {
+                    if (!state.scenes[sceneIndex].interactions) {
+                        state.scenes[sceneIndex].interactions = [];
+                    }
+                    state.scenes[sceneIndex].interactions.push(interaction);
+                }
+            }
+        });
+    }
+
+    // Store emotional beats
+    if (masterContext.emotionalBeats) {
+        window.emotionalBeats = masterContext.emotionalBeats;
+        console.log(`✓ Identified ${Object.keys(masterContext.emotionalBeats).length} emotional beats`);
+
+        // Apply emotional beats to scenes
+        Object.entries(masterContext.emotionalBeats).forEach(([sceneKey, beat]) => {
+            const sceneMatch = sceneKey.match(/scene_(\d+)/);
+            if (sceneMatch) {
+                const sceneIndex = parseInt(sceneMatch[1]) - 1;
+                if (state.scenes[sceneIndex]) {
+                    if (!state.scenes[sceneIndex].emotionalBeats) {
+                        state.scenes[sceneIndex].emotionalBeats = [];
+                    }
+                    state.scenes[sceneIndex].emotionalBeats.push(beat);
+                }
+            }
+        });
+    }
+
+    // Store dialogue references to appearance
+    if (masterContext.dialogueReferences) {
+        window.dialogueReferences = masterContext.dialogueReferences;
+        console.log(`✓ Extracted ${Object.keys(masterContext.dialogueReferences).length} dialogue appearance references`);
     }
 
     // Store major events for continuity tracking
     if (masterContext.majorEvents) {
         window.majorEvents = masterContext.majorEvents;
         console.log(`✓ Tracked ${masterContext.majorEvents.length} major continuity events`);
+
+        // Apply major events to continuity system
+        masterContext.majorEvents.forEach(event => {
+            const sceneIndex = event.scene - 1;
+            if (event.charactersAffected) {
+                event.charactersAffected.forEach(characterName => {
+                    if (!state.continuityEvents[characterName]) {
+                        state.continuityEvents[characterName] = [];
+                    }
+                    state.continuityEvents[characterName].push({
+                        sceneIndex: sceneIndex,
+                        type: event.type,
+                        description: event.visualImpact,
+                        importance: 8
+                    });
+                });
+            }
+        });
     }
 
     // Update scene list to reflect new data
@@ -288,7 +538,13 @@ function populateInitialData(masterContext) {
         renderCharacterTabPanels();
     }
 
-    console.log('✅ Initial data populated successfully');
+    console.log('✅ ENHANCED initial data populated successfully:', {
+        characters: characterNames.length,
+        environments: Object.keys(masterContext.environments || {}).length,
+        interactions: Object.keys(masterContext.interactions || {}).length,
+        emotionalBeats: Object.keys(masterContext.emotionalBeats || {}).length,
+        majorEvents: masterContext.majorEvents?.length || 0
+    });
 }
 
 /**

@@ -397,6 +397,10 @@ function renderTransitionBanner(sceneTransitions) {
  * Render scene information section
  */
 function renderSceneInfoSection(scene) {
+    // Get masterContext scene data if available
+    const sceneNumber = scene.number;
+    const sceneContext = window.getSceneContext ? window.getSceneContext(sceneNumber) : null;
+
     return `
         <div class="scene-info-section" id="sceneInfoSection">
             <div class="scene-info-header" onclick="toggleSceneInfo()">
@@ -443,6 +447,9 @@ function renderSceneInfoSection(scene) {
                                    onchange="updateSceneMetadata(${state.currentScene}, 'location', this.value)">
                         </div>
                     </div>
+
+                    ${renderMasterContextAlerts(sceneContext)}
+
                     <div class="ai-detect-row">
                         <button class="ai-btn-compact" onclick="handleDetectAIElements(${state.currentScene})" title="Auto-detect cast & elements">
                             🔍 Auto-Detect Elements
@@ -451,6 +458,90 @@ function renderSceneInfoSection(scene) {
                     </div>
                 </div>
             </div>
+        </div>
+    `;
+}
+
+/**
+ * Render contextual alerts and notes from masterContext
+ * @param {Object} sceneContext - Scene context from masterContext
+ * @returns {string} HTML string
+ */
+function renderMasterContextAlerts(sceneContext) {
+    if (!sceneContext) return '';
+
+    let alerts = [];
+
+    // Environment alert
+    if (sceneContext.environment) {
+        const env = sceneContext.environment;
+        alerts.push({
+            type: 'environment',
+            icon: '🌤️',
+            title: 'Environmental Conditions',
+            content: `${env.conditions?.join(', ') || 'N/A'} - ${env.impactOnAppearance || ''}`
+        });
+    }
+
+    // Physical interactions alert
+    if (sceneContext.interactions) {
+        const inter = sceneContext.interactions;
+        alerts.push({
+            type: 'interaction',
+            icon: '⚡',
+            title: `Physical Interaction: ${inter.type}`,
+            content: `${inter.characters?.join(' & ') || ''} - ${inter.impact || ''}`
+        });
+    }
+
+    // Emotional beats alert
+    if (sceneContext.emotionalBeats) {
+        const beat = sceneContext.emotionalBeats;
+        alerts.push({
+            type: 'emotional',
+            icon: '💔',
+            title: `Emotional Beat: ${beat.character}`,
+            content: `${beat.emotion} - ${beat.visualImpact || ''}`
+        });
+    }
+
+    // Dialogue reference alert
+    if (sceneContext.dialogueReferences) {
+        const ref = sceneContext.dialogueReferences;
+        alerts.push({
+            type: 'dialogue',
+            icon: '💬',
+            title: 'Appearance Reference in Dialogue',
+            content: `"${ref.line}" - ${ref.implication || ''}`
+        });
+    }
+
+    // Flashback alert
+    if (sceneContext.isFlashback) {
+        alerts.push({
+            type: 'flashback',
+            icon: '⏮️',
+            title: 'Flashback Scene',
+            content: 'This scene is a flashback - check continuity with timeline'
+        });
+    }
+
+    if (alerts.length === 0) return '';
+
+    return `
+        <div class="master-context-alerts">
+            <div class="alerts-header">
+                <strong>📋 Continuity Notes</strong>
+            </div>
+            ${alerts.map(alert => `
+                <div class="context-alert context-alert-${alert.type}">
+                    <div class="alert-header">
+                        <span class="alert-icon">${alert.icon}</span>
+                        <span class="alert-title">${escapeHtml(alert.title)}</span>
+                    </div>
+                    <div class="alert-content">${escapeHtml(alert.content)}</div>
+                </div>
+            `).join('')}
         </div>
     `;
 }
