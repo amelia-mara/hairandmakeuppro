@@ -16,6 +16,7 @@ import { renderSceneList } from './scene-list.js';
 import { renderCharacterTabs, renderCharacterTabPanels } from './character-panel.js';
 import { detectTimeOfDay, detectIntExt, extractLocation } from './utils.js';
 import { callAI } from './ai-integration.js';
+import { renderAllHighlights } from './tag-system.js';
 
 /**
  * Export project data as JSON file
@@ -105,29 +106,42 @@ export async function processScript() {
     console.log(`Found ${state.scenes.length} scenes`);
 
     // COMPREHENSIVE INITIAL ANALYSIS
-    showProgressModal('Analyzing Script', 'Performing deep narrative analysis...');
+    showTopLoadingBar('Analyzing Script', `Analyzing ${state.scenes.length} scenes...`, 0);
 
     try {
+        // Update progress during analysis
+        updateTopLoadingBar('Analyzing Script', 'Performing deep narrative analysis...', 25);
+
         const masterContext = await performDeepAnalysis(text, state.scenes);
 
-        // Store master context
+        // Update progress
+        updateTopLoadingBar('Analyzing Script', 'Building character profiles...', 50);
+
+        // Store master context in BOTH locations for compatibility
         window.masterContext = masterContext;
+        window.scriptMasterContext = masterContext; // Character profiles look for this!
         localStorage.setItem('masterContext', JSON.stringify(masterContext));
+        localStorage.setItem('scriptMasterContext', JSON.stringify(masterContext));
 
         // Populate initial data from master context
+        updateTopLoadingBar('Analyzing Script', 'Populating initial data...', 75);
         populateInitialData(masterContext);
+
+        // Complete
+        updateTopLoadingBar('Analysis Complete', `${state.scenes.length} scenes processed`, 100);
 
         showToast('Script imported successfully. Proceed with scene-by-scene breakdown.', 'success');
 
     } catch (error) {
         console.error('Analysis failed:', error);
         showToast('Failed to analyze script. You can still process scenes manually.', 'warning');
+        closeTopLoadingBar(0); // Close immediately on error
     }
 
     // Load and render
     loadScript(text);
 
-    closeProgressModal();
+    closeTopLoadingBar();
 
     // Update workflow status
     if (window.updateWorkflowStatus) {
@@ -331,7 +345,10 @@ Return ONLY valid JSON (no markdown, no code fences).
 `;
 
     try {
+        console.log('🤖 Calling AI for comprehensive analysis...');
         const response = await callAI(prompt, 8000); // Increased token limit for comprehensive response
+
+        console.log('✅ AI response received, length:', response?.length || 0);
 
         // Clean response
         let cleanedResponse = response.trim();
@@ -344,6 +361,7 @@ Return ONLY valid JSON (no markdown, no code fences).
         // Parse JSON response
         const jsonMatch = cleanedResponse.match(/\{[\s\S]*\}/);
         if (!jsonMatch) {
+            console.warn('⚠️ No JSON found in AI response, using fallback');
             throw new Error('No valid JSON found in AI response');
         }
 
@@ -362,9 +380,10 @@ Return ONLY valid JSON (no markdown, no code fences).
         masterContext.createdAt = new Date().toISOString();
         masterContext.analysisVersion = '2.0-enhanced';
 
+        const characterCount = Object.keys(masterContext.characters).length;
         console.log('✅ ENHANCED Master context created:', {
             title: masterContext.title,
-            characters: Object.keys(masterContext.characters).length,
+            characters: characterCount,
             storyDays: masterContext.storyStructure.totalDays,
             majorEvents: masterContext.majorEvents.length,
             environments: Object.keys(masterContext.environments).length,
@@ -373,12 +392,363 @@ Return ONLY valid JSON (no markdown, no code fences).
             dialogueReferences: Object.keys(masterContext.dialogueReferences).length
         });
 
+        // If no characters found, use fallback
+        if (characterCount === 0) {
+            console.warn('⚠️ AI returned 0 characters, using fallback extraction');
+            throw new Error('No characters extracted by AI');
+        }
+
+        // Log character names found
+        console.log('📋 Characters found:', Object.keys(masterContext.characters).join(', '));
+
         return masterContext;
 
     } catch (error) {
-        console.error('❌ Deep analysis failed:', error);
-        throw error;
+        console.error('❌ AI analysis failed:', error);
+        console.log('🔧 Falling back to manual character extraction...');
+
+        // FALLBACK: Manual character extraction
+        return createFallbackMasterContext(scriptText, scenes);
     }
+}
+
+/**
+ * Create fallback master context when AI analysis fails
+ * Extracts basic character data from script text
+ */
+function createFallbackMasterContext(scriptText, scenes) {
+    console.log('🔧 Creating fallback master context from manual extraction...');
+
+    const characters = {};
+    const lines = scriptText.split('\n');
+
+    // Extract character names from dialogue
+    const dialoguePattern = /^([A-Z][A-Z\s\.\-\']+)(\s*\([^\)]*\))?$/;
+    const characterNames = new Set();
+
+    // First pass: Find all speaking characters
+    lines.forEach((line, lineIndex) => {
+        const trimmed = line.trim();
+        const match = trimmed.match(dialoguePattern);
+
+        if (match) {
+            let charName = match[1].trim();
+            // Clean up character name
+            charName = charName.replace(/(\s*\(.*\)|\s*V\.O\.|CONT'D|CONT\.|O\.S\.|O\.C\.)/g, '').trim();
+
+            if (charName &&
+                charName.length > 1 &&
+                !charName.includes('INT.') &&
+                !charName.includes('EXT.') &&
+                !charName.includes('FADE') &&
+                !charName.includes('CUT TO')) {
+                characterNames.add(charName);
+            }
+        }
+    });
+
+    console.log(`📋 Found ${characterNames.size} characters in dialogue`);
+
+    // Second pass: Find character descriptions (looking for introductions)
+    const characterDescriptions = {};
+    lines.forEach((line, lineIndex) => {
+        const trimmed = line.trim();
+
+        // Look for character introductions: "CHARACTER_NAME (age), description"
+        for (const charName of characterNames) {
+            const descPattern = new RegExp(`${charName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\(([^)]+)\\)[,\\s]+([^.]+)`, 'i');
+            const match = trimmed.match(descPattern);
+
+            if (match) {
+                if (!characterDescriptions[charName]) {
+                    characterDescriptions[charName] = [];
+                }
+                characterDescriptions[charName].push({
+                    text: match[0],
+                    age: match[1],
+                    description: match[2]
+                });
+            }
+        }
+    });
+
+    // Create character profiles
+    characterNames.forEach(charName => {
+        const descriptions = characterDescriptions[charName] || [];
+        const firstDesc = descriptions[0];
+
+        characters[charName] = {
+            scriptDescriptions: descriptions.map((desc, idx) => ({
+                text: desc.text,
+                sceneNumber: idx + 1,
+                type: idx === 0 ? 'introduction' : 'description'
+            })),
+
+            physicalProfile: {
+                age: firstDesc?.age || null,
+                gender: null,
+                build: null,
+                height: null,
+                hairColor: null,
+                hairStyle: null,
+                eyeColor: null,
+                skin: null,
+                distinctiveFeatures: []
+            },
+
+            characterAnalysis: {
+                role: 'supporting',
+                relationship: null,
+                occupation: null,
+                socialClass: null,
+                personality: 'To be analyzed scene-by-scene',
+                arc: 'To be determined through breakdown',
+                emotionalJourney: null
+            },
+
+            visualProfile: {
+                overallVibe: 'To be determined from script context',
+                styleChoices: 'To be defined during breakdown',
+                groomingHabits: null,
+                makeupNotes: null,
+                quirks: null,
+                inspirations: null
+            },
+
+            storyPresence: {
+                firstAppearance: 1,
+                lastAppearance: scenes.length,
+                totalScenes: 0,
+                scenesPresent: [],
+                hasDialogue: true,
+                speakingScenes: []
+            },
+
+            extractedElements: {
+                mentionedWardrobe: [],
+                mentionedAppearanceChanges: [],
+                physicalActions: [],
+                environmentalExposure: []
+            },
+
+            continuityNotes: {
+                keyLooks: 'To be identified during breakdown',
+                transformations: 'To be tracked scene-by-scene',
+                signature: 'To be determined',
+                importantScenes: []
+            },
+
+            firstAppearance: 1,
+            lastAppearance: scenes.length,
+            sceneCount: 0,
+            scenesPresent: []
+        };
+    });
+
+    // Create basic master context structure
+    const masterContext = {
+        title: 'Imported Script',
+        totalScenes: scenes.length,
+
+        storyStructure: {
+            totalDays: 1,
+            dayBreakdown: [{
+                day: 'Day 1',
+                scenes: scenes.map((_, i) => i + 1),
+                timeProgression: 'To be determined',
+                description: 'Script imported - timeline to be analyzed'
+            }],
+            timeline: [{
+                day: 'Day 1',
+                scenes: scenes.map((_, i) => i + 1),
+                description: 'Full script'
+            }],
+            flashbacks: [],
+            timeJumps: []
+        },
+
+        characters: characters,
+        environments: {},
+        interactions: {},
+        emotionalBeats: {},
+        dialogueReferences: {},
+        majorEvents: [],
+
+        continuityNotes: 'Fallback extraction - AI analysis failed. Character data extracted from dialogue. Complete scene-by-scene breakdown recommended.',
+        createdAt: new Date().toISOString(),
+        analysisVersion: '1.0-fallback'
+    };
+
+    console.log('✅ Fallback master context created:', {
+        characters: Object.keys(characters).length,
+        characterNames: Object.keys(characters).join(', ')
+    });
+
+    return masterContext;
+}
+
+/**
+ * Create tags from master context data
+ * Automatically tags character names, descriptions, and key events
+ */
+function createTagsFromMasterContext(masterContext) {
+    if (!state.scriptTags) {
+        state.scriptTags = {};
+    }
+
+    let totalTagsCreated = 0;
+
+    // Tag character descriptions in each scene
+    Object.entries(masterContext.characters || {}).forEach(([charName, charData]) => {
+        // Tag script descriptions (character introductions/mentions)
+        if (charData.scriptDescriptions && charData.scriptDescriptions.length > 0) {
+            charData.scriptDescriptions.forEach(desc => {
+                const sceneIndex = (desc.sceneNumber || 1) - 1;
+
+                if (!state.scenes[sceneIndex]) return;
+
+                // Create tag for this character description
+                const tag = {
+                    id: generateTagId(),
+                    category: 'cast',
+                    character: charName,
+                    selectedText: desc.text,
+                    fullContext: `${charName} - ${desc.type || 'description'}`,
+                    sceneIndex: sceneIndex,
+                    position: { start: 0, end: desc.text.length }, // Will be matched later
+                    importance: 8 // High importance for character descriptions
+                };
+
+                if (!state.scriptTags[sceneIndex]) {
+                    state.scriptTags[sceneIndex] = [];
+                }
+
+                state.scriptTags[sceneIndex].push(tag);
+                totalTagsCreated++;
+            });
+        }
+
+        // Tag extracted wardrobe mentions
+        if (charData.extractedElements?.mentionedWardrobe) {
+            charData.extractedElements.mentionedWardrobe.forEach((item, idx) => {
+                // Assume these are spread across character's scenes
+                const sceneIndex = charData.scenesPresent?.[idx] ?
+                    charData.scenesPresent[idx] - 1 : charData.firstAppearance - 1;
+
+                if (!state.scenes[sceneIndex]) return;
+
+                const tag = {
+                    id: generateTagId(),
+                    category: 'wardrobe',
+                    character: charName,
+                    selectedText: item,
+                    fullContext: `${charName} wardrobe: ${item}`,
+                    sceneIndex: sceneIndex,
+                    position: { start: 0, end: item.length },
+                    importance: 6
+                };
+
+                if (!state.scriptTags[sceneIndex]) {
+                    state.scriptTags[sceneIndex] = [];
+                }
+
+                state.scriptTags[sceneIndex].push(tag);
+                totalTagsCreated++;
+            });
+        }
+    });
+
+    // Tag physical interactions
+    Object.entries(masterContext.interactions || {}).forEach(([sceneKey, interaction]) => {
+        const sceneMatch = sceneKey.match(/scene_(\d+)/);
+        if (!sceneMatch) return;
+
+        const sceneIndex = parseInt(sceneMatch[1]) - 1;
+        if (!state.scenes[sceneIndex]) return;
+
+        const tag = {
+            id: generateTagId(),
+            category: interaction.type === 'fight' ? 'stunts' : 'sfx',
+            character: interaction.characters?.[0] || null,
+            selectedText: interaction.impact || interaction.type,
+            fullContext: `Physical interaction: ${interaction.type} - ${interaction.impact}`,
+            sceneIndex: sceneIndex,
+            position: { start: 0, end: 50 },
+            importance: 7
+        };
+
+        if (!state.scriptTags[sceneIndex]) {
+            state.scriptTags[sceneIndex] = [];
+        }
+
+        state.scriptTags[sceneIndex].push(tag);
+        totalTagsCreated++;
+    });
+
+    // Tag emotional beats that require makeup (crying, bruising, etc.)
+    Object.entries(masterContext.emotionalBeats || {}).forEach(([sceneKey, beat]) => {
+        const sceneMatch = sceneKey.match(/scene_(\d+)/);
+        if (!sceneMatch) return;
+
+        const sceneIndex = parseInt(sceneMatch[1]) - 1;
+        if (!state.scenes[sceneIndex]) return;
+
+        const tag = {
+            id: generateTagId(),
+            category: 'makeup',
+            character: beat.character || null,
+            selectedText: beat.visualImpact || beat.emotion,
+            fullContext: `${beat.character} - ${beat.emotion}: ${beat.visualImpact}`,
+            sceneIndex: sceneIndex,
+            position: { start: 0, end: 50 },
+            importance: 6
+        };
+
+        if (!state.scriptTags[sceneIndex]) {
+            state.scriptTags[sceneIndex] = [];
+        }
+
+        state.scriptTags[sceneIndex].push(tag);
+        totalTagsCreated++;
+    });
+
+    // Tag major events (injuries, transformations, etc.)
+    (masterContext.majorEvents || []).forEach(event => {
+        const sceneIndex = event.scene - 1;
+        if (!state.scenes[sceneIndex]) return;
+
+        let category = 'sfx';
+        if (event.type === 'fight') category = 'stunts';
+        if (event.type === 'accident') category = 'injuries';
+        if (event.type === 'weather') category = 'weather';
+
+        const tag = {
+            id: generateTagId(),
+            category: category,
+            character: event.charactersAffected?.[0] || null,
+            selectedText: event.visualImpact || event.type,
+            fullContext: `Major event: ${event.type} - ${event.visualImpact}`,
+            sceneIndex: sceneIndex,
+            position: { start: 0, end: 50 },
+            importance: 9 // Major events are high priority
+        };
+
+        if (!state.scriptTags[sceneIndex]) {
+            state.scriptTags[sceneIndex] = [];
+        }
+
+        state.scriptTags[sceneIndex].push(tag);
+        totalTagsCreated++;
+    });
+
+    console.log(`✅ Created ${totalTagsCreated} tags from master context`);
+}
+
+/**
+ * Generate unique tag ID
+ */
+function generateTagId() {
+    return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
 }
 
 /**
@@ -587,12 +957,23 @@ function populateInitialData(masterContext) {
         renderCharacterTabPanels();
     }
 
+    // AUTO-CREATE TAGS from master context data
+    console.log('🏷️ Creating tags from master context data...');
+    createTagsFromMasterContext(masterContext);
+
+    // Render highlights to show tags in script
+    console.log('🎨 Applying highlights to script...');
+    setTimeout(() => {
+        renderAllHighlights();
+    }, 500); // Small delay to ensure script is rendered
+
     console.log('✅ ENHANCED initial data populated successfully:', {
         characters: characterNames.length,
         environments: Object.keys(masterContext.environments || {}).length,
         interactions: Object.keys(masterContext.interactions || {}).length,
         emotionalBeats: Object.keys(masterContext.emotionalBeats || {}).length,
-        majorEvents: masterContext.majorEvents?.length || 0
+        majorEvents: masterContext.majorEvents?.length || 0,
+        tagsCreated: Object.values(state.scriptTags || {}).reduce((sum, tags) => sum + tags.length, 0)
     });
 }
 
@@ -655,6 +1036,95 @@ function closeProgressModal() {
         }, 1000);
     }
 }
+
+// ============================================================================
+// TOP LOADING BAR (Non-blocking progress indicator)
+// ============================================================================
+
+/**
+ * Show top loading bar
+ * @param {string} message - Main message to display
+ * @param {string} details - Optional details text
+ * @param {number} progress - Optional progress percentage (0-100), omit for indeterminate
+ */
+function showTopLoadingBar(message, details = '', progress = null) {
+    const loadingBar = document.getElementById('top-loading-bar');
+    const loadingMessage = document.getElementById('top-loading-message');
+    const loadingDetails = document.getElementById('top-loading-details');
+    const loadingProgress = document.getElementById('top-loading-progress');
+
+    if (!loadingBar) return;
+
+    // Set message and details
+    if (loadingMessage) loadingMessage.textContent = message;
+    if (loadingDetails) loadingDetails.textContent = details;
+
+    // Set progress bar
+    if (loadingProgress) {
+        if (progress === null) {
+            // Indeterminate progress
+            loadingProgress.classList.add('indeterminate');
+            loadingProgress.style.width = '100%';
+        } else {
+            // Determinate progress
+            loadingProgress.classList.remove('indeterminate');
+            loadingProgress.style.width = `${Math.min(100, Math.max(0, progress))}%`;
+        }
+    }
+
+    // Show loading bar
+    loadingBar.classList.remove('closing');
+    loadingBar.style.display = 'block';
+}
+
+/**
+ * Update top loading bar
+ * @param {string} message - Main message
+ * @param {string} details - Optional details text
+ * @param {number} progress - Progress percentage (0-100), omit for indeterminate
+ */
+function updateTopLoadingBar(message, details = '', progress = null) {
+    const loadingMessage = document.getElementById('top-loading-message');
+    const loadingDetails = document.getElementById('top-loading-details');
+    const loadingProgress = document.getElementById('top-loading-progress');
+
+    if (loadingMessage && message) loadingMessage.textContent = message;
+    if (loadingDetails) loadingDetails.textContent = details || '';
+
+    if (loadingProgress && progress !== null) {
+        loadingProgress.classList.remove('indeterminate');
+        loadingProgress.style.width = `${Math.min(100, Math.max(0, progress))}%`;
+    }
+}
+
+/**
+ * Close top loading bar
+ * @param {number} delay - Optional delay in ms before closing (default 500)
+ */
+function closeTopLoadingBar(delay = 500) {
+    const loadingBar = document.getElementById('top-loading-bar');
+    if (!loadingBar) return;
+
+    setTimeout(() => {
+        loadingBar.classList.add('closing');
+        setTimeout(() => {
+            loadingBar.style.display = 'none';
+            loadingBar.classList.remove('closing');
+
+            // Reset progress bar
+            const loadingProgress = document.getElementById('top-loading-progress');
+            if (loadingProgress) {
+                loadingProgress.classList.remove('indeterminate');
+                loadingProgress.style.width = '0%';
+            }
+        }, 300); // Match CSS animation duration
+    }, delay);
+}
+
+// Make top loading bar functions globally available
+window.showTopLoadingBar = showTopLoadingBar;
+window.updateTopLoadingBar = updateTopLoadingBar;
+window.closeTopLoadingBar = closeTopLoadingBar;
 
 /**
  * Show toast notification
@@ -3098,29 +3568,41 @@ ${scene.text || scene.content || ''}`;
 
         const scriptTitle = state.scriptData?.title || state.currentProject || 'Untitled';
 
-        // Show progress
-        showToast('Creating AI context...', 'info');
+        // Show progress with top loading bar
+        showTopLoadingBar('Creating AI Context', `Analyzing ${state.scenes.length} scenes...`, 0);
 
         // Perform comprehensive analysis
+        updateTopLoadingBar('Creating AI Context', 'Performing comprehensive analysis...', 25);
         const masterContext = await performComprehensiveAnalysis(fullScriptText, scriptTitle);
 
         if (masterContext) {
+            // Store master context in BOTH locations for compatibility
+            window.masterContext = masterContext;
+            window.scriptMasterContext = masterContext; // Character profiles look for this!
+            localStorage.setItem('masterContext', JSON.stringify(masterContext));
+            localStorage.setItem('scriptMasterContext', JSON.stringify(masterContext));
+
             // Populate application state from context
+            updateTopLoadingBar('Creating AI Context', 'Building character profiles...', 75);
             populateFromMasterContext(masterContext);
 
             // Mark context as ready
             window.contextReady = true;
 
+            updateTopLoadingBar('Analysis Complete', 'AI context created successfully', 100);
             showToast('AI context created successfully', 'success');
             console.log('✅ AI context initialized successfully');
 
+            closeTopLoadingBar();
             return true;
         }
 
+        closeTopLoadingBar(0);
         return false;
     } catch (error) {
         console.error('Failed to initialize AI context:', error);
         showToast('AI context creation failed: ' + error.message, 'error');
+        closeTopLoadingBar(0); // Close immediately on error
         return false;
     }
 };

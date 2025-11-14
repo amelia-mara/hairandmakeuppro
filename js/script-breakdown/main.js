@@ -27,6 +27,8 @@ import './hybrid-export.js';
 import './continuity-tracking.js';
 // Master context utilities for rich character data access
 import './master-context-utils.js';
+// Debug utilities for troubleshooting data flow
+import './debug-utils.js';
 
 // ============================================================================
 // GLOBAL APPLICATION STATE

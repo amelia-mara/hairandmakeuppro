@@ -39,7 +39,101 @@
             height: 100vh;
             overflow: hidden;
         }
-        
+
+        /* Top Loading Bar */
+        .top-loading-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 9999;
+            background: linear-gradient(to bottom,
+                rgba(18, 16, 14, 0.98) 0%,
+                rgba(18, 16, 14, 0.95) 100%);
+            backdrop-filter: blur(16px) saturate(180%);
+            border-bottom: 1px solid var(--glass-border);
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes slideDown {
+            from { transform: translateY(-100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(0); opacity: 1; }
+            to { transform: translateY(-100%); opacity: 0; }
+        }
+
+        .top-loading-bar.closing {
+            animation: slideUp 0.3s ease-out forwards;
+        }
+
+        .top-loading-progress {
+            height: 3px;
+            background: linear-gradient(90deg,
+                var(--accent-blue) 0%,
+                var(--accent-gold) 100%);
+            width: 0%;
+            transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 0 12px rgba(102, 126, 234, 0.5);
+        }
+
+        .top-loading-progress.indeterminate {
+            width: 100%;
+            background: linear-gradient(90deg,
+                transparent 0%,
+                var(--accent-blue) 25%,
+                var(--accent-gold) 50%,
+                var(--accent-blue) 75%,
+                transparent 100%);
+            background-size: 200% 100%;
+            animation: progressSlide 2s ease-in-out infinite;
+        }
+
+        @keyframes progressSlide {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .top-loading-content {
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .top-loading-message {
+            font-size: 0.9375em;
+            font-weight: 600;
+            color: var(--text-light);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .top-loading-message::before {
+            content: '';
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--accent-gold);
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .top-loading-details {
+            font-size: 0.8125em;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
         .app-layout { display: flex; height: 100vh; flex-direction: column; }
         
         .top-bar {
