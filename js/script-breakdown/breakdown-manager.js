@@ -112,7 +112,20 @@ export class SceneBreakdownManager {
      */
     loadCharacterStates(sceneIndex, storyPosition) {
         const breakdown = state.sceneBreakdowns[sceneIndex] || {};
-        const cast = breakdown.cast || [];
+        let cast = breakdown.cast || [];
+
+        // Auto-detect characters if none are explicitly set
+        if (cast.length === 0) {
+            cast = this.autoDetectSceneCharacters(sceneIndex);
+
+            // Update breakdown with detected characters
+            if (cast.length > 0 && !breakdown.cast) {
+                if (!state.sceneBreakdowns[sceneIndex]) {
+                    state.sceneBreakdowns[sceneIndex] = {};
+                }
+                state.sceneBreakdowns[sceneIndex].cast = cast;
+            }
+        }
 
         this.continuityStates = {};
 
@@ -129,6 +142,53 @@ export class SceneBreakdownManager {
                 storyPosition: storyPosition
             };
         });
+    }
+
+    /**
+     * Auto-detect characters from scene content
+     * @param {number} sceneIndex - Scene index
+     * @returns {Array} Detected character names
+     */
+    autoDetectSceneCharacters(sceneIndex) {
+        const scene = state.scenes[sceneIndex];
+        if (!scene || !scene.content) return [];
+
+        const characters = new Set();
+
+        // Check confirmed characters from state
+        if (state.characters && state.characters.size > 0) {
+            const confirmedChars = Array.from(state.characters);
+
+            // Look for character dialogue in scene content
+            const lines = scene.content.split('\n');
+
+            confirmedChars.forEach(character => {
+                // Check if character has dialogue (uppercase line followed by dialogue)
+                const charPattern = new RegExp(`^\\s*${escapeRegex(character)}\\s*$`, 'i');
+
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i].trim();
+
+                    // Check for character name (all caps, standalone line)
+                    if (charPattern.test(line) || line.toUpperCase() === character.toUpperCase()) {
+                        characters.add(character);
+                        break;
+                    }
+                }
+            });
+        }
+
+        // Fallback: Check tags for this scene
+        if (characters.size === 0) {
+            const sceneTags = state.scriptTags?.[sceneIndex] || [];
+            sceneTags.forEach(tag => {
+                if (tag.character && tag.category === 'cast') {
+                    characters.add(tag.character);
+                }
+            });
+        }
+
+        return Array.from(characters);
     }
 
     /**
@@ -228,6 +288,106 @@ export class SceneBreakdownManager {
     }
 
     /**
+     * Render scene alerts and conditions
+     * @returns {string} HTML string
+     */
+    renderSceneAlerts() {
+        if (this.currentScene === null) return '';
+
+        const scene = state.scenes[this.currentScene];
+        const alerts = [];
+
+        // Check for continuous from previous scene
+        if (this.currentScene > 0) {
+            const prevScene = state.scenes[this.currentScene - 1];
+            if (prevScene?.heading?.toUpperCase().includes('CONTINUOUS')) {
+                alerts.push({
+                    type: 'continuous',
+                    icon: '🔄',
+                    text: 'CONTINUOUS from previous scene'
+                });
+            }
+        }
+
+        // Check for weather in heading
+        const heading = scene.heading?.toUpperCase() || '';
+        if (heading.includes('RAIN')) {
+            alerts.push({
+                type: 'weather',
+                icon: '🌧️',
+                text: 'Rain scene - waterproof makeup needed'
+            });
+        }
+        if (heading.includes('SNOW')) {
+            alerts.push({
+                type: 'weather',
+                icon: '❄️',
+                text: 'Snow scene - cold weather considerations'
+            });
+        }
+
+        // Check for time of day
+        if (heading.includes('NIGHT')) {
+            alerts.push({
+                type: 'time',
+                icon: '🌙',
+                text: 'Night scene - consider lighting for continuity'
+            });
+        }
+        if (heading.includes('DAWN') || heading.includes('DUSK')) {
+            alerts.push({
+                type: 'time',
+                icon: '🌅',
+                text: 'Transition lighting - monitor continuity closely'
+            });
+        }
+
+        // Check for tagged elements (stunts, action)
+        const sceneTags = state.scriptTags[this.currentScene] || [];
+        const hasStunt = sceneTags.some(t => t.category === 'stunts');
+        if (hasStunt) {
+            alerts.push({
+                type: 'action',
+                icon: '🎬',
+                text: 'Action/stunt sequence - prepare for touch-ups'
+            });
+        }
+
+        // Check for injuries
+        const hasInjury = sceneTags.some(t => t.category === 'injuries');
+        if (hasInjury) {
+            alerts.push({
+                type: 'injury',
+                icon: '🩹',
+                text: 'Injuries in scene - SFX required'
+            });
+        }
+
+        // Check for special effects
+        const hasSFX = sceneTags.some(t => t.category === 'sfx');
+        if (hasSFX) {
+            alerts.push({
+                type: 'sfx',
+                icon: '🎭',
+                text: 'Special effects makeup required'
+            });
+        }
+
+        if (alerts.length === 0) return '';
+
+        return `
+            <div class="alerts-section">
+                ${alerts.map(alert => `
+                    <div class="alert-item ${alert.type}">
+                        <span class="alert-icon">${alert.icon}</span>
+                        <span class="alert-text">${alert.text}</span>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    /**
      * Render enhanced breakdown panel
      */
     renderEnhancedBreakdown() {
@@ -258,6 +418,9 @@ export class SceneBreakdownManager {
                     ${scene.timeOfDay ? `- <span class="time-label">${escapeHtml(scene.timeOfDay)}</span>` : ''}
                 </div>
             </div>
+
+            <!-- Scene Alerts -->
+            ${this.renderSceneAlerts()}
 
             <!-- Character Quick Select -->
             ${this.renderCharacterQuickSelect(cast)}
@@ -361,52 +524,173 @@ export class SceneBreakdownManager {
      * @returns {string} HTML string
      */
     renderCharacterStateCard(character) {
-        const state = this.continuityStates[character];
-        if (!state) return '';
+        const charState = this.continuityStates[character];
+        if (!charState) return '';
 
-        const lastSeen = state.lastAppearance
-            ? `Scene ${state.lastAppearance.sceneNumber}`
+        const breakdown = state.sceneBreakdowns[this.currentScene] || {};
+        const charData = breakdown.characterStates?.[character] || {};
+        const prevState = this.getPreviousCharacterState(character, this.currentScene);
+
+        const lastSeen = charState.lastAppearance
+            ? `Scene ${charState.lastAppearance.sceneNumber}`
             : 'First appearance';
 
         return `
-            <div class="character-state-card" data-character="${escapeHtml(character)}">
-                <div class="state-header">
-                    <h4 class="state-character-name">${escapeHtml(character)}</h4>
-                    <span class="last-seen">${lastSeen}</span>
+            <div class="character-block" data-character="${escapeHtml(character)}">
+                <!-- Character Header -->
+                <div class="character-header">
+                    <h3 class="character-name">${escapeHtml(character)}</h3>
+                    <div class="character-actions">
+                        <button class="icon-btn" onclick="window.breakdownManager.copyFromLastScene('${escapeHtml(character).replace(/'/g, "\\'")}')">
+                            <span title="Copy from previous scene">↓</span>
+                        </button>
+                        <button class="icon-btn" onclick="window.breakdownManager.viewCharacterTimeline('${escapeHtml(character).replace(/'/g, "\\'")}')">
+                            <span title="View timeline">⏱</span>
+                        </button>
+                    </div>
                 </div>
 
-                <div class="state-content">
-                    <!-- Current State Summary -->
-                    <div class="current-state-summary">
-                        <div class="state-section-label">Current State:</div>
-                        ${this.renderCurrentStateSummary(character, state)}
-                    </div>
-
-                    <!-- Active Continuity Items -->
-                    ${state.activeItems.length > 0 ? `
-                        <div class="active-items-list">
-                            <div class="state-section-label">Active Items:</div>
-                            ${state.activeItems.map(item => this.renderActiveItem(character, item)).join('')}
+                <!-- Enters With -->
+                <div class="continuity-row">
+                    <label class="field-label">Enters with:</label>
+                    <div class="field-grid">
+                        <div class="field-item">
+                            <input
+                                type="text"
+                                class="continuity-input"
+                                placeholder="Hair"
+                                value="${escapeHtml(charData.entersHair || '')}"
+                                onchange="window.breakdownManager.updateCharacterField('${escapeHtml(character).replace(/'/g, "\\'")}', 'entersHair', this.value)"
+                            />
                         </div>
-                    ` : ''}
-
-                    <!-- Quick Actions -->
-                    <div class="state-actions">
-                        <button class="state-action-btn" onclick="window.breakdownManager.addContinuityItem('${escapeHtml(character).replace(/'/g, "\\'")}')">
-                            + Add
-                        </button>
-                        ${state.lastAppearance ? `
-                            <button class="state-action-btn" onclick="window.breakdownManager.copyFromLastScene('${escapeHtml(character).replace(/'/g, "\\'")}')">
-                                Copy Previous
-                            </button>
-                        ` : ''}
-                        <button class="state-action-btn" onclick="window.breakdownManager.viewCharacterTimeline('${escapeHtml(character).replace(/'/g, "\\'")}')">
-                            Timeline
-                        </button>
+                        <div class="field-item">
+                            <input
+                                type="text"
+                                class="continuity-input"
+                                placeholder="Makeup"
+                                value="${escapeHtml(charData.entersMakeup || '')}"
+                                onchange="window.breakdownManager.updateCharacterField('${escapeHtml(character).replace(/'/g, "\\'")}', 'entersMakeup', this.value)"
+                            />
+                        </div>
+                        <div class="field-item">
+                            <input
+                                type="text"
+                                class="continuity-input"
+                                placeholder="Wardrobe"
+                                value="${escapeHtml(charData.entersWardrobe || '')}"
+                                onchange="window.breakdownManager.updateCharacterField('${escapeHtml(character).replace(/'/g, "\\'")}', 'entersWardrobe', this.value)"
+                            />
+                        </div>
                     </div>
                 </div>
+
+                <!-- Changes During Scene -->
+                <div class="continuity-row">
+                    <label class="field-label">Changes during scene:</label>
+                    <textarea
+                        class="continuity-textarea"
+                        placeholder="Describe any changes to appearance during this scene..."
+                        onchange="window.breakdownManager.updateCharacterField('${escapeHtml(character).replace(/'/g, "\\'")}', 'changes', this.value)"
+                    >${escapeHtml(charData.changes || '')}</textarea>
+                </div>
+
+                <!-- Exits With -->
+                <div class="continuity-row">
+                    <label class="field-label">Exits with:</label>
+                    <div class="field-grid">
+                        <div class="field-item">
+                            <input
+                                type="text"
+                                class="continuity-input"
+                                placeholder="Hair"
+                                value="${escapeHtml(charData.exitsHair || '')}"
+                                onchange="window.breakdownManager.updateCharacterField('${escapeHtml(character).replace(/'/g, "\\'")}', 'exitsHair', this.value)"
+                            />
+                        </div>
+                        <div class="field-item">
+                            <input
+                                type="text"
+                                class="continuity-input"
+                                placeholder="Makeup"
+                                value="${escapeHtml(charData.exitsMakeup || '')}"
+                                onchange="window.breakdownManager.updateCharacterField('${escapeHtml(character).replace(/'/g, "\\'")}', 'exitsMakeup', this.value)"
+                            />
+                        </div>
+                        <div class="field-item">
+                            <input
+                                type="text"
+                                class="continuity-input"
+                                placeholder="Wardrobe"
+                                value="${escapeHtml(charData.exitsWardrobe || '')}"
+                                onchange="window.breakdownManager.updateCharacterField('${escapeHtml(character).replace(/'/g, "\\'")}', 'exitsWardrobe', this.value)"
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Active Items Summary -->
+                ${charState.activeItems.length > 0 ? `
+                    <div class="continuity-row">
+                        <label class="field-label">Active Continuity Items:</label>
+                        <div class="active-items-compact">
+                            ${charState.activeItems.map(item => `
+                                <div class="active-item-tag ${item.category}">
+                                    ${this.getCategoryIcon(item.category)} ${escapeHtml(item.description)}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
             </div>
         `;
+    }
+
+    /**
+     * Get previous character state for reference
+     * @param {string} character - Character name
+     * @param {number} currentSceneIndex - Current scene index
+     * @returns {Object|null} Previous state or null
+     */
+    getPreviousCharacterState(character, currentSceneIndex) {
+        for (let i = currentSceneIndex - 1; i >= 0; i--) {
+            const breakdown = state.sceneBreakdowns[i] || {};
+            if (breakdown.characterStates?.[character]) {
+                return breakdown.characterStates[character];
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Update character field
+     * @param {string} character - Character name
+     * @param {string} field - Field name
+     * @param {string} value - Field value
+     */
+    async updateCharacterField(character, field, value) {
+        if (this.currentScene === null) return;
+
+        // Initialize structure if needed
+        if (!state.sceneBreakdowns[this.currentScene]) {
+            state.sceneBreakdowns[this.currentScene] = {};
+        }
+        if (!state.sceneBreakdowns[this.currentScene].characterStates) {
+            state.sceneBreakdowns[this.currentScene].characterStates = {};
+        }
+        if (!state.sceneBreakdowns[this.currentScene].characterStates[character]) {
+            state.sceneBreakdowns[this.currentScene].characterStates[character] = {};
+        }
+
+        // Update field
+        state.sceneBreakdowns[this.currentScene].characterStates[character][field] = value;
+
+        // Save project
+        try {
+            const { saveProject } = await import('./export-handlers.js');
+            saveProject();
+        } catch (error) {
+            console.error('Error saving project:', error);
+        }
     }
 
     /**
@@ -883,6 +1167,15 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+/**
+ * Escape regex special characters
+ * @param {string} string - String to escape
+ * @returns {string} Escaped string
+ */
+function escapeRegex(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 /**
