@@ -54,6 +54,9 @@ export function renderSceneList() {
         return;
     }
 
+    // Get master context for indicators
+    const analysis = window.scriptMasterContext || window.masterContext || {};
+
     container.innerHTML = state.scenes.map((scene, index) => {
         const sceneType = getSceneType(scene.heading);
         const sceneTypeLabel = getSceneTypeLabel(sceneType);
@@ -67,6 +70,9 @@ export function renderSceneList() {
         const hasTags = sceneTags.length > 0;
         const hasContinuity = scene.characterStates && Object.keys(scene.characterStates).length > 0;
         const isProcessed = scene.processed || (hasSynopsis && hasTags);
+
+        // Get scene indicators from master context
+        const contextIndicators = getSceneIndicators(index, analysis);
 
         // Count elements (excluding cast)
         let elementCounts = [];
@@ -88,6 +94,13 @@ export function renderSceneList() {
                         <div class="scene-heading">${escapeHtml(scene.heading)}</div>
                         <div class="scene-meta">
                             <span class="scene-type-indicator ${sceneType}">${sceneTypeLabel}</span>
+                            ${contextIndicators.length > 0 ? `
+                                <div class="scene-context-indicators">
+                                    ${contextIndicators.map(ind =>
+                                        `<span class="context-indicator ${ind.type}" title="${ind.tooltip}">${ind.icon}</span>`
+                                    ).join('')}
+                                </div>
+                            ` : ''}
                         </div>
                     </div>
                     <div class="scene-indicators">
@@ -101,6 +114,69 @@ export function renderSceneList() {
             </div>
         `;
     }).join('');
+}
+
+/**
+ * Get scene indicators based on master context analysis
+ * @param {number} sceneIndex - Scene index
+ * @param {Object} analysis - Master context analysis
+ * @returns {Array} Array of indicator objects
+ */
+function getSceneIndicators(sceneIndex, analysis) {
+    const indicators = [];
+
+    // Check for weather conditions
+    const environment = analysis.environments?.[`scene_${sceneIndex}`];
+    if (environment?.conditions) {
+        const conditions = Array.isArray(environment.conditions) ? environment.conditions : [];
+        if (conditions.some(c => c.toLowerCase().includes('rain'))) {
+            indicators.push({ icon: '🌧️', type: 'weather', tooltip: 'Rain scene' });
+        }
+        if (conditions.some(c => c.toLowerCase().includes('snow'))) {
+            indicators.push({ icon: '❄️', type: 'weather', tooltip: 'Snow scene' });
+        }
+        if (conditions.some(c => c.toLowerCase().includes('wind'))) {
+            indicators.push({ icon: '💨', type: 'weather', tooltip: 'Windy scene' });
+        }
+    }
+
+    // Check for crowd scenes
+    if (analysis.crowdScenes?.[`scene_${sceneIndex}`]) {
+        indicators.push({ icon: '👥', type: 'crowd', tooltip: 'Extras required' });
+    }
+
+    // Check for action/fight scenes
+    const interactions = analysis.interactions?.[`scene_${sceneIndex}`];
+    if (interactions?.type === 'fight') {
+        indicators.push({ icon: '⚔️', type: 'action', tooltip: 'Fight scene' });
+    }
+
+    // Check for emotional beats
+    if (analysis.emotionalBeats?.[`scene_${sceneIndex}`]) {
+        indicators.push({ icon: '😢', type: 'emotional', tooltip: 'Emotional scene' });
+    }
+
+    // Check for special requirements
+    if (analysis.specialRequirements?.[`scene_${sceneIndex}`]) {
+        indicators.push({ icon: '⚠️', type: 'special', tooltip: 'Special requirements' });
+    }
+
+    // Check for stunts/doubling needs
+    if (analysis.doublingNeeds?.[`scene_${sceneIndex}`]) {
+        indicators.push({ icon: '🎬', type: 'stunt', tooltip: 'Stunt work required' });
+    }
+
+    // Check if scene is continuous
+    if (analysis.sceneFlow?.continuous) {
+        for (let group of analysis.sceneFlow.continuous) {
+            if (group.includes(sceneIndex)) {
+                indicators.push({ icon: '⚡', type: 'continuous', tooltip: 'Continuous scene' });
+                break;
+            }
+        }
+    }
+
+    return indicators;
 }
 
 /**

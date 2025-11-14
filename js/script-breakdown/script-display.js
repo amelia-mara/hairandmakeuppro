@@ -84,6 +84,9 @@ export function renderScript() {
 
     // Highlight character descriptions
     highlightCharacterDescriptions();
+
+    // Highlight continuity references
+    highlightContinuityReferences();
 }
 
 /**
@@ -138,6 +141,125 @@ export function highlightCharacterDescriptions() {
     scriptContent.innerHTML = html;
 
     console.log(`✓ Highlighted ${descriptions.length} character descriptions`);
+}
+
+/**
+ * Highlight continuity-related text in script display
+ * Adds visual highlighting to dialogue and action lines that reference appearance
+ */
+export function highlightContinuityReferences() {
+    const analysis = window.scriptMasterContext || window.masterContext;
+    if (!analysis) return;
+
+    const scriptContent = document.getElementById('script-content');
+    if (!scriptContent) return;
+
+    // Get all scene elements
+    const scenes = scriptContent.querySelectorAll('.script-scene');
+
+    scenes.forEach((sceneElement, index) => {
+        // Highlight dialogue about appearance
+        if (analysis.dialogueReferences?.[`scene_${index}`]) {
+            const ref = analysis.dialogueReferences[`scene_${index}`];
+            if (ref.line) {
+                highlightTextInElement(sceneElement, ref.line, 'dialogue-appearance', {
+                    character: ref.character || '',
+                    note: ref.implication || 'Appearance reference'
+                });
+            }
+        }
+
+        // Highlight action line cues
+        if (analysis.actionLineCues?.[`scene_${index}`]) {
+            const cue = analysis.actionLineCues[`scene_${index}`];
+            if (cue.cue) {
+                highlightTextInElement(sceneElement, cue.cue, 'action-cue', {
+                    character: cue.character || '',
+                    note: cue.visualNotes || 'Visual cue'
+                });
+            }
+        }
+
+        // Highlight character descriptions (additional to what's already done)
+        if (analysis.characters) {
+            Object.entries(analysis.characters).forEach(([charName, data]) => {
+                if (data.scriptDescriptions && Array.isArray(data.scriptDescriptions)) {
+                    data.scriptDescriptions.forEach(desc => {
+                        if (desc.sceneNumber === index + 1 && desc.text) {
+                            highlightTextInElement(sceneElement, desc.text, 'character-description', {
+                                character: charName,
+                                note: 'Character introduction'
+                            });
+                        }
+                    });
+                }
+            });
+        }
+    });
+
+    console.log('✓ Highlighted continuity references');
+}
+
+/**
+ * Highlight specific text within an element
+ * @param {HTMLElement} element - Container element to search within
+ * @param {string} searchText - Text to highlight
+ * @param {string} className - CSS class to apply to highlight
+ * @param {Object} data - Data attributes to add to highlight span
+ */
+function highlightTextInElement(element, searchText, className, data) {
+    if (!searchText || !element) return;
+
+    const walker = document.createTreeWalker(
+        element,
+        NodeFilter.SHOW_TEXT,
+        null,
+        false
+    );
+
+    const nodesToProcess = [];
+    let node;
+    while (node = walker.nextNode()) {
+        if (node.nodeValue && node.nodeValue.includes(searchText)) {
+            // Don't highlight if already inside a highlighted element
+            let parent = node.parentNode;
+            let alreadyHighlighted = false;
+            while (parent && parent !== element) {
+                if (parent.classList && (parent.classList.contains('highlighted') || parent.classList.contains('character-description'))) {
+                    alreadyHighlighted = true;
+                    break;
+                }
+                parent = parent.parentNode;
+            }
+            if (!alreadyHighlighted) {
+                nodesToProcess.push(node);
+            }
+        }
+    }
+
+    // Process nodes (done separately to avoid walker issues during DOM modification)
+    nodesToProcess.forEach(node => {
+        const span = document.createElement('span');
+        span.className = `highlighted ${className}`;
+        if (data.character) span.setAttribute('data-character', data.character);
+        if (data.note) span.setAttribute('data-note', data.note);
+        span.textContent = searchText;
+
+        // Add hover tooltip
+        if (data.note) span.setAttribute('title', data.note);
+
+        const parent = node.parentNode;
+        const text = node.nodeValue;
+        const index = text.indexOf(searchText);
+
+        // Split the text node
+        const before = document.createTextNode(text.substring(0, index));
+        const after = document.createTextNode(text.substring(index + searchText.length));
+
+        parent.replaceChild(after, node);
+        parent.insertBefore(span, after);
+        parent.insertBefore(before, span);
+    });
 }
 
 /**
