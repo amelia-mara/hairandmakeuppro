@@ -430,7 +430,15 @@ export class CharacterTimeline {
  */
 export function buildCharacterProfile(characterName) {
     const narrativeContext = window.scriptNarrativeContext;
-    const characterData = narrativeContext?.characters?.find(c => c.name === characterName);
+    const masterContext = window.scriptMasterContext;
+
+    // Try to get character data from master context first (new format), fallback to narrative context
+    let characterData = null;
+    if (masterContext?.characters?.[characterName]) {
+        characterData = masterContext.characters[characterName];
+    } else if (narrativeContext?.characters?.find(c => c.name === characterName)) {
+        characterData = narrativeContext.characters.find(c => c.name === characterName);
+    }
 
     // Create visual timeline
     const timeline = new CharacterTimeline(characterName);
@@ -441,13 +449,19 @@ export function buildCharacterProfile(characterName) {
     const events = extractCharacterEvents(characterName);
     const taggedElements = getCharacterTaggedElements(characterName);
 
-    // Build HTML
+    // Build HTML with new sections
     let html = `
         <div class="character-profile-panel">
             ${renderCharacterHeader(characterName, characterData, timelineData)}
+            ${renderScriptDescriptions(characterData)}
+            ${renderPhysicalProfile(characterData)}
+            ${renderVisualIdentity(characterData)}
+            ${renderCharacterJourney(characterData)}
+            ${renderContinuityGuidelines(characterData)}
             ${renderVisualTimeline(timeline)}
             ${renderContinuityEvents(events, characterName)}
             ${renderTaggedElements(taggedElements, characterName)}
+            ${renderActionButtons(characterName)}
         </div>
     `;
 
@@ -494,6 +508,261 @@ function getImportanceLabel(importance) {
 }
 
 /**
+ * Render script descriptions section (direct quotes from script)
+ * @param {Object} characterData - Character data
+ * @returns {string} HTML string
+ */
+function renderScriptDescriptions(characterData) {
+    const descriptions = characterData?.scriptDescriptions || [];
+
+    if (descriptions.length === 0) {
+        return '';
+    }
+
+    return `
+        <div class="character-section script-descriptions-section">
+            <h3 class="section-title">📝 From The Script</h3>
+            <div class="script-descriptions-list">
+                ${descriptions.map(desc => `
+                    <div class="script-description-item" data-scene="${desc.sceneNumber}">
+                        <div class="description-quote">"${escapeHtml(desc.text)}"</div>
+                        <div class="description-meta">
+                            <span class="scene-badge" onclick="scrollToScene(${desc.sceneNumber - 1})">Scene ${desc.sceneNumber}</span>
+                            <span class="type-badge">${desc.type}</span>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Render physical profile section
+ * @param {Object} characterData - Character data
+ * @returns {string} HTML string
+ */
+function renderPhysicalProfile(characterData) {
+    const physical = characterData?.physicalProfile || {};
+
+    const fields = [
+        { key: 'age', label: 'Age' },
+        { key: 'gender', label: 'Gender' },
+        { key: 'ethnicity', label: 'Ethnicity' },
+        { key: 'height', label: 'Height' },
+        { key: 'build', label: 'Build' },
+        { key: 'hairColor', label: 'Hair Color' },
+        { key: 'hairStyle', label: 'Hair Style' },
+        { key: 'eyeColor', label: 'Eye Color' }
+    ];
+
+    const hasAnyField = fields.some(f => physical[f.key]);
+    const hasFeatures = physical.distinctiveFeatures && physical.distinctiveFeatures.length > 0;
+
+    if (!hasAnyField && !hasFeatures) {
+        return '';
+    }
+
+    return `
+        <div class="character-section physical-profile-section">
+            <h3 class="section-title">👤 Physical Profile</h3>
+            <div class="profile-grid">
+                ${fields.filter(f => physical[f.key]).map(field => `
+                    <div class="profile-field">
+                        <span class="field-label">${field.label}:</span>
+                        <span class="field-value">${escapeHtml(physical[field.key])}</span>
+                    </div>
+                `).join('')}
+                ${hasFeatures ? `
+                    <div class="profile-field full-width">
+                        <span class="field-label">Distinctive Features:</span>
+                        <span class="field-value">${physical.distinctiveFeatures.map(f => escapeHtml(f)).join(', ')}</span>
+                    </div>
+                ` : ''}
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Render visual identity section (generated analysis)
+ * @param {Object} characterData - Character data
+ * @returns {string} HTML string
+ */
+function renderVisualIdentity(characterData) {
+    const visual = characterData?.visualProfile || {};
+
+    const hasContent = visual.overallVibe || visual.styleChoices || visual.groomingHabits ||
+                       visual.makeupStyle || visual.quirks || visual.inspirations;
+
+    if (!hasContent) {
+        return '';
+    }
+
+    return `
+        <div class="character-section visual-identity-section">
+            <h3 class="section-title">🎨 Visual Identity</h3>
+            <div class="visual-profile-content">
+                ${visual.overallVibe ? `
+                    <div class="visual-field">
+                        <div class="visual-label">Overall Vibe</div>
+                        <div class="visual-value">${escapeHtml(visual.overallVibe)}</div>
+                    </div>
+                ` : ''}
+                ${visual.styleChoices ? `
+                    <div class="visual-field">
+                        <div class="visual-label">Style Choices</div>
+                        <div class="visual-value">${escapeHtml(visual.styleChoices)}</div>
+                    </div>
+                ` : ''}
+                ${visual.groomingHabits ? `
+                    <div class="visual-field">
+                        <div class="visual-label">Grooming Habits</div>
+                        <div class="visual-value">${escapeHtml(visual.groomingHabits)}</div>
+                    </div>
+                ` : ''}
+                ${visual.makeupStyle ? `
+                    <div class="visual-field">
+                        <div class="visual-label">Makeup Style</div>
+                        <div class="visual-value">${escapeHtml(visual.makeupStyle)}</div>
+                    </div>
+                ` : ''}
+                ${visual.quirks ? `
+                    <div class="visual-field">
+                        <div class="visual-label">Visual Quirks</div>
+                        <div class="visual-value">${escapeHtml(visual.quirks)}</div>
+                    </div>
+                ` : ''}
+                ${visual.inspirations ? `
+                    <div class="visual-field">
+                        <div class="visual-label">Reference Inspirations</div>
+                        <div class="visual-value">${escapeHtml(visual.inspirations)}</div>
+                    </div>
+                ` : ''}
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Render character journey section (personality and arc)
+ * @param {Object} characterData - Character data
+ * @returns {string} HTML string
+ */
+function renderCharacterJourney(characterData) {
+    const analysis = characterData?.characterAnalysis || {};
+
+    const hasContent = analysis.personality || analysis.arc || analysis.emotionalJourney ||
+                       analysis.socialClass || analysis.occupation;
+
+    if (!hasContent) {
+        return '';
+    }
+
+    return `
+        <div class="character-section character-journey-section">
+            <h3 class="section-title">📈 Character Journey</h3>
+            <div class="journey-content">
+                ${analysis.personality ? `
+                    <div class="journey-field">
+                        <div class="journey-label">Personality</div>
+                        <div class="journey-value">${escapeHtml(analysis.personality)}</div>
+                    </div>
+                ` : ''}
+                ${analysis.socialClass ? `
+                    <div class="journey-field">
+                        <div class="journey-label">Social Class</div>
+                        <div class="journey-value">${escapeHtml(analysis.socialClass)}</div>
+                    </div>
+                ` : ''}
+                ${analysis.occupation ? `
+                    <div class="journey-field">
+                        <div class="journey-label">Occupation</div>
+                        <div class="journey-value">${escapeHtml(analysis.occupation)}</div>
+                    </div>
+                ` : ''}
+                ${analysis.arc ? `
+                    <div class="journey-field">
+                        <div class="journey-label">Story Arc</div>
+                        <div class="journey-value">${escapeHtml(analysis.arc)}</div>
+                    </div>
+                ` : ''}
+                ${analysis.emotionalJourney ? `
+                    <div class="journey-field">
+                        <div class="journey-label">Emotional Journey</div>
+                        <div class="journey-value">${escapeHtml(analysis.emotionalJourney)}</div>
+                    </div>
+                ` : ''}
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Render continuity guidelines section
+ * @param {Object} characterData - Character data
+ * @returns {string} HTML string
+ */
+function renderContinuityGuidelines(characterData) {
+    const notes = characterData?.continuityNotes || {};
+
+    const hasContent = notes.keyLooks || notes.signature || notes.transformations;
+
+    if (!hasContent) {
+        return '';
+    }
+
+    return `
+        <div class="character-section continuity-guidelines-section">
+            <h3 class="section-title">📋 Continuity Guidelines</h3>
+            <div class="guidelines-content">
+                ${notes.keyLooks ? `
+                    <div class="guideline-field">
+                        <div class="guideline-label">Key Looks</div>
+                        <div class="guideline-value">${escapeHtml(notes.keyLooks)}</div>
+                    </div>
+                ` : ''}
+                ${notes.signature ? `
+                    <div class="guideline-field">
+                        <div class="guideline-label">Signature Elements</div>
+                        <div class="guideline-value">${escapeHtml(notes.signature)}</div>
+                    </div>
+                ` : ''}
+                ${notes.transformations ? `
+                    <div class="guideline-field">
+                        <div class="guideline-label">Major Transformations</div>
+                        <div class="guideline-value">${escapeHtml(notes.transformations)}</div>
+                    </div>
+                ` : ''}
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Render action buttons section
+ * @param {string} characterName - Character name
+ * @returns {string} HTML string
+ */
+function renderActionButtons(characterName) {
+    return `
+        <div class="character-section action-buttons-section">
+            <div class="action-buttons">
+                <button class="action-btn" onclick="generateLookbook('${characterName}')" title="Generate visual lookbook">
+                    📖 Generate Lookbook
+                </button>
+                <button class="action-btn" onclick="viewCharacterTimeline('${characterName}')" title="View detailed timeline">
+                    📊 View Timeline
+                </button>
+                <button class="action-btn" onclick="exportCharacterProfile('${characterName}')" title="Export profile as PDF/JSON">
+                    📤 Export Profile
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+/**
  * Render visual timeline section
  * @param {CharacterTimeline} timeline - Timeline instance
  * @returns {string} HTML string
@@ -501,7 +770,7 @@ function getImportanceLabel(importance) {
 function renderVisualTimeline(timeline) {
     return `
         <div class="character-timeline">
-            <h3 class="section-title">Visual Journey</h3>
+            <h3 class="section-title">Visual Journey Timeline</h3>
             <div class="timeline-container">
                 ${timeline.renderTimeline()}
             </div>
@@ -761,6 +1030,40 @@ function escapeHtml(text) {
     div.textContent = text;
     return div.innerHTML;
 }
+
+// ============================================================================
+// ACTION BUTTON HANDLERS
+// ============================================================================
+
+/**
+ * Generate lookbook for character (placeholder)
+ * @param {string} characterName - Character name
+ */
+window.generateLookbook = function(characterName) {
+    console.log('Generate lookbook for:', characterName);
+    // TODO: Implement lookbook generation
+    alert(`Lookbook generation for ${characterName} - Coming soon!`);
+};
+
+/**
+ * View detailed character timeline (placeholder)
+ * @param {string} characterName - Character name
+ */
+window.viewCharacterTimeline = function(characterName) {
+    console.log('View timeline for:', characterName);
+    // TODO: Implement detailed timeline view
+    alert(`Detailed timeline for ${characterName} - Coming soon!`);
+};
+
+/**
+ * Export character profile (placeholder)
+ * @param {string} characterName - Character name
+ */
+window.exportCharacterProfile = function(characterName) {
+    console.log('Export profile for:', characterName);
+    // TODO: Implement profile export
+    alert(`Export profile for ${characterName} - Coming soon!`);
+};
 
 // ============================================================================
 // EXPOSE FUNCTIONS
