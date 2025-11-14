@@ -474,13 +474,231 @@ export function switchCenterTab(tabName) {
     if (tabName === 'script') {
         // IMPORTANT: The correct element ID is 'script-tab-panel' (with hyphens)
         document.getElementById('script-tab-panel')?.classList.add('active');
+    } else if (tabName.startsWith('character-')) {
+        // Show character profile
+        const charName = tabName.replace('character-', '').replace(/-/g, ' ');
+        // Convert back to proper case - find matching character in confirmed list
+        const matchingChar = Array.from(state.confirmedCharacters || [])
+            .find(c => c.toLowerCase().replace(/\s+/g, '-') === charName.toLowerCase().replace(/\s+/g, '-'));
+
+        if (matchingChar) {
+            showCharacterProfile(matchingChar);
+        }
     } else {
-        // Use the new panel ID format
+        // Fallback for other panels
         document.getElementById(`${tabName}-panel`)?.classList.add('active');
     }
 
     // Update right panel context
     updateRightPanelContext();
+}
+
+/**
+ * Show character profile panel
+ * Creates the panel if it doesn't exist, otherwise shows it
+ * @param {string} characterName - Character name
+ */
+function showCharacterProfile(characterName) {
+    const profileId = `${characterName.toLowerCase().replace(/\s+/g, '-')}-profile-panel`;
+    let profilePanel = document.getElementById(profileId);
+
+    if (!profilePanel) {
+        profilePanel = createCharacterProfilePanel(characterName);
+        document.querySelector('.center-tab-content').appendChild(profilePanel);
+    }
+
+    profilePanel.classList.add('active');
+}
+
+/**
+ * Create character profile panel with header, stats, and view tabs
+ * @param {string} characterName - Character name
+ * @returns {HTMLElement} The created panel element
+ */
+function createCharacterProfilePanel(characterName) {
+    const panel = document.createElement('div');
+    panel.className = 'center-tab-panel character-profile-panel';
+    panel.id = `${characterName.toLowerCase().replace(/\s+/g, '-')}-profile-panel`;
+
+    const sceneCount = getCharacterSceneCount(characterName);
+    const role = getCharacterRole(characterName);
+
+    panel.innerHTML = `
+        <div class="character-profile-header">
+            <h2>${escapeHtml(characterName)}</h2>
+            <div class="character-stats">
+                <span>Scenes: ${sceneCount}</span>
+                <span>Role: ${escapeHtml(role)}</span>
+            </div>
+        </div>
+
+        <div class="profile-view-tabs">
+            <button class="view-tab active" onclick="showProfileView('${escapeHtml(characterName).replace(/'/g, "\\'")}', 'lookbook')">
+                Lookbook
+            </button>
+            <button class="view-tab" onclick="showProfileView('${escapeHtml(characterName).replace(/'/g, "\\'")}', 'timeline')">
+                Timeline
+            </button>
+            <button class="view-tab" onclick="showProfileView('${escapeHtml(characterName).replace(/'/g, "\\'")}', 'events')">
+                Events
+            </button>
+        </div>
+
+        <div class="character-profile-content" id="${escapeHtml(characterName).toLowerCase().replace(/\s+/g, '-')}-content">
+            <!-- Content will be loaded here -->
+            ${renderLookbookView(characterName)}
+        </div>
+    `;
+
+    return panel;
+}
+
+/**
+ * Get character scene count
+ * @param {string} characterName - Character name
+ * @returns {number} Number of scenes the character appears in
+ */
+function getCharacterSceneCount(characterName) {
+    let count = 0;
+    state.scenes.forEach((scene, index) => {
+        const breakdown = state.sceneBreakdowns[index];
+        if (breakdown && breakdown.cast && breakdown.cast.includes(characterName)) {
+            count++;
+        }
+    });
+    return count;
+}
+
+/**
+ * Get character role based on scene count
+ * @param {string} characterName - Character name
+ * @returns {string} Character role (Lead, Supporting, Minor)
+ */
+function getCharacterRole(characterName) {
+    const sceneCount = getCharacterSceneCount(characterName);
+
+    if (sceneCount >= 10) {
+        return 'Lead';
+    } else if (sceneCount >= 5) {
+        return 'Supporting';
+    } else if (sceneCount >= 2) {
+        return 'Minor';
+    } else {
+        return 'Extra';
+    }
+}
+
+/**
+ * Switch between profile views (Lookbook, Timeline, Events)
+ * @param {string} characterName - Character name
+ * @param {string} viewType - View type ('lookbook', 'timeline', 'events')
+ */
+window.showProfileView = function(characterName, viewType) {
+    const contentId = `${characterName.toLowerCase().replace(/\s+/g, '-')}-content`;
+    const contentDiv = document.getElementById(contentId);
+
+    if (!contentDiv) return;
+
+    // Update active tab
+    const profilePanel = contentDiv.closest('.character-profile-panel');
+    if (profilePanel) {
+        profilePanel.querySelectorAll('.view-tab').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        profilePanel.querySelector(`.view-tab:nth-child(${viewType === 'lookbook' ? 1 : viewType === 'timeline' ? 2 : 3})`).classList.add('active');
+    }
+
+    // Render the appropriate view
+    switch (viewType) {
+        case 'lookbook':
+            contentDiv.innerHTML = renderLookbookView(characterName);
+            break;
+        case 'timeline':
+            contentDiv.innerHTML = renderTimelineView(characterName);
+            break;
+        case 'events':
+            contentDiv.innerHTML = renderEventsView(characterName);
+            break;
+    }
+};
+
+/**
+ * Render lookbook view
+ * @param {string} characterName - Character name
+ * @returns {string} HTML for lookbook view
+ */
+function renderLookbookView(characterName) {
+    const profile = state.castProfiles[characterName] || {};
+    const looks = state.characterLooks[characterName] || [];
+
+    return `
+        <div class="lookbook-view">
+            <div class="view-section">
+                <h3>Base Description</h3>
+                <p>${escapeHtml(profile.baseDescription || 'No base description yet')}</p>
+            </div>
+
+            <div class="view-section">
+                <h3>Look States (${looks.length})</h3>
+                ${looks.length > 0 ? `
+                    <div class="look-states-grid">
+                        ${looks.map(look => `
+                            <div class="look-state-card">
+                                <div class="look-state-name">${escapeHtml(look.lookName || 'Untitled Look')}</div>
+                                <div class="look-state-scenes">Scenes: ${formatSceneRange(look.scenes || [])}</div>
+                                ${look.appearance ? `
+                                    <div class="look-state-details">
+                                        ${look.appearance.hair ? `<div><strong>Hair:</strong> ${escapeHtml(look.appearance.hair)}</div>` : ''}
+                                        ${look.appearance.makeup ? `<div><strong>Makeup:</strong> ${escapeHtml(look.appearance.makeup)}</div>` : ''}
+                                        ${look.appearance.sfx ? `<div><strong>SFX:</strong> ${escapeHtml(look.appearance.sfx)}</div>` : ''}
+                                        ${look.appearance.wardrobe ? `<div><strong>Wardrobe:</strong> ${escapeHtml(look.appearance.wardrobe)}</div>` : ''}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : '<p class="empty-message">No look states defined yet</p>'}
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Render timeline view
+ * @param {string} characterName - Character name
+ * @returns {string} HTML for timeline view
+ */
+function renderTimelineView(characterName) {
+    // Reuse the existing renderCharacterTimeline function
+    return renderCharacterTimeline(characterName);
+}
+
+/**
+ * Render events view
+ * @param {string} characterName - Character name
+ * @returns {string} HTML for events view
+ */
+function renderEventsView(characterName) {
+    const events = state.continuityEvents[characterName] || [];
+
+    return `
+        <div class="events-view">
+            <div class="view-section">
+                <h3>Continuity Events (${events.length})</h3>
+                ${events.length > 0 ? `
+                    <div class="events-list">
+                        ${events.map(event => `
+                            <div class="event-card">
+                                <div class="event-scene">Scene ${event.sceneNumber || 'Unknown'}</div>
+                                <div class="event-category">${escapeHtml(event.category || '')}</div>
+                                <div class="event-description">${escapeHtml(event.description || '')}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : '<p class="empty-message">No continuity events recorded yet</p>'}
+            </div>
+        </div>
+    `;
 }
 
 /**
