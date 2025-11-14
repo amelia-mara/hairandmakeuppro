@@ -52,20 +52,38 @@ export function openImportModal() {
     const modal = document.getElementById('import-modal');
     if (!modal) {
         console.error('❌ Import modal element not found in DOM');
+        console.log('Available elements with "modal" in ID:', Array.from(document.querySelectorAll('[id*="modal"]')).map(m => m.id));
         alert('Error: Import modal not found. Please refresh the page.');
         return;
     }
 
-    console.log('✅ Import modal element found, setting display to flex');
+    console.log('✅ Import modal element found');
+
+    // Use both class and inline style for maximum compatibility
+    modal.classList.add('active');
     modal.style.display = 'flex';
+    modal.style.zIndex = '9999';
+
+    console.log('✅ Modal visibility set - classList:', modal.classList.toString(), 'display:', modal.style.display, 'zIndex:', modal.style.zIndex);
 
     // Pre-fill with current script if available
     const scriptInput = document.getElementById('script-input');
-    if (scriptInput && state.currentProject?.scriptContent) {
-        console.log('📝 Pre-filling script input with existing script');
-        scriptInput.value = state.currentProject.scriptContent;
+    if (scriptInput) {
+        if (state.currentProject?.scriptContent) {
+            console.log('📝 Pre-filling script input with existing script');
+            scriptInput.value = state.currentProject.scriptContent;
+        } else {
+            console.log('📄 Script input empty - ready for new import');
+            scriptInput.value = '';
+            scriptInput.placeholder = 'Paste your screenplay here...';
+        }
+        // Focus the textarea
+        setTimeout(() => {
+            scriptInput.focus();
+            console.log('✅ Script input focused');
+        }, 100);
     } else {
-        console.log('📄 Script input empty - ready for new import');
+        console.error('❌ Script input element not found');
     }
 
     console.log('✅ Import modal should now be visible');
@@ -76,8 +94,32 @@ export function openImportModal() {
  */
 export function closeImportModal() {
     const modal = document.getElementById('import-modal');
-    if (modal) modal.style.display = 'none';
+    if (modal) {
+        modal.classList.remove('active');
+        modal.style.display = 'none';
+    }
 }
+
+/**
+ * Clear all project data and restart fresh
+ * Useful for debugging when localStorage gets into a bad state
+ */
+export function clearAndRestart() {
+    if (confirm('This will delete ALL project data and restart fresh. Continue?')) {
+        console.log('🗑️ Clearing all localStorage data...');
+
+        // Clear all script breakdown related data
+        localStorage.removeItem('currentProject');
+        localStorage.removeItem('scriptMasterContext');
+        sessionStorage.clear();
+
+        console.log('✅ Data cleared, reloading page...');
+        window.location.reload();
+    }
+}
+
+// Expose to window for console access
+window.clearAndRestart = clearAndRestart;
 
 /**
  * Process script from import modal

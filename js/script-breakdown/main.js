@@ -128,6 +128,8 @@ export async function init() {
             }, 100);
         } else {
             console.log('✅ Script already loaded - skipping import modal');
+            console.log('💡 To manually open import modal, click "Import Script" button or run: openImportModal()');
+            console.log('💡 To clear all data and restart fresh, run: clearAndRestart()');
         }
 
         console.log('Application initialized successfully');
