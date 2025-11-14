@@ -344,7 +344,10 @@ Return ONLY valid JSON (no markdown, no code fences).
 `;
 
     try {
+        console.log('🤖 Calling AI for comprehensive analysis...');
         const response = await callAI(prompt, 8000); // Increased token limit for comprehensive response
+
+        console.log('✅ AI response received, length:', response?.length || 0);
 
         // Clean response
         let cleanedResponse = response.trim();
@@ -357,6 +360,7 @@ Return ONLY valid JSON (no markdown, no code fences).
         // Parse JSON response
         const jsonMatch = cleanedResponse.match(/\{[\s\S]*\}/);
         if (!jsonMatch) {
+            console.warn('⚠️ No JSON found in AI response, using fallback');
             throw new Error('No valid JSON found in AI response');
         }
 
@@ -375,9 +379,10 @@ Return ONLY valid JSON (no markdown, no code fences).
         masterContext.createdAt = new Date().toISOString();
         masterContext.analysisVersion = '2.0-enhanced';
 
+        const characterCount = Object.keys(masterContext.characters).length;
         console.log('✅ ENHANCED Master context created:', {
             title: masterContext.title,
-            characters: Object.keys(masterContext.characters).length,
+            characters: characterCount,
             storyDays: masterContext.storyStructure.totalDays,
             majorEvents: masterContext.majorEvents.length,
             environments: Object.keys(masterContext.environments).length,
@@ -386,12 +391,199 @@ Return ONLY valid JSON (no markdown, no code fences).
             dialogueReferences: Object.keys(masterContext.dialogueReferences).length
         });
 
+        // If no characters found, use fallback
+        if (characterCount === 0) {
+            console.warn('⚠️ AI returned 0 characters, using fallback extraction');
+            throw new Error('No characters extracted by AI');
+        }
+
+        // Log character names found
+        console.log('📋 Characters found:', Object.keys(masterContext.characters).join(', '));
+
         return masterContext;
 
     } catch (error) {
-        console.error('❌ Deep analysis failed:', error);
-        throw error;
+        console.error('❌ AI analysis failed:', error);
+        console.log('🔧 Falling back to manual character extraction...');
+
+        // FALLBACK: Manual character extraction
+        return createFallbackMasterContext(scriptText, scenes);
     }
+}
+
+/**
+ * Create fallback master context when AI analysis fails
+ * Extracts basic character data from script text
+ */
+function createFallbackMasterContext(scriptText, scenes) {
+    console.log('🔧 Creating fallback master context from manual extraction...');
+
+    const characters = {};
+    const lines = scriptText.split('\n');
+
+    // Extract character names from dialogue
+    const dialoguePattern = /^([A-Z][A-Z\s\.\-\']+)(\s*\([^\)]*\))?$/;
+    const characterNames = new Set();
+
+    // First pass: Find all speaking characters
+    lines.forEach((line, lineIndex) => {
+        const trimmed = line.trim();
+        const match = trimmed.match(dialoguePattern);
+
+        if (match) {
+            let charName = match[1].trim();
+            // Clean up character name
+            charName = charName.replace(/(\s*\(.*\)|\s*V\.O\.|CONT'D|CONT\.|O\.S\.|O\.C\.)/g, '').trim();
+
+            if (charName &&
+                charName.length > 1 &&
+                !charName.includes('INT.') &&
+                !charName.includes('EXT.') &&
+                !charName.includes('FADE') &&
+                !charName.includes('CUT TO')) {
+                characterNames.add(charName);
+            }
+        }
+    });
+
+    console.log(`📋 Found ${characterNames.size} characters in dialogue`);
+
+    // Second pass: Find character descriptions (looking for introductions)
+    const characterDescriptions = {};
+    lines.forEach((line, lineIndex) => {
+        const trimmed = line.trim();
+
+        // Look for character introductions: "CHARACTER_NAME (age), description"
+        for (const charName of characterNames) {
+            const descPattern = new RegExp(`${charName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\(([^)]+)\\)[,\\s]+([^.]+)`, 'i');
+            const match = trimmed.match(descPattern);
+
+            if (match) {
+                if (!characterDescriptions[charName]) {
+                    characterDescriptions[charName] = [];
+                }
+                characterDescriptions[charName].push({
+                    text: match[0],
+                    age: match[1],
+                    description: match[2]
+                });
+            }
+        }
+    });
+
+    // Create character profiles
+    characterNames.forEach(charName => {
+        const descriptions = characterDescriptions[charName] || [];
+        const firstDesc = descriptions[0];
+
+        characters[charName] = {
+            scriptDescriptions: descriptions.map((desc, idx) => ({
+                text: desc.text,
+                sceneNumber: idx + 1,
+                type: idx === 0 ? 'introduction' : 'description'
+            })),
+
+            physicalProfile: {
+                age: firstDesc?.age || null,
+                gender: null,
+                build: null,
+                height: null,
+                hairColor: null,
+                hairStyle: null,
+                eyeColor: null,
+                skin: null,
+                distinctiveFeatures: []
+            },
+
+            characterAnalysis: {
+                role: 'supporting',
+                relationship: null,
+                occupation: null,
+                socialClass: null,
+                personality: 'To be analyzed scene-by-scene',
+                arc: 'To be determined through breakdown',
+                emotionalJourney: null
+            },
+
+            visualProfile: {
+                overallVibe: 'To be determined from script context',
+                styleChoices: 'To be defined during breakdown',
+                groomingHabits: null,
+                makeupNotes: null,
+                quirks: null,
+                inspirations: null
+            },
+
+            storyPresence: {
+                firstAppearance: 1,
+                lastAppearance: scenes.length,
+                totalScenes: 0,
+                scenesPresent: [],
+                hasDialogue: true,
+                speakingScenes: []
+            },
+
+            extractedElements: {
+                mentionedWardrobe: [],
+                mentionedAppearanceChanges: [],
+                physicalActions: [],
+                environmentalExposure: []
+            },
+
+            continuityNotes: {
+                keyLooks: 'To be identified during breakdown',
+                transformations: 'To be tracked scene-by-scene',
+                signature: 'To be determined',
+                importantScenes: []
+            },
+
+            firstAppearance: 1,
+            lastAppearance: scenes.length,
+            sceneCount: 0,
+            scenesPresent: []
+        };
+    });
+
+    // Create basic master context structure
+    const masterContext = {
+        title: 'Imported Script',
+        totalScenes: scenes.length,
+
+        storyStructure: {
+            totalDays: 1,
+            dayBreakdown: [{
+                day: 'Day 1',
+                scenes: scenes.map((_, i) => i + 1),
+                timeProgression: 'To be determined',
+                description: 'Script imported - timeline to be analyzed'
+            }],
+            timeline: [{
+                day: 'Day 1',
+                scenes: scenes.map((_, i) => i + 1),
+                description: 'Full script'
+            }],
+            flashbacks: [],
+            timeJumps: []
+        },
+
+        characters: characters,
+        environments: {},
+        interactions: {},
+        emotionalBeats: {},
+        dialogueReferences: {},
+        majorEvents: [],
+
+        continuityNotes: 'Fallback extraction - AI analysis failed. Character data extracted from dialogue. Complete scene-by-scene breakdown recommended.',
+        createdAt: new Date().toISOString(),
+        analysisVersion: '1.0-fallback'
+    };
+
+    console.log('✅ Fallback master context created:', {
+        characters: Object.keys(characters).length,
+        characterNames: Object.keys(characters).join(', ')
+    });
+
+    return masterContext;
 }
 
 /**
