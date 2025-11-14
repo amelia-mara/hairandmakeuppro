@@ -129,6 +129,16 @@ export async function processScript() {
  * Analyzes entire screenplay to understand story structure
  */
 async function runNarrativeAnalysis() {
+    let progressModalClosed = false;
+
+    // Helper to ensure modal is closed only once
+    const ensureModalClosed = () => {
+        if (!progressModalClosed) {
+            closeProgressModal();
+            progressModalClosed = true;
+        }
+    };
+
     try {
         console.log('🎬 Starting narrative analysis...');
 
@@ -138,8 +148,16 @@ async function runNarrativeAnalysis() {
         // Import narrative analyzer
         const { narrativeAnalyzer } = await import('./narrative-analyzer.js');
 
-        // Run analysis
-        const context = await narrativeAnalyzer.analyzeFullScript(state.scenes);
+        // Create timeout promise (60 seconds)
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Analysis timeout - taking too long')), 60000);
+        });
+
+        // Race between analysis and timeout
+        const context = await Promise.race([
+            narrativeAnalyzer.analyzeFullScript(state.scenes),
+            timeoutPromise
+        ]);
 
         if (context) {
             console.log('✅ Narrative analysis complete');
@@ -153,13 +171,54 @@ async function runNarrativeAnalysis() {
         }
 
         // Close progress modal
-        closeProgressModal();
+        ensureModalClosed();
 
     } catch (error) {
         console.error('❌ Narrative analysis failed:', error);
-        closeProgressModal();
+
+        // Show user-friendly error message
+        if (error.message?.includes('timeout')) {
+            console.warn('⏱️ Analysis timed out - skipping narrative analysis');
+            showToast('Script analysis timed out - continuing without AI analysis', 'warning');
+        } else {
+            console.warn('⚠️ Analysis error - continuing without narrative analysis');
+            showToast('AI analysis failed - you can still use the app', 'info');
+        }
+
+        // Always close modal
+        ensureModalClosed();
+
         // Don't block import if analysis fails - it's optional
     }
+}
+
+/**
+ * Show toast notification
+ */
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.textContent = message;
+    toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${type === 'success' ? '#10b981' : type === 'warning' ? '#f59e0b' : type === 'error' ? '#ef4444' : '#3b82f6'};
+        color: white;
+        padding: 12px 20px;
+        border-radius: 6px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        z-index: 10000;
+        animation: slideIn 0.3s ease;
+        max-width: 400px;
+    `;
+
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 5000);
 }
 
 /**
