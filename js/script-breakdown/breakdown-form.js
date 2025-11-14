@@ -187,6 +187,8 @@ function renderClassicBreakdown() {
             </button>
         </div>
 
+        ${renderSceneProcessingButtons(scene, state.currentScene)}
+
         ${sceneTransitions.length > 0 ? renderTransitionBanner(sceneTransitions) : ''}
 
         <!-- SCENE INFORMATION - COLLAPSIBLE -->
@@ -217,6 +219,162 @@ function renderClassicBreakdown() {
     });
 
     container.innerHTML = html;
+}
+
+/**
+ * Render scene processing buttons
+ * Shows options to process the scene with AI using master context
+ */
+function renderSceneProcessingButtons(scene, sceneIndex) {
+    const hasSynopsis = scene.synopsis && scene.synopsis.trim().length > 0;
+    const hasTags = state.scriptTags[sceneIndex] && state.scriptTags[sceneIndex].length > 0;
+    const isProcessed = scene.processed || (hasSynopsis && hasTags);
+
+    // Check if master context is available
+    const hasMasterContext = window.masterContext && window.masterContext.characters;
+
+    if (!hasMasterContext) {
+        return `
+            <div class="scene-processing-section warning">
+                <div class="processing-warning-icon">⚠️</div>
+                <div class="processing-warning-text">
+                    Master context not available. Import a script to enable AI processing.
+                </div>
+            </div>
+        `;
+    }
+
+    return `
+        <div class="scene-processing-section">
+            <div class="processing-header">
+                <span class="processing-title">Scene Processing</span>
+                <span class="processing-status ${isProcessed ? 'processed' : 'pending'}">
+                    ${isProcessed ? '✓ Processed' : '○ Not Processed'}
+                </span>
+            </div>
+            <div class="processing-buttons">
+                <button class="processing-btn primary" onclick="handleProcessScene(${sceneIndex})" title="Generate both synopsis and tags">
+                    ${isProcessed ? '✓ Reprocess Scene' : '⚡ Process Scene'}
+                </button>
+                <button class="processing-btn secondary" onclick="handleGenerateSynopsisOnly(${sceneIndex})" title="Generate synopsis only">
+                    📝 ${hasSynopsis ? 'Regenerate' : 'Generate'} Synopsis
+                </button>
+                <button class="processing-btn secondary" onclick="handleGenerateTagsOnly(${sceneIndex})" title="Generate tags only">
+                    🏷️ ${hasTags ? 'Regenerate' : 'Generate'} Tags
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Handle process scene button click
+ */
+async function handleProcessScene(sceneIndex) {
+    const btn = event.target;
+    btn.disabled = true;
+    btn.textContent = 'Processing...';
+
+    try {
+        const { processThisScene } = await import('./scene-processing.js');
+        await processThisScene(sceneIndex);
+    } catch (error) {
+        console.error('Error processing scene:', error);
+        alert('Error processing scene: ' + error.message);
+    } finally {
+        btn.disabled = false;
+        renderBreakdownPanel();
+    }
+}
+
+/**
+ * Handle generate synopsis only
+ */
+async function handleGenerateSynopsisOnly(sceneIndex) {
+    const btn = event.target;
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Generating...';
+
+    try {
+        const { generateSceneSynopsis } = await import('./scene-processing.js');
+        await generateSceneSynopsis(sceneIndex);
+
+        // Save project
+        const { saveProject } = await import('./export-handlers.js');
+        saveProject();
+
+        // Refresh displays
+        renderBreakdownPanel();
+        renderSceneList();
+
+        showProcessingToast('Synopsis generated successfully', 'success');
+    } catch (error) {
+        console.error('Error generating synopsis:', error);
+        showProcessingToast('Error: ' + error.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
+    }
+}
+
+/**
+ * Handle generate tags only
+ */
+async function handleGenerateTagsOnly(sceneIndex) {
+    const btn = event.target;
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Generating...';
+
+    try {
+        const { generateSceneTags } = await import('./scene-processing.js');
+        await generateSceneTags(sceneIndex);
+
+        // Save project
+        const { saveProject } = await import('./export-handlers.js');
+        saveProject();
+
+        // Refresh displays
+        renderBreakdownPanel();
+        renderSceneList();
+
+        showProcessingToast('Tags generated successfully', 'success');
+    } catch (error) {
+        console.error('Error generating tags:', error);
+        showProcessingToast('Error: ' + error.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
+    }
+}
+
+/**
+ * Show toast notification for processing actions
+ */
+function showProcessingToast(message, type = 'info') {
+    const existingToasts = document.querySelectorAll('.toast-notification');
+    existingToasts.forEach(t => t.remove());
+
+    const toast = document.createElement('div');
+    toast.className = `toast-notification toast-${type}`;
+    toast.textContent = message;
+    toast.style.cssText = `
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        padding: 12px 20px;
+        background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
+        color: white;
+        border-radius: 8px;
+        font-size: 0.9em;
+        font-weight: 500;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        z-index: 10000;
+    `;
+
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
 }
 
 /**
@@ -2314,6 +2472,11 @@ window.endContinuityEvent = function(eventId, sceneIndex) {
         import('./export-handlers.js').then(module => module.saveProject());
     }
 };
+
+// Expose scene processing functions globally for HTML onclick handlers
+window.handleProcessScene = handleProcessScene;
+window.handleGenerateSynopsisOnly = handleGenerateSynopsisOnly;
+window.handleGenerateTagsOnly = handleGenerateTagsOnly;
 
 // Expose selectScene globally
 window.selectScene = selectScene;
