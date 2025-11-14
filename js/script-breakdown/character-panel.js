@@ -702,6 +702,118 @@ function renderEventsView(characterName) {
 }
 
 /**
+ * Get all scenes where a character appears
+ * @param {string} characterName - Character name
+ * @returns {Array} Array of scene indices
+ */
+function getCharacterScenes(characterName) {
+    const sceneIndices = [];
+    state.scenes.forEach((scene, index) => {
+        const breakdown = state.sceneBreakdowns[index];
+        if (breakdown && breakdown.cast && breakdown.cast.includes(characterName)) {
+            sceneIndices.push(index);
+        }
+    });
+    return sceneIndices;
+}
+
+/**
+ * Group scenes by story day
+ * @param {Array} sceneIndices - Array of scene indices
+ * @returns {Object} Object mapping story days to arrays of scene indices
+ */
+function groupScenesByStoryDay(sceneIndices) {
+    const groups = {};
+    sceneIndices.forEach(sceneIndex => {
+        const scene = state.scenes[sceneIndex];
+        const day = scene.storyDay || 'Unassigned';
+        if (!groups[day]) {
+            groups[day] = [];
+        }
+        groups[day].push(sceneIndex);
+    });
+    return groups;
+}
+
+/**
+ * Render story day timeline visualization
+ * Shows a horizontal timeline with clickable day segments
+ * @param {string} characterName - Character name
+ * @returns {string} HTML for story day timeline
+ */
+function renderStoryDayTimeline(characterName) {
+    const characterScenes = getCharacterScenes(characterName);
+
+    if (characterScenes.length === 0) {
+        return '';
+    }
+
+    const dayGroups = groupScenesByStoryDay(characterScenes);
+
+    // Sort days (natural sort for "Day 1", "Day 2", etc.)
+    const sortedDays = Object.keys(dayGroups).sort((a, b) => {
+        if (a === 'Unassigned') return 1;
+        if (b === 'Unassigned') return -1;
+
+        const numA = parseInt(a.match(/\d+/)?.[0] || 0);
+        const numB = parseInt(b.match(/\d+/)?.[0] || 0);
+        return numA - numB;
+    });
+
+    if (sortedDays.length === 0) {
+        return '';
+    }
+
+    return `
+        <div class="story-day-timeline">
+            ${sortedDays.map(day => {
+                const scenes = dayGroups[day];
+                const sceneNumbers = scenes.map(idx => state.scenes[idx].number);
+                const firstScene = Math.min(...sceneNumbers);
+                const lastScene = Math.max(...sceneNumbers);
+                const sceneRange = firstScene === lastScene ? `Sc ${firstScene}` : `Sc ${firstScene}-${lastScene}`;
+
+                return `
+                    <div class="timeline-day" onclick="scrollToStoryDay('${escapeHtml(day).replace(/'/g, "\\'")}', '${escapeHtml(characterName).replace(/'/g, "\\'")}')">
+                        <div class="day-label">${escapeHtml(day)}</div>
+                        <div class="day-bar" data-scenes="${scenes.length}">
+                            <div class="scene-range">${sceneRange}</div>
+                            <div class="scene-count">${scenes.length} scene${scenes.length !== 1 ? 's' : ''}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('')}
+        </div>
+    `;
+}
+
+/**
+ * Scroll to a specific story day section in the character timeline
+ * @param {string} storyDay - Story day label
+ * @param {string} characterName - Character name
+ */
+window.scrollToStoryDay = function(storyDay, characterName) {
+    // Find the story day section in the current view
+    const storyDayGroups = document.querySelectorAll('.story-day-group');
+
+    for (const group of storyDayGroups) {
+        const dayLabel = group.querySelector('.story-day-label');
+        if (dayLabel && dayLabel.textContent.trim() === storyDay) {
+            group.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            // Add highlight effect
+            group.style.transition = 'background 0.5s ease';
+            group.style.background = 'rgba(212, 175, 122, 0.15)';
+            setTimeout(() => {
+                group.style.background = '';
+            }, 1500);
+
+            break;
+        }
+    }
+};
+
+/**
  * Update right panel based on active center tab
  */
 function updateRightPanelContext() {
@@ -915,6 +1027,9 @@ export function renderCharacterTimeline(character) {
                     📊 Manage Look States
                 </button>
             </div>
+
+            <!-- Story Day Timeline Visualization -->
+            ${renderStoryDayTimeline(character)}
     `;
 
     if (hasLooks) {

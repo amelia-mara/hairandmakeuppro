@@ -10133,3 +10133,116 @@
     font-size: 0.9375em;
     font-style: italic;
 }
+
+/* ============================================================================ */
+/* STORY DAY TIMELINE VISUALIZATION */
+/* ============================================================================ */
+
+.story-day-timeline {
+    display: flex;
+    background: rgba(28, 25, 22, 0.5);
+    padding: 16px;
+    border-radius: 8px;
+    margin: 20px 0;
+    overflow-x: auto;
+    gap: 8px;
+    border: 1px solid var(--glass-border);
+}
+
+.timeline-day {
+    flex: 1;
+    min-width: 120px;
+    text-align: center;
+    cursor: pointer;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--glass-border);
+    border-radius: 6px;
+    transition: all 0.3s ease;
+}
+
+.timeline-day:hover {
+    background: rgba(212, 175, 122, 0.1);
+    border-color: var(--accent-gold);
+    transform: translateY(-2px);
+}
+
+.timeline-day:active {
+    transform: translateY(0);
+}
+
+.day-label {
+    font-size: 0.875em;
+    font-weight: 600;
+    color: var(--accent-gold);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.day-bar {
+    background: linear-gradient(135deg, rgba(212, 175, 122, 0.3) 0%, rgba(212, 175, 122, 0.15) 100%);
+    padding: 8px;
+    border-radius: 6px;
+    margin-top: 8px;
+    border: 1px solid rgba(212, 175, 122, 0.3);
+    transition: all 0.3s ease;
+}
+
+.timeline-day:hover .day-bar {
+    background: linear-gradient(135deg, rgba(212, 175, 122, 0.4) 0%, rgba(212, 175, 122, 0.25) 100%);
+    border-color: var(--accent-gold);
+}
+
+.scene-range {
+    font-size: 0.8125em;
+    font-weight: 600;
+    color: var(--text-light);
+    margin-bottom: 4px;
+}
+
+.scene-count {
+    font-size: 0.75em;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+/* Timeline day with more scenes gets slightly stronger highlight */
+.day-bar[data-scenes="1"] {
+    opacity: 0.7;
+}
+
+.day-bar[data-scenes="2"],
+.day-bar[data-scenes="3"] {
+    opacity: 0.85;
+}
+
+.day-bar[data-scenes="4"],
+.day-bar[data-scenes="5"] {
+    opacity: 1;
+}
+
+/* Highlight effect for scrolled-to day */
+.story-day-group.highlighted {
+    background: rgba(212, 175, 122, 0.15);
+    transition: background 0.5s ease;
+}
+
+/* Scrollbar styling for horizontal timeline */
+.story-day-timeline::-webkit-scrollbar {
+    height: 6px;
+}
+
+.story-day-timeline::-webkit-scrollbar-track {
+    background: rgba(13, 11, 10, 0.4);
+    border-radius: 3px;
+}
+
+.story-day-timeline::-webkit-scrollbar-thumb {
+    background: rgba(212, 175, 122, 0.3);
+    border-radius: 3px;
+}
+
+.story-day-timeline::-webkit-scrollbar-thumb:hover {
+    background: rgba(212, 175, 122, 0.5);
+}
