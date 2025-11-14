@@ -124,7 +124,9 @@ function renderClassicBreakdown() {
 
     const scene = state.scenes[state.currentScene];
     const breakdown = state.sceneBreakdowns[state.currentScene] || {};
-    const cast = breakdown.cast || [];
+
+    // Auto-detect characters if none exist
+    const cast = ensureSceneCharacters(state.currentScene);
 
     // Count tagged elements
     const sceneTags = state.scriptTags[state.currentScene] || [];
@@ -1094,6 +1096,121 @@ function extractTimeFromHeading(heading) {
 }
 
 // ============================================================================
+// CHARACTER DETECTION FROM SCENE CONTENT
+// ============================================================================
+
+/**
+ * Extract characters from scene content using screenplay format patterns
+ * Detects character names that appear as dialogue markers
+ * @param {Object} scene - Scene object with content/text
+ * @returns {Array<string>} Array of detected character names
+ */
+function extractCharactersFromScene(scene) {
+    const characters = [];
+    const content = scene.content || scene.text || '';
+
+    if (!content.trim()) {
+        return characters;
+    }
+
+    // Look for character dialogue markers (standard screenplay format)
+    // Pattern matches:
+    // - All caps character name at start of line
+    // - May have parenthetical like (V.O.), (CONT'D), etc.
+    // - Allows for indentation/spacing before character name
+    const dialoguePattern = /^\s+([A-Z][A-Z\s\.\-\']+?)(?:\s*\(.*?\))?\s*$/gm;
+    const matches = content.matchAll(dialoguePattern);
+
+    for (const match of matches) {
+        let charName = match[1].trim();
+
+        // Skip if it looks like a scene heading element
+        if (charName.startsWith('INT') || charName.startsWith('EXT') ||
+            charName.startsWith('FADE') || charName.startsWith('CUT TO')) {
+            continue;
+        }
+
+        // Clean up common suffixes that might still be attached
+        charName = charName.replace(/(\s*\(.*\)|\s*V\.O\.|\s*O\.S\.|\s*O\.C\.|\s*CONT'D|\s*CONT\.)$/g, '').trim();
+
+        // Validate it's a reasonable character name (2-50 chars, not all spaces)
+        if (charName && charName.length >= 2 && charName.length <= 50 &&
+            charName.replace(/\s/g, '').length >= 2) {
+
+            // Use character manager if available to normalize
+            if (window.characterManager && typeof window.characterManager.addCharacter === 'function') {
+                const canonical = window.characterManager.addCharacter(charName);
+                if (canonical && !characters.includes(canonical)) {
+                    characters.push(canonical);
+                }
+            } else {
+                // Fallback: just capitalize properly and dedupe
+                const normalized = charName.split(' ')
+                    .map(word => word.charAt(0) + word.slice(1).toLowerCase())
+                    .join(' ');
+
+                // Check for duplicates (case-insensitive)
+                if (!characters.some(c => c.toUpperCase() === normalized.toUpperCase())) {
+                    characters.push(normalized);
+                }
+            }
+        }
+    }
+
+    return characters;
+}
+
+/**
+ * Auto-detect and populate characters for a scene if none exist
+ * Called when rendering breakdown to ensure characters are always detected
+ * @param {number} sceneIndex - Scene index
+ * @returns {Array<string>} Array of character names (detected or existing)
+ */
+function ensureSceneCharacters(sceneIndex) {
+    const scene = state.scenes[sceneIndex];
+    if (!scene) return [];
+
+    // Initialize breakdown if needed
+    if (!state.sceneBreakdowns[sceneIndex]) {
+        state.sceneBreakdowns[sceneIndex] = {};
+    }
+
+    const breakdown = state.sceneBreakdowns[sceneIndex];
+
+    // If characters already exist, return them
+    if (breakdown.cast && breakdown.cast.length > 0) {
+        return breakdown.cast;
+    }
+
+    // Try to extract characters from scene content
+    const detectedCharacters = extractCharactersFromScene(scene);
+
+    if (detectedCharacters.length > 0) {
+        console.log(`🎭 Auto-detected ${detectedCharacters.length} character(s) in scene ${scene.number}:`, detectedCharacters);
+
+        // Save detected characters to breakdown
+        breakdown.cast = detectedCharacters;
+
+        // Add to global characters set
+        detectedCharacters.forEach(char => {
+            if (state.characters) {
+                state.characters.add(char);
+            }
+        });
+
+        // Auto-save (but don't block rendering)
+        setTimeout(() => {
+            import('./export-handlers.js').then(module => module.saveProject());
+        }, 100);
+
+        return detectedCharacters;
+    }
+
+    // No characters detected
+    return [];
+}
+
+// ============================================================================
 // NEW COMPREHENSIVE DATA COLLECTION INTERFACE
 // ============================================================================
 
@@ -1110,7 +1227,9 @@ function renderSceneBreakdown(sceneIndex) {
     const storyDay = scene.storyDay || extractStoryDay(sceneIndex) || scene.aiSuggestions?.storyDay || '';
     const timeOfDay = scene.timeOfDay || extractTimeFromHeading(scene.heading) || scene.aiSuggestions?.timeOfDay || '';
     const breakdown = state.sceneBreakdowns[sceneIndex] || {};
-    const characters = breakdown.cast || [];
+
+    // Auto-detect characters if none exist
+    const characters = ensureSceneCharacters(sceneIndex);
 
     // Extract relevant data for this scene from master context
     const analysis = window.scriptMasterContext || window.masterContext || {};
