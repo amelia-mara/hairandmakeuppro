@@ -48,19 +48,27 @@ export function exportData() {
  * Open import modal
  */
 export function openImportModal() {
+    console.log('📂 openImportModal() called');
     const modal = document.getElementById('import-modal');
     if (!modal) {
-        console.error('Import modal not found');
+        console.error('❌ Import modal element not found in DOM');
+        alert('Error: Import modal not found. Please refresh the page.');
         return;
     }
 
+    console.log('✅ Import modal element found, setting display to flex');
     modal.style.display = 'flex';
 
     // Pre-fill with current script if available
     const scriptInput = document.getElementById('script-input');
     if (scriptInput && state.currentProject?.scriptContent) {
+        console.log('📝 Pre-filling script input with existing script');
         scriptInput.value = state.currentProject.scriptContent;
+    } else {
+        console.log('📄 Script input empty - ready for new import');
     }
+
+    console.log('✅ Import modal should now be visible');
 }
 
 /**

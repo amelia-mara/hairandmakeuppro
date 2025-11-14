@@ -105,13 +105,29 @@ export async function init() {
 
         // Check if script exists - if not, auto-open import modal
         const hasScript = state.currentProject?.scriptContent && state.scenes.length > 0;
+        console.log('🔍 Script check:', {
+            hasCurrentProject: !!state.currentProject,
+            hasScriptContent: !!state.currentProject?.scriptContent,
+            scenesCount: state.scenes.length,
+            hasScript: hasScript
+        });
+
         if (!hasScript) {
-            console.log('No script found - opening import modal');
+            console.log('📂 No script found - will open import modal in 100ms');
             // Use setTimeout to ensure DOM is ready
             setTimeout(async () => {
-                const { openImportModal } = await import('./export-handlers.js');
-                openImportModal();
+                try {
+                    console.log('📂 Loading export-handlers module to open import modal...');
+                    const { openImportModal } = await import('./export-handlers.js');
+                    console.log('📂 Calling openImportModal()...');
+                    openImportModal();
+                } catch (error) {
+                    console.error('❌ Error opening import modal:', error);
+                    alert('Error opening import dialog. Please refresh the page.');
+                }
             }, 100);
+        } else {
+            console.log('✅ Script already loaded - skipping import modal');
         }
 
         console.log('Application initialized successfully');
