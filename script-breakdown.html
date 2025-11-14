@@ -422,43 +422,58 @@
         </div>
 
         <div class="tools-panel-content">
+            <!-- WORKFLOW Status Section -->
+            <div class="tools-section">
+                <div class="tools-section-title">WORKFLOW</div>
+                <div class="workflow-status" id="workflow-status">
+                    <div class="workflow-item" id="workflow-script-status">
+                        <span class="workflow-icon">📄</span>
+                        <span class="workflow-text">No Script Loaded</span>
+                    </div>
+                    <div class="workflow-item" id="workflow-characters-status" style="display: none;">
+                        <span class="workflow-icon">👥</span>
+                        <span class="workflow-text">Characters: 0</span>
+                    </div>
+                    <div class="workflow-item" id="workflow-scenes-status" style="display: none;">
+                        <span class="workflow-icon">🎬</span>
+                        <span class="workflow-text">Scenes: 0/0 processed</span>
+                    </div>
+                </div>
+            </div>
+
             <!-- SCRIPT Section -->
             <div class="tools-section">
                 <div class="tools-section-title">SCRIPT</div>
                 <button class="tools-panel-btn" onclick="openImportModal(); closeToolsPanel();">
-                    Import Script
+                    Import New Script
                 </button>
                 <button class="tools-panel-btn" onclick="openSupervisorUploadModal(); closeToolsPanel();">
                     Upload Supervisor Breakdown
                 </button>
-                <button class="tools-panel-btn" onclick="generateAllSynopses(event); closeToolsPanel();">
-                    Auto Synopsis
+            </div>
+
+            <!-- SCENE TOOLS Section -->
+            <div class="tools-section">
+                <div class="tools-section-title">SCENE TOOLS</div>
+                <button class="tools-panel-btn" onclick="processCurrentScene(); closeToolsPanel();" id="process-current-scene-btn" disabled>
+                    Process Current Scene
                 </button>
-                <button class="tools-panel-btn" onclick="autoTagScript(event); closeToolsPanel();">
-                    Auto Tag
+                <button class="tools-panel-btn" onclick="processAllRemaining(); closeToolsPanel();" id="process-all-remaining-btn" disabled>
+                    Process All Unprocessed
                 </button>
                 <button class="tools-panel-btn" onclick="reviewCharacters(); closeToolsPanel();">
                     Detect & Review Characters
-                </button>
-                <button class="tools-panel-btn" onclick="generateCharacterTimelines(); closeToolsPanel();">
-                    Generate Character Timelines
-                </button>
-                <button class="tools-panel-btn" onclick="generateCharacterLookbooks(); closeToolsPanel();">
-                    Generate Character Lookbooks
                 </button>
             </div>
 
             <!-- EXPORT Section -->
             <div class="tools-section">
                 <div class="tools-section-title">EXPORT</div>
-                <button class="tools-panel-btn" onclick="window.location.href='/generate-breakdown.html'">
-                    Generate Breakdown
+                <button class="tools-panel-btn" onclick="generateCharacterTimelines(); closeToolsPanel();">
+                    Generate Timelines
                 </button>
-                <button class="tools-panel-btn" onclick="exportTimeline(); closeToolsPanel();">
-                    Export Timeline
-                </button>
-                <button class="tools-panel-btn" onclick="exportLookbook(); closeToolsPanel();">
-                    Export Lookbook
+                <button class="tools-panel-btn" onclick="generateCharacterLookbooks(); closeToolsPanel();">
+                    Generate Lookbooks
                 </button>
                 <button class="tools-panel-btn" onclick="exportBible(); closeToolsPanel();">
                     Export Bible

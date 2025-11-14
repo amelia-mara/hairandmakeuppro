@@ -61,6 +61,13 @@ export function renderSceneList() {
         const cast = breakdown.cast || [];
         const isActive = state.currentScene === index;
 
+        // Determine processing status
+        const hasSynopsis = scene.synopsis && scene.synopsis.trim().length > 0;
+        const sceneTags = state.scriptTags[index] || [];
+        const hasTags = sceneTags.length > 0;
+        const hasContinuity = scene.characterStates && Object.keys(scene.characterStates).length > 0;
+        const isProcessed = scene.processed || (hasSynopsis && hasTags);
+
         // Count elements (excluding cast)
         let elementCounts = [];
         categories.forEach(cat => {
@@ -71,14 +78,22 @@ export function renderSceneList() {
         });
 
         return `
-            <div class="scene-item ${sceneType} ${isActive ? 'active' : ''}" onclick="selectScene(${index})">
+            <div class="scene-item ${sceneType} ${isActive ? 'active' : ''} ${isProcessed ? 'processed' : ''}" onclick="selectScene(${index})">
                 <div class="scene-header">
+                    <div class="scene-status-icon" title="${isProcessed ? 'Processed' : 'Not Processed'}">
+                        ${isProcessed ? '✓' : '○'}
+                    </div>
                     <div class="scene-number">${scene.number}</div>
                     <div class="scene-info">
                         <div class="scene-heading">${escapeHtml(scene.heading)}</div>
                         <div class="scene-meta">
                             <span class="scene-type-indicator ${sceneType}">${sceneTypeLabel}</span>
                         </div>
+                    </div>
+                    <div class="scene-indicators">
+                        ${isProcessed ? '<span class="indicator processed" title="Processed">P</span>' : ''}
+                        ${hasContinuity ? '<span class="indicator continuity" title="Has Continuity">C</span>' : ''}
+                        ${hasTags ? `<span class="indicator tags" title="${sceneTags.length} tags">${sceneTags.length}</span>` : ''}
                     </div>
                 </div>
 
