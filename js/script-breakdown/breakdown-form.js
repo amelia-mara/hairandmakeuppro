@@ -1136,6 +1136,98 @@ function renderCharacterFields(character, sceneIndex, scene) {
 }
 
 /**
+ * Render events section for a scene
+ * @param {number} sceneIndex - Scene index
+ * @returns {string} HTML for events section
+ */
+export function renderEventsSection(sceneIndex) {
+    const activeEvents = getActiveEventsForScene(sceneIndex);
+
+    return `
+        <div class="breakdown-section events-section" id="events-section-${sceneIndex}">
+            <h4 class="section-title">CONTINUITY EVENTS</h4>
+
+            <!-- Active Events -->
+            <div class="active-events">
+                ${activeEvents.length > 0
+                    ? activeEvents.map(event => renderEventCard(event, sceneIndex)).join('')
+                    : '<div class="no-events">No active continuity events</div>'}
+            </div>
+
+            <!-- Event Controls -->
+            <div class="event-controls">
+                <button class="start-event-btn" onclick="showStartEventDialog(${sceneIndex})">
+                    + Start New Event
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Render event card
+ * @param {Object} event - Event object
+ * @param {number} sceneIndex - Current scene index
+ * @returns {string} HTML for event card
+ */
+function renderEventCard(event, sceneIndex) {
+    const isEndable = !event.endScene && sceneIndex > event.startScene;
+    const isComplete = event.endScene !== null && event.endScene !== undefined;
+    const canGenerateProgression = isComplete && !event.progression;
+
+    return `
+        <div class="event-card ${event.type} ${isComplete ? 'completed' : 'ongoing'}">
+            <div class="event-card-header">
+                <span class="event-character">${escapeHtml(event.character)}</span>
+                <span class="event-type-badge">${escapeHtml(event.type)}</span>
+            </div>
+            <div class="event-description">${escapeHtml(event.description)}</div>
+            <div class="event-timeline">
+                <span class="timeline-start">Scene ${event.startScene + 1}</span>
+                <span class="timeline-arrow">→</span>
+                <span class="timeline-end">${event.endScene !== null && event.endScene !== undefined ? `Scene ${event.endScene + 1}` : 'Ongoing'}</span>
+            </div>
+            <div class="event-actions">
+                ${isEndable ? `
+                    <button class="end-event-btn" onclick="endEvent('${event.id}', ${sceneIndex})">
+                        End Event Here
+                    </button>
+                ` : ''}
+                ${canGenerateProgression ? `
+                    <button class="generate-progression-btn" onclick="generateProgression('${event.id}')">
+                        ✨ Generate Progression
+                    </button>
+                ` : ''}
+                ${event.progression ? `
+                    <span class="progression-indicator">✓ Progression applied</span>
+                ` : ''}
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Get active events for scene
+ * @param {number} sceneIndex - Scene index
+ * @returns {Array} Active events
+ */
+function getActiveEventsForScene(sceneIndex) {
+    const events = Array.from(window.continuityTracker?.events?.values() || []);
+    return events.filter(e =>
+        sceneIndex >= e.startScene && (!e.endScene || sceneIndex <= e.endScene)
+    );
+}
+
+/**
+ * Get event by ID
+ * @param {string} eventId - Event ID
+ * @returns {Object|null} Event object or null
+ */
+function getEventById(eventId) {
+    return window.continuityTracker?.events?.get(eventId) || null;
+}
+
+/**
  * Render scene events list
  * @param {number} sceneIndex - Scene index
  * @returns {string} HTML for scene events
@@ -1471,10 +1563,10 @@ window.closeAddCharacterMenu = function() {
 };
 
 /**
- * Start new continuity event
+ * Show start event dialog
  * @param {number} sceneIndex - Scene index
  */
-window.startNewEvent = function(sceneIndex) {
+window.showStartEventDialog = function(sceneIndex) {
     const breakdown = state.sceneBreakdowns[sceneIndex];
     const cast = breakdown?.cast || [];
 
@@ -1483,25 +1575,221 @@ window.startNewEvent = function(sceneIndex) {
         return;
     }
 
-    const character = prompt(`Character name (${cast.join(', ')}):`);
-    if (!character || !cast.includes(character)) {
-        alert('Invalid character name');
+    const dialog = document.createElement('div');
+    dialog.className = 'event-dialog-overlay';
+    dialog.innerHTML = `
+        <div class="event-dialog" onclick="event.stopPropagation()">
+            <h4>Start New Continuity Event</h4>
+
+            <div class="dialog-field">
+                <label>Character</label>
+                <select id="event-character">
+                    <option value="">-- Select Character --</option>
+                    ${cast.map(char => `
+                        <option value="${escapeHtml(char)}">${escapeHtml(char)}</option>
+                    `).join('')}
+                </select>
+            </div>
+
+            <div class="dialog-field">
+                <label>Event Type</label>
+                <select id="event-type">
+                    <option value="">-- Select Type --</option>
+                    <option value="injury">Injury</option>
+                    <option value="condition">Medical Condition</option>
+                    <option value="transformation">Transformation</option>
+                    <option value="wardrobe_change">Wardrobe Change</option>
+                    <option value="makeup_effect">Makeup Effect</option>
+                    <option value="hair_change">Hair Change</option>
+                    <option value="prop">Prop/Item</option>
+                </select>
+            </div>
+
+            <div class="dialog-field">
+                <label>Description</label>
+                <textarea id="event-description" placeholder="Describe the event and how it affects continuity..."></textarea>
+            </div>
+
+            <div class="dialog-actions">
+                <button class="primary-btn" onclick="createEventFromDialog(${sceneIndex})">Create Event</button>
+                <button class="cancel-btn" onclick="closeEventDialog()">Cancel</button>
+            </div>
+        </div>
+    `;
+
+    dialog.onclick = () => closeEventDialog();
+    document.body.appendChild(dialog);
+};
+
+/**
+ * Create event from dialog
+ * @param {number} sceneIndex - Scene index
+ */
+window.createEventFromDialog = function(sceneIndex) {
+    const character = document.getElementById('event-character')?.value;
+    const type = document.getElementById('event-type')?.value;
+    const description = document.getElementById('event-description')?.value.trim();
+
+    if (!character || !type || !description) {
+        alert('Please fill in all fields');
         return;
     }
 
-    const type = prompt('Event type (injury, condition, transformation, wardrobe_change, makeup_effect):');
-    if (!type) return;
-
-    const description = prompt('Description:');
-    if (!description) return;
-
     if (window.continuityTracker) {
         window.continuityTracker.createEvent(sceneIndex, character, type, description);
+        closeEventDialog();
         renderSceneBreakdown(sceneIndex);
         saveToLocalStorage();
     } else {
         alert('Continuity tracker not available');
     }
+};
+
+/**
+ * Close event dialog
+ */
+window.closeEventDialog = function() {
+    const dialog = document.querySelector('.event-dialog-overlay');
+    if (dialog) {
+        dialog.remove();
+    }
+};
+
+/**
+ * End event at current scene
+ * @param {string} eventId - Event ID
+ * @param {number} sceneIndex - Scene index
+ */
+window.endEvent = function(eventId, sceneIndex) {
+    if (!confirm('Mark this event as resolved in this scene?')) return;
+
+    if (window.continuityTracker) {
+        window.continuityTracker.closeEvent(eventId, sceneIndex);
+        renderSceneBreakdown(sceneIndex);
+        saveToLocalStorage();
+    } else {
+        alert('Continuity tracker not available');
+    }
+};
+
+/**
+ * Generate AI progression for event
+ * @param {string} eventId - Event ID
+ */
+window.generateProgression = async function(eventId) {
+    const event = getEventById(eventId);
+    if (!event || !event.endScene) {
+        alert('Event must be completed before generating progression');
+        return;
+    }
+
+    const duration = event.endScene - event.startScene;
+    if (duration < 2) {
+        alert('Event must span at least 2 scenes to generate progression');
+        return;
+    }
+
+    // Show loading state
+    const button = document.querySelector(`button[onclick*="${eventId}"]`);
+    const originalText = button?.innerHTML;
+    if (button) button.innerHTML = '⏳ Generating...';
+
+    try {
+        const prompt = `Generate realistic healing/progression stages for a continuity event:
+
+Type: ${event.type}
+Character: ${event.character}
+Description: ${event.description}
+Duration: Scene ${event.startScene + 1} to Scene ${event.endScene + 1} (${duration} scenes)
+
+Create a JSON array with progression stages for each scene. Each stage should describe how the ${event.type} appears/progresses.
+
+Format:
+[
+  { "scene": ${event.startScene}, "description": "Initial state..." },
+  { "scene": ${event.startScene + 1}, "description": "Early stage..." },
+  ...
+  { "scene": ${event.endScene}, "description": "Final state..." }
+]
+
+Return only the JSON array, no other text.`;
+
+        // Call AI service (assuming there's an AI integration)
+        const progression = await callAIForProgression(prompt);
+
+        // Apply progression to event
+        if (window.continuityTracker) {
+            event.progression = progression;
+            applyProgressionToScenes(eventId, progression);
+            saveToLocalStorage();
+
+            // Refresh the current scene
+            if (state.currentScene !== null) {
+                renderSceneBreakdown(state.currentScene);
+            }
+
+            alert('Progression generated and applied successfully!');
+        }
+    } catch (error) {
+        console.error('Error generating progression:', error);
+        alert('Failed to generate progression. Please try again.');
+    } finally {
+        if (button && originalText) button.innerHTML = originalText;
+    }
+};
+
+/**
+ * Call AI for progression generation
+ * @param {string} prompt - AI prompt
+ * @returns {Promise<Array>} Progression array
+ */
+async function callAIForProgression(prompt) {
+    // This is a placeholder - implement based on your AI integration
+    // For now, return a mock progression
+    console.log('AI Prompt:', prompt);
+
+    // Mock implementation - replace with actual AI call
+    return new Promise((resolve) => {
+        setTimeout(() => {
+            resolve([
+                { scene: 0, description: 'Fresh injury, visible bleeding' },
+                { scene: 1, description: 'Cleaned and bandaged, some swelling' },
+                { scene: 2, description: 'Healing, bruising visible' }
+            ]);
+        }, 1000);
+    });
+}
+
+/**
+ * Apply progression to scenes
+ * @param {string} eventId - Event ID
+ * @param {Array} progression - Progression stages
+ */
+function applyProgressionToScenes(eventId, progression) {
+    const event = getEventById(eventId);
+    if (!event) return;
+
+    progression.forEach(stage => {
+        const sceneIndex = stage.scene;
+        if (!state.characterStates[sceneIndex]) {
+            state.characterStates[sceneIndex] = {};
+        }
+        if (!state.characterStates[sceneIndex][event.character]) {
+            state.characterStates[sceneIndex][event.character] = {};
+        }
+
+        // Add progression note to character state
+        const fieldName = `${event.type}_progression`;
+        state.characterStates[sceneIndex][event.character][fieldName] = stage.description;
+    });
+};
+
+/**
+ * Start new continuity event (legacy compatibility)
+ * @param {number} sceneIndex - Scene index
+ */
+window.startNewEvent = function(sceneIndex) {
+    showStartEventDialog(sceneIndex);
 };
 
 /**
