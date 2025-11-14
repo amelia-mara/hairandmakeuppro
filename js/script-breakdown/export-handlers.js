@@ -958,9 +958,13 @@ function loadScript(text) {
 
     // Render UI
     renderSceneList();
-    renderCharacterTabs();
-    renderCharacterTabPanels();
     renderScript();
+
+    // Render character tabs and panels after DOM is ready
+    setTimeout(() => {
+        renderCharacterTabs();
+        renderCharacterTabPanels();
+    }, 0);
 
     // Select first scene
     if (state.scenes.length > 0) {
@@ -1180,14 +1184,19 @@ export function createNewProject() {
     state.sceneTimeline = {};
     state.scriptTags = {};
     state.characterTabs = [];
+    state.confirmedCharacters = new Set();
     state.currentScene = null;
 
     // Save and render
     saveProject();
     renderSceneList();
-    renderCharacterTabs();
-    renderCharacterTabPanels();
     renderScript();
+
+    // Render character tabs and panels after DOM is ready
+    setTimeout(() => {
+        renderCharacterTabs();
+        renderCharacterTabPanels();
+    }, 0);
 
     alert('New project created');
 }
