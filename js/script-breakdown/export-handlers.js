@@ -116,9 +116,11 @@ export async function processScript() {
         // Update progress
         updateTopLoadingBar('Analyzing Script', 'Building character profiles...', 50);
 
-        // Store master context
+        // Store master context in BOTH locations for compatibility
         window.masterContext = masterContext;
+        window.scriptMasterContext = masterContext; // Character profiles look for this!
         localStorage.setItem('masterContext', JSON.stringify(masterContext));
+        localStorage.setItem('scriptMasterContext', JSON.stringify(masterContext));
 
         // Populate initial data from master context
         updateTopLoadingBar('Analyzing Script', 'Populating initial data...', 75);
@@ -3206,6 +3208,12 @@ ${scene.text || scene.content || ''}`;
         const masterContext = await performComprehensiveAnalysis(fullScriptText, scriptTitle);
 
         if (masterContext) {
+            // Store master context in BOTH locations for compatibility
+            window.masterContext = masterContext;
+            window.scriptMasterContext = masterContext; // Character profiles look for this!
+            localStorage.setItem('masterContext', JSON.stringify(masterContext));
+            localStorage.setItem('scriptMasterContext', JSON.stringify(masterContext));
+
             // Populate application state from context
             updateTopLoadingBar('Creating AI Context', 'Building character profiles...', 75);
             populateFromMasterContext(masterContext);
