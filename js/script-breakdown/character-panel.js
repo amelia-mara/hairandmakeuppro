@@ -500,6 +500,12 @@ export function switchCenterTab(tabName) {
  */
 function showCharacterProfile(characterName) {
     const profileId = `${characterName.toLowerCase().replace(/\s+/g, '-')}-profile-panel`;
+
+    // First, hide all character profile panels explicitly
+    document.querySelectorAll('.character-profile-panel').forEach(panel => {
+        panel.classList.remove('active');
+    });
+
     let profilePanel = document.getElementById(profileId);
 
     if (!profilePanel) {
@@ -507,6 +513,7 @@ function showCharacterProfile(characterName) {
         document.querySelector('.center-tab-content').appendChild(profilePanel);
     }
 
+    // Show only the requested panel
     profilePanel.classList.add('active');
 }
 
