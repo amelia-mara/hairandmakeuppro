@@ -478,6 +478,45 @@ Return comprehensive JSON with this EXACT structure:
             "lastAppearance": 10,
             "sceneList": [1, 2, 5, 10],
             "totalScenes": 4,
+            "scriptDescriptions": [
+                {
+                    "text": "EXACT quote from script describing character (first appearance)",
+                    "sceneNumber": 1,
+                    "type": "introduction"
+                },
+                {
+                    "text": "Any other physical descriptions mentioned",
+                    "sceneNumber": 5,
+                    "type": "action"
+                }
+            ],
+            "physicalProfile": {
+                "age": "extracted or inferred age/age range",
+                "gender": "gender",
+                "ethnicity": "if mentioned in script",
+                "height": "if mentioned",
+                "build": "if mentioned (slim, athletic, heavyset, etc)",
+                "hairColor": "natural hair color",
+                "hairStyle": "typical hairstyle",
+                "eyeColor": "if mentioned",
+                "distinctiveFeatures": ["scars", "tattoos", "unique characteristics"]
+            },
+            "characterAnalysis": {
+                "personality": "detailed personality traits that affect appearance choices",
+                "socialClass": "affects wardrobe and grooming choices",
+                "occupation": "affects grooming standards and style",
+                "arc": "how they change through the story",
+                "emotionalJourney": "how emotions affect appearance over time",
+                "relationships": ["key relationships that matter for continuity"]
+            },
+            "visualProfile": {
+                "overallVibe": "e.g., uptight professional, free spirit, rugged outdoorsman",
+                "styleChoices": "how they would dress and groom themselves",
+                "groomingHabits": "meticulous, casual, messy, particular",
+                "makeupStyle": "natural, heavy, none, professional (if applicable)",
+                "quirks": "nervous habits, signature looks, mannerisms affecting appearance",
+                "inspirations": "similar characters or real people for visual reference"
+            },
             "visualJourney": [
                 {
                     "scene": 1,
@@ -505,6 +544,11 @@ Return comprehensive JSON with this EXACT structure:
                 "skinTone": "description",
                 "specialFeatures": []
             },
+            "continuityNotes": {
+                "keyLooks": "important appearance moments that define the character",
+                "transformations": "major changes in appearance throughout story",
+                "signature": "what stays consistent about their look"
+            },
             "keyLooks": []
         }
     },
@@ -517,6 +561,13 @@ Return comprehensive JSON with this EXACT structure:
     "weatherProgression": {},
     "locationNotes": {}
 }
+
+IMPORTANT INSTRUCTIONS FOR CHARACTER ANALYSIS:
+1. Extract EXACT quotes from the script where characters are described (appearance, clothing, physical traits)
+2. For physicalProfile: Use only information explicitly stated or strongly implied in the script
+3. For characterAnalysis: Analyze personality, class, occupation based on dialogue and actions
+4. For visualProfile: Generate insights about how this character would present themselves based on their personality and role
+5. For continuityNotes: Identify key looks that matter for the story and any major transformations
 
 CRITICAL: Be thorough. This is the ONLY time you'll see the full script. Return valid JSON only.`;
 
