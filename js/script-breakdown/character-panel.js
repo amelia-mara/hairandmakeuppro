@@ -474,13 +474,1144 @@ export function switchCenterTab(tabName) {
     if (tabName === 'script') {
         // IMPORTANT: The correct element ID is 'script-tab-panel' (with hyphens)
         document.getElementById('script-tab-panel')?.classList.add('active');
+    } else if (tabName.startsWith('character-')) {
+        // Show character profile
+        const charName = tabName.replace('character-', '').replace(/-/g, ' ');
+        // Convert back to proper case - find matching character in confirmed list
+        const matchingChar = Array.from(state.confirmedCharacters || [])
+            .find(c => c.toLowerCase().replace(/\s+/g, '-') === charName.toLowerCase().replace(/\s+/g, '-'));
+
+        if (matchingChar) {
+            showCharacterProfile(matchingChar);
+        }
     } else {
-        // Use the new panel ID format
+        // Fallback for other panels
         document.getElementById(`${tabName}-panel`)?.classList.add('active');
     }
 
     // Update right panel context
     updateRightPanelContext();
+}
+
+/**
+ * Show character profile panel
+ * Creates the panel if it doesn't exist, otherwise shows it
+ * @param {string} characterName - Character name
+ */
+function showCharacterProfile(characterName) {
+    const profileId = `${characterName.toLowerCase().replace(/\s+/g, '-')}-profile-panel`;
+
+    // First, hide all character profile panels explicitly
+    document.querySelectorAll('.character-profile-panel').forEach(panel => {
+        panel.classList.remove('active');
+    });
+
+    let profilePanel = document.getElementById(profileId);
+
+    if (!profilePanel) {
+        profilePanel = createCharacterProfilePanel(characterName);
+        document.querySelector('.center-tab-content').appendChild(profilePanel);
+    }
+
+    // Show only the requested panel
+    profilePanel.classList.add('active');
+}
+
+/**
+ * Create character profile panel with header, stats, and view tabs
+ * @param {string} characterName - Character name
+ * @returns {HTMLElement} The created panel element
+ */
+function createCharacterProfilePanel(characterName) {
+    const panel = document.createElement('div');
+    panel.className = 'center-tab-panel character-profile-panel';
+    panel.id = `${characterName.toLowerCase().replace(/\s+/g, '-')}-profile-panel`;
+
+    const sceneCount = getCharacterSceneCount(characterName);
+    const role = getCharacterRole(characterName);
+
+    panel.innerHTML = `
+        <div class="character-profile-header">
+            <h2>${escapeHtml(characterName)}</h2>
+            <div class="character-stats">
+                <span>Scenes: ${sceneCount}</span>
+                <span>Role: ${escapeHtml(role)}</span>
+            </div>
+        </div>
+
+        <div class="profile-view-tabs">
+            <button class="view-tab active" onclick="showProfileView('${escapeHtml(characterName).replace(/'/g, "\\'")}', 'lookbook')">
+                Lookbook
+            </button>
+            <button class="view-tab" onclick="showProfileView('${escapeHtml(characterName).replace(/'/g, "\\'")}', 'timeline')">
+                Timeline
+            </button>
+            <button class="view-tab" onclick="showProfileView('${escapeHtml(characterName).replace(/'/g, "\\'")}', 'events')">
+                Events
+            </button>
+        </div>
+
+        <div class="character-profile-content" id="${escapeHtml(characterName).toLowerCase().replace(/\s+/g, '-')}-content">
+            <!-- Content will be loaded here -->
+            ${renderLookbookView(characterName)}
+        </div>
+    `;
+
+    return panel;
+}
+
+/**
+ * Get character scene count
+ * @param {string} characterName - Character name
+ * @returns {number} Number of scenes the character appears in
+ */
+function getCharacterSceneCount(characterName) {
+    let count = 0;
+    state.scenes.forEach((scene, index) => {
+        const breakdown = state.sceneBreakdowns[index];
+        if (breakdown && breakdown.cast && breakdown.cast.includes(characterName)) {
+            count++;
+        }
+    });
+    return count;
+}
+
+/**
+ * Get character role based on scene count
+ * @param {string} characterName - Character name
+ * @returns {string} Character role (Lead, Supporting, Minor)
+ */
+function getCharacterRole(characterName) {
+    const sceneCount = getCharacterSceneCount(characterName);
+
+    if (sceneCount >= 10) {
+        return 'Lead';
+    } else if (sceneCount >= 5) {
+        return 'Supporting';
+    } else if (sceneCount >= 2) {
+        return 'Minor';
+    } else {
+        return 'Extra';
+    }
+}
+
+/**
+ * Switch between profile views (Lookbook, Timeline, Events)
+ * @param {string} characterName - Character name
+ * @param {string} viewType - View type ('lookbook', 'timeline', 'events')
+ */
+window.showProfileView = function(characterName, viewType) {
+    const contentId = `${characterName.toLowerCase().replace(/\s+/g, '-')}-content`;
+    const contentDiv = document.getElementById(contentId);
+
+    if (!contentDiv) return;
+
+    // Update active tab
+    const profilePanel = contentDiv.closest('.character-profile-panel');
+    if (profilePanel) {
+        profilePanel.querySelectorAll('.view-tab').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        profilePanel.querySelector(`.view-tab:nth-child(${viewType === 'lookbook' ? 1 : viewType === 'timeline' ? 2 : 3})`).classList.add('active');
+    }
+
+    // Render the appropriate view
+    switch (viewType) {
+        case 'lookbook':
+            contentDiv.innerHTML = renderLookbookView(characterName);
+            break;
+        case 'timeline':
+            contentDiv.innerHTML = renderTimelineView(characterName);
+            break;
+        case 'events':
+            contentDiv.innerHTML = renderEventsView(characterName);
+            break;
+    }
+};
+
+/**
+ * Get character looks organized by story day
+ * @param {string} characterName - Character name
+ * @returns {Object} Object mapping story days to arrays of look objects
+ */
+function getCharacterLooksByDay(characterName) {
+    const dayGroups = {};
+
+    // Get all scenes where character appears
+    state.scenes.forEach((scene, sceneIndex) => {
+        const breakdown = state.sceneBreakdowns[sceneIndex];
+        if (!breakdown || !breakdown.cast || !breakdown.cast.includes(characterName)) {
+            return;
+        }
+
+        const storyDay = scene.storyDay || 'Unassigned';
+        const charState = state.characterStates[sceneIndex]?.[characterName] || {};
+
+        // Initialize day group if needed
+        if (!dayGroups[storyDay]) {
+            dayGroups[storyDay] = [];
+        }
+
+        // Create look object from scene data
+        const look = {
+            sceneIndex: sceneIndex,
+            sceneNumber: scene.number,
+            heading: scene.heading,
+            storyDay: storyDay,
+            hair: charState.hair || '',
+            makeup: charState.makeup || '',
+            sfx: charState.sfx || '',
+            wardrobe: charState.wardrobe || '',
+            notes: charState.notes || ''
+        };
+
+        dayGroups[storyDay].push(look);
+    });
+
+    return dayGroups;
+}
+
+/**
+ * Render a single look card with editable fields
+ * @param {string} characterName - Character name
+ * @param {Object} look - Look object with scene and appearance data
+ * @returns {string} HTML for look card
+ */
+function renderLookCard(characterName, look) {
+    const hasContent = look.hair || look.makeup || look.sfx || look.wardrobe || look.notes;
+
+    return `
+        <div class="look-card ${hasContent ? 'has-content' : ''}" data-scene="${look.sceneIndex}">
+            <div class="look-card-header" onclick="navigateToScene(${look.sceneIndex})">
+                <span class="look-scene-badge">Scene ${look.sceneNumber}</span>
+                <span class="look-scene-heading">${escapeHtml(look.heading.substring(0, 50))}${look.heading.length > 50 ? '...' : ''}</span>
+            </div>
+
+            <div class="look-details">
+                <div class="look-field">
+                    <label>Hair:</label>
+                    <input type="text"
+                           value="${escapeHtml(look.hair)}"
+                           placeholder="Hair description..."
+                           onchange="updateCharacterLook('${escapeHtml(characterName).replace(/'/g, "\\'")}', ${look.sceneIndex}, 'hair', this.value)">
+                </div>
+
+                <div class="look-field">
+                    <label>Makeup:</label>
+                    <input type="text"
+                           value="${escapeHtml(look.makeup)}"
+                           placeholder="Makeup description..."
+                           onchange="updateCharacterLook('${escapeHtml(characterName).replace(/'/g, "\\'")}', ${look.sceneIndex}, 'makeup', this.value)">
+                </div>
+
+                <div class="look-field">
+                    <label>SFX:</label>
+                    <input type="text"
+                           value="${escapeHtml(look.sfx)}"
+                           placeholder="SFX/prosthetics..."
+                           onchange="updateCharacterLook('${escapeHtml(characterName).replace(/'/g, "\\'")}', ${look.sceneIndex}, 'sfx', this.value)">
+                </div>
+
+                <div class="look-field">
+                    <label>Wardrobe:</label>
+                    <input type="text"
+                           value="${escapeHtml(look.wardrobe)}"
+                           placeholder="Wardrobe description..."
+                           onchange="updateCharacterLook('${escapeHtml(characterName).replace(/'/g, "\\'")}', ${look.sceneIndex}, 'wardrobe', this.value)">
+                </div>
+
+                <div class="look-field look-field-notes">
+                    <label>Notes:</label>
+                    <textarea
+                        placeholder="Additional continuity notes..."
+                        onchange="updateCharacterLook('${escapeHtml(characterName).replace(/'/g, "\\'")}', ${look.sceneIndex}, 'notes', this.value)">${escapeHtml(look.notes)}</textarea>
+                </div>
+            </div>
+
+            <div class="look-actions">
+                <button class="look-action-btn" onclick="applyLookForward('${escapeHtml(characterName).replace(/'/g, "\\'")}', ${look.sceneIndex})" title="Copy this look to all following scenes in this day">
+                    Apply Forward →
+                </button>
+                <button class="look-action-btn" onclick="alert('Photo attachment feature coming soon')" title="Attach reference photos">
+                    📎 Add Photo
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Render lookbook view with expandable story day sections
+ * @param {string} characterName - Character name
+ * @returns {string} HTML for lookbook view
+ */
+function renderLookbookView(characterName) {
+    const profile = state.castProfiles[characterName] || {};
+    const dayGroups = getCharacterLooksByDay(characterName);
+
+    // Sort days (natural sort for "Day 1", "Day 2", etc.)
+    const sortedDays = Object.keys(dayGroups).sort((a, b) => {
+        if (a === 'Unassigned') return 1;
+        if (b === 'Unassigned') return -1;
+
+        const numA = parseInt(a.match(/\d+/)?.[0] || 0);
+        const numB = parseInt(b.match(/\d+/)?.[0] || 0);
+        return numA - numB;
+    });
+
+    if (sortedDays.length === 0) {
+        return `
+            <div class="lookbook-view">
+                <div class="view-section">
+                    <h3>Base Description</h3>
+                    <p>${escapeHtml(profile.baseDescription || 'No base description yet')}</p>
+                </div>
+                <div class="empty-message">
+                    This character doesn't appear in any scenes yet.
+                </div>
+            </div>
+        `;
+    }
+
+    return `
+        <div class="lookbook-view">
+            <div class="view-section">
+                <h3>Base Description</h3>
+                <div class="base-description-field">
+                    <textarea
+                        class="base-description-input"
+                        placeholder="Enter base character description (age, build, general appearance, etc.)..."
+                        onchange="updateQuickBaseDescription('${escapeHtml(characterName).replace(/'/g, "\\'")}', this.value)">${escapeHtml(profile.baseDescription || '')}</textarea>
+                </div>
+            </div>
+
+            <div class="lookbook-container">
+                ${sortedDays.map(day => {
+                    const looks = dayGroups[day];
+                    const dayId = day.toLowerCase().replace(/\s+/g, '-');
+
+                    return `
+                        <div class="story-day-section" id="lookbook-day-${dayId}">
+                            <div class="day-section-header" onclick="toggleDaySection('${dayId}')">
+                                <span class="expand-icon">▼</span>
+                                <h3 class="day-section-title">${escapeHtml(day)}</h3>
+                                <span class="day-scene-count">${looks.length} scene${looks.length !== 1 ? 's' : ''}</span>
+                            </div>
+
+                            <div class="day-looks expanded" id="day-looks-${dayId}">
+                                ${looks.map(look => renderLookCard(characterName, look)).join('')}
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Render timeline view
+ * @param {string} characterName - Character name
+ * @returns {string} HTML for timeline view
+ */
+function renderTimelineView(characterName) {
+    // Reuse the existing renderCharacterTimeline function
+    return renderCharacterTimeline(characterName);
+}
+
+/**
+ * Get character continuity events with scene data
+ * @param {string} characterName - Character name
+ * @returns {Array} Array of continuity event objects
+ */
+function getCharacterContinuityEvents(characterName) {
+    const events = state.continuityEvents[characterName] || [];
+
+    // Enrich events with scene information
+    return events.map(event => {
+        const enrichedEvent = { ...event };
+
+        // Ensure event has an ID
+        if (!enrichedEvent.id) {
+            enrichedEvent.id = `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        }
+
+        return enrichedEvent;
+    });
+}
+
+/**
+ * Get color for progression stage based on severity
+ * @param {number} severity - Severity level (0-100)
+ * @returns {string} CSS color value
+ */
+function getStageColor(severity) {
+    if (severity >= 70) {
+        // High severity - red
+        return 'rgba(239, 68, 68, 0.8)';
+    } else if (severity >= 40) {
+        // Medium severity - yellow/orange
+        return 'rgba(251, 191, 36, 0.8)';
+    } else if (severity >= 10) {
+        // Low severity - light green
+        return 'rgba(132, 204, 22, 0.8)';
+    } else {
+        // Healed - green
+        return 'rgba(34, 197, 94, 0.8)';
+    }
+}
+
+/**
+ * Render progression stages for a continuity event
+ * @param {Object} event - Event object with progression data
+ * @param {string} characterName - Character name
+ * @returns {string} HTML for progression stages
+ */
+function renderProgressionStages(event, characterName) {
+    if (!event.progression || event.progression.length === 0) {
+        return `
+            <div class="progression-empty">
+                <span>No progression stages defined</span>
+                <button class="small-stage-btn" onclick="addProgressionStage('${escapeHtml(characterName).replace(/'/g, "\\'")}', '${event.id}')">
+                    + Add Stage
+                </button>
+            </div>
+        `;
+    }
+
+    const characterScenes = getCharacterScenes(characterName);
+    const totalScenes = characterScenes.length;
+
+    return `
+        <div class="progression-stages">
+            ${event.progression.map((stage, index) => {
+                const stageScenes = stage.endScene - stage.startScene + 1;
+                const width = totalScenes > 0 ? (stageScenes / totalScenes) * 100 : 0;
+                const color = getStageColor(stage.severity || 50);
+
+                return `
+                    <div class="progression-stage"
+                         style="width: ${width}%; background: ${color};"
+                         onclick="editProgressionStage('${escapeHtml(characterName).replace(/'/g, "\\'")}', '${event.id}', ${index})"
+                         title="Click to edit stage">
+                        <div class="stage-content">
+                            <span class="stage-label">${escapeHtml(stage.name || 'Stage ' + (index + 1))}</span>
+                            <span class="stage-scenes">Sc ${stage.startScene}-${stage.endScene}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('')}
+        </div>
+    `;
+}
+
+/**
+ * Render continuity events timeline
+ * @param {string} characterName - Character name
+ * @returns {string} HTML for continuity events timeline
+ */
+function renderContinuityEventsTimeline(characterName) {
+    const events = getCharacterContinuityEvents(characterName);
+
+    if (events.length === 0) {
+        return `
+            <div class="continuity-events-section">
+                <div class="empty-message">
+                    No continuity events tracked yet.
+                </div>
+                <button class="add-event-btn" onclick="addContinuityEvent('${escapeHtml(characterName).replace(/'/g, "\\'")}')">
+                    + Add Continuity Event
+                </button>
+            </div>
+        `;
+    }
+
+    return `
+        <div class="continuity-events-section">
+            ${events.map(event => `
+                <div class="event-timeline" data-event-id="${event.id}">
+                    <div class="event-timeline-header">
+                        <div class="event-info">
+                            <span class="event-type-badge">${escapeHtml(event.category || event.type || 'Event')}</span>
+                            <span class="event-name">${escapeHtml(event.description || 'Untitled Event')}</span>
+                        </div>
+                        <div class="event-meta">
+                            <span class="event-duration">
+                                ${event.startScene ? `Scene ${event.startScene}` : 'Not started'}
+                                ${event.endScene ? ` - ${event.endScene}` : ' (ongoing)'}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="progression-bar">
+                        ${renderProgressionStages(event, characterName)}
+                    </div>
+
+                    <div class="event-timeline-actions">
+                        <button class="event-action-btn" onclick="fillProgressionGaps('${escapeHtml(characterName).replace(/'/g, "\\'")}', '${event.id}')" title="Use AI to fill progression gaps">
+                            ✨ Fill Gaps with AI
+                        </button>
+                        <button class="event-action-btn" onclick="editContinuityEvent('${escapeHtml(characterName).replace(/'/g, "\\'")}', '${event.id}')" title="Edit event details">
+                            ✏️ Edit Event
+                        </button>
+                        <button class="event-action-btn danger" onclick="deleteContinuityEvent('${escapeHtml(characterName).replace(/'/g, "\\'")}', '${event.id}')" title="Delete event">
+                            🗑️ Delete
+                        </button>
+                    </div>
+                </div>
+            `).join('')}
+
+            <button class="add-event-btn" onclick="addContinuityEvent('${escapeHtml(characterName).replace(/'/g, "\\'")}')">
+                + Add Continuity Event
+            </button>
+        </div>
+    `;
+}
+
+/**
+ * Render events view with timeline visualization
+ * @param {string} characterName - Character name
+ * @returns {string} HTML for events view
+ */
+function renderEventsView(characterName) {
+    return `
+        <div class="events-view">
+            ${renderContinuityEventsTimeline(characterName)}
+        </div>
+    `;
+}
+
+/**
+ * Get all scenes where a character appears
+ * @param {string} characterName - Character name
+ * @returns {Array} Array of scene indices
+ */
+function getCharacterScenes(characterName) {
+    const sceneIndices = [];
+    state.scenes.forEach((scene, index) => {
+        const breakdown = state.sceneBreakdowns[index];
+        if (breakdown && breakdown.cast && breakdown.cast.includes(characterName)) {
+            sceneIndices.push(index);
+        }
+    });
+    return sceneIndices;
+}
+
+/**
+ * Group scenes by story day
+ * @param {Array} sceneIndices - Array of scene indices
+ * @returns {Object} Object mapping story days to arrays of scene indices
+ */
+function groupScenesByStoryDay(sceneIndices) {
+    const groups = {};
+    sceneIndices.forEach(sceneIndex => {
+        const scene = state.scenes[sceneIndex];
+        const day = scene.storyDay || 'Unassigned';
+        if (!groups[day]) {
+            groups[day] = [];
+        }
+        groups[day].push(sceneIndex);
+    });
+    return groups;
+}
+
+/**
+ * Render story day timeline visualization
+ * Shows a horizontal timeline with clickable day segments
+ * @param {string} characterName - Character name
+ * @returns {string} HTML for story day timeline
+ */
+function renderStoryDayTimeline(characterName) {
+    const characterScenes = getCharacterScenes(characterName);
+
+    if (characterScenes.length === 0) {
+        return '';
+    }
+
+    const dayGroups = groupScenesByStoryDay(characterScenes);
+
+    // Sort days (natural sort for "Day 1", "Day 2", etc.)
+    const sortedDays = Object.keys(dayGroups).sort((a, b) => {
+        if (a === 'Unassigned') return 1;
+        if (b === 'Unassigned') return -1;
+
+        const numA = parseInt(a.match(/\d+/)?.[0] || 0);
+        const numB = parseInt(b.match(/\d+/)?.[0] || 0);
+        return numA - numB;
+    });
+
+    if (sortedDays.length === 0) {
+        return '';
+    }
+
+    return `
+        <div class="story-day-timeline">
+            ${sortedDays.map(day => {
+                const scenes = dayGroups[day];
+                const sceneNumbers = scenes.map(idx => state.scenes[idx].number);
+                const firstScene = Math.min(...sceneNumbers);
+                const lastScene = Math.max(...sceneNumbers);
+                const sceneRange = firstScene === lastScene ? `Sc ${firstScene}` : `Sc ${firstScene}-${lastScene}`;
+
+                return `
+                    <div class="timeline-day" onclick="scrollToStoryDay('${escapeHtml(day).replace(/'/g, "\\'")}', '${escapeHtml(characterName).replace(/'/g, "\\'")}')">
+                        <div class="day-label">${escapeHtml(day)}</div>
+                        <div class="day-bar" data-scenes="${scenes.length}">
+                            <div class="scene-range">${sceneRange}</div>
+                            <div class="scene-count">${scenes.length} scene${scenes.length !== 1 ? 's' : ''}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('')}
+        </div>
+    `;
+}
+
+/**
+ * Scroll to a specific story day section in the character timeline
+ * @param {string} storyDay - Story day label
+ * @param {string} characterName - Character name
+ */
+window.scrollToStoryDay = function(storyDay, characterName) {
+    // Find the story day section in the current view
+    const storyDayGroups = document.querySelectorAll('.story-day-group');
+
+    for (const group of storyDayGroups) {
+        const dayLabel = group.querySelector('.story-day-label');
+        if (dayLabel && dayLabel.textContent.trim() === storyDay) {
+            group.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            // Add highlight effect
+            group.style.transition = 'background 0.5s ease';
+            group.style.background = 'rgba(212, 175, 122, 0.15)';
+            setTimeout(() => {
+                group.style.background = '';
+            }, 1500);
+
+            break;
+        }
+    }
+};
+
+/**
+ * Toggle expansion of a story day section
+ * @param {string} dayId - Day identifier (e.g., 'day-1', 'unassigned')
+ */
+window.toggleDaySection = function(dayId) {
+    const dayLooks = document.getElementById(`day-looks-${dayId}`);
+    const section = document.getElementById(`lookbook-day-${dayId}`);
+
+    if (!dayLooks || !section) return;
+
+    const expandIcon = section.querySelector('.expand-icon');
+
+    if (dayLooks.classList.contains('expanded')) {
+        dayLooks.classList.remove('expanded');
+        dayLooks.classList.add('collapsed');
+        if (expandIcon) expandIcon.textContent = '▶';
+    } else {
+        dayLooks.classList.remove('collapsed');
+        dayLooks.classList.add('expanded');
+        if (expandIcon) expandIcon.textContent = '▼';
+    }
+};
+
+/**
+ * Update character look for a specific scene
+ * @param {string} characterName - Character name
+ * @param {number} sceneIndex - Scene index
+ * @param {string} field - Field to update (hair, makeup, sfx, wardrobe, notes)
+ * @param {string} value - New value
+ */
+window.updateCharacterLook = async function(characterName, sceneIndex, field, value) {
+    // Initialize structures if needed
+    if (!state.characterStates[sceneIndex]) {
+        state.characterStates[sceneIndex] = {};
+    }
+    if (!state.characterStates[sceneIndex][characterName]) {
+        state.characterStates[sceneIndex][characterName] = {};
+    }
+
+    // Update the field
+    state.characterStates[sceneIndex][characterName][field] = value;
+
+    // Save project
+    const { saveProject } = await import('./export-handlers.js');
+    saveProject();
+
+    // Update visual indicator on the card
+    const card = document.querySelector(`.look-card[data-scene="${sceneIndex}"]`);
+    if (card) {
+        const hasContent = Object.values(state.characterStates[sceneIndex][characterName])
+            .some(val => val && val.trim() !== '');
+        if (hasContent) {
+            card.classList.add('has-content');
+        } else {
+            card.classList.remove('has-content');
+        }
+    }
+
+    console.log(`Updated ${characterName} ${field} for scene ${sceneIndex}:`, value);
+};
+
+/**
+ * Apply current look forward to all following scenes in the same day
+ * @param {string} characterName - Character name
+ * @param {number} sourceSceneIndex - Scene index to copy from
+ */
+window.applyLookForward = async function(characterName, sourceSceneIndex) {
+    const sourceScene = state.scenes[sourceSceneIndex];
+    if (!sourceScene) return;
+
+    const sourceState = state.characterStates[sourceSceneIndex]?.[characterName];
+    if (!sourceState || Object.keys(sourceState).length === 0) {
+        showToast('No look data to copy from this scene', 'warning');
+        return;
+    }
+
+    const storyDay = sourceScene.storyDay || 'Unassigned';
+
+    // Find all following scenes in the same story day where character appears
+    let updatedCount = 0;
+
+    state.scenes.forEach((scene, sceneIndex) => {
+        if (sceneIndex <= sourceSceneIndex) return;
+        if ((scene.storyDay || 'Unassigned') !== storyDay) return;
+
+        const breakdown = state.sceneBreakdowns[sceneIndex];
+        if (!breakdown || !breakdown.cast || !breakdown.cast.includes(characterName)) return;
+
+        // Initialize structures if needed
+        if (!state.characterStates[sceneIndex]) {
+            state.characterStates[sceneIndex] = {};
+        }
+        if (!state.characterStates[sceneIndex][characterName]) {
+            state.characterStates[sceneIndex][characterName] = {};
+        }
+
+        // Copy all look fields
+        ['hair', 'makeup', 'sfx', 'wardrobe'].forEach(field => {
+            if (sourceState[field]) {
+                state.characterStates[sceneIndex][characterName][field] = sourceState[field];
+            }
+        });
+
+        updatedCount++;
+    });
+
+    if (updatedCount > 0) {
+        // Save project
+        const { saveProject } = await import('./export-handlers.js');
+        saveProject();
+
+        // Refresh the view
+        const contentId = `${characterName.toLowerCase().replace(/\s+/g, '-')}-content`;
+        const contentDiv = document.getElementById(contentId);
+        if (contentDiv) {
+            contentDiv.innerHTML = renderLookbookView(characterName);
+        }
+
+        showToast(`Applied look forward to ${updatedCount} scene${updatedCount !== 1 ? 's' : ''} in ${storyDay}`, 'success');
+    } else {
+        showToast(`No following scenes found in ${storyDay}`, 'info');
+    }
+};
+
+/**
+ * Add a new continuity event for a character
+ * @param {string} characterName - Character name
+ */
+window.addContinuityEvent = async function(characterName) {
+    const eventName = prompt('Enter event name (e.g., "Bruised Left Eye", "Broken Arm"):');
+    if (!eventName || !eventName.trim()) return;
+
+    const category = prompt('Enter category (injury, health, sfx, other):', 'injury');
+    const startScene = parseInt(prompt('Enter starting scene number:', '1'));
+
+    if (isNaN(startScene)) {
+        alert('Invalid scene number');
+        return;
+    }
+
+    // Initialize continuity events if needed
+    if (!state.continuityEvents[characterName]) {
+        state.continuityEvents[characterName] = [];
+    }
+
+    // Create new event
+    const newEvent = {
+        id: `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        description: eventName.trim(),
+        category: category || 'injury',
+        startScene: startScene,
+        endScene: null,
+        progression: []
+    };
+
+    state.continuityEvents[characterName].push(newEvent);
+
+    // Save project
+    const { saveProject } = await import('./export-handlers.js');
+    saveProject();
+
+    // Refresh the view
+    const contentId = `${characterName.toLowerCase().replace(/\s+/g, '-')}-content`;
+    const contentDiv = document.getElementById(contentId);
+    if (contentDiv) {
+        contentDiv.innerHTML = renderEventsView(characterName);
+    }
+
+    alert(`Added continuity event: ${eventName}`);
+};
+
+/**
+ * Edit a continuity event
+ * @param {string} characterName - Character name
+ * @param {string} eventId - Event ID
+ */
+window.editContinuityEvent = async function(characterName, eventId) {
+    const events = state.continuityEvents[characterName] || [];
+    const event = events.find(e => e.id === eventId);
+
+    if (!event) {
+        alert('Event not found');
+        return;
+    }
+
+    const newName = prompt('Event name:', event.description);
+    if (newName === null) return;
+
+    if (newName.trim()) {
+        event.description = newName.trim();
+    }
+
+    const newCategory = prompt('Category (injury, health, sfx, other):', event.category);
+    if (newCategory && newCategory.trim()) {
+        event.category = newCategory.trim();
+    }
+
+    const newEnd = prompt('End scene (leave empty if ongoing):', event.endScene || '');
+    if (newEnd.trim()) {
+        const endScene = parseInt(newEnd);
+        if (!isNaN(endScene)) {
+            event.endScene = endScene;
+        }
+    } else {
+        event.endScene = null;
+    }
+
+    // Save project
+    const { saveProject } = await import('./export-handlers.js');
+    saveProject();
+
+    // Refresh the view
+    const contentId = `${characterName.toLowerCase().replace(/\s+/g, '-')}-content`;
+    const contentDiv = document.getElementById(contentId);
+    if (contentDiv) {
+        contentDiv.innerHTML = renderEventsView(characterName);
+    }
+};
+
+/**
+ * Delete a continuity event
+ * @param {string} characterName - Character name
+ * @param {string} eventId - Event ID
+ */
+window.deleteContinuityEvent = async function(characterName, eventId) {
+    if (!confirm('Are you sure you want to delete this continuity event?')) {
+        return;
+    }
+
+    const events = state.continuityEvents[characterName] || [];
+    const index = events.findIndex(e => e.id === eventId);
+
+    if (index !== -1) {
+        events.splice(index, 1);
+
+        // Save project
+        const { saveProject } = await import('./export-handlers.js');
+        saveProject();
+
+        // Refresh the view
+        const contentId = `${characterName.toLowerCase().replace(/\s+/g, '-')}-content`;
+        const contentDiv = document.getElementById(contentId);
+        if (contentDiv) {
+            contentDiv.innerHTML = renderEventsView(characterName);
+        }
+    }
+};
+
+/**
+ * Add a progression stage to an event
+ * @param {string} characterName - Character name
+ * @param {string} eventId - Event ID
+ */
+window.addProgressionStage = async function(characterName, eventId) {
+    const events = state.continuityEvents[characterName] || [];
+    const event = events.find(e => e.id === eventId);
+
+    if (!event) {
+        alert('Event not found');
+        return;
+    }
+
+    const stageName = prompt('Stage name (e.g., "Fresh wound", "Healing", "Scabbed over"):');
+    if (!stageName || !stageName.trim()) return;
+
+    const startScene = parseInt(prompt('Start scene:', event.startScene));
+    const endScene = parseInt(prompt('End scene:', startScene + 5));
+    const severity = parseInt(prompt('Severity (0-100, where 100 is worst):', '70'));
+
+    if (isNaN(startScene) || isNaN(endScene) || isNaN(severity)) {
+        alert('Invalid input');
+        return;
+    }
+
+    if (!event.progression) {
+        event.progression = [];
+    }
+
+    event.progression.push({
+        name: stageName.trim(),
+        startScene: startScene,
+        endScene: endScene,
+        severity: Math.max(0, Math.min(100, severity))
+    });
+
+    // Sort by start scene
+    event.progression.sort((a, b) => a.startScene - b.startScene);
+
+    // Save project
+    const { saveProject } = await import('./export-handlers.js');
+    saveProject();
+
+    // Refresh the view
+    const contentId = `${characterName.toLowerCase().replace(/\s+/g, '-')}-content`;
+    const contentDiv = document.getElementById(contentId);
+    if (contentDiv) {
+        contentDiv.innerHTML = renderEventsView(characterName);
+    }
+};
+
+/**
+ * Edit a progression stage
+ * @param {string} characterName - Character name
+ * @param {string} eventId - Event ID
+ * @param {number} stageIndex - Stage index
+ */
+window.editProgressionStage = async function(characterName, eventId, stageIndex) {
+    const events = state.continuityEvents[characterName] || [];
+    const event = events.find(e => e.id === eventId);
+
+    if (!event || !event.progression || !event.progression[stageIndex]) {
+        alert('Stage not found');
+        return;
+    }
+
+    const stage = event.progression[stageIndex];
+
+    const newName = prompt('Stage name:', stage.name);
+    if (newName === null) return;
+
+    if (newName.trim()) {
+        stage.name = newName.trim();
+    }
+
+    const newSeverity = prompt('Severity (0-100):', stage.severity);
+    if (newSeverity && newSeverity.trim()) {
+        const severity = parseInt(newSeverity);
+        if (!isNaN(severity)) {
+            stage.severity = Math.max(0, Math.min(100, severity));
+        }
+    }
+
+    // Save project
+    const { saveProject } = await import('./export-handlers.js');
+    saveProject();
+
+    // Refresh the view
+    const contentId = `${characterName.toLowerCase().replace(/\s+/g, '-')}-content`;
+    const contentDiv = document.getElementById(contentId);
+    if (contentDiv) {
+        contentDiv.innerHTML = renderEventsView(characterName);
+    }
+};
+
+/**
+ * Fill progression gaps with AI
+ * @param {string} characterName - Character name
+ * @param {string} eventId - Event ID
+ */
+window.fillProgressionGaps = async function(characterName, eventId) {
+    const events = state.continuityEvents[characterName] || [];
+    const event = events.find(e => e.id === eventId);
+
+    if (!event) {
+        showToast('Event not found', 'error');
+        return;
+    }
+
+    // Check if event has basic info
+    if (!event.startScene) {
+        showToast('Event needs a start scene before generating progression', 'error');
+        return;
+    }
+
+    // Get character scenes for context
+    const characterScenes = getCharacterScenes(characterName);
+    const sceneCount = characterScenes.length;
+    const endScene = event.endScene || Math.min(event.startScene + 20, sceneCount);
+
+    const duration = endScene - event.startScene;
+
+    if (duration < 2) {
+        showToast('Event duration too short for meaningful progression', 'error');
+        return;
+    }
+
+    try {
+        showToast('Generating progression stages with AI...', 'info');
+
+        const { callAI } = await import('./ai-integration.js');
+
+        const prompt = `You are a film continuity expert. Generate realistic healing/progression stages for a character continuity event.
+
+Event Type: ${event.category || 'injury'}
+Description: ${event.description}
+Start Scene: ${event.startScene}
+End Scene: ${endScene}
+Duration: ${duration} scenes
+
+Create 3-5 progression stages showing realistic healing/recovery over time. For each stage:
+1. Name (brief description of the stage)
+2. Start scene number
+3. End scene number
+4. Severity (0-100, where 100 is worst/most severe)
+
+Format as JSON array:
+[
+  {"name": "Fresh wound", "startScene": ${event.startScene}, "endScene": ${event.startScene + Math.floor(duration * 0.2)}, "severity": 95},
+  ...
+]
+
+Important:
+- Severity should decrease over time (healing progression)
+- Scene ranges should be continuous with no gaps
+- Be realistic for the type of injury/condition
+- Consider typical healing timelines
+- Final stage should have low severity (nearly healed)
+
+Return ONLY the JSON array, no other text.`;
+
+        const response = await callAI(prompt, 1000);
+
+        // Parse AI response
+        let progressionStages;
+        try {
+            // Try to extract JSON from response
+            const jsonMatch = response.match(/\[[\s\S]*\]/);
+            if (jsonMatch) {
+                progressionStages = JSON.parse(jsonMatch[0]);
+            } else {
+                throw new Error('No JSON found in response');
+            }
+        } catch (parseError) {
+            console.error('Failed to parse AI response:', response);
+            showToast('AI generated invalid progression data', 'error');
+            return;
+        }
+
+        // Validate progression stages
+        if (!Array.isArray(progressionStages) || progressionStages.length === 0) {
+            showToast('AI generated empty progression', 'error');
+            return;
+        }
+
+        // Ensure all stages have required fields
+        progressionStages = progressionStages.map((stage, index) => ({
+            name: stage.name || `Stage ${index + 1}`,
+            startScene: parseInt(stage.startScene) || event.startScene,
+            endScene: parseInt(stage.endScene) || event.startScene + 1,
+            severity: Math.max(0, Math.min(100, parseInt(stage.severity) || 50))
+        }));
+
+        // Sort by start scene
+        progressionStages.sort((a, b) => a.startScene - b.startScene);
+
+        // Update event with new progression
+        event.progression = progressionStages;
+
+        // Save project
+        const { saveProject } = await import('./export-handlers.js');
+        saveProject();
+
+        // Refresh the view
+        const contentId = `${characterName.toLowerCase().replace(/\s+/g, '-')}-content`;
+        const contentDiv = document.getElementById(contentId);
+        if (contentDiv) {
+            contentDiv.innerHTML = renderEventsView(characterName);
+        }
+
+        showToast(`Generated ${progressionStages.length} progression stages`, 'success');
+
+    } catch (error) {
+        console.error('Error filling progression gaps:', error);
+        showToast(`Error: ${error.message}`, 'error');
+    }
+};
+
+/**
+ * Show toast notification
+ * @param {string} message - Message to display
+ * @param {string} type - Type of toast (success, error, info)
+ */
+function showToast(message, type = 'info') {
+    // Try to use existing toast system
+    if (window.showToast && typeof window.showToast === 'function') {
+        window.showToast(message, type);
+        return;
+    }
+
+    // Fallback to simple implementation
+    const existingToast = document.getElementById('simple-toast');
+    if (existingToast) {
+        existingToast.remove();
+    }
+
+    const toast = document.createElement('div');
+    toast.id = 'simple-toast';
+    toast.textContent = message;
+
+    // Style based on type
+    const colors = {
+        success: '#22c55e',
+        error: '#ef4444',
+        info: '#d4af7a',
+        warning: '#f59e0b'
+    };
+
+    Object.assign(toast.style, {
+        position: 'fixed',
+        bottom: '24px',
+        right: '24px',
+        padding: '12px 24px',
+        background: colors[type] || colors.info,
+        color: '#fff',
+        borderRadius: '8px',
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+        zIndex: '10000',
+        fontSize: '0.875em',
+        fontWeight: '600',
+        animation: 'slideIn 0.3s ease',
+        maxWidth: '400px'
+    });
+
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
 }
 
 /**
@@ -697,6 +1828,9 @@ export function renderCharacterTimeline(character) {
                     📊 Manage Look States
                 </button>
             </div>
+
+            <!-- Story Day Timeline Visualization -->
+            ${renderStoryDayTimeline(character)}
     `;
 
     if (hasLooks) {
