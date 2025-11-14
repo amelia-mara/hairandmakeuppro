@@ -958,6 +958,89 @@ window.handleAIFillCharacter = async function(sceneIndex, character) {
 };
 
 /**
+ * Extract scene alerts from master context
+ * @param {Object} scene - Scene object
+ * @param {number} sceneIndex - Scene index
+ * @param {Object} analysis - Master context analysis
+ * @returns {Array} Array of alert objects
+ */
+function extractSceneAlerts(scene, sceneIndex, analysis) {
+    const alerts = [];
+
+    // Check if continuous from previous
+    if (analysis.sceneFlow?.continuous) {
+        for (let group of analysis.sceneFlow.continuous) {
+            if (group.includes(sceneIndex) && group.includes(sceneIndex - 1)) {
+                alerts.push({
+                    type: 'continuous',
+                    icon: '⚡',
+                    text: 'CONTINUOUS from previous scene'
+                });
+                break;
+            }
+        }
+    }
+
+    // Check for weather
+    const environment = analysis.environments?.[`scene_${sceneIndex}`];
+    if (environment?.conditions) {
+        const conditions = Array.isArray(environment.conditions) ? environment.conditions : [];
+        if (conditions.some(c => c.toLowerCase().includes('rain'))) {
+            alerts.push({
+                type: 'weather',
+                icon: '🌧️',
+                text: 'Rain - waterproof makeup needed'
+            });
+        }
+        if (conditions.some(c => c.toLowerCase().includes('snow'))) {
+            alerts.push({
+                type: 'weather',
+                icon: '❄️',
+                text: 'Snow - weather protection needed'
+            });
+        }
+        if (conditions.some(c => c.toLowerCase().includes('wind'))) {
+            alerts.push({
+                type: 'weather',
+                icon: '💨',
+                text: 'Wind - hair protection needed'
+            });
+        }
+    }
+
+    // Check for stunts
+    if (analysis.doublingNeeds?.[`scene_${sceneIndex}`]) {
+        alerts.push({
+            type: 'stunt',
+            icon: '🎬',
+            text: 'Stunt double required'
+        });
+    }
+
+    // Check for crowds
+    if (analysis.crowdScenes?.[`scene_${sceneIndex}`]) {
+        const crowd = analysis.crowdScenes[`scene_${sceneIndex}`];
+        alerts.push({
+            type: 'crowd',
+            icon: '👥',
+            text: `${crowd.extras || 'Multiple'} extras - ${crowd.lookRequirements || 'special looks required'}`
+        });
+    }
+
+    // Check for action sequences
+    const interactions = analysis.interactions?.[`scene_${sceneIndex}`];
+    if (interactions?.type === 'fight') {
+        alerts.push({
+            type: 'action',
+            icon: '⚔️',
+            text: 'Fight scene - injury makeup may be needed'
+        });
+    }
+
+    return alerts;
+}
+
+/**
  * Escape HTML to prevent XSS
  */
 function escapeHtml(text) {
@@ -1029,6 +1112,14 @@ function renderSceneBreakdown(sceneIndex) {
     const breakdown = state.sceneBreakdowns[sceneIndex] || {};
     const characters = breakdown.cast || [];
 
+    // Extract relevant data for this scene from master context
+    const analysis = window.scriptMasterContext || window.masterContext || {};
+    const alerts = extractSceneAlerts(scene, sceneIndex, analysis);
+    const environment = analysis.environments?.[`scene_${sceneIndex}`];
+    const emotional = analysis.emotionalBeats?.[`scene_${sceneIndex}`];
+    const interactions = analysis.interactions?.[`scene_${sceneIndex}`];
+    const specialReq = analysis.specialRequirements?.[`scene_${sceneIndex}`];
+
     panel.innerHTML = `
         <div class="scene-breakdown-wrapper">
             <!-- Scene Header -->
@@ -1036,6 +1127,70 @@ function renderSceneBreakdown(sceneIndex) {
                 <h3>Scene ${sceneIndex + 1}</h3>
                 <div class="scene-heading">${escapeHtml(scene.heading)}</div>
             </div>
+
+            ${alerts.length > 0 ? `
+                <!-- ALERTS BAR -->
+                <div class="alerts-bar">
+                    ${alerts.map(alert => `
+                        <div class="alert-item ${alert.type}">
+                            <span class="alert-icon">${alert.icon}</span>
+                            <span class="alert-text">${escapeHtml(alert.text)}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            ` : ''}
+
+            ${environment || emotional || specialReq ? `
+                <!-- SCENE CONDITIONS -->
+                <div class="conditions-section">
+                    <h4 class="section-title">SCENE CONDITIONS</h4>
+
+                    ${environment ? `
+                        <div class="condition-box">
+                            <div class="condition-label">Environment:</div>
+                            <div class="condition-tags">
+                                ${(Array.isArray(environment.conditions) ? environment.conditions : []).map(c =>
+                                    `<div class="condition-tag">${escapeHtml(c)}</div>`
+                                ).join('')}
+                            </div>
+                            ${environment.impactOnAppearance ? `
+                                <div class="impact-note">
+                                    💡 ${escapeHtml(environment.impactOnAppearance)}
+                                </div>
+                            ` : ''}
+                        </div>
+                    ` : ''}
+
+                    ${emotional ? `
+                        <div class="condition-box">
+                            <div class="condition-label">Emotional State:</div>
+                            <div class="emotional-info">
+                                ${emotional.character ? `<strong>${escapeHtml(emotional.character)}</strong>: ` : ''}
+                                ${escapeHtml(emotional.emotion || '')}
+                                ${emotional.visualImpact ? `
+                                    <div class="impact-note">
+                                        💄 ${escapeHtml(emotional.visualImpact)}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    ${specialReq ? `
+                        <div class="condition-box">
+                            <div class="condition-label">Special Requirements:</div>
+                            <div class="special-req-info">
+                                ${escapeHtml(specialReq.type || '')}
+                                ${(specialReq.note || specialReq.impact) ? `
+                                    <div class="impact-note">
+                                        ⚠️ ${escapeHtml(specialReq.note || specialReq.impact)}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            ` : ''}
 
             <!-- TIMELINE SECTION -->
             <div class="breakdown-section timeline-section">
