@@ -24,10 +24,7 @@ import { renderBreakdownPanel } from './breakdown-form.js';
 export class SceneBreakdownManager {
     constructor() {
         this.currentScene = null;
-        this.focusCharacter = 'all';
         this.continuityStates = {};
-        // Restore active panel from localStorage, default to 'continuity'
-        this.activePanel = localStorage.getItem('breakdownActivePanel') || 'continuity';
     }
 
     /**
@@ -43,23 +40,13 @@ export class SceneBreakdownManager {
             return;
         }
 
-        // Restore focus character for this scene (if previously set)
-        const sceneKey = `breakdownFocusChar_scene${sceneIndex}`;
-        const savedFocusChar = localStorage.getItem(sceneKey);
-        if (savedFocusChar) {
-            this.focusCharacter = savedFocusChar;
-        } else {
-            // Default to 'all' for new scenes
-            this.focusCharacter = 'all';
-        }
-
         // Get story position context
         const storyPosition = this.getStoryPosition(sceneIndex);
 
         // Load character states for this scene
         this.loadCharacterStates(sceneIndex, storyPosition);
 
-        // Render the enhanced breakdown
+        // Render the breakdown
         this.renderEnhancedBreakdown();
     }
 
@@ -228,7 +215,7 @@ export class SceneBreakdownManager {
     }
 
     /**
-     * Render enhanced breakdown panel
+     * Render breakdown panel - single comprehensive view
      */
     renderEnhancedBreakdown() {
         const container = document.getElementById('breakdown-panel');
@@ -244,312 +231,10 @@ export class SceneBreakdownManager {
             return;
         }
 
-        const scene = state.scenes[this.currentScene];
-        const breakdown = state.sceneBreakdowns[this.currentScene] || {};
-        const cast = breakdown.cast || [];
-
-        let html = `
-            <!-- Workspace Header with Scene Context -->
-            <div class="workspace-header-enhanced">
-                <div class="workspace-title">SCENE BREAKDOWN</div>
-                <div class="scene-context">
-                    Scene <span class="scene-num-highlight">${scene.number}</span>
-                    ${scene.storyDay ? `| <span class="story-day-label">${escapeHtml(scene.storyDay)}</span>` : ''}
-                    ${scene.timeOfDay ? `- <span class="time-label">${escapeHtml(scene.timeOfDay)}</span>` : ''}
-                </div>
-            </div>
-
-            <!-- Character Quick Select -->
-            ${this.renderCharacterQuickSelect(cast)}
-
-            <!-- Breakdown Tabs -->
-            ${this.renderBreakdownTabs()}
-
-            <!-- Tab Content -->
-            <div class="breakdown-tab-content">
-                ${this.activePanel === 'continuity' ? this.renderContinuityPanel() : ''}
-                ${this.activePanel === 'tags' ? this.renderTagsPanel() : ''}
-                ${this.activePanel === 'classic' ? this.renderClassicPanel() : ''}
-            </div>
-        `;
-
-        container.innerHTML = html;
+        // Render the comprehensive breakdown view directly
+        renderBreakdownPanel();
     }
 
-    /**
-     * Render character quick select dropdown
-     * @param {Array} cast - Cast members in scene
-     * @returns {string} HTML string
-     */
-    renderCharacterQuickSelect(cast) {
-        if (cast.length === 0) {
-            return `
-                <div class="character-quick-select">
-                    <div class="no-cast-notice">No cast members in this scene yet</div>
-                </div>
-            `;
-        }
-
-        return `
-            <div class="character-quick-select">
-                <label class="quick-select-label">Focus Character:</label>
-                <select id="focus-character" class="focus-character-select" onchange="window.breakdownManager.updateFocusCharacter(this.value)">
-                    <option value="all" ${this.focusCharacter === 'all' ? 'selected' : ''}>All Characters</option>
-                    ${cast.map(char => `
-                        <option value="${escapeHtml(char)}" ${this.focusCharacter === char ? 'selected' : ''}>
-                            ${escapeHtml(char)}
-                        </option>
-                    `).join('')}
-                </select>
-                ${this.focusCharacter !== 'all' ? `
-                    <button class="quick-profile-btn" onclick="window.breakdownManager.jumpToCharacterProfile()">
-                        View Profile →
-                    </button>
-                ` : ''}
-            </div>
-        `;
-    }
-
-    /**
-     * Render breakdown tabs
-     * @returns {string} HTML string
-     */
-    renderBreakdownTabs() {
-        return `
-            <div class="breakdown-tabs">
-                <div class="breakdown-tab ${this.activePanel === 'continuity' ? 'active' : ''}"
-                     onclick="window.breakdownManager.switchPanel('continuity')">
-                    Continuity
-                </div>
-                <div class="breakdown-tab ${this.activePanel === 'tags' ? 'active' : ''}"
-                     onclick="window.breakdownManager.switchPanel('tags')">
-                    Tags
-                </div>
-                <div class="breakdown-tab ${this.activePanel === 'classic' ? 'active' : ''}"
-                     onclick="window.breakdownManager.switchPanel('classic')">
-                    Classic View
-                </div>
-            </div>
-        `;
-    }
-
-    /**
-     * Render continuity panel with character state cards
-     * @returns {string} HTML string
-     */
-    renderContinuityPanel() {
-        const characters = this.focusCharacter === 'all'
-            ? Object.keys(this.continuityStates)
-            : [this.focusCharacter];
-
-        return `
-            <div class="continuity-panel-content">
-                <!-- Character State Cards -->
-                <div class="character-states-container">
-                    ${characters.map(char => this.renderCharacterStateCard(char)).join('')}
-                </div>
-
-                <!-- Quick Add Section -->
-                ${this.renderQuickAddSection()}
-            </div>
-        `;
-    }
-
-    /**
-     * Render character state card
-     * @param {string} character - Character name
-     * @returns {string} HTML string
-     */
-    renderCharacterStateCard(character) {
-        const state = this.continuityStates[character];
-        if (!state) return '';
-
-        const lastSeen = state.lastAppearance
-            ? `Scene ${state.lastAppearance.sceneNumber}`
-            : 'First appearance';
-
-        return `
-            <div class="character-state-card" data-character="${escapeHtml(character)}">
-                <div class="state-header">
-                    <h4 class="state-character-name">${escapeHtml(character)}</h4>
-                    <span class="last-seen">${lastSeen}</span>
-                </div>
-
-                <div class="state-content">
-                    <!-- Current State Summary -->
-                    <div class="current-state-summary">
-                        <div class="state-section-label">Current State:</div>
-                        ${this.renderCurrentStateSummary(character, state)}
-                    </div>
-
-                    <!-- Active Continuity Items -->
-                    ${state.activeItems.length > 0 ? `
-                        <div class="active-items-list">
-                            <div class="state-section-label">Active Items:</div>
-                            ${state.activeItems.map(item => this.renderActiveItem(character, item)).join('')}
-                        </div>
-                    ` : ''}
-
-                    <!-- Quick Actions -->
-                    <div class="state-actions">
-                        <button class="state-action-btn" onclick="window.breakdownManager.addContinuityItem('${escapeHtml(character).replace(/'/g, "\\'")}')">
-                            + Add
-                        </button>
-                        ${state.lastAppearance ? `
-                            <button class="state-action-btn" onclick="window.breakdownManager.copyFromLastScene('${escapeHtml(character).replace(/'/g, "\\'")}')">
-                                Copy Previous
-                            </button>
-                        ` : ''}
-                        <button class="state-action-btn" onclick="window.breakdownManager.viewCharacterTimeline('${escapeHtml(character).replace(/'/g, "\\'")}')">
-                            Timeline
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    /**
-     * Render current state summary for character
-     * @param {string} character - Character name
-     * @param {Object} state - Character state
-     * @returns {string} HTML string
-     */
-    renderCurrentStateSummary(character, state) {
-        const currentState = state.currentState;
-        const items = [];
-
-        if (currentState.hair) {
-            items.push({ category: 'hair', description: currentState.hair });
-        }
-        if (currentState.makeup) {
-            items.push({ category: 'makeup', description: currentState.makeup });
-        }
-        if (currentState.sfx) {
-            items.push({ category: 'sfx', description: currentState.sfx });
-        }
-        if (currentState.wardrobe) {
-            items.push({ category: 'wardrobe', description: currentState.wardrobe });
-        }
-
-        if (items.length === 0) {
-            return '<em class="no-state-data">No continuity data yet</em>';
-        }
-
-        return items.map(item => `
-            <div class="state-item ${item.category}">
-                <span class="state-item-icon">${this.getCategoryIcon(item.category)}</span>
-                <span class="state-item-desc">${escapeHtml(item.description)}</span>
-            </div>
-        `).join('');
-    }
-
-    /**
-     * Render active continuity item
-     * @param {string} character - Character name
-     * @param {Object} item - Continuity item
-     * @returns {string} HTML string
-     */
-    renderActiveItem(character, item) {
-        return `
-            <div class="continuity-item ${item.category}" data-importance="${item.importance}">
-                <div class="item-content">
-                    <span class="item-icon">${this.getCategoryIcon(item.category)}</span>
-                    <div class="item-details">
-                        <div class="item-description">${escapeHtml(item.description)}</div>
-                        <div class="item-meta">Scene ${state.scenes[item.scene]?.number || item.scene}</div>
-                    </div>
-                </div>
-                ${item.healingProgress !== undefined ? `
-                    <div class="progression-bar">
-                        <div class="progression-fill" style="width: ${item.healingProgress}%"></div>
-                    </div>
-                    <div class="progression-label">${Math.round(item.healingProgress)}% healed</div>
-                ` : ''}
-            </div>
-        `;
-    }
-
-    /**
-     * Render quick add section
-     * @returns {string} HTML string
-     */
-    renderQuickAddSection() {
-        return `
-            <div class="quick-add-section">
-                <h4 class="quick-add-title">Quick Add Continuity</h4>
-                <div class="quick-add-grid">
-                    <button class="quick-add-btn" onclick="window.breakdownManager.quickAdd('injury')">
-                        <span class="quick-add-icon">🩹</span>
-                        <span class="quick-add-label">Injury</span>
-                    </button>
-                    <button class="quick-add-btn" onclick="window.breakdownManager.quickAdd('hair')">
-                        <span class="quick-add-icon">✂️</span>
-                        <span class="quick-add-label">Hair Change</span>
-                    </button>
-                    <button class="quick-add-btn" onclick="window.breakdownManager.quickAdd('makeup')">
-                        <span class="quick-add-icon">💄</span>
-                        <span class="quick-add-label">Makeup</span>
-                    </button>
-                    <button class="quick-add-btn" onclick="window.breakdownManager.quickAdd('wardrobe')">
-                        <span class="quick-add-icon">👔</span>
-                        <span class="quick-add-label">Wardrobe</span>
-                    </button>
-                </div>
-            </div>
-        `;
-    }
-
-    /**
-     * Render tags panel
-     * @returns {string} HTML string
-     */
-    renderTagsPanel() {
-        const sceneTags = state.scriptTags[this.currentScene] || [];
-
-        if (sceneTags.length === 0) {
-            return `
-                <div class="empty-panel-state">
-                    <div class="empty-icon">🏷️</div>
-                    <div class="empty-text">No tags in this scene yet</div>
-                </div>
-            `;
-        }
-
-        // Group tags by character
-        const tagsByCharacter = {};
-        sceneTags.forEach(tag => {
-            const char = tag.character || 'General';
-            if (!tagsByCharacter[char]) tagsByCharacter[char] = [];
-            tagsByCharacter[char].push(tag);
-        });
-
-        return `
-            <div class="tags-panel-content">
-                ${Object.entries(tagsByCharacter).map(([char, tags]) => `
-                    <div class="tags-group">
-                        <h4 class="tags-group-header">${escapeHtml(char)}</h4>
-                        <div class="tags-list">
-                            ${tags.map(tag => `
-                                <div class="tag-item ${tag.category}">
-                                    <span class="tag-icon">${this.getCategoryIcon(tag.category)}</span>
-                                    <span class="tag-text">${escapeHtml(tag.selectedText || tag.notes || 'No description')}</span>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                `).join('')}
-            </div>
-        `;
-    }
-
-    /**
-     * Render classic panel (fallback to original breakdown view)
-     * @returns {string} HTML string
-     */
-    renderClassicPanel() {
-        return '<div id="classic-breakdown-container"></div>';
-    }
 
     /**
      * Get icon for category
@@ -572,87 +257,6 @@ export class SceneBreakdownManager {
         return icons[category] || '●';
     }
 
-    /**
-     * Update focus character
-     * @param {string} character - Character name or 'all'
-     */
-    updateFocusCharacter(character) {
-        this.focusCharacter = character;
-        // Persist focus character choice (per scene basis)
-        if (this.currentScene !== null) {
-            const sceneKey = `breakdownFocusChar_scene${this.currentScene}`;
-            localStorage.setItem(sceneKey, character);
-        }
-        this.renderEnhancedBreakdown();
-    }
-
-    /**
-     * Switch active panel
-     * @param {string} panel - Panel name
-     */
-    switchPanel(panel) {
-        const previousPanel = this.activePanel;
-        this.activePanel = panel;
-        // Persist active panel choice
-        localStorage.setItem('breakdownActivePanel', panel);
-
-        if (panel === 'classic') {
-            // Switching TO classic view
-            this.renderEnhancedBreakdown();
-            setTimeout(() => {
-                const container = document.getElementById('classic-breakdown-container');
-                if (container) {
-                    // Clear any existing content
-                    container.innerHTML = '';
-
-                    // Create temporary div for classic breakdown
-                    const tempDiv = document.createElement('div');
-                    tempDiv.id = 'temp-breakdown-panel';
-                    container.appendChild(tempDiv);
-
-                    // Temporarily swap the breakdown panel ID
-                    const originalContainer = document.getElementById('breakdown-panel');
-                    if (originalContainer) {
-                        originalContainer.id = 'enhanced-breakdown-panel-saved';
-                        tempDiv.id = 'breakdown-panel';
-
-                        // Render classic view
-                        renderBreakdownPanel();
-                    }
-                }
-            }, 0);
-        } else {
-            // Switching AWAY from classic or between enhanced tabs
-            if (previousPanel === 'classic') {
-                // Restore the original breakdown panel
-                const savedContainer = document.getElementById('enhanced-breakdown-panel-saved');
-                if (savedContainer) {
-                    savedContainer.id = 'breakdown-panel';
-                }
-
-                // Remove temp classic container content
-                const classicContainer = document.getElementById('classic-breakdown-container');
-                if (classicContainer) {
-                    classicContainer.innerHTML = '';
-                }
-            }
-
-            // Re-render enhanced breakdown
-            this.renderEnhancedBreakdown();
-        }
-    }
-
-    /**
-     * Jump to character profile tab
-     */
-    jumpToCharacterProfile() {
-        if (this.focusCharacter === 'all') return;
-
-        const charId = `character-${this.focusCharacter.toLowerCase().replace(/\s+/g, '-')}`;
-        if (typeof window.switchCenterTab === 'function') {
-            window.switchCenterTab(charId);
-        }
-    }
 
     /**
      * View character timeline
@@ -665,21 +269,6 @@ export class SceneBreakdownManager {
         }
     }
 
-    /**
-     * Quick add continuity item
-     * @param {string} category - Category type
-     */
-    quickAdd(category) {
-        const character = this.focusCharacter;
-
-        if (character === 'all') {
-            showToast('Please select a specific character first', 'warning');
-            return;
-        }
-
-        // Show inline quick add form
-        this.showQuickAddForm(category, character);
-    }
 
     /**
      * Show quick add form

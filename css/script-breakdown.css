@@ -6981,106 +6981,6 @@
     color: var(--text-muted);
 }
 
-/* Character Quick Select */
-.character-quick-select {
-    padding: 16px 20px;
-    background: rgba(28, 25, 22, 0.4);
-    border-bottom: 1px solid var(--glass-border);
-    display: flex;
-    gap: 12px;
-    align-items: center;
-}
-
-.quick-select-label {
-    font-size: 0.8125em;
-    font-weight: 600;
-    color: var(--text-light);
-    min-width: 110px;
-}
-
-.focus-character-select {
-    flex: 1;
-    padding: 8px 12px;
-    background: var(--bg-primary);
-    border: 1px solid var(--glass-border);
-    border-radius: 6px;
-    color: var(--text-light);
-    font-size: 0.875em;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.focus-character-select:hover {
-    border-color: var(--accent-gold);
-}
-
-.focus-character-select:focus {
-    outline: none;
-    border-color: var(--accent-gold);
-    box-shadow: 0 0 0 2px rgba(212, 175, 122, 0.1);
-}
-
-.quick-profile-btn {
-    padding: 8px 16px;
-    background: linear-gradient(135deg, var(--accent-gold), rgba(212, 175, 122, 0.8));
-    border: none;
-    border-radius: 6px;
-    color: var(--bg-primary);
-    font-size: 0.75em;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    white-space: nowrap;
-}
-
-.quick-profile-btn:hover {
-    transform: translateX(2px);
-    box-shadow: 0 2px 8px rgba(212, 175, 122, 0.3);
-}
-
-.no-cast-notice {
-    font-size: 0.875em;
-    color: var(--text-muted);
-    font-style: italic;
-}
-
-/* Breakdown Tabs */
-.breakdown-tabs {
-    display: flex;
-    background: rgba(28, 25, 22, 0.3);
-    border-bottom: 2px solid var(--glass-border);
-}
-
-.breakdown-tab {
-    flex: 1;
-    padding: 12px 16px;
-    text-align: center;
-    font-size: 0.8125em;
-    font-weight: 600;
-    color: var(--text-muted);
-    cursor: pointer;
-    transition: all 0.2s ease;
-    border-bottom: 3px solid transparent;
-    position: relative;
-}
-
-.breakdown-tab:hover {
-    color: var(--text-light);
-    background: rgba(212, 175, 122, 0.05);
-}
-
-.breakdown-tab.active {
-    color: var(--accent-gold);
-    background: rgba(212, 175, 122, 0.1);
-    border-bottom-color: var(--accent-gold);
-}
-
-/* Breakdown Tab Content */
-.breakdown-tab-content {
-    padding: 20px;
-    overflow-y: auto;
-    height: calc(100% - 200px);
-}
 
 /* Continuity Panel */
 .continuity-panel-content {
@@ -7551,15 +7451,6 @@
 @media (max-width: 1400px) {
     .quick-add-grid {
         grid-template-columns: 1fr;
-    }
-
-    .character-quick-select {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .quick-select-label {
-        min-width: auto;
     }
 }
 
