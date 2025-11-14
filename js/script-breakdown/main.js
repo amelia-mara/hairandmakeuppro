@@ -281,12 +281,16 @@ function renderInitialUI() {
     // Render scene list
     renderSceneList();
 
-    // Render character tabs
-    renderCharacterTabs();
-    renderCharacterTabPanels();
-
     // Render script
     renderScript();
+
+    // Render character tabs and panels after a short delay to ensure DOM is ready
+    // This fixes a race condition where panels don't show on initial load
+    setTimeout(() => {
+        renderCharacterTabs();
+        renderCharacterTabPanels();
+        console.log('✓ Character tabs and panels rendered after DOM ready');
+    }, 0);
 
     // Select first scene if available
     if (state.scenes.length > 0) {
