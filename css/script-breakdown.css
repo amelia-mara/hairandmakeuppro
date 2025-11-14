@@ -10246,3 +10246,255 @@
 .story-day-timeline::-webkit-scrollbar-thumb:hover {
     background: rgba(212, 175, 122, 0.5);
 }
+
+/* ============================================================================ */
+/* LOOKBOOK VIEW - EXPANDABLE DAY SECTIONS & LOOK CARDS */
+/* ============================================================================ */
+
+.base-description-field {
+    margin-top: 12px;
+}
+
+.base-description-input {
+    width: 100%;
+    min-height: 80px;
+    padding: 12px;
+    background: rgba(28, 25, 22, 0.5);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    color: var(--text-light);
+    font-size: 0.9375em;
+    font-family: 'Inter', sans-serif;
+    line-height: 1.6;
+    resize: vertical;
+    transition: all 0.3s ease;
+}
+
+.base-description-input:focus {
+    outline: none;
+    border-color: var(--accent-gold);
+    background: rgba(28, 25, 22, 0.7);
+}
+
+.lookbook-container {
+    margin-top: 32px;
+}
+
+.story-day-section {
+    margin-bottom: 24px;
+    background: rgba(28, 25, 22, 0.3);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.story-day-section:hover {
+    border-color: rgba(212, 175, 122, 0.3);
+}
+
+.day-section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    background: rgba(255, 255, 255, 0.02);
+    border-bottom: 1px solid var(--glass-border);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    user-select: none;
+}
+
+.day-section-header:hover {
+    background: rgba(212, 175, 122, 0.1);
+}
+
+.day-section-header:active {
+    background: rgba(212, 175, 122, 0.15);
+}
+
+.expand-icon {
+    font-size: 0.75em;
+    color: var(--accent-gold);
+    transition: transform 0.3s ease;
+    min-width: 12px;
+}
+
+.day-section-title {
+    flex: 1;
+    font-size: 1.125em;
+    font-weight: 600;
+    color: var(--accent-gold);
+    margin: 0;
+}
+
+.day-scene-count {
+    font-size: 0.8125em;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.day-looks {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.day-looks.expanded {
+    max-height: 10000px;
+    padding: 16px;
+}
+
+.day-looks.collapsed {
+    max-height: 0;
+    padding: 0;
+}
+
+/* Look Cards */
+.look-card {
+    margin-bottom: 16px;
+    padding: 16px;
+    background: rgba(28, 25, 22, 0.5);
+    border: 1px solid var(--glass-border);
+    border-left: 3px solid rgba(212, 175, 122, 0.3);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.look-card:hover {
+    background: rgba(28, 25, 22, 0.7);
+    border-left-color: var(--accent-gold);
+}
+
+.look-card.has-content {
+    border-left-color: var(--accent-gold);
+    background: rgba(28, 25, 22, 0.6);
+}
+
+.look-card:last-child {
+    margin-bottom: 0;
+}
+
+.look-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--glass-border);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.look-card-header:hover {
+    color: var(--accent-gold);
+}
+
+.look-scene-badge {
+    padding: 4px 10px;
+    background: rgba(212, 175, 122, 0.15);
+    border: 1px solid rgba(212, 175, 122, 0.3);
+    border-radius: 6px;
+    font-size: 0.75em;
+    font-weight: 600;
+    color: var(--accent-gold);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.look-scene-heading {
+    flex: 1;
+    font-size: 0.875em;
+    color: var(--text-light);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.look-details {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.look-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.look-field label {
+    font-size: 0.8125em;
+    font-weight: 600;
+    color: var(--accent-gold);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.look-field input,
+.look-field textarea {
+    padding: 10px 12px;
+    background: rgba(28, 25, 22, 0.5);
+    border: 1px solid var(--glass-border);
+    border-radius: 6px;
+    color: var(--text-light);
+    font-size: 0.875em;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.3s ease;
+}
+
+.look-field input:focus,
+.look-field textarea:focus {
+    outline: none;
+    border-color: var(--accent-gold);
+    background: rgba(28, 25, 22, 0.7);
+}
+
+.look-field input::placeholder,
+.look-field textarea::placeholder {
+    color: var(--text-muted);
+    opacity: 0.6;
+}
+
+.look-field-notes textarea {
+    min-height: 60px;
+    resize: vertical;
+    line-height: 1.5;
+}
+
+.look-actions {
+    display: flex;
+    gap: 8px;
+    padding-top: 12px;
+    border-top: 1px solid var(--glass-border);
+}
+
+.look-action-btn {
+    flex: 1;
+    padding: 8px 16px;
+    background: rgba(212, 175, 122, 0.1);
+    border: 1px solid rgba(212, 175, 122, 0.3);
+    border-radius: 6px;
+    color: var(--text-light);
+    font-size: 0.8125em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.look-action-btn:hover {
+    background: rgba(212, 175, 122, 0.2);
+    border-color: var(--accent-gold);
+    color: var(--accent-gold);
+    transform: translateY(-1px);
+}
+
+.look-action-btn:active {
+    transform: translateY(0);
+}
+
+/* Empty state within lookbook */
+.lookbook-view .empty-message {
+    margin-top: 20px;
+}
