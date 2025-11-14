@@ -104,19 +104,35 @@ export async function processScript() {
     state.scenes = detectScenes(text);
     console.log(`Found ${state.scenes.length} scenes`);
 
-    // CRITICAL: Do NOT auto-detect characters during import
-    // User must explicitly click "Detect & Review Characters" button
-    // This ensures proper workflow separation between import and character detection
+    // COMPREHENSIVE INITIAL ANALYSIS
+    showProgressModal('Analyzing Script', 'Performing deep narrative analysis...');
 
-    // DIAGNOSTIC: Log after script processing
-    console.log('✓ Script imported, scenes parsed:', state.scenes.length);
-    console.log('⚠️ Characters NOT auto-detected - user must run "Detect & Review Characters"');
+    try {
+        const masterContext = await performDeepAnalysis(text, state.scenes);
 
-    // NEW: Run narrative analysis on full script
-    await runNarrativeAnalysis();
+        // Store master context
+        window.masterContext = masterContext;
+        localStorage.setItem('masterContext', JSON.stringify(masterContext));
+
+        // Populate initial data from master context
+        populateInitialData(masterContext);
+
+        showToast('Script imported successfully. Proceed with scene-by-scene breakdown.', 'success');
+
+    } catch (error) {
+        console.error('Analysis failed:', error);
+        showToast('Failed to analyze script. You can still process scenes manually.', 'warning');
+    }
 
     // Load and render
     loadScript(text);
+
+    closeProgressModal();
+
+    // Update workflow status
+    if (window.updateWorkflowStatus) {
+        updateWorkflowStatus();
+    }
 
     // Close modal after a brief delay
     setTimeout(() => {
@@ -125,41 +141,154 @@ export async function processScript() {
 }
 
 /**
- * Run narrative analysis on imported script
- * Analyzes entire screenplay to understand story structure
+ * Perform deep analysis of screenplay to create master context
+ * This is the one-time comprehensive analysis that creates the foundation
+ * for all future scene-by-scene operations
  */
-async function runNarrativeAnalysis() {
+async function performDeepAnalysis(scriptText, scenes) {
+    console.log('🎬 Starting deep script analysis...');
+
+    // Truncate script text for AI prompt if too long (max ~50k chars to stay within token limits)
+    const truncatedScript = scriptText.length > 50000
+        ? scriptText.substring(0, 50000) + '\n\n[Script truncated for analysis...]'
+        : scriptText;
+
+    const prompt = `
+Perform a COMPREHENSIVE analysis of this screenplay for hair/makeup department continuity tracking.
+This analysis will be the MASTER CONTEXT for all future operations.
+
+SCREENPLAY:
+${truncatedScript}
+
+Return detailed JSON with:
+
+{
+    "title": "script title",
+    "totalScenes": ${scenes.length},
+    "storyStructure": {
+        "totalDays": number,
+        "timeline": [
+            {
+                "day": "Day 1",
+                "scenes": [1, 2, 3],
+                "description": "Introduction day"
+            }
+        ],
+        "flashbacks": [scene numbers],
+        "timeJumps": [
+            {
+                "afterScene": number,
+                "jump": "3 days later"
+            }
+        ]
+    },
+    "characters": {
+        "CHARACTER_NAME": {
+            "role": "protagonist/supporting/background",
+            "description": "Age, gender, physical description from script",
+            "personality": "Character traits that affect appearance",
+            "arc": "How they change through story",
+            "firstAppearance": scene number,
+            "lastAppearance": scene number,
+            "sceneCount": number,
+            "visualNotes": "Any specific visual descriptions from action lines",
+            "relationships": ["other characters they interact with"]
+        }
+    },
+    "majorEvents": [
+        {
+            "scene": number,
+            "type": "fight/accident/transformation",
+            "charactersAffected": ["names"],
+            "visualImpact": "injuries, wardrobe damage, etc"
+        }
+    ],
+    "continuityNotes": "General observations about visual continuity needs"
+}
+
+Be extremely thorough. Extract every character mentioned, their descriptions, and story arc.
+Identify all story days and timeline structure for continuity tracking.
+Note any visual changes (injuries, costume changes, aging, etc.) that occur.
+`;
+
     try {
-        console.log('🎬 Starting narrative analysis...');
+        const response = await callAI(prompt, 3000); // Increased token limit for comprehensive response
 
-        // Show progress modal
-        showProgressModal('Analyzing Script', 'Understanding narrative structure...');
-
-        // Import narrative analyzer
-        const { narrativeAnalyzer } = await import('./narrative-analyzer.js');
-
-        // Run analysis
-        const context = await narrativeAnalyzer.analyzeFullScript(state.scenes);
-
-        if (context) {
-            console.log('✅ Narrative analysis complete');
-            console.log('📊 Context:', {
-                genre: context.genre,
-                characters: context.characters?.length || 0,
-                acts: context.storyStructure?.acts?.length || 0
-            });
-        } else {
-            console.warn('⚠️ Narrative analysis returned no context');
+        // Parse JSON response
+        const jsonMatch = response.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+            throw new Error('No valid JSON found in AI response');
         }
 
-        // Close progress modal
-        closeProgressModal();
+        const masterContext = JSON.parse(jsonMatch[0]);
+
+        console.log('✅ Master context created:', {
+            title: masterContext.title,
+            characters: Object.keys(masterContext.characters || {}).length,
+            storyDays: masterContext.storyStructure?.totalDays || 0,
+            majorEvents: masterContext.majorEvents?.length || 0
+        });
+
+        return masterContext;
 
     } catch (error) {
-        console.error('❌ Narrative analysis failed:', error);
-        closeProgressModal();
-        // Don't block import if analysis fails - it's optional
+        console.error('❌ Deep analysis failed:', error);
+        throw error;
     }
+}
+
+/**
+ * Populate initial data from master context
+ * Sets up the application state with the comprehensive analysis results
+ */
+function populateInitialData(masterContext) {
+    console.log('📋 Populating initial data from master context...');
+
+    // Update confirmed characters from master context
+    if (masterContext.characters) {
+        const characterNames = Object.keys(masterContext.characters);
+        window.confirmedCharacters = characterNames;
+        state.confirmedCharacters = new Set(characterNames);
+
+        console.log(`✓ Added ${characterNames.length} characters from master context`);
+    }
+
+    // Create character importance mapping
+    if (masterContext.characters) {
+        window.characterImportance = {};
+        Object.entries(masterContext.characters).forEach(([name, data]) => {
+            window.characterImportance[name] = {
+                role: data.role,
+                sceneCount: data.sceneCount,
+                description: data.description,
+                visualNotes: data.visualNotes
+            };
+        });
+    }
+
+    // Store story structure for timeline tracking
+    if (masterContext.storyStructure) {
+        window.storyTimeline = masterContext.storyStructure;
+        console.log(`✓ Story timeline mapped: ${masterContext.storyStructure.totalDays} days`);
+    }
+
+    // Store major events for continuity tracking
+    if (masterContext.majorEvents) {
+        window.majorEvents = masterContext.majorEvents;
+        console.log(`✓ Tracked ${masterContext.majorEvents.length} major continuity events`);
+    }
+
+    // Update scene list to reflect new data
+    renderSceneList();
+
+    // Create character tabs if we have characters
+    const characterNames = Object.keys(masterContext.characters || {});
+    if (characterNames.length > 0) {
+        renderCharacterTabs();
+        renderCharacterTabPanels();
+    }
+
+    console.log('✅ Initial data populated successfully');
 }
 
 /**
@@ -2681,3 +2810,179 @@ ${scene.text || scene.content || ''}`;
         return false;
     }
 };
+
+// ============================================================================
+// WORKFLOW STATUS UPDATES
+// ============================================================================
+
+/**
+ * Update workflow status in tools panel
+ * Shows current state of script analysis and processing
+ */
+export function updateWorkflowStatus() {
+    // Update script status
+    const scriptStatusEl = document.getElementById('workflow-script-status');
+    if (scriptStatusEl) {
+        const hasScript = state.scenes && state.scenes.length > 0;
+        const hasMasterContext = window.masterContext && window.masterContext.characters;
+        
+        if (hasMasterContext) {
+            scriptStatusEl.innerHTML = `
+                <span class="workflow-icon">✓</span>
+                <span class="workflow-text">Script Analyzed</span>
+            `;
+            scriptStatusEl.style.color = 'var(--success)';
+        } else if (hasScript) {
+            scriptStatusEl.innerHTML = `
+                <span class="workflow-icon">📄</span>
+                <span class="workflow-text">Script Loaded</span>
+            `;
+            scriptStatusEl.style.color = 'var(--text-light)';
+        } else {
+            scriptStatusEl.innerHTML = `
+                <span class="workflow-icon">📄</span>
+                <span class="workflow-text">No Script Loaded</span>
+            `;
+            scriptStatusEl.style.color = 'var(--text-muted)';
+        }
+    }
+
+    // Update characters status
+    const charactersStatusEl = document.getElementById('workflow-characters-status');
+    if (charactersStatusEl) {
+        const characterCount = window.confirmedCharacters ? window.confirmedCharacters.length : 0;
+        
+        if (characterCount > 0) {
+            charactersStatusEl.style.display = 'flex';
+            charactersStatusEl.innerHTML = `
+                <span class="workflow-icon">👥</span>
+                <span class="workflow-text">Characters: ${characterCount}</span>
+            `;
+        } else {
+            charactersStatusEl.style.display = 'none';
+        }
+    }
+
+    // Update scenes status
+    const scenesStatusEl = document.getElementById('workflow-scenes-status');
+    if (scenesStatusEl) {
+        const totalScenes = state.scenes ? state.scenes.length : 0;
+        const processedScenes = state.scenes ? state.scenes.filter(s => s.processed || (s.synopsis && state.scriptTags[state.scenes.indexOf(s)])).length : 0;
+        
+        if (totalScenes > 0) {
+            scenesStatusEl.style.display = 'flex';
+            scenesStatusEl.innerHTML = `
+                <span class="workflow-icon">🎬</span>
+                <span class="workflow-text">Scenes: ${processedScenes}/${totalScenes} processed</span>
+            `;
+        } else {
+            scenesStatusEl.style.display = 'none';
+        }
+    }
+
+    // Enable/disable scene processing buttons
+    const processCurrentBtn = document.getElementById('process-current-scene-btn');
+    const processAllBtn = document.getElementById('process-all-remaining-btn');
+    
+    if (processCurrentBtn) {
+        processCurrentBtn.disabled = !window.masterContext || state.currentScene === null;
+    }
+    
+    if (processAllBtn) {
+        processAllBtn.disabled = !window.masterContext || !state.scenes || state.scenes.length === 0;
+    }
+}
+
+/**
+ * Process current scene shortcut
+ */
+export function processCurrentScene() {
+    if (state.currentScene !== null) {
+        if (window.processThisScene) {
+            window.processThisScene(state.currentScene);
+        } else {
+            import('./scene-processing.js').then(module => {
+                module.processThisScene(state.currentScene);
+            });
+        }
+    } else {
+        alert('Please select a scene first');
+    }
+}
+
+/**
+ * Batch process unprocessed scenes (optional)
+ */
+export async function processAllRemaining() {
+    if (!state.scenes || state.scenes.length === 0) {
+        alert('No scenes to process');
+        return;
+    }
+
+    const unprocessed = state.scenes.filter((s, i) => {
+        const hasSynopsis = s.synopsis && s.synopsis.trim().length > 0;
+        const hasTags = state.scriptTags[i] && state.scriptTags[i].length > 0;
+        return !s.processed && !(hasSynopsis && hasTags);
+    });
+
+    if (unprocessed.length === 0) {
+        alert('All scenes already processed');
+        return;
+    }
+
+    if (!confirm(`Process ${unprocessed.length} remaining scenes?`)) {
+        return;
+    }
+
+    // Import processing module
+    const { processThisScene } = await import('./scene-processing.js');
+
+    showProgressModal('Processing Scenes', `0 / ${unprocessed.length}`);
+
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (let i = 0; i < state.scenes.length; i++) {
+        const scene = state.scenes[i];
+        const hasSynopsis = scene.synopsis && scene.synopsis.trim().length > 0;
+        const hasTags = state.scriptTags[i] && state.scriptTags[i].length > 0;
+        
+        if (!scene.processed && !(hasSynopsis && hasTags)) {
+            try {
+                updateProgressModal(
+                    successCount + errorCount + 1,
+                    unprocessed.length,
+                    `Processing scene ${scene.number}...`,
+                    false
+                );
+
+                await processThisScene(i);
+                successCount++;
+            } catch (error) {
+                console.error(`Error processing scene ${scene.number}:`, error);
+                errorCount++;
+            }
+
+            // Small delay to avoid rate limiting
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+    }
+
+    updateProgressModal(
+        unprocessed.length,
+        unprocessed.length,
+        `Complete: ${successCount} successful, ${errorCount} failed`,
+        true
+    );
+
+    setTimeout(() => {
+        closeProgressModal();
+        updateWorkflowStatus();
+        renderSceneList();
+    }, 2000);
+}
+
+// Expose functions globally
+window.updateWorkflowStatus = updateWorkflowStatus;
+window.processCurrentScene = processCurrentScene;
+window.processAllRemaining = processAllRemaining;
