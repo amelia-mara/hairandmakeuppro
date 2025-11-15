@@ -503,6 +503,7 @@ function detectCharactersFromContent(sceneContent) {
 
 /**
  * Manually detect characters in a single scene
+ * ENHANCED: Uses masterContext as source of truth when available
  */
 window.detectSceneCharacters = function(sceneIndex) {
     const scene = state.scenes[sceneIndex];
@@ -513,7 +514,28 @@ window.detectSceneCharacters = function(sceneIndex) {
 
     console.log(`🔍 Manually detecting characters for scene ${sceneIndex}...`);
 
-    const characters = detectCharactersFromContent(scene.content);
+    let characters = new Set();
+
+    // FIRST: Try to get characters from masterContext (more reliable)
+    if (window.masterContext?.characters) {
+        const sceneNumber = scene.number || (sceneIndex + 1);
+        const sceneContent = scene.content.toUpperCase();
+
+        // Check which characters from masterContext appear in this scene
+        Object.keys(window.masterContext.characters).forEach(charName => {
+            if (sceneContent.includes(charName.toUpperCase())) {
+                characters.add(charName);
+            }
+        });
+
+        console.log(`✓ Found ${characters.size} characters from masterContext`);
+    }
+
+    // FALLBACK: If masterContext not available or found no characters, use pattern matching
+    if (characters.size === 0) {
+        console.log('⚠️ No masterContext available, using pattern matching...');
+        characters = detectCharactersFromContent(scene.content);
+    }
 
     if (characters.size === 0) {
         alert('No characters detected. Characters must be in ALL CAPS in the script.');
@@ -544,6 +566,7 @@ window.detectSceneCharacters = function(sceneIndex) {
 
 /**
  * Detect characters across all scenes in the script
+ * ENHANCED: Uses masterContext as primary source when available
  */
 window.detectAllCharacters = function() {
     if (!state.scenes || state.scenes.length === 0) {
@@ -557,37 +580,88 @@ window.detectAllCharacters = function() {
     let scenesWithCharacters = 0;
     const allCharacters = new Set();
 
-    state.scenes.forEach((scene, index) => {
-        if (!scene.content) return;
+    // FIRST: Try to use masterContext (more reliable and complete)
+    if (window.masterContext?.characters) {
+        console.log('✓ Using masterContext for character detection');
 
-        const sceneCharacters = detectCharactersFromContent(scene.content);
+        const masterCharacters = Object.keys(window.masterContext.characters);
 
-        if (sceneCharacters.size > 0) {
-            // Update breakdown for this scene
-            if (!state.sceneBreakdowns[index]) {
-                state.sceneBreakdowns[index] = {};
-            }
-            state.sceneBreakdowns[index].cast = Array.from(sceneCharacters);
+        state.scenes.forEach((scene, index) => {
+            if (!scene.content) return;
 
-            totalCharactersDetected += sceneCharacters.size;
-            scenesWithCharacters++;
+            const sceneContent = scene.content.toUpperCase();
+            const sceneCharacters = new Set();
 
-            // Add to global characters
-            sceneCharacters.forEach(char => {
-                allCharacters.add(char);
-                if (state.characters) {
-                    state.characters.add(char);
+            // Check which characters from masterContext appear in this scene
+            masterCharacters.forEach(charName => {
+                if (sceneContent.includes(charName.toUpperCase())) {
+                    sceneCharacters.add(charName);
+                    allCharacters.add(charName);
                 }
             });
 
-            console.log(`  Scene ${scene.number}: ${sceneCharacters.size} characters -`, Array.from(sceneCharacters).join(', '));
-        }
-    });
+            if (sceneCharacters.size > 0) {
+                // Update breakdown for this scene
+                if (!state.sceneBreakdowns[index]) {
+                    state.sceneBreakdowns[index] = {};
+                }
+                state.sceneBreakdowns[index].cast = Array.from(sceneCharacters);
 
-    console.log(`✅ Detection complete:`);
-    console.log(`  - Unique characters found: ${allCharacters.size}`);
-    console.log(`  - Scenes with characters: ${scenesWithCharacters}`);
-    console.log(`  - Characters:`, Array.from(allCharacters).join(', '));
+                totalCharactersDetected += sceneCharacters.size;
+                scenesWithCharacters++;
+
+                // Add to global characters
+                sceneCharacters.forEach(char => {
+                    if (state.characters) {
+                        state.characters.add(char);
+                    }
+                });
+
+                console.log(`  Scene ${scene.number}: ${sceneCharacters.size} characters -`, Array.from(sceneCharacters).join(', '));
+            }
+        });
+
+        console.log(`✅ Detection complete using masterContext:`);
+        console.log(`  - Total characters: ${allCharacters.size}`);
+        console.log(`  - Scenes with characters: ${scenesWithCharacters}`);
+        console.log(`  - Characters:`, Array.from(allCharacters).join(', '));
+
+    } else {
+        // FALLBACK: Pattern-based detection if masterContext not available
+        console.log('⚠️ No masterContext available, using pattern matching...');
+
+        state.scenes.forEach((scene, index) => {
+            if (!scene.content) return;
+
+            const sceneCharacters = detectCharactersFromContent(scene.content);
+
+            if (sceneCharacters.size > 0) {
+                // Update breakdown for this scene
+                if (!state.sceneBreakdowns[index]) {
+                    state.sceneBreakdowns[index] = {};
+                }
+                state.sceneBreakdowns[index].cast = Array.from(sceneCharacters);
+
+                totalCharactersDetected += sceneCharacters.size;
+                scenesWithCharacters++;
+
+                // Add to global characters
+                sceneCharacters.forEach(char => {
+                    allCharacters.add(char);
+                    if (state.characters) {
+                        state.characters.add(char);
+                    }
+                });
+
+                console.log(`  Scene ${scene.number}: ${sceneCharacters.size} characters -`, Array.from(sceneCharacters).join(', '));
+            }
+        });
+
+        console.log(`✅ Detection complete (pattern matching):`);
+        console.log(`  - Unique characters found: ${allCharacters.size}`);
+        console.log(`  - Scenes with characters: ${scenesWithCharacters}`);
+        console.log(`  - Characters:`, Array.from(allCharacters).join(', '));
+    }
 
     // Save
     saveToLocalStorage();

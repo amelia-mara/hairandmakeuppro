@@ -17,6 +17,7 @@ import { renderCharacterTabs, renderCharacterTabPanels } from './character-panel
 import { detectTimeOfDay, detectIntExt, extractLocation } from './utils.js';
 import { callAI } from './ai-integration.js';
 import { renderAllHighlights } from './tag-system.js';
+import { extractAllCharactersFromScript, buildCharacterProfile } from './character-extraction.js';
 
 /**
  * Export project data as JSON file
@@ -171,6 +172,34 @@ export async function processScript() {
 async function performDeepAnalysis(scriptText, scenes) {
     console.log('🎬 Starting ENHANCED deep script analysis...');
 
+    // ========================================================================
+    // STEP 1: ALWAYS EXTRACT ALL CHARACTERS FIRST USING PATTERN MATCHING
+    // This ensures we NEVER miss characters regardless of AI performance
+    // ========================================================================
+    console.log('📋 STEP 1: Extracting ALL characters using pattern matching...');
+    const extractedCharacters = extractAllCharactersFromScript(scriptText, scenes);
+    const characterNames = extractedCharacters.characterNames;
+    const characterData = extractedCharacters.characterData;
+
+    console.log(`✅ Found ${characterNames.length} characters via pattern matching:`, characterNames);
+
+    // If we found no characters, something is very wrong with the script format
+    if (characterNames.length === 0) {
+        console.error('⚠️ No characters found in script. Check script formatting.');
+    }
+
+    // ========================================================================
+    // STEP 2: BUILD COMPLETE CHARACTER PROFILES FROM EXTRACTED DATA
+    // ========================================================================
+    console.log('🏗️ STEP 2: Building character profiles...');
+    const characters = {};
+
+    characterNames.forEach(charName => {
+        characters[charName] = buildCharacterProfile(charName, extractedCharacters);
+    });
+
+    console.log(`✅ Built ${Object.keys(characters).length} character profiles`);
+
     // Truncate script text for AI prompt if too long (max ~80k chars to stay within token limits)
     const truncatedScript = scriptText.length > 80000
         ? scriptText.substring(0, 80000) + '\n\n[Script truncated for analysis...]'
@@ -178,6 +207,12 @@ async function performDeepAnalysis(scriptText, scenes) {
 
     // Add line numbers for reference extraction
     const scriptLines = scriptText.split('\n');
+
+    // ========================================================================
+    // STEP 3: (OPTIONAL) USE AI TO ENRICH CHARACTER PROFILES
+    // AI can add analysis, but pattern extraction already found ALL characters
+    // ========================================================================
+    console.log('🤖 STEP 3: Enriching profiles with AI analysis (optional)...');
 
     const prompt = `
 Perform a COMPREHENSIVE analysis of this screenplay for HAIR & MAKEUP DEPARTMENT continuity tracking.
@@ -372,50 +407,179 @@ Return ONLY valid JSON (no markdown, no code fences).
             throw new Error('No valid JSON found in AI response');
         }
 
-        const masterContext = JSON.parse(jsonMatch[0]);
+        const aiMasterContext = JSON.parse(jsonMatch[0]);
 
         // Validate structure
-        if (!masterContext.characters) masterContext.characters = {};
-        if (!masterContext.environments) masterContext.environments = {};
-        if (!masterContext.interactions) masterContext.interactions = {};
-        if (!masterContext.emotionalBeats) masterContext.emotionalBeats = {};
-        if (!masterContext.dialogueReferences) masterContext.dialogueReferences = {};
-        if (!masterContext.majorEvents) masterContext.majorEvents = [];
-        if (!masterContext.storyStructure) masterContext.storyStructure = { totalDays: 1, timeline: [], flashbacks: [], timeJumps: [] };
+        if (!aiMasterContext.characters) aiMasterContext.characters = {};
+        if (!aiMasterContext.environments) aiMasterContext.environments = {};
+        if (!aiMasterContext.interactions) aiMasterContext.interactions = {};
+        if (!aiMasterContext.emotionalBeats) aiMasterContext.emotionalBeats = {};
+        if (!aiMasterContext.dialogueReferences) aiMasterContext.dialogueReferences = {};
+        if (!aiMasterContext.majorEvents) aiMasterContext.majorEvents = [];
+        if (!aiMasterContext.storyStructure) aiMasterContext.storyStructure = { totalDays: 1, timeline: [], flashbacks: [], timeJumps: [] };
 
-        // Add metadata
-        masterContext.createdAt = new Date().toISOString();
-        masterContext.analysisVersion = '2.0-enhanced';
+        // ====================================================================
+        // CRITICAL: MERGE AI ENRICHMENT WITH PATTERN-EXTRACTED CHARACTERS
+        // Pattern extraction is the source of truth for character names
+        // AI enriches the profiles with detailed analysis
+        // ====================================================================
+        console.log('🔀 STEP 4: Merging AI enrichment with pattern-extracted characters...');
 
-        const characterCount = Object.keys(masterContext.characters).length;
-        console.log('✅ ENHANCED Master context created:', {
-            title: masterContext.title,
-            characters: characterCount,
-            storyDays: masterContext.storyStructure.totalDays,
-            majorEvents: masterContext.majorEvents.length,
-            environments: Object.keys(masterContext.environments).length,
-            interactions: Object.keys(masterContext.interactions).length,
-            emotionalBeats: Object.keys(masterContext.emotionalBeats).length,
-            dialogueReferences: Object.keys(masterContext.dialogueReferences).length
+        // Start with pattern-extracted characters (guaranteed complete)
+        const mergedCharacters = { ...characters };
+
+        // Enrich with AI data where available
+        Object.entries(aiMasterContext.characters || {}).forEach(([aiCharName, aiCharData]) => {
+            // Try to match AI character name with our extracted characters
+            let matchedName = null;
+
+            // Exact match
+            if (mergedCharacters[aiCharName]) {
+                matchedName = aiCharName;
+            } else {
+                // Fuzzy match (AI might have different formatting)
+                for (const extractedName of characterNames) {
+                    if (extractedName.toLowerCase() === aiCharName.toLowerCase() ||
+                        extractedName.toLowerCase().includes(aiCharName.toLowerCase()) ||
+                        aiCharName.toLowerCase().includes(extractedName.toLowerCase())) {
+                        matchedName = extractedName;
+                        break;
+                    }
+                }
+            }
+
+            if (matchedName) {
+                // Merge AI enrichment into pattern-extracted profile
+                const baseProfile = mergedCharacters[matchedName];
+
+                mergedCharacters[matchedName] = {
+                    ...baseProfile,
+                    // Enrich with AI data while preserving pattern-extracted basics
+                    scriptDescriptions: aiCharData.scriptDescriptions?.length > 0
+                        ? aiCharData.scriptDescriptions
+                        : baseProfile.scriptDescriptions,
+
+                    physicalProfile: {
+                        ...baseProfile.physicalProfile,
+                        ...aiCharData.physicalProfile
+                    },
+
+                    characterAnalysis: {
+                        ...baseProfile.characterAnalysis,
+                        ...aiCharData.characterAnalysis,
+                        role: baseProfile.characterAnalysis.role // Keep pattern-based role
+                    },
+
+                    visualProfile: {
+                        ...baseProfile.visualProfile,
+                        ...aiCharData.visualProfile
+                    },
+
+                    extractedElements: {
+                        ...baseProfile.extractedElements,
+                        ...aiCharData.extractedElements
+                    },
+
+                    continuityNotes: {
+                        ...baseProfile.continuityNotes,
+                        ...aiCharData.continuityNotes
+                    }
+                };
+
+                console.log(`  ✓ Enriched ${matchedName} with AI data`);
+            } else {
+                // AI found a character we missed (rare, but possible)
+                console.log(`  + Adding AI-only character: ${aiCharName}`);
+                mergedCharacters[aiCharName] = aiCharData;
+            }
         });
 
-        // If no characters found, use fallback
-        if (characterCount === 0) {
-            console.warn('⚠️ AI returned 0 characters, using fallback extraction');
-            throw new Error('No characters extracted by AI');
-        }
+        // Build final master context
+        const masterContext = {
+            title: aiMasterContext.title || 'Untitled Script',
+            totalScenes: scenes.length,
+            characters: mergedCharacters, // MERGED characters (pattern + AI enrichment)
+            storyStructure: aiMasterContext.storyStructure,
+            environments: aiMasterContext.environments,
+            interactions: aiMasterContext.interactions,
+            emotionalBeats: aiMasterContext.emotionalBeats,
+            dialogueReferences: aiMasterContext.dialogueReferences,
+            majorEvents: aiMasterContext.majorEvents,
+            continuityNotes: aiMasterContext.continuityNotes || '',
+            createdAt: new Date().toISOString(),
+            analysisVersion: '3.0-hybrid' // Pattern + AI hybrid
+        };
 
-        // Log character names found
-        console.log('📋 Characters found:', Object.keys(masterContext.characters).join(', '));
+        const finalCharacterCount = Object.keys(masterContext.characters).length;
+        console.log('✅ HYBRID Master context created (Pattern + AI):', {
+            title: masterContext.title,
+            characters: finalCharacterCount,
+            patternExtracted: characterNames.length,
+            aiEnriched: Object.keys(aiMasterContext.characters || {}).length,
+            storyDays: masterContext.storyStructure.totalDays,
+            majorEvents: masterContext.majorEvents.length
+        });
+
+        // Log final character names
+        console.log('📋 Final characters:', Object.keys(masterContext.characters).join(', '));
 
         return masterContext;
 
     } catch (error) {
-        console.error('❌ AI analysis failed:', error);
-        console.log('🔧 Falling back to manual character extraction...');
+        console.error('❌ AI enrichment failed:', error);
+        console.log('✅ Using pattern-extracted characters (AI enrichment skipped)');
 
-        // FALLBACK: Manual character extraction
-        return createFallbackMasterContext(scriptText, scenes);
+        // FALLBACK: Use pattern-extracted characters without AI enrichment
+        // We already have all characters from Step 1, just need to build masterContext
+
+        // Build story structure
+        const storyStructure = {
+            totalDays: Math.ceil(scenes.length / 10) || 1,
+            timeline: [],
+            flashbacks: [],
+            timeJumps: []
+        };
+
+        // Create simple day breakdown
+        const scenesPerDay = Math.ceil(scenes.length / storyStructure.totalDays);
+        for (let day = 1; day <= storyStructure.totalDays; day++) {
+            const startScene = ((day - 1) * scenesPerDay) + 1;
+            const endScene = Math.min(day * scenesPerDay, scenes.length);
+            const dayScenes = [];
+
+            for (let s = startScene; s <= endScene; s++) {
+                dayScenes.push(s);
+            }
+
+            storyStructure.timeline.push({
+                day: `Day ${day}`,
+                scenes: dayScenes,
+                description: `Scenes ${startScene}-${endScene}`
+            });
+        }
+
+        const masterContext = {
+            title: 'Untitled Script',
+            totalScenes: scenes.length,
+            characters: characters, // Pattern-extracted characters (already built)
+            storyStructure: storyStructure,
+            environments: {},
+            interactions: {},
+            emotionalBeats: {},
+            dialogueReferences: {},
+            majorEvents: [],
+            continuityNotes: 'Pattern extraction only (AI enrichment failed)',
+            createdAt: new Date().toISOString(),
+            analysisVersion: '3.0-pattern-only' // Pattern extraction without AI
+        };
+
+        console.log('✅ Pattern-only master context created:', {
+            characters: Object.keys(characters).length,
+            scenes: scenes.length,
+            storyDays: storyStructure.totalDays
+        });
+
+        return masterContext;
     }
 }
 
