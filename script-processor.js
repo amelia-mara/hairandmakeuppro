@@ -300,18 +300,37 @@ class ScriptProcessor {
             .trim();
     }
 
-    // Character name detection
+    // Character name detection - improved to catch more formats
     isCharacterName(text, indent, wasInDialogue) {
-        if (text.length > 35) return false;
-        if (indent < 10 && !wasInDialogue) return false;
-        
-        const cleanText = text.replace(/\s*\([^)]+\)$/, '').trim();
-        
+        if (text.length > 50) return false; // Increased from 35 to catch longer names
+        if (text.length < 2) return false; // Must be at least 2 characters
+
+        const cleanText = text.replace(/\s*\([^)]+\)$/, '').replace(/\s*\(.*?\)\s*/g, '').trim();
+
         // Check if it's mostly uppercase
         const upperRatio = (cleanText.match(/[A-Z]/g) || []).length / cleanText.replace(/\s/g, '').length;
-        
-        // Character names are usually centered and uppercase
-        return upperRatio > 0.7 && cleanText.length > 0 && indent > 15;
+
+        // More inclusive detection:
+        // 1. If it's mostly uppercase (>70%) and not too long
+        if (upperRatio > 0.7 && cleanText.length > 0) {
+            // Check it's not a scene heading or transition
+            if (cleanText.startsWith('INT') || cleanText.startsWith('EXT') ||
+                cleanText.includes('CUT TO') || cleanText.includes('FADE')) {
+                return false;
+            }
+
+            // If indented at all (screenplay format) or was in dialogue context
+            if (indent > 5 || wasInDialogue) {
+                return true;
+            }
+
+            // Also accept if it looks like a name pattern (all caps, reasonable length)
+            if (cleanText.match(/^[A-Z][A-Z\s\.\-\']+$/) && cleanText.length <= 35) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     // Transition detection
