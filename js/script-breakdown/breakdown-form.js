@@ -159,10 +159,17 @@ function renderSceneBreakdown(sceneIndex) {
 
             <!-- CHARACTER CONTINUITY SECTION -->
             <div class="breakdown-section character-section">
-                <h4 class="section-title">CHARACTER CONTINUITY</h4>
+                <div class="section-header">
+                    <h4 class="section-title">CHARACTER CONTINUITY</h4>
+                    ${characters.length === 0 ? `
+                        <button class="small-btn detect-chars-btn" onclick="detectSceneCharacters(${sceneIndex})">
+                            🔍 Detect Characters
+                        </button>
+                    ` : ''}
+                </div>
                 ${characters.length > 0 ?
                     characters.map(char => renderCharacterFields(char, sceneIndex, scene)).join('')
-                    : '<div class="no-characters">No characters in this scene</div>'}
+                    : '<div class="no-characters">No characters detected in this scene yet</div>'}
             </div>
 
             <!-- CONTINUITY EVENTS SECTION -->
@@ -451,6 +458,149 @@ function saveToLocalStorage() {
 // ============================================================================
 // WINDOW EVENT HANDLERS
 // ============================================================================
+
+/**
+ * Detect characters in scene content using pattern matching
+ * @param {string} sceneContent - Scene content text
+ * @returns {Set} Set of detected character names
+ */
+function detectCharactersFromContent(sceneContent) {
+    const characters = new Set();
+    const lines = sceneContent.split('\n');
+
+    for (let i = 0; i < lines.length - 1; i++) {
+        const line = lines[i].trim();
+        const nextLine = lines[i + 1]?.trim();
+
+        if (!line || !nextLine) continue;
+
+        // Character name pattern: all caps, not too long, not scene headings
+        if (line.length > 1 && line.length < 50 &&
+            line === line.toUpperCase() &&
+            !line.startsWith('INT') && !line.startsWith('EXT') &&
+            !line.includes('CUT TO') && !line.includes('FADE') &&
+            !line.includes('CONTINUOUS') &&
+            !line.includes('DISSOLVE') && !line.includes('SMASH CUT')) {
+
+            let cleanName = line
+                .replace(/\s*\(.*?\)\s*/g, '')
+                .replace(/\s*\(V\.O\.\)\s*/gi, '')
+                .replace(/\s*\(O\.S\.\)\s*/gi, '')
+                .replace(/\s*\(O\.C\.\)\s*/gi, '')
+                .replace(/\s*\(CONT'D\)\s*/gi, '')
+                .replace(/\s*\(CONT\.\)\s*/gi, '')
+                .trim();
+
+            // Validate character name format
+            if (cleanName.match(/^[A-Z][A-Z\s\.\-\']{1,35}$/)) {
+                characters.add(cleanName);
+            }
+        }
+    }
+
+    return characters;
+}
+
+/**
+ * Manually detect characters in a single scene
+ */
+window.detectSceneCharacters = function(sceneIndex) {
+    const scene = state.scenes[sceneIndex];
+    if (!scene || !scene.content) {
+        alert('No scene content available');
+        return;
+    }
+
+    console.log(`🔍 Manually detecting characters for scene ${sceneIndex}...`);
+
+    const characters = detectCharactersFromContent(scene.content);
+
+    if (characters.size === 0) {
+        alert('No characters detected. Characters must be in ALL CAPS in the script.');
+        return;
+    }
+
+    // Add to global characters
+    characters.forEach(char => {
+        if (state.characters) {
+            state.characters.add(char);
+        }
+    });
+
+    // Update breakdown
+    if (!state.sceneBreakdowns[sceneIndex]) {
+        state.sceneBreakdowns[sceneIndex] = {};
+    }
+    state.sceneBreakdowns[sceneIndex].cast = Array.from(characters);
+
+    console.log(`✅ Detected ${characters.size} characters:`, Array.from(characters));
+
+    // Save and re-render
+    saveToLocalStorage();
+    renderSceneBreakdown(sceneIndex);
+
+    alert(`Detected ${characters.size} character(s): ${Array.from(characters).join(', ')}`);
+};
+
+/**
+ * Detect characters across all scenes in the script
+ */
+window.detectAllCharacters = function() {
+    if (!state.scenes || state.scenes.length === 0) {
+        alert('No scenes loaded. Please import a script first.');
+        return;
+    }
+
+    console.log('🔍 Detecting characters across all scenes...');
+
+    let totalCharactersDetected = 0;
+    let scenesWithCharacters = 0;
+    const allCharacters = new Set();
+
+    state.scenes.forEach((scene, index) => {
+        if (!scene.content) return;
+
+        const sceneCharacters = detectCharactersFromContent(scene.content);
+
+        if (sceneCharacters.size > 0) {
+            // Update breakdown for this scene
+            if (!state.sceneBreakdowns[index]) {
+                state.sceneBreakdowns[index] = {};
+            }
+            state.sceneBreakdowns[index].cast = Array.from(sceneCharacters);
+
+            totalCharactersDetected += sceneCharacters.size;
+            scenesWithCharacters++;
+
+            // Add to global characters
+            sceneCharacters.forEach(char => {
+                allCharacters.add(char);
+                if (state.characters) {
+                    state.characters.add(char);
+                }
+            });
+
+            console.log(`  Scene ${scene.number}: ${sceneCharacters.size} characters -`, Array.from(sceneCharacters).join(', '));
+        }
+    });
+
+    console.log(`✅ Detection complete:`);
+    console.log(`  - Unique characters found: ${allCharacters.size}`);
+    console.log(`  - Scenes with characters: ${scenesWithCharacters}`);
+    console.log(`  - Characters:`, Array.from(allCharacters).join(', '));
+
+    // Save
+    saveToLocalStorage();
+
+    // Refresh current view if viewing a scene
+    if (state.currentScene !== null) {
+        renderSceneBreakdown(state.currentScene);
+    }
+
+    alert(`Character Detection Complete!\n\n` +
+          `Found ${allCharacters.size} unique characters across ${scenesWithCharacters} scenes.\n\n` +
+          `Characters: ${Array.from(allCharacters).join(', ')}`);
+};
 
 /**
  * Update scene field

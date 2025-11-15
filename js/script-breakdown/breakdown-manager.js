@@ -154,22 +154,17 @@ export class SceneBreakdownManager {
         if (!scene || !scene.content) return [];
 
         const characters = new Set();
+        const lines = scene.content.split('\n');
 
-        // Check confirmed characters from state
+        // Method 1: Check confirmed characters from state
         if (state.characters && state.characters.size > 0) {
             const confirmedChars = Array.from(state.characters);
 
-            // Look for character dialogue in scene content
-            const lines = scene.content.split('\n');
-
             confirmedChars.forEach(character => {
-                // Check if character has dialogue (uppercase line followed by dialogue)
-                const charPattern = new RegExp(`^\\s*${escapeRegex(character)}\\s*$`, 'i');
+                const charPattern = new RegExp(`^\\s*${escapeRegex(character)}\\s*(?:\\(.*?\\))?\\s*$`, 'i');
 
                 for (let i = 0; i < lines.length; i++) {
                     const line = lines[i].trim();
-
-                    // Check for character name (all caps, standalone line)
                     if (charPattern.test(line) || line.toUpperCase() === character.toUpperCase()) {
                         characters.add(character);
                         break;
@@ -178,16 +173,63 @@ export class SceneBreakdownManager {
             });
         }
 
-        // Fallback: Check tags for this scene
+        // Method 2: Direct pattern matching for character names (more aggressive)
+        // Look for lines that are all caps and appear before dialogue
+        for (let i = 0; i < lines.length - 1; i++) {
+            const line = lines[i].trim();
+            const nextLine = lines[i + 1]?.trim();
+
+            // Skip empty lines
+            if (!line) continue;
+
+            // Character name pattern: all caps, not too long, not a scene heading
+            if (line.length > 1 && line.length < 50 &&
+                line === line.toUpperCase() &&
+                !line.startsWith('INT') && !line.startsWith('EXT') &&
+                !line.includes('CUT TO') && !line.includes('FADE') &&
+                !line.includes('CONTINUOUS') &&
+                nextLine && nextLine.length > 0) {
+
+                // Clean the character name (remove parentheticals and extensions)
+                let cleanName = line
+                    .replace(/\s*\(.*?\)\s*/g, '') // Remove parentheticals
+                    .replace(/\s*\(V\.O\.\)\s*/gi, '')
+                    .replace(/\s*\(O\.S\.\)\s*/gi, '')
+                    .replace(/\s*\(O\.C\.\)\s*/gi, '')
+                    .replace(/\s*\(CONT'D\)\s*/gi, '')
+                    .replace(/\s*\(CONT\.\)\s*/gi, '')
+                    .trim();
+
+                // Validate it looks like a character name (letters, spaces, dots, hyphens, apostrophes)
+                if (cleanName.match(/^[A-Z][A-Z\s\.\-\']{1,35}$/)) {
+                    // Normalize through CharacterManager if available
+                    if (window.characterManager) {
+                        cleanName = window.characterManager.addCharacter(cleanName);
+                    }
+
+                    if (cleanName) {
+                        characters.add(cleanName);
+
+                        // Also add to global state.characters if not present
+                        if (state.characters && !state.characters.has(cleanName)) {
+                            state.characters.add(cleanName);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Method 3: Fallback - Check tags for this scene
         if (characters.size === 0) {
             const sceneTags = state.scriptTags?.[sceneIndex] || [];
             sceneTags.forEach(tag => {
-                if (tag.character && tag.category === 'cast') {
+                if (tag.character) {
                     characters.add(tag.character);
                 }
             });
         }
 
+        console.log(`Auto-detected ${characters.size} characters in scene ${sceneIndex}:`, Array.from(characters));
         return Array.from(characters);
     }
 
