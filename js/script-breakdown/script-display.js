@@ -82,6 +82,9 @@ export function renderScript() {
         }
     });
 
+    // Highlight character names (MUST happen first, before descriptions)
+    highlightCharacterNames();
+
     // Highlight character descriptions
     highlightCharacterDescriptions();
 
@@ -198,6 +201,62 @@ export function highlightContinuityReferences() {
     });
 
     console.log('✓ Highlighted continuity references');
+}
+
+/**
+ * Highlight all character names in the script
+ * Characters are highlighted with yellow background and gold underline
+ * This is called automatically after script rendering
+ */
+export function highlightCharacterNames() {
+    // Get characters from various sources (checking all for compatibility)
+    let characters = [];
+
+    if (window.masterContext?.characters) {
+        characters = Object.keys(window.masterContext.characters);
+    } else if (window.scriptMasterContext?.characters) {
+        characters = Object.keys(window.scriptMasterContext.characters);
+    } else if (window.confirmedCharacters && window.confirmedCharacters.size > 0) {
+        characters = Array.from(window.confirmedCharacters);
+    }
+
+    if (characters.length === 0) {
+        console.log('⚠️ No characters found to highlight');
+        return;
+    }
+
+    const scriptContent = document.getElementById('script-content');
+    if (!scriptContent) {
+        console.log('⚠️ Script content element not found');
+        return;
+    }
+
+    // Get current HTML
+    let html = scriptContent.innerHTML;
+
+    // Sort characters by length (longest first) to avoid partial matches
+    const sortedCharacters = [...characters].sort((a, b) => b.length - a.length);
+
+    // Highlight each character name
+    sortedCharacters.forEach(characterName => {
+        // Escape special regex characters
+        const escapedName = characterName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+        // Create regex that matches the character name as a whole word
+        // Use negative lookahead to avoid matching text already inside HTML tags
+        const regex = new RegExp(`\\b(${escapedName})\\b(?![^<]*>|[^<]*<\/span>)`, 'gi');
+
+        // Replace with highlighted version
+        // Using inline styles to ensure highlighting works
+        html = html.replace(regex,
+            '<span class="character-name-highlight" style="background-color: rgba(251, 191, 36, 0.3); border-bottom: 2px solid #fbbf24; cursor: pointer;" title="Character: $1">$1</span>'
+        );
+    });
+
+    // Update the display
+    scriptContent.innerHTML = html;
+
+    console.log(`✅ Highlighted ${characters.length} character names:`, characters.join(', '));
 }
 
 /**
@@ -382,3 +441,4 @@ window.zoomIn = zoomIn;
 window.zoomOut = zoomOut;
 window.scrollToScene = scrollToScene;
 window.highlightCharacterDescriptions = highlightCharacterDescriptions;
+window.highlightCharacterNames = highlightCharacterNames;
