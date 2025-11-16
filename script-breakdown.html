@@ -419,6 +419,77 @@
     </div>
     -->
 
+    <!-- Create Continuity Event Modal -->
+    <div class="modal" id="create-event-modal" style="display: none;">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-title">Create Continuity Event</div>
+
+            <div class="modal-section">
+                <label class="modal-label">Character</label>
+                <div id="event-character-name" style="color: var(--accent-gold); font-weight: 600; margin-bottom: 16px;"></div>
+
+                <label class="modal-label">Event Name</label>
+                <input type="text" class="modal-input" id="event-name"
+                       placeholder="e.g., Forehead Cut, Flu Illness, Pregnancy">
+
+                <label class="modal-label">Category</label>
+                <select class="modal-select" id="event-category">
+                    <option value="injuries">Injury/Wound</option>
+                    <option value="health">Illness/Health</option>
+                    <option value="sfx">SFX/Prosthetics</option>
+                    <option value="aging">Aging</option>
+                    <option value="pregnancy">Pregnancy</option>
+                    <option value="dirt">Dirt/Blood/Wear</option>
+                    <option value="other">Other</option>
+                </select>
+
+                <label class="modal-label">Starting Scene</label>
+                <input type="number" class="modal-input" id="event-start-scene"
+                       value="" min="1">
+                <div class="modal-note">Scene where this event begins</div>
+
+                <label class="modal-label">Initial Description</label>
+                <textarea class="modal-textarea" id="event-initial-description" rows="3"
+                          placeholder="Describe the initial state (e.g., 'Fresh 2-inch cut above right eyebrow, bleeding')"></textarea>
+            </div>
+
+            <div class="modal-actions">
+                <button class="modal-btn" onclick="closeCreateEventModal()">Cancel</button>
+                <button class="modal-btn primary" onclick="confirmCreateEvent()">Create Event</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Event Timeline Modal -->
+    <div class="modal" id="event-timeline-modal" style="display: none;">
+        <div class="modal-content" style="max-width: 900px; max-height: 85vh;">
+            <div class="modal-title" id="timeline-event-name">Event Timeline</div>
+
+            <div class="modal-section">
+                <div class="timeline-header">
+                    <div class="timeline-info">
+                        <div><strong>Character:</strong> <span id="timeline-character"></span></div>
+                        <div><strong>Category:</strong> <span id="timeline-category"></span></div>
+                        <div><strong>Scenes:</strong> <span id="timeline-range"></span></div>
+                        <div><strong>Status:</strong> <span id="timeline-status"></span></div>
+                    </div>
+                    <button class="modal-btn primary" onclick="generateEventTimeline()"
+                            id="generate-timeline-btn">
+                        🤖 Generate AI Timeline
+                    </button>
+                </div>
+
+                <div class="timeline-view" id="timeline-view">
+                    <!-- Timeline entries generated dynamically -->
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="modal-btn" onclick="closeEventTimelineModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ============================================================================ -->
     <!-- TOOLS PANEL -->
     <!-- ============================================================================ -->
