@@ -14,18 +14,17 @@ import { state } from './main.js';
 import { generateId } from './utils.js';
 import { callAI } from './ai-integration.js';
 
-// Element categories for tagging
+// Element categories for tagging (NO 'cast' - characters are handled separately)
 const categories = [
-    { id: 'cast', name: 'Cast Members', color: '#fbbf24' },
     { id: 'hair', name: 'Hair', color: '#a855f7' },
-    { id: 'makeup', name: 'Makeup (Beauty)', color: '#ec4899' },
-    { id: 'sfx', name: 'SFX Makeup', color: '#ef4444' },
-    { id: 'health', name: 'Health/Illness', color: '#f59e0b' },
-    { id: 'injuries', name: 'Injuries/Wounds', color: '#dc2626' },
-    { id: 'stunts', name: 'Stunts/Action', color: '#f97316' },
-    { id: 'weather', name: 'Weather Effects', color: '#38bdf8' },
-    { id: 'wardrobe', name: 'Costume/Wardrobe', color: '#34d399' },
-    { id: 'extras', name: 'Supporting Artists', color: '#9ca3af' }
+    { id: 'makeup', name: 'Makeup', color: '#ec4899' },
+    { id: 'sfx', name: 'SFX', color: '#ef4444' },
+    { id: 'wardrobe', name: 'Wardrobe', color: '#34d399' },
+    { id: 'health', name: 'Health', color: '#f59e0b' },
+    { id: 'injuries', name: 'Injuries', color: '#dc2626' },
+    { id: 'stunts', name: 'Stunts', color: '#f97316' },
+    { id: 'weather', name: 'Weather', color: '#38bdf8' },
+    { id: 'extras', name: 'Extras', color: '#9ca3af' }
 ];
 
 // Current text selection
@@ -51,15 +50,8 @@ export function handleTagClick(event, tagId) {
 
     if (!tag) return;
 
-    // If it's a cast member, open their character tab
-    if (tag.category === 'cast' && tag.character) {
-        import('./character-panel.js').then(module => {
-            module.switchCenterTab(`character-${tag.character}`);
-        });
-    } else {
-        // For other tags, show the tag info
-        showTagInfo(tag);
-    }
+    // Show tag info
+    showTagInfo(tag);
 }
 
 /**
@@ -106,6 +98,148 @@ function showTagInfo(tag) {
 }
 
 /**
+ * Get all characters available in the current scene
+ * @returns {Array} Array of character names
+ */
+function getAllCharactersInScene() {
+    const sceneIndex = state.currentScene;
+    const characters = new Set();
+
+    // From masterContext (all detected characters)
+    if (window.masterContext?.characters) {
+        Object.keys(window.masterContext.characters).forEach(char => {
+            characters.add(char);
+        });
+    }
+
+    // From confirmed characters
+    if (state.confirmedCharacters) {
+        state.confirmedCharacters.forEach(char => {
+            characters.add(char);
+        });
+    }
+
+    // From scene breakdown (manually added or featured characters)
+    if (state.sceneBreakdowns?.[sceneIndex]?.cast) {
+        state.sceneBreakdowns[sceneIndex].cast.forEach(char => {
+            characters.add(char);
+        });
+    }
+
+    return Array.from(characters).sort();
+}
+
+/**
+ * Populate character dropdown with all available characters
+ * @param {HTMLSelectElement} select - The dropdown element
+ */
+function populateCharacterDropdown(select) {
+    const allCharacters = getAllCharactersInScene();
+
+    select.innerHTML = `
+        <option value="">General Note (no character)</option>
+        <option value="__ADD_NEW__" style="font-weight: bold; color: #667eea;">+ Add New Character</option>
+        ${allCharacters.length > 0 ? '<option disabled>──────────</option>' : ''}
+        ${allCharacters.map(char =>
+            `<option value="${escapeHtml(char)}">${escapeHtml(char)}</option>`
+        ).join('')}
+    `;
+
+    // Add event listener for ADD_NEW option
+    select.addEventListener('change', function handleAddNew() {
+        if (this.value === '__ADD_NEW__') {
+            handleAddNewCharacter(select);
+        }
+    });
+}
+
+/**
+ * Handle adding a new character via dropdown
+ * @param {HTMLSelectElement} dropdown - The dropdown element
+ */
+function handleAddNewCharacter(dropdown) {
+    // Create input field
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.placeholder = 'Character name (e.g., JOHN)';
+    input.className = 'modal-input';
+    input.style.textTransform = 'uppercase';
+    input.style.marginTop = '8px';
+
+    // Hide dropdown, show input
+    dropdown.style.display = 'none';
+    dropdown.parentNode.insertBefore(input, dropdown.nextSibling);
+    input.focus();
+
+    // Handle input completion
+    const completeInput = () => {
+        const newName = input.value.trim().toUpperCase();
+        if (newName) {
+            // Add to system
+            addCharacterToSystem(newName);
+            // Update dropdown
+            populateCharacterDropdown(dropdown);
+            dropdown.value = newName;
+        } else {
+            // User canceled - reset dropdown
+            dropdown.value = '';
+        }
+        input.remove();
+        dropdown.style.display = 'block';
+    };
+
+    input.addEventListener('blur', completeInput);
+    input.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            completeInput();
+        }
+    });
+}
+
+/**
+ * Add a new character to the system
+ * @param {string} characterName - Character name in uppercase
+ */
+function addCharacterToSystem(characterName) {
+    console.log(`Adding new character: ${characterName}`);
+
+    // Add to masterContext
+    if (!window.masterContext) window.masterContext = { characters: {} };
+    if (!window.masterContext.characters[characterName]) {
+        window.masterContext.characters[characterName] = {
+            characterAnalysis: {
+                role: 'tracked',  // Not featured (no auto tab)
+                addedManually: true
+            }
+        };
+    }
+
+    // Add to confirmed characters
+    if (!state.confirmedCharacters) {
+        state.confirmedCharacters = new Set();
+    }
+    state.confirmedCharacters.add(characterName);
+
+    // Add to current scene's cast list
+    const sceneIndex = state.currentScene;
+    if (!state.sceneBreakdowns[sceneIndex]) {
+        state.sceneBreakdowns[sceneIndex] = { cast: [] };
+    }
+    if (!state.sceneBreakdowns[sceneIndex].cast) {
+        state.sceneBreakdowns[sceneIndex].cast = [];
+    }
+    if (!state.sceneBreakdowns[sceneIndex].cast.includes(characterName)) {
+        state.sceneBreakdowns[sceneIndex].cast.push(characterName);
+    }
+
+    // Save to localStorage
+    import('./export-handlers.js').then(module => module.saveProject());
+
+    console.log(`✓ Character "${characterName}" added to system`);
+}
+
+/**
  * Show tag popup for creating new tag
  */
 export function showTagPopup() {
@@ -124,27 +258,19 @@ export function showTagPopup() {
     const characterSelect = document.getElementById('tag-character');
 
     if (selectedTextEl) selectedTextEl.textContent = currentSelection.selectedText;
-    if (categoryEl) categoryEl.value = 'cast'; // Default to cast
+    if (categoryEl) categoryEl.value = 'hair'; // Default to first category
 
     // Reset character field
     const characterField = document.getElementById('tag-character-field');
-    if (characterField) characterField.style.display = 'block'; // Show by default for cast
+    if (characterField) characterField.style.display = 'block'; // Show by default
 
-    // Populate character dropdown
+    // Populate character dropdown with "+ Add New Character" option
     if (characterSelect) {
-        characterSelect.innerHTML = '<option value="">-- Select Character --</option>';
+        populateCharacterDropdown(characterSelect);
 
-        // Add current scene cast if available
-        if (state.currentScene !== null && state.sceneBreakdowns[state.currentScene]?.cast) {
-            state.sceneBreakdowns[state.currentScene].cast.forEach(castMember => {
-                const option = document.createElement('option');
-                option.value = castMember;
-                option.textContent = castMember;
-                if (castMember === currentSelection.detectedCharacter) {
-                    option.selected = true;
-                }
-                characterSelect.appendChild(option);
-            });
+        // Auto-select detected character if found
+        if (currentSelection.detectedCharacter) {
+            characterSelect.value = currentSelection.detectedCharacter;
         }
     }
 
@@ -167,7 +293,7 @@ export function closeTagPopup() {
     const categoryEl = document.getElementById('tag-category');
     const characterEl = document.getElementById('tag-character');
 
-    if (categoryEl) categoryEl.value = 'cast';
+    if (categoryEl) categoryEl.value = 'hair';
     if (characterEl) characterEl.value = '';
 }
 
@@ -179,8 +305,8 @@ function handleCategoryChange() {
     const category = document.getElementById('tag-category')?.value;
     const characterField = document.getElementById('tag-character-field');
 
-    // Show character field for categories that need it
-    const needsCharacter = ['cast', 'hair', 'makeup', 'sfx', 'wardrobe', 'injuries', 'health', 'stunts'];
+    // Show character field for categories that need it (all except weather and extras)
+    const needsCharacter = ['hair', 'makeup', 'sfx', 'wardrobe', 'injuries', 'health', 'stunts'];
     if (needsCharacter.includes(category)) {
         if (characterField) characterField.style.display = 'block';
     } else {
@@ -207,12 +333,16 @@ export function saveTag() {
     }
 
     const category = categoryEl.value;
-    const character = characterEl.value;
+    let character = characterEl.value;
 
-    // Validate: certain categories must have character
-    const needsCharacter = ['cast', 'hair', 'makeup', 'sfx', 'wardrobe'];
-    if (needsCharacter.includes(category) && !character) {
-        alert(`Please select a character for ${category} tags`);
+    // Filter out __ADD_NEW__ if somehow it got through
+    if (character === '__ADD_NEW__') {
+        character = '';
+    }
+
+    // Validate: category must be selected
+    if (!category) {
+        alert('Please select a category');
         return;
     }
 
@@ -252,13 +382,59 @@ export function saveTag() {
     // Add to scene breakdown
     addTagToBreakdown(tag);
 
-    // Re-render breakdown panel
+    // CRITICAL: Add to character's continuity notes
+    if (character && character !== '__ADD_NEW__') {
+        addToCharacterContinuity(character, tag, state.currentScene);
+    }
+
+    // Re-render breakdown panel to show new continuity notes
     import('./breakdown-form.js').then(module => module.renderBreakdownPanel());
 
     // Save project
     import('./export-handlers.js').then(module => module.saveProject());
 
     closeTagPopup();
+}
+
+/**
+ * Add tag to character's continuity notes
+ * @param {string} characterName - Character name
+ * @param {Object} tag - Tag object
+ * @param {number} sceneIndex - Scene index
+ */
+function addToCharacterContinuity(characterName, tag, sceneIndex) {
+    console.log(`📝 Adding tag to ${characterName}'s continuity in scene ${sceneIndex}`);
+
+    // Ensure characterStates structure exists
+    if (!state.characterStates[sceneIndex]) {
+        state.characterStates[sceneIndex] = {};
+    }
+    if (!state.characterStates[sceneIndex][characterName]) {
+        state.characterStates[sceneIndex][characterName] = {
+            enterHair: '',
+            enterMakeup: '',
+            enterWardrobe: '',
+            changes: '',
+            exitHair: '',
+            exitMakeup: '',
+            exitWardrobe: ''
+        };
+    }
+
+    // Add tag to changes field
+    const charState = state.characterStates[sceneIndex][characterName];
+    const categoryLabel = categories.find(c => c.id === tag.category)?.name || tag.category.toUpperCase();
+    const tagNote = `[${categoryLabel}] ${tag.selectedText}`;
+
+    if (charState.changes) {
+        // Append to existing changes
+        charState.changes += '\n' + tagNote;
+    } else {
+        // First change
+        charState.changes = tagNote;
+    }
+
+    console.log(`✓ Added to ${characterName}'s continuity:`, tagNote);
 }
 
 /**
@@ -285,42 +461,8 @@ export function applyHighlight(tag) {
             return;
         }
 
-        // CAST TAGS: Search in character name elements first
-        if (tag.category === 'cast') {
-            // First try to find exact match in character elements
-            const characterElements = sceneContainer.querySelectorAll('.script-character');
-            for (const el of characterElements) {
-                const charName = el.textContent.trim().toUpperCase();
-                const searchName = tag.selectedText.trim().toUpperCase();
-
-                // Exact match or contains (for character names with extensions like "JOHN (V.O.)")
-                if (charName === searchName || charName.includes(searchName)) {
-                    element = el;
-                    if (!el.id) {
-                        el.id = `element-${generateId()}`;
-                    }
-                    tag.elementId = el.id;
-                    break;
-                }
-            }
-
-            // If not found in character elements, try dialogue and action
-            if (!element) {
-                const textElements = sceneContainer.querySelectorAll('.script-dialogue, .script-action');
-                for (const el of textElements) {
-                    if (el.textContent.includes(tag.selectedText)) {
-                        element = el;
-                        if (!el.id) {
-                            el.id = `element-${generateId()}`;
-                        }
-                        tag.elementId = el.id;
-                        break;
-                    }
-                }
-            }
-        }
-        // OTHER TAGS: Use keyword matching for AI-generated descriptions
-        else {
+        // Use keyword matching for AI-generated descriptions
+        {
             // Extract keywords from the tag description (words longer than 3 chars)
             const keywords = tag.selectedText.toLowerCase()
                 .split(/\s+/)
@@ -372,63 +514,51 @@ export function applyHighlight(tag) {
     const category = categories.find(c => c.id === tag.category);
     const color = category?.color || '#667eea';
 
-    // For CAST tags, try to highlight just the character name
-    if (tag.category === 'cast' && element.classList.contains('script-character')) {
-        const charName = element.textContent.trim();
-        const searchName = tag.selectedText.trim();
+    // Find and highlight the relevant text portion
+    const text = element.innerHTML;
+    const selectedText = tag.selectedText;
 
-        // Highlight the character name portion
-        const highlightedText = `<span class="tag-highlight" data-tag-id="${tag.id}" data-category="${tag.category}" style="background-color: ${color}33; border-bottom: 2px solid ${color}; padding: 2px 4px; border-radius: 2px;" onclick="handleTagClick(event, '${tag.id}')" title="${tag.fullContext}">${charName}</span>`;
+    // Try to find exact match first
+    let highlightedHTML = null;
 
-        element.innerHTML = highlightedText;
-    }
-    // For OTHER tags, find and highlight the relevant text portion
-    else {
-        const text = element.innerHTML;
-        const selectedText = tag.selectedText;
+    // Escape special regex characters in the selected text
+    const escapedText = selectedText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-        // Try to find exact match first
-        let highlightedHTML = null;
+    // Try case-insensitive match
+    const regex = new RegExp(`(${escapedText})`, 'i');
+    if (regex.test(element.textContent)) {
+        // Found exact match, highlight it
+        highlightedHTML = text.replace(regex, `<span class="tag-highlight" data-tag-id="${tag.id}" data-category="${tag.category}" style="background-color: ${color}33; border-bottom: 2px solid ${color}; padding: 2px 4px; border-radius: 2px;" onclick="handleTagClick(event, '${tag.id}')" title="${tag.fullContext}">$1</span>`);
+    } else {
+        // No exact match - highlight the first significant keyword found
+        const keywords = selectedText.toLowerCase()
+            .split(/\s+/)
+            .filter(word => word.length > 3 && !['that', 'with', 'from', 'this', 'have'].includes(word))
+            .sort((a, b) => b.length - a.length); // Sort by length, longest first
 
-        // Escape special regex characters in the selected text
-        const escapedText = selectedText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        for (const keyword of keywords) {
+            const keywordEscaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const keywordRegex = new RegExp(`\\b(${keywordEscaped}\\w*)`, 'i');
 
-        // Try case-insensitive match
-        const regex = new RegExp(`(${escapedText})`, 'i');
-        if (regex.test(element.textContent)) {
-            // Found exact match, highlight it
-            highlightedHTML = text.replace(regex, `<span class="tag-highlight" data-tag-id="${tag.id}" data-category="${tag.category}" style="background-color: ${color}33; border-bottom: 2px solid ${color}; padding: 2px 4px; border-radius: 2px;" onclick="handleTagClick(event, '${tag.id}')" title="${tag.fullContext}">$1</span>`);
-        } else {
-            // No exact match - highlight the first significant keyword found
-            const keywords = selectedText.toLowerCase()
-                .split(/\s+/)
-                .filter(word => word.length > 3 && !['that', 'with', 'from', 'this', 'have'].includes(word))
-                .sort((a, b) => b.length - a.length); // Sort by length, longest first
-
-            for (const keyword of keywords) {
-                const keywordEscaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                const keywordRegex = new RegExp(`\\b(${keywordEscaped}\\w*)`, 'i');
-
-                if (keywordRegex.test(element.textContent)) {
-                    highlightedHTML = text.replace(keywordRegex, `<span class="tag-highlight" data-tag-id="${tag.id}" data-category="${tag.category}" style="background-color: ${color}33; border-bottom: 2px solid ${color}; padding: 2px 4px; border-radius: 2px;" onclick="handleTagClick(event, '${tag.id}')" title="${escapeHtml(tag.fullContext)} - ${escapeHtml(tag.selectedText)}">$1</span>`);
-                    break;
-                }
+            if (keywordRegex.test(element.textContent)) {
+                highlightedHTML = text.replace(keywordRegex, `<span class="tag-highlight" data-tag-id="${tag.id}" data-category="${tag.category}" style="background-color: ${color}33; border-bottom: 2px solid ${color}; padding: 2px 4px; border-radius: 2px;" onclick="handleTagClick(event, '${tag.id}')" title="${escapeHtml(tag.fullContext)} - ${escapeHtml(tag.selectedText)}">$1</span>`);
+                break;
             }
         }
+    }
 
-        // If we found a match, apply it
-        if (highlightedHTML) {
-            element.innerHTML = highlightedHTML;
-        } else {
-            // Fallback: Add a subtle indicator to the entire line
-            element.style.borderLeft = `3px solid ${color}`;
-            element.style.paddingLeft = '8px';
-            element.dataset.tagId = tag.id;
-            element.dataset.category = tag.category;
-            element.title = `${tag.category.toUpperCase()}: ${tag.fullContext || tag.selectedText}`;
-            element.style.cursor = 'pointer';
-            element.onclick = (e) => handleTagClick(e, tag.id);
-        }
+    // If we found a match, apply it
+    if (highlightedHTML) {
+        element.innerHTML = highlightedHTML;
+    } else {
+        // Fallback: Add a subtle indicator to the entire line
+        element.style.borderLeft = `3px solid ${color}`;
+        element.style.paddingLeft = '8px';
+        element.dataset.tagId = tag.id;
+        element.dataset.category = tag.category;
+        element.title = `${tag.category.toUpperCase()}: ${tag.fullContext || tag.selectedText}`;
+        element.style.cursor = 'pointer';
+        element.onclick = (e) => handleTagClick(e, tag.id);
     }
 }
 
@@ -439,7 +569,7 @@ export function applyHighlight(tag) {
 function addTagToBreakdown(tag) {
     if (!state.sceneBreakdowns[tag.sceneIndex]) {
         state.sceneBreakdowns[tag.sceneIndex] = {
-            cast: [],
+            cast: [],  // Keep for character names, but not used for tagging
             hair: [],
             makeup: [],
             sfx: [],
@@ -455,6 +585,7 @@ function addTagToBreakdown(tag) {
     const breakdown = state.sceneBreakdowns[tag.sceneIndex];
     const categoryKey = tag.category;
 
+    // Only add to breakdown array if category exists and tag isn't already there
     if (breakdown[categoryKey] && !breakdown[categoryKey].includes(tag.selectedText)) {
         breakdown[categoryKey].push(tag.selectedText);
     }
