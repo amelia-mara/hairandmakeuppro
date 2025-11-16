@@ -1724,6 +1724,282 @@ function closeCharactersNotConfirmedModal() {
     }
 }
 
+// ============================================================================
+// CONTINUITY EVENT TIMELINE GENERATION
+// ============================================================================
+
+/**
+ * Generate AI timeline for a continuity event
+ * Fills in gaps between logged observations with realistic progression
+ */
+window.generateEventTimeline = async function() {
+    const eventId = window.currentTimelineEvent;
+    if (!eventId) {
+        alert('No event selected');
+        return;
+    }
+
+    const event = state.continuityEvents.find(e => e.id === eventId);
+    if (!event) {
+        alert('Event not found');
+        return;
+    }
+
+    // Disable button during generation
+    const generateBtn = document.getElementById('generate-timeline-btn');
+    const originalText = generateBtn.textContent;
+    generateBtn.textContent = '⏳ Generating...';
+    generateBtn.disabled = true;
+
+    try {
+        console.log(`🤖 Generating timeline for: ${event.name}`);
+
+        // Build AI prompt
+        const prompt = buildTimelinePrompt(event);
+
+        // Call AI with higher token limit for detailed responses
+        const result = await callAI(prompt, 3000);
+
+        // Parse result
+        const generatedEntries = parseTimelineResponse(result, event);
+
+        // Store generated timeline
+        event.generatedTimeline = generatedEntries;
+
+        // Save to localStorage
+        saveToLocalStorage();
+
+        // Refresh display
+        renderEventTimelineEntries(event);
+
+        console.log(`✅ Generated ${generatedEntries.length} timeline entries`);
+
+        alert(`Generated ${generatedEntries.length} timeline entries successfully!`);
+
+    } catch (error) {
+        console.error('Error generating timeline:', error);
+        alert(`Failed to generate timeline: ${error.message}`);
+    } finally {
+        // Re-enable button
+        generateBtn.textContent = originalText;
+        generateBtn.disabled = false;
+    }
+};
+
+/**
+ * Build AI prompt for timeline generation
+ */
+function buildTimelinePrompt(event) {
+    // Sort observations by scene
+    const sortedObs = [...event.observations].sort((a, b) => a.scene - b.scene);
+
+    const observations = sortedObs.map(obs =>
+        `Scene ${obs.scene + 1}: ${obs.description}`
+    ).join('\n');
+
+    // Get scenes that need generation
+    const scenesToGenerate = getScenesToGenerate(event);
+
+    // Category-specific guidance
+    let categoryGuidance = '';
+    switch (event.category) {
+        case 'injuries':
+            categoryGuidance = `For wounds/injuries, consider:
+- Realistic healing timeline (fresh → dried blood → scab → scar)
+- Color changes (red → purple → yellow for bruises)
+- Texture changes (wet → dry → scab formation)
+- Size/severity progression
+- Swelling and inflammation progression`;
+            break;
+        case 'health':
+            categoryGuidance = `For illness/health conditions, consider:
+- Symptom progression or recovery
+- Visible signs (pale, flushed, sweaty, dark circles)
+- Energy level indicators
+- Physical deterioration or improvement`;
+            break;
+        case 'dirt':
+            categoryGuidance = `For dirt/blood/wear accumulation, consider:
+- Gradual accumulation vs. sudden application
+- Drying and color changes (wet blood → dried → brown)
+- Spread patterns and coverage
+- Wear patterns on clothing`;
+            break;
+        case 'aging':
+            categoryGuidance = `For aging makeup progression, consider:
+- Gradual introduction of age indicators
+- Gray hair progression
+- Wrinkle depth and coverage
+- Posture and movement changes`;
+            break;
+        case 'pregnancy':
+            categoryGuidance = `For pregnancy progression, consider:
+- Gradual belly growth month by month
+- Posture changes
+- Face shape changes (fuller face)
+- Movement difficulty progression`;
+            break;
+        default:
+            categoryGuidance = `Consider realistic, gradual progression between observed states.`;
+    }
+
+    return `You are a professional makeup continuity supervisor creating a detailed progression timeline.
+
+EVENT: ${event.name}
+CHARACTER: ${event.character}
+CATEGORY: ${event.category}
+SCENES: ${event.startScene + 1} to ${event.endScene ? event.endScene + 1 : state.scenes.length}
+
+LOGGED OBSERVATIONS (documented by crew):
+${observations}
+
+${categoryGuidance}
+
+TASK:
+Fill in the progression for scenes: ${scenesToGenerate}
+
+Create smooth, realistic transitions between the logged observations. Each generated description must:
+1. Flow logically from the previous state
+2. Progress toward the next logged observation
+3. Be specific and detailed enough for makeup department reference
+4. Maintain medical/physical realism
+5. Use professional continuity language
+
+CRITICAL: The generated descriptions must create seamless transitions between logged observations. If Scene 10 shows "fresh bleeding" and Scene 15 shows "dried blood", scenes 11-14 must show gradual drying progression.
+
+OUTPUT FORMAT (JSON only, no explanation):
+{
+  "timeline": [
+    {
+      "scene": 11,
+      "description": "Detailed, specific description of appearance"
+    },
+    {
+      "scene": 12,
+      "description": "Detailed, specific description of appearance"
+    }
+  ]
+}
+
+Generate realistic, detailed continuity notes for ONLY the scenes listed above. Do not include scenes that already have logged observations.`;
+}
+
+/**
+ * Get list of scenes that need AI generation
+ */
+function getScenesToGenerate(event) {
+    const logged = event.observations.map(o => o.scene).sort((a, b) => a - b);
+    const scenesToGenerate = [];
+
+    const endScene = event.endScene !== null ? event.endScene : state.scenes.length - 1;
+
+    for (let i = event.startScene; i <= endScene; i++) {
+        if (!logged.includes(i)) {
+            scenesToGenerate.push(i + 1); // Convert to 1-indexed for display
+        }
+    }
+
+    return scenesToGenerate.join(', ');
+}
+
+/**
+ * Parse AI timeline response
+ */
+function parseTimelineResponse(response, event) {
+    try {
+        // Extract JSON from response
+        const jsonMatch = response.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+            throw new Error('No valid JSON found in response');
+        }
+
+        const data = JSON.parse(jsonMatch[0]);
+
+        if (!data.timeline || !Array.isArray(data.timeline)) {
+            throw new Error('Invalid timeline format');
+        }
+
+        // Convert scene numbers from 1-indexed to 0-indexed
+        return data.timeline.map(entry => ({
+            scene: typeof entry.scene === 'number' ? entry.scene - 1 : parseInt(entry.scene) - 1,
+            description: entry.description,
+            type: 'generated'
+        }));
+
+    } catch (error) {
+        console.error('Error parsing timeline response:', error);
+        throw new Error('Failed to parse AI response');
+    }
+}
+
+/**
+ * Render timeline entries (shared with breakdown-form.js)
+ */
+function renderEventTimelineEntries(event) {
+    const container = document.getElementById('timeline-view');
+    if (!container) return;
+
+    let html = '';
+    let lastLoggedScene = event.startScene - 1;
+
+    // Sort observations by scene
+    const sortedObs = [...event.observations].sort((a, b) => a.scene - b.scene);
+
+    sortedObs.forEach((obs, index) => {
+        // Check if there's a gap between this and previous observation
+        if (obs.scene > lastLoggedScene + 1) {
+            const gapStart = lastLoggedScene + 1;
+            const gapEnd = obs.scene - 1;
+
+            // Show generated entries for this gap if they exist
+            const generated = event.generatedTimeline.filter(g => g.scene >= gapStart && g.scene <= gapEnd);
+
+            if (generated.length === 0) {
+                // Show gap indicator
+                const sceneList = [];
+                for (let i = gapStart; i <= gapEnd; i++) {
+                    sceneList.push(i + 1);
+                }
+                html += `
+                    <div class="timeline-gap">
+                        <div class="gap-indicator">Scenes ${sceneList.join(', ')} (AI can generate)</div>
+                    </div>
+                `;
+            } else {
+                // Show generated entries
+                generated.forEach(gen => {
+                    html += `
+                        <div class="timeline-entry generated">
+                            <div class="timeline-scene">Scene ${gen.scene + 1}</div>
+                            <div class="timeline-badge">AI GENERATED</div>
+                            <div class="timeline-description">${escapeHtml(gen.description)}</div>
+                        </div>
+                    `;
+                });
+            }
+        }
+
+        // Add logged observation
+        html += `
+            <div class="timeline-entry logged">
+                <div class="timeline-scene">Scene ${obs.scene + 1}</div>
+                <div class="timeline-badge">LOGGED</div>
+                <div class="timeline-description">${escapeHtml(obs.description)}</div>
+            </div>
+        `;
+
+        lastLoggedScene = obs.scene;
+    });
+
+    container.innerHTML = html;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 // Expose functions globally for HTML onclick handlers
 window.openSettingsModal = openSettingsModal;
 window.closeSettingsModal = closeSettingsModal;

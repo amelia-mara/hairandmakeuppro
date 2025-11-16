@@ -13112,3 +13112,316 @@
         text-align: center;
     }
 }
+
+/* ============================================================================
+   CONTINUITY EVENT TRACKING
+   ============================================================================ */
+
+/* Active Events Section */
+.active-events-section {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.section-header-with-btn {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.add-event-btn {
+    padding: 8px 16px;
+    background: rgba(201, 169, 97, 0.1);
+    border: 1px solid rgba(201, 169, 97, 0.3);
+    border-radius: 6px;
+    color: var(--accent-gold);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.add-event-btn:hover {
+    background: rgba(201, 169, 97, 0.2);
+    border-color: var(--accent-gold);
+}
+
+.add-event-btn.small {
+    padding: 4px 10px;
+    font-size: 11px;
+}
+
+/* Event Card */
+.event-card {
+    background: rgba(201, 169, 97, 0.05);
+    border: 1px solid rgba(201, 169, 97, 0.2);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+    transition: all 0.2s;
+}
+
+.event-card:hover {
+    background: rgba(201, 169, 97, 0.08);
+    border-color: rgba(201, 169, 97, 0.3);
+}
+
+.event-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.event-info {
+    flex: 1;
+}
+
+.event-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent-gold);
+    margin-bottom: 4px;
+}
+
+.event-meta {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.event-menu-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 18px;
+    cursor: pointer;
+    padding: 0 4px;
+    transition: color 0.2s;
+}
+
+.event-menu-btn:hover {
+    color: var(--text-light);
+}
+
+/* Event Current State */
+.event-current-state {
+    margin-bottom: 12px;
+}
+
+.event-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.event-note {
+    width: 100%;
+    min-height: 60px;
+    padding: 8px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: var(--text-light);
+    font-size: 12px;
+    font-family: inherit;
+    resize: vertical;
+}
+
+.event-note:focus {
+    outline: none;
+    border-color: var(--accent-gold);
+    background: rgba(0, 0, 0, 0.4);
+}
+
+.event-note::placeholder {
+    color: var(--text-muted);
+    opacity: 0.6;
+}
+
+/* Event Actions */
+.event-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.event-btn {
+    flex: 1;
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: var(--text-light);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.event-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--accent-gold);
+}
+
+.end-event-btn {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+}
+
+.end-event-btn:hover {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: #ef4444;
+}
+
+.event-status-badge {
+    flex: 1;
+    padding: 6px 12px;
+    background: rgba(52, 211, 153, 0.1);
+    border: 1px solid rgba(52, 211, 153, 0.3);
+    border-radius: 6px;
+    color: #34d399;
+    font-size: 11px;
+    text-align: center;
+    font-weight: 600;
+}
+
+/* Timeline View */
+.timeline-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 8px;
+}
+
+.timeline-info {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 13px;
+}
+
+.timeline-info strong {
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.timeline-view {
+    max-height: 500px;
+    overflow-y: auto;
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+}
+
+.timeline-entry {
+    position: relative;
+    padding: 12px 16px;
+    margin-bottom: 12px;
+    border-left: 3px solid var(--accent-gold);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.03);
+    transition: all 0.2s;
+}
+
+.timeline-entry:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.timeline-entry.logged {
+    border-left-color: var(--accent-gold);
+    background: rgba(201, 169, 97, 0.1);
+}
+
+.timeline-entry.generated {
+    border-left-color: #60a5fa;
+    background: rgba(96, 165, 250, 0.05);
+}
+
+.timeline-scene {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+}
+
+.timeline-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    background: rgba(201, 169, 97, 0.2);
+    border: 1px solid rgba(201, 169, 97, 0.4);
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--accent-gold);
+    margin-bottom: 8px;
+    letter-spacing: 0.5px;
+}
+
+.timeline-entry.generated .timeline-badge {
+    background: rgba(96, 165, 250, 0.2);
+    border-color: rgba(96, 165, 250, 0.4);
+    color: #60a5fa;
+}
+
+.timeline-description {
+    font-size: 13px;
+    color: var(--text-light);
+    line-height: 1.5;
+}
+
+.timeline-gap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    margin: 8px 0;
+}
+
+.gap-indicator {
+    padding: 8px 16px;
+    background: rgba(96, 165, 250, 0.1);
+    border: 1px dashed rgba(96, 165, 250, 0.3);
+    border-radius: 6px;
+    font-size: 12px;
+    color: #60a5fa;
+    font-style: italic;
+}
+
+.edit-timeline-btn {
+    margin-top: 8px;
+    padding: 4px 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    color: var(--text-muted);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.edit-timeline-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-light);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .timeline-header {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .event-actions {
+        flex-direction: column;
+    }
+
+    .event-btn {
+        width: 100%;
+    }
+}

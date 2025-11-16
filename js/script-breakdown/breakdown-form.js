@@ -415,8 +415,102 @@ function renderCharacterFields(character, sceneIndex, scene) {
                     ${exitTags.map(tag => `<span class="continuity-tag">${escapeHtml(tag)}</span>`).join('')}
                 </div>
             </div>
+
+            <!-- ACTIVE CONTINUITY EVENTS -->
+            ${renderActiveEvents(character, sceneIndex)}
         </div>
     `;
+}
+
+/**
+ * Render active continuity events for a character in current scene
+ */
+function renderActiveEvents(character, sceneIndex) {
+    // Get all events for this character that are active in this scene
+    const activeEvents = getActiveEventsForCharacter(character, sceneIndex);
+
+    if (activeEvents.length === 0) {
+        return `
+            <div class="active-events-section">
+                <div class="section-label">CONTINUITY EVENTS</div>
+                <button class="add-event-btn" onclick="createContinuityEvent('${escapeHtml(character).replace(/'/g, "\\'")}', ${sceneIndex})">
+                    + Create Event
+                </button>
+            </div>
+        `;
+    }
+
+    return `
+        <div class="active-events-section">
+            <div class="section-header-with-btn">
+                <div class="section-label">ACTIVE EVENTS</div>
+                <button class="add-event-btn small" onclick="createContinuityEvent('${escapeHtml(character).replace(/'/g, "\\'")}', ${sceneIndex})">
+                    + New
+                </button>
+            </div>
+            ${activeEvents.map(event => renderEventCard(event, sceneIndex)).join('')}
+        </div>
+    `;
+}
+
+/**
+ * Render a single event card
+ */
+function renderEventCard(event, sceneIndex) {
+    // Get current scene's observation if it exists
+    const currentObs = event.observations.find(o => o.scene === sceneIndex);
+    const currentNote = currentObs ? currentObs.description : '';
+
+    const sceneRange = event.endScene
+        ? `Scenes ${event.startScene}-${event.endScene}`
+        : `Started Scene ${event.startScene} • Active`;
+
+    return `
+        <div class="event-card" data-event-id="${event.id}">
+            <div class="event-header">
+                <div class="event-info">
+                    <div class="event-name">${escapeHtml(event.name)}</div>
+                    <div class="event-meta">${sceneRange}</div>
+                </div>
+                <button class="event-menu-btn" onclick="toggleEventMenu('${event.id}')">⋮</button>
+            </div>
+
+            <div class="event-current-state">
+                <div class="event-label">Scene ${sceneIndex + 1} Status:</div>
+                <textarea class="event-note"
+                          placeholder="Describe appearance/condition in this scene..."
+                          onchange="updateEventNote('${event.id}', ${sceneIndex}, this.value)">${escapeHtml(currentNote)}</textarea>
+            </div>
+
+            <div class="event-actions">
+                <button class="event-btn" onclick="viewEventTimeline('${event.id}')">
+                    📊 Timeline
+                </button>
+                ${!event.endScene ? `
+                    <button class="event-btn end-event-btn" onclick="endContinuityEvent('${event.id}', ${sceneIndex})">
+                        End Event
+                    </button>
+                ` : `
+                    <span class="event-status-badge">Completed</span>
+                `}
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Get active events for a character in a given scene
+ */
+function getActiveEventsForCharacter(character, sceneIndex) {
+    if (!state.continuityEvents) {
+        state.continuityEvents = [];
+    }
+
+    return state.continuityEvents.filter(event =>
+        event.character === character &&
+        event.startScene <= sceneIndex &&
+        (!event.endScene || event.endScene >= sceneIndex)
+    );
 }
 
 /**
@@ -962,6 +1056,250 @@ window.showChangeFields = function(character, sceneIndex) {
 
     renderSceneBreakdown(sceneIndex);
     saveToLocalStorage();
+};
+
+// ============================================================================
+// CONTINUITY EVENT MANAGEMENT
+// ============================================================================
+
+/**
+ * Create a new continuity event
+ */
+window.createContinuityEvent = function(character, sceneIndex) {
+    // Store character and scene for modal
+    window.currentEventCharacter = character;
+    window.currentEventScene = sceneIndex;
+
+    // Open create event modal
+    document.getElementById('event-character-name').textContent = character;
+    document.getElementById('event-start-scene').value = sceneIndex + 1;
+    document.getElementById('create-event-modal').style.display = 'flex';
+};
+
+/**
+ * Confirm creating a continuity event
+ */
+window.confirmCreateEvent = function() {
+    const name = document.getElementById('event-name').value.trim();
+    const category = document.getElementById('event-category').value;
+    const startScene = parseInt(document.getElementById('event-start-scene').value) - 1; // Convert to 0-index
+    const initialDescription = document.getElementById('event-initial-description').value.trim();
+
+    if (!name) {
+        alert('Please enter an event name');
+        return;
+    }
+
+    if (!initialDescription) {
+        alert('Please enter an initial description');
+        return;
+    }
+
+    const event = {
+        id: `event-${Date.now()}`,
+        character: window.currentEventCharacter,
+        name: name,
+        category: category,
+        startScene: startScene,
+        endScene: null,
+        status: 'active',
+        observations: [
+            {
+                scene: startScene,
+                description: initialDescription,
+                type: 'logged',
+                timestamp: Date.now()
+            }
+        ],
+        generatedTimeline: []
+    };
+
+    // Initialize continuityEvents if needed
+    if (!state.continuityEvents) {
+        state.continuityEvents = [];
+    }
+
+    // Add event
+    state.continuityEvents.push(event);
+
+    // Save to localStorage
+    saveToLocalStorage();
+
+    console.log(`✅ Created event: ${event.name} for ${event.character}`);
+
+    // Close modal
+    closeCreateEventModal();
+
+    // Refresh scene breakdown
+    renderSceneBreakdown(state.currentScene);
+};
+
+/**
+ * Close create event modal
+ */
+window.closeCreateEventModal = function() {
+    document.getElementById('create-event-modal').style.display = 'none';
+    // Clear form
+    document.getElementById('event-name').value = '';
+    document.getElementById('event-initial-description').value = '';
+};
+
+/**
+ * Update event note for current scene
+ */
+window.updateEventNote = function(eventId, sceneIndex, note) {
+    if (!state.continuityEvents) return;
+
+    const event = state.continuityEvents.find(e => e.id === eventId);
+    if (!event) return;
+
+    // Find or create observation for current scene
+    let obs = event.observations.find(o => o.scene === sceneIndex);
+
+    if (obs) {
+        obs.description = note;
+    } else {
+        event.observations.push({
+            scene: sceneIndex,
+            description: note,
+            type: 'logged',
+            timestamp: Date.now()
+        });
+    }
+
+    // Sort observations by scene
+    event.observations.sort((a, b) => a.scene - b.scene);
+
+    saveToLocalStorage();
+    console.log(`📝 Updated ${event.name} for Scene ${sceneIndex + 1}`);
+};
+
+/**
+ * End a continuity event
+ */
+window.endContinuityEvent = function(eventId, sceneIndex) {
+    const description = prompt('Describe the final state of this event:');
+
+    if (!description) return;
+
+    const event = state.continuityEvents.find(e => e.id === eventId);
+    if (!event) return;
+
+    event.endScene = sceneIndex;
+    event.status = 'completed';
+
+    // Add final observation
+    event.observations.push({
+        scene: sceneIndex,
+        description: description,
+        type: 'logged',
+        timestamp: Date.now()
+    });
+
+    saveToLocalStorage();
+
+    console.log(`✅ Ended event: ${event.name} at Scene ${sceneIndex + 1}`);
+
+    // Refresh scene breakdown
+    renderSceneBreakdown(state.currentScene);
+};
+
+/**
+ * View event timeline
+ */
+window.viewEventTimeline = function(eventId) {
+    const event = state.continuityEvents.find(e => e.id === eventId);
+    if (!event) return;
+
+    // Store current event ID
+    window.currentTimelineEvent = eventId;
+
+    // Populate timeline modal
+    document.getElementById('timeline-event-name').textContent = `${event.name} Timeline`;
+    document.getElementById('timeline-character').textContent = event.character;
+    document.getElementById('timeline-category').textContent = event.category;
+    document.getElementById('timeline-range').textContent = event.endScene
+        ? `${event.startScene + 1} - ${event.endScene + 1}`
+        : `${event.startScene + 1} - present`;
+    document.getElementById('timeline-status').textContent = event.status;
+
+    // Render timeline view
+    renderTimelineEntries(event);
+
+    // Show modal
+    document.getElementById('event-timeline-modal').style.display = 'flex';
+};
+
+/**
+ * Render timeline entries
+ */
+function renderTimelineEntries(event) {
+    const container = document.getElementById('timeline-view');
+    const endScene = event.endScene || state.scenes.length - 1;
+
+    let html = '';
+    let lastLoggedScene = event.startScene - 1;
+
+    // Sort observations by scene
+    const sortedObs = [...event.observations].sort((a, b) => a.scene - b.scene);
+
+    sortedObs.forEach((obs, index) => {
+        // Check if there's a gap between this and previous observation
+        if (obs.scene > lastLoggedScene + 1) {
+            const gapStart = lastLoggedScene + 1;
+            const gapEnd = obs.scene - 1;
+            const sceneList = [];
+            for (let i = gapStart; i <= gapEnd; i++) {
+                sceneList.push(i + 1);
+            }
+
+            html += `
+                <div class="timeline-gap">
+                    <div class="gap-indicator">Scenes ${sceneList.join(', ')} (AI can generate)</div>
+                </div>
+            `;
+
+            // Show generated entries for this gap if they exist
+            const generated = event.generatedTimeline.filter(g => g.scene >= gapStart && g.scene <= gapEnd);
+            generated.forEach(gen => {
+                html += `
+                    <div class="timeline-entry generated">
+                        <div class="timeline-scene">Scene ${gen.scene + 1}</div>
+                        <div class="timeline-badge">AI GENERATED</div>
+                        <div class="timeline-description">${escapeHtml(gen.description)}</div>
+                    </div>
+                `;
+            });
+        }
+
+        // Add logged observation
+        html += `
+            <div class="timeline-entry logged">
+                <div class="timeline-scene">Scene ${obs.scene + 1}</div>
+                <div class="timeline-badge">LOGGED</div>
+                <div class="timeline-description">${escapeHtml(obs.description)}</div>
+            </div>
+        `;
+
+        lastLoggedScene = obs.scene;
+    });
+
+    container.innerHTML = html;
+}
+
+/**
+ * Close event timeline modal
+ */
+window.closeEventTimelineModal = function() {
+    document.getElementById('event-timeline-modal').style.display = 'none';
+};
+
+/**
+ * Toggle event menu
+ */
+window.toggleEventMenu = function(eventId) {
+    // TODO: Implement menu dropdown
+    console.log('Toggle menu for event:', eventId);
 };
 
 // ============================================================================
