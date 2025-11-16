@@ -3680,6 +3680,12 @@ ${scene.text || scene.content || ''}`;
             // Mark context as ready
             window.contextReady = true;
 
+            // Highlight character names in the script
+            if (window.highlightCharacterNames) {
+                console.log('🎨 Applying character name highlighting...');
+                window.highlightCharacterNames();
+            }
+
             updateTopLoadingBar('Analysis Complete', 'AI context created successfully', 100);
             showToast('AI context created successfully', 'success');
             console.log('✅ AI context initialized successfully');

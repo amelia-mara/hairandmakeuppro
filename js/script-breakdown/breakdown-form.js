@@ -51,6 +51,54 @@ export function renderBreakdownPanel() {
 }
 
 /**
+ * Detect which characters from masterContext appear in the given scene content
+ * This is the SINGLE SOURCE OF TRUTH - uses characters from initial analysis
+ */
+function detectCharactersFromMasterContext(sceneContent) {
+    const charactersInScene = [];
+
+    // First try: Check masterContext.characters (primary source)
+    if (window.masterContext?.characters) {
+        Object.keys(window.masterContext.characters).forEach(characterName => {
+            // Check if character name appears in scene content
+            // Use word boundary to avoid partial matches
+            const regex = new RegExp('\\b' + characterName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+            if (sceneContent.match(regex)) {
+                charactersInScene.push(characterName);
+            }
+        });
+    }
+
+    // Fallback: Check confirmedCharacters if masterContext didn't have characters
+    if (charactersInScene.length === 0 && window.confirmedCharacters) {
+        window.confirmedCharacters.forEach(characterName => {
+            const regex = new RegExp('\\b' + characterName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+            if (sceneContent.match(regex)) {
+                charactersInScene.push(characterName);
+            }
+        });
+    }
+
+    // Additional fallback: Check scriptMasterContext.characters
+    if (charactersInScene.length === 0 && window.scriptMasterContext?.characters) {
+        Object.keys(window.scriptMasterContext.characters).forEach(characterName => {
+            const regex = new RegExp('\\b' + characterName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+            if (sceneContent.match(regex)) {
+                charactersInScene.push(characterName);
+            }
+        });
+    }
+
+    console.log('🔍 Character detection from masterContext:', {
+        sceneContentLength: sceneContent.length,
+        masterContextCharacters: Object.keys(window.masterContext?.characters || {}),
+        charactersFound: charactersInScene
+    });
+
+    return charactersInScene;
+}
+
+/**
  * Render comprehensive scene breakdown
  */
 function renderSceneBreakdown(sceneIndex) {
@@ -59,7 +107,21 @@ function renderSceneBreakdown(sceneIndex) {
     if (!scene || !panel) return;
 
     const breakdown = state.sceneBreakdowns[sceneIndex] || {};
-    const characters = breakdown.cast || [];
+
+    // FIX: Auto-populate characters from masterContext if not already set
+    let characters = breakdown.cast || [];
+    if (characters.length === 0 && scene.content) {
+        characters = detectCharactersFromMasterContext(scene.content);
+        if (characters.length > 0) {
+            // Auto-populate breakdown.cast for future renders
+            if (!state.sceneBreakdowns[sceneIndex]) {
+                state.sceneBreakdowns[sceneIndex] = {};
+            }
+            state.sceneBreakdowns[sceneIndex].cast = characters;
+            saveToLocalStorage();
+        }
+    }
+
     const storyDay = scene.storyDay || extractStoryDay(sceneIndex) || '';
     const timeOfDay = scene.timeOfDay || extractTimeFromHeading(scene.heading) || '';
 
@@ -169,7 +231,17 @@ function renderSceneBreakdown(sceneIndex) {
                 </div>
                 ${characters.length > 0 ?
                     characters.map(char => renderCharacterFields(char, sceneIndex, scene)).join('')
-                    : '<div class="no-characters">No characters detected in this scene yet</div>'}
+                    : `<div class="no-characters">
+                        <div>No characters from masterContext found in this scene.</div>
+                        <div style="font-size: 0.9em; margin-top: 8px; opacity: 0.7;">
+                            Master characters: ${Object.keys(window.masterContext?.characters || {}).length > 0
+                                ? Object.keys(window.masterContext.characters).join(', ')
+                                : 'None in masterContext'}
+                        </div>
+                        <div style="font-size: 0.85em; margin-top: 4px; opacity: 0.6;">
+                            Scene preview: ${escapeHtml(scene.content?.substring(0, 100) || 'No content')}...
+                        </div>
+                    </div>`}
             </div>
 
             <!-- CONTINUITY EVENTS SECTION -->

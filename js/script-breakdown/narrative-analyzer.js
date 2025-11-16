@@ -430,13 +430,91 @@ export const narrativeAnalyzer = new NarrativeAnalyzer();
 // ============================================================================
 
 /**
+ * Extract all character names from full script using pattern matching
+ * This ensures we capture ALL characters regardless of script length or AI truncation
+ * @param {string} scriptText - Full script text
+ * @returns {Array} Array of character names
+ */
+function extractCharactersFromFullScript(scriptText) {
+    const characterSet = new Set();
+    const lines = scriptText.split('\n');
+
+    for (let i = 0; i < lines.length - 1; i++) {
+        const line = lines[i].trim();
+        const nextLine = lines[i + 1]?.trim() || '';
+
+        // Skip if empty or too long
+        if (!line || line.length === 0 || line.length > 50) continue;
+
+        // Character name pattern: all caps, followed by dialogue
+        if (line === line.toUpperCase() &&
+            !line.startsWith('INT') && !line.startsWith('EXT') &&
+            !line.startsWith('SCENE') &&
+            !line.includes('CUT TO') && !line.includes('FADE') &&
+            !line.includes('DISSOLVE') && !line.includes('SMASH CUT') &&
+            !line.includes('CONTINUOUS') && !line.includes('LATER') &&
+            !line.includes('SAME') && !line.includes('MOMENTS') &&
+            nextLine && nextLine.length > 0 &&
+            !nextLine.startsWith('INT') && !nextLine.startsWith('EXT')) {
+
+            // Clean the character name
+            let cleanName = line
+                .replace(/\s*\([^)]*\)/g, '')  // Remove (V.O.), (O.S.), etc
+                .replace(/\s*(CONT'D|CONT\.|V\.O\.|O\.S\.|O\.C\.)/gi, '')
+                .trim();
+
+            // Validate character name format
+            if (cleanName &&
+                cleanName.length > 1 &&
+                cleanName.length < 40 &&
+                cleanName.match(/^[A-Z][A-Z\s\.\-\']+$/)) {
+
+                characterSet.add(cleanName);
+            }
+        }
+    }
+
+    // Convert to array and sort
+    const characters = Array.from(characterSet).sort();
+
+    // Filter out characters that appear only once (likely false positives)
+    const characterCounts = new Map();
+    lines.forEach(line => {
+        const trimmed = line.trim();
+        characters.forEach(char => {
+            if (trimmed === char || trimmed.startsWith(char + ' ')) {
+                characterCounts.set(char, (characterCounts.get(char) || 0) + 1);
+            }
+        });
+    });
+
+    // Return characters that appear at least twice
+    return characters.filter(char => (characterCounts.get(char) || 0) >= 2);
+}
+
+/**
  * Perform comprehensive analysis with persistent context
  * This creates a master context that ALL future AI operations will reference
  */
 export async function performComprehensiveAnalysis(scriptText, scriptTitle = 'Untitled') {
     console.log('🎬 Starting comprehensive analysis with persistent context...');
+    console.log(`📝 Script length: ${scriptText.length} characters`);
 
     const sceneCount = state.scenes?.length || 0;
+
+    // IMPORTANT: Extract characters from FULL script before truncation
+    // This ensures we get ALL characters, not just from the first 100k chars
+    console.log('🔍 Extracting characters from full script...');
+    const extractedCharacters = extractCharactersFromFullScript(scriptText);
+    console.log(`✅ Found ${extractedCharacters.length} characters via pattern matching:`, extractedCharacters.join(', '));
+
+    // Determine how much script to send to AI (balance between thoroughness and API limits)
+    const maxChars = 150000; // Increased from 100k to 150k
+    const scriptForAI = scriptText.length > maxChars
+        ? scriptText.substring(0, maxChars) + '\n\n[... script continues ...]'
+        : scriptText;
+
+    console.log(`📤 Sending ${scriptForAI.length} characters to AI (${Math.round(scriptForAI.length / scriptText.length * 100)}% of full script)`);
 
     const prompt = `Perform a COMPLETE breakdown analysis of this screenplay for hair/makeup/continuity department.
 This analysis will be used as reference for ALL future operations, so be extremely thorough.
@@ -444,8 +522,11 @@ This analysis will be used as reference for ALL future operations, so be extreme
 SCREENPLAY TITLE: ${scriptTitle}
 TOTAL SCENES: ${sceneCount}
 
+CHARACTERS DETECTED (from full script):
+${extractedCharacters.join(', ')}
+
 SCREENPLAY TEXT:
-${scriptText.substring(0, 100000)}
+${scriptForAI}
 
 Return comprehensive JSON with this EXACT structure:
 {
@@ -563,13 +644,15 @@ Return comprehensive JSON with this EXACT structure:
 }
 
 IMPORTANT INSTRUCTIONS FOR CHARACTER ANALYSIS:
-1. Extract EXACT quotes from the script where characters are described (appearance, clothing, physical traits)
-2. For physicalProfile: Use only information explicitly stated or strongly implied in the script
-3. For characterAnalysis: Analyze personality, class, occupation based on dialogue and actions
-4. For visualProfile: Generate insights about how this character would present themselves based on their personality and role
-5. For continuityNotes: Identify key looks that matter for the story and any major transformations
+1. Include ALL characters listed above in the "CHARACTERS DETECTED" section
+2. Extract EXACT quotes from the script where characters are described (appearance, clothing, physical traits)
+3. For physicalProfile: Use only information explicitly stated or strongly implied in the script
+4. For characterAnalysis: Analyze personality, class, occupation based on dialogue and actions
+5. For visualProfile: Generate insights about how this character would present themselves based on their personality and role
+6. For continuityNotes: Identify key looks that matter for the story and any major transformations
+7. If a character from the list isn't in the visible script portion, still include them with basic information
 
-CRITICAL: Be thorough. This is the ONLY time you'll see the full script. Return valid JSON only.`;
+CRITICAL: Be thorough. Include ALL detected characters. This is the ONLY time you'll see the full script. Return valid JSON only.`;
 
     try {
         const response = await callAI(prompt, 10000);
@@ -588,6 +671,51 @@ CRITICAL: Be thorough. This is the ONLY time you'll see the full script. Return 
         if (!masterContext.characters || !masterContext.storyTimeline) {
             throw new Error('Invalid master context structure');
         }
+
+        // CRITICAL: Merge pattern-extracted characters with AI-detected characters
+        // This ensures characters from the entire script are included, not just the truncated portion
+        console.log(`🔄 Merging characters...`);
+        console.log(`  AI detected: ${Object.keys(masterContext.characters).length} characters`);
+        console.log(`  Pattern extracted: ${extractedCharacters.length} characters`);
+
+        extractedCharacters.forEach(charName => {
+            if (!masterContext.characters[charName]) {
+                // Character found by pattern matching but not by AI (likely from truncated portion)
+                console.log(`  ➕ Adding missing character: ${charName}`);
+                masterContext.characters[charName] = {
+                    fullName: charName,
+                    importance: 5, // Default importance
+                    role: 'supporting',
+                    arc: 'Appears in script',
+                    firstAppearance: 1,
+                    sceneList: [],
+                    totalScenes: 0,
+                    scriptDescriptions: [],
+                    physicalProfile: {
+                        age: 'Unknown',
+                        gender: 'Unknown'
+                    },
+                    characterAnalysis: {
+                        personality: 'To be determined',
+                        arc: 'Character appears in script'
+                    },
+                    visualProfile: {
+                        overallVibe: 'Standard appearance'
+                    },
+                    baseAppearance: {
+                        hair: 'Standard',
+                        makeup: 'Standard'
+                    },
+                    continuityNotes: {
+                        keyLooks: 'Character detected from script pattern matching',
+                        transformations: 'None noted',
+                        signature: 'Consistent appearance'
+                    }
+                };
+            }
+        });
+
+        console.log(`✅ Final character count: ${Object.keys(masterContext.characters).length}`);
 
         // Store in multiple places for redundancy
         masterContext.createdAt = new Date().toISOString();
