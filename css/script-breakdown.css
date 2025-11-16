@@ -9603,6 +9603,85 @@
     border-left-color: #ec4899;
 }
 
+/* Event Visibility Tracking */
+.event-visibility {
+    margin: 12px 0;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.visibility-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 0.85em;
+    color: var(--text-light);
+    margin-bottom: 8px;
+}
+
+.visibility-checkbox input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--accent-gold);
+}
+
+.visibility-checkbox span {
+    user-select: none;
+}
+
+.visibility-details {
+    margin-top: 12px;
+    padding-left: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.visibility-label {
+    font-size: 0.75em;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.visibility-select {
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    border-radius: 4px;
+    color: var(--text-light);
+    font-size: 0.85em;
+    cursor: pointer;
+}
+
+.visibility-select:focus {
+    outline: none;
+    border-color: var(--accent-gold);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.visibility-note {
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    border-radius: 4px;
+    color: var(--text-light);
+    font-size: 0.85em;
+    width: 100%;
+}
+
+.visibility-note:focus {
+    outline: none;
+    border-color: var(--accent-gold);
+    background: rgba(255, 255, 255, 0.08);
+}
+
 .event-header {
     display: flex;
     gap: 8px;
@@ -13408,6 +13487,150 @@
 .edit-timeline-btn:hover {
     background: rgba(255, 255, 255, 0.1);
     color: var(--text-light);
+}
+
+/* Three-Column Timeline View */
+.timeline-three-column {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    margin-top: 20px;
+}
+
+.timeline-column {
+    display: flex;
+    flex-direction: column;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--glass-border);
+}
+
+.timeline-column-header {
+    padding: 12px 16px;
+    background: rgba(201, 169, 97, 0.1);
+    border-bottom: 1px solid var(--glass-border);
+    font-size: 0.75em;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--accent-gold);
+    text-align: center;
+}
+
+.timeline-column-content {
+    flex: 1;
+    padding: 12px;
+    overflow-y: auto;
+    max-height: 500px;
+}
+
+/* Actor Presence Item */
+.presence-item {
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 4px;
+    border-left: 3px solid rgba(52, 211, 153, 0.5);
+}
+
+.presence-item.hidden {
+    border-left-color: rgba(239, 68, 68, 0.5);
+    background: rgba(239, 68, 68, 0.05);
+}
+
+.presence-scene {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+}
+
+.presence-status {
+    font-size: 12px;
+    color: var(--text-light);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.presence-status-icon {
+    font-size: 14px;
+}
+
+.presence-coverage {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+    font-style: italic;
+}
+
+/* Key Scene Item */
+.key-scene-item {
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 4px;
+    border-left: 3px solid var(--accent-gold);
+}
+
+.key-scene-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.key-scene-number {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent-gold);
+}
+
+.key-scene-category {
+    font-size: 10px;
+    padding: 2px 6px;
+    background: rgba(201, 169, 97, 0.2);
+    border-radius: 3px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+}
+
+.key-scene-text {
+    font-size: 12px;
+    color: var(--text-light);
+    line-height: 1.4;
+    margin-bottom: 6px;
+}
+
+.key-scene-phrase {
+    display: inline-block;
+    background: rgba(201, 169, 97, 0.2);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-weight: 600;
+}
+
+.key-scene-note {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-style: italic;
+    margin-top: 6px;
+}
+
+/* Empty State for Columns */
+.column-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-muted);
+    font-size: 0.875em;
+    font-style: italic;
+}
+
+/* Responsive: Stack columns on smaller screens */
+@media (max-width: 1000px) {
+    .timeline-three-column {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* Responsive */

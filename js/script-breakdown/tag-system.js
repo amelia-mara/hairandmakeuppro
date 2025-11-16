@@ -312,10 +312,112 @@ function handleCategoryChange() {
     } else {
         if (characterField) characterField.style.display = 'none';
     }
+
+    // Update event dropdown when category changes
+    updateEventDropdown();
 }
 
-// Expose handleCategoryChange to window for HTML onclick
+/**
+ * Handle character selection change to populate event dropdown
+ */
+function handleCharacterChange() {
+    updateEventDropdown();
+}
+
+/**
+ * Update event dropdown based on selected character
+ */
+function updateEventDropdown() {
+    const characterSelect = document.getElementById('tag-character');
+    const eventField = document.getElementById('tag-event-field');
+    const eventSelect = document.getElementById('tag-event');
+
+    if (!characterSelect || !eventField || !eventSelect) return;
+
+    const selectedCharacter = characterSelect.value;
+
+    // Only show event dropdown if a character is selected
+    if (!selectedCharacter || selectedCharacter === '__ADD_NEW__') {
+        eventField.style.display = 'none';
+        return;
+    }
+
+    // Get active events for this character in current scene
+    const activeEvents = getActiveEventsForCharacter(selectedCharacter, state.currentScene);
+
+    if (activeEvents.length === 0) {
+        eventField.style.display = 'none';
+        return;
+    }
+
+    // Populate event dropdown
+    eventSelect.innerHTML = '<option value="">None</option>';
+    activeEvents.forEach(event => {
+        const option = document.createElement('option');
+        option.value = event.id;
+        option.textContent = `${event.name} (${event.category})`;
+        eventSelect.appendChild(option);
+    });
+
+    eventField.style.display = 'block';
+}
+
+/**
+ * Get active events for a character in a given scene
+ */
+function getActiveEventsForCharacter(character, sceneIndex) {
+    if (!state.continuityEvents) {
+        return [];
+    }
+
+    return state.continuityEvents.filter(event =>
+        event.character === character &&
+        event.startScene <= sceneIndex &&
+        (!event.endScene || event.endScene >= sceneIndex)
+    );
+}
+
+// Expose functions to window for HTML onclick handlers
 window.handleCategoryChange = handleCategoryChange;
+window.handleCharacterChange = handleCharacterChange;
+
+/**
+ * Link a tag to a continuity event's keyScenes array
+ * @param {string} eventId - Event ID
+ * @param {Object} tag - Tag object
+ */
+function linkTagToEvent(eventId, tag) {
+    if (!state.continuityEvents) return;
+
+    const event = state.continuityEvents.find(e => e.id === eventId);
+    if (!event) {
+        console.error(`❌ Event ${eventId} not found`);
+        return;
+    }
+
+    // Initialize keyScenes if needed
+    if (!event.keyScenes) {
+        event.keyScenes = [];
+    }
+
+    // Add tag to keyScenes
+    const keyScene = {
+        scene: tag.sceneIndex,
+        tagId: tag.id,
+        scriptText: tag.fullContext || tag.selectedText,
+        taggedPhrase: tag.selectedText,
+        category: tag.category,
+        note: '',
+        timestamp: Date.now()
+    };
+
+    event.keyScenes.push(keyScene);
+
+    // Sort keyScenes by scene
+    event.keyScenes.sort((a, b) => a.scene - b.scene);
+
+    console.log(`🔗 Linked tag to event: ${event.name} (Scene ${tag.sceneIndex + 1})`);
+}
 
 /**
  * Save tag
@@ -326,6 +428,7 @@ export function saveTag() {
     // FIX: Use kebab-case IDs
     const categoryEl = document.getElementById('tag-category');
     const characterEl = document.getElementById('tag-character');
+    const eventEl = document.getElementById('tag-event');
 
     if (!categoryEl || !characterEl) {
         console.error('❌ Tag form elements not found');
@@ -334,6 +437,7 @@ export function saveTag() {
 
     const category = categoryEl.value;
     let character = characterEl.value;
+    const eventId = eventEl?.value || null;
 
     // Filter out __ADD_NEW__ if somehow it got through
     if (character === '__ADD_NEW__') {
@@ -349,6 +453,7 @@ export function saveTag() {
     console.log('✓ Creating new tag...');
     console.log(`  Category: ${category}`);
     console.log(`  Character: ${character || 'none'}`);
+    console.log(`  Event: ${eventId || 'none'}`);
     console.log(`  Selected text: "${currentSelection.selectedText.substring(0, 50)}${currentSelection.selectedText.length > 50 ? '...' : '"'}`);
 
     // Create tag object
@@ -360,6 +465,7 @@ export function saveTag() {
         selectedText: currentSelection.selectedText,
         fullContext: currentSelection.fullContext, // Full context from selection
         character: character || null,
+        eventId: eventId || null, // NEW: Link to continuity event
         elementId: currentSelection.element.id || `element-${generateId()}`,
         created: Date.now()
     };
@@ -375,6 +481,11 @@ export function saveTag() {
     }
     state.scriptTags[state.currentScene].push(tag);
     console.log(`✓ Tag stored (Scene ${state.currentScene} now has ${state.scriptTags[state.currentScene].length} tag(s))`);
+
+    // Link to continuity event if selected
+    if (eventId) {
+        linkTagToEvent(eventId, tag);
+    }
 
     // Apply highlight
     applyHighlight(tag);
