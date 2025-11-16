@@ -496,6 +496,31 @@
                     AI Settings
                 </button>
             </div>
+
+            <!-- API USAGE Section -->
+            <div class="tools-section">
+                <div class="tools-section-title">API USAGE</div>
+                <div class="api-stats" id="api-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Total Calls:</span>
+                        <span class="stat-value" id="stat-calls">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Errors:</span>
+                        <span class="stat-value" id="stat-errors">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Rate Limits:</span>
+                        <span class="stat-value" id="stat-rate-limits">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Last Call:</span>
+                        <span class="stat-value" id="stat-last-call">Never</span>
+                    </div>
+                </div>
+                <button class="tools-panel-btn" onclick="resetAPIUsage()">Reset Stats</button>
+                <button class="tools-panel-btn" onclick="showAPILimitHelp()">Check API Limits</button>
+            </div>
         </div>
     </div>
 
@@ -517,5 +542,103 @@
 
     <!-- Legacy global function exposure for HTML onclick handlers -->
     <!-- These are exposed in each module via window.functionName = ... -->
+
+    <!-- Error Notification -->
+    <div class="error-notification" id="error-notification" style="display: none;">
+        <div class="error-content">
+            <div class="error-icon">⚠️</div>
+            <div class="error-message" id="error-message"></div>
+            <button class="error-close" onclick="closeErrorNotification()">×</button>
+        </div>
+    </div>
+
+    <style>
+        .error-notification {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            max-width: 400px;
+            background: rgba(239, 68, 68, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 16px;
+            z-index: 10001;
+            animation: slideInRight 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .error-content {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .error-icon {
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+
+        .error-message {
+            flex: 1;
+            color: white;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .error-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            line-height: 1;
+        }
+
+        .error-close:hover {
+            opacity: 0.8;
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* API Stats Styles */
+        .api-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .stat-value {
+            font-size: 13px;
+            font-weight: 600;
+            color: #fbbf24;
+        }
+    </style>
 </body>
 </html>

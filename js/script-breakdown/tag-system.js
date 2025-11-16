@@ -442,24 +442,27 @@ function addToCharacterContinuity(characterName, tag, sceneIndex) {
  * @param {Object} tag - Tag object
  */
 export function applyHighlight(tag) {
+    console.log(`🏷️  Applying tag to Scene ${tag.sceneIndex}: "${tag.selectedText.substring(0, 40)}..."`);
     let element = null;
 
     // MANUAL TAGS: Have elementId pointing to specific DOM element
     if (tag.elementId) {
         element = document.getElementById(tag.elementId);
         if (!element) {
-            console.warn(`Element ${tag.elementId} not found for manual tag`);
+            console.warn(`⚠️  Element ${tag.elementId} not found for manual tag`);
             return;
         }
+        console.log(`   Found element by ID: ${tag.elementId}`);
     }
     // AI TAGS: Don't have elementId, need to search for text in the scene
     else {
         // Find the scene container
         const sceneContainer = document.querySelector(`.script-scene[data-scene-index="${tag.sceneIndex}"]`);
         if (!sceneContainer) {
-            console.warn(`Scene ${tag.sceneIndex} container not found for AI tag`);
+            console.warn(`⚠️  Scene ${tag.sceneIndex} container not found for AI tag`);
             return;
         }
+        console.log(`   Searching for text in Scene ${tag.sceneIndex} container...`);
 
         // Use keyword matching for AI-generated descriptions
         {
@@ -837,6 +840,45 @@ export function initializeTagSystem() {
     }
 }
 
+/**
+ * Debug function to inspect tag data across all scenes
+ * Call from console: debugTags()
+ */
+function debugTags() {
+    const scenes = state.scenes || [];
+
+    console.log('=== TAG DEBUG ===');
+    console.log(`Total scenes in state: ${scenes.length}`);
+    console.log(`Scenes with tags in scriptTags:`, Object.keys(state.scriptTags).length);
+
+    // Show tag count per scene
+    scenes.forEach((scene, index) => {
+        const tags = state.scriptTags[index] || [];
+        const sceneNum = scene.number || index + 1;
+
+        if (tags.length > 0) {
+            console.log(`\n📄 Scene ${sceneNum} (index ${index}): ${tags.length} tags`);
+            tags.forEach((tag, tagIndex) => {
+                console.log(`   ${tagIndex + 1}. [${tag.category}] "${tag.selectedText.substring(0, 50)}..."${tag.character ? ` (${tag.character})` : ''}`);
+            });
+        } else {
+            console.log(`📄 Scene ${sceneNum} (index ${index}): No tags`);
+        }
+    });
+
+    // Summary
+    const totalTags = Object.values(state.scriptTags).reduce((sum, tags) => sum + (tags?.length || 0), 0);
+    console.log(`\n=== SUMMARY ===`);
+    console.log(`Total tags across all scenes: ${totalTags}`);
+    console.log(`=== END TAG DEBUG ===`);
+
+    return {
+        totalScenes: scenes.length,
+        scenesWithTags: Object.keys(state.scriptTags).length,
+        totalTags: totalTags
+    };
+}
+
 // ============================================================================
 // EXPOSE GLOBAL FUNCTIONS
 // ============================================================================
@@ -847,3 +889,4 @@ window.closeTagPopup = closeTagPopup;
 window.saveTag = saveTag;
 window.renderAllHighlights = renderAllHighlights;
 window.handleTextSelection = handleTextSelection;
+window.debugTags = debugTags;
