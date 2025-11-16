@@ -378,9 +378,18 @@
             </div>
             <div class="tag-field" id="tag-character-field">
                 <label>Character</label>
-                <select id="tag-character">
+                <select id="tag-character" onchange="handleCharacterChange()">
                     <option value="">Auto-detect</option>
                 </select>
+            </div>
+            <div class="tag-field" id="tag-event-field" style="display: none;">
+                <label>Link to Continuity Event</label>
+                <select id="tag-event">
+                    <option value="">None</option>
+                </select>
+                <div class="modal-note" style="margin-top: 4px; font-size: 0.85em;">
+                    Link this tag to an active event for timeline tracking
+                </div>
             </div>
         </div>
         <div class="tag-popup-footer">
@@ -460,9 +469,9 @@
         </div>
     </div>
 
-    <!-- Event Timeline Modal -->
+    <!-- Event Timeline Modal (Three-Column View) -->
     <div class="modal" id="event-timeline-modal" style="display: none;">
-        <div class="modal-content" style="max-width: 900px; max-height: 85vh;">
+        <div class="modal-content" style="max-width: 1200px; max-height: 90vh;">
             <div class="modal-title" id="timeline-event-name">Event Timeline</div>
 
             <div class="modal-section">
@@ -479,13 +488,34 @@
                     </button>
                 </div>
 
-                <div class="timeline-view" id="timeline-view">
-                    <!-- Timeline entries generated dynamically -->
+                <!-- Three-Column Timeline View -->
+                <div class="timeline-three-column">
+                    <div class="timeline-column">
+                        <div class="timeline-column-header">TIMELINE</div>
+                        <div class="timeline-column-content" id="timeline-column">
+                            <!-- Timeline entries (logged + generated) -->
+                        </div>
+                    </div>
+
+                    <div class="timeline-column">
+                        <div class="timeline-column-header">ACTOR PRESENCE</div>
+                        <div class="timeline-column-content" id="actor-presence-column">
+                            <!-- Actor presence scenes with visibility status -->
+                        </div>
+                    </div>
+
+                    <div class="timeline-column">
+                        <div class="timeline-column-header">KEY SCENES</div>
+                        <div class="timeline-column-content" id="key-scenes-column">
+                            <!-- Linked tags from script -->
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <div class="modal-actions">
                 <button class="modal-btn" onclick="closeEventTimelineModal()">Close</button>
+                <button class="modal-btn" onclick="exportEventPDF()">📄 Export PDF</button>
             </div>
         </div>
     </div>

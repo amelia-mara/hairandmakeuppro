@@ -461,9 +461,15 @@ function renderEventCard(event, sceneIndex) {
     const currentObs = event.observations.find(o => o.scene === sceneIndex);
     const currentNote = currentObs ? currentObs.description : '';
 
+    // Get visibility info for current scene
+    const visInfo = event.visibility?.find(v => v.scene === sceneIndex);
+    const isHidden = visInfo?.status === 'hidden';
+    const coverage = visInfo?.coverage || '';
+    const coverageNote = visInfo?.note || '';
+
     const sceneRange = event.endScene
-        ? `Scenes ${event.startScene}-${event.endScene}`
-        : `Started Scene ${event.startScene} • Active`;
+        ? `Scenes ${event.startScene + 1}-${event.endScene + 1}`
+        : `Started Scene ${event.startScene + 1} • Active`;
 
     return `
         <div class="event-card" data-event-id="${event.id}">
@@ -480,6 +486,39 @@ function renderEventCard(event, sceneIndex) {
                 <textarea class="event-note"
                           placeholder="Describe appearance/condition in this scene..."
                           onchange="updateEventNote('${event.id}', ${sceneIndex}, this.value)">${escapeHtml(currentNote)}</textarea>
+            </div>
+
+            <!-- Visibility Tracking -->
+            <div class="event-visibility">
+                <label class="visibility-checkbox">
+                    <input type="checkbox"
+                           ${isHidden ? 'checked' : ''}
+                           onchange="toggleVisibility('${event.id}', ${sceneIndex}, this.checked)">
+                    <span>Hidden/Covered in this scene</span>
+                </label>
+
+                ${isHidden ? `
+                    <div class="visibility-details">
+                        <label class="visibility-label">Coverage Type:</label>
+                        <select class="visibility-select"
+                                onchange="setCoverage('${event.id}', ${sceneIndex}, this.value)">
+                            <option value="">Select...</option>
+                            <option value="bandage" ${coverage === 'bandage' ? 'selected' : ''}>Bandage</option>
+                            <option value="clothing" ${coverage === 'clothing' ? 'selected' : ''}>Clothing</option>
+                            <option value="hat" ${coverage === 'hat' ? 'selected' : ''}>Hat</option>
+                            <option value="makeup" ${coverage === 'makeup' ? 'selected' : ''}>Makeup/Concealer</option>
+                            <option value="other" ${coverage === 'other' ? 'selected' : ''}>Other</option>
+                        </select>
+
+                        ${coverage === 'other' || coverageNote ? `
+                            <input type="text"
+                                   class="visibility-note"
+                                   placeholder="Specify coverage details..."
+                                   value="${escapeHtml(coverageNote)}"
+                                   onchange="setCoverageNote('${event.id}', ${sceneIndex}, this.value)">
+                        ` : ''}
+                    </div>
+                ` : ''}
             </div>
 
             <div class="event-actions">
@@ -1063,6 +1102,65 @@ window.showChangeFields = function(character, sceneIndex) {
 // ============================================================================
 
 /**
+ * Auto-detect which scenes a character appears in based on scene breakdowns
+ * @param {string} character - Character name
+ * @returns {number[]} - Array of scene indices where character appears
+ */
+function detectActorPresenceForCharacter(character) {
+    const scenes = [];
+
+    // Scan all scene breakdowns for character presence
+    state.sceneBreakdowns.forEach((breakdown, index) => {
+        if (breakdown && breakdown.cast && breakdown.cast.includes(character)) {
+            scenes.push(index);
+        }
+    });
+
+    console.log(`🎬 Detected ${character} in scenes:`, scenes.map(s => s + 1).join(', '));
+
+    return scenes;
+}
+
+/**
+ * Update actor presence for an existing event (when scene breakdowns change)
+ * @param {string} eventId - Event ID to update
+ */
+function updateEventActorPresence(eventId) {
+    const event = state.continuityEvents.find(e => e.id === eventId);
+    if (!event) return;
+
+    const newPresence = detectActorPresenceForCharacter(event.character);
+
+    // Filter to scenes within event range
+    const filteredPresence = newPresence.filter(scene =>
+        scene >= event.startScene &&
+        (!event.endScene || scene <= event.endScene)
+    );
+
+    // Update actorPresence
+    event.actorPresence = filteredPresence;
+
+    // Add visibility entries for new scenes (default: visible)
+    filteredPresence.forEach(sceneNum => {
+        const existingVis = event.visibility.find(v => v.scene === sceneNum);
+        if (!existingVis) {
+            event.visibility.push({
+                scene: sceneNum,
+                status: 'visible',
+                coverage: null,
+                note: ''
+            });
+        }
+    });
+
+    // Sort visibility by scene
+    event.visibility.sort((a, b) => a.scene - b.scene);
+
+    saveToLocalStorage();
+    console.log(`✅ Updated actor presence for event: ${event.name}`);
+}
+
+/**
  * Create a new continuity event
  */
 window.createContinuityEvent = function(character, sceneIndex) {
@@ -1095,6 +1193,9 @@ window.confirmCreateEvent = function() {
         return;
     }
 
+    // Auto-detect actor presence from scene breakdowns
+    const actorPresence = detectActorPresenceForCharacter(window.currentEventCharacter);
+
     const event = {
         id: `event-${Date.now()}`,
         character: window.currentEventCharacter,
@@ -1111,7 +1212,21 @@ window.confirmCreateEvent = function() {
                 timestamp: Date.now()
             }
         ],
-        generatedTimeline: []
+        timeline: [],
+
+        // NEW: Auto-detected actor presence
+        actorPresence: actorPresence,
+
+        // NEW: Visibility tracking
+        visibility: actorPresence.map(sceneNum => ({
+            scene: sceneNum,
+            status: 'visible',
+            coverage: null,
+            note: ''
+        })),
+
+        // NEW: Script references (tags linked to this event)
+        keyScenes: []
     };
 
     // Initialize continuityEvents if needed
@@ -1175,6 +1290,79 @@ window.updateEventNote = function(eventId, sceneIndex, note) {
 };
 
 /**
+ * Toggle visibility status for an event in a specific scene
+ */
+window.toggleVisibility = function(eventId, sceneIndex, isHidden) {
+    const event = state.continuityEvents.find(e => e.id === eventId);
+    if (!event) return;
+
+    // Initialize visibility array if needed
+    if (!event.visibility) {
+        event.visibility = [];
+    }
+
+    // Find or create visibility entry for this scene
+    let visEntry = event.visibility.find(v => v.scene === sceneIndex);
+
+    if (!visEntry) {
+        visEntry = {
+            scene: sceneIndex,
+            status: 'visible',
+            coverage: null,
+            note: ''
+        };
+        event.visibility.push(visEntry);
+        event.visibility.sort((a, b) => a.scene - b.scene);
+    }
+
+    // Update status
+    visEntry.status = isHidden ? 'hidden' : 'visible';
+
+    // Clear coverage if not hidden
+    if (!isHidden) {
+        visEntry.coverage = null;
+        visEntry.note = '';
+    }
+
+    saveToLocalStorage();
+    renderSceneBreakdown(state.currentScene);
+    console.log(`👁️ ${event.name}: ${isHidden ? 'Hidden' : 'Visible'} in Scene ${sceneIndex + 1}`);
+};
+
+/**
+ * Set coverage type for a hidden event
+ */
+window.setCoverage = function(eventId, sceneIndex, coverage) {
+    const event = state.continuityEvents.find(e => e.id === eventId);
+    if (!event) return;
+
+    const visEntry = event.visibility.find(v => v.scene === sceneIndex);
+    if (!visEntry) return;
+
+    visEntry.coverage = coverage;
+
+    saveToLocalStorage();
+    renderSceneBreakdown(state.currentScene);
+    console.log(`🩹 ${event.name}: Coverage set to "${coverage}" in Scene ${sceneIndex + 1}`);
+};
+
+/**
+ * Set coverage note for a hidden event
+ */
+window.setCoverageNote = function(eventId, sceneIndex, note) {
+    const event = state.continuityEvents.find(e => e.id === eventId);
+    if (!event) return;
+
+    const visEntry = event.visibility.find(v => v.scene === sceneIndex);
+    if (!visEntry) return;
+
+    visEntry.note = note;
+
+    saveToLocalStorage();
+    console.log(`📝 ${event.name}: Coverage note updated for Scene ${sceneIndex + 1}`);
+};
+
+/**
  * End a continuity event
  */
 window.endContinuityEvent = function(eventId, sceneIndex) {
@@ -1231,12 +1419,27 @@ window.viewEventTimeline = function(eventId) {
 };
 
 /**
- * Render timeline entries
+ * Render timeline entries in three-column view
  */
 function renderTimelineEntries(event) {
-    const container = document.getElementById('timeline-view');
-    const endScene = event.endScene || state.scenes.length - 1;
+    // Render Timeline column
+    renderTimelineColumn(event);
 
+    // Render Actor Presence column
+    renderActorPresenceColumn(event);
+
+    // Render Key Scenes column
+    renderKeyScenesColumn(event);
+}
+
+/**
+ * Render Timeline column (logged + generated observations)
+ */
+function renderTimelineColumn(event) {
+    const container = document.getElementById('timeline-column');
+    if (!container) return;
+
+    const endScene = event.endScene || state.scenes.length - 1;
     let html = '';
     let lastLoggedScene = event.startScene - 1;
 
@@ -1255,12 +1458,13 @@ function renderTimelineEntries(event) {
 
             html += `
                 <div class="timeline-gap">
-                    <div class="gap-indicator">Scenes ${sceneList.join(', ')} (AI can generate)</div>
+                    <div class="gap-indicator">Scenes ${sceneList.join(', ')}</div>
                 </div>
             `;
 
             // Show generated entries for this gap if they exist
-            const generated = event.generatedTimeline.filter(g => g.scene >= gapStart && g.scene <= gapEnd);
+            const generated = (event.timeline || event.generatedTimeline || [])
+                .filter(g => g.scene >= gapStart && g.scene <= gapEnd);
             generated.forEach(gen => {
                 html += `
                     <div class="timeline-entry generated">
@@ -1284,6 +1488,91 @@ function renderTimelineEntries(event) {
         lastLoggedScene = obs.scene;
     });
 
+    if (html === '') {
+        html = '<div class="column-empty">No timeline entries yet</div>';
+    }
+
+    container.innerHTML = html;
+}
+
+/**
+ * Render Actor Presence column
+ */
+function renderActorPresenceColumn(event) {
+    const container = document.getElementById('actor-presence-column');
+    if (!container) return;
+
+    const actorPresence = event.actorPresence || [];
+    const visibility = event.visibility || [];
+
+    if (actorPresence.length === 0) {
+        container.innerHTML = '<div class="column-empty">No actor presence data</div>';
+        return;
+    }
+
+    let html = '';
+
+    actorPresence.forEach(sceneNum => {
+        const visInfo = visibility.find(v => v.scene === sceneNum);
+        const isHidden = visInfo?.status === 'hidden';
+        const coverage = visInfo?.coverage || '';
+        const coverageNote = visInfo?.note || '';
+
+        html += `
+            <div class="presence-item ${isHidden ? 'hidden' : ''}">
+                <div class="presence-scene">Scene ${sceneNum + 1}</div>
+                <div class="presence-status">
+                    <span class="presence-status-icon">${isHidden ? '🚫' : '✅'}</span>
+                    <span>${isHidden ? 'Hidden/Covered' : 'Visible'}</span>
+                </div>
+                ${isHidden && coverage ? `
+                    <div class="presence-coverage">
+                        Coverage: ${coverage === 'other' ? (coverageNote || 'Other') : coverage}
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+}
+
+/**
+ * Render Key Scenes column (linked tags)
+ */
+function renderKeyScenesColumn(event) {
+    const container = document.getElementById('key-scenes-column');
+    if (!container) return;
+
+    const keyScenes = event.keyScenes || [];
+
+    if (keyScenes.length === 0) {
+        container.innerHTML = '<div class="column-empty">No key scenes linked yet<br><br>Use "Link to Event" when creating tags</div>';
+        return;
+    }
+
+    let html = '';
+
+    keyScenes.forEach(keyScene => {
+        html += `
+            <div class="key-scene-item">
+                <div class="key-scene-header">
+                    <span class="key-scene-number">Scene ${keyScene.scene + 1}</span>
+                    <span class="key-scene-category">${keyScene.category}</span>
+                </div>
+                <div class="key-scene-text">
+                    "${escapeHtml(keyScene.scriptText.substring(0, 100))}${keyScene.scriptText.length > 100 ? '...' : ''}"
+                </div>
+                <div class="key-scene-phrase">
+                    → <span class="key-scene-phrase">${escapeHtml(keyScene.taggedPhrase)}</span>
+                </div>
+                ${keyScene.note ? `
+                    <div class="key-scene-note">${escapeHtml(keyScene.note)}</div>
+                ` : ''}
+            </div>
+        `;
+    });
+
     container.innerHTML = html;
 }
 
@@ -1295,12 +1584,22 @@ window.closeEventTimelineModal = function() {
 };
 
 /**
+ * Export event timeline to PDF
+ */
+window.exportEventPDF = function() {
+    alert('PDF export coming soon! This will export the full event timeline with all three columns.');
+};
+
+/**
  * Toggle event menu
  */
 window.toggleEventMenu = function(eventId) {
     // TODO: Implement menu dropdown
     console.log('Toggle menu for event:', eventId);
 };
+
+// Expose renderTimelineEntries for AI integration
+window.renderTimelineEntries = renderTimelineEntries;
 
 // ============================================================================
 // EXPORTS

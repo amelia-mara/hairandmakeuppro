@@ -1763,14 +1763,54 @@ window.generateEventTimeline = async function() {
         // Parse result
         const generatedEntries = parseTimelineResponse(result, event);
 
-        // Store generated timeline
+        // Store generated timeline in new structure
+        if (!event.timeline) {
+            event.timeline = [];
+        }
+
+        // Add generated entries with source field
+        generatedEntries.forEach(entry => {
+            // Check if entry for this scene already exists
+            const existingIndex = event.timeline.findIndex(t => t.scene === entry.scene);
+            if (existingIndex >= 0) {
+                // Replace existing generated entry
+                event.timeline[existingIndex] = {
+                    ...entry,
+                    source: 'ai',
+                    timestamp: Date.now()
+                };
+            } else {
+                // Add new entry
+                event.timeline.push({
+                    ...entry,
+                    source: 'ai',
+                    timestamp: Date.now()
+                });
+            }
+        });
+
+        // Sort timeline by scene
+        event.timeline.sort((a, b) => a.scene - b.scene);
+
+        // Backward compatibility: also store in generatedTimeline
         event.generatedTimeline = generatedEntries;
 
         // Save to localStorage
         saveToLocalStorage();
 
-        // Refresh display
-        renderEventTimelineEntries(event);
+        // Refresh display using new render function from breakdown-form.js
+        import('./breakdown-form.js').then(module => {
+            const timelineEvent = state.continuityEvents.find(e => e.id === eventId);
+            if (timelineEvent) {
+                // Call the three-column render functions
+                if (typeof window.renderTimelineEntries === 'function') {
+                    window.renderTimelineEntries(timelineEvent);
+                } else {
+                    // Fallback to legacy render
+                    renderEventTimelineEntries(timelineEvent);
+                }
+            }
+        });
 
         console.log(`✅ Generated ${generatedEntries.length} timeline entries`);
 
@@ -1799,6 +1839,32 @@ function buildTimelinePrompt(event) {
 
     // Get scenes that need generation
     const scenesToGenerate = getScenesToGenerate(event);
+
+    // Actor presence information
+    const actorPresence = event.actorPresence || [];
+    const presenceInfo = actorPresence.length > 0
+        ? `Character appears in scenes: ${actorPresence.map(s => s + 1).join(', ')}`
+        : 'Actor presence not tracked';
+
+    // Visibility information
+    const visibility = event.visibility || [];
+    const hiddenScenes = visibility
+        .filter(v => v.status === 'hidden')
+        .map(v => {
+            const coverage = v.coverage ? ` (covered by ${v.coverage})` : '';
+            return `Scene ${v.scene + 1}${coverage}`;
+        });
+    const visibilityInfo = hiddenScenes.length > 0
+        ? `Event hidden/covered in: ${hiddenScenes.join(', ')}`
+        : 'Event visible in all scenes';
+
+    // Key scenes (script references)
+    const keyScenes = event.keyScenes || [];
+    const scriptRefs = keyScenes.length > 0
+        ? keyScenes.map(ks =>
+            `Scene ${ks.scene + 1}: "${ks.taggedPhrase}" - ${ks.scriptText.substring(0, 80)}...`
+        ).join('\n')
+        : 'No script references';
 
     // Category-specific guidance
     let categoryGuidance = '';
@@ -1850,6 +1916,15 @@ CHARACTER: ${event.character}
 CATEGORY: ${event.category}
 SCENES: ${event.startScene + 1} to ${event.endScene ? event.endScene + 1 : state.scenes.length}
 
+ACTOR PRESENCE:
+${presenceInfo}
+
+VISIBILITY STATUS:
+${visibilityInfo}
+
+SCRIPT REFERENCES:
+${scriptRefs}
+
 LOGGED OBSERVATIONS (documented by crew):
 ${observations}
 
@@ -1864,8 +1939,13 @@ Create smooth, realistic transitions between the logged observations. Each gener
 3. Be specific and detailed enough for makeup department reference
 4. Maintain medical/physical realism
 5. Use professional continuity language
+6. Account for visibility status (if hidden, note that it's covered but still progressing)
 
-CRITICAL: The generated descriptions must create seamless transitions between logged observations. If Scene 10 shows "fresh bleeding" and Scene 15 shows "dried blood", scenes 11-14 must show gradual drying progression.
+CRITICAL:
+- The generated descriptions must create seamless transitions between logged observations
+- Only generate for scenes where the character actually appears (check ACTOR PRESENCE)
+- If an event is hidden/covered in certain scenes, still track its progression underneath
+- Use script references to understand context and maintain consistency
 
 OUTPUT FORMAT (JSON only, no explanation):
 {
