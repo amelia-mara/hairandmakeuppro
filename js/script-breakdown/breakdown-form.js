@@ -11,17 +11,17 @@ import { detectAIElements, generateDescription } from './ai-integration.js';
 // ELEMENT CATEGORIES
 // ============================================================================
 
+// Element categories for tagging (NO 'cast' - characters are handled separately)
 const categories = [
-    { id: 'cast', name: 'Cast Members', color: '#fbbf24' },
     { id: 'hair', name: 'Hair', color: '#a855f7' },
-    { id: 'makeup', name: 'Makeup (Beauty)', color: '#ec4899' },
-    { id: 'sfx', name: 'SFX Makeup', color: '#ef4444' },
-    { id: 'health', name: 'Health/Illness', color: '#f59e0b' },
-    { id: 'injuries', name: 'Injuries/Wounds', color: '#dc2626' },
-    { id: 'stunts', name: 'Stunts/Action', color: '#f97316' },
-    { id: 'weather', name: 'Weather Effects', color: '#38bdf8' },
-    { id: 'wardrobe', name: 'Costume/Wardrobe', color: '#34d399' },
-    { id: 'extras', name: 'Supporting Artists', color: '#9ca3af' }
+    { id: 'makeup', name: 'Makeup', color: '#ec4899' },
+    { id: 'sfx', name: 'SFX', color: '#ef4444' },
+    { id: 'wardrobe', name: 'Wardrobe', color: '#34d399' },
+    { id: 'health', name: 'Health', color: '#f59e0b' },
+    { id: 'injuries', name: 'Injuries', color: '#dc2626' },
+    { id: 'stunts', name: 'Stunts', color: '#f97316' },
+    { id: 'weather', name: 'Weather', color: '#38bdf8' },
+    { id: 'extras', name: 'Extras', color: '#9ca3af' }
 ];
 
 let currentElementCategory = null;
