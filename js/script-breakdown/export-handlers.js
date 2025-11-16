@@ -1803,6 +1803,16 @@ function loadScript(text) {
     renderSceneList();
     renderScript();
 
+    // CRITICAL: Auto-populate characters for all scenes from masterContext
+    // This ensures tagging works in every scene, not just Scene 1
+    if (window.masterContext?.characters) {
+        import('./tag-system.js').then(module => {
+            if (module.populateCharactersForAllScenes) {
+                module.populateCharactersForAllScenes();
+            }
+        });
+    }
+
     // Render character tabs and panels after DOM is ready
     setTimeout(() => {
         renderCharacterTabs();

@@ -660,11 +660,23 @@ export function handleTextSelection(e) {
         return;
     }
 
+    // CRITICAL: Detect which scene this selection is in
+    const sceneIndex = detectSceneFromElement(element);
+    if (sceneIndex === null) {
+        console.warn('⚠️ Could not determine scene index from selection');
+        alert('Could not determine which scene you are in. Please click on a scene first.');
+        return;
+    }
+
+    // Set current scene so tag will be associated with correct scene
+    state.currentScene = sceneIndex;
+    console.log(`  Scene detected: ${sceneIndex + 1}`);
+
     // Capture full context
     const fullContext = element.textContent || '';
 
-    // Detect character from context
-    const detectedCharacter = detectCharacter(fullContext);
+    // Detect character from context (now uses the detected scene)
+    const detectedCharacter = detectCharacter(fullContext, sceneIndex);
 
     // Store selection data
     currentSelection = {
@@ -682,24 +694,107 @@ export function handleTextSelection(e) {
 }
 
 /**
+ * Detect which scene an element belongs to by walking up the DOM tree
+ * @param {HTMLElement} element - Element to start from
+ * @returns {number|null} Scene index or null if not found
+ */
+function detectSceneFromElement(element) {
+    // Walk up the DOM tree to find parent with data-scene-index
+    let current = element;
+    while (current && current !== document.body) {
+        if (current.dataset && current.dataset.sceneIndex !== undefined) {
+            return parseInt(current.dataset.sceneIndex);
+        }
+        current = current.parentElement;
+    }
+
+    // If not found in DOM, return current scene from state
+    return state.currentScene;
+}
+
+/**
  * Detect character from context
  * @param {string} text - Context text
+ * @param {number} sceneIndex - Scene index (optional, defaults to state.currentScene)
  * @returns {string|null} Detected character name
  */
-function detectCharacter(text) {
-    if (!state.currentScene) return null;
+function detectCharacter(text, sceneIndex = null) {
+    const targetScene = sceneIndex !== null ? sceneIndex : state.currentScene;
+    if (targetScene === null) return null;
 
-    const breakdown = state.sceneBreakdowns[state.currentScene];
-    if (!breakdown || !breakdown.cast) return null;
+    // First, try to get characters from scene breakdown
+    const breakdown = state.sceneBreakdowns[targetScene];
+    if (breakdown?.cast && breakdown.cast.length > 0) {
+        for (const character of breakdown.cast) {
+            if (text.includes(character)) {
+                return character;
+            }
+        }
+    }
 
-    // Look for character names in the context
-    for (const character of breakdown.cast) {
-        if (text.includes(character)) {
-            return character;
+    // Fallback: Look in masterContext for all characters and check if they appear in text
+    if (window.masterContext?.characters) {
+        const allCharacters = Object.keys(window.masterContext.characters);
+        for (const character of allCharacters) {
+            if (text.includes(character)) {
+                return character;
+            }
         }
     }
 
     return null;
+}
+
+/**
+ * Auto-populate characters for all scenes from masterContext
+ * This ensures characters are available in dropdowns even if user hasn't manually added them
+ */
+export function populateCharactersForAllScenes() {
+    if (!window.masterContext?.characters || !state.scenes) {
+        console.log('⚠️ Cannot populate characters: no masterContext or scenes');
+        return;
+    }
+
+    const allCharacters = Object.keys(window.masterContext.characters);
+    console.log(`🔄 Auto-populating characters for ${state.scenes.length} scenes from ${allCharacters.length} detected characters...`);
+
+    let populatedCount = 0;
+
+    state.scenes.forEach((scene, sceneIndex) => {
+        // Get scene content
+        const sceneContent = scene.content || scene.text || '';
+        if (!sceneContent) return;
+
+        // Find which characters appear in this scene
+        const sceneCharacters = [];
+        allCharacters.forEach(characterName => {
+            // Use word boundary to avoid partial matches
+            const regex = new RegExp('\\b' + characterName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+            if (sceneContent.match(regex)) {
+                sceneCharacters.push(characterName);
+            }
+        });
+
+        // Only populate if characters were found
+        if (sceneCharacters.length > 0) {
+            // Ensure scene breakdown exists
+            if (!state.sceneBreakdowns[sceneIndex]) {
+                state.sceneBreakdowns[sceneIndex] = {};
+            }
+
+            // Set cast if not already set or if empty
+            if (!state.sceneBreakdowns[sceneIndex].cast || state.sceneBreakdowns[sceneIndex].cast.length === 0) {
+                state.sceneBreakdowns[sceneIndex].cast = sceneCharacters;
+                populatedCount++;
+                console.log(`  Scene ${sceneIndex + 1}: ${sceneCharacters.join(', ')}`);
+            }
+        }
+    });
+
+    console.log(`✅ Auto-populated ${populatedCount} scenes with character data`);
+
+    // Save to localStorage
+    import('./export-handlers.js').then(module => module.saveProject());
 }
 
 /**
