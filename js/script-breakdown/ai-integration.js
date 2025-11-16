@@ -774,14 +774,13 @@ export async function detectAIElements(sceneIndex) {
     const scene = state.scenes[sceneIndex];
     const sceneText = scene.content || scene.text || '';
 
-    // Get confirmed character names for validation (if available)
-    const confirmedCharNames = state.confirmedCharacters && state.confirmedCharacters.size > 0
-        ? Array.from(state.confirmedCharacters)
-        : [];
-
-    const characterContext = confirmedCharNames.length > 0
-        ? `Confirmed Characters in Script: ${confirmedCharNames.join(', ')}`
-        : 'Characters will be detected automatically from the scene text.';
+    // Build comprehensive character reference with variations
+    let characterContext = 'Characters will be detected automatically from the scene text.';
+    if (window.characterManager) {
+        characterContext = window.characterManager.buildCharacterReferenceForAI();
+        console.log('📋 Character Reference for AI:');
+        console.log(characterContext);
+    }
 
     const prompt = `You are analyzing a screenplay scene for production continuity, specifically for hair, makeup, wardrobe, and SFX departments.
 
@@ -857,19 +856,32 @@ ${characterContext}
 
 **IMPORTANT**:
 - Capture COMPLETE descriptive phrases, not keywords
-- Link to specific CHARACTER when possible (use exact names from confirmed list)
+- Match character variations to their canonical names (e.g., "Gwen" → "GWEN LAWSON", "Peter" → "PETER LAWSON")
+- Use the UPPERCASE canonical name from the CHARACTER REFERENCE above (e.g., "GWEN LAWSON", not "Gwen" or "gwen lawson")
 - Tag the same text in MULTIPLE categories if relevant (e.g., "blood on face" = both injuries AND makeup)
 - Include contextual action if it affects appearance
 - Use "cast" category for character presence/introductions
 
-Example:
+Examples:
 Input: "GWEN's long auburn hair whips in the wind as rain soaks her jacket."
 Output: {
   "tags": [
-    {"category": "hair", "character": "Gwen Lawson", "text": "long auburn hair whips in the wind", "confidence": "high"},
-    {"category": "weather", "character": "Gwen Lawson", "text": "wind", "confidence": "high"},
-    {"category": "weather", "character": "Gwen Lawson", "text": "rain soaks her jacket", "confidence": "high"},
-    {"category": "wardrobe", "character": "Gwen Lawson", "text": "rain soaks her jacket", "confidence": "high"}
+    {"category": "hair", "character": "GWEN LAWSON", "text": "long auburn hair whips in the wind", "confidence": "high"},
+    {"category": "weather", "character": "GWEN LAWSON", "text": "wind", "confidence": "high"},
+    {"category": "weather", "character": "GWEN LAWSON", "text": "rain soaks her jacket", "confidence": "high"},
+    {"category": "wardrobe", "character": "GWEN LAWSON", "text": "rain soaks her jacket", "confidence": "high"}
+  ]
+}
+
+Input: "Gwen looks exhausted, dark circles under her eyes. Peter stands beside her, a fresh cut above his eyebrow."
+Output: {
+  "tags": [
+    {"category": "health", "character": "GWEN LAWSON", "text": "looks exhausted", "confidence": "high"},
+    {"category": "health", "character": "GWEN LAWSON", "text": "dark circles under her eyes", "confidence": "high"},
+    {"category": "makeup", "character": "GWEN LAWSON", "text": "dark circles under her eyes", "confidence": "high"},
+    {"category": "cast", "character": "PETER LAWSON", "text": "Peter stands beside her", "confidence": "high"},
+    {"category": "injuries", "character": "PETER LAWSON", "text": "fresh cut above his eyebrow", "confidence": "high"},
+    {"category": "makeup", "character": "PETER LAWSON", "text": "fresh cut above his eyebrow", "confidence": "high"}
   ]
 }
 

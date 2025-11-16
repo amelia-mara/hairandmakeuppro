@@ -192,6 +192,76 @@ class CharacterManager {
     }
 
     /**
+     * Get all variations/aliases for a canonical character name
+     * @param {string} canonicalName - The canonical character name
+     * @returns {string[]} - Array of all known variations for this character
+     */
+    getVariations(canonicalName) {
+        const variations = new Set();
+
+        // Add the canonical name itself
+        variations.add(canonicalName);
+
+        // Find all aliases that map to this canonical name
+        for (const [variation, canonical] of this.aliases.entries()) {
+            if (canonical === canonicalName) {
+                variations.add(variation);
+            }
+        }
+
+        // Add common variations
+        const parts = canonicalName.split(' ');
+        if (parts.length > 1) {
+            // Add first name only
+            variations.add(parts[0]);
+            // Add last name only
+            variations.add(parts[parts.length - 1]);
+            // Add first name with common prefixes
+            variations.add(`Mr. ${parts[parts.length - 1]}`);
+            variations.add(`Ms. ${parts[parts.length - 1]}`);
+            variations.add(`Mrs. ${parts[parts.length - 1]}`);
+            variations.add(`Dr. ${parts[parts.length - 1]}`);
+        }
+
+        // Remove duplicates and return sorted
+        return Array.from(variations).sort();
+    }
+
+    /**
+     * Build character reference for AI prompts
+     * Returns formatted string with all characters and their variations
+     * @returns {string} - Formatted character reference
+     */
+    buildCharacterReferenceForAI() {
+        const confirmedChars = window.scriptBreakdownState?.confirmedCharacters || state.confirmedCharacters;
+        if (!confirmedChars || confirmedChars.size === 0) {
+            return 'Characters will be detected automatically from the scene text.';
+        }
+
+        const lines = ['**CHARACTER REFERENCE** (use these names when tagging):'];
+
+        for (const canonicalName of confirmedChars) {
+            const variations = this.getVariations(canonicalName);
+            // Filter to show most useful variations (remove case duplicates)
+            const uniqueVariations = new Set(variations.map(v => v.toLowerCase()));
+            const displayVariations = Array.from(uniqueVariations)
+                .filter(v => v !== canonicalName.toLowerCase())
+                .slice(0, 5); // Limit to 5 most common
+
+            if (displayVariations.length > 0) {
+                lines.push(`- ${canonicalName.toUpperCase()} (also matches: ${displayVariations.join(', ')})`);
+            } else {
+                lines.push(`- ${canonicalName.toUpperCase()}`);
+            }
+        }
+
+        lines.push('');
+        lines.push('**IMPORTANT**: When you find "Gwen" or "Peter" in action lines, match them to the full character names above. Use the UPPERCASE canonical name (e.g., "GWEN LAWSON") in your character field.');
+
+        return lines.join('\n');
+    }
+
+    /**
      * Clear all data
      */
     clear() {
