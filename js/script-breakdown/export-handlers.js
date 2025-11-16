@@ -90,6 +90,20 @@ export async function processScript() {
 
     console.log('Processing script import...');
 
+    // CRITICAL: Initialize state arrays if needed
+    if (!state.continuityEvents || !Array.isArray(state.continuityEvents)) {
+        console.log('⚠️ Initializing continuityEvents array');
+        state.continuityEvents = [];
+    }
+
+    if (!Array.isArray(state.scenes)) {
+        state.scenes = [];
+    }
+
+    if (!state.confirmedCharacters || !(state.confirmedCharacters instanceof Set)) {
+        state.confirmedCharacters = new Set();
+    }
+
     // Store script text
     if (!state.currentProject) {
         state.currentProject = {
@@ -1841,6 +1855,12 @@ export function saveProject() {
         };
     }
 
+    // CRITICAL: Ensure continuityEvents is an array before saving
+    if (!state.continuityEvents || !Array.isArray(state.continuityEvents)) {
+        console.warn('⚠️ continuityEvents was not array, fixing before save');
+        state.continuityEvents = [];
+    }
+
     // Update project data
     state.currentProject.sceneBreakdowns = state.sceneBreakdowns;
     state.currentProject.castProfiles = state.castProfiles;
@@ -1915,7 +1935,18 @@ export function loadProjectData() {
             state.characterStates = project.characterStates || {};
             state.characterLooks = project.characterLooks || {};
             state.lookTransitions = project.lookTransitions || [];
-            state.continuityEvents = project.continuityEvents || {};
+
+            // CRITICAL: Ensure continuityEvents is an ARRAY, not an object
+            if (!project.continuityEvents) {
+                console.warn('⚠️ Project missing continuityEvents, adding empty array');
+                state.continuityEvents = [];
+            } else if (!Array.isArray(project.continuityEvents)) {
+                console.error('❌ continuityEvents was not array:', typeof project.continuityEvents);
+                state.continuityEvents = [];
+            } else {
+                state.continuityEvents = project.continuityEvents;
+            }
+
             state.sceneTimeline = project.sceneTimeline || {};
             state.scriptTags = project.scriptTags || {};
 
@@ -1961,9 +1992,24 @@ export function loadProjectData() {
                 name: 'Untitled Project',
                 created: Date.now()
             };
+
+            // CRITICAL: Initialize continuityEvents for new projects
+            state.continuityEvents = [];
         }
     } catch (error) {
         console.error('❌ Error loading project:', error);
+
+        // Initialize fresh state on error
+        if (!state.continuityEvents || !Array.isArray(state.continuityEvents)) {
+            state.continuityEvents = [];
+        }
+        if (!Array.isArray(state.scenes)) {
+            state.scenes = [];
+        }
+        if (!state.confirmedCharacters || !(state.confirmedCharacters instanceof Set)) {
+            state.confirmedCharacters = new Set();
+        }
+
         alert('Failed to load project: ' + error.message);
     }
 }
