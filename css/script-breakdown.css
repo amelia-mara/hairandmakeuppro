@@ -9603,6 +9603,85 @@
     border-left-color: #ec4899;
 }
 
+/* Event Visibility Tracking */
+.event-visibility {
+    margin: 12px 0;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.visibility-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 0.85em;
+    color: var(--text-light);
+    margin-bottom: 8px;
+}
+
+.visibility-checkbox input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--accent-gold);
+}
+
+.visibility-checkbox span {
+    user-select: none;
+}
+
+.visibility-details {
+    margin-top: 12px;
+    padding-left: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.visibility-label {
+    font-size: 0.75em;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.visibility-select {
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    border-radius: 4px;
+    color: var(--text-light);
+    font-size: 0.85em;
+    cursor: pointer;
+}
+
+.visibility-select:focus {
+    outline: none;
+    border-color: var(--accent-gold);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.visibility-note {
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    border-radius: 4px;
+    color: var(--text-light);
+    font-size: 0.85em;
+    width: 100%;
+}
+
+.visibility-note:focus {
+    outline: none;
+    border-color: var(--accent-gold);
+    background: rgba(255, 255, 255, 0.08);
+}
+
 .event-header {
     display: flex;
     gap: 8px;
@@ -12854,4 +12933,718 @@
 .breakdown-tab.active {
     color: var(--accent-gold);
     border-bottom-color: var(--accent-gold);
+}
+
+/* ============================================================================
+   STREAMLINED CHARACTER CONTINUITY WORKFLOW
+   ============================================================================ */
+
+/* Character Profile Container */
+.character-profile {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.character-profile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.character-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--accent-gold);
+}
+
+.copy-previous-btn {
+    padding: 6px 12px;
+    background: rgba(201, 169, 97, 0.1);
+    border: 1px solid rgba(201, 169, 97, 0.3);
+    border-radius: 6px;
+    color: var(--accent-gold);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.copy-previous-btn:hover:not(:disabled) {
+    background: rgba(201, 169, 97, 0.2);
+    border-color: var(--accent-gold);
+}
+
+.copy-previous-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Continuity Sections */
+.continuity-section {
+    margin-bottom: 16px;
+}
+
+.continuity-section:last-child {
+    margin-bottom: 0;
+}
+
+.continuity-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.continuity-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.continuity-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* No Change / Change Buttons */
+.continuity-btn {
+    padding: 4px 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: var(--text-muted);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.continuity-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.continuity-btn.active {
+    background: rgba(201, 169, 97, 0.2);
+    border-color: var(--accent-gold);
+    color: var(--accent-gold);
+}
+
+.no-change-btn.active {
+    background: rgba(52, 211, 153, 0.2);
+    border-color: #34d399;
+    color: #34d399;
+}
+
+.change-btn.active {
+    background: rgba(251, 191, 36, 0.2);
+    border-color: #fbbf24;
+    color: #fbbf24;
+}
+
+/* Continuity Tags Display */
+.continuity-tags {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.continuity-tag {
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-left: 3px solid var(--accent-gold);
+    border-radius: 4px;
+    font-size: 13px;
+    color: var(--text-light);
+}
+
+.continuity-empty {
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px dashed rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-style: italic;
+    text-align: center;
+    margin-bottom: 8px;
+}
+
+.continuity-status {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+/* Entry Fields (compact inputs) */
+.continuity-entry-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.continuity-entry-fields input {
+    width: 100%;
+    padding: 6px 10px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: var(--text-light);
+    font-size: 12px;
+    font-family: inherit;
+}
+
+.continuity-entry-fields input:focus {
+    outline: none;
+    border-color: var(--accent-gold);
+    background: rgba(0, 0, 0, 0.4);
+}
+
+.continuity-entry-fields input::placeholder {
+    color: var(--text-muted);
+    opacity: 0.6;
+}
+
+/* Change Fields */
+.change-fields {
+    margin-top: 12px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.change-category {
+    margin-bottom: 12px;
+}
+
+.change-category:last-child {
+    margin-bottom: 0;
+}
+
+.change-category label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.change-category textarea {
+    width: 100%;
+    min-height: 50px;
+    padding: 8px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: var(--text-light);
+    font-size: 12px;
+    font-family: inherit;
+    resize: vertical;
+}
+
+.change-category textarea:focus {
+    outline: none;
+    border-color: var(--accent-gold);
+    background: rgba(0, 0, 0, 0.4);
+}
+
+.change-category textarea::placeholder {
+    color: var(--text-muted);
+    opacity: 0.6;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .character-profile-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .copy-previous-btn {
+        width: 100%;
+        text-align: center;
+    }
+
+    .continuity-section-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .continuity-actions {
+        width: 100%;
+    }
+
+    .continuity-btn {
+        flex: 1;
+        text-align: center;
+    }
+}
+
+/* ============================================================================
+   CONTINUITY EVENT TRACKING
+   ============================================================================ */
+
+/* Active Events Section */
+.active-events-section {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.section-header-with-btn {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.add-event-btn {
+    padding: 8px 16px;
+    background: rgba(201, 169, 97, 0.1);
+    border: 1px solid rgba(201, 169, 97, 0.3);
+    border-radius: 6px;
+    color: var(--accent-gold);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.add-event-btn:hover {
+    background: rgba(201, 169, 97, 0.2);
+    border-color: var(--accent-gold);
+}
+
+.add-event-btn.small {
+    padding: 4px 10px;
+    font-size: 11px;
+}
+
+/* Event Card */
+.event-card {
+    background: rgba(201, 169, 97, 0.05);
+    border: 1px solid rgba(201, 169, 97, 0.2);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+    transition: all 0.2s;
+}
+
+.event-card:hover {
+    background: rgba(201, 169, 97, 0.08);
+    border-color: rgba(201, 169, 97, 0.3);
+}
+
+.event-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.event-info {
+    flex: 1;
+}
+
+.event-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent-gold);
+    margin-bottom: 4px;
+}
+
+.event-meta {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.event-menu-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 18px;
+    cursor: pointer;
+    padding: 0 4px;
+    transition: color 0.2s;
+}
+
+.event-menu-btn:hover {
+    color: var(--text-light);
+}
+
+/* Event Current State */
+.event-current-state {
+    margin-bottom: 12px;
+}
+
+.event-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.event-note {
+    width: 100%;
+    min-height: 60px;
+    padding: 8px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: var(--text-light);
+    font-size: 12px;
+    font-family: inherit;
+    resize: vertical;
+}
+
+.event-note:focus {
+    outline: none;
+    border-color: var(--accent-gold);
+    background: rgba(0, 0, 0, 0.4);
+}
+
+.event-note::placeholder {
+    color: var(--text-muted);
+    opacity: 0.6;
+}
+
+/* Event Actions */
+.event-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.event-btn {
+    flex: 1;
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: var(--text-light);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.event-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--accent-gold);
+}
+
+.end-event-btn {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+}
+
+.end-event-btn:hover {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: #ef4444;
+}
+
+.event-status-badge {
+    flex: 1;
+    padding: 6px 12px;
+    background: rgba(52, 211, 153, 0.1);
+    border: 1px solid rgba(52, 211, 153, 0.3);
+    border-radius: 6px;
+    color: #34d399;
+    font-size: 11px;
+    text-align: center;
+    font-weight: 600;
+}
+
+/* Timeline View */
+.timeline-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 8px;
+}
+
+.timeline-info {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 13px;
+}
+
+.timeline-info strong {
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.timeline-view {
+    max-height: 500px;
+    overflow-y: auto;
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+}
+
+.timeline-entry {
+    position: relative;
+    padding: 12px 16px;
+    margin-bottom: 12px;
+    border-left: 3px solid var(--accent-gold);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.03);
+    transition: all 0.2s;
+}
+
+.timeline-entry:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.timeline-entry.logged {
+    border-left-color: var(--accent-gold);
+    background: rgba(201, 169, 97, 0.1);
+}
+
+.timeline-entry.generated {
+    border-left-color: #60a5fa;
+    background: rgba(96, 165, 250, 0.05);
+}
+
+.timeline-scene {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+}
+
+.timeline-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    background: rgba(201, 169, 97, 0.2);
+    border: 1px solid rgba(201, 169, 97, 0.4);
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--accent-gold);
+    margin-bottom: 8px;
+    letter-spacing: 0.5px;
+}
+
+.timeline-entry.generated .timeline-badge {
+    background: rgba(96, 165, 250, 0.2);
+    border-color: rgba(96, 165, 250, 0.4);
+    color: #60a5fa;
+}
+
+.timeline-description {
+    font-size: 13px;
+    color: var(--text-light);
+    line-height: 1.5;
+}
+
+.timeline-gap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    margin: 8px 0;
+}
+
+.gap-indicator {
+    padding: 8px 16px;
+    background: rgba(96, 165, 250, 0.1);
+    border: 1px dashed rgba(96, 165, 250, 0.3);
+    border-radius: 6px;
+    font-size: 12px;
+    color: #60a5fa;
+    font-style: italic;
+}
+
+.edit-timeline-btn {
+    margin-top: 8px;
+    padding: 4px 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    color: var(--text-muted);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.edit-timeline-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-light);
+}
+
+/* Three-Column Timeline View */
+.timeline-three-column {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    margin-top: 20px;
+}
+
+.timeline-column {
+    display: flex;
+    flex-direction: column;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--glass-border);
+}
+
+.timeline-column-header {
+    padding: 12px 16px;
+    background: rgba(201, 169, 97, 0.1);
+    border-bottom: 1px solid var(--glass-border);
+    font-size: 0.75em;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--accent-gold);
+    text-align: center;
+}
+
+.timeline-column-content {
+    flex: 1;
+    padding: 12px;
+    overflow-y: auto;
+    max-height: 500px;
+}
+
+/* Actor Presence Item */
+.presence-item {
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 4px;
+    border-left: 3px solid rgba(52, 211, 153, 0.5);
+}
+
+.presence-item.hidden {
+    border-left-color: rgba(239, 68, 68, 0.5);
+    background: rgba(239, 68, 68, 0.05);
+}
+
+.presence-scene {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+}
+
+.presence-status {
+    font-size: 12px;
+    color: var(--text-light);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.presence-status-icon {
+    font-size: 14px;
+}
+
+.presence-coverage {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+    font-style: italic;
+}
+
+/* Key Scene Item */
+.key-scene-item {
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 4px;
+    border-left: 3px solid var(--accent-gold);
+}
+
+.key-scene-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.key-scene-number {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent-gold);
+}
+
+.key-scene-category {
+    font-size: 10px;
+    padding: 2px 6px;
+    background: rgba(201, 169, 97, 0.2);
+    border-radius: 3px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+}
+
+.key-scene-text {
+    font-size: 12px;
+    color: var(--text-light);
+    line-height: 1.4;
+    margin-bottom: 6px;
+}
+
+.key-scene-phrase {
+    display: inline-block;
+    background: rgba(201, 169, 97, 0.2);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-weight: 600;
+}
+
+.key-scene-note {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-style: italic;
+    margin-top: 6px;
+}
+
+/* Empty State for Columns */
+.column-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-muted);
+    font-size: 0.875em;
+    font-style: italic;
+}
+
+/* Responsive: Stack columns on smaller screens */
+@media (max-width: 1000px) {
+    .timeline-three-column {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .timeline-header {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .event-actions {
+        flex-direction: column;
+    }
+
+    .event-btn {
+        width: 100%;
+    }
 }
