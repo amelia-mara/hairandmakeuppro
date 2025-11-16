@@ -12855,3 +12855,260 @@
     color: var(--accent-gold);
     border-bottom-color: var(--accent-gold);
 }
+
+/* ============================================================================
+   STREAMLINED CHARACTER CONTINUITY WORKFLOW
+   ============================================================================ */
+
+/* Character Profile Container */
+.character-profile {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.character-profile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.character-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--accent-gold);
+}
+
+.copy-previous-btn {
+    padding: 6px 12px;
+    background: rgba(201, 169, 97, 0.1);
+    border: 1px solid rgba(201, 169, 97, 0.3);
+    border-radius: 6px;
+    color: var(--accent-gold);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.copy-previous-btn:hover:not(:disabled) {
+    background: rgba(201, 169, 97, 0.2);
+    border-color: var(--accent-gold);
+}
+
+.copy-previous-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Continuity Sections */
+.continuity-section {
+    margin-bottom: 16px;
+}
+
+.continuity-section:last-child {
+    margin-bottom: 0;
+}
+
+.continuity-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.continuity-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.continuity-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* No Change / Change Buttons */
+.continuity-btn {
+    padding: 4px 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: var(--text-muted);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.continuity-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.continuity-btn.active {
+    background: rgba(201, 169, 97, 0.2);
+    border-color: var(--accent-gold);
+    color: var(--accent-gold);
+}
+
+.no-change-btn.active {
+    background: rgba(52, 211, 153, 0.2);
+    border-color: #34d399;
+    color: #34d399;
+}
+
+.change-btn.active {
+    background: rgba(251, 191, 36, 0.2);
+    border-color: #fbbf24;
+    color: #fbbf24;
+}
+
+/* Continuity Tags Display */
+.continuity-tags {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.continuity-tag {
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-left: 3px solid var(--accent-gold);
+    border-radius: 4px;
+    font-size: 13px;
+    color: var(--text-light);
+}
+
+.continuity-empty {
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px dashed rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-style: italic;
+    text-align: center;
+    margin-bottom: 8px;
+}
+
+.continuity-status {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+/* Entry Fields (compact inputs) */
+.continuity-entry-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.continuity-entry-fields input {
+    width: 100%;
+    padding: 6px 10px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: var(--text-light);
+    font-size: 12px;
+    font-family: inherit;
+}
+
+.continuity-entry-fields input:focus {
+    outline: none;
+    border-color: var(--accent-gold);
+    background: rgba(0, 0, 0, 0.4);
+}
+
+.continuity-entry-fields input::placeholder {
+    color: var(--text-muted);
+    opacity: 0.6;
+}
+
+/* Change Fields */
+.change-fields {
+    margin-top: 12px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.change-category {
+    margin-bottom: 12px;
+}
+
+.change-category:last-child {
+    margin-bottom: 0;
+}
+
+.change-category label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.change-category textarea {
+    width: 100%;
+    min-height: 50px;
+    padding: 8px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: var(--text-light);
+    font-size: 12px;
+    font-family: inherit;
+    resize: vertical;
+}
+
+.change-category textarea:focus {
+    outline: none;
+    border-color: var(--accent-gold);
+    background: rgba(0, 0, 0, 0.4);
+}
+
+.change-category textarea::placeholder {
+    color: var(--text-muted);
+    opacity: 0.6;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .character-profile-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .copy-previous-btn {
+        width: 100%;
+        text-align: center;
+    }
+
+    .continuity-section-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .continuity-actions {
+        width: 100%;
+    }
+
+    .continuity-btn {
+        flex: 1;
+        text-align: center;
+    }
+}

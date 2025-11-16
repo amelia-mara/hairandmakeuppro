@@ -277,79 +277,153 @@ function renderSceneBreakdown(sceneIndex) {
 // ============================================================================
 
 /**
- * Render character continuity fields
+ * Render character continuity fields with streamlined "No Change" workflow
  */
 function renderCharacterFields(character, sceneIndex, scene) {
     const charData = state.characterStates[sceneIndex]?.[character] || {};
     const prevScene = findPreviousCharacterAppearance(character, sceneIndex);
     const suggestions = extractSuggestionsFromTags(sceneIndex, character);
 
+    // Character ID for HTML elements
+    const charId = sanitizeCharacterId(character);
+
+    // Get appearance data
     const enterHair = charData.enterHair || suggestions.hair || '';
     const enterMakeup = charData.enterMakeup || suggestions.makeup || '';
     const enterWardrobe = charData.enterWardrobe || suggestions.wardrobe || '';
-    const changes = charData.changes || suggestions.changes.join('; ') || '';
+
+    // Change status
+    const changeStatus = charData.changeStatus || 'no-change';
+    const hasChanges = changeStatus === 'has-changes';
+
+    // Changes data
+    const changeHair = charData.changeHair || '';
+    const changeMakeup = charData.changeMakeup || '';
+    const changeWardrobe = charData.changeWardrobe || '';
+    const changeInjuries = charData.changeInjuries || '';
+    const changeDirt = charData.changeDirt || '';
+
+    // Exit appearance (calculated or manual)
+    const exitHair = charData.exitHair || enterHair;
+    const exitMakeup = charData.exitMakeup || enterMakeup;
+    const exitWardrobe = charData.exitWardrobe || enterWardrobe;
+
+    // Build entry tags
+    const entryTags = [];
+    if (enterHair) entryTags.push(`Hair: ${enterHair}`);
+    if (enterMakeup) entryTags.push(`Makeup: ${enterMakeup}`);
+    if (enterWardrobe) entryTags.push(`Wardrobe: ${enterWardrobe}`);
+
+    // Build exit tags (show if different from entry)
+    const exitTags = [];
+    if (hasChanges || exitHair !== enterHair) exitTags.push(`Hair: ${exitHair}`);
+    if (hasChanges || exitMakeup !== enterMakeup) exitTags.push(`Makeup: ${exitMakeup}`);
+    if (hasChanges || exitWardrobe !== enterWardrobe) exitTags.push(`Wardrobe: ${exitWardrobe}`);
 
     return `
-        <div class="character-continuity-block" data-character="${escapeHtml(character)}">
-            <div class="character-header">
-                <h5>${escapeHtml(character)}</h5>
-                <button class="copy-btn"
-                        onclick="copyFromPrevious('${escapeHtml(character).replace(/'/g, "\\'")}', ${sceneIndex})"
-                        title="Copy from previous scene"
-                        ${!prevScene ? 'disabled' : ''}>
-                    ↓ Copy Previous
+        <div class="character-profile" data-character="${escapeHtml(character)}">
+            <!-- Header with character name and copy button -->
+            <div class="character-profile-header">
+                <div class="character-name">${escapeHtml(character)}</div>
+                <button class="copy-previous-btn"
+                        onclick="copyPreviousAppearance('${escapeHtml(character).replace(/'/g, "\\'")}', ${sceneIndex})"
+                        ${!prevScene ? 'disabled' : ''}
+                        title="${prevScene ? `Copy from Scene ${prevScene + 1}` : 'No previous appearance'}">
+                    ${prevScene !== null ? '↓ Copy Previous' : 'First Appearance'}
                 </button>
             </div>
 
             <!-- ENTERS WITH -->
-            <div class="continuity-row">
-                <label class="row-label">Enters with:</label>
-                <div class="continuity-fields">
-                    <input type="text"
-                           placeholder="Hair"
-                           value="${escapeHtml(enterHair)}"
+            <div class="continuity-section">
+                <div class="continuity-section-header">
+                    <div class="continuity-label">ENTERS WITH</div>
+                </div>
+                ${entryTags.length > 0 ? `
+                    <div class="continuity-tags" id="enters-tags-${charId}">
+                        ${entryTags.map(tag => `<span class="continuity-tag">${escapeHtml(tag)}</span>`).join('')}
+                    </div>
+                ` : `
+                    <div class="continuity-empty">
+                        Click "Copy Previous" or enter appearance below
+                    </div>
+                `}
+                <div class="continuity-entry-fields">
+                    <input type="text" placeholder="Hair..." value="${escapeHtml(enterHair)}"
                            onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'enterHair', this.value)">
-                    <input type="text"
-                           placeholder="Makeup"
-                           value="${escapeHtml(enterMakeup)}"
+                    <input type="text" placeholder="Makeup..." value="${escapeHtml(enterMakeup)}"
                            onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'enterMakeup', this.value)">
-                    <input type="text"
-                           placeholder="Wardrobe"
-                           value="${escapeHtml(enterWardrobe)}"
+                    <input type="text" placeholder="Wardrobe..." value="${escapeHtml(enterWardrobe)}"
                            onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'enterWardrobe', this.value)">
                 </div>
             </div>
 
-            <!-- CHANGES DURING -->
-            <div class="continuity-row">
-                <label class="row-label">Changes:</label>
-                <div class="continuity-fields">
-                    <textarea placeholder="Describe any changes during the scene..."
-                              onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'changes', this.value)"
-                              >${escapeHtml(changes)}</textarea>
+            <!-- CHANGES -->
+            <div class="continuity-section">
+                <div class="continuity-section-header">
+                    <div class="continuity-label">CHANGES</div>
+                    <div class="continuity-actions">
+                        <button class="continuity-btn no-change-btn ${!hasChanges ? 'active' : ''}"
+                                onclick="setNoChange('${escapeHtml(character).replace(/'/g, "\\'")}', ${sceneIndex})">
+                            No Change
+                        </button>
+                        <button class="continuity-btn change-btn ${hasChanges ? 'active' : ''}"
+                                onclick="showChangeFields('${escapeHtml(character).replace(/'/g, "\\'")}', ${sceneIndex})">
+                            Change
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Change fields (shown when has-changes) -->
+                <div class="change-fields" id="change-fields-${charId}" style="display: ${hasChanges ? 'block' : 'none'};">
+                    <div class="change-category">
+                        <label>Hair</label>
+                        <textarea placeholder="Describe hair changes..."
+                                  onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'changeHair', this.value)">${escapeHtml(changeHair)}</textarea>
+                    </div>
+                    <div class="change-category">
+                        <label>Makeup</label>
+                        <textarea placeholder="Describe makeup changes..."
+                                  onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'changeMakeup', this.value)">${escapeHtml(changeMakeup)}</textarea>
+                    </div>
+                    <div class="change-category">
+                        <label>Wardrobe</label>
+                        <textarea placeholder="Describe wardrobe changes..."
+                                  onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'changeWardrobe', this.value)">${escapeHtml(changeWardrobe)}</textarea>
+                    </div>
+                    <div class="change-category">
+                        <label>Injuries/Blood</label>
+                        <textarea placeholder="New injuries, blood, etc..."
+                                  onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'changeInjuries', this.value)">${escapeHtml(changeInjuries)}</textarea>
+                    </div>
+                    <div class="change-category">
+                        <label>Dirt/Damage</label>
+                        <textarea placeholder="Dirt, damage, wear..."
+                                  onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'changeDirt', this.value)">${escapeHtml(changeDirt)}</textarea>
+                    </div>
                 </div>
             </div>
 
             <!-- EXITS WITH -->
-            <div class="continuity-row">
-                <label class="row-label">Exits with:</label>
-                <div class="continuity-fields">
-                    <input type="text"
-                           placeholder="Hair"
-                           value="${escapeHtml(charData.exitHair || '')}"
-                           onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'exitHair', this.value)">
-                    <input type="text"
-                           placeholder="Makeup"
-                           value="${escapeHtml(charData.exitMakeup || '')}"
-                           onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'exitMakeup', this.value)">
-                    <input type="text"
-                           placeholder="Wardrobe"
-                           value="${escapeHtml(charData.exitWardrobe || '')}"
-                           onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'exitWardrobe', this.value)">
+            <div class="continuity-section">
+                <div class="continuity-section-header">
+                    <div class="continuity-label">EXITS WITH</div>
+                    <div class="continuity-status" id="exit-status-${charId}">
+                        ${hasChanges ? 'Entry + changes' : 'Same as entry'}
+                    </div>
+                </div>
+                <div class="continuity-tags" id="exits-tags-${charId}" style="display: ${hasChanges || exitTags.length > 0 ? 'flex' : 'none'};">
+                    ${exitTags.map(tag => `<span class="continuity-tag">${escapeHtml(tag)}</span>`).join('')}
                 </div>
             </div>
         </div>
     `;
+}
+
+/**
+ * Sanitize character name for use in HTML IDs
+ */
+function sanitizeCharacterId(name) {
+    return name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 }
 
 /**
@@ -789,6 +863,105 @@ window.endEventAtScene = function(eventId, sceneIndex) {
         renderSceneBreakdown(sceneIndex);
         saveToLocalStorage();
     }
+};
+
+// ============================================================================
+// STREAMLINED CONTINUITY WORKFLOW FUNCTIONS
+// ============================================================================
+
+/**
+ * Copy previous scene's exit appearance to current entry
+ */
+window.copyPreviousAppearance = function(character, sceneIndex) {
+    const prevScene = findPreviousCharacterAppearance(character, sceneIndex);
+
+    if (prevScene === null) {
+        alert(`${character} has no previous appearance to copy from`);
+        return;
+    }
+
+    const prevState = state.characterStates[prevScene]?.[character];
+    if (!prevState) {
+        alert(`No previous appearance data found for ${character} in Scene ${prevScene + 1}`);
+        return;
+    }
+
+    // Initialize current scene's character state
+    if (!state.characterStates[sceneIndex]) {
+        state.characterStates[sceneIndex] = {};
+    }
+    if (!state.characterStates[sceneIndex][character]) {
+        state.characterStates[sceneIndex][character] = {};
+    }
+
+    // Copy exit appearance from previous scene to entry of current scene
+    state.characterStates[sceneIndex][character] = {
+        ...state.characterStates[sceneIndex][character],
+        enterHair: prevState.exitHair || prevState.enterHair || '',
+        enterMakeup: prevState.exitMakeup || prevState.enterMakeup || '',
+        enterWardrobe: prevState.exitWardrobe || prevState.enterWardrobe || ''
+    };
+
+    console.log(`✅ Copied ${character}'s appearance from Scene ${prevScene + 1} to Scene ${sceneIndex + 1}`);
+
+    renderSceneBreakdown(sceneIndex);
+    saveToLocalStorage();
+};
+
+/**
+ * Set "No Change" mode - exit = entry
+ */
+window.setNoChange = function(character, sceneIndex) {
+    // Initialize state if needed
+    if (!state.characterStates[sceneIndex]) {
+        state.characterStates[sceneIndex] = {};
+    }
+    if (!state.characterStates[sceneIndex][character]) {
+        state.characterStates[sceneIndex][character] = {};
+    }
+
+    const charState = state.characterStates[sceneIndex][character];
+
+    // Set changeStatus to no-change
+    charState.changeStatus = 'no-change';
+
+    // Copy entry to exit (no changes)
+    charState.exitHair = charState.enterHair || '';
+    charState.exitMakeup = charState.enterMakeup || '';
+    charState.exitWardrobe = charState.enterWardrobe || '';
+
+    // Clear change fields
+    charState.changeHair = '';
+    charState.changeMakeup = '';
+    charState.changeWardrobe = '';
+    charState.changeInjuries = '';
+    charState.changeDirt = '';
+
+    console.log(`✅ ${character}: No change in Scene ${sceneIndex + 1}`);
+
+    renderSceneBreakdown(sceneIndex);
+    saveToLocalStorage();
+};
+
+/**
+ * Show change fields - user will document changes
+ */
+window.showChangeFields = function(character, sceneIndex) {
+    // Initialize state if needed
+    if (!state.characterStates[sceneIndex]) {
+        state.characterStates[sceneIndex] = {};
+    }
+    if (!state.characterStates[sceneIndex][character]) {
+        state.characterStates[sceneIndex][character] = {};
+    }
+
+    // Set changeStatus to has-changes
+    state.characterStates[sceneIndex][character].changeStatus = 'has-changes';
+
+    console.log(`📝 ${character}: Recording changes in Scene ${sceneIndex + 1}`);
+
+    renderSceneBreakdown(sceneIndex);
+    saveToLocalStorage();
 };
 
 // ============================================================================
