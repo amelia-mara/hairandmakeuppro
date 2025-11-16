@@ -378,9 +378,18 @@
             </div>
             <div class="tag-field" id="tag-character-field">
                 <label>Character</label>
-                <select id="tag-character">
+                <select id="tag-character" onchange="handleCharacterChange()">
                     <option value="">Auto-detect</option>
                 </select>
+            </div>
+            <div class="tag-field" id="tag-event-field" style="display: none;">
+                <label>Link to Continuity Event</label>
+                <select id="tag-event">
+                    <option value="">None</option>
+                </select>
+                <div class="modal-note" style="margin-top: 4px; font-size: 0.85em;">
+                    Link this tag to an active event for timeline tracking
+                </div>
             </div>
         </div>
         <div class="tag-popup-footer">
@@ -418,6 +427,98 @@
         </div>
     </div>
     -->
+
+    <!-- Create Continuity Event Modal -->
+    <div class="modal" id="create-event-modal" style="display: none;">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-title">Create Continuity Event</div>
+
+            <div class="modal-section">
+                <label class="modal-label">Character</label>
+                <div id="event-character-name" style="color: var(--accent-gold); font-weight: 600; margin-bottom: 16px;"></div>
+
+                <label class="modal-label">Event Name</label>
+                <input type="text" class="modal-input" id="event-name"
+                       placeholder="e.g., Forehead Cut, Flu Illness, Pregnancy">
+
+                <label class="modal-label">Category</label>
+                <select class="modal-select" id="event-category">
+                    <option value="injuries">Injury/Wound</option>
+                    <option value="health">Illness/Health</option>
+                    <option value="sfx">SFX/Prosthetics</option>
+                    <option value="aging">Aging</option>
+                    <option value="pregnancy">Pregnancy</option>
+                    <option value="dirt">Dirt/Blood/Wear</option>
+                    <option value="other">Other</option>
+                </select>
+
+                <label class="modal-label">Starting Scene</label>
+                <input type="number" class="modal-input" id="event-start-scene"
+                       value="" min="1">
+                <div class="modal-note">Scene where this event begins</div>
+
+                <label class="modal-label">Initial Description</label>
+                <textarea class="modal-textarea" id="event-initial-description" rows="3"
+                          placeholder="Describe the initial state (e.g., 'Fresh 2-inch cut above right eyebrow, bleeding')"></textarea>
+            </div>
+
+            <div class="modal-actions">
+                <button class="modal-btn" onclick="closeCreateEventModal()">Cancel</button>
+                <button class="modal-btn primary" onclick="confirmCreateEvent()">Create Event</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Event Timeline Modal (Three-Column View) -->
+    <div class="modal" id="event-timeline-modal" style="display: none;">
+        <div class="modal-content" style="max-width: 1200px; max-height: 90vh;">
+            <div class="modal-title" id="timeline-event-name">Event Timeline</div>
+
+            <div class="modal-section">
+                <div class="timeline-header">
+                    <div class="timeline-info">
+                        <div><strong>Character:</strong> <span id="timeline-character"></span></div>
+                        <div><strong>Category:</strong> <span id="timeline-category"></span></div>
+                        <div><strong>Scenes:</strong> <span id="timeline-range"></span></div>
+                        <div><strong>Status:</strong> <span id="timeline-status"></span></div>
+                    </div>
+                    <button class="modal-btn primary" onclick="generateEventTimeline()"
+                            id="generate-timeline-btn">
+                        🤖 Generate AI Timeline
+                    </button>
+                </div>
+
+                <!-- Three-Column Timeline View -->
+                <div class="timeline-three-column">
+                    <div class="timeline-column">
+                        <div class="timeline-column-header">TIMELINE</div>
+                        <div class="timeline-column-content" id="timeline-column">
+                            <!-- Timeline entries (logged + generated) -->
+                        </div>
+                    </div>
+
+                    <div class="timeline-column">
+                        <div class="timeline-column-header">ACTOR PRESENCE</div>
+                        <div class="timeline-column-content" id="actor-presence-column">
+                            <!-- Actor presence scenes with visibility status -->
+                        </div>
+                    </div>
+
+                    <div class="timeline-column">
+                        <div class="timeline-column-header">KEY SCENES</div>
+                        <div class="timeline-column-content" id="key-scenes-column">
+                            <!-- Linked tags from script -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="modal-btn" onclick="closeEventTimelineModal()">Close</button>
+                <button class="modal-btn" onclick="exportEventPDF()">📄 Export PDF</button>
+            </div>
+        </div>
+    </div>
 
     <!-- ============================================================================ -->
     <!-- TOOLS PANEL -->
@@ -496,6 +597,31 @@
                     AI Settings
                 </button>
             </div>
+
+            <!-- API USAGE Section -->
+            <div class="tools-section">
+                <div class="tools-section-title">API USAGE</div>
+                <div class="api-stats" id="api-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Total Calls:</span>
+                        <span class="stat-value" id="stat-calls">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Errors:</span>
+                        <span class="stat-value" id="stat-errors">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Rate Limits:</span>
+                        <span class="stat-value" id="stat-rate-limits">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Last Call:</span>
+                        <span class="stat-value" id="stat-last-call">Never</span>
+                    </div>
+                </div>
+                <button class="tools-panel-btn" onclick="resetAPIUsage()">Reset Stats</button>
+                <button class="tools-panel-btn" onclick="showAPILimitHelp()">Check API Limits</button>
+            </div>
         </div>
     </div>
 
@@ -517,5 +643,103 @@
 
     <!-- Legacy global function exposure for HTML onclick handlers -->
     <!-- These are exposed in each module via window.functionName = ... -->
+
+    <!-- Error Notification -->
+    <div class="error-notification" id="error-notification" style="display: none;">
+        <div class="error-content">
+            <div class="error-icon">⚠️</div>
+            <div class="error-message" id="error-message"></div>
+            <button class="error-close" onclick="closeErrorNotification()">×</button>
+        </div>
+    </div>
+
+    <style>
+        .error-notification {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            max-width: 400px;
+            background: rgba(239, 68, 68, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 16px;
+            z-index: 10001;
+            animation: slideInRight 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .error-content {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .error-icon {
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+
+        .error-message {
+            flex: 1;
+            color: white;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .error-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            line-height: 1;
+        }
+
+        .error-close:hover {
+            opacity: 0.8;
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* API Stats Styles */
+        .api-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .stat-value {
+            font-size: 13px;
+            font-weight: 600;
+            color: #fbbf24;
+        }
+    </style>
 </body>
 </html>

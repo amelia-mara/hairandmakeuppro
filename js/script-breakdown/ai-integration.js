@@ -14,6 +14,193 @@
 import { state } from './main.js';
 
 // ============================================================================
+// API USAGE TRACKING
+// ============================================================================
+
+/**
+ * API Usage Tracker
+ * Tracks API calls, errors, and rate limits for debugging
+ */
+const apiUsageTracker = {
+    calls: 0,
+    errors: 0,
+    rateLimits: 0,
+    lastCall: null,
+
+    logCall() {
+        this.calls++;
+        this.lastCall = new Date();
+        this.saveToStorage();
+        this.updateDisplay();
+    },
+
+    logError() {
+        this.errors++;
+        this.saveToStorage();
+        this.updateDisplay();
+    },
+
+    logRateLimit() {
+        this.rateLimits++;
+        this.saveToStorage();
+        this.updateDisplay();
+    },
+
+    reset() {
+        this.calls = 0;
+        this.errors = 0;
+        this.rateLimits = 0;
+        this.lastCall = null;
+        this.saveToStorage();
+        this.updateDisplay();
+    },
+
+    saveToStorage() {
+        localStorage.setItem('apiUsageTracker', JSON.stringify({
+            calls: this.calls,
+            errors: this.errors,
+            rateLimits: this.rateLimits,
+            lastCall: this.lastCall
+        }));
+    },
+
+    loadFromStorage() {
+        const saved = localStorage.getItem('apiUsageTracker');
+        if (saved) {
+            const data = JSON.parse(saved);
+            Object.assign(this, data);
+        }
+    },
+
+    getStats() {
+        return {
+            totalCalls: this.calls,
+            totalErrors: this.errors,
+            totalRateLimits: this.rateLimits,
+            lastCall: this.lastCall ? new Date(this.lastCall).toLocaleString() : 'Never'
+        };
+    },
+
+    updateDisplay() {
+        // Update UI elements
+        const callsEl = document.getElementById('stat-calls');
+        const errorsEl = document.getElementById('stat-errors');
+        const rateLimitsEl = document.getElementById('stat-rate-limits');
+        const lastCallEl = document.getElementById('stat-last-call');
+
+        if (callsEl) callsEl.textContent = this.calls;
+        if (errorsEl) errorsEl.textContent = this.errors;
+        if (rateLimitsEl) rateLimitsEl.textContent = this.rateLimits;
+        if (lastCallEl) lastCallEl.textContent = this.lastCall ? new Date(this.lastCall).toLocaleString() : 'Never';
+    }
+};
+
+// Load saved stats on initialization
+apiUsageTracker.loadFromStorage();
+
+// Expose globally
+window.apiUsageTracker = apiUsageTracker;
+
+/**
+ * Show error notification to user
+ */
+function showErrorNotification(message) {
+    const notification = document.getElementById('error-notification');
+    const messageEl = document.getElementById('error-message');
+
+    if (!notification || !messageEl) {
+        console.warn('Error notification elements not found');
+        return;
+    }
+
+    messageEl.textContent = message;
+    notification.style.display = 'block';
+
+    // Auto-hide after 10 seconds
+    setTimeout(() => {
+        closeErrorNotification();
+    }, 10000);
+}
+
+/**
+ * Close error notification
+ */
+function closeErrorNotification() {
+    const notification = document.getElementById('error-notification');
+    if (notification) {
+        notification.style.display = 'none';
+    }
+}
+
+// Expose globally for HTML onclick
+window.closeErrorNotification = closeErrorNotification;
+
+/**
+ * Reset API usage statistics
+ */
+function resetAPIUsage() {
+    if (confirm('Reset API usage statistics?')) {
+        apiUsageTracker.reset();
+        showToast('API usage stats reset', 'success');
+    }
+}
+
+// Expose globally
+window.resetAPIUsage = resetAPIUsage;
+
+/**
+ * Show API limit help based on current provider
+ */
+function showAPILimitHelp() {
+    const provider = state.aiProvider || localStorage.getItem('aiProvider') || 'openai';
+
+    let helpText = '';
+    if (provider === 'openai') {
+        helpText = `Check your OpenAI usage and rate limits:
+
+1. Go to: https://platform.openai.com/usage
+2. Click "Rate limits" tab to see your current tier
+3. Check requests per minute (RPM) and tokens per minute (TPM)
+
+FREE TIER LIMITS:
+- Very limited (3 requests/minute for GPT-4)
+- Upgrade to at least Tier 1 ($5+ usage) for better limits
+
+COMMON RATE LIMITS BY TIER:
+- Tier 1: 500 RPM, 30K TPM (GPT-4)
+- Tier 2: 5,000 RPM, 450K TPM (GPT-4)
+- Tier 3: 10,000 RPM, 10M TPM (GPT-4)
+
+TIP: If you're hitting rate limits, the app will automatically retry with exponential backoff.`;
+    } else if (provider === 'anthropic') {
+        helpText = `Check your Anthropic (Claude) usage and rate limits:
+
+1. Go to: https://console.anthropic.com/settings/limits
+2. View your rate limits for your current tier
+3. Check your billing plan
+
+RATE LIMITS DEPEND ON TIER:
+- Free tier: Very limited
+- Build tier: 50 requests/minute
+- Scale tier: Custom limits
+
+TIP: Anthropic has generous rate limits on paid tiers. The app will automatically retry with exponential backoff if you hit limits.`;
+    }
+
+    alert(helpText);
+}
+
+// Expose globally
+window.showAPILimitHelp = showAPILimitHelp;
+
+/**
+ * Sleep utility for retry delays
+ */
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// ============================================================================
 // AI SETTINGS MANAGEMENT
 // ============================================================================
 
@@ -200,14 +387,95 @@ function showToast(message, type = 'info') {
 }
 
 // ============================================================================
-// AI API CALLER
+// AI API CALLER WITH ERROR HANDLING & RETRY LOGIC
 // ============================================================================
 
 /**
- * Universal AI caller
+ * Universal AI caller with comprehensive error logging and retry logic
  * Supports: Serverless API, OpenAI, Anthropic
  */
-export async function callAI(prompt, maxTokens = 500) {
+export async function callAI(prompt, maxTokens = 500, sceneNumber = null) {
+    return await callAIWithRetry(prompt, maxTokens, sceneNumber, 3);
+}
+
+/**
+ * Call AI with retry logic and exponential backoff
+ */
+async function callAIWithRetry(prompt, maxTokens, sceneNumber, maxRetries = 3) {
+    let lastError;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            const sceneLabel = sceneNumber !== null ? `Scene ${sceneNumber}` : 'Request';
+            console.log(`🔄 Attempt ${attempt}/${maxRetries} for ${sceneLabel}`);
+
+            const result = await callAIInternal(prompt, maxTokens, sceneNumber);
+
+            // Success! Log and return
+            apiUsageTracker.logCall();
+            return result;
+
+        } catch (error) {
+            lastError = error;
+
+            // Check if this is a rate limit error
+            const isRateLimit = error.message.includes('429') ||
+                              error.message.includes('rate limit') ||
+                              error.message.includes('Rate limit');
+
+            const isAuthError = error.message.includes('401') ||
+                              error.message.includes('403') ||
+                              error.message.includes('authentication') ||
+                              error.message.includes('Invalid API key');
+
+            // Log the error
+            apiUsageTracker.logError();
+
+            if (isRateLimit) {
+                apiUsageTracker.logRateLimit();
+                const waitTime = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
+                console.warn(`⏳ Rate limited. Waiting ${waitTime}ms before retry...`);
+
+                const sceneLabel = sceneNumber !== null ? `Scene ${sceneNumber}` : 'Request';
+                showErrorNotification(`Rate limited on ${sceneLabel}. Retrying in ${waitTime/1000}s...`);
+
+                await sleep(waitTime);
+                continue; // Retry
+            }
+
+            // If auth error, don't retry
+            if (isAuthError) {
+                console.error('🔑 AUTHENTICATION FAILED');
+                showErrorNotification('Invalid API key. Check AI Settings.');
+                throw error; // Don't retry
+            }
+
+            // For other errors, short wait and retry
+            if (attempt < maxRetries) {
+                console.warn(`⏳ Error occurred. Retrying in 2s...`);
+                await sleep(2000);
+                continue; // Retry
+            }
+        }
+    }
+
+    // All retries failed
+    const sceneLabel = sceneNumber !== null ? `Scene ${sceneNumber}` : 'Request';
+    console.error(`❌ All ${maxRetries} attempts failed for ${sceneLabel}`);
+    showErrorNotification(`All retries failed for ${sceneLabel}: ${lastError.message}`);
+    throw lastError;
+}
+
+/**
+ * Internal AI caller with detailed logging
+ */
+async function callAIInternal(prompt, maxTokens, sceneNumber) {
+    const sceneLabel = sceneNumber !== null ? `Scene ${sceneNumber}` : 'Request';
+    console.log(`🤖 AI Call Started - ${sceneLabel}`);
+    console.log(`   Provider: ${state.aiProvider || 'serverless'}`);
+    console.log(`   Model: ${state.aiProvider === 'openai' ? state.openaiModel : state.aiProvider === 'anthropic' ? state.anthropicModel : 'default'}`);
+    console.log(`   Max Tokens: ${maxTokens}`);
+
     // For deployed Vercel version - use secure serverless function
     if (window.location.hostname.includes('vercel.app')) {
         try {
@@ -225,95 +493,159 @@ export async function callAI(prompt, maxTokens = 500) {
                 })
             });
 
-            const data = await response.json();
+            console.log(`📡 Response Status: ${response.status}`);
 
             if (!response.ok) {
-                throw new Error(`API returned ${response.status}: ${JSON.stringify(data)}`);
+                const errorText = await response.text();
+                console.error(`❌ API Error (${sceneLabel}):`, errorText);
+
+                // Check for specific error types
+                if (response.status === 429) {
+                    console.error('🚫 RATE LIMIT HIT');
+                    throw new Error(`Rate limit exceeded. Status: 429`);
+                }
+
+                if (response.status === 401 || response.status === 403) {
+                    console.error('🔑 AUTHENTICATION FAILED');
+                    throw new Error(`Invalid API key. Status: ${response.status}`);
+                }
+
+                throw new Error(`API Error: ${response.status} - ${errorText}`);
             }
+
+            const data = await response.json();
 
             // Extract text from response
             if (data.choices && data.choices[0] && data.choices[0].message) {
+                console.log(`✅ AI Call Success - ${sceneLabel}`);
                 return data.choices[0].message.content;
             }
 
             throw new Error('Invalid response format from API');
 
         } catch (error) {
-            console.error('Serverless API Error:', error);
+            console.error(`💥 Exception in AI call (${sceneLabel}):`, error);
             throw error;
         }
     }
 
     // For local testing with API key
     if (!state.apiKey) {
-        throw new Error('No API key set. Please configure AI settings first or deploy to Vercel with serverless function.');
+        const error = new Error('No API key set. Please configure AI settings first or deploy to Vercel with serverless function.');
+        console.error('❌ No API key configured');
+        showErrorNotification('No API key configured. Open AI Settings to add your key.');
+        throw error;
     }
 
     // OpenAI
     if (state.aiProvider === 'openai') {
-        const response = await fetch("https://api.openai.com/v1/chat/completions", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${state.apiKey}`
-            },
-            body: JSON.stringify({
-                model: state.openaiModel,
-                messages: [{
-                    role: "user",
-                    content: prompt
-                }],
-                max_tokens: maxTokens,
-                temperature: 0.7
-            })
-        });
+        try {
+            const response = await fetch("https://api.openai.com/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${state.apiKey}`
+                },
+                body: JSON.stringify({
+                    model: state.openaiModel,
+                    messages: [{
+                        role: "user",
+                        content: prompt
+                    }],
+                    max_tokens: maxTokens,
+                    temperature: 0.7
+                })
+            });
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('OpenAI API Error:', errorText);
-            throw new Error(`OpenAI API returned ${response.status}: ${errorText}`);
+            console.log(`📡 Response Status: ${response.status}`);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error(`❌ OpenAI API Error (${sceneLabel}):`, errorText);
+
+                // Check for specific error types
+                if (response.status === 429) {
+                    console.error('🚫 RATE LIMIT HIT');
+                    throw new Error(`Rate limit exceeded. Status: 429`);
+                }
+
+                if (response.status === 401) {
+                    console.error('🔑 AUTHENTICATION FAILED');
+                    throw new Error(`Invalid API key. Status: 401`);
+                }
+
+                throw new Error(`OpenAI API Error: ${response.status} - ${errorText}`);
+            }
+
+            const data = await response.json();
+
+            if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+                throw new Error('Invalid response format from OpenAI');
+            }
+
+            console.log(`✅ AI Call Success - ${sceneLabel}`);
+            return data.choices[0].message.content;
+
+        } catch (error) {
+            console.error(`💥 Exception in OpenAI call (${sceneLabel}):`, error);
+            throw error;
         }
-
-        const data = await response.json();
-        if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-            throw new Error('Invalid response format from OpenAI');
-        }
-
-        return data.choices[0].message.content;
     }
 
     // Anthropic
     if (state.aiProvider === 'anthropic') {
-        const response = await fetch("https://api.anthropic.com/v1/messages", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "x-api-key": state.apiKey,
-                "anthropic-version": "2023-06-01"
-            },
-            body: JSON.stringify({
-                model: state.anthropicModel || "claude-3-5-sonnet-20241022",
-                max_tokens: maxTokens,
-                temperature: 0.3, // Lower temperature for more consistent analysis
-                messages: [{
-                    role: "user",
-                    content: prompt
-                }]
-            })
-        });
+        try {
+            const response = await fetch("https://api.anthropic.com/v1/messages", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "x-api-key": state.apiKey,
+                    "anthropic-version": "2023-06-01"
+                },
+                body: JSON.stringify({
+                    model: state.anthropicModel || "claude-3-5-sonnet-20241022",
+                    max_tokens: maxTokens,
+                    temperature: 0.3, // Lower temperature for more consistent analysis
+                    messages: [{
+                        role: "user",
+                        content: prompt
+                    }]
+                })
+            });
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('Anthropic API Error:', errorText);
-            throw new Error(`Anthropic API returned ${response.status}: ${errorText}`);
+            console.log(`📡 Response Status: ${response.status}`);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error(`❌ Anthropic API Error (${sceneLabel}):`, errorText);
+
+                // Check for specific error types
+                if (response.status === 429) {
+                    console.error('🚫 RATE LIMIT HIT');
+                    throw new Error(`Rate limit exceeded. Status: 429`);
+                }
+
+                if (response.status === 401) {
+                    console.error('🔑 AUTHENTICATION FAILED');
+                    throw new Error(`Invalid API key. Status: 401`);
+                }
+
+                throw new Error(`Anthropic API Error: ${response.status} - ${errorText}`);
+            }
+
+            const data = await response.json();
+
+            if (!data.content || !data.content[0]) {
+                throw new Error('Invalid response format from Anthropic');
+            }
+
+            console.log(`✅ AI Call Success - ${sceneLabel}`);
+            return data.content[0].text;
+
+        } catch (error) {
+            console.error(`💥 Exception in Anthropic call (${sceneLabel}):`, error);
+            throw error;
         }
-
-        const data = await response.json();
-        if (!data.content || !data.content[0]) {
-            throw new Error('Invalid response format from Anthropic');
-        }
-
-        return data.content[0].text;
     }
 
     throw new Error(`Unknown AI provider: ${state.aiProvider}`);
@@ -372,7 +704,8 @@ Focus on the primary dramatic action or event in the scene.
 Provide only the synopsis text, no additional commentary or explanations.`;
 
     try {
-        const synopsis = await callAI(prompt, 200);
+        const sceneNumber = scene.number || sceneIndex + 1;
+        const synopsis = await callAI(prompt, 200, sceneNumber);
         return synopsis.trim();
     } catch (error) {
         console.error('Error generating synopsis:', error);
@@ -441,14 +774,13 @@ export async function detectAIElements(sceneIndex) {
     const scene = state.scenes[sceneIndex];
     const sceneText = scene.content || scene.text || '';
 
-    // Get confirmed character names for validation (if available)
-    const confirmedCharNames = state.confirmedCharacters && state.confirmedCharacters.size > 0
-        ? Array.from(state.confirmedCharacters)
-        : [];
-
-    const characterContext = confirmedCharNames.length > 0
-        ? `Confirmed Characters in Script: ${confirmedCharNames.join(', ')}`
-        : 'Characters will be detected automatically from the scene text.';
+    // Build comprehensive character reference with variations
+    let characterContext = 'Characters will be detected automatically from the scene text.';
+    if (window.characterManager) {
+        characterContext = window.characterManager.buildCharacterReferenceForAI();
+        console.log('📋 Character Reference for AI:');
+        console.log(characterContext);
+    }
 
     const prompt = `You are analyzing a screenplay scene for production continuity, specifically for hair, makeup, wardrobe, and SFX departments.
 
@@ -524,26 +856,40 @@ ${characterContext}
 
 **IMPORTANT**:
 - Capture COMPLETE descriptive phrases, not keywords
-- Link to specific CHARACTER when possible (use exact names from confirmed list)
+- Match character variations to their canonical names (e.g., "Gwen" → "GWEN LAWSON", "Peter" → "PETER LAWSON")
+- Use the UPPERCASE canonical name from the CHARACTER REFERENCE above (e.g., "GWEN LAWSON", not "Gwen" or "gwen lawson")
 - Tag the same text in MULTIPLE categories if relevant (e.g., "blood on face" = both injuries AND makeup)
 - Include contextual action if it affects appearance
 - Use "cast" category for character presence/introductions
 
-Example:
+Examples:
 Input: "GWEN's long auburn hair whips in the wind as rain soaks her jacket."
 Output: {
   "tags": [
-    {"category": "hair", "character": "Gwen Lawson", "text": "long auburn hair whips in the wind", "confidence": "high"},
-    {"category": "weather", "character": "Gwen Lawson", "text": "wind", "confidence": "high"},
-    {"category": "weather", "character": "Gwen Lawson", "text": "rain soaks her jacket", "confidence": "high"},
-    {"category": "wardrobe", "character": "Gwen Lawson", "text": "rain soaks her jacket", "confidence": "high"}
+    {"category": "hair", "character": "GWEN LAWSON", "text": "long auburn hair whips in the wind", "confidence": "high"},
+    {"category": "weather", "character": "GWEN LAWSON", "text": "wind", "confidence": "high"},
+    {"category": "weather", "character": "GWEN LAWSON", "text": "rain soaks her jacket", "confidence": "high"},
+    {"category": "wardrobe", "character": "GWEN LAWSON", "text": "rain soaks her jacket", "confidence": "high"}
+  ]
+}
+
+Input: "Gwen looks exhausted, dark circles under her eyes. Peter stands beside her, a fresh cut above his eyebrow."
+Output: {
+  "tags": [
+    {"category": "health", "character": "GWEN LAWSON", "text": "looks exhausted", "confidence": "high"},
+    {"category": "health", "character": "GWEN LAWSON", "text": "dark circles under her eyes", "confidence": "high"},
+    {"category": "makeup", "character": "GWEN LAWSON", "text": "dark circles under her eyes", "confidence": "high"},
+    {"category": "cast", "character": "PETER LAWSON", "text": "Peter stands beside her", "confidence": "high"},
+    {"category": "injuries", "character": "PETER LAWSON", "text": "fresh cut above his eyebrow", "confidence": "high"},
+    {"category": "makeup", "character": "PETER LAWSON", "text": "fresh cut above his eyebrow", "confidence": "high"}
   ]
 }
 
 Analyze the scene and return ALL relevant tags as JSON.`;
 
     try {
-        const response = await callAI(prompt, 2000); // Increased token limit for detailed responses
+        const sceneNumber = scene.number || sceneIndex + 1;
+        const response = await callAI(prompt, 2000, sceneNumber); // Increased token limit for detailed responses
 
         // Parse JSON response
         const jsonMatch = response.match(/\{[\s\S]*\}/);
@@ -1102,6 +1448,16 @@ export async function autoTagScript(event) {
 
             const tagCount = state.scriptTags[i] ? state.scriptTags[i].length : 0;
             console.log(`✓ Scene ${scene.number} complete: ${sceneTagsCreated} tags created (total in scene: ${tagCount})`);
+
+            // DIAGNOSTIC: Verify tags were stored correctly
+            if (tagCount === 0 && sceneTagsCreated > 0) {
+                console.error(`⚠️  WARNING: Created ${sceneTagsCreated} tags but state.scriptTags[${i}] is empty!`);
+            }
+
+            // DIAGNOSTIC: Show sample tag from this scene
+            if (state.scriptTags[i] && state.scriptTags[i].length > 0) {
+                console.log(`   Sample tag:`, state.scriptTags[i][0]);
+            }
         } catch (error) {
             console.error(`Error auto-tagging scene ${i}:`, error);
             errorCount++;
@@ -1366,6 +1722,362 @@ function closeCharactersNotConfirmedModal() {
     if (modal) {
         modal.style.display = 'none';
     }
+}
+
+// ============================================================================
+// CONTINUITY EVENT TIMELINE GENERATION
+// ============================================================================
+
+/**
+ * Generate AI timeline for a continuity event
+ * Fills in gaps between logged observations with realistic progression
+ */
+window.generateEventTimeline = async function() {
+    const eventId = window.currentTimelineEvent;
+    if (!eventId) {
+        alert('No event selected');
+        return;
+    }
+
+    const event = state.continuityEvents.find(e => e.id === eventId);
+    if (!event) {
+        alert('Event not found');
+        return;
+    }
+
+    // Disable button during generation
+    const generateBtn = document.getElementById('generate-timeline-btn');
+    const originalText = generateBtn.textContent;
+    generateBtn.textContent = '⏳ Generating...';
+    generateBtn.disabled = true;
+
+    try {
+        console.log(`🤖 Generating timeline for: ${event.name}`);
+
+        // Build AI prompt
+        const prompt = buildTimelinePrompt(event);
+
+        // Call AI with higher token limit for detailed responses
+        const result = await callAI(prompt, 3000);
+
+        // Parse result
+        const generatedEntries = parseTimelineResponse(result, event);
+
+        // Store generated timeline in new structure
+        if (!event.timeline) {
+            event.timeline = [];
+        }
+
+        // Add generated entries with source field
+        generatedEntries.forEach(entry => {
+            // Check if entry for this scene already exists
+            const existingIndex = event.timeline.findIndex(t => t.scene === entry.scene);
+            if (existingIndex >= 0) {
+                // Replace existing generated entry
+                event.timeline[existingIndex] = {
+                    ...entry,
+                    source: 'ai',
+                    timestamp: Date.now()
+                };
+            } else {
+                // Add new entry
+                event.timeline.push({
+                    ...entry,
+                    source: 'ai',
+                    timestamp: Date.now()
+                });
+            }
+        });
+
+        // Sort timeline by scene
+        event.timeline.sort((a, b) => a.scene - b.scene);
+
+        // Backward compatibility: also store in generatedTimeline
+        event.generatedTimeline = generatedEntries;
+
+        // Save to localStorage
+        saveToLocalStorage();
+
+        // Refresh display using new render function from breakdown-form.js
+        import('./breakdown-form.js').then(module => {
+            const timelineEvent = state.continuityEvents.find(e => e.id === eventId);
+            if (timelineEvent) {
+                // Call the three-column render functions
+                if (typeof window.renderTimelineEntries === 'function') {
+                    window.renderTimelineEntries(timelineEvent);
+                } else {
+                    // Fallback to legacy render
+                    renderEventTimelineEntries(timelineEvent);
+                }
+            }
+        });
+
+        console.log(`✅ Generated ${generatedEntries.length} timeline entries`);
+
+        alert(`Generated ${generatedEntries.length} timeline entries successfully!`);
+
+    } catch (error) {
+        console.error('Error generating timeline:', error);
+        alert(`Failed to generate timeline: ${error.message}`);
+    } finally {
+        // Re-enable button
+        generateBtn.textContent = originalText;
+        generateBtn.disabled = false;
+    }
+};
+
+/**
+ * Build AI prompt for timeline generation
+ */
+function buildTimelinePrompt(event) {
+    // Sort observations by scene
+    const sortedObs = [...event.observations].sort((a, b) => a.scene - b.scene);
+
+    const observations = sortedObs.map(obs =>
+        `Scene ${obs.scene + 1}: ${obs.description}`
+    ).join('\n');
+
+    // Get scenes that need generation
+    const scenesToGenerate = getScenesToGenerate(event);
+
+    // Actor presence information
+    const actorPresence = event.actorPresence || [];
+    const presenceInfo = actorPresence.length > 0
+        ? `Character appears in scenes: ${actorPresence.map(s => s + 1).join(', ')}`
+        : 'Actor presence not tracked';
+
+    // Visibility information
+    const visibility = event.visibility || [];
+    const hiddenScenes = visibility
+        .filter(v => v.status === 'hidden')
+        .map(v => {
+            const coverage = v.coverage ? ` (covered by ${v.coverage})` : '';
+            return `Scene ${v.scene + 1}${coverage}`;
+        });
+    const visibilityInfo = hiddenScenes.length > 0
+        ? `Event hidden/covered in: ${hiddenScenes.join(', ')}`
+        : 'Event visible in all scenes';
+
+    // Key scenes (script references)
+    const keyScenes = event.keyScenes || [];
+    const scriptRefs = keyScenes.length > 0
+        ? keyScenes.map(ks =>
+            `Scene ${ks.scene + 1}: "${ks.taggedPhrase}" - ${ks.scriptText.substring(0, 80)}...`
+        ).join('\n')
+        : 'No script references';
+
+    // Category-specific guidance
+    let categoryGuidance = '';
+    switch (event.category) {
+        case 'injuries':
+            categoryGuidance = `For wounds/injuries, consider:
+- Realistic healing timeline (fresh → dried blood → scab → scar)
+- Color changes (red → purple → yellow for bruises)
+- Texture changes (wet → dry → scab formation)
+- Size/severity progression
+- Swelling and inflammation progression`;
+            break;
+        case 'health':
+            categoryGuidance = `For illness/health conditions, consider:
+- Symptom progression or recovery
+- Visible signs (pale, flushed, sweaty, dark circles)
+- Energy level indicators
+- Physical deterioration or improvement`;
+            break;
+        case 'dirt':
+            categoryGuidance = `For dirt/blood/wear accumulation, consider:
+- Gradual accumulation vs. sudden application
+- Drying and color changes (wet blood → dried → brown)
+- Spread patterns and coverage
+- Wear patterns on clothing`;
+            break;
+        case 'aging':
+            categoryGuidance = `For aging makeup progression, consider:
+- Gradual introduction of age indicators
+- Gray hair progression
+- Wrinkle depth and coverage
+- Posture and movement changes`;
+            break;
+        case 'pregnancy':
+            categoryGuidance = `For pregnancy progression, consider:
+- Gradual belly growth month by month
+- Posture changes
+- Face shape changes (fuller face)
+- Movement difficulty progression`;
+            break;
+        default:
+            categoryGuidance = `Consider realistic, gradual progression between observed states.`;
+    }
+
+    return `You are a professional makeup continuity supervisor creating a detailed progression timeline.
+
+EVENT: ${event.name}
+CHARACTER: ${event.character}
+CATEGORY: ${event.category}
+SCENES: ${event.startScene + 1} to ${event.endScene ? event.endScene + 1 : state.scenes.length}
+
+ACTOR PRESENCE:
+${presenceInfo}
+
+VISIBILITY STATUS:
+${visibilityInfo}
+
+SCRIPT REFERENCES:
+${scriptRefs}
+
+LOGGED OBSERVATIONS (documented by crew):
+${observations}
+
+${categoryGuidance}
+
+TASK:
+Fill in the progression for scenes: ${scenesToGenerate}
+
+Create smooth, realistic transitions between the logged observations. Each generated description must:
+1. Flow logically from the previous state
+2. Progress toward the next logged observation
+3. Be specific and detailed enough for makeup department reference
+4. Maintain medical/physical realism
+5. Use professional continuity language
+6. Account for visibility status (if hidden, note that it's covered but still progressing)
+
+CRITICAL:
+- The generated descriptions must create seamless transitions between logged observations
+- Only generate for scenes where the character actually appears (check ACTOR PRESENCE)
+- If an event is hidden/covered in certain scenes, still track its progression underneath
+- Use script references to understand context and maintain consistency
+
+OUTPUT FORMAT (JSON only, no explanation):
+{
+  "timeline": [
+    {
+      "scene": 11,
+      "description": "Detailed, specific description of appearance"
+    },
+    {
+      "scene": 12,
+      "description": "Detailed, specific description of appearance"
+    }
+  ]
+}
+
+Generate realistic, detailed continuity notes for ONLY the scenes listed above. Do not include scenes that already have logged observations.`;
+}
+
+/**
+ * Get list of scenes that need AI generation
+ */
+function getScenesToGenerate(event) {
+    const logged = event.observations.map(o => o.scene).sort((a, b) => a - b);
+    const scenesToGenerate = [];
+
+    const endScene = event.endScene !== null ? event.endScene : state.scenes.length - 1;
+
+    for (let i = event.startScene; i <= endScene; i++) {
+        if (!logged.includes(i)) {
+            scenesToGenerate.push(i + 1); // Convert to 1-indexed for display
+        }
+    }
+
+    return scenesToGenerate.join(', ');
+}
+
+/**
+ * Parse AI timeline response
+ */
+function parseTimelineResponse(response, event) {
+    try {
+        // Extract JSON from response
+        const jsonMatch = response.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+            throw new Error('No valid JSON found in response');
+        }
+
+        const data = JSON.parse(jsonMatch[0]);
+
+        if (!data.timeline || !Array.isArray(data.timeline)) {
+            throw new Error('Invalid timeline format');
+        }
+
+        // Convert scene numbers from 1-indexed to 0-indexed
+        return data.timeline.map(entry => ({
+            scene: typeof entry.scene === 'number' ? entry.scene - 1 : parseInt(entry.scene) - 1,
+            description: entry.description,
+            type: 'generated'
+        }));
+
+    } catch (error) {
+        console.error('Error parsing timeline response:', error);
+        throw new Error('Failed to parse AI response');
+    }
+}
+
+/**
+ * Render timeline entries (shared with breakdown-form.js)
+ */
+function renderEventTimelineEntries(event) {
+    const container = document.getElementById('timeline-view');
+    if (!container) return;
+
+    let html = '';
+    let lastLoggedScene = event.startScene - 1;
+
+    // Sort observations by scene
+    const sortedObs = [...event.observations].sort((a, b) => a.scene - b.scene);
+
+    sortedObs.forEach((obs, index) => {
+        // Check if there's a gap between this and previous observation
+        if (obs.scene > lastLoggedScene + 1) {
+            const gapStart = lastLoggedScene + 1;
+            const gapEnd = obs.scene - 1;
+
+            // Show generated entries for this gap if they exist
+            const generated = event.generatedTimeline.filter(g => g.scene >= gapStart && g.scene <= gapEnd);
+
+            if (generated.length === 0) {
+                // Show gap indicator
+                const sceneList = [];
+                for (let i = gapStart; i <= gapEnd; i++) {
+                    sceneList.push(i + 1);
+                }
+                html += `
+                    <div class="timeline-gap">
+                        <div class="gap-indicator">Scenes ${sceneList.join(', ')} (AI can generate)</div>
+                    </div>
+                `;
+            } else {
+                // Show generated entries
+                generated.forEach(gen => {
+                    html += `
+                        <div class="timeline-entry generated">
+                            <div class="timeline-scene">Scene ${gen.scene + 1}</div>
+                            <div class="timeline-badge">AI GENERATED</div>
+                            <div class="timeline-description">${escapeHtml(gen.description)}</div>
+                        </div>
+                    `;
+                });
+            }
+        }
+
+        // Add logged observation
+        html += `
+            <div class="timeline-entry logged">
+                <div class="timeline-scene">Scene ${obs.scene + 1}</div>
+                <div class="timeline-badge">LOGGED</div>
+                <div class="timeline-description">${escapeHtml(obs.description)}</div>
+            </div>
+        `;
+
+        lastLoggedScene = obs.scene;
+    });
+
+    container.innerHTML = html;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 // Expose functions globally for HTML onclick handlers

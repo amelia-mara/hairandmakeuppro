@@ -277,79 +277,286 @@ function renderSceneBreakdown(sceneIndex) {
 // ============================================================================
 
 /**
- * Render character continuity fields
+ * Render character continuity fields with streamlined "No Change" workflow
  */
 function renderCharacterFields(character, sceneIndex, scene) {
     const charData = state.characterStates[sceneIndex]?.[character] || {};
     const prevScene = findPreviousCharacterAppearance(character, sceneIndex);
     const suggestions = extractSuggestionsFromTags(sceneIndex, character);
 
+    // Character ID for HTML elements
+    const charId = sanitizeCharacterId(character);
+
+    // Get appearance data
     const enterHair = charData.enterHair || suggestions.hair || '';
     const enterMakeup = charData.enterMakeup || suggestions.makeup || '';
     const enterWardrobe = charData.enterWardrobe || suggestions.wardrobe || '';
-    const changes = charData.changes || suggestions.changes.join('; ') || '';
+
+    // Change status
+    const changeStatus = charData.changeStatus || 'no-change';
+    const hasChanges = changeStatus === 'has-changes';
+
+    // Changes data
+    const changeHair = charData.changeHair || '';
+    const changeMakeup = charData.changeMakeup || '';
+    const changeWardrobe = charData.changeWardrobe || '';
+    const changeInjuries = charData.changeInjuries || '';
+    const changeDirt = charData.changeDirt || '';
+
+    // Exit appearance (calculated or manual)
+    const exitHair = charData.exitHair || enterHair;
+    const exitMakeup = charData.exitMakeup || enterMakeup;
+    const exitWardrobe = charData.exitWardrobe || enterWardrobe;
+
+    // Build entry tags
+    const entryTags = [];
+    if (enterHair) entryTags.push(`Hair: ${enterHair}`);
+    if (enterMakeup) entryTags.push(`Makeup: ${enterMakeup}`);
+    if (enterWardrobe) entryTags.push(`Wardrobe: ${enterWardrobe}`);
+
+    // Build exit tags (show if different from entry)
+    const exitTags = [];
+    if (hasChanges || exitHair !== enterHair) exitTags.push(`Hair: ${exitHair}`);
+    if (hasChanges || exitMakeup !== enterMakeup) exitTags.push(`Makeup: ${exitMakeup}`);
+    if (hasChanges || exitWardrobe !== enterWardrobe) exitTags.push(`Wardrobe: ${exitWardrobe}`);
 
     return `
-        <div class="character-continuity-block" data-character="${escapeHtml(character)}">
-            <div class="character-header">
-                <h5>${escapeHtml(character)}</h5>
-                <button class="copy-btn"
-                        onclick="copyFromPrevious('${escapeHtml(character).replace(/'/g, "\\'")}', ${sceneIndex})"
-                        title="Copy from previous scene"
-                        ${!prevScene ? 'disabled' : ''}>
-                    ↓ Copy Previous
+        <div class="character-profile" data-character="${escapeHtml(character)}">
+            <!-- Header with character name and copy button -->
+            <div class="character-profile-header">
+                <div class="character-name">${escapeHtml(character)}</div>
+                <button class="copy-previous-btn"
+                        onclick="copyPreviousAppearance('${escapeHtml(character).replace(/'/g, "\\'")}', ${sceneIndex})"
+                        ${!prevScene ? 'disabled' : ''}
+                        title="${prevScene ? `Copy from Scene ${prevScene + 1}` : 'No previous appearance'}">
+                    ${prevScene !== null ? '↓ Copy Previous' : 'First Appearance'}
                 </button>
             </div>
 
             <!-- ENTERS WITH -->
-            <div class="continuity-row">
-                <label class="row-label">Enters with:</label>
-                <div class="continuity-fields">
-                    <input type="text"
-                           placeholder="Hair"
-                           value="${escapeHtml(enterHair)}"
+            <div class="continuity-section">
+                <div class="continuity-section-header">
+                    <div class="continuity-label">ENTERS WITH</div>
+                </div>
+                ${entryTags.length > 0 ? `
+                    <div class="continuity-tags" id="enters-tags-${charId}">
+                        ${entryTags.map(tag => `<span class="continuity-tag">${escapeHtml(tag)}</span>`).join('')}
+                    </div>
+                ` : `
+                    <div class="continuity-empty">
+                        Click "Copy Previous" or enter appearance below
+                    </div>
+                `}
+                <div class="continuity-entry-fields">
+                    <input type="text" placeholder="Hair..." value="${escapeHtml(enterHair)}"
                            onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'enterHair', this.value)">
-                    <input type="text"
-                           placeholder="Makeup"
-                           value="${escapeHtml(enterMakeup)}"
+                    <input type="text" placeholder="Makeup..." value="${escapeHtml(enterMakeup)}"
                            onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'enterMakeup', this.value)">
-                    <input type="text"
-                           placeholder="Wardrobe"
-                           value="${escapeHtml(enterWardrobe)}"
+                    <input type="text" placeholder="Wardrobe..." value="${escapeHtml(enterWardrobe)}"
                            onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'enterWardrobe', this.value)">
                 </div>
             </div>
 
-            <!-- CHANGES DURING -->
-            <div class="continuity-row">
-                <label class="row-label">Changes:</label>
-                <div class="continuity-fields">
-                    <textarea placeholder="Describe any changes during the scene..."
-                              onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'changes', this.value)"
-                              >${escapeHtml(changes)}</textarea>
+            <!-- CHANGES -->
+            <div class="continuity-section">
+                <div class="continuity-section-header">
+                    <div class="continuity-label">CHANGES</div>
+                    <div class="continuity-actions">
+                        <button class="continuity-btn no-change-btn ${!hasChanges ? 'active' : ''}"
+                                onclick="setNoChange('${escapeHtml(character).replace(/'/g, "\\'")}', ${sceneIndex})">
+                            No Change
+                        </button>
+                        <button class="continuity-btn change-btn ${hasChanges ? 'active' : ''}"
+                                onclick="showChangeFields('${escapeHtml(character).replace(/'/g, "\\'")}', ${sceneIndex})">
+                            Change
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Change fields (shown when has-changes) -->
+                <div class="change-fields" id="change-fields-${charId}" style="display: ${hasChanges ? 'block' : 'none'};">
+                    <div class="change-category">
+                        <label>Hair</label>
+                        <textarea placeholder="Describe hair changes..."
+                                  onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'changeHair', this.value)">${escapeHtml(changeHair)}</textarea>
+                    </div>
+                    <div class="change-category">
+                        <label>Makeup</label>
+                        <textarea placeholder="Describe makeup changes..."
+                                  onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'changeMakeup', this.value)">${escapeHtml(changeMakeup)}</textarea>
+                    </div>
+                    <div class="change-category">
+                        <label>Wardrobe</label>
+                        <textarea placeholder="Describe wardrobe changes..."
+                                  onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'changeWardrobe', this.value)">${escapeHtml(changeWardrobe)}</textarea>
+                    </div>
+                    <div class="change-category">
+                        <label>Injuries/Blood</label>
+                        <textarea placeholder="New injuries, blood, etc..."
+                                  onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'changeInjuries', this.value)">${escapeHtml(changeInjuries)}</textarea>
+                    </div>
+                    <div class="change-category">
+                        <label>Dirt/Damage</label>
+                        <textarea placeholder="Dirt, damage, wear..."
+                                  onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'changeDirt', this.value)">${escapeHtml(changeDirt)}</textarea>
+                    </div>
                 </div>
             </div>
 
             <!-- EXITS WITH -->
-            <div class="continuity-row">
-                <label class="row-label">Exits with:</label>
-                <div class="continuity-fields">
-                    <input type="text"
-                           placeholder="Hair"
-                           value="${escapeHtml(charData.exitHair || '')}"
-                           onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'exitHair', this.value)">
-                    <input type="text"
-                           placeholder="Makeup"
-                           value="${escapeHtml(charData.exitMakeup || '')}"
-                           onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'exitMakeup', this.value)">
-                    <input type="text"
-                           placeholder="Wardrobe"
-                           value="${escapeHtml(charData.exitWardrobe || '')}"
-                           onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'exitWardrobe', this.value)">
+            <div class="continuity-section">
+                <div class="continuity-section-header">
+                    <div class="continuity-label">EXITS WITH</div>
+                    <div class="continuity-status" id="exit-status-${charId}">
+                        ${hasChanges ? 'Entry + changes' : 'Same as entry'}
+                    </div>
                 </div>
+                <div class="continuity-tags" id="exits-tags-${charId}" style="display: ${hasChanges || exitTags.length > 0 ? 'flex' : 'none'};">
+                    ${exitTags.map(tag => `<span class="continuity-tag">${escapeHtml(tag)}</span>`).join('')}
+                </div>
+            </div>
+
+            <!-- ACTIVE CONTINUITY EVENTS -->
+            ${renderActiveEvents(character, sceneIndex)}
+        </div>
+    `;
+}
+
+/**
+ * Render active continuity events for a character in current scene
+ */
+function renderActiveEvents(character, sceneIndex) {
+    // Get all events for this character that are active in this scene
+    const activeEvents = getActiveEventsForCharacter(character, sceneIndex);
+
+    if (activeEvents.length === 0) {
+        return `
+            <div class="active-events-section">
+                <div class="section-label">CONTINUITY EVENTS</div>
+                <button class="add-event-btn" onclick="createContinuityEvent('${escapeHtml(character).replace(/'/g, "\\'")}', ${sceneIndex})">
+                    + Create Event
+                </button>
+            </div>
+        `;
+    }
+
+    return `
+        <div class="active-events-section">
+            <div class="section-header-with-btn">
+                <div class="section-label">ACTIVE EVENTS</div>
+                <button class="add-event-btn small" onclick="createContinuityEvent('${escapeHtml(character).replace(/'/g, "\\'")}', ${sceneIndex})">
+                    + New
+                </button>
+            </div>
+            ${activeEvents.map(event => renderEventCard(event, sceneIndex)).join('')}
+        </div>
+    `;
+}
+
+/**
+ * Render a single event card
+ */
+function renderEventCard(event, sceneIndex) {
+    // Get current scene's observation if it exists
+    const currentObs = event.observations.find(o => o.scene === sceneIndex);
+    const currentNote = currentObs ? currentObs.description : '';
+
+    // Get visibility info for current scene
+    const visInfo = event.visibility?.find(v => v.scene === sceneIndex);
+    const isHidden = visInfo?.status === 'hidden';
+    const coverage = visInfo?.coverage || '';
+    const coverageNote = visInfo?.note || '';
+
+    const sceneRange = event.endScene
+        ? `Scenes ${event.startScene + 1}-${event.endScene + 1}`
+        : `Started Scene ${event.startScene + 1} • Active`;
+
+    return `
+        <div class="event-card" data-event-id="${event.id}">
+            <div class="event-header">
+                <div class="event-info">
+                    <div class="event-name">${escapeHtml(event.name)}</div>
+                    <div class="event-meta">${sceneRange}</div>
+                </div>
+                <button class="event-menu-btn" onclick="toggleEventMenu('${event.id}')">⋮</button>
+            </div>
+
+            <div class="event-current-state">
+                <div class="event-label">Scene ${sceneIndex + 1} Status:</div>
+                <textarea class="event-note"
+                          placeholder="Describe appearance/condition in this scene..."
+                          onchange="updateEventNote('${event.id}', ${sceneIndex}, this.value)">${escapeHtml(currentNote)}</textarea>
+            </div>
+
+            <!-- Visibility Tracking -->
+            <div class="event-visibility">
+                <label class="visibility-checkbox">
+                    <input type="checkbox"
+                           ${isHidden ? 'checked' : ''}
+                           onchange="toggleVisibility('${event.id}', ${sceneIndex}, this.checked)">
+                    <span>Hidden/Covered in this scene</span>
+                </label>
+
+                ${isHidden ? `
+                    <div class="visibility-details">
+                        <label class="visibility-label">Coverage Type:</label>
+                        <select class="visibility-select"
+                                onchange="setCoverage('${event.id}', ${sceneIndex}, this.value)">
+                            <option value="">Select...</option>
+                            <option value="bandage" ${coverage === 'bandage' ? 'selected' : ''}>Bandage</option>
+                            <option value="clothing" ${coverage === 'clothing' ? 'selected' : ''}>Clothing</option>
+                            <option value="hat" ${coverage === 'hat' ? 'selected' : ''}>Hat</option>
+                            <option value="makeup" ${coverage === 'makeup' ? 'selected' : ''}>Makeup/Concealer</option>
+                            <option value="other" ${coverage === 'other' ? 'selected' : ''}>Other</option>
+                        </select>
+
+                        ${coverage === 'other' || coverageNote ? `
+                            <input type="text"
+                                   class="visibility-note"
+                                   placeholder="Specify coverage details..."
+                                   value="${escapeHtml(coverageNote)}"
+                                   onchange="setCoverageNote('${event.id}', ${sceneIndex}, this.value)">
+                        ` : ''}
+                    </div>
+                ` : ''}
+            </div>
+
+            <div class="event-actions">
+                <button class="event-btn" onclick="viewEventTimeline('${event.id}')">
+                    📊 Timeline
+                </button>
+                ${!event.endScene ? `
+                    <button class="event-btn end-event-btn" onclick="endContinuityEvent('${event.id}', ${sceneIndex})">
+                        End Event
+                    </button>
+                ` : `
+                    <span class="event-status-badge">Completed</span>
+                `}
             </div>
         </div>
     `;
+}
+
+/**
+ * Get active events for a character in a given scene
+ */
+function getActiveEventsForCharacter(character, sceneIndex) {
+    if (!state.continuityEvents) {
+        state.continuityEvents = [];
+    }
+
+    return state.continuityEvents.filter(event =>
+        event.character === character &&
+        event.startScene <= sceneIndex &&
+        (!event.endScene || event.endScene >= sceneIndex)
+    );
+}
+
+/**
+ * Sanitize character name for use in HTML IDs
+ */
+function sanitizeCharacterId(name) {
+    return name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 }
 
 /**
@@ -790,6 +997,609 @@ window.endEventAtScene = function(eventId, sceneIndex) {
         saveToLocalStorage();
     }
 };
+
+// ============================================================================
+// STREAMLINED CONTINUITY WORKFLOW FUNCTIONS
+// ============================================================================
+
+/**
+ * Copy previous scene's exit appearance to current entry
+ */
+window.copyPreviousAppearance = function(character, sceneIndex) {
+    const prevScene = findPreviousCharacterAppearance(character, sceneIndex);
+
+    if (prevScene === null) {
+        alert(`${character} has no previous appearance to copy from`);
+        return;
+    }
+
+    const prevState = state.characterStates[prevScene]?.[character];
+    if (!prevState) {
+        alert(`No previous appearance data found for ${character} in Scene ${prevScene + 1}`);
+        return;
+    }
+
+    // Initialize current scene's character state
+    if (!state.characterStates[sceneIndex]) {
+        state.characterStates[sceneIndex] = {};
+    }
+    if (!state.characterStates[sceneIndex][character]) {
+        state.characterStates[sceneIndex][character] = {};
+    }
+
+    // Copy exit appearance from previous scene to entry of current scene
+    state.characterStates[sceneIndex][character] = {
+        ...state.characterStates[sceneIndex][character],
+        enterHair: prevState.exitHair || prevState.enterHair || '',
+        enterMakeup: prevState.exitMakeup || prevState.enterMakeup || '',
+        enterWardrobe: prevState.exitWardrobe || prevState.enterWardrobe || ''
+    };
+
+    console.log(`✅ Copied ${character}'s appearance from Scene ${prevScene + 1} to Scene ${sceneIndex + 1}`);
+
+    renderSceneBreakdown(sceneIndex);
+    saveToLocalStorage();
+};
+
+/**
+ * Set "No Change" mode - exit = entry
+ */
+window.setNoChange = function(character, sceneIndex) {
+    // Initialize state if needed
+    if (!state.characterStates[sceneIndex]) {
+        state.characterStates[sceneIndex] = {};
+    }
+    if (!state.characterStates[sceneIndex][character]) {
+        state.characterStates[sceneIndex][character] = {};
+    }
+
+    const charState = state.characterStates[sceneIndex][character];
+
+    // Set changeStatus to no-change
+    charState.changeStatus = 'no-change';
+
+    // Copy entry to exit (no changes)
+    charState.exitHair = charState.enterHair || '';
+    charState.exitMakeup = charState.enterMakeup || '';
+    charState.exitWardrobe = charState.enterWardrobe || '';
+
+    // Clear change fields
+    charState.changeHair = '';
+    charState.changeMakeup = '';
+    charState.changeWardrobe = '';
+    charState.changeInjuries = '';
+    charState.changeDirt = '';
+
+    console.log(`✅ ${character}: No change in Scene ${sceneIndex + 1}`);
+
+    renderSceneBreakdown(sceneIndex);
+    saveToLocalStorage();
+};
+
+/**
+ * Show change fields - user will document changes
+ */
+window.showChangeFields = function(character, sceneIndex) {
+    // Initialize state if needed
+    if (!state.characterStates[sceneIndex]) {
+        state.characterStates[sceneIndex] = {};
+    }
+    if (!state.characterStates[sceneIndex][character]) {
+        state.characterStates[sceneIndex][character] = {};
+    }
+
+    // Set changeStatus to has-changes
+    state.characterStates[sceneIndex][character].changeStatus = 'has-changes';
+
+    console.log(`📝 ${character}: Recording changes in Scene ${sceneIndex + 1}`);
+
+    renderSceneBreakdown(sceneIndex);
+    saveToLocalStorage();
+};
+
+// ============================================================================
+// CONTINUITY EVENT MANAGEMENT
+// ============================================================================
+
+/**
+ * Auto-detect which scenes a character appears in based on scene breakdowns
+ * @param {string} character - Character name
+ * @returns {number[]} - Array of scene indices where character appears
+ */
+function detectActorPresenceForCharacter(character) {
+    const scenes = [];
+
+    // Scan all scene breakdowns for character presence
+    state.sceneBreakdowns.forEach((breakdown, index) => {
+        if (breakdown && breakdown.cast && breakdown.cast.includes(character)) {
+            scenes.push(index);
+        }
+    });
+
+    console.log(`🎬 Detected ${character} in scenes:`, scenes.map(s => s + 1).join(', '));
+
+    return scenes;
+}
+
+/**
+ * Update actor presence for an existing event (when scene breakdowns change)
+ * @param {string} eventId - Event ID to update
+ */
+function updateEventActorPresence(eventId) {
+    const event = state.continuityEvents.find(e => e.id === eventId);
+    if (!event) return;
+
+    const newPresence = detectActorPresenceForCharacter(event.character);
+
+    // Filter to scenes within event range
+    const filteredPresence = newPresence.filter(scene =>
+        scene >= event.startScene &&
+        (!event.endScene || scene <= event.endScene)
+    );
+
+    // Update actorPresence
+    event.actorPresence = filteredPresence;
+
+    // Add visibility entries for new scenes (default: visible)
+    filteredPresence.forEach(sceneNum => {
+        const existingVis = event.visibility.find(v => v.scene === sceneNum);
+        if (!existingVis) {
+            event.visibility.push({
+                scene: sceneNum,
+                status: 'visible',
+                coverage: null,
+                note: ''
+            });
+        }
+    });
+
+    // Sort visibility by scene
+    event.visibility.sort((a, b) => a.scene - b.scene);
+
+    saveToLocalStorage();
+    console.log(`✅ Updated actor presence for event: ${event.name}`);
+}
+
+/**
+ * Create a new continuity event
+ */
+window.createContinuityEvent = function(character, sceneIndex) {
+    // Store character and scene for modal
+    window.currentEventCharacter = character;
+    window.currentEventScene = sceneIndex;
+
+    // Open create event modal
+    document.getElementById('event-character-name').textContent = character;
+    document.getElementById('event-start-scene').value = sceneIndex + 1;
+    document.getElementById('create-event-modal').style.display = 'flex';
+};
+
+/**
+ * Confirm creating a continuity event
+ */
+window.confirmCreateEvent = function() {
+    const name = document.getElementById('event-name').value.trim();
+    const category = document.getElementById('event-category').value;
+    const startScene = parseInt(document.getElementById('event-start-scene').value) - 1; // Convert to 0-index
+    const initialDescription = document.getElementById('event-initial-description').value.trim();
+
+    if (!name) {
+        alert('Please enter an event name');
+        return;
+    }
+
+    if (!initialDescription) {
+        alert('Please enter an initial description');
+        return;
+    }
+
+    // Auto-detect actor presence from scene breakdowns
+    const actorPresence = detectActorPresenceForCharacter(window.currentEventCharacter);
+
+    const event = {
+        id: `event-${Date.now()}`,
+        character: window.currentEventCharacter,
+        name: name,
+        category: category,
+        startScene: startScene,
+        endScene: null,
+        status: 'active',
+        observations: [
+            {
+                scene: startScene,
+                description: initialDescription,
+                type: 'logged',
+                timestamp: Date.now()
+            }
+        ],
+        timeline: [],
+
+        // NEW: Auto-detected actor presence
+        actorPresence: actorPresence,
+
+        // NEW: Visibility tracking
+        visibility: actorPresence.map(sceneNum => ({
+            scene: sceneNum,
+            status: 'visible',
+            coverage: null,
+            note: ''
+        })),
+
+        // NEW: Script references (tags linked to this event)
+        keyScenes: []
+    };
+
+    // Initialize continuityEvents if needed
+    if (!state.continuityEvents) {
+        state.continuityEvents = [];
+    }
+
+    // Add event
+    state.continuityEvents.push(event);
+
+    // Save to localStorage
+    saveToLocalStorage();
+
+    console.log(`✅ Created event: ${event.name} for ${event.character}`);
+
+    // Close modal
+    closeCreateEventModal();
+
+    // Refresh scene breakdown
+    renderSceneBreakdown(state.currentScene);
+};
+
+/**
+ * Close create event modal
+ */
+window.closeCreateEventModal = function() {
+    document.getElementById('create-event-modal').style.display = 'none';
+    // Clear form
+    document.getElementById('event-name').value = '';
+    document.getElementById('event-initial-description').value = '';
+};
+
+/**
+ * Update event note for current scene
+ */
+window.updateEventNote = function(eventId, sceneIndex, note) {
+    if (!state.continuityEvents) return;
+
+    const event = state.continuityEvents.find(e => e.id === eventId);
+    if (!event) return;
+
+    // Find or create observation for current scene
+    let obs = event.observations.find(o => o.scene === sceneIndex);
+
+    if (obs) {
+        obs.description = note;
+    } else {
+        event.observations.push({
+            scene: sceneIndex,
+            description: note,
+            type: 'logged',
+            timestamp: Date.now()
+        });
+    }
+
+    // Sort observations by scene
+    event.observations.sort((a, b) => a.scene - b.scene);
+
+    saveToLocalStorage();
+    console.log(`📝 Updated ${event.name} for Scene ${sceneIndex + 1}`);
+};
+
+/**
+ * Toggle visibility status for an event in a specific scene
+ */
+window.toggleVisibility = function(eventId, sceneIndex, isHidden) {
+    const event = state.continuityEvents.find(e => e.id === eventId);
+    if (!event) return;
+
+    // Initialize visibility array if needed
+    if (!event.visibility) {
+        event.visibility = [];
+    }
+
+    // Find or create visibility entry for this scene
+    let visEntry = event.visibility.find(v => v.scene === sceneIndex);
+
+    if (!visEntry) {
+        visEntry = {
+            scene: sceneIndex,
+            status: 'visible',
+            coverage: null,
+            note: ''
+        };
+        event.visibility.push(visEntry);
+        event.visibility.sort((a, b) => a.scene - b.scene);
+    }
+
+    // Update status
+    visEntry.status = isHidden ? 'hidden' : 'visible';
+
+    // Clear coverage if not hidden
+    if (!isHidden) {
+        visEntry.coverage = null;
+        visEntry.note = '';
+    }
+
+    saveToLocalStorage();
+    renderSceneBreakdown(state.currentScene);
+    console.log(`👁️ ${event.name}: ${isHidden ? 'Hidden' : 'Visible'} in Scene ${sceneIndex + 1}`);
+};
+
+/**
+ * Set coverage type for a hidden event
+ */
+window.setCoverage = function(eventId, sceneIndex, coverage) {
+    const event = state.continuityEvents.find(e => e.id === eventId);
+    if (!event) return;
+
+    const visEntry = event.visibility.find(v => v.scene === sceneIndex);
+    if (!visEntry) return;
+
+    visEntry.coverage = coverage;
+
+    saveToLocalStorage();
+    renderSceneBreakdown(state.currentScene);
+    console.log(`🩹 ${event.name}: Coverage set to "${coverage}" in Scene ${sceneIndex + 1}`);
+};
+
+/**
+ * Set coverage note for a hidden event
+ */
+window.setCoverageNote = function(eventId, sceneIndex, note) {
+    const event = state.continuityEvents.find(e => e.id === eventId);
+    if (!event) return;
+
+    const visEntry = event.visibility.find(v => v.scene === sceneIndex);
+    if (!visEntry) return;
+
+    visEntry.note = note;
+
+    saveToLocalStorage();
+    console.log(`📝 ${event.name}: Coverage note updated for Scene ${sceneIndex + 1}`);
+};
+
+/**
+ * End a continuity event
+ */
+window.endContinuityEvent = function(eventId, sceneIndex) {
+    const description = prompt('Describe the final state of this event:');
+
+    if (!description) return;
+
+    const event = state.continuityEvents.find(e => e.id === eventId);
+    if (!event) return;
+
+    event.endScene = sceneIndex;
+    event.status = 'completed';
+
+    // Add final observation
+    event.observations.push({
+        scene: sceneIndex,
+        description: description,
+        type: 'logged',
+        timestamp: Date.now()
+    });
+
+    saveToLocalStorage();
+
+    console.log(`✅ Ended event: ${event.name} at Scene ${sceneIndex + 1}`);
+
+    // Refresh scene breakdown
+    renderSceneBreakdown(state.currentScene);
+};
+
+/**
+ * View event timeline
+ */
+window.viewEventTimeline = function(eventId) {
+    const event = state.continuityEvents.find(e => e.id === eventId);
+    if (!event) return;
+
+    // Store current event ID
+    window.currentTimelineEvent = eventId;
+
+    // Populate timeline modal
+    document.getElementById('timeline-event-name').textContent = `${event.name} Timeline`;
+    document.getElementById('timeline-character').textContent = event.character;
+    document.getElementById('timeline-category').textContent = event.category;
+    document.getElementById('timeline-range').textContent = event.endScene
+        ? `${event.startScene + 1} - ${event.endScene + 1}`
+        : `${event.startScene + 1} - present`;
+    document.getElementById('timeline-status').textContent = event.status;
+
+    // Render timeline view
+    renderTimelineEntries(event);
+
+    // Show modal
+    document.getElementById('event-timeline-modal').style.display = 'flex';
+};
+
+/**
+ * Render timeline entries in three-column view
+ */
+function renderTimelineEntries(event) {
+    // Render Timeline column
+    renderTimelineColumn(event);
+
+    // Render Actor Presence column
+    renderActorPresenceColumn(event);
+
+    // Render Key Scenes column
+    renderKeyScenesColumn(event);
+}
+
+/**
+ * Render Timeline column (logged + generated observations)
+ */
+function renderTimelineColumn(event) {
+    const container = document.getElementById('timeline-column');
+    if (!container) return;
+
+    const endScene = event.endScene || state.scenes.length - 1;
+    let html = '';
+    let lastLoggedScene = event.startScene - 1;
+
+    // Sort observations by scene
+    const sortedObs = [...event.observations].sort((a, b) => a.scene - b.scene);
+
+    sortedObs.forEach((obs, index) => {
+        // Check if there's a gap between this and previous observation
+        if (obs.scene > lastLoggedScene + 1) {
+            const gapStart = lastLoggedScene + 1;
+            const gapEnd = obs.scene - 1;
+            const sceneList = [];
+            for (let i = gapStart; i <= gapEnd; i++) {
+                sceneList.push(i + 1);
+            }
+
+            html += `
+                <div class="timeline-gap">
+                    <div class="gap-indicator">Scenes ${sceneList.join(', ')}</div>
+                </div>
+            `;
+
+            // Show generated entries for this gap if they exist
+            const generated = (event.timeline || event.generatedTimeline || [])
+                .filter(g => g.scene >= gapStart && g.scene <= gapEnd);
+            generated.forEach(gen => {
+                html += `
+                    <div class="timeline-entry generated">
+                        <div class="timeline-scene">Scene ${gen.scene + 1}</div>
+                        <div class="timeline-badge">AI GENERATED</div>
+                        <div class="timeline-description">${escapeHtml(gen.description)}</div>
+                    </div>
+                `;
+            });
+        }
+
+        // Add logged observation
+        html += `
+            <div class="timeline-entry logged">
+                <div class="timeline-scene">Scene ${obs.scene + 1}</div>
+                <div class="timeline-badge">LOGGED</div>
+                <div class="timeline-description">${escapeHtml(obs.description)}</div>
+            </div>
+        `;
+
+        lastLoggedScene = obs.scene;
+    });
+
+    if (html === '') {
+        html = '<div class="column-empty">No timeline entries yet</div>';
+    }
+
+    container.innerHTML = html;
+}
+
+/**
+ * Render Actor Presence column
+ */
+function renderActorPresenceColumn(event) {
+    const container = document.getElementById('actor-presence-column');
+    if (!container) return;
+
+    const actorPresence = event.actorPresence || [];
+    const visibility = event.visibility || [];
+
+    if (actorPresence.length === 0) {
+        container.innerHTML = '<div class="column-empty">No actor presence data</div>';
+        return;
+    }
+
+    let html = '';
+
+    actorPresence.forEach(sceneNum => {
+        const visInfo = visibility.find(v => v.scene === sceneNum);
+        const isHidden = visInfo?.status === 'hidden';
+        const coverage = visInfo?.coverage || '';
+        const coverageNote = visInfo?.note || '';
+
+        html += `
+            <div class="presence-item ${isHidden ? 'hidden' : ''}">
+                <div class="presence-scene">Scene ${sceneNum + 1}</div>
+                <div class="presence-status">
+                    <span class="presence-status-icon">${isHidden ? '🚫' : '✅'}</span>
+                    <span>${isHidden ? 'Hidden/Covered' : 'Visible'}</span>
+                </div>
+                ${isHidden && coverage ? `
+                    <div class="presence-coverage">
+                        Coverage: ${coverage === 'other' ? (coverageNote || 'Other') : coverage}
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+}
+
+/**
+ * Render Key Scenes column (linked tags)
+ */
+function renderKeyScenesColumn(event) {
+    const container = document.getElementById('key-scenes-column');
+    if (!container) return;
+
+    const keyScenes = event.keyScenes || [];
+
+    if (keyScenes.length === 0) {
+        container.innerHTML = '<div class="column-empty">No key scenes linked yet<br><br>Use "Link to Event" when creating tags</div>';
+        return;
+    }
+
+    let html = '';
+
+    keyScenes.forEach(keyScene => {
+        html += `
+            <div class="key-scene-item">
+                <div class="key-scene-header">
+                    <span class="key-scene-number">Scene ${keyScene.scene + 1}</span>
+                    <span class="key-scene-category">${keyScene.category}</span>
+                </div>
+                <div class="key-scene-text">
+                    "${escapeHtml(keyScene.scriptText.substring(0, 100))}${keyScene.scriptText.length > 100 ? '...' : ''}"
+                </div>
+                <div class="key-scene-phrase">
+                    → <span class="key-scene-phrase">${escapeHtml(keyScene.taggedPhrase)}</span>
+                </div>
+                ${keyScene.note ? `
+                    <div class="key-scene-note">${escapeHtml(keyScene.note)}</div>
+                ` : ''}
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+}
+
+/**
+ * Close event timeline modal
+ */
+window.closeEventTimelineModal = function() {
+    document.getElementById('event-timeline-modal').style.display = 'none';
+};
+
+/**
+ * Export event timeline to PDF
+ */
+window.exportEventPDF = function() {
+    alert('PDF export coming soon! This will export the full event timeline with all three columns.');
+};
+
+/**
+ * Toggle event menu
+ */
+window.toggleEventMenu = function(eventId) {
+    // TODO: Implement menu dropdown
+    console.log('Toggle menu for event:', eventId);
+};
+
+// Expose renderTimelineEntries for AI integration
+window.renderTimelineEntries = renderTimelineEntries;
 
 // ============================================================================
 // EXPORTS
