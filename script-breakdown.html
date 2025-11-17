@@ -520,6 +520,42 @@
         </div>
     </div>
 
+    <!-- New Character Modal -->
+    <div class="modal" id="new-character-modal" style="display: none;">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-title">Add New Character</div>
+
+            <div class="modal-section">
+                <label class="modal-label">Full Character Name *</label>
+                <input type="text" class="modal-input" id="new-char-name"
+                       placeholder="e.g., JOHN SMITH">
+                <div class="modal-note">Use ALL CAPS for consistency</div>
+
+                <label class="modal-label">First Appearance Scene *</label>
+                <input type="number" class="modal-input" id="new-char-first-scene"
+                       min="1" value="1">
+
+                <label class="modal-label">Role/Importance</label>
+                <select class="modal-select" id="new-char-importance">
+                    <option value="lead">Lead</option>
+                    <option value="supporting">Supporting</option>
+                    <option value="recurring">Recurring</option>
+                    <option value="day-player">Day Player</option>
+                    <option value="background">Background</option>
+                </select>
+
+                <label class="modal-label">Notes (Optional)</label>
+                <textarea class="modal-textarea" id="new-char-notes" rows="2"
+                          placeholder="Any additional character info..."></textarea>
+            </div>
+
+            <div class="modal-actions">
+                <button class="modal-btn" onclick="cancelNewCharacter()">Cancel</button>
+                <button class="modal-btn primary" onclick="confirmNewCharacter()">Add Character</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ============================================================================ -->
     <!-- TOOLS PANEL -->
     <!-- ============================================================================ -->
