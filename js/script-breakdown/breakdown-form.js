@@ -1115,23 +1115,43 @@ window.showChangeFields = function(character, sceneIndex) {
 // ============================================================================
 
 /**
- * Auto-detect which scenes a character appears in based on scene breakdowns
+ * Auto-detect which scenes a character appears in based on castMembers
  * @param {string} character - Character name
- * @returns {number[]} - Array of scene indices where character appears
+ * @param {number} startScene - Starting scene (1-indexed, optional)
+ * @param {number} endScene - Ending scene (1-indexed, optional)
+ * @returns {number[]} - Array of 1-indexed scene numbers where character appears
  */
-function detectActorPresenceForCharacter(character) {
-    const scenes = [];
+function detectActorPresenceForCharacter(character, startScene, endScene) {
+    console.log('🔍 Detecting actor presence for:', character);
+    console.log('   Range:', startScene || 'start', 'to', endScene || 'end');
 
-    // Scan all scene breakdowns for character presence
-    state.sceneBreakdowns.forEach((breakdown, index) => {
-        if (breakdown && breakdown.cast && breakdown.cast.includes(character)) {
-            scenes.push(index);
+    const presenceScenes = [];
+
+    // Check if scenes exist
+    if (!state || !state.scenes || !Array.isArray(state.scenes)) {
+        console.warn('⚠️ No scenes array found in state');
+        return [];
+    }
+
+    // Loop through scenes
+    state.scenes.forEach((scene, index) => {
+        const sceneNumber = index + 1; // Convert to 1-indexed
+
+        // Check if scene is in range
+        if (startScene && sceneNumber < startScene) return;
+        if (endScene && sceneNumber > endScene) return;
+
+        // Check if character appears in this scene's castMembers
+        const castMembers = scene.castMembers || [];
+
+        if (castMembers.includes(character)) {
+            presenceScenes.push(sceneNumber);
         }
     });
 
-    console.log(`🎬 Detected ${character} in scenes:`, scenes.map(s => s + 1).join(', '));
+    console.log(`✅ Actor "${character}" present in ${presenceScenes.length} scene(s):`, presenceScenes.join(', '));
 
-    return scenes;
+    return presenceScenes;
 }
 
 /**
@@ -1322,9 +1342,17 @@ window.confirmCreateEvent = function() {
         console.log('✅ All validations passed');
 
         // Auto-detect actor presence from scene breakdowns
+        // detectActorPresenceForCharacter returns 1-indexed scene numbers
         console.log('🔍 Detecting actor presence...');
-        const actorPresence = detectActorPresenceForCharacter(window.currentEventCharacter);
-        console.log('🎭 Actor presence detected:', actorPresence);
+        const actorPresence1Indexed = detectActorPresenceForCharacter(
+            window.currentEventCharacter,
+            parseInt(startSceneValue) // Pass 1-indexed start scene
+        );
+        console.log('🎭 Actor presence detected (1-indexed):', actorPresence1Indexed);
+
+        // Convert to 0-indexed for internal storage
+        const actorPresence = actorPresence1Indexed.map(sceneNum => sceneNum - 1);
+        console.log('🎭 Actor presence (0-indexed for storage):', actorPresence);
 
         // Create event object
         const event = {
@@ -1344,9 +1372,9 @@ window.confirmCreateEvent = function() {
                 }
             ],
             timeline: [],
-            actorPresence: actorPresence,
+            actorPresence: actorPresence, // 0-indexed scene numbers
             visibility: actorPresence.map(sceneNum => ({
-                scene: sceneNum,
+                scene: sceneNum, // 0-indexed
                 status: 'visible',
                 coverage: null,
                 note: ''
