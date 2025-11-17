@@ -426,10 +426,43 @@ function renderCharacterFields(character, sceneIndex, scene) {
  * Render active continuity events for a character in current scene
  */
 function renderActiveEvents(character, sceneIndex) {
-    // Get all events for this character that are active in this scene
+    console.log('🎬 Rendering active events for:', character, 'in scene', sceneIndex + 1);
+
+    // Get all active events for this character
     const activeEvents = getActiveEventsForCharacter(character, sceneIndex);
 
+    console.log('   Found', activeEvents.length, 'active events');
+
     if (activeEvents.length === 0) {
+        return `
+            <div class="active-events-section">
+                <div class="section-label">CONTINUITY EVENTS</div>
+                <button class="add-event-btn" onclick="createContinuityEvent('${escapeHtml(character).replace(/'/g, "\\'")}', ${sceneIndex})">
+                    + Create Event
+                </button>
+            </div>
+        `;
+    }
+
+    // Filter to events that are active in this scene
+    const relevantEvents = activeEvents.filter(event => {
+        // Show if scene is at or after start
+        if (sceneIndex < event.startScene) {
+            return false;
+        }
+
+        // Show if no end scene (still active)
+        if (!event.endScene && event.endScene !== 0) {
+            return true;
+        }
+
+        // Show if scene is before or at end
+        return sceneIndex <= event.endScene;
+    });
+
+    console.log('   Showing', relevantEvents.length, 'events in this scene');
+
+    if (relevantEvents.length === 0) {
         return `
             <div class="active-events-section">
                 <div class="section-label">CONTINUITY EVENTS</div>
@@ -448,7 +481,7 @@ function renderActiveEvents(character, sceneIndex) {
                     + New
                 </button>
             </div>
-            ${activeEvents.map(event => renderEventCard(event, sceneIndex)).join('')}
+            ${relevantEvents.map(event => renderEventCard(event, sceneIndex)).join('')}
         </div>
     `;
 }
@@ -457,82 +490,96 @@ function renderActiveEvents(character, sceneIndex) {
  * Render a single event card
  */
 function renderEventCard(event, sceneIndex) {
-    // Get current scene's observation if it exists
-    const currentObs = event.observations.find(o => o.scene === sceneIndex);
-    const currentNote = currentObs ? currentObs.description : '';
+    // Get existing observation for this scene
+    const observation = event.observations.find(obs => obs.scene === sceneIndex);
+    const observationText = observation ? observation.description : '';
 
-    // Get visibility info for current scene
-    const visInfo = event.visibility?.find(v => v.scene === sceneIndex);
-    const isHidden = visInfo?.status === 'hidden';
-    const coverage = visInfo?.coverage || '';
-    const coverageNote = visInfo?.note || '';
-
-    const sceneRange = event.endScene
-        ? `Scenes ${event.startScene + 1}-${event.endScene + 1}`
-        : `Started Scene ${event.startScene + 1} • Active`;
+    // Get visibility for this scene
+    const visibility = event.visibility.find(v => v.scene === sceneIndex);
+    const isVisible = !visibility || visibility.status === 'visible';
 
     return `
         <div class="event-card" data-event-id="${event.id}">
             <div class="event-header">
                 <div class="event-info">
                     <div class="event-name">${escapeHtml(event.name)}</div>
-                    <div class="event-meta">${sceneRange}</div>
-                </div>
-                <button class="event-menu-btn" onclick="toggleEventMenu('${event.id}')">⋮</button>
-            </div>
-
-            <div class="event-current-state">
-                <div class="event-label">Scene ${sceneIndex + 1} Status:</div>
-                <textarea class="event-note"
-                          placeholder="Describe appearance/condition in this scene..."
-                          onchange="updateEventNote('${event.id}', ${sceneIndex}, this.value)">${escapeHtml(currentNote)}</textarea>
-            </div>
-
-            <!-- Visibility Tracking -->
-            <div class="event-visibility">
-                <label class="visibility-checkbox">
-                    <input type="checkbox"
-                           ${isHidden ? 'checked' : ''}
-                           onchange="toggleVisibility('${event.id}', ${sceneIndex}, this.checked)">
-                    <span>Hidden/Covered in this scene</span>
-                </label>
-
-                ${isHidden ? `
-                    <div class="visibility-details">
-                        <label class="visibility-label">Coverage Type:</label>
-                        <select class="visibility-select"
-                                onchange="setCoverage('${event.id}', ${sceneIndex}, this.value)">
-                            <option value="">Select...</option>
-                            <option value="bandage" ${coverage === 'bandage' ? 'selected' : ''}>Bandage</option>
-                            <option value="clothing" ${coverage === 'clothing' ? 'selected' : ''}>Clothing</option>
-                            <option value="hat" ${coverage === 'hat' ? 'selected' : ''}>Hat</option>
-                            <option value="makeup" ${coverage === 'makeup' ? 'selected' : ''}>Makeup/Concealer</option>
-                            <option value="other" ${coverage === 'other' ? 'selected' : ''}>Other</option>
-                        </select>
-
-                        ${coverage === 'other' || coverageNote ? `
-                            <input type="text"
-                                   class="visibility-note"
-                                   placeholder="Specify coverage details..."
-                                   value="${escapeHtml(coverageNote)}"
-                                   onchange="setCoverageNote('${event.id}', ${sceneIndex}, this.value)">
-                        ` : ''}
+                    <div class="event-meta">
+                        ${event.category} • Started Scene ${event.startScene + 1}
+                        ${event.endScene ? ` • Ended Scene ${event.endScene + 1}` : ' • Active'}
                     </div>
-                ` : ''}
+                </div>
+                <button class="event-menu-btn" onclick="openEventMenu('${event.id}')">⋮</button>
             </div>
 
-            <div class="event-actions">
-                <button class="event-btn" onclick="viewEventTimeline('${event.id}')">
-                    📊 Timeline
+            <div class="event-observation">
+                <label class="event-label">Scene ${sceneIndex + 1} Notes:</label>
+                <textarea class="event-note-input"
+                          placeholder="Describe appearance/condition in this scene..."
+                          onchange="saveEventObservation('${event.id}', ${sceneIndex}, this.value)"
+                          >${escapeHtml(observationText)}</textarea>
+                <div class="observation-hint">
+                    ${observationText ? '✓ Observation logged' : 'No notes yet for this scene'}
+                </div>
+            </div>
+
+            ${renderVisibilityCheckbox(event, sceneIndex)}
+
+            <div class="event-card-actions">
+                <button class="event-btn view" onclick="viewEventInTimeline('${event.id}')">
+                    View Timeline
                 </button>
                 ${!event.endScene ? `
-                    <button class="event-btn end-event-btn" onclick="endContinuityEvent('${event.id}', ${sceneIndex})">
-                        End Event
+                    <button class="event-btn end" onclick="endEventAtScene('${event.id}', ${sceneIndex})">
+                        End Event Here
                     </button>
                 ` : `
-                    <span class="event-status-badge">Completed</span>
+                    <div class="event-ended-badge">Ended</div>
                 `}
             </div>
+        </div>
+    `;
+}
+
+/**
+ * Render visibility checkbox for an event
+ */
+function renderVisibilityCheckbox(event, sceneIndex) {
+    const visInfo = event.visibility?.find(v => v.scene === sceneIndex);
+    const isHidden = visInfo?.status === 'hidden';
+    const coverage = visInfo?.coverage || '';
+    const coverageNote = visInfo?.note || '';
+
+    return `
+        <div class="event-visibility">
+            <label class="visibility-checkbox">
+                <input type="checkbox"
+                       ${isHidden ? 'checked' : ''}
+                       onchange="toggleVisibility('${event.id}', ${sceneIndex}, this.checked)">
+                <span>Hidden/Covered in this scene</span>
+            </label>
+
+            ${isHidden ? `
+                <div class="visibility-details">
+                    <label class="visibility-label">Coverage Type:</label>
+                    <select class="visibility-select"
+                            onchange="setCoverage('${event.id}', ${sceneIndex}, this.value)">
+                        <option value="">Select...</option>
+                        <option value="bandage" ${coverage === 'bandage' ? 'selected' : ''}>Bandage</option>
+                        <option value="clothing" ${coverage === 'clothing' ? 'selected' : ''}>Clothing</option>
+                        <option value="hat" ${coverage === 'hat' ? 'selected' : ''}>Hat</option>
+                        <option value="makeup" ${coverage === 'makeup' ? 'selected' : ''}>Makeup/Concealer</option>
+                        <option value="other" ${coverage === 'other' ? 'selected' : ''}>Other</option>
+                    </select>
+
+                    ${coverage === 'other' || coverageNote ? `
+                        <input type="text"
+                               class="visibility-note"
+                               placeholder="Specify coverage details..."
+                               value="${escapeHtml(coverageNote)}"
+                               onchange="setCoverageNote('${event.id}', ${sceneIndex}, this.value)">
+                    ` : ''}
+                </div>
+            ` : ''}
         </div>
     `;
 }
@@ -1459,7 +1506,93 @@ window.closeCreateEventModal = function() {
 };
 
 /**
- * Update event note for current scene
+ * Save event observation for a scene
+ */
+window.saveEventObservation = function(eventId, sceneNumber, description) {
+    console.log('💾 Saving observation:', { eventId, sceneNumber, description });
+
+    const event = state.continuityEvents.find(e => e.id === eventId);
+
+    if (!event) {
+        console.error('❌ Event not found:', eventId);
+        return;
+    }
+
+    // Remove empty observations
+    if (!description || description.trim() === '') {
+        event.observations = event.observations.filter(obs => obs.scene !== sceneNumber);
+        console.log('🗑️ Removed empty observation for scene', sceneNumber + 1);
+    } else {
+        // Find or create observation for this scene
+        let observation = event.observations.find(obs => obs.scene === sceneNumber);
+
+        if (observation) {
+            // Update existing
+            observation.description = description;
+            observation.timestamp = Date.now();
+            console.log('✏️ Updated observation');
+        } else {
+            // Add new
+            event.observations.push({
+                scene: sceneNumber,
+                description: description,
+                type: 'logged',
+                timestamp: Date.now()
+            });
+            console.log('➕ Added new observation');
+        }
+
+        // Sort by scene number
+        event.observations.sort((a, b) => a.scene - b.scene);
+    }
+
+    // Update timeline with logged observation
+    updateTimelineEntry(event, sceneNumber, description);
+
+    // Save to storage
+    saveToLocalStorage();
+
+    console.log('✅ Observation saved for', event.name);
+};
+
+/**
+ * Update timeline entry for a scene
+ */
+function updateTimelineEntry(event, sceneNumber, description) {
+    // Initialize timeline if needed
+    if (!event.timeline) {
+        event.timeline = [];
+    }
+
+    // Find existing timeline entry
+    let timelineEntry = event.timeline.find(t => t.scene === sceneNumber);
+
+    if (description && description.trim()) {
+        if (timelineEntry) {
+            // Update existing
+            timelineEntry.state = description;
+            timelineEntry.source = 'logged';
+        } else {
+            // Add new
+            event.timeline.push({
+                scene: sceneNumber,
+                state: description,
+                source: 'logged'
+            });
+
+            // Sort timeline
+            event.timeline.sort((a, b) => a.scene - b.scene);
+        }
+    } else {
+        // Remove if description is empty (but keep generated entries)
+        event.timeline = event.timeline.filter(t =>
+            t.scene !== sceneNumber || t.source === 'generated'
+        );
+    }
+}
+
+/**
+ * Update event note for current scene (DEPRECATED - use saveEventObservation)
  */
 window.updateEventNote = function(eventId, sceneIndex, note) {
     if (!state.continuityEvents) return;
@@ -1589,6 +1722,62 @@ window.endContinuityEvent = function(eventId, sceneIndex) {
 
     // Refresh scene breakdown
     renderSceneBreakdown(state.currentScene);
+};
+
+/**
+ * End event at a specific scene
+ */
+window.endEventAtScene = function(eventId, sceneNumber) {
+    console.log('🏁 Ending event:', eventId, 'at scene', sceneNumber + 1);
+
+    const description = prompt(`Describe the final state of this event in Scene ${sceneNumber + 1}:`);
+
+    if (description === null) {
+        // User cancelled
+        return;
+    }
+
+    const event = state.continuityEvents.find(e => e.id === eventId);
+
+    if (!event) {
+        console.error('❌ Event not found:', eventId);
+        return;
+    }
+
+    // Set end scene
+    event.endScene = sceneNumber;
+    event.status = 'completed';
+
+    // Add final observation if description provided
+    if (description && description.trim()) {
+        // Check if observation already exists
+        let observation = event.observations.find(obs => obs.scene === sceneNumber);
+
+        if (observation) {
+            observation.description = description;
+            observation.timestamp = Date.now();
+        } else {
+            event.observations.push({
+                scene: sceneNumber,
+                description: description,
+                type: 'logged',
+                timestamp: Date.now()
+            });
+        }
+
+        // Update timeline
+        updateTimelineEntry(event, sceneNumber, description);
+    }
+
+    // Save
+    saveToLocalStorage();
+
+    console.log('✅ Event ended:', event.name);
+
+    // Refresh display
+    renderSceneBreakdown(sceneNumber);
+
+    alert(`✅ Event "${event.name}" ended at Scene ${sceneNumber + 1}`);
 };
 
 /**
@@ -1795,6 +1984,20 @@ window.exportEventPDF = function() {
 window.toggleEventMenu = function(eventId) {
     // TODO: Implement menu dropdown
     console.log('Toggle menu for event:', eventId);
+};
+
+/**
+ * Open event menu (alias for toggleEventMenu)
+ */
+window.openEventMenu = function(eventId) {
+    window.toggleEventMenu(eventId);
+};
+
+/**
+ * View event in timeline (alias for viewEventTimeline)
+ */
+window.viewEventInTimeline = function(eventId) {
+    window.viewEventTimeline(eventId);
 };
 
 // Expose renderTimelineEntries for AI integration
