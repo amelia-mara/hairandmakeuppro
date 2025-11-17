@@ -1115,23 +1115,43 @@ window.showChangeFields = function(character, sceneIndex) {
 // ============================================================================
 
 /**
- * Auto-detect which scenes a character appears in based on scene breakdowns
+ * Auto-detect which scenes a character appears in based on castMembers
  * @param {string} character - Character name
- * @returns {number[]} - Array of scene indices where character appears
+ * @param {number} startScene - Starting scene (1-indexed, optional)
+ * @param {number} endScene - Ending scene (1-indexed, optional)
+ * @returns {number[]} - Array of 1-indexed scene numbers where character appears
  */
-function detectActorPresenceForCharacter(character) {
-    const scenes = [];
+function detectActorPresenceForCharacter(character, startScene, endScene) {
+    console.log('🔍 Detecting actor presence for:', character);
+    console.log('   Range:', startScene || 'start', 'to', endScene || 'end');
 
-    // Scan all scene breakdowns for character presence
-    state.sceneBreakdowns.forEach((breakdown, index) => {
-        if (breakdown && breakdown.cast && breakdown.cast.includes(character)) {
-            scenes.push(index);
+    const presenceScenes = [];
+
+    // Check if scenes exist
+    if (!state || !state.scenes || !Array.isArray(state.scenes)) {
+        console.warn('⚠️ No scenes array found in state');
+        return [];
+    }
+
+    // Loop through scenes
+    state.scenes.forEach((scene, index) => {
+        const sceneNumber = index + 1; // Convert to 1-indexed
+
+        // Check if scene is in range
+        if (startScene && sceneNumber < startScene) return;
+        if (endScene && sceneNumber > endScene) return;
+
+        // Check if character appears in this scene's castMembers
+        const castMembers = scene.castMembers || [];
+
+        if (castMembers.includes(character)) {
+            presenceScenes.push(sceneNumber);
         }
     });
 
-    console.log(`🎬 Detected ${character} in scenes:`, scenes.map(s => s + 1).join(', '));
+    console.log(`✅ Actor "${character}" present in ${presenceScenes.length} scene(s):`, presenceScenes.join(', '));
 
-    return scenes;
+    return presenceScenes;
 }
 
 /**
@@ -1177,99 +1197,265 @@ function updateEventActorPresence(eventId) {
  * Create a new continuity event
  */
 window.createContinuityEvent = function(character, sceneIndex) {
-    // Store character and scene for modal
-    window.currentEventCharacter = character;
-    window.currentEventScene = sceneIndex;
+    console.log('🎬 Opening create event modal:', { character, sceneIndex });
 
-    // Open create event modal
-    document.getElementById('event-character-name').textContent = character;
-    document.getElementById('event-start-scene').value = sceneIndex + 1;
-    document.getElementById('create-event-modal').style.display = 'flex';
+    try {
+        // Store character and scene for modal
+        window.currentEventCharacter = character;
+        window.currentEventScene = sceneIndex;
+
+        // Get modal elements
+        const modal = document.getElementById('create-event-modal');
+        const characterDisplay = document.getElementById('event-character-name');
+        const startSceneInput = document.getElementById('event-start-scene');
+        const nameInput = document.getElementById('event-name');
+        const descriptionInput = document.getElementById('event-initial-description');
+
+        // Validate elements exist
+        if (!modal) {
+            console.error('❌ Modal not found: create-event-modal');
+            alert('Error: Event modal not found. Please refresh the page.');
+            return;
+        }
+
+        if (!characterDisplay) {
+            console.error('❌ Character display not found: event-character-name');
+        }
+
+        if (!startSceneInput) {
+            console.error('❌ Start scene input not found: event-start-scene');
+        }
+
+        // Set character display
+        if (characterDisplay) {
+            characterDisplay.textContent = character;
+            characterDisplay.style.color = 'var(--accent-gold)';
+            characterDisplay.style.fontWeight = '600';
+        }
+
+        // Set starting scene (convert 0-index to 1-index for display)
+        if (startSceneInput) {
+            startSceneInput.value = sceneIndex + 1;
+            console.log(`📍 Set start scene to: ${sceneIndex + 1}`);
+        }
+
+        // Clear previous values
+        if (nameInput) {
+            nameInput.value = '';
+        }
+        if (descriptionInput) {
+            descriptionInput.value = '';
+        }
+
+        // Open modal
+        modal.style.display = 'flex';
+        console.log('✅ Modal opened successfully');
+
+        // Focus on name input for better UX
+        setTimeout(() => {
+            if (nameInput) {
+                nameInput.focus();
+            }
+        }, 100);
+
+    } catch (error) {
+        console.error('❌ Error opening event modal:', error);
+        alert(`Error opening modal: ${error.message}`);
+    }
 };
 
 /**
  * Confirm creating a continuity event
  */
 window.confirmCreateEvent = function() {
-    const name = document.getElementById('event-name').value.trim();
-    const category = document.getElementById('event-category').value;
-    const startScene = parseInt(document.getElementById('event-start-scene').value) - 1; // Convert to 0-index
-    const initialDescription = document.getElementById('event-initial-description').value.trim();
+    console.log('🎬 confirmCreateEvent called');
 
-    if (!name) {
-        alert('Please enter an event name');
-        return;
+    try {
+        // Get form values
+        const nameInput = document.getElementById('event-name');
+        const categoryInput = document.getElementById('event-category');
+        const startSceneInput = document.getElementById('event-start-scene');
+        const descriptionInput = document.getElementById('event-initial-description');
+
+        console.log('📋 Form elements:', {
+            nameInput,
+            categoryInput,
+            startSceneInput,
+            descriptionInput
+        });
+
+        if (!nameInput || !categoryInput || !startSceneInput || !descriptionInput) {
+            console.error('❌ Missing form elements!');
+            alert('Error: Form elements not found. Please refresh the page.');
+            return;
+        }
+
+        const name = nameInput.value.trim();
+        const category = categoryInput.value;
+        const startSceneValue = startSceneInput.value;
+        const initialDescription = descriptionInput.value.trim();
+
+        console.log('📝 Form values:', {
+            character: window.currentEventCharacter,
+            name,
+            category,
+            startSceneValue,
+            initialDescription
+        });
+
+        // Validate character
+        if (!window.currentEventCharacter) {
+            console.error('❌ No character selected');
+            alert('Error: No character selected. Please close and reopen the modal.');
+            return;
+        }
+
+        // Validate name
+        if (!name) {
+            console.warn('⚠️ No event name entered');
+            alert('Please enter an event name');
+            return;
+        }
+
+        // Validate start scene
+        if (!startSceneValue || isNaN(startSceneValue)) {
+            console.warn('⚠️ Invalid start scene:', startSceneValue);
+            alert('Please enter a valid starting scene number');
+            return;
+        }
+
+        const startScene = parseInt(startSceneValue) - 1; // Convert to 0-index
+
+        if (startScene < 0 || startScene >= state.scenes.length) {
+            console.warn('⚠️ Start scene out of range:', startScene);
+            alert(`Scene ${startSceneValue} is out of range (1-${state.scenes.length})`);
+            return;
+        }
+
+        // Validate description
+        if (!initialDescription) {
+            console.warn('⚠️ No initial description entered');
+            alert('Please enter an initial description');
+            return;
+        }
+
+        console.log('✅ All validations passed');
+
+        // Auto-detect actor presence from scene breakdowns
+        // detectActorPresenceForCharacter returns 1-indexed scene numbers
+        console.log('🔍 Detecting actor presence...');
+        const actorPresence1Indexed = detectActorPresenceForCharacter(
+            window.currentEventCharacter,
+            parseInt(startSceneValue) // Pass 1-indexed start scene
+        );
+        console.log('🎭 Actor presence detected (1-indexed):', actorPresence1Indexed);
+
+        // Convert to 0-indexed for internal storage
+        const actorPresence = actorPresence1Indexed.map(sceneNum => sceneNum - 1);
+        console.log('🎭 Actor presence (0-indexed for storage):', actorPresence);
+
+        // Create event object
+        const event = {
+            id: `event-${Date.now()}`,
+            character: window.currentEventCharacter,
+            name: name,
+            category: category,
+            startScene: startScene,
+            endScene: null,
+            status: 'active',
+            observations: [
+                {
+                    scene: startScene,
+                    description: initialDescription,
+                    type: 'logged',
+                    timestamp: Date.now()
+                }
+            ],
+            timeline: [],
+            actorPresence: actorPresence, // 0-indexed scene numbers
+            visibility: actorPresence.map(sceneNum => ({
+                scene: sceneNum, // 0-indexed
+                status: 'visible',
+                coverage: null,
+                note: ''
+            })),
+            keyScenes: []
+        };
+
+        console.log('📦 Event object created:', event);
+
+        // Initialize continuityEvents if needed
+        if (!state.continuityEvents) {
+            console.log('🔧 Initializing continuityEvents array');
+            state.continuityEvents = [];
+        }
+
+        // Add event
+        console.log('➕ Adding event to state...');
+        state.continuityEvents.push(event);
+        console.log(`📊 Total events: ${state.continuityEvents.length}`);
+
+        // Save to localStorage
+        console.log('💾 Saving to localStorage...');
+        saveToLocalStorage();
+        console.log('✅ Saved successfully');
+
+        console.log(`✅ Created event: ${event.name} for ${event.character}`);
+
+        // Close modal
+        console.log('🚪 Closing modal...');
+        closeCreateEventModal();
+
+        // Refresh scene breakdown
+        console.log('🔄 Refreshing scene breakdown...');
+        renderSceneBreakdown(state.currentScene);
+
+        // Show success message
+        alert(`✅ Event created: ${name}\n\nCharacter: ${event.character}\nStarting Scene: ${startSceneValue}\nActor appears in ${actorPresence.length} scene(s)`);
+
+        console.log('✅ confirmCreateEvent completed successfully');
+
+    } catch (error) {
+        console.error('❌ Error in confirmCreateEvent:', error);
+        console.error('Stack trace:', error.stack);
+        alert(`Error creating event: ${error.message}\n\nCheck console for details.`);
     }
-
-    if (!initialDescription) {
-        alert('Please enter an initial description');
-        return;
-    }
-
-    // Auto-detect actor presence from scene breakdowns
-    const actorPresence = detectActorPresenceForCharacter(window.currentEventCharacter);
-
-    const event = {
-        id: `event-${Date.now()}`,
-        character: window.currentEventCharacter,
-        name: name,
-        category: category,
-        startScene: startScene,
-        endScene: null,
-        status: 'active',
-        observations: [
-            {
-                scene: startScene,
-                description: initialDescription,
-                type: 'logged',
-                timestamp: Date.now()
-            }
-        ],
-        timeline: [],
-
-        // NEW: Auto-detected actor presence
-        actorPresence: actorPresence,
-
-        // NEW: Visibility tracking
-        visibility: actorPresence.map(sceneNum => ({
-            scene: sceneNum,
-            status: 'visible',
-            coverage: null,
-            note: ''
-        })),
-
-        // NEW: Script references (tags linked to this event)
-        keyScenes: []
-    };
-
-    // Initialize continuityEvents if needed
-    if (!state.continuityEvents) {
-        state.continuityEvents = [];
-    }
-
-    // Add event
-    state.continuityEvents.push(event);
-
-    // Save to localStorage
-    saveToLocalStorage();
-
-    console.log(`✅ Created event: ${event.name} for ${event.character}`);
-
-    // Close modal
-    closeCreateEventModal();
-
-    // Refresh scene breakdown
-    renderSceneBreakdown(state.currentScene);
 };
 
 /**
  * Close create event modal
  */
 window.closeCreateEventModal = function() {
-    document.getElementById('create-event-modal').style.display = 'none';
-    // Clear form
-    document.getElementById('event-name').value = '';
-    document.getElementById('event-initial-description').value = '';
+    console.log('🚪 Closing event modal...');
+
+    try {
+        const modal = document.getElementById('create-event-modal');
+        const nameInput = document.getElementById('event-name');
+        const descriptionInput = document.getElementById('event-initial-description');
+
+        if (modal) {
+            modal.style.display = 'none';
+        } else {
+            console.error('❌ Modal not found when trying to close');
+        }
+
+        // Clear form
+        if (nameInput) {
+            nameInput.value = '';
+        }
+        if (descriptionInput) {
+            descriptionInput.value = '';
+        }
+
+        // Clear stored character
+        window.currentEventCharacter = null;
+        window.currentEventScene = null;
+
+        console.log('✅ Modal closed');
+
+    } catch (error) {
+        console.error('❌ Error closing modal:', error);
+    }
 };
 
 /**
