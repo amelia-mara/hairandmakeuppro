@@ -396,9 +396,17 @@ import { buildCharacterProfile } from './character-profiles.js';
 export function renderCharacterTabs() {
     console.log('🔄 Rendering character tabs from confirmed characters...');
 
-    const tabsContainer = document.querySelector('.center-tabs');
+    // Look for either .center-tabs OR .file-dividers (in case it's already been converted)
+    const tabsContainer = document.querySelector('.center-tabs, .file-dividers');
     if (!tabsContainer) {
         console.error('❌ .center-tabs container not found!');
+        console.log('   DOM readyState:', document.readyState);
+        console.log('   Retrying in 100ms...');
+
+        // Retry after short delay if DOM not ready
+        if (document.readyState === 'loading') {
+            setTimeout(() => renderCharacterTabs(), 100);
+        }
         return;
     }
 
