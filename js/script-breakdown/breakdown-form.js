@@ -541,7 +541,20 @@ function renderEventCard(event, sceneIndex) {
  * Get active events for a character in a given scene
  */
 function getActiveEventsForCharacter(character, sceneIndex) {
+    // DEFENSIVE: Ensure state exists
+    if (!state) {
+        console.warn('⚠️ scriptBreakdownState not initialized');
+        return [];
+    }
+
+    // DEFENSIVE: Ensure continuityEvents is an array
     if (!state.continuityEvents) {
+        console.warn('⚠️ continuityEvents missing, initializing');
+        state.continuityEvents = [];
+    }
+
+    if (!Array.isArray(state.continuityEvents)) {
+        console.error('❌ continuityEvents is not an array:', typeof state.continuityEvents);
         state.continuityEvents = [];
     }
 

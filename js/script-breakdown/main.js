@@ -86,9 +86,24 @@ export const state = {
  * - Render initial UI
  */
 export async function init() {
-    console.log('Initializing Script Breakdown application...');
+    console.log('🚀 Initializing Script Breakdown application...');
 
     try {
+        // CRITICAL: Initialize state arrays FIRST before loading anything
+        if (!state.continuityEvents) {
+            state.continuityEvents = [];
+        }
+
+        if (!Array.isArray(state.scenes)) {
+            state.scenes = [];
+        }
+
+        if (!state.confirmedCharacters || !(state.confirmedCharacters instanceof Set)) {
+            state.confirmedCharacters = new Set();
+        }
+
+        console.log('✅ State initialized with continuityEvents:', state.continuityEvents);
+
         // Load project data from localStorage
         loadProjectData();
 
