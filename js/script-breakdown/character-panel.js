@@ -1106,64 +1106,43 @@ function renderLookCard(characterName, look) {
  * @returns {string} HTML for lookbook view
  */
 function renderLookbookView(characterName) {
-    const profile = state.castProfiles[characterName] || {};
-    const dayGroups = getCharacterLooksByDay(characterName);
+    console.log('📖 Rendering lookbook for:', characterName);
 
-    // Sort days (natural sort for "Day 1", "Day 2", etc.)
-    const sortedDays = Object.keys(dayGroups).sort((a, b) => {
-        if (a === 'Unassigned') return 1;
-        if (b === 'Unassigned') return -1;
+    const looks = window.getLooksForCharacter ? window.getLooksForCharacter(characterName) : [];
 
-        const numA = parseInt(a.match(/\d+/)?.[0] || 0);
-        const numB = parseInt(b.match(/\d+/)?.[0] || 0);
-        return numA - numB;
-    });
-
-    if (sortedDays.length === 0) {
+    if (looks.length === 0) {
         return `
             <div class="lookbook-view">
-                <div class="view-section">
-                    <h3>Base Description</h3>
-                    <p>${escapeHtml(profile.baseDescription || 'No base description yet')}</p>
-                </div>
-                <div class="empty-message">
-                    This character doesn't appear in any scenes yet.
+                <div class="lookbook-empty">
+                    <div class="empty-icon">👔</div>
+                    <div class="empty-title">No looks created yet</div>
+                    <div class="empty-text">
+                        Create looks in the scene-by-scene breakdown to build this character's lookbook.
+                    </div>
                 </div>
             </div>
         `;
     }
 
+    // Sort looks by start scene
+    looks.sort((a, b) => a.startScene - b.startScene);
+
     return `
         <div class="lookbook-view">
-            <div class="view-section">
-                <h3>Base Description</h3>
-                <div class="base-description-field">
-                    <textarea
-                        class="base-description-input"
-                        placeholder="Enter base character description (age, build, general appearance, etc.)..."
-                        onchange="updateQuickBaseDescription('${escapeHtml(characterName).replace(/'/g, "\\'")}', this.value)">${escapeHtml(profile.baseDescription || '')}</textarea>
+            <div class="lookbook-header">
+                <div class="lookbook-title">
+                    <h3>Character Lookbook: ${escapeHtml(characterName)}</h3>
+                    <div class="lookbook-stats">${looks.length} look${looks.length !== 1 ? 's' : ''}</div>
+                </div>
+                <div class="lookbook-actions">
+                    <button class="btn" onclick="exportLookbook('${escapeHtml(characterName).replace(/'/g, "\\'")}')">
+                        📤 Export PDF
+                    </button>
                 </div>
             </div>
 
-            <div class="lookbook-container">
-                ${sortedDays.map(day => {
-                    const looks = dayGroups[day];
-                    const dayId = day.toLowerCase().replace(/\s+/g, '-');
-
-                    return `
-                        <div class="story-day-section" id="lookbook-day-${dayId}">
-                            <div class="day-section-header" onclick="toggleDaySection('${dayId}')">
-                                <span class="expand-icon">▼</span>
-                                <h3 class="day-section-title">${escapeHtml(day)}</h3>
-                                <span class="day-scene-count">${looks.length} scene${looks.length !== 1 ? 's' : ''}</span>
-                            </div>
-
-                            <div class="day-looks expanded" id="day-looks-${dayId}">
-                                ${looks.map(look => renderLookCard(characterName, look)).join('')}
-                            </div>
-                        </div>
-                    `;
-                }).join('')}
+            <div class="lookbook-grid">
+                ${looks.map((look, index) => renderCharacterLookCard(look, index + 1)).join('')}
             </div>
         </div>
     `;

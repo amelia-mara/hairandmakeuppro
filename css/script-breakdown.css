@@ -13892,3 +13892,251 @@
     color: var(--text-light);
     font-weight: 500;
 }
+
+/* ============================================
+   LOOKBOOK TAB STYLES
+   ============================================ */
+
+.lookbook-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.lookbook-title h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-light);
+    margin-bottom: 4px;
+}
+
+.lookbook-stats {
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.lookbook-empty {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.empty-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.empty-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-light);
+    margin-bottom: 8px;
+}
+
+.empty-text {
+    font-size: 14px;
+    color: var(--text-muted);
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+/* Look Cards Grid */
+.lookbook-grid {
+    display: grid;
+    gap: 20px;
+}
+
+.look-card {
+    background: rgba(201, 169, 97, 0.05);
+    border: 1px solid rgba(201, 169, 97, 0.2);
+    border-radius: 12px;
+    padding: 20px;
+    transition: all 0.2s;
+}
+
+.look-card:hover {
+    border-color: rgba(201, 169, 97, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.look-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.look-number {
+    padding: 4px 12px;
+    background: var(--accent-gold);
+    color: var(--bg-dark);
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.look-name {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--accent-gold);
+}
+
+.look-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.look-meta-item {
+    display: flex;
+    gap: 8px;
+    font-size: 13px;
+}
+
+.meta-label {
+    color: var(--text-muted);
+    font-weight: 500;
+    min-width: 80px;
+}
+
+.meta-value {
+    color: var(--text-light);
+}
+
+/* Appearance Details */
+.look-appearance {
+    margin-bottom: 16px;
+}
+
+.appearance-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+}
+
+.appearance-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 6px;
+    margin-bottom: 6px;
+    font-size: 13px;
+}
+
+.appearance-icon {
+    font-size: 16px;
+}
+
+.appearance-field {
+    color: var(--text-muted);
+    font-weight: 500;
+    min-width: 70px;
+}
+
+.appearance-value {
+    color: var(--text-light);
+    flex: 1;
+}
+
+.appearance-empty {
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 6px;
+    text-align: center;
+    color: var(--text-muted);
+    font-style: italic;
+    font-size: 13px;
+}
+
+/* Notes */
+.look-notes {
+    margin-bottom: 16px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border-left: 3px solid var(--accent-gold);
+    border-radius: 4px;
+}
+
+.notes-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+}
+
+.notes-text {
+    font-size: 13px;
+    color: var(--text-light);
+    line-height: 1.5;
+}
+
+/* Events */
+.look-events {
+    margin-bottom: 16px;
+}
+
+.events-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+
+.event-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #ef4444;
+    margin-right: 6px;
+    margin-bottom: 6px;
+}
+
+/* Actions */
+.look-actions {
+    display: flex;
+    gap: 8px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+}
+
+.look-btn {
+    flex: 1;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: var(--text-light);
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.look-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--accent-gold);
+    transform: translateY(-1px);
+}
+
+.look-btn:active {
+    transform: translateY(0);
+}

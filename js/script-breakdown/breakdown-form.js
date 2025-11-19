@@ -2373,6 +2373,189 @@ function updateLookScenes(character, sceneIndex) {
 window.updateLookScenes = updateLookScenes;
 
 // ============================================================================
+// LOOKBOOK TAB RENDERING FUNCTIONS
+// ============================================================================
+
+/**
+ * Render a look card for the lookbook display
+ */
+function renderCharacterLookCard(look, lookNumber) {
+    const sceneRange = look.endScene !== null && look.endScene !== undefined
+        ? `${look.startScene + 1}-${look.endScene + 1}`
+        : `${look.startScene + 1}+`;
+
+    const sceneCount = look.scenes?.length || 0;
+    const contexts = look.contexts?.length > 0
+        ? look.contexts.join(', ')
+        : 'No context specified';
+
+    // Check if look has active events
+    const activeEvents = getActiveEventsForLook(look);
+
+    return `
+        <div class="look-card" data-look-id="${look.id}">
+            <div class="look-card-header">
+                <div class="look-number">Look ${lookNumber}</div>
+                <div class="look-name">${escapeHtml(look.name)}</div>
+            </div>
+
+            <div class="look-meta">
+                <div class="look-meta-item">
+                    <span class="meta-label">Scenes:</span>
+                    <span class="meta-value">${sceneRange} (${sceneCount} appearances)</span>
+                </div>
+                <div class="look-meta-item">
+                    <span class="meta-label">Context:</span>
+                    <span class="meta-value">${escapeHtml(contexts)}</span>
+                </div>
+            </div>
+
+            ${renderLookAppearanceSection(look.appearance)}
+
+            ${look.notes ? `
+                <div class="look-notes">
+                    <div class="notes-label">Notes:</div>
+                    <div class="notes-text">${escapeHtml(look.notes)}</div>
+                </div>
+            ` : ''}
+
+            ${activeEvents.length > 0 ? `
+                <div class="look-events">
+                    <div class="events-label">Active Events:</div>
+                    ${activeEvents.map(event => `
+                        <div class="event-badge">${escapeHtml(event.name)}</div>
+                    `).join('')}
+                </div>
+            ` : ''}
+
+            <div class="look-actions">
+                <button class="look-btn" onclick="viewLookScenes('${look.id}')">
+                    📋 View Scenes
+                </button>
+                <button class="look-btn" onclick="editLook('${look.id}')">
+                    ✏️ Edit
+                </button>
+                <button class="look-btn" onclick="duplicateLook('${look.id}')">
+                    📋 Duplicate
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Render appearance section of a look card
+ */
+function renderLookAppearanceSection(appearance) {
+    if (!appearance) return '';
+
+    const fields = [
+        { key: 'hair', label: 'Hair', icon: '💇' },
+        { key: 'makeup', label: 'Makeup', icon: '💄' },
+        { key: 'wardrobe', label: 'Wardrobe', icon: '👔' }
+    ];
+
+    const hasData = fields.some(field => appearance[field.key]);
+
+    if (!hasData) {
+        return `
+            <div class="look-appearance">
+                <div class="appearance-empty">No appearance details captured</div>
+            </div>
+        `;
+    }
+
+    return `
+        <div class="look-appearance">
+            <div class="appearance-label">Appearance:</div>
+            ${fields.map(field => {
+                const value = appearance[field.key];
+                if (!value) return '';
+
+                return `
+                    <div class="appearance-item">
+                        <span class="appearance-icon">${field.icon}</span>
+                        <span class="appearance-field">${field.label}:</span>
+                        <span class="appearance-value">${escapeHtml(value)}</span>
+                    </div>
+                `;
+            }).join('')}
+        </div>
+    `;
+}
+
+/**
+ * Get active events that overlap with a look's scene range
+ */
+function getActiveEventsForLook(look) {
+    const events = state.continuityEvents || [];
+
+    return events.filter(event => {
+        if (event.character !== look.character) return false;
+
+        // Check if event overlaps with look's scene range
+        const lookEnd = look.endScene !== null && look.endScene !== undefined ? look.endScene : 999;
+        const eventEnd = event.endScene || 999;
+
+        return !(event.startScene > lookEnd || eventEnd < look.startScene);
+    });
+}
+
+// Expose lookbook rendering functions to window
+window.renderCharacterLookCard = renderCharacterLookCard;
+window.renderLookAppearanceSection = renderLookAppearanceSection;
+window.getActiveEventsForLook = getActiveEventsForLook;
+
+// ============================================================================
+// LOOKBOOK ACTION FUNCTIONS
+// ============================================================================
+
+/**
+ * View scenes where a look is used
+ */
+window.viewLookScenes = function(lookId) {
+    const look = window.getLookById ? window.getLookById(lookId) : null;
+    if (!look) return;
+
+    const sceneList = look.scenes.map(s => s + 1).join(', ');
+    alert(`Scenes using "${look.name}":\n\n${sceneList}\n\nFeature coming soon: Highlight these scenes in the sidebar and allow quick navigation.`);
+};
+
+/**
+ * Edit a look (placeholder)
+ */
+window.editLook = function(lookId) {
+    alert('Edit look feature coming soon!\n\nThis will allow you to:\n• Change look name\n• Update appearance details\n• Modify scene range\n• Add/edit notes');
+};
+
+/**
+ * Duplicate a look (placeholder)
+ */
+window.duplicateLook = function(lookId) {
+    const look = window.getLookById ? window.getLookById(lookId) : null;
+    if (!look) return;
+
+    const confirmed = confirm(`Duplicate "${look.name}"?\n\nThis will create a copy of this look that you can modify.`);
+    if (confirmed) {
+        alert('Duplicate look feature coming soon!');
+    }
+};
+
+/**
+ * Export lookbook to PDF (placeholder)
+ */
+window.exportLookbook = function(character) {
+    const looks = window.getLooksForCharacter ? window.getLooksForCharacter(character) : [];
+
+    if (looks.length === 0) {
+        alert('No looks to export!');
+        return;
+    }
+
+    alert(`Export lookbook for ${character}\n\n${looks.length} look(s) will be exported to PDF.\n\nFeature coming soon!`);
+};
+
+// ============================================================================
 // EXPORTS
 // ============================================================================
 
