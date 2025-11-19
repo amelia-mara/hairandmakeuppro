@@ -520,6 +520,34 @@
         </div>
     </div>
 
+    <!-- Create Look Modal -->
+    <div class="modal" id="create-look-modal" style="display: none;">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-title">Create New Look</div>
+
+            <div class="modal-section">
+                <label class="modal-label">Look Name *</label>
+                <input type="text" class="modal-input" id="look-name"
+                       placeholder="e.g., Professional Work Look">
+
+                <label class="modal-label">Start Scene *</label>
+                <input type="number" class="modal-input" id="look-start-scene"
+                       min="1" value="1">
+                <div class="modal-note">This look begins at this scene</div>
+
+                <label class="modal-label">Notes (Optional)</label>
+                <textarea class="modal-textarea" id="look-notes" rows="2"
+                          placeholder="Any details about this look..."></textarea>
+                <div class="modal-note">Appearance details will be pulled from scene breakdown</div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="modal-btn" onclick="closeCreateLookModal()">Cancel</button>
+                <button class="modal-btn primary" onclick="confirmCreateLook()">Create Look</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ============================================================================ -->
     <!-- TOOLS PANEL -->
     <!-- ============================================================================ -->

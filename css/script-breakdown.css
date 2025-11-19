@@ -13767,3 +13767,128 @@
         width: 100%;
     }
 }
+
+/* ============================================
+   LOOKBOOK SYSTEM STYLES
+   ============================================ */
+
+.scene-context-field {
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.breakdown-field {
+    margin-bottom: 16px;
+}
+
+.breakdown-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--accent-gold);
+    margin-bottom: 8px;
+}
+
+.breakdown-select {
+    width: 100%;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: var(--text-light);
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.breakdown-select:hover {
+    border-color: var(--accent-gold);
+}
+
+.breakdown-select:focus {
+    outline: none;
+    border-color: var(--accent-gold);
+}
+
+.breakdown-select option {
+    background: var(--card-bg);
+    color: var(--text-light);
+}
+
+/* ============================================
+   LOOK SELECTOR STYLES
+   ============================================ */
+
+.current-look-field {
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.look-selector-container {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.look-select {
+    flex: 1;
+}
+
+.btn-new-look {
+    padding: 8px 16px;
+    background: var(--accent-gold);
+    border: none;
+    border-radius: 6px;
+    color: var(--bg-dark);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+}
+
+.btn-new-look:hover {
+    background: #d4b16d;
+    transform: translateY(-1px);
+}
+
+.btn-new-look:active {
+    transform: translateY(0);
+}
+
+.look-info {
+    padding: 8px;
+    background: rgba(201, 169, 97, 0.05);
+    border-radius: 6px;
+    font-size: 11px;
+}
+
+.look-info-empty {
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.look-info-details {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.look-info-row {
+    display: flex;
+    justify-content: space-between;
+}
+
+.look-info-label {
+    color: var(--text-muted);
+}
+
+.look-info-value {
+    color: var(--text-light);
+    font-weight: 500;
+}

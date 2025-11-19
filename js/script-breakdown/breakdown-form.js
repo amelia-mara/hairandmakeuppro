@@ -337,34 +337,32 @@ function renderCharacterFields(character, sceneIndex, scene) {
                 </button>
             </div>
 
-            <!-- SCENE CONTEXT & LOOK -->
-            <div class="continuity-section lookbook-metadata">
-                <div class="continuity-section-header">
-                    <div class="continuity-label">SCENE CONTEXT & LOOK</div>
+            <!-- SCENE CONTEXT -->
+            <div class="breakdown-field scene-context-field">
+                <label class="breakdown-label">SCENE CONTEXT</label>
+                <select class="breakdown-select" onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'sceneContext', this.value)">
+                    <option value="">What's happening in this scene?</option>
+                    ${(state.sceneContexts || []).map(context =>
+                        `<option value="${escapeHtml(context)}" ${sceneContext === context ? 'selected' : ''}>${escapeHtml(context)}</option>`
+                    ).join('')}
+                </select>
+            </div>
+
+            <!-- CURRENT LOOK -->
+            <div class="breakdown-field current-look-field">
+                <label class="breakdown-label">CURRENT LOOK</label>
+                <div class="look-selector-container">
+                    <select class="breakdown-select look-select"
+                            id="look-${charId}-${sceneIndex}"
+                            onchange="assignLookToScene('${escapeHtml(character).replace(/'/g, "\\'")}', ${sceneIndex}, this.value)">
+                        ${renderLookOptions(character, sceneIndex)}
+                    </select>
+                    <button class="btn-new-look" onclick="openCreateLookModal('${escapeHtml(character).replace(/'/g, "\\'")}', ${sceneIndex})">
+                        + New Look
+                    </button>
                 </div>
-                <div class="lookbook-fields">
-                    <div class="lookbook-field">
-                        <label>Scene Context:</label>
-                        <select onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'sceneContext', this.value)">
-                            <option value="">Select context...</option>
-                            ${(window.scriptBreakdownState?.sceneContexts || []).map(context =>
-                                `<option value="${escapeHtml(context)}" ${sceneContext === context ? 'selected' : ''}>${escapeHtml(context)}</option>`
-                            ).join('')}
-                        </select>
-                    </div>
-                    <div class="lookbook-field">
-                        <label>Current Look:</label>
-                        <div class="look-reference">
-                            ${currentLookId ? `
-                                <span class="look-badge" id="look-badge-${charId}">
-                                    ${window.getLookById ? (window.getLookById(currentLookId)?.name || 'Unknown Look') : 'Look ID: ' + currentLookId}
-                                </span>
-                                <button class="small-btn" onclick="clearLookReference('${escapeHtml(character).replace(/'/g, "\\'")}', ${sceneIndex})">Clear</button>
-                            ` : `
-                                <button class="small-btn" onclick="linkToLook('${escapeHtml(character).replace(/'/g, "\\'")}', ${sceneIndex})">Link to Look</button>
-                            `}
-                        </div>
-                    </div>
+                <div class="look-info" id="look-info-${charId}-${sceneIndex}">
+                    ${renderLookInfo(character, sceneIndex)}
                 </div>
             </div>
 
@@ -2039,21 +2037,71 @@ window.viewEventInTimeline = function(eventId) {
 window.renderTimelineEntries = renderTimelineEntries;
 
 // ============================================================================
-// LOOKBOOK HELPER FUNCTIONS (STUBS)
+// LOOKBOOK MANAGEMENT FUNCTIONS
 // ============================================================================
 
 /**
- * Link character to a specific look (stub for future implementation)
+ * Render look options for dropdown
  */
-window.linkToLook = function(character, sceneIndex) {
-    alert('Lookbook integration coming soon!\n\nThis feature will allow you to:\n- Create character looks\n- Link looks to specific scene ranges\n- Automatically populate appearance fields from looks');
-    console.log('🎨 Link to look:', { character, sceneIndex });
-};
+function renderLookOptions(character, sceneIndex) {
+    const looks = window.getLooksForCharacter ? window.getLooksForCharacter(character) : [];
+    const charData = state.characterStates[sceneIndex]?.[character] || {};
+    const currentLookId = charData.currentLookId || '';
+
+    let options = '<option value="">No look assigned</option>';
+
+    looks.forEach(look => {
+        const isActive = look.id === currentLookId;
+        const sceneCount = look.scenes?.length || 0;
+        options += `<option value="${look.id}" ${isActive ? 'selected' : ''}>
+            ${escapeHtml(look.name)} (${sceneCount} scenes)
+        </option>`;
+    });
+
+    return options;
+}
 
 /**
- * Clear look reference for character in scene
+ * Render look info display
  */
-window.clearLookReference = function(character, sceneIndex) {
+function renderLookInfo(character, sceneIndex) {
+    const charData = state.characterStates[sceneIndex]?.[character] || {};
+    const lookId = charData.currentLookId;
+
+    if (!lookId) {
+        return '<div class="look-info-empty">No look assigned to this scene</div>';
+    }
+
+    const look = window.getLookById ? window.getLookById(lookId) : null;
+
+    if (!look) {
+        return '<div class="look-info-empty">Look not found</div>';
+    }
+
+    const endScene = look.endScene !== null && look.endScene !== undefined ? look.endScene + 1 : 'current';
+    const startScene = look.startScene + 1;
+
+    return `
+        <div class="look-info-details">
+            <div class="look-info-row">
+                <span class="look-info-label">Scenes:</span>
+                <span class="look-info-value">${startScene}-${endScene}</span>
+            </div>
+            <div class="look-info-row">
+                <span class="look-info-label">Total appearances:</span>
+                <span class="look-info-value">${look.scenes?.length || 0} scenes</span>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Assign look to scene
+ */
+window.assignLookToScene = function(character, sceneIndex, lookId) {
+    console.log('🎨 Assigning look to scene:', { character, sceneIndex, lookId });
+
+    // Initialize character state if needed
     if (!state.characterStates[sceneIndex]) {
         state.characterStates[sceneIndex] = {};
     }
@@ -2061,11 +2109,193 @@ window.clearLookReference = function(character, sceneIndex) {
         state.characterStates[sceneIndex][character] = {};
     }
 
-    state.characterStates[sceneIndex][character].currentLookId = null;
+    // Update look reference
+    state.characterStates[sceneIndex][character].currentLookId = lookId || null;
+
+    // Update look's scene list
+    if (lookId) {
+        const look = window.getLookById ? window.getLookById(lookId) : null;
+        if (look) {
+            if (!look.scenes) {
+                look.scenes = [];
+            }
+            if (!look.scenes.includes(sceneIndex)) {
+                look.scenes.push(sceneIndex);
+                look.scenes.sort((a, b) => a - b);
+            }
+        }
+    }
 
     saveToLocalStorage();
-    renderSceneBreakdown(sceneIndex);
-    console.log('✅ Cleared look reference for', character, 'in scene', sceneIndex + 1);
+
+    // Refresh look info display
+    const charId = sanitizeCharacterId(character);
+    const infoContainer = document.getElementById(`look-info-${charId}-${sceneIndex}`);
+    if (infoContainer) {
+        infoContainer.innerHTML = renderLookInfo(character, sceneIndex);
+    }
+
+    console.log('✅ Look assigned');
+};
+
+/**
+ * Open create look modal
+ */
+window.openCreateLookModal = function(character, sceneIndex) {
+    console.log('➕ Opening create look modal:', { character, sceneIndex });
+
+    // Store context
+    window.currentLookCharacter = character;
+    window.currentLookScene = sceneIndex;
+
+    // Get scene data for defaults
+    const charData = state.characterStates[sceneIndex]?.[character] || {};
+    const context = charData.sceneContext || '';
+
+    // Pre-fill form
+    const nameInput = document.getElementById('look-name');
+    const startInput = document.getElementById('look-start-scene');
+    const notesInput = document.getElementById('look-notes');
+
+    if (nameInput) nameInput.value = '';
+    if (startInput) startInput.value = sceneIndex + 1; // Convert to 1-indexed for display
+    if (notesInput) notesInput.value = '';
+
+    // Suggest name based on context
+    if (context && nameInput) {
+        const suggestion = context.replace('/', ' ') + ' Look';
+        nameInput.placeholder = `e.g., ${suggestion}`;
+    }
+
+    // Show modal
+    const modal = document.getElementById('create-look-modal');
+    if (modal) {
+        modal.style.display = 'flex';
+
+        // Focus name input after modal appears
+        setTimeout(() => {
+            if (nameInput) nameInput.focus();
+        }, 100);
+    } else {
+        console.error('❌ Create look modal not found in DOM');
+        alert('Error: Modal not found. Please refresh the page.');
+    }
+};
+
+/**
+ * Close create look modal
+ */
+window.closeCreateLookModal = function() {
+    const modal = document.getElementById('create-look-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    window.currentLookCharacter = null;
+    window.currentLookScene = null;
+};
+
+/**
+ * Confirm create look
+ */
+window.confirmCreateLook = function() {
+    console.log('✅ Confirming create look');
+
+    try {
+        const character = window.currentLookCharacter;
+        const sceneIndex = window.currentLookScene;
+
+        if (!character || sceneIndex === null || sceneIndex === undefined) {
+            console.error('❌ Missing character or scene number');
+            alert('Error: Missing character or scene information');
+            return;
+        }
+
+        // Get form values
+        const name = document.getElementById('look-name')?.value.trim();
+        const startSceneDisplay = parseInt(document.getElementById('look-start-scene')?.value);
+        const notes = document.getElementById('look-notes')?.value.trim();
+
+        // Validate
+        if (!name) {
+            alert('Please enter a look name');
+            return;
+        }
+
+        if (!startSceneDisplay || startSceneDisplay < 1) {
+            alert('Please enter a valid start scene');
+            return;
+        }
+
+        // Convert to 0-indexed
+        const startScene = startSceneDisplay - 1;
+
+        if (startScene >= state.scenes.length) {
+            alert(`Scene ${startSceneDisplay} is out of range (1-${state.scenes.length})`);
+            return;
+        }
+
+        // Get appearance data from current scene
+        const charData = state.characterStates[sceneIndex]?.[character] || {};
+        const appearance = {
+            hair: charData.enterHair || '',
+            makeup: charData.enterMakeup || '',
+            wardrobe: charData.enterWardrobe || ''
+        };
+
+        // Create look object
+        const look = {
+            id: `look-${Date.now()}`,
+            name: name,
+            character: character,
+            startScene: startScene,
+            endScene: null,
+            contexts: charData.sceneContext ? [charData.sceneContext] : [],
+            scenes: [startScene],
+            appearance: appearance,
+            notes: notes,
+            createdAt: Date.now()
+        };
+
+        // End previous look if exists
+        const previousLook = window.getActiveLook ? window.getActiveLook(character, startScene - 1) : null;
+        if (previousLook && (previousLook.endScene === null || previousLook.endScene === undefined)) {
+            previousLook.endScene = startScene - 1;
+            console.log(`📍 Ended previous look "${previousLook.name}" at scene ${startScene}`);
+        }
+
+        // Initialize character's looks array if needed
+        if (!state.characterLooks[character]) {
+            state.characterLooks[character] = [];
+        }
+
+        // Save look
+        state.characterLooks[character].push(look);
+
+        // Assign to current scene
+        if (!state.characterStates[sceneIndex]) {
+            state.characterStates[sceneIndex] = {};
+        }
+        if (!state.characterStates[sceneIndex][character]) {
+            state.characterStates[sceneIndex][character] = {};
+        }
+        state.characterStates[sceneIndex][character].currentLookId = look.id;
+
+        saveToLocalStorage();
+
+        console.log('✅ Look created:', look);
+
+        // Close modal
+        window.closeCreateLookModal();
+
+        // Refresh breakdown display
+        renderSceneBreakdown(sceneIndex);
+
+        alert(`✅ Created look: ${name}`);
+
+    } catch (error) {
+        console.error('❌ Error creating look:', error);
+        alert('Error creating look. Check console for details.');
+    }
 };
 
 // ============================================================================
