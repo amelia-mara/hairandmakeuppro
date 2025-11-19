@@ -270,6 +270,13 @@ function renderSceneBreakdown(sceneIndex) {
             </div>
         </div>
     `;
+
+    // Auto-update look scenes for all characters in this scene
+    characters.forEach(character => {
+        if (typeof window.updateLookScenes === 'function') {
+            window.updateLookScenes(character, sceneIndex);
+        }
+    });
 }
 
 // ============================================================================
@@ -995,6 +1002,13 @@ window.updateCharField = function(sceneIndex, character, field, value) {
 
     state.characterStates[sceneIndex][character][field] = value;
     saveToLocalStorage();
+
+    // Update look scenes when appearance data changes
+    if (field.includes('enter') || field === 'sceneContext') {
+        if (typeof window.updateLookScenes === 'function') {
+            window.updateLookScenes(character, sceneIndex);
+        }
+    }
 };
 
 /**
@@ -2297,6 +2311,66 @@ window.confirmCreateLook = function() {
         alert('Error creating look. Check console for details.');
     }
 };
+
+// ============================================
+// AUTO-UPDATE LOOK SCENES
+// ============================================
+
+/**
+ * Automatically update look's scene list when navigating with active look
+ */
+function updateLookScenes(character, sceneIndex) {
+    console.log('🔄 Updating look scenes for:', character, 'Scene', sceneIndex + 1);
+
+    const charData = state.characterStates[sceneIndex]?.[character];
+
+    if (!charData || !charData.currentLookId) {
+        console.log('   No look assigned to this scene');
+        return;
+    }
+
+    const look = window.getLookById ? window.getLookById(charData.currentLookId) : null;
+
+    if (!look) {
+        console.warn('⚠️ Look not found:', charData.currentLookId);
+        return;
+    }
+
+    // Add scene if not already in list
+    if (!look.scenes.includes(sceneIndex)) {
+        look.scenes.push(sceneIndex);
+        look.scenes.sort((a, b) => a - b);
+
+        console.log(`✅ Added scene ${sceneIndex + 1} to look "${look.name}"`);
+
+        // Update context if different
+        if (charData.sceneContext && !look.contexts.includes(charData.sceneContext)) {
+            look.contexts.push(charData.sceneContext);
+            console.log(`✅ Added context "${charData.sceneContext}" to look`);
+        }
+
+        // Update appearance if data exists and look appearance is empty
+        if (charData.enterHair && !look.appearance.hair) {
+            look.appearance.hair = charData.enterHair;
+            console.log(`✅ Updated look hair from scene ${sceneIndex + 1}`);
+        }
+        if (charData.enterMakeup && !look.appearance.makeup) {
+            look.appearance.makeup = charData.enterMakeup;
+            console.log(`✅ Updated look makeup from scene ${sceneIndex + 1}`);
+        }
+        if (charData.enterWardrobe && !look.appearance.wardrobe) {
+            look.appearance.wardrobe = charData.enterWardrobe;
+            console.log(`✅ Updated look wardrobe from scene ${sceneIndex + 1}`);
+        }
+
+        saveToLocalStorage();
+    } else {
+        console.log(`   Scene ${sceneIndex + 1} already in look "${look.name}"`);
+    }
+}
+
+// Expose to window
+window.updateLookScenes = updateLookScenes;
 
 // ============================================================================
 // EXPORTS
