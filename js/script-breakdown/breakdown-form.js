@@ -287,6 +287,10 @@ function renderCharacterFields(character, sceneIndex, scene) {
     // Character ID for HTML elements
     const charId = sanitizeCharacterId(character);
 
+    // Get lookbook data
+    const sceneContext = charData.sceneContext || '';
+    const currentLookId = charData.currentLookId || null;
+
     // Get appearance data
     const enterHair = charData.enterHair || suggestions.hair || '';
     const enterMakeup = charData.enterMakeup || suggestions.makeup || '';
@@ -331,6 +335,37 @@ function renderCharacterFields(character, sceneIndex, scene) {
                         title="${prevScene ? `Copy from Scene ${prevScene + 1}` : 'No previous appearance'}">
                     ${prevScene !== null ? '↓ Copy Previous' : 'First Appearance'}
                 </button>
+            </div>
+
+            <!-- SCENE CONTEXT & LOOK -->
+            <div class="continuity-section lookbook-metadata">
+                <div class="continuity-section-header">
+                    <div class="continuity-label">SCENE CONTEXT & LOOK</div>
+                </div>
+                <div class="lookbook-fields">
+                    <div class="lookbook-field">
+                        <label>Scene Context:</label>
+                        <select onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'sceneContext', this.value)">
+                            <option value="">Select context...</option>
+                            ${(window.scriptBreakdownState?.sceneContexts || []).map(context =>
+                                `<option value="${escapeHtml(context)}" ${sceneContext === context ? 'selected' : ''}>${escapeHtml(context)}</option>`
+                            ).join('')}
+                        </select>
+                    </div>
+                    <div class="lookbook-field">
+                        <label>Current Look:</label>
+                        <div class="look-reference">
+                            ${currentLookId ? `
+                                <span class="look-badge" id="look-badge-${charId}">
+                                    ${window.getLookById ? (window.getLookById(currentLookId)?.name || 'Unknown Look') : 'Look ID: ' + currentLookId}
+                                </span>
+                                <button class="small-btn" onclick="clearLookReference('${escapeHtml(character).replace(/'/g, "\\'")}', ${sceneIndex})">Clear</button>
+                            ` : `
+                                <button class="small-btn" onclick="linkToLook('${escapeHtml(character).replace(/'/g, "\\'")}', ${sceneIndex})">Link to Look</button>
+                            `}
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- ENTERS WITH -->
@@ -2002,6 +2037,36 @@ window.viewEventInTimeline = function(eventId) {
 
 // Expose renderTimelineEntries for AI integration
 window.renderTimelineEntries = renderTimelineEntries;
+
+// ============================================================================
+// LOOKBOOK HELPER FUNCTIONS (STUBS)
+// ============================================================================
+
+/**
+ * Link character to a specific look (stub for future implementation)
+ */
+window.linkToLook = function(character, sceneIndex) {
+    alert('Lookbook integration coming soon!\n\nThis feature will allow you to:\n- Create character looks\n- Link looks to specific scene ranges\n- Automatically populate appearance fields from looks');
+    console.log('🎨 Link to look:', { character, sceneIndex });
+};
+
+/**
+ * Clear look reference for character in scene
+ */
+window.clearLookReference = function(character, sceneIndex) {
+    if (!state.characterStates[sceneIndex]) {
+        state.characterStates[sceneIndex] = {};
+    }
+    if (!state.characterStates[sceneIndex][character]) {
+        state.characterStates[sceneIndex][character] = {};
+    }
+
+    state.characterStates[sceneIndex][character].currentLookId = null;
+
+    saveToLocalStorage();
+    renderSceneBreakdown(sceneIndex);
+    console.log('✅ Cleared look reference for', character, 'in scene', sceneIndex + 1);
+};
 
 // ============================================================================
 // EXPORTS

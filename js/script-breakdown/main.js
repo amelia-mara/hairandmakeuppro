@@ -102,7 +102,30 @@ export async function init() {
             state.confirmedCharacters = new Set();
         }
 
+        // Initialize character looks data structure
+        if (!state.characterLooks) {
+            state.characterLooks = {};
+        }
+
+        // Initialize scene contexts for lookbook
+        if (!state.sceneContexts) {
+            state.sceneContexts = [
+                "At home/bedroom",
+                "At work/office",
+                "Outdoor activity",
+                "Social event",
+                "Action/Fight scene",
+                "Emotional moment",
+                "Travel/Transit",
+                "Medical/Hospital",
+                "Dining/Restaurant",
+                "Shopping",
+                "Custom"
+            ];
+        }
+
         console.log('✅ State initialized with continuityEvents:', state.continuityEvents);
+        console.log('✅ Lookbook data structures initialized');
 
         // Load project data from localStorage
         loadProjectData();
@@ -430,6 +453,79 @@ export function getCurrentBreakdown() {
 }
 
 // ============================================================================
+// CHARACTER LOOKBOOK HELPER FUNCTIONS
+// ============================================================================
+
+/**
+ * CHARACTER LOOK DATA STRUCTURE
+ *
+ * Structure for a single look:
+ * {
+ *     id: "look-{timestamp}",           // Unique identifier
+ *     name: "Opening Look",              // User-friendly name
+ *     character: "GWEN LAWSON",          // Character name
+ *     startScene: 1,                     // Starting scene (0-indexed)
+ *     endScene: 5,                       // Ending scene (null if current/active)
+ *     contexts: ["At home/bedroom"],     // Scene contexts where this look applies
+ *     scenes: [1, 2, 3, 4, 5],          // All scenes where this look is used
+ *     appearance: {
+ *         hair: "Long auburn, disheveled",
+ *         makeup: "Minimal, dark circles",
+ *         wardrobe: "White nightgown"
+ *     },
+ *     notes: "",                         // Additional notes
+ *     createdAt: Date.now()              // Creation timestamp
+ * }
+ *
+ * Stored in state.characterLooks as:
+ * {
+ *     "GWEN LAWSON": [look1, look2, ...],
+ *     "JOHN DOE": [look3, look4, ...]
+ * }
+ */
+
+/**
+ * Get all looks for a character
+ * @param {string} character - Character name
+ * @returns {Array} Array of look objects for the character
+ */
+export function getLooksForCharacter(character) {
+    return state.characterLooks[character] || [];
+}
+
+/**
+ * Get active look for character at specific scene
+ * @param {string} character - Character name
+ * @param {number} sceneNumber - Scene number (0-indexed)
+ * @returns {Object|null} Active look object or null
+ */
+export function getActiveLook(character, sceneNumber) {
+    const looks = getLooksForCharacter(character);
+    return looks.find(look =>
+        sceneNumber >= look.startScene &&
+        (look.endScene === null || sceneNumber <= look.endScene)
+    );
+}
+
+/**
+ * Get look by ID
+ * @param {string} lookId - Look ID
+ * @returns {Object|null} Look object or null
+ */
+export function getLookById(lookId) {
+    const allLooks = Object.values(state.characterLooks).flat();
+    return allLooks.find(look => look.id === lookId);
+}
+
+/**
+ * Save looks to storage
+ * Wrapper function to maintain consistency with other save operations
+ */
+export function saveLooks() {
+    saveProject();
+}
+
+// ============================================================================
 // EXPOSE GLOBAL FUNCTIONS
 // ============================================================================
 
@@ -437,6 +533,12 @@ export function getCurrentBreakdown() {
 window.selectScene = selectScene;
 window.navigateToScene = navigateToScene;
 window.init = init;
+
+// Expose lookbook helper functions
+window.getLooksForCharacter = getLooksForCharacter;
+window.getActiveLook = getActiveLook;
+window.getLookById = getLookById;
+window.saveLooks = saveLooks;
 
 // Initialize on page load
 if (document.readyState === 'loading') {
