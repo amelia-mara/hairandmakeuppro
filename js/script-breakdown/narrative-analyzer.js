@@ -96,18 +96,93 @@ export class NarrativeAnalyzer {
      * Perform comprehensive AI analysis of full script
      */
     async performFullAnalysis(fullText, scenes) {
-        const prompt = `Analyze this screenplay for professional hair/makeup/continuity breakdown.
+        const prompt = `You are analyzing a screenplay to create a detailed character bible for hair and makeup continuity.
+
+CRITICAL INSTRUCTIONS:
+1. Extract EXACT QUOTES from the script that describe each character visually or emotionally
+2. Include the STORY CONTEXT for each character (what's happening to them, their relationships, conflicts)
+3. Track character progression through SPECIFIC STORY BEATS, not generic arc descriptions
+4. Focus on VISUAL and PHYSICAL details that inform hair/makeup decisions
 
 SCREENPLAY:
 ${fullText}
 
-Provide comprehensive JSON analysis with the following structure. Be thorough and specific.
+For each character, provide:
+
+SCRIPT DESCRIPTIONS:
+- Direct quotes from action lines or dialogue that describe the character
+- Include scene numbers
+- Include type: "introduction", "physical detail", "emotional moment", "action"
+- Focus on: physical descriptions, emotional states, actions, relationships
+
+PHYSICAL PROFILE:
+- Age: [exact age or range mentioned]
+- Gender: [as stated]
+- Build: [if mentioned: slim, athletic, etc.]
+- Height: [if mentioned]
+- Hair: [color, style, texture - only if explicitly stated]
+- Eyes: [color - only if stated]
+- Distinctive Features: [scars, tattoos, birthmarks, prosthetics, disabilities - BE SPECIFIC]
+- Ethnicity: [only if clearly stated]
+
+CHARACTER ANALYSIS:
+- Role: [protagonist/antagonist/supporting - explain their function]
+- Core Conflict: [What is this character trying to achieve? What's at stake?]
+- Personality: [Based on their ACTIONS and DIALOGUE, not assumptions]
+- Relationships: [Key relationships that affect their emotional state]
+- Emotional Journey: [How do they FEEL in Act 1 vs Act 2 vs Act 3?]
+
+VISUAL IDENTITY:
+- Overall Vibe: [How would they present themselves? Professional? Desperate? Confident?]
+- Style Context: [What's their life situation that affects appearance?]
+- Grooming Level: [Meticulous? Disheveled? Changes over story?]
+- Emotional Tells: [Do they cry? Smile through pain? Physical habits?]
+
+CHARACTER PROGRESSION:
+Track their VISUAL JOURNEY through specific story beats:
+
+Act 1 Setup:
+- Opening situation and appearance
+- Key introductory moments
+- Initial emotional state
+
+Turning Points:
+- Major events that change them
+- Trauma, victory, loss, revelation
+- How does this affect their appearance?
+
+Act 2 Development:
+- How are they different now?
+- Physical changes (injuries, illness, transformation)
+- Emotional state affecting grooming
+
+Act 3 Resolution:
+- Final state
+- Visual transformation complete?
+
+Key Looks to Track:
+- List distinct "looks" tied to story moments
+- Example: "Opening look - professional", "Post-attack look - disheveled and bloody"
+- Scene ranges for each look
+
+Signature Elements:
+- Consistent visual elements throughout (glasses, watch, tattoo, scar)
+- Props that define them
+- Mannerisms
+
+CRITICAL RULES:
+- ONLY include information EXPLICITLY STATED in the script
+- DO NOT invent or assume details
+- DO NOT use generic descriptions - be SPECIFIC to this story
+- Quote the script directly for physical descriptions
+- Tie everything to STORY CONTEXT
+- Think like a makeup continuity supervisor: What do I need to know to maintain this character's appearance across all scenes?
 
 Return ONLY valid JSON (no markdown, no explanations):
 
 {
     "genre": "string - genre of the story",
-    "tone": "string - overall tone (dramatic, comedic, thriller, etc)",
+    "tone": "string - overall tone",
     "logline": "one sentence summary of the story",
     "timeline": {
         "storyDays": number,
@@ -118,17 +193,70 @@ Return ONLY valid JSON (no markdown, no explanations):
         {
             "name": "CHARACTER_NAME",
             "importance": 1-10,
-            "arc": "brief character transformation description",
             "sceneCount": number,
-            "physicalChanges": [
+            "scriptDescriptions": [
                 {
-                    "scene": number,
-                    "change": "description of physical change",
-                    "type": "injury|aging|condition|hair|makeup"
+                    "text": "exact quote from script",
+                    "sceneNumber": number,
+                    "type": "introduction|physical detail|emotional moment|action"
                 }
             ],
-            "emotionalBeats": ["key emotional moment 1", "key emotional moment 2"],
-            "relationships": ["relationship1", "relationship2"]
+            "physicalProfile": {
+                "age": "string or null",
+                "gender": "string or null",
+                "build": "string or null",
+                "height": "string or null",
+                "hair": "string or null",
+                "eyes": "string or null",
+                "distinctiveFeatures": ["array of specific features"],
+                "ethnicity": "string or null"
+            },
+            "characterAnalysis": {
+                "role": "protagonist/antagonist/supporting with explanation",
+                "coreConflict": "what they're trying to achieve",
+                "personality": "based on actions and dialogue",
+                "relationships": ["key relationship 1", "key relationship 2"],
+                "emotionalJourney": "how they feel across the story"
+            },
+            "visualIdentity": {
+                "overallVibe": "how they present themselves",
+                "styleContext": "life situation affecting appearance",
+                "groomingLevel": "meticulous/disheveled/changes",
+                "emotionalTells": ["physical habits", "reactions"]
+            },
+            "characterProgression": {
+                "act1Setup": {
+                    "appearance": "opening appearance description",
+                    "emotionalState": "initial emotional state",
+                    "keyMoments": ["specific moment 1", "specific moment 2"]
+                },
+                "turningPoints": [
+                    {
+                        "scene": number,
+                        "event": "what happens",
+                        "visualImpact": "how it affects appearance"
+                    }
+                ],
+                "act2Development": {
+                    "changes": "how they're different",
+                    "physicalChanges": ["injury", "illness", "transformation"],
+                    "emotionalState": "affecting grooming"
+                },
+                "act3Resolution": {
+                    "finalState": "ending appearance",
+                    "transformation": "visual transformation complete?"
+                }
+            },
+            "keyLooks": [
+                {
+                    "name": "Opening Look",
+                    "description": "professional, put-together",
+                    "sceneRange": "1-5",
+                    "contexts": ["At work", "Meeting scenes"]
+                }
+            ],
+            "signatureElements": ["glasses", "watch", "scar on cheek"],
+            "continuityNotes": ["specific things to track for this character"]
         }
     ],
     "storyStructure": {
@@ -158,6 +286,7 @@ Return ONLY valid JSON (no markdown, no explanations):
                 "character": "name",
                 "scene": number,
                 "type": "cut|bruise|burn|wound",
+                "description": "specific description from script",
                 "severity": 1-10,
                 "healingScenes": [list of scenes showing progression],
                 "narrativeImportance": 1-10
@@ -179,26 +308,11 @@ Return ONLY valid JSON (no markdown, no explanations):
                 "importance": 1-10
             }
         ],
-        "costumeCritical": [
-            {
-                "character": "name",
-                "scene": number,
-                "description": "critical costume element",
-                "importance": 1-10
-            }
-        ],
         "weatherEffects": [
             {
                 "scene": number,
                 "effect": "rain|snow|mud|wind|etc",
                 "affectsCharacters": ["char1", "char2"]
-            }
-        ],
-        "recurringMotifs": [
-            {
-                "element": "description of recurring visual element",
-                "scenes": [list of scenes],
-                "significance": "why it matters to story"
             }
         ]
     },
@@ -213,7 +327,7 @@ Return ONLY valid JSON (no markdown, no explanations):
 }`;
 
         try {
-            const response = await callAI(prompt, 3000); // Increased token limit for comprehensive response
+            const response = await callAI(prompt, 4000); // Increased token limit for comprehensive response
 
             // Extract JSON from response
             const jsonMatch = response.match(/\{[\s\S]*\}/);
@@ -258,10 +372,16 @@ Return ONLY valid JSON (no markdown, no explanations):
         characters.forEach(char => {
             this.characterImportance[char.name] = {
                 weight: char.importance || 5,
-                arc: char.arc || '',
-                changes: char.physicalChanges || [],
                 sceneCount: char.sceneCount || 0,
-                emotionalBeats: char.emotionalBeats || []
+                // New comprehensive fields
+                scriptDescriptions: char.scriptDescriptions || [],
+                physicalProfile: char.physicalProfile || {},
+                characterAnalysis: char.characterAnalysis || {},
+                visualIdentity: char.visualIdentity || {},
+                characterProgression: char.characterProgression || {},
+                keyLooks: char.keyLooks || [],
+                signatureElements: char.signatureElements || [],
+                continuityNotes: char.continuityNotes || []
             };
         });
 
