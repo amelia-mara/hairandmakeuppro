@@ -344,6 +344,35 @@ Return ONLY valid JSON (no markdown, no explanations):
             if (!data.elements) data.elements = {};
             if (!data.timeline) data.timeline = { storyDays: 1, timeSpans: [], flashbacks: [] };
 
+            // CRITICAL: Convert characters array to object format for compatibility
+            // The app expects: { "GWEN LAWSON": {...}, "PETER LAWSON": {...} }
+            // But the prompt returns: [{ name: "GWEN LAWSON", ... }, { name: "PETER LAWSON", ... }]
+            if (Array.isArray(data.characters)) {
+                const charactersObject = {};
+                data.characters.forEach(char => {
+                    if (char.name) {
+                        // Store all character data under their name as key
+                        charactersObject[char.name] = {
+                            ...char,
+                            // Keep original fields for backward compatibility
+                            importance: char.importance || 5,
+                            sceneCount: char.sceneCount || 0,
+                            // New comprehensive fields
+                            scriptDescriptions: char.scriptDescriptions || [],
+                            physicalProfile: char.physicalProfile || {},
+                            characterAnalysis: char.characterAnalysis || {},
+                            visualIdentity: char.visualIdentity || {},
+                            characterProgression: char.characterProgression || {},
+                            keyLooks: char.keyLooks || [],
+                            signatureElements: char.signatureElements || [],
+                            continuityNotes: char.continuityNotes || []
+                        };
+                    }
+                });
+                data.characters = charactersObject;
+                console.log('✅ Converted characters array to object format:', Object.keys(charactersObject));
+            }
+
             return data;
 
         } catch (error) {
@@ -367,10 +396,15 @@ Return ONLY valid JSON (no markdown, no explanations):
      * Creates quick-lookup map for character weights
      */
     processCharacterImportance(characters) {
-        if (!characters || !Array.isArray(characters)) return;
+        if (!characters) return;
 
-        characters.forEach(char => {
-            this.characterImportance[char.name] = {
+        // Handle both object format (new) and array format (legacy)
+        const characterEntries = Array.isArray(characters)
+            ? characters.map(char => [char.name, char])
+            : Object.entries(characters);
+
+        characterEntries.forEach(([name, char]) => {
+            this.characterImportance[name] = {
                 weight: char.importance || 5,
                 sceneCount: char.sceneCount || 0,
                 // New comprehensive fields
