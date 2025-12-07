@@ -907,6 +907,230 @@
             to { transform: translateX(400px); opacity: 0; }
         }
 
+        /* Over Budget Banner */
+        .over-budget-banner {
+            position: fixed;
+            top: 0;
+            left: 260px;
+            right: 0;
+            padding: 12px 32px;
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.95), rgba(200, 50, 50, 0.95));
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            gap: 16px;
+            z-index: 1001;
+            box-shadow: 0 4px 20px rgba(239, 68, 68, 0.3);
+            animation: slideDown 0.3s ease;
+        }
+
+        .over-budget-banner button {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .over-budget-banner button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: white;
+        }
+
+        @keyframes slideDown {
+            from { transform: translateY(-100%); }
+            to { transform: translateY(0); }
+        }
+
+        /* Receipt Upload Zone */
+        .receipt-upload-zone {
+            border: 2px dashed var(--glass-border);
+            border-radius: 12px;
+            padding: 48px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .receipt-upload-zone:hover,
+        .receipt-upload-zone.dragover {
+            border-color: var(--accent-gold);
+            background: rgba(212, 175, 122, 0.05);
+        }
+
+        .receipt-upload-zone .upload-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .receipt-upload-zone .upload-text {
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .receipt-upload-zone .upload-subtext {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        /* Receipts Grid */
+        .receipts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 16px;
+            padding: 24px;
+        }
+
+        .receipt-card {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+
+        .receipt-card:hover {
+            border-color: var(--accent-gold);
+            transform: translateY(-2px);
+        }
+
+        .receipt-thumbnail {
+            width: 100%;
+            height: 140px;
+            background: var(--bg-dark);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .receipt-thumbnail img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .receipt-thumbnail .pdf-icon {
+            font-size: 48px;
+            color: var(--text-secondary);
+        }
+
+        .receipt-info {
+            padding: 12px;
+        }
+
+        .receipt-supplier {
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .receipt-amount {
+            font-size: 14px;
+            color: var(--accent-gold);
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .receipt-status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+
+        .receipt-status.unprocessed {
+            background: rgba(232, 168, 124, 0.2);
+            color: var(--warning);
+        }
+
+        .receipt-status.processed {
+            background: rgba(82, 193, 134, 0.2);
+            color: var(--success);
+        }
+
+        .receipt-status.flagged {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+        }
+
+        .receipt-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .receipt-actions button {
+            flex: 1;
+            padding: 6px;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .receipt-actions button:hover {
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+        }
+
+        .receipt-actions button.primary {
+            background: rgba(212, 175, 122, 0.2);
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+        }
+
+        .receipt-count {
+            font-weight: 400;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        /* Receipt Link Button */
+        .receipt-link-btn {
+            padding: 4px 8px;
+            background: rgba(212, 175, 122, 0.15);
+            border: 1px solid rgba(212, 175, 122, 0.3);
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .receipt-link-btn:hover {
+            background: rgba(212, 175, 122, 0.3);
+            border-color: var(--accent-gold);
+        }
+
+        .receipt-link-btn.no-receipt {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: var(--border);
+            opacity: 0.6;
+        }
+
+        .receipt-link-btn.no-receipt:hover {
+            opacity: 1;
+            background: rgba(212, 175, 122, 0.1);
+            border-color: var(--accent-gold);
+        }
+
         /* Search & Filter Bar */
         .search-bar {
             display: flex;
@@ -1160,11 +1384,41 @@
                 <div class="nav-item" data-tab="proposal">
                     <span class="nav-icon">PROPOSAL</span>
                 </div>
+                <div class="nav-item" data-tab="receipts">
+                    <span class="nav-icon">RECEIPTS</span>
+                </div>
                 <div class="nav-item" data-tab="tracking">
                     <span class="nav-icon">TRACKING</span>
                 </div>
                 <div class="nav-item" data-tab="comparison">
                     <span class="nav-icon">COMPARE</span>
+                </div>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">Budget Summary</div>
+                <div style="padding: 0 16px; font-size: 14px;">
+                    <div style="margin-bottom: 12px;">
+                        <div style="color: var(--text-secondary); margin-bottom: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;">Budget Total</div>
+                        <div style="color: var(--accent-gold); font-weight: 600;" id="sidebar-budget-total">£0.00</div>
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <div style="color: var(--text-secondary); margin-bottom: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;">Spent</div>
+                        <div style="color: var(--text-primary); font-weight: 600;" id="sidebar-spent">£0.00</div>
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <div style="color: var(--text-secondary); margin-bottom: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;">Remaining</div>
+                        <div style="font-weight: 600;" id="sidebar-remaining">£0.00</div>
+                    </div>
+                    <div style="margin-bottom: 16px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                            <span style="color: var(--text-secondary); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;">Budget Used</span>
+                            <span style="color: var(--text-primary); font-size: 12px;" id="sidebar-percent">0%</span>
+                        </div>
+                        <div class="sidebar-progress-bar" style="height: 6px; background: rgba(0, 0, 0, 0.3); border-radius: 3px; overflow: hidden;">
+                            <div id="sidebar-progress-fill" style="height: 100%; width: 0%; background: var(--success); border-radius: 3px; transition: width 0.3s ease, background 0.3s ease;"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -1206,8 +1460,9 @@
                 <div class="tabs">
                     <button class="tab active" data-tab="overview">Overview</button>
                     <button class="tab" data-tab="proposal">Budget Proposal</button>
+                    <button class="tab" data-tab="receipts">Receipts</button>
                     <button class="tab" data-tab="tracking">Spend Tracking</button>
-                    <button class="tab" data-tab="comparison">Budget vs Actual</button>
+                    <button class="tab" data-tab="comparison">Compare</button>
                 </div>
 
                 <!-- Overview Tab -->
@@ -1342,6 +1597,68 @@
                     <div class="grand-total">
                         <div class="grand-total-label">TOTAL ESTIMATED BUDGET</div>
                         <div class="grand-total-value" id="grand-total">£0.00</div>
+                    </div>
+                </div>
+
+                <!-- Receipts Tab -->
+                <div id="receipts-tab" class="tab-content">
+                    <!-- Upload Zone -->
+                    <div class="budget-section" style="margin-bottom: 24px;">
+                        <div class="budget-section-header">
+                            <div class="section-title">Upload Receipts</div>
+                            <div class="section-actions">
+                                <button class="icon-btn" onclick="openSettingsModal()">API Settings</button>
+                            </div>
+                        </div>
+                        <div style="padding: 24px;">
+                            <div class="receipt-upload-zone" id="receipt-upload-zone" onclick="triggerReceiptUpload()">
+                                <div class="upload-icon">📄</div>
+                                <div class="upload-text">Drag & drop receipts here or click to browse</div>
+                                <div class="upload-subtext">Accepts JPG, PNG, HEIC, PDF (max 10MB each)</div>
+                                <input type="file" id="receipt-file-input" accept=".jpg,.jpeg,.png,.heic,.pdf,image/jpeg,image/png,image/heic,application/pdf" multiple style="display: none;" onchange="handleReceiptFiles(this.files)">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Unprocessed Receipts -->
+                    <div class="budget-section" style="margin-bottom: 24px;">
+                        <div class="budget-section-header">
+                            <div class="section-title">
+                                Unprocessed Receipts
+                                <span class="receipt-count" id="unprocessed-count">(0)</span>
+                            </div>
+                            <div class="section-actions">
+                                <button class="icon-btn" onclick="processAllReceipts()">Process All</button>
+                            </div>
+                        </div>
+                        <div class="receipts-grid" id="unprocessed-receipts-grid">
+                            <div class="empty-state">
+                                <div class="empty-title">No unprocessed receipts</div>
+                                <div class="empty-desc">Upload receipts above to get started</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Processed Receipts -->
+                    <div class="budget-section">
+                        <div class="budget-section-header">
+                            <div class="section-title">
+                                Processed Receipts
+                                <span class="receipt-count" id="processed-count">(0)</span>
+                            </div>
+                            <div class="section-actions">
+                                <button class="icon-btn" onclick="toggleProcessedReceipts()">View All</button>
+                            </div>
+                        </div>
+                        <div class="receipts-grid" id="processed-receipts-grid" style="display: none;">
+                            <div class="empty-state">
+                                <div class="empty-title">No processed receipts</div>
+                                <div class="empty-desc">Process unprocessed receipts to see them here</div>
+                            </div>
+                        </div>
+                        <div id="processed-receipts-summary" style="padding: 24px; text-align: center; color: var(--text-secondary);">
+                            Click "View All" to see processed receipts
+                        </div>
                     </div>
                 </div>
 
@@ -1587,13 +1904,15 @@
                     <label class="form-label">Category</label>
                     <select class="form-select" id="expense-category">
                         <option value="disposables">Disposables</option>
-                        <option value="hygiene">Hygiene & Sanitation</option>
-                        <option value="consumables">Everyday Consumables</option>
-                        <option value="beauty">Beauty Products</option>
-                        <option value="sfx">Special Effects</option>
-                        <option value="hair">Hair Products</option>
-                        <option value="tools">Tools & Equipment</option>
-                        <option value="custom">Custom Builds / Fabrication</option>
+                        <option value="hygiene">Hygiene</option>
+                        <option value="makeup">Makeup</option>
+                        <option value="hair">Hair</option>
+                        <option value="prosthetics">Prosthetics</option>
+                        <option value="mouldmaking">Mould Making</option>
+                        <option value="sfxmakeup">SFX Makeup</option>
+                        <option value="accessories">Accessories</option>
+                        <option value="actoressentials">Actor Essentials</option>
+                        <option value="departmentsupplies">Department Supplies</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -1631,6 +1950,127 @@
         </div>
     </div>
 
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">API Settings</div>
+                <button class="modal-close" onclick="closeModal('settingsModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Claude API Key</label>
+                    <input type="password" class="form-input" id="claude-api-key" placeholder="sk-ant-...">
+                    <div style="margin-top: 8px; font-size: 12px; color: var(--text-secondary);">
+                        Your API key is stored locally in your browser's localStorage. Never share your API key.
+                    </div>
+                </div>
+                <div class="form-group" style="margin-top: 16px;">
+                    <label class="form-label">Note</label>
+                    <div style="background: rgba(232, 168, 124, 0.1); padding: 12px; border-radius: 6px; font-size: 13px; color: var(--text-secondary);">
+                        The Claude API is used for OCR receipt extraction. In production, API calls should be made through a secure server. This local storage approach is for personal use only.
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeModal('settingsModal')">Cancel</button>
+                <button class="btn primary" onclick="saveApiSettings()">Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Receipt Processing Modal -->
+    <div id="receiptProcessingModal" class="modal">
+        <div class="modal-content" style="max-width: 1200px; width: 95%; max-height: 90vh;">
+            <div class="modal-header">
+                <div class="modal-title">Process Receipt</div>
+                <button class="modal-close" onclick="closeReceiptProcessingModal()">×</button>
+            </div>
+            <div class="modal-body" style="display: flex; gap: 24px; padding: 0; max-height: calc(90vh - 140px);">
+                <!-- Left: Receipt Viewer -->
+                <div class="receipt-viewer" style="flex: 1; min-width: 0; background: var(--bg-dark); display: flex; flex-direction: column;">
+                    <div class="viewer-controls" style="padding: 12px; border-bottom: 1px solid var(--border); display: flex; gap: 8px;">
+                        <button class="icon-btn" onclick="rotateReceiptImage(-90)">↺ Rotate Left</button>
+                        <button class="icon-btn" onclick="rotateReceiptImage(90)">↻ Rotate Right</button>
+                        <button class="icon-btn" onclick="zoomReceiptImage(1.2)">+ Zoom In</button>
+                        <button class="icon-btn" onclick="zoomReceiptImage(0.8)">- Zoom Out</button>
+                        <button class="icon-btn" onclick="resetReceiptImage()">Reset</button>
+                    </div>
+                    <div id="receipt-image-container" style="flex: 1; overflow: auto; padding: 16px; display: flex; align-items: center; justify-content: center;">
+                        <img id="receipt-image-preview" src="" alt="Receipt" style="max-width: 100%; transition: transform 0.2s ease;">
+                    </div>
+                </div>
+
+                <!-- Right: Extracted Data Form -->
+                <div class="receipt-form" style="width: 400px; overflow-y: auto; padding: 24px; border-left: 1px solid var(--border);">
+                    <div class="form-group">
+                        <label class="form-label">Supplier</label>
+                        <input type="text" class="form-input" id="receipt-supplier">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Date</label>
+                        <input type="date" class="form-input" id="receipt-date">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Invoice/Receipt Number</label>
+                        <input type="text" class="form-input" id="receipt-invoice-number">
+                    </div>
+
+                    <div class="form-group" style="margin-top: 24px;">
+                        <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
+                            Line Items
+                            <button class="icon-btn" onclick="addReceiptLineItem()">+ Add Item</button>
+                        </label>
+                        <div id="receipt-line-items" style="max-height: 300px; overflow-y: auto;">
+                            <!-- Dynamic line items -->
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 24px; padding: 16px; background: rgba(0, 0, 0, 0.3); border-radius: 8px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span style="color: var(--text-secondary);">Receipt Total (OCR):</span>
+                            <span id="receipt-ocr-total" style="color: var(--text-primary); font-weight: 600;">£0.00</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span style="color: var(--text-secondary);">Items Total:</span>
+                            <span id="receipt-items-total" style="color: var(--text-primary); font-weight: 600;">£0.00</span>
+                        </div>
+                        <div id="receipt-total-match" style="display: flex; align-items: center; gap: 8px; padding-top: 8px; border-top: 1px solid var(--border);">
+                            <span style="font-size: 18px;">✓</span>
+                            <span style="color: var(--success);">Totals match</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeReceiptProcessingModal()">Cancel</button>
+                <button class="btn" onclick="flagReceipt()">Flag for Review</button>
+                <button class="btn primary" onclick="approveReceipt()">Save & Approve</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Receipt View Modal (for viewing processed receipts) -->
+    <div id="receiptViewModal" class="modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <div class="modal-title">View Receipt</div>
+                <button class="modal-close" onclick="closeModal('receiptViewModal')">×</button>
+            </div>
+            <div class="modal-body" style="text-align: center;">
+                <div id="receipt-view-image" style="max-height: 60vh; overflow: auto; margin-bottom: 16px;">
+                    <img src="" alt="Receipt" style="max-width: 100%;">
+                </div>
+                <div id="receipt-view-metadata" style="text-align: left; padding: 16px; background: rgba(0, 0, 0, 0.3); border-radius: 8px;">
+                    <!-- Receipt metadata -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeModal('receiptViewModal')">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Quick Actions FAB -->
     <div class="quick-actions">
         <div class="fab-menu" id="fab-menu">
@@ -1657,18 +2097,31 @@
                     },
                     categories: {
                         disposables: { name: 'Disposables', items: [] },
-                        hygiene: { name: 'Hygiene & Sanitation', items: [] },
-                        consumables: { name: 'Everyday Consumables', items: [] },
-                        beauty: { name: 'Beauty Products', items: [] },
-                        sfx: { name: 'Special Effects', items: [] },
-                        hair: { name: 'Hair Products', items: [] },
-                        tools: { name: 'Tools & Equipment', items: [] },
-                        custom: { name: 'Custom Builds / Fabrication', items: [] }
+                        hygiene: { name: 'Hygiene', items: [] },
+                        makeup: { name: 'Makeup', items: [] },
+                        hair: { name: 'Hair', items: [] },
+                        prosthetics: { name: 'Prosthetics', items: [] },
+                        mouldmaking: { name: 'Mould Making', items: [] },
+                        sfxmakeup: { name: 'SFX Makeup', items: [] },
+                        accessories: { name: 'Accessories', items: [] },
+                        actoressentials: { name: 'Actor Essentials', items: [] },
+                        departmentsupplies: { name: 'Department Supplies', items: [] }
                     },
                     expenses: [],
+                    receipts: [],
+                    apiSettings: {
+                        claudeApiKey: ''
+                    },
                     lastSaved: null
                 };
-                
+
+                // Track which budget alerts have been triggered this session
+                this.triggeredAlerts = {
+                    threshold75: false,
+                    threshold90: false,
+                    threshold100: false
+                };
+
                 this.init();
             }
 
@@ -2021,13 +2474,16 @@
                 const grandTotal = this.updateGrandTotal();
                 const totalExpenses = this.calculateTotalExpenses();
                 const remaining = grandTotal - totalExpenses;
-                
+
                 // Update overview
                 this.updateOverview(grandTotal, totalExpenses, remaining);
-                
+
                 // Update comparison
                 this.updateComparison();
-                
+
+                // Update sidebar budget summary
+                this.updateSidebarBudgetSummary(grandTotal, totalExpenses, remaining);
+
                 // Update item count
                 let itemCount = 0;
                 Object.values(this.data.categories).forEach(cat => {
@@ -2036,6 +2492,95 @@
                 const itemsEl = document.getElementById('sidebar-items');
                 if (itemsEl) {
                     itemsEl.textContent = itemCount;
+                }
+            }
+
+            updateSidebarBudgetSummary(budget, spent, remaining) {
+                // Update sidebar values
+                this.setElementText('sidebar-budget-total', this.formatCurrency(budget));
+                this.setElementText('sidebar-spent', this.formatCurrency(spent));
+
+                // Update remaining with color
+                const remainingEl = document.getElementById('sidebar-remaining');
+                if (remainingEl) {
+                    remainingEl.textContent = this.formatCurrency(remaining);
+                    if (remaining < 0) {
+                        remainingEl.style.color = 'var(--danger)';
+                        remainingEl.textContent = '-' + this.formatCurrency(Math.abs(remaining));
+                    } else {
+                        remainingEl.style.color = 'var(--success)';
+                    }
+                }
+
+                // Calculate and update percentage
+                const percent = budget > 0 ? (spent / budget * 100) : 0;
+                this.setElementText('sidebar-percent', percent.toFixed(1) + '%');
+
+                // Update progress bar
+                const progressFill = document.getElementById('sidebar-progress-fill');
+                if (progressFill) {
+                    progressFill.style.width = Math.min(percent, 100) + '%';
+
+                    // Update color based on percentage
+                    if (percent >= 100) {
+                        progressFill.style.background = 'var(--danger)';
+                    } else if (percent >= 75) {
+                        progressFill.style.background = 'var(--warning)';
+                    } else {
+                        progressFill.style.background = 'var(--success)';
+                    }
+                }
+
+                // Check and trigger budget alerts
+                this.checkBudgetAlerts(budget, spent, percent);
+            }
+
+            checkBudgetAlerts(budget, spent, percent) {
+                // Don't check if budget is 0
+                if (budget <= 0) return;
+
+                const overBudgetAmount = spent - budget;
+
+                // Handle over budget state
+                if (percent >= 100) {
+                    this.showOverBudgetBanner(overBudgetAmount);
+
+                    if (!this.triggeredAlerts.threshold100) {
+                        this.showNotification("You've reached your budget limit", 'danger');
+                        this.triggeredAlerts.threshold100 = true;
+                    }
+                } else {
+                    this.hideOverBudgetBanner();
+
+                    // Check 90% threshold
+                    if (percent >= 90 && !this.triggeredAlerts.threshold90) {
+                        this.showNotification('Warning - only 10% of budget remaining', 'warning');
+                        this.triggeredAlerts.threshold90 = true;
+                    }
+                    // Check 75% threshold
+                    else if (percent >= 75 && !this.triggeredAlerts.threshold75) {
+                        this.showNotification("Heads up - you've used 75% of your budget", 'info');
+                        this.triggeredAlerts.threshold75 = true;
+                    }
+                }
+            }
+
+            showOverBudgetBanner(amount) {
+                let banner = document.getElementById('over-budget-banner');
+                if (!banner) {
+                    banner = document.createElement('div');
+                    banner.id = 'over-budget-banner';
+                    banner.className = 'over-budget-banner';
+                    document.body.appendChild(banner);
+                }
+                banner.innerHTML = `<span>You're ${this.formatCurrency(amount)} over budget</span><button onclick="budgetManager.hideOverBudgetBanner()">×</button>`;
+                banner.style.display = 'flex';
+            }
+
+            hideOverBudgetBanner() {
+                const banner = document.getElementById('over-budget-banner');
+                if (banner) {
+                    banner.style.display = 'none';
                 }
             }
 
@@ -2308,19 +2853,26 @@
                 if (!tbody) return;
 
                 tbody.innerHTML = '';
-                
+
                 if (this.data.expenses.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-secondary); padding: 40px;">No expenses recorded yet. Click "Add Expense" to start tracking.</td></tr>';
                     this.setElementText('total-expenses', '£0.00');
                     return;
                 }
 
-                const sortedExpenses = [...this.data.expenses].sort((a, b) => 
+                const sortedExpenses = [...this.data.expenses].sort((a, b) =>
                     new Date(b.date) - new Date(a.date)
                 );
 
                 sortedExpenses.forEach(expense => {
                     const row = document.createElement('tr');
+
+                    // Check if expense has a linked receipt
+                    const hasReceipt = expense.receipt_id && this.data.receipts?.find(r => r.id === expense.receipt_id);
+                    const receiptIcon = hasReceipt
+                        ? `<button class="receipt-link-btn" onclick="viewReceipt(${expense.receipt_id})" title="View linked receipt">📎</button>`
+                        : `<button class="receipt-link-btn no-receipt" onclick="attachReceiptToExpense(${expense.id})" title="Attach receipt">+📎</button>`;
+
                     row.innerHTML = `
                         <td>${expense.date}</td>
                         <td>
@@ -2329,18 +2881,23 @@
                         </td>
                         <td>${this.data.categories[expense.category]?.name || expense.category}</td>
                         <td><span class="supplier-tag">${expense.supplier || '-'}</span></td>
-                        <td>${expense.receipt || '-'}</td>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span>${expense.receipt || '-'}</span>
+                                ${receiptIcon}
+                            </div>
+                        </td>
                         <td>${this.formatCurrency(expense.amount)}</td>
                         <td>
                             <button class="delete-btn" data-expense-id="${expense.id}">×</button>
                         </td>
                     `;
-                    
+
                     // Add delete listener
                     row.querySelector('.delete-btn').addEventListener('click', () => {
                         this.deleteExpense(expense.id);
                     });
-                    
+
                     tbody.appendChild(row);
                 });
 
@@ -2430,9 +2987,48 @@
                 if (saved) {
                     try {
                         const data = JSON.parse(saved);
-                        this.data = { ...this.data, ...data };
-                        
-                        // Restore project info
+
+                        // Deep merge categories (keep new structure, import items from old)
+                        if (data.categories) {
+                            // Migrate old category data to new structure
+                            const categoryMapping = {
+                                'consumables': 'makeup',
+                                'beauty': 'makeup',
+                                'sfx': 'sfxmakeup',
+                                'tools': 'departmentsupplies',
+                                'custom': 'prosthetics'
+                            };
+
+                            Object.keys(data.categories).forEach(key => {
+                                // Direct match for categories that exist in both old and new
+                                if (this.data.categories[key]) {
+                                    this.data.categories[key].items = data.categories[key].items || [];
+                                }
+                                // Map old categories to new ones
+                                else if (categoryMapping[key] && this.data.categories[categoryMapping[key]]) {
+                                    const targetKey = categoryMapping[key];
+                                    const existingItems = this.data.categories[targetKey].items || [];
+                                    const migratedItems = data.categories[key].items || [];
+                                    this.data.categories[targetKey].items = [...existingItems, ...migratedItems];
+                                }
+                            });
+                        }
+
+                        // Merge other data
+                        this.data.projectInfo = { ...this.data.projectInfo, ...data.projectInfo };
+                        this.data.expenses = data.expenses || [];
+                        this.data.receipts = data.receipts || [];
+                        this.data.apiSettings = data.apiSettings || { claudeApiKey: '' };
+                        this.data.lastSaved = data.lastSaved;
+
+                        // Ensure all expenses have receipt_id field (migration)
+                        this.data.expenses.forEach(expense => {
+                            if (!expense.hasOwnProperty('receipt_id')) {
+                                expense.receipt_id = null;
+                            }
+                        });
+
+                        // Restore project info to form
                         if (this.data.projectInfo) {
                             document.getElementById('project-name').value = this.data.projectInfo.name || '';
                             document.getElementById('project-code').value = this.data.projectInfo.code || '';
@@ -2440,15 +3036,15 @@
                             document.getElementById('project-type').value = this.data.projectInfo.type || '';
                             document.getElementById('project-duration').value = this.data.projectInfo.duration || '';
                             document.getElementById('budget-limit').value = this.data.projectInfo.budgetLimit || '';
-                            
+
                             this.setElementText('project-name-display', this.data.projectInfo.name);
                             this.setElementText('project-code-display', this.data.projectInfo.code);
                         }
 
                         // Update last saved
                         if (this.data.lastSaved) {
-                            const saved = new Date(this.data.lastSaved);
-                            this.setElementText('sidebar-saved', saved.toLocaleTimeString());
+                            const savedDate = new Date(this.data.lastSaved);
+                            this.setElementText('sidebar-saved', savedDate.toLocaleTimeString());
                         }
 
                         this.renderExpenses();
@@ -2918,14 +3514,14 @@
                         { description: 'Isopropyl Alcohol 99% (1L)', qty: 3, price: 12.00, markup: 0, supplier: 'Pharmacy', notes: '' },
                         { description: 'Brush Cleaner (250ml)', qty: 2, price: 15.00, markup: 0, supplier: 'MAC', notes: '' }
                     ],
-                    beauty: [
+                    makeup: [
                         { description: 'Foundation Set (Various Shades)', qty: 1, price: 250.00, markup: 0, supplier: 'MAC', notes: '' },
                         { description: 'Concealer Palette', qty: 2, price: 45.00, markup: 0, supplier: 'Charles Fox', notes: '' },
                         { description: 'Powder Set', qty: 1, price: 85.00, markup: 0, supplier: 'Kryolan', notes: '' }
                     ]
                 },
                 horror: {
-                    sfx: [
+                    sfxmakeup: [
                         { description: 'Liquid Latex (1L)', qty: 3, price: 25.00, markup: 0, supplier: 'Screenface', notes: '' },
                         { description: 'Scar Wax', qty: 5, price: 12.00, markup: 0, supplier: 'Kryolan', notes: '' },
                         { description: 'Stage Blood (1L)', qty: 2, price: 18.00, markup: 0, supplier: 'Charles Fox', notes: '' },
@@ -2937,12 +3533,12 @@
                         { description: 'Mascara Wands (Pack of 100)', qty: 2, price: 8.00, markup: 0, supplier: 'Amazon', notes: '' },
                         { description: 'Cotton Pads (Pack of 200)', qty: 2, price: 4.50, markup: 0, supplier: 'Boots', notes: '' }
                     ],
-                    beauty: [
+                    makeup: [
                         { description: 'Foundation Set', qty: 1, price: 150.00, markup: 0, supplier: 'MAC', notes: '' }
                     ]
                 },
                 commercial: {
-                    beauty: [
+                    makeup: [
                         { description: 'HD Foundation', qty: 1, price: 120.00, markup: 0, supplier: 'MAC', notes: '' },
                         { description: 'Setting Spray', qty: 2, price: 25.00, markup: 0, supplier: 'MAC', notes: '' }
                     ]
@@ -2952,12 +3548,12 @@
                         { description: 'Period Wigs', qty: 3, price: 200.00, markup: 0, supplier: 'Other', notes: '' },
                         { description: 'Hair Pieces', qty: 5, price: 80.00, markup: 0, supplier: 'Other', notes: '' }
                     ],
-                    custom: [
+                    prosthetics: [
                         { description: 'Custom Prosthetics', qty: 1, price: 500.00, markup: 0, supplier: 'Other', notes: '' }
                     ]
                 },
                 indie: {
-                    disposables: [
+                    makeup: [
                         { description: 'Basic Makeup Kit', qty: 1, price: 100.00, markup: 0, supplier: 'Amazon', notes: '' }
                     ]
                 }
@@ -3063,7 +3659,7 @@
         }
 
         function quickAddItem() {
-            const category = prompt('Enter category (disposables, hygiene, consumables, beauty, sfx, hair, tools, custom):');
+            const category = prompt('Enter category (disposables, hygiene, makeup, hair, prosthetics, mouldmaking, sfxmakeup, accessories, actoressentials, departmentsupplies):');
             if (category && budgetManager.data.categories[category]) {
                 budgetManager.addItem(category);
                 budgetManager.switchTab('proposal');
@@ -3129,6 +3725,711 @@
             // Export comparison as CSV
             budgetManager.exportData('csv-full');
         }
+
+        // ===== RECEIPT MANAGEMENT FUNCTIONS =====
+
+        // State for current receipt being processed
+        let currentReceiptId = null;
+        let currentReceiptData = {
+            rotation: 0,
+            zoom: 1,
+            lineItems: []
+        };
+
+        // Settings Modal
+        function openSettingsModal() {
+            const apiKeyInput = document.getElementById('claude-api-key');
+            if (apiKeyInput && budgetManager.data.apiSettings) {
+                apiKeyInput.value = budgetManager.data.apiSettings.claudeApiKey || '';
+            }
+            document.getElementById('settingsModal').classList.add('active');
+        }
+
+        function saveApiSettings() {
+            const apiKey = document.getElementById('claude-api-key').value;
+            budgetManager.data.apiSettings.claudeApiKey = apiKey;
+            budgetManager.save();
+            closeModal('settingsModal');
+            budgetManager.showNotification('API settings saved', 'success');
+        }
+
+        // Receipt Upload Functions
+        function triggerReceiptUpload() {
+            document.getElementById('receipt-file-input').click();
+        }
+
+        function handleReceiptFiles(files) {
+            if (!files || files.length === 0) return;
+
+            const maxSize = 10 * 1024 * 1024; // 10MB
+            const allowedTypes = ['image/jpeg', 'image/png', 'image/heic', 'application/pdf'];
+
+            Array.from(files).forEach(file => {
+                if (file.size > maxSize) {
+                    budgetManager.showNotification(`File ${file.name} is too large (max 10MB)`, 'warning');
+                    return;
+                }
+
+                if (!allowedTypes.includes(file.type) && !file.name.toLowerCase().endsWith('.heic')) {
+                    budgetManager.showNotification(`File ${file.name} is not a supported format`, 'warning');
+                    return;
+                }
+
+                processReceiptFile(file);
+            });
+        }
+
+        async function processReceiptFile(file) {
+            try {
+                const base64 = await fileToBase64(file);
+                const receipt = {
+                    id: Date.now(),
+                    project_id: budgetManager.data.projectInfo.code,
+                    file_data: base64,
+                    file_type: file.type || 'image/jpeg',
+                    file_name: file.name,
+                    supplier: '',
+                    invoice_number: '',
+                    receipt_date: '',
+                    raw_total: 0,
+                    status: 'unprocessed',
+                    uploaded_at: Date.now(),
+                    ocr_response: null
+                };
+
+                budgetManager.data.receipts.push(receipt);
+                budgetManager.save();
+                renderReceipts();
+                budgetManager.showNotification('Receipt uploaded successfully', 'success');
+            } catch (error) {
+                console.error('Error processing file:', error);
+                budgetManager.showNotification('Error processing file', 'danger');
+            }
+        }
+
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // Drag and Drop
+        document.addEventListener('DOMContentLoaded', () => {
+            const uploadZone = document.getElementById('receipt-upload-zone');
+            if (uploadZone) {
+                uploadZone.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    uploadZone.classList.add('dragover');
+                });
+
+                uploadZone.addEventListener('dragleave', () => {
+                    uploadZone.classList.remove('dragover');
+                });
+
+                uploadZone.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    uploadZone.classList.remove('dragover');
+                    handleReceiptFiles(e.dataTransfer.files);
+                });
+            }
+        });
+
+        // Render Receipts
+        function renderReceipts() {
+            const unprocessedGrid = document.getElementById('unprocessed-receipts-grid');
+            const processedGrid = document.getElementById('processed-receipts-grid');
+
+            const unprocessed = budgetManager.data.receipts.filter(r => r.status === 'unprocessed' || r.status === 'flagged');
+            const processed = budgetManager.data.receipts.filter(r => r.status === 'processed');
+
+            // Update counts
+            document.getElementById('unprocessed-count').textContent = `(${unprocessed.length})`;
+            document.getElementById('processed-count').textContent = `(${processed.length})`;
+
+            // Render unprocessed
+            if (unprocessed.length === 0) {
+                unprocessedGrid.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-title">No unprocessed receipts</div>
+                        <div class="empty-desc">Upload receipts above to get started</div>
+                    </div>
+                `;
+            } else {
+                unprocessedGrid.innerHTML = unprocessed.map(receipt => createReceiptCard(receipt)).join('');
+            }
+
+            // Render processed
+            if (processed.length === 0) {
+                processedGrid.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-title">No processed receipts</div>
+                        <div class="empty-desc">Process unprocessed receipts to see them here</div>
+                    </div>
+                `;
+            } else {
+                processedGrid.innerHTML = processed.map(receipt => createReceiptCard(receipt, true)).join('');
+            }
+        }
+
+        function createReceiptCard(receipt, isProcessed = false) {
+            const isPdf = receipt.file_type === 'application/pdf';
+            const thumbnail = isPdf
+                ? `<div class="pdf-icon">PDF</div>`
+                : `<img src="${receipt.file_data}" alt="Receipt">`;
+
+            const statusClass = receipt.status === 'flagged' ? 'flagged' : (isProcessed ? 'processed' : 'unprocessed');
+            const statusText = receipt.status === 'flagged' ? 'Flagged' : (isProcessed ? 'Processed' : 'Unprocessed');
+
+            return `
+                <div class="receipt-card" data-receipt-id="${receipt.id}">
+                    <div class="receipt-thumbnail">${thumbnail}</div>
+                    <div class="receipt-info">
+                        <div class="receipt-supplier">${receipt.supplier || 'Unknown Supplier'}</div>
+                        <div class="receipt-amount">${receipt.raw_total ? '£' + receipt.raw_total.toFixed(2) : 'Amount pending'}</div>
+                        <span class="receipt-status ${statusClass}">${statusText}</span>
+                        <div class="receipt-actions">
+                            ${isProcessed
+                                ? `<button onclick="viewReceipt(${receipt.id})">View</button>
+                                   <button onclick="deleteReceipt(${receipt.id})">Delete</button>`
+                                : `<button class="primary" onclick="processReceipt(${receipt.id})">Process</button>
+                                   <button onclick="deleteReceipt(${receipt.id})">Delete</button>`
+                            }
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function toggleProcessedReceipts() {
+            const grid = document.getElementById('processed-receipts-grid');
+            const summary = document.getElementById('processed-receipts-summary');
+
+            if (grid.style.display === 'none') {
+                grid.style.display = 'grid';
+                summary.style.display = 'none';
+            } else {
+                grid.style.display = 'none';
+                summary.style.display = 'block';
+            }
+        }
+
+        function deleteReceipt(receiptId) {
+            if (confirm('Delete this receipt?')) {
+                budgetManager.data.receipts = budgetManager.data.receipts.filter(r => r.id !== receiptId);
+                budgetManager.save();
+                renderReceipts();
+                budgetManager.showNotification('Receipt deleted', 'info');
+            }
+        }
+
+        // ===== CLAUDE API INTEGRATION =====
+
+        async function callClaudeAPI(imageBase64, fileType) {
+            const apiKey = budgetManager.data.apiSettings.claudeApiKey;
+
+            if (!apiKey) {
+                throw new Error('API key not configured. Please set your Claude API key in Settings.');
+            }
+
+            // Extract base64 data from data URL
+            const base64Data = imageBase64.split(',')[1];
+
+            // Determine media type
+            let mediaType = fileType;
+            if (mediaType === 'image/heic') mediaType = 'image/jpeg'; // Claude doesn't support HEIC directly
+
+            const prompt = `Analyse this receipt/invoice image and extract the following data in JSON format:
+{
+  "supplier": "supplier name",
+  "date": "DD/MM/YYYY",
+  "invoice_number": "if visible",
+  "items": [
+    {
+      "description": "item description",
+      "quantity": 1,
+      "amount": 0.00,
+      "suggested_category": "one of: disposables, hygiene, makeup, hair, prosthetics, mouldmaking, sfxmakeup, accessories, actoressentials, departmentsupplies"
+    }
+  ],
+  "total": 0.00
+}
+
+For suggested_category, use your knowledge of hair and makeup department supplies:
+- disposables: mascara wands, cotton buds, sponges, gloves, applicators
+- hygiene: brush cleaner, alcohol, sanitiser, wipes, sterilising supplies
+- makeup: foundations, powders, lip products, mascara, setting spray, makeup brushes
+- hair: wigs, extensions, styling products, combs, hairspray
+- prosthetics: ready-made pieces, bondo moulds, transfers, bald caps, pre-made appliances
+- mouldmaking: silicone, alginate, plaster, lifecasting supplies, release agents
+- sfxmakeup: liquid latex, blood products, adhesives, removers, sealers, scar wax
+- accessories: hair clips, grips, facial jewellery, piercings, decorative pieces
+- actoressentials: chewing gum, mints, eye drops, tampons, deodorant, lip balm, tissues
+- departmentsupplies: kit bags, capes, mirrors, organisers, storage, towels
+
+Return ONLY the JSON object, no markdown formatting or explanation.`;
+
+            const response = await fetch('https://api.anthropic.com/v1/messages', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-api-key': apiKey,
+                    'anthropic-version': '2023-06-01',
+                    'anthropic-dangerous-direct-browser-access': 'true'
+                },
+                body: JSON.stringify({
+                    model: 'claude-sonnet-4-20250514',
+                    max_tokens: 2048,
+                    messages: [
+                        {
+                            role: 'user',
+                            content: [
+                                {
+                                    type: 'image',
+                                    source: {
+                                        type: 'base64',
+                                        media_type: mediaType,
+                                        data: base64Data
+                                    }
+                                },
+                                {
+                                    type: 'text',
+                                    text: prompt
+                                }
+                            ]
+                        }
+                    ]
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error?.message || 'API request failed');
+            }
+
+            const data = await response.json();
+            const content = data.content[0].text;
+
+            // Parse the JSON response
+            try {
+                return JSON.parse(content);
+            } catch (e) {
+                // Try to extract JSON from the response
+                const jsonMatch = content.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    return JSON.parse(jsonMatch[0]);
+                }
+                throw new Error('Could not parse OCR response');
+            }
+        }
+
+        // ===== RECEIPT PROCESSING =====
+
+        async function processReceipt(receiptId) {
+            const receipt = budgetManager.data.receipts.find(r => r.id === receiptId);
+            if (!receipt) return;
+
+            currentReceiptId = receiptId;
+            currentReceiptData = {
+                rotation: 0,
+                zoom: 1,
+                lineItems: []
+            };
+
+            // Show the processing modal
+            document.getElementById('receiptProcessingModal').classList.add('active');
+
+            // Set the image
+            const img = document.getElementById('receipt-image-preview');
+            img.src = receipt.file_data;
+            img.style.transform = 'rotate(0deg) scale(1)';
+
+            // Clear previous data
+            document.getElementById('receipt-supplier').value = receipt.supplier || '';
+            document.getElementById('receipt-date').value = receipt.receipt_date || '';
+            document.getElementById('receipt-invoice-number').value = receipt.invoice_number || '';
+            document.getElementById('receipt-line-items').innerHTML = '';
+
+            // Check if already has OCR data
+            if (receipt.ocr_response) {
+                populateFromOCR(receipt.ocr_response);
+            } else {
+                // Call Claude API for OCR
+                if (!budgetManager.data.apiSettings.claudeApiKey) {
+                    budgetManager.showNotification('Please set your Claude API key in Settings first', 'warning');
+                    addReceiptLineItem(); // Add empty line item for manual entry
+                    return;
+                }
+
+                try {
+                    budgetManager.showNotification('Processing receipt with AI...', 'info');
+                    const ocrResult = await callClaudeAPI(receipt.file_data, receipt.file_type);
+
+                    // Store OCR response
+                    receipt.ocr_response = ocrResult;
+                    budgetManager.save();
+
+                    populateFromOCR(ocrResult);
+                    budgetManager.showNotification('Receipt processed successfully', 'success');
+                } catch (error) {
+                    console.error('OCR Error:', error);
+                    budgetManager.showNotification('OCR failed: ' + error.message + '. You can enter data manually.', 'warning');
+                    addReceiptLineItem(); // Add empty line item for manual entry
+                }
+            }
+        }
+
+        function populateFromOCR(ocrData) {
+            // Populate form fields
+            document.getElementById('receipt-supplier').value = ocrData.supplier || '';
+
+            // Convert date format from DD/MM/YYYY to YYYY-MM-DD for input
+            if (ocrData.date) {
+                const parts = ocrData.date.split('/');
+                if (parts.length === 3) {
+                    document.getElementById('receipt-date').value = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                }
+            }
+
+            document.getElementById('receipt-invoice-number').value = ocrData.invoice_number || '';
+
+            // Set OCR total
+            const ocrTotal = parseFloat(ocrData.total) || 0;
+            document.getElementById('receipt-ocr-total').textContent = '£' + ocrTotal.toFixed(2);
+
+            // Clear and populate line items
+            const lineItemsContainer = document.getElementById('receipt-line-items');
+            lineItemsContainer.innerHTML = '';
+            currentReceiptData.lineItems = [];
+
+            if (ocrData.items && ocrData.items.length > 0) {
+                ocrData.items.forEach(item => {
+                    addReceiptLineItem(item);
+                });
+            } else {
+                addReceiptLineItem();
+            }
+
+            updateReceiptTotals();
+        }
+
+        function processAllReceipts() {
+            const unprocessed = budgetManager.data.receipts.filter(r => r.status === 'unprocessed');
+            if (unprocessed.length === 0) {
+                budgetManager.showNotification('No unprocessed receipts', 'info');
+                return;
+            }
+
+            // Process first one
+            processReceipt(unprocessed[0].id);
+        }
+
+        // ===== LINE ITEM MANAGEMENT =====
+
+        function addReceiptLineItem(itemData = {}) {
+            const container = document.getElementById('receipt-line-items');
+            const index = currentReceiptData.lineItems.length;
+
+            const item = {
+                description: itemData.description || '',
+                quantity: itemData.quantity || 1,
+                amount: itemData.amount || 0,
+                category: itemData.suggested_category || 'disposables'
+            };
+
+            currentReceiptData.lineItems.push(item);
+
+            const categoryOptions = `
+                <option value="disposables" ${item.category === 'disposables' ? 'selected' : ''}>Disposables</option>
+                <option value="hygiene" ${item.category === 'hygiene' ? 'selected' : ''}>Hygiene</option>
+                <option value="makeup" ${item.category === 'makeup' ? 'selected' : ''}>Makeup</option>
+                <option value="hair" ${item.category === 'hair' ? 'selected' : ''}>Hair</option>
+                <option value="prosthetics" ${item.category === 'prosthetics' ? 'selected' : ''}>Prosthetics</option>
+                <option value="mouldmaking" ${item.category === 'mouldmaking' ? 'selected' : ''}>Mould Making</option>
+                <option value="sfxmakeup" ${item.category === 'sfxmakeup' ? 'selected' : ''}>SFX Makeup</option>
+                <option value="accessories" ${item.category === 'accessories' ? 'selected' : ''}>Accessories</option>
+                <option value="actoressentials" ${item.category === 'actoressentials' ? 'selected' : ''}>Actor Essentials</option>
+                <option value="departmentsupplies" ${item.category === 'departmentsupplies' ? 'selected' : ''}>Department Supplies</option>
+            `;
+
+            const itemHtml = `
+                <div class="receipt-line-item" data-index="${index}" style="padding: 12px; background: rgba(0,0,0,0.2); border-radius: 6px; margin-bottom: 8px;">
+                    <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                        <input type="text" class="form-input" placeholder="Description" value="${item.description}"
+                               style="flex: 1;" onchange="updateLineItem(${index}, 'description', this.value)">
+                        <button class="delete-btn" onclick="removeLineItem(${index})" style="width: 32px;">×</button>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <select class="form-select" style="flex: 2;" onchange="updateLineItem(${index}, 'category', this.value)">
+                            ${categoryOptions}
+                        </select>
+                        <input type="number" class="form-input" placeholder="Qty" value="${item.quantity}" min="1" step="1"
+                               style="width: 60px;" onchange="updateLineItem(${index}, 'quantity', this.value)">
+                        <input type="number" class="form-input" placeholder="Amount" value="${item.amount}" min="0" step="0.01"
+                               style="width: 80px;" onchange="updateLineItem(${index}, 'amount', this.value)">
+                    </div>
+                </div>
+            `;
+
+            container.insertAdjacentHTML('beforeend', itemHtml);
+        }
+
+        function updateLineItem(index, field, value) {
+            if (currentReceiptData.lineItems[index]) {
+                if (field === 'quantity' || field === 'amount') {
+                    value = parseFloat(value) || 0;
+                }
+                currentReceiptData.lineItems[index][field] = value;
+                updateReceiptTotals();
+            }
+        }
+
+        function removeLineItem(index) {
+            currentReceiptData.lineItems.splice(index, 1);
+
+            // Re-render all line items
+            const container = document.getElementById('receipt-line-items');
+            container.innerHTML = '';
+
+            const itemsCopy = [...currentReceiptData.lineItems];
+            currentReceiptData.lineItems = [];
+
+            itemsCopy.forEach(item => {
+                addReceiptLineItem(item);
+            });
+
+            updateReceiptTotals();
+        }
+
+        function updateReceiptTotals() {
+            const itemsTotal = currentReceiptData.lineItems.reduce((sum, item) => {
+                return sum + (parseFloat(item.amount) || 0) * (parseInt(item.quantity) || 1);
+            }, 0);
+
+            document.getElementById('receipt-items-total').textContent = '£' + itemsTotal.toFixed(2);
+
+            const ocrTotalText = document.getElementById('receipt-ocr-total').textContent;
+            const ocrTotal = parseFloat(ocrTotalText.replace('£', '')) || 0;
+
+            const matchEl = document.getElementById('receipt-total-match');
+            const tolerance = 0.02; // 2p tolerance for rounding differences
+
+            if (Math.abs(itemsTotal - ocrTotal) <= tolerance || ocrTotal === 0) {
+                matchEl.innerHTML = '<span style="font-size: 18px;">✓</span><span style="color: var(--success);">Totals match</span>';
+            } else {
+                matchEl.innerHTML = '<span style="font-size: 18px;">⚠</span><span style="color: var(--warning);">Totals don\'t match (difference: £' + Math.abs(itemsTotal - ocrTotal).toFixed(2) + ')</span>';
+            }
+        }
+
+        // ===== IMAGE MANIPULATION =====
+
+        function rotateReceiptImage(degrees) {
+            currentReceiptData.rotation += degrees;
+            applyImageTransform();
+        }
+
+        function zoomReceiptImage(factor) {
+            currentReceiptData.zoom *= factor;
+            currentReceiptData.zoom = Math.max(0.5, Math.min(3, currentReceiptData.zoom));
+            applyImageTransform();
+        }
+
+        function resetReceiptImage() {
+            currentReceiptData.rotation = 0;
+            currentReceiptData.zoom = 1;
+            applyImageTransform();
+        }
+
+        function applyImageTransform() {
+            const img = document.getElementById('receipt-image-preview');
+            img.style.transform = `rotate(${currentReceiptData.rotation}deg) scale(${currentReceiptData.zoom})`;
+        }
+
+        // ===== RECEIPT APPROVAL =====
+
+        function closeReceiptProcessingModal() {
+            document.getElementById('receiptProcessingModal').classList.remove('active');
+            currentReceiptId = null;
+        }
+
+        function flagReceipt() {
+            if (!currentReceiptId) return;
+
+            const receipt = budgetManager.data.receipts.find(r => r.id === currentReceiptId);
+            if (receipt) {
+                receipt.status = 'flagged';
+                budgetManager.save();
+                renderReceipts();
+            }
+
+            closeReceiptProcessingModal();
+            budgetManager.showNotification('Receipt flagged for review', 'warning');
+        }
+
+        function approveReceipt() {
+            if (!currentReceiptId) return;
+
+            const receipt = budgetManager.data.receipts.find(r => r.id === currentReceiptId);
+            if (!receipt) return;
+
+            // Validate we have at least one line item
+            if (currentReceiptData.lineItems.length === 0 || !currentReceiptData.lineItems.some(item => item.description)) {
+                budgetManager.showNotification('Please add at least one line item', 'warning');
+                return;
+            }
+
+            // Check for duplicate invoice number
+            const invoiceNumber = document.getElementById('receipt-invoice-number').value;
+            if (invoiceNumber) {
+                const duplicate = budgetManager.data.receipts.find(r =>
+                    r.id !== receipt.id &&
+                    r.invoice_number === invoiceNumber &&
+                    r.status === 'processed'
+                );
+                if (duplicate) {
+                    if (!confirm('A receipt with this invoice number already exists. Continue anyway?')) {
+                        return;
+                    }
+                }
+            }
+
+            // Update receipt data
+            receipt.supplier = document.getElementById('receipt-supplier').value;
+            receipt.receipt_date = document.getElementById('receipt-date').value;
+            receipt.invoice_number = invoiceNumber;
+            receipt.raw_total = currentReceiptData.lineItems.reduce((sum, item) => {
+                return sum + (parseFloat(item.amount) || 0) * (parseInt(item.quantity) || 1);
+            }, 0);
+            receipt.status = 'processed';
+
+            // Create expenses for each line item
+            currentReceiptData.lineItems.forEach(item => {
+                if (!item.description) return;
+
+                const expense = {
+                    id: Date.now() + Math.random(),
+                    date: receipt.receipt_date || new Date().toISOString().split('T')[0],
+                    item: item.description,
+                    category: item.category,
+                    supplier: receipt.supplier,
+                    amount: (parseFloat(item.amount) || 0) * (parseInt(item.quantity) || 1),
+                    receipt: receipt.invoice_number,
+                    receipt_id: receipt.id,
+                    notes: `From receipt: ${receipt.file_name || 'uploaded'}`
+                };
+
+                budgetManager.data.expenses.push(expense);
+            });
+
+            budgetManager.save();
+            budgetManager.renderExpenses();
+            budgetManager.updateAllCalculations();
+            renderReceipts();
+            closeReceiptProcessingModal();
+            budgetManager.showNotification('Receipt approved and expenses created', 'success');
+        }
+
+        // ===== VIEW RECEIPT =====
+
+        function viewReceipt(receiptId) {
+            const receipt = budgetManager.data.receipts.find(r => r.id === receiptId);
+            if (!receipt) return;
+
+            const imageContainer = document.querySelector('#receiptViewModal #receipt-view-image img');
+            imageContainer.src = receipt.file_data;
+
+            const metadata = document.getElementById('receipt-view-metadata');
+            const uploadDate = new Date(receipt.uploaded_at).toLocaleDateString();
+
+            // Find linked expenses
+            const linkedExpenses = budgetManager.data.expenses.filter(e => e.receipt_id === receipt.id);
+
+            metadata.innerHTML = `
+                <div style="display: grid; gap: 8px;">
+                    <div><strong>Supplier:</strong> ${receipt.supplier || 'N/A'}</div>
+                    <div><strong>Invoice Number:</strong> ${receipt.invoice_number || 'N/A'}</div>
+                    <div><strong>Receipt Date:</strong> ${receipt.receipt_date || 'N/A'}</div>
+                    <div><strong>Total:</strong> £${receipt.raw_total?.toFixed(2) || '0.00'}</div>
+                    <div><strong>Uploaded:</strong> ${uploadDate}</div>
+                    <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border);">
+                        <strong>Linked Expenses:</strong> ${linkedExpenses.length} item(s)
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('receiptViewModal').classList.add('active');
+        }
+
+        // ===== ATTACH RECEIPT TO EXPENSE =====
+
+        function attachReceiptToExpense(expenseId) {
+            // Get unprocessed receipts
+            const unprocessedReceipts = budgetManager.data.receipts.filter(r =>
+                r.status === 'unprocessed' || r.status === 'flagged'
+            );
+
+            if (unprocessedReceipts.length === 0) {
+                // Option to upload new receipt
+                if (confirm('No unprocessed receipts available. Would you like to upload a new receipt?')) {
+                    budgetManager.switchTab('receipts');
+                }
+                return;
+            }
+
+            // Create a simple modal to select receipt
+            const options = unprocessedReceipts.map(r =>
+                `${r.supplier || 'Unknown'} - ${r.file_name || 'Receipt'} (${new Date(r.uploaded_at).toLocaleDateString()})`
+            );
+
+            const selected = prompt(
+                'Select a receipt to attach (enter number):\n\n' +
+                options.map((opt, i) => `${i + 1}. ${opt}`).join('\n') +
+                '\n\nOr enter 0 to upload a new receipt'
+            );
+
+            if (selected === null) return;
+
+            const index = parseInt(selected) - 1;
+
+            if (selected === '0') {
+                budgetManager.switchTab('receipts');
+                return;
+            }
+
+            if (index >= 0 && index < unprocessedReceipts.length) {
+                const receipt = unprocessedReceipts[index];
+                const expense = budgetManager.data.expenses.find(e => e.id === expenseId);
+
+                if (expense) {
+                    expense.receipt_id = receipt.id;
+                    if (!expense.receipt) {
+                        expense.receipt = receipt.invoice_number || 'Attached';
+                    }
+                    budgetManager.save();
+                    budgetManager.renderExpenses();
+                    budgetManager.showNotification('Receipt attached to expense', 'success');
+                }
+            } else {
+                budgetManager.showNotification('Invalid selection', 'warning');
+            }
+        }
+
+        // Initialize receipts display when tab is shown
+        document.addEventListener('DOMContentLoaded', () => {
+            // Add tab switch listener to render receipts when receipts tab is shown
+            document.querySelectorAll('[data-tab="receipts"]').forEach(el => {
+                el.addEventListener('click', () => {
+                    setTimeout(renderReceipts, 100);
+                });
+            });
+
+            // Initial render if receipts data exists
+            if (budgetManager && budgetManager.data.receipts) {
+                renderReceipts();
+            }
+        });
     </script>
 </body>
 </html>
