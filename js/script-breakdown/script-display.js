@@ -164,15 +164,39 @@ export function highlightCharacterDescriptions() {
     let html = scriptContent.innerHTML;
     let highlightCount = 0;
 
-    // Category-based colors
+    // Category-based colors for all continuity event types
     const categoryColors = {
+        // Physical appearance
         physical_appearance: '#FFD70033', // Gold
         physical: '#FFD70033',
-        hair: '#E6E6FA33', // Lavender
-        wardrobe: '#98FB9833', // Pale green
-        injury: '#FF634733', // Coral
-        condition: '#87CEEB33', // Sky blue
         age: '#DDA0DD33', // Plum
+
+        // Hair
+        hair: '#E6E6FA55', // Lavender
+
+        // Injuries and fights
+        injury: '#FF634755', // Coral/red
+        fight: '#FF634744', // Slightly lighter coral
+
+        // Weather effects
+        weather: '#87CEEB55', // Sky blue
+
+        // Illness
+        illness: '#90EE9044', // Light green (sickly)
+
+        // Time passage
+        time_passage: '#DDA0DD44', // Plum/purple
+
+        // Condition (wet, dirty, etc.)
+        condition: '#87CEEB44', // Sky blue
+
+        // Wardrobe
+        wardrobe: '#98FB9844', // Pale green
+
+        // Makeup
+        makeup: '#FFB6C155', // Pink
+
+        // Defaults
         introduction: '#FFD70033',
         description: '#F5F5DC33' // Beige (default)
     };

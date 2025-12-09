@@ -592,14 +592,38 @@ function extractDescriptionsViaPatterns(scriptText, scenes, characterNames) {
     const wardrobeMentions = [];
     const appearanceChanges = [];
 
-    // Patterns for different description types
+    // Comprehensive patterns for all continuity-affecting events
     const patterns = {
+        // Physical appearance
         age: /\(?\s*(\d+s?|early|mid|late)\s*(twenties|thirties|forties|fifties|sixties|teens)\s*\)?/gi,
-        physical: /\b(tall|short|slim|heavyset|muscular|athletic|thin|stocky|petite|large)\b/gi,
-        hair: /\b(hair|blonde|brunette|redhead|gray|grey|bald|curly|straight|wavy|ponytail|braids?|beard|stubble|shaved)\b/gi,
-        injury: /\b(cut|cuts|bleeding|blood|bruise|bruised|wound|wounded|scar|scarred|bandage|bandaged|injured)\b/gi,
-        condition: /\b(wet|soaked|drenched|sweaty|dirty|muddy|disheveled|tired|exhausted|pale|flushed)\b/gi,
-        wardrobe: /\b(wearing|wears|dressed|dress|suit|uniform|jacket|coat|shirt|pants|jeans|skirt|gown|robe|towel|pajamas)\b/gi
+        physical: /\b(tall|short|slim|heavyset|muscular|athletic|thin|stocky|petite|large|aging|aged|older|younger)\b/gi,
+
+        // Hair changes (including growth, styling, damage)
+        hair: /\b(hair|blonde|brunette|redhead|gray|grey|graying|bald|balding|curly|straight|wavy|ponytail|braids?|beard|stubble|shaved|grows?|grown|longer|shorter|haircut|wig|extensions?|messy|tangled|wind-?blown)\b/gi,
+
+        // Injuries and physical trauma
+        injury: /\b(cut|cuts|bleeding|blood|bloody|bruise|bruised|bruising|wound|wounded|scar|scarred|bandage|bandaged|injured|injury|black eye|swollen|split lip|broken|fractured|limping|limp|stitches|gash|abrasion|burn|burned|burnt)\b/gi,
+
+        // Weather and environmental effects
+        weather: /\b(rain|raining|soaked|drenched|wet|snow|snowing|frozen|frost|frostbite|sunburn|sunburned|windswept|wind-?blown|storm|hail|humid|sweat|sweating|sweaty)\b/gi,
+
+        // Illness and health conditions
+        illness: /\b(sick|ill|illness|pale|pallid|fever|feverish|cough|coughing|sneeze|sneezing|vomit|vomiting|nausea|lesions?|rash|spots|sores?|weak|weakened|frail|recovering|recovery|healthy|healthier|better|worse|dying|death|dead)\b/gi,
+
+        // Time passage effects (aging, growth)
+        time_passage: /\b(older|younger|aged|aging|years?\s+later|months?\s+later|weeks?\s+later|time\s+jump|grown|matured|gray\s+hair|graying|wrinkles?|weathered|weight\s+(?:gain|loss)|pregnant|pregnancy|showing)\b/gi,
+
+        // Physical condition/state
+        condition: /\b(wet|soaked|drenched|sweaty|dirty|muddy|filthy|grime|grimy|disheveled|unkempt|tired|exhausted|fatigued|weary|haggard|gaunt|flushed|clean|cleaned|washed|groomed|refreshed|rested|drunk|intoxicated|hungover|drugged|sedated)\b/gi,
+
+        // Fight/action aftermath
+        fight: /\b(fight|fighting|fought|punch|punched|hit|hits|struck|kick|kicked|tackle|tackled|wrestle|wrestled|struggle|struggled|attack|attacked|defend|defended|brawl|scuffle|beaten|beating)\b/gi,
+
+        // Wardrobe/costume
+        wardrobe: /\b(wearing|wears|dressed|dress|suit|uniform|jacket|coat|shirt|pants|jeans|skirt|gown|robe|towel|pajamas|costume|outfit|clothes|clothing|changed|changes|torn|ripped|stained|bloodstained|dirty|muddy|wet|damaged)\b/gi,
+
+        // Makeup specific
+        makeup: /\b(makeup|make-?up|lipstick|mascara|foundation|blush|eyeliner|eye\s+shadow|smeared|smudged|running|crying|tears|tear-?stained|no\s+makeup|natural|bare-?faced|glamorous|done\s+up)\b/gi
     };
 
     let currentScene = 0;
