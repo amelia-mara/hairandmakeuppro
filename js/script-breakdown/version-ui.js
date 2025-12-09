@@ -9,8 +9,37 @@
  * - Copy scene from version dialog
  */
 
-import { state } from './main.js';
-import { detectScenes, saveProject } from './export-handlers.js';
+// LAZY IMPORTS to avoid circular dependency with main.js
+let _stateModule = null;
+let _detectScenes = null;
+let _saveProject = null;
+
+// Lazy getter for state to avoid circular dependency
+// Uses window.state as fallback since main.js sets it globally
+function getState() {
+    // First check if we have a cached module reference
+    if (_stateModule) {
+        return _stateModule;
+    }
+    // Fall back to window.state which is set by main.js after initialization
+    // This is safe because version functions are only called after init
+    if (typeof window !== 'undefined' && window.state) {
+        _stateModule = window.state;
+        return _stateModule;
+    }
+    // Last resort - return null during initial load
+    return null;
+}
+
+// Lazy loader for export handlers
+async function loadExportHandlers() {
+    if (!_detectScenes || !_saveProject) {
+        const exportModule = await import('./export-handlers.js');
+        _detectScenes = exportModule.detectScenes;
+        _saveProject = exportModule.saveProject;
+    }
+}
+
 import {
     getAllVersions,
     getCurrentVersion,
@@ -145,6 +174,7 @@ window.updateVersionColorPreview = function() {
  * Process version upload
  */
 window.processVersionUpload = async function() {
+    const state = getState();
     const versionName = document.getElementById('version-name-select').value;
     const uploadDate = document.getElementById('version-upload-date').valueAsDate || new Date();
     const scriptContent = document.getElementById('version-script-input').value;
@@ -159,8 +189,11 @@ window.processVersionUpload = async function() {
     showVersionLoadingBar('Processing Script', 'Detecting scenes...', 10);
 
     try {
+        // Load export handlers for detectScenes
+        await loadExportHandlers();
+
         // Detect scenes from script
-        const scenes = detectScenes(scriptContent);
+        const scenes = _detectScenes(scriptContent);
         updateVersionLoadingBar('Processing Script', `Found ${scenes.length} scenes`, 30);
 
         if (scenes.length === 0) {
@@ -216,7 +249,7 @@ window.processVersionUpload = async function() {
             newVersion.is_current = true;
             state.currentProject.current_version_id = newVersion.version_id;
 
-            saveProject();
+            if (_saveProject) _saveProject();
 
             closeVersionLoadingBar();
             closeVersionUploadModal();
@@ -421,7 +454,8 @@ window.closeComparisonResultsModal = function() {
     if (modal) modal.style.display = 'none';
 };
 
-window.acceptVersionUpload = function() {
+window.acceptVersionUpload = async function() {
+    const state = getState();
     const modal = document.getElementById('version-comparison-results-modal');
     if (!modal) return;
 
@@ -444,7 +478,8 @@ window.acceptVersionUpload = function() {
             }
         });
 
-        saveProject();
+        await loadExportHandlers();
+        if (_saveProject) _saveProject();
 
         closeVersionLoadingBar();
         closeComparisonResultsModal();
@@ -1149,13 +1184,8 @@ function showToast(message, type = 'info') {
 }
 
 // ============================================================================
-// EXPORTS
+// WINDOW EXPORTS
 // ============================================================================
-
-export {
-    openVersionUploadModal,
-    renderVersionSelector
-};
 
 // Window exports for HTML onclick handlers
 window.openVersionUploadModal = openVersionUploadModal;
