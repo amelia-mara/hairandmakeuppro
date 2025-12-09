@@ -109,9 +109,12 @@ function renderSceneBreakdown(sceneIndex) {
     const breakdown = state.sceneBreakdowns[sceneIndex] || {};
 
     // FIX: Auto-populate characters from masterContext if not already set
+    // Use scene.content or scene.text as fallback (different script parsers store content differently)
     let characters = breakdown.cast || [];
-    if (characters.length === 0 && scene.content) {
-        characters = detectCharactersFromMasterContext(scene.content);
+    const sceneContent = scene.content || scene.text || '';
+
+    if (characters.length === 0 && sceneContent) {
+        characters = detectCharactersFromMasterContext(sceneContent);
         if (characters.length > 0) {
             // Auto-populate breakdown.cast for future renders
             if (!state.sceneBreakdowns[sceneIndex]) {
@@ -120,6 +123,11 @@ function renderSceneBreakdown(sceneIndex) {
             state.sceneBreakdowns[sceneIndex].cast = characters;
             saveToLocalStorage();
         }
+    }
+
+    // Also populate castMembers on the scene object for continuity tracking
+    if (characters.length > 0 && !scene.castMembers) {
+        scene.castMembers = characters;
     }
 
     const storyDay = scene.storyDay || extractStoryDay(sceneIndex) || '';
@@ -239,7 +247,7 @@ function renderSceneBreakdown(sceneIndex) {
                                 : 'None in masterContext'}
                         </div>
                         <div style="font-size: 0.85em; margin-top: 4px; opacity: 0.6;">
-                            Scene preview: ${escapeHtml(scene.content?.substring(0, 100) || 'No content')}...
+                            Scene preview: ${escapeHtml((scene.content || scene.text || '')?.substring(0, 100) || 'No content')}...
                         </div>
                     </div>`}
             </div>
@@ -766,12 +774,25 @@ function extractSuggestionsFromTags(sceneIndex, character) {
 
 /**
  * Find previous appearance of character
+ * Returns the scene INDEX (not the state) for the most recent scene where this character appeared
  */
 function findPreviousCharacterAppearance(character, currentSceneIndex) {
     for (let i = currentSceneIndex - 1; i >= 0; i--) {
         const breakdown = state.sceneBreakdowns[i];
-        if (breakdown?.cast?.includes(character) && state.characterStates[i]?.[character]) {
-            return state.characterStates[i][character];
+
+        // Check if character is in this scene's cast
+        if (breakdown?.cast?.includes(character)) {
+            return i; // Return scene INDEX, not state
+        }
+
+        // Also check if character appears in scene content (fallback)
+        const scene = state.scenes[i];
+        const sceneContent = scene?.content || scene?.text || '';
+        if (sceneContent && window.masterContext?.characters?.[character]) {
+            const regex = new RegExp('\\b' + character.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+            if (sceneContent.match(regex)) {
+                return i; // Return scene INDEX
+            }
         }
     }
     return null;
@@ -968,9 +989,16 @@ window.updateCharField = function(sceneIndex, character, field, value) {
  * Copy character state from previous scene
  */
 window.copyFromPrevious = function(character, sceneIndex) {
-    const prevState = findPreviousCharacterAppearance(character, sceneIndex);
-    if (!prevState) {
+    const prevSceneIndex = findPreviousCharacterAppearance(character, sceneIndex);
+    if (prevSceneIndex === null) {
         alert('No previous appearance found for ' + character);
+        return;
+    }
+
+    // Get the character state from the previous scene
+    const prevState = state.characterStates[prevSceneIndex]?.[character];
+    if (!prevState) {
+        alert(`${character} appeared in Scene ${prevSceneIndex + 1} but has no saved appearance data`);
         return;
     }
 
@@ -988,6 +1016,8 @@ window.copyFromPrevious = function(character, sceneIndex) {
         enterWardrobe: prevState.exitWardrobe || prevState.enterWardrobe || prevState.wardrobe || '',
         enterCondition: prevState.exitCondition || prevState.enterCondition || ''
     };
+
+    console.log(`✅ Copied ${character}'s appearance from Scene ${prevSceneIndex + 1} to Scene ${sceneIndex + 1}`);
 
     renderSceneBreakdown(sceneIndex);
     saveToLocalStorage();

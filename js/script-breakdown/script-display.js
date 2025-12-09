@@ -210,15 +210,39 @@ export function highlightContinuityReferences() {
  */
 export function highlightCharacterNames() {
     // Get characters from various sources (checking all for compatibility)
-    let characters = [];
+    let characters = new Set();
 
+    // Primary source: masterContext from AI analysis
     if (window.masterContext?.characters) {
-        characters = Object.keys(window.masterContext.characters);
-    } else if (window.scriptMasterContext?.characters) {
-        characters = Object.keys(window.scriptMasterContext.characters);
-    } else if (window.confirmedCharacters && window.confirmedCharacters.size > 0) {
-        characters = Array.from(window.confirmedCharacters);
+        Object.keys(window.masterContext.characters).forEach(char => characters.add(char));
     }
+
+    // Secondary source: scriptMasterContext
+    if (window.scriptMasterContext?.characters) {
+        Object.keys(window.scriptMasterContext.characters).forEach(char => characters.add(char));
+    }
+
+    // Tertiary source: window.confirmedCharacters
+    if (window.confirmedCharacters && window.confirmedCharacters.size > 0) {
+        window.confirmedCharacters.forEach(char => characters.add(char));
+    }
+
+    // Quaternary source: state.confirmedCharacters
+    if (state.confirmedCharacters && state.confirmedCharacters.size > 0) {
+        state.confirmedCharacters.forEach(char => characters.add(char));
+    }
+
+    // Fifth source: Extract from scene breakdowns
+    if (state.sceneBreakdowns) {
+        Object.values(state.sceneBreakdowns).forEach(breakdown => {
+            if (breakdown.cast && Array.isArray(breakdown.cast)) {
+                breakdown.cast.forEach(char => characters.add(char));
+            }
+        });
+    }
+
+    // Convert Set to Array
+    characters = Array.from(characters);
 
     if (characters.length === 0) {
         console.log('⚠️ No characters found to highlight');
