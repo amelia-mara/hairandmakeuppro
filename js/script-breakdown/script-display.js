@@ -94,10 +94,13 @@ export function renderScript() {
 
 /**
  * Highlight character descriptions in the script based on master context
+ * Uses both scriptDescriptions per character AND descriptionTags from Phase 5 analysis
  */
 export function highlightCharacterDescriptions() {
-    const masterContext = window.scriptMasterContext;
-    if (!masterContext?.characters) {
+    // Check both sources for master context
+    const masterContext = window.scriptMasterContext || window.masterContext;
+    if (!masterContext) {
+        console.log('⚠️ No master context for description highlighting');
         return;
     }
 
@@ -106,44 +109,126 @@ export function highlightCharacterDescriptions() {
         return;
     }
 
-    // Collect all character descriptions
+    // Collect all character descriptions from multiple sources
     const descriptions = [];
-    Object.entries(masterContext.characters).forEach(([characterName, data]) => {
-        if (data.scriptDescriptions && Array.isArray(data.scriptDescriptions)) {
-            data.scriptDescriptions.forEach(desc => {
-                descriptions.push({
-                    text: desc.text,
-                    character: characterName,
-                    sceneNumber: desc.sceneNumber,
-                    type: desc.type
+
+    // Source 1: scriptDescriptions from each character
+    if (masterContext.characters) {
+        Object.entries(masterContext.characters).forEach(([characterName, data]) => {
+            if (data.scriptDescriptions && Array.isArray(data.scriptDescriptions)) {
+                data.scriptDescriptions.forEach(desc => {
+                    if (desc.text && desc.text.length > 10) { // Skip very short descriptions
+                        descriptions.push({
+                            text: desc.text,
+                            character: characterName,
+                            sceneNumber: desc.sceneNumber,
+                            type: desc.type || 'description',
+                            category: desc.category || 'physical'
+                        });
+                    }
                 });
-            });
-        }
-    });
+            }
+        });
+    }
+
+    // Source 2: descriptionTags from Phase 5 analysis
+    if (masterContext.descriptionTags && Array.isArray(masterContext.descriptionTags)) {
+        masterContext.descriptionTags.forEach(tag => {
+            if (tag.quote && tag.quote.length > 10) {
+                // Avoid duplicates
+                const isDuplicate = descriptions.some(d =>
+                    d.text === tag.quote && d.character === tag.character
+                );
+                if (!isDuplicate) {
+                    descriptions.push({
+                        text: tag.quote,
+                        character: tag.character,
+                        sceneNumber: tag.scene,
+                        type: tag.category || 'description',
+                        category: tag.category || 'appearance'
+                    });
+                }
+            }
+        });
+    }
 
     if (descriptions.length === 0) {
+        console.log('⚠️ No descriptions found to highlight');
         return;
     }
 
     // Sort by length (longest first) to avoid partial matches
-    descriptions.sort((a, b) => b.text.length - a.text.length);
+    descriptions.sort((a, b) => (b.text?.length || 0) - (a.text?.length || 0));
 
     // Get current HTML
     let html = scriptContent.innerHTML;
+    let highlightCount = 0;
+
+    // Category-based colors for all continuity event types
+    const categoryColors = {
+        // Physical appearance
+        physical_appearance: '#FFD70033', // Gold
+        physical: '#FFD70033',
+        age: '#DDA0DD33', // Plum
+
+        // Hair
+        hair: '#E6E6FA55', // Lavender
+
+        // Injuries and fights
+        injury: '#FF634755', // Coral/red
+        fight: '#FF634744', // Slightly lighter coral
+
+        // Weather effects
+        weather: '#87CEEB55', // Sky blue
+
+        // Illness
+        illness: '#90EE9044', // Light green (sickly)
+
+        // Time passage
+        time_passage: '#DDA0DD44', // Plum/purple
+
+        // Condition (wet, dirty, etc.)
+        condition: '#87CEEB44', // Sky blue
+
+        // Wardrobe
+        wardrobe: '#98FB9844', // Pale green
+
+        // Makeup
+        makeup: '#FFB6C155', // Pink
+
+        // Defaults
+        introduction: '#FFD70033',
+        description: '#F5F5DC33' // Beige (default)
+    };
 
     // Highlight each description
     descriptions.forEach(desc => {
-        const escapedText = escapeHtml(desc.text);
-        const regex = new RegExp(escapeRegex(escapedText), 'g');
+        if (!desc.text) return;
 
-        const highlighted = `<span class="character-description" data-character="${escapeHtml(desc.character)}" data-scene="${desc.sceneNumber}" title="${escapeHtml(desc.character)} - ${desc.type}">${escapedText}</span>`;
+        try {
+            const escapedText = escapeHtml(desc.text);
+            // Create a regex that's more flexible with whitespace
+            const flexibleText = escapeRegex(escapedText).replace(/\s+/g, '\\s+');
+            const regex = new RegExp(flexibleText, 'gi');
 
-        html = html.replace(regex, highlighted);
+            const color = categoryColors[desc.category] || categoryColors[desc.type] || categoryColors.description;
+            const categoryLabel = (desc.category || desc.type || 'description').replace(/_/g, ' ');
+
+            const highlighted = `<span class="character-description" data-character="${escapeHtml(desc.character)}" data-scene="${desc.sceneNumber}" data-category="${desc.category || desc.type}" style="background-color: ${color}; border-bottom: 2px solid var(--accent-gold);" title="${escapeHtml(desc.character)} - ${categoryLabel}">$&</span>`;
+
+            const newHtml = html.replace(regex, highlighted);
+            if (newHtml !== html) {
+                html = newHtml;
+                highlightCount++;
+            }
+        } catch (e) {
+            console.warn('Failed to highlight description:', desc.text?.substring(0, 50), e);
+        }
     });
 
     scriptContent.innerHTML = html;
 
-    console.log(`✓ Highlighted ${descriptions.length} character descriptions`);
+    console.log(`✓ Highlighted ${highlightCount} character descriptions (from ${descriptions.length} found)`);
 }
 
 /**
@@ -210,15 +295,39 @@ export function highlightContinuityReferences() {
  */
 export function highlightCharacterNames() {
     // Get characters from various sources (checking all for compatibility)
-    let characters = [];
+    let characters = new Set();
 
+    // Primary source: masterContext from AI analysis
     if (window.masterContext?.characters) {
-        characters = Object.keys(window.masterContext.characters);
-    } else if (window.scriptMasterContext?.characters) {
-        characters = Object.keys(window.scriptMasterContext.characters);
-    } else if (window.confirmedCharacters && window.confirmedCharacters.size > 0) {
-        characters = Array.from(window.confirmedCharacters);
+        Object.keys(window.masterContext.characters).forEach(char => characters.add(char));
     }
+
+    // Secondary source: scriptMasterContext
+    if (window.scriptMasterContext?.characters) {
+        Object.keys(window.scriptMasterContext.characters).forEach(char => characters.add(char));
+    }
+
+    // Tertiary source: window.confirmedCharacters
+    if (window.confirmedCharacters && window.confirmedCharacters.size > 0) {
+        window.confirmedCharacters.forEach(char => characters.add(char));
+    }
+
+    // Quaternary source: state.confirmedCharacters
+    if (state.confirmedCharacters && state.confirmedCharacters.size > 0) {
+        state.confirmedCharacters.forEach(char => characters.add(char));
+    }
+
+    // Fifth source: Extract from scene breakdowns
+    if (state.sceneBreakdowns) {
+        Object.values(state.sceneBreakdowns).forEach(breakdown => {
+            if (breakdown.cast && Array.isArray(breakdown.cast)) {
+                breakdown.cast.forEach(char => characters.add(char));
+            }
+        });
+    }
+
+    // Convert Set to Array
+    characters = Array.from(characters);
 
     if (characters.length === 0) {
         console.log('⚠️ No characters found to highlight');
