@@ -568,6 +568,60 @@
             color: var(--danger);
         }
 
+        /* Pending Review Expense Styling */
+        .expense-row-pending {
+            background: rgba(232, 168, 124, 0.08);
+            border-left: 3px solid var(--warning);
+        }
+
+        .pending-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            background: rgba(232, 168, 124, 0.2);
+            color: var(--warning);
+            margin-left: 8px;
+        }
+
+        .approve-btn, .reject-btn {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: none;
+        }
+
+        .approve-btn {
+            background: rgba(82, 193, 134, 0.2);
+            color: var(--success);
+        }
+
+        .approve-btn:hover {
+            background: rgba(82, 193, 134, 0.4);
+        }
+
+        .reject-btn {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+        }
+
+        .reject-btn:hover {
+            background: rgba(239, 68, 68, 0.4);
+        }
+
+        .expense-actions {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
         /* Category Total */
         .category-total {
             padding: 16px 24px;
@@ -2860,12 +2914,22 @@
                     return;
                 }
 
-                const sortedExpenses = [...this.data.expenses].sort((a, b) =>
-                    new Date(b.date) - new Date(a.date)
-                );
+                // Sort: pending review first, then by date
+                const sortedExpenses = [...this.data.expenses].sort((a, b) => {
+                    // Pending review items first
+                    if (a.status === 'pending_review' && b.status !== 'pending_review') return -1;
+                    if (b.status === 'pending_review' && a.status !== 'pending_review') return 1;
+                    // Then by date (newest first)
+                    return new Date(b.date) - new Date(a.date);
+                });
 
                 sortedExpenses.forEach(expense => {
                     const row = document.createElement('tr');
+                    const isPending = expense.status === 'pending_review';
+
+                    if (isPending) {
+                        row.classList.add('expense-row-pending');
+                    }
 
                     // Check if expense has a linked receipt
                     const hasReceipt = expense.receipt_id && this.data.receipts?.find(r => r.id === expense.receipt_id);
@@ -2873,10 +2937,21 @@
                         ? `<button class="receipt-link-btn" onclick="viewReceipt(${expense.receipt_id})" title="View linked receipt">📎</button>`
                         : `<button class="receipt-link-btn no-receipt" onclick="attachReceiptToExpense(${expense.id})" title="Attach receipt">+📎</button>`;
 
+                    // Show pending badge if pending review
+                    const pendingBadge = isPending ? '<span class="pending-badge">Pending</span>' : '';
+
+                    // Show approve/reject buttons for pending expenses
+                    const actionButtons = isPending
+                        ? `<div class="expense-actions">
+                               <button class="approve-btn" data-expense-id="${expense.id}" title="Approve expense">✓</button>
+                               <button class="reject-btn" data-expense-id="${expense.id}" title="Reject expense">✕</button>
+                           </div>`
+                        : `<button class="delete-btn" data-expense-id="${expense.id}">×</button>`;
+
                     row.innerHTML = `
                         <td>${expense.date}</td>
                         <td>
-                            <div class="item-name">${expense.item}</div>
+                            <div class="item-name">${expense.item}${pendingBadge}</div>
                             ${expense.notes ? `<div class="item-desc">${expense.notes}</div>` : ''}
                         </td>
                         <td>${this.data.categories[expense.category]?.name || expense.category}</td>
@@ -2888,15 +2963,22 @@
                             </div>
                         </td>
                         <td>${this.formatCurrency(expense.amount)}</td>
-                        <td>
-                            <button class="delete-btn" data-expense-id="${expense.id}">×</button>
-                        </td>
+                        <td>${actionButtons}</td>
                     `;
 
-                    // Add delete listener
-                    row.querySelector('.delete-btn').addEventListener('click', () => {
-                        this.deleteExpense(expense.id);
-                    });
+                    // Add event listeners based on status
+                    if (isPending) {
+                        row.querySelector('.approve-btn').addEventListener('click', () => {
+                            this.approveExpense(expense.id);
+                        });
+                        row.querySelector('.reject-btn').addEventListener('click', () => {
+                            this.rejectExpense(expense.id);
+                        });
+                    } else {
+                        row.querySelector('.delete-btn').addEventListener('click', () => {
+                            this.deleteExpense(expense.id);
+                        });
+                    }
 
                     tbody.appendChild(row);
                 });
@@ -2910,6 +2992,58 @@
                     this.renderExpenses();
                     this.updateAllCalculations();
                     this.save();
+                }
+            }
+
+            approveExpense(id) {
+                const expense = this.data.expenses.find(e => e.id === id);
+                if (expense) {
+                    expense.status = 'approved';
+                    // Also update the linked receipt if all expenses from it are approved
+                    if (expense.receipt_id) {
+                        this.checkAndUpdateReceiptStatus(expense.receipt_id);
+                    }
+                    this.renderExpenses();
+                    this.save();
+                    this.showNotification('Expense approved', 'success');
+                }
+            }
+
+            rejectExpense(id) {
+                if (confirm('Reject and delete this expense?')) {
+                    const expense = this.data.expenses.find(e => e.id === id);
+                    const receiptId = expense?.receipt_id;
+
+                    this.data.expenses = this.data.expenses.filter(e => e.id !== id);
+
+                    // Update receipt status if needed
+                    if (receiptId) {
+                        this.checkAndUpdateReceiptStatus(receiptId);
+                    }
+
+                    this.renderExpenses();
+                    this.updateAllCalculations();
+                    this.save();
+                    this.showNotification('Expense rejected and removed', 'info');
+                }
+            }
+
+            checkAndUpdateReceiptStatus(receiptId) {
+                const receipt = this.data.receipts?.find(r => r.id === receiptId);
+                if (!receipt) return;
+
+                // Check if there are any pending expenses for this receipt
+                const linkedExpenses = this.data.expenses.filter(e => e.receipt_id === receiptId);
+                const hasPending = linkedExpenses.some(e => e.status === 'pending_review');
+
+                if (!hasPending && linkedExpenses.length > 0) {
+                    // All expenses approved/processed - mark receipt as processed
+                    receipt.status = 'processed';
+                    renderReceipts();
+                } else if (linkedExpenses.length === 0) {
+                    // No expenses left - mark receipt as unprocessed to allow reprocessing
+                    receipt.status = 'unprocessed';
+                    renderReceipts();
                 }
             }
 
@@ -3815,6 +3949,7 @@
         }
 
         // Auto-process OCR in background (doesn't open modal)
+        // Option B: Automatically creates expenses with pending_review status
         async function autoProcessReceiptOCR(receiptId) {
             const receipt = budgetManager.data.receipts.find(r => r.id === receiptId);
             if (!receipt || receipt.ocr_response) return;
@@ -3828,10 +3963,54 @@
                 receipt.receipt_date = ocrResult.date || '';
                 receipt.raw_total = parseFloat(ocrResult.total) || 0;
                 receipt.ocr_response = ocrResult;
+                receipt.status = 'pending_review'; // Mark receipt as pending review
+
+                // Convert OCR date from DD/MM/YYYY to YYYY-MM-DD
+                let expenseDate = new Date().toISOString().split('T')[0];
+                if (ocrResult.date) {
+                    const parts = ocrResult.date.split('/');
+                    if (parts.length === 3) {
+                        expenseDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                    }
+                }
+
+                // Auto-create expenses from OCR line items with pending_review status
+                let createdCount = 0;
+                if (ocrResult.items && ocrResult.items.length > 0) {
+                    ocrResult.items.forEach(item => {
+                        if (!item.description) return;
+
+                        // Map suggested_category to our category keys
+                        const categoryKey = item.suggested_category || 'departmentsupplies';
+
+                        const expense = {
+                            id: Date.now() + Math.random(),
+                            date: expenseDate,
+                            item: item.description,
+                            category: categoryKey,
+                            supplier: receipt.supplier,
+                            amount: (parseFloat(item.amount) || 0) * (parseInt(item.quantity) || 1),
+                            receipt: receipt.invoice_number,
+                            receipt_id: receipt.id,
+                            notes: `Auto-extracted from receipt: ${receipt.file_name || 'uploaded'}`,
+                            status: 'pending_review' // Mark expense as pending review
+                        };
+
+                        budgetManager.data.expenses.push(expense);
+                        createdCount++;
+                    });
+                }
 
                 budgetManager.save();
+                budgetManager.renderExpenses();
+                budgetManager.updateAllCalculations();
                 renderReceipts();
-                budgetManager.showNotification(`Receipt from "${receipt.supplier || 'Unknown'}" processed - £${receipt.raw_total.toFixed(2)}`, 'success');
+
+                if (createdCount > 0) {
+                    budgetManager.showNotification(`Receipt from "${receipt.supplier || 'Unknown'}" processed - ${createdCount} expense(s) created for review`, 'success');
+                } else {
+                    budgetManager.showNotification(`Receipt from "${receipt.supplier || 'Unknown'}" processed - £${receipt.raw_total.toFixed(2)}. No line items found.`, 'warning');
+                }
             } catch (error) {
                 console.error('Auto OCR Error:', error);
                 receipt.status = 'flagged';
@@ -3876,14 +4055,17 @@
             const unprocessedGrid = document.getElementById('unprocessed-receipts-grid');
             const processedGrid = document.getElementById('processed-receipts-grid');
 
-            const unprocessed = budgetManager.data.receipts.filter(r => r.status === 'unprocessed' || r.status === 'flagged');
+            // pending_review receipts go in unprocessed section (they still need review)
+            const unprocessed = budgetManager.data.receipts.filter(r =>
+                r.status === 'unprocessed' || r.status === 'flagged' || r.status === 'pending_review'
+            );
             const processed = budgetManager.data.receipts.filter(r => r.status === 'processed');
 
             // Update counts
             document.getElementById('unprocessed-count').textContent = `(${unprocessed.length})`;
             document.getElementById('processed-count').textContent = `(${processed.length})`;
 
-            // Render unprocessed
+            // Render unprocessed (including pending review)
             if (unprocessed.length === 0) {
                 unprocessedGrid.innerHTML = `
                     <div class="empty-state">
@@ -3914,8 +4096,34 @@
                 ? `<div class="pdf-icon">PDF</div>`
                 : `<img src="${receipt.file_data}" alt="Receipt">`;
 
-            const statusClass = receipt.status === 'flagged' ? 'flagged' : (isProcessed ? 'processed' : 'unprocessed');
-            const statusText = receipt.status === 'flagged' ? 'Flagged' : (isProcessed ? 'Processed' : 'Unprocessed');
+            // Determine status class and text
+            let statusClass, statusText;
+            if (receipt.status === 'flagged') {
+                statusClass = 'flagged';
+                statusText = 'Flagged';
+            } else if (receipt.status === 'pending_review') {
+                statusClass = 'unprocessed'; // Use amber styling
+                statusText = 'Pending Review';
+            } else if (isProcessed || receipt.status === 'processed') {
+                statusClass = 'processed';
+                statusText = 'Processed';
+            } else {
+                statusClass = 'unprocessed';
+                statusText = 'Unprocessed';
+            }
+
+            // Determine action buttons based on status
+            let actionButtons;
+            if (isProcessed || receipt.status === 'processed') {
+                actionButtons = `<button onclick="viewReceipt(${receipt.id})">View</button>
+                                 <button onclick="deleteReceipt(${receipt.id})">Delete</button>`;
+            } else if (receipt.status === 'pending_review') {
+                actionButtons = `<button class="primary" onclick="goToSpendTracking()">Review Expenses</button>
+                                 <button onclick="viewReceipt(${receipt.id})">View</button>`;
+            } else {
+                actionButtons = `<button class="primary" onclick="processReceipt(${receipt.id})">Process</button>
+                                 <button onclick="deleteReceipt(${receipt.id})">Delete</button>`;
+            }
 
             return `
                 <div class="receipt-card" data-receipt-id="${receipt.id}">
@@ -3925,16 +4133,22 @@
                         <div class="receipt-amount">${receipt.raw_total ? '£' + receipt.raw_total.toFixed(2) : 'Amount pending'}</div>
                         <span class="receipt-status ${statusClass}">${statusText}</span>
                         <div class="receipt-actions">
-                            ${isProcessed
-                                ? `<button onclick="viewReceipt(${receipt.id})">View</button>
-                                   <button onclick="deleteReceipt(${receipt.id})">Delete</button>`
-                                : `<button class="primary" onclick="processReceipt(${receipt.id})">Process</button>
-                                   <button onclick="deleteReceipt(${receipt.id})">Delete</button>`
-                            }
+                            ${actionButtons}
                         </div>
                     </div>
                 </div>
             `;
+        }
+
+        // Helper function to navigate to Spend Tracking tab
+        function goToSpendTracking() {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+
+            document.getElementById('spend-tracking').classList.add('active');
+            document.querySelector('[data-tab="spend-tracking"]')?.classList.add('active');
+
+            budgetManager.showNotification('Review pending expenses and approve or reject them', 'info');
         }
 
         function toggleProcessedReceipts() {
