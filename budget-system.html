@@ -3800,10 +3800,44 @@
                 budgetManager.data.receipts.push(receipt);
                 budgetManager.save();
                 renderReceipts();
-                budgetManager.showNotification('Receipt uploaded successfully', 'success');
+                budgetManager.showNotification('Receipt uploaded - processing with AI...', 'info');
+
+                // Auto-trigger OCR if API key is configured
+                if (budgetManager.data.apiSettings?.claudeApiKey) {
+                    autoProcessReceiptOCR(receipt.id);
+                } else {
+                    budgetManager.showNotification('Receipt uploaded. Set API key in Settings to enable auto-extraction.', 'warning');
+                }
             } catch (error) {
                 console.error('Error processing file:', error);
                 budgetManager.showNotification('Error processing file', 'danger');
+            }
+        }
+
+        // Auto-process OCR in background (doesn't open modal)
+        async function autoProcessReceiptOCR(receiptId) {
+            const receipt = budgetManager.data.receipts.find(r => r.id === receiptId);
+            if (!receipt || receipt.ocr_response) return;
+
+            try {
+                const ocrResult = await callClaudeAPI(receipt.file_data, receipt.file_type);
+
+                // Update receipt with OCR data
+                receipt.supplier = ocrResult.supplier || '';
+                receipt.invoice_number = ocrResult.invoice_number || '';
+                receipt.receipt_date = ocrResult.date || '';
+                receipt.raw_total = parseFloat(ocrResult.total) || 0;
+                receipt.ocr_response = ocrResult;
+
+                budgetManager.save();
+                renderReceipts();
+                budgetManager.showNotification(`Receipt from "${receipt.supplier || 'Unknown'}" processed - £${receipt.raw_total.toFixed(2)}`, 'success');
+            } catch (error) {
+                console.error('Auto OCR Error:', error);
+                receipt.status = 'flagged';
+                budgetManager.save();
+                renderReceipts();
+                budgetManager.showNotification('OCR failed: ' + error.message + '. Click Process to enter manually.', 'warning');
             }
         }
 
@@ -3937,91 +3971,133 @@
             // Extract base64 data from data URL
             const base64Data = imageBase64.split(',')[1];
 
-            // Determine media type
-            let mediaType = fileType;
-            if (mediaType === 'image/heic') mediaType = 'image/jpeg'; // Claude doesn't support HEIC directly
+            if (!base64Data) {
+                throw new Error('Invalid image data');
+            }
 
-            const prompt = `Analyse this receipt/invoice image and extract the following data in JSON format:
+            // Determine media type and content type for API
+            let mediaType = fileType;
+            let contentType = 'image';
+
+            // Handle PDFs - they need document type
+            if (fileType === 'application/pdf') {
+                contentType = 'document';
+                mediaType = 'application/pdf';
+            }
+            // HEIC isn't directly supported - will fail gracefully
+            else if (mediaType === 'image/heic') {
+                mediaType = 'image/jpeg';
+            }
+
+            const prompt = `Analyse this receipt/invoice and extract the following data. Return ONLY valid JSON, no other text or markdown.
+
 {
-  "supplier": "supplier name",
+  "supplier": "supplier/store name",
   "date": "DD/MM/YYYY",
-  "invoice_number": "if visible",
+  "invoice_number": "invoice or receipt number if visible, otherwise empty string",
   "items": [
     {
       "description": "item description",
       "quantity": 1,
       "amount": 0.00,
-      "suggested_category": "one of: disposables, hygiene, makeup, hair, prosthetics, mouldmaking, sfxmakeup, accessories, actoressentials, departmentsupplies"
+      "suggested_category": "category name"
     }
   ],
   "total": 0.00
 }
 
-For suggested_category, use your knowledge of hair and makeup department supplies:
-- disposables: mascara wands, cotton buds, sponges, gloves, applicators
-- hygiene: brush cleaner, alcohol, sanitiser, wipes, sterilising supplies
-- makeup: foundations, powders, lip products, mascara, setting spray, makeup brushes
-- hair: wigs, extensions, styling products, combs, hairspray
-- prosthetics: ready-made pieces, bondo moulds, transfers, bald caps, pre-made appliances
-- mouldmaking: silicone, alginate, plaster, lifecasting supplies, release agents
-- sfxmakeup: liquid latex, blood products, adhesives, removers, sealers, scar wax
-- accessories: hair clips, grips, facial jewellery, piercings, decorative pieces
-- actoressentials: chewing gum, mints, eye drops, tampons, deodorant, lip balm, tissues
-- departmentsupplies: kit bags, capes, mirrors, organisers, storage, towels
+For suggested_category, use ONLY one of these exact values:
+- disposables (mascara wands, cotton buds, sponges, gloves, applicators)
+- hygiene (brush cleaner, alcohol, sanitiser, wipes)
+- makeup (foundations, powders, lip products, mascara, setting spray, brushes)
+- hair (wigs, extensions, styling products, combs, hairspray)
+- prosthetics (ready-made pieces, bondo moulds, transfers, bald caps)
+- mouldmaking (silicone, alginate, plaster, lifecasting supplies)
+- sfxmakeup (liquid latex, blood products, adhesives, removers, sealers, scar wax)
+- accessories (hair clips, grips, facial jewellery, piercings)
+- actoressentials (chewing gum, mints, eye drops, tampons, deodorant, lip balm)
+- departmentsupplies (kit bags, capes, mirrors, organisers, storage)
 
-Return ONLY the JSON object, no markdown formatting or explanation.`;
+If unsure about category, use "departmentsupplies" as default.
+If you cannot read a value clearly, use empty string or 0 as appropriate.
+Return ONLY the JSON object.`;
 
-            const response = await fetch('https://api.anthropic.com/v1/messages', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-api-key': apiKey,
-                    'anthropic-version': '2023-06-01',
-                    'anthropic-dangerous-direct-browser-access': 'true'
-                },
-                body: JSON.stringify({
-                    model: 'claude-sonnet-4-20250514',
-                    max_tokens: 2048,
-                    messages: [
-                        {
-                            role: 'user',
-                            content: [
-                                {
-                                    type: 'image',
-                                    source: {
-                                        type: 'base64',
-                                        media_type: mediaType,
-                                        data: base64Data
-                                    }
-                                },
-                                {
-                                    type: 'text',
-                                    text: prompt
-                                }
-                            ]
-                        }
-                    ]
-                })
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error?.message || 'API request failed');
-            }
-
-            const data = await response.json();
-            const content = data.content[0].text;
-
-            // Parse the JSON response
-            try {
-                return JSON.parse(content);
-            } catch (e) {
-                // Try to extract JSON from the response
-                const jsonMatch = content.match(/\{[\s\S]*\}/);
-                if (jsonMatch) {
-                    return JSON.parse(jsonMatch[0]);
+            // Build the content object based on type (image vs document for PDFs)
+            const sourceContent = {
+                type: contentType,
+                source: {
+                    type: 'base64',
+                    media_type: mediaType,
+                    data: base64Data
                 }
-                throw new Error('Could not parse OCR response');
+            };
+
+            console.log('Calling Claude API:', { contentType, mediaType, dataLength: base64Data?.length });
+
+            try {
+                const response = await fetch('https://api.anthropic.com/v1/messages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-api-key': apiKey,
+                        'anthropic-version': '2023-06-01',
+                        'anthropic-dangerous-direct-browser-access': 'true'
+                    },
+                    body: JSON.stringify({
+                        model: 'claude-sonnet-4-20250514',
+                        max_tokens: 2048,
+                        messages: [
+                            {
+                                role: 'user',
+                                content: [
+                                    sourceContent,
+                                    {
+                                        type: 'text',
+                                        text: prompt
+                                    }
+                                ]
+                            }
+                        ]
+                    })
+                });
+
+                console.log('API Response status:', response.status);
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('API Error Response:', errorText);
+                    let errorMessage = `API request failed (${response.status})`;
+                    try {
+                        const errorData = JSON.parse(errorText);
+                        errorMessage = errorData.error?.message || errorMessage;
+                    } catch (e) {}
+                    throw new Error(errorMessage);
+                }
+
+                const data = await response.json();
+                console.log('API Response received');
+
+                if (!data.content || !data.content[0]) {
+                    throw new Error('Invalid API response format');
+                }
+
+                const content = data.content[0].text;
+
+                // Parse the JSON response
+                try {
+                    return JSON.parse(content);
+                } catch (e) {
+                    // Try to extract JSON from the response
+                    const jsonMatch = content.match(/\{[\s\S]*\}/);
+                    if (jsonMatch) {
+                        return JSON.parse(jsonMatch[0]);
+                    }
+                    console.error('Could not parse response:', content);
+                    throw new Error('Could not parse OCR response');
+                }
+            } catch (error) {
+                console.error('API call failed:', error);
+                throw error;
             }
         }
 
