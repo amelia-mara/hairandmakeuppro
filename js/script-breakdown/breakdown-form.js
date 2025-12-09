@@ -286,6 +286,7 @@ function renderSceneBreakdown(sceneIndex) {
 
 /**
  * Render character continuity fields with streamlined "No Change" workflow
+ * Now auto-populates from AI-detected appearance changes
  */
 function renderCharacterFields(character, sceneIndex, scene) {
     const charData = state.characterStates[sceneIndex]?.[character] || {};
@@ -295,21 +296,25 @@ function renderCharacterFields(character, sceneIndex, scene) {
     // Character ID for HTML elements
     const charId = sanitizeCharacterId(character);
 
-    // Get appearance data
+    // Get appearance data (with AI suggestions as fallback)
     const enterHair = charData.enterHair || suggestions.hair || '';
     const enterMakeup = charData.enterMakeup || suggestions.makeup || '';
     const enterWardrobe = charData.enterWardrobe || suggestions.wardrobe || '';
 
-    // Change status
-    const changeStatus = charData.changeStatus || 'no-change';
+    // Change status - auto-detect from AI analysis if not manually set
+    const hasAutoChanges = suggestions.hasAutoChanges && suggestions.changes.length > 0;
+    const changeStatus = charData.changeStatus || (hasAutoChanges ? 'has-changes' : 'no-change');
     const hasChanges = changeStatus === 'has-changes';
 
-    // Changes data
+    // Changes data - use AI suggestions if not manually entered
     const changeHair = charData.changeHair || '';
     const changeMakeup = charData.changeMakeup || '';
     const changeWardrobe = charData.changeWardrobe || '';
-    const changeInjuries = charData.changeInjuries || '';
-    const changeDirt = charData.changeDirt || '';
+    const changeInjuries = charData.changeInjuries || suggestions.injuries || '';
+    const changeDirt = charData.changeDirt || suggestions.condition || '';
+
+    // Build auto-detected changes summary for display
+    const autoChanges = suggestions.changes || [];
 
     // Exit appearance (calculated or manual)
     const exitHair = charData.exitHair || enterHair;
@@ -368,7 +373,7 @@ function renderCharacterFields(character, sceneIndex, scene) {
             <!-- CHANGES -->
             <div class="continuity-section">
                 <div class="continuity-section-header">
-                    <div class="continuity-label">CHANGES</div>
+                    <div class="continuity-label">CHANGES ${hasAutoChanges ? '<span style="color: var(--accent-gold); font-size: 0.8em; margin-left: 8px;">⚡ Auto-detected</span>' : ''}</div>
                     <div class="continuity-actions">
                         <button class="continuity-btn no-change-btn ${!hasChanges ? 'active' : ''}"
                                 onclick="setNoChange('${escapeHtml(character).replace(/'/g, "\\'")}', ${sceneIndex})">
@@ -380,6 +385,33 @@ function renderCharacterFields(character, sceneIndex, scene) {
                         </button>
                     </div>
                 </div>
+
+                <!-- Auto-detected changes from script analysis -->
+                ${autoChanges.length > 0 ? `
+                    <div class="auto-detected-changes" style="background: rgba(201, 169, 97, 0.1); border: 1px solid var(--accent-gold); border-radius: 6px; padding: 10px; margin-bottom: 10px;">
+                        <div style="font-size: 0.75em; color: var(--accent-gold); margin-bottom: 6px; font-weight: 600;">DETECTED FROM SCRIPT:</div>
+                        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                            ${autoChanges.map(change => {
+                                // Determine color based on change type
+                                let bgColor = '#F5F5DC33'; // default beige
+                                const lowerChange = change.toLowerCase();
+                                if (lowerChange.includes('injury') || lowerChange.includes('blood')) {
+                                    bgColor = '#FF634755'; // coral for injuries
+                                } else if (lowerChange.includes('wet') || lowerChange.includes('soaked')) {
+                                    bgColor = '#87CEEB55'; // sky blue for wet
+                                } else if (lowerChange.includes('dirty') || lowerChange.includes('mud')) {
+                                    bgColor = '#8B451355'; // brown for dirt
+                                } else if (lowerChange.includes('condition')) {
+                                    bgColor = '#87CEEB55'; // sky blue for condition
+                                }
+                                return `<span class="auto-change-tag" style="background: ${bgColor}; padding: 4px 8px; border-radius: 4px; font-size: 0.85em; display: inline-block;">${escapeHtml(change)}</span>`;
+                            }).join('')}
+                        </div>
+                        <button class="small-btn" style="margin-top: 8px; font-size: 0.75em;" onclick="applyAutoChanges('${escapeHtml(character).replace(/'/g, "\\'")}', ${sceneIndex})">
+                            Apply to Fields Below
+                        </button>
+                    </div>
+                ` : ''}
 
                 <!-- Change fields (shown when has-changes) -->
                 <div class="change-fields" id="change-fields-${charId}" style="display: ${hasChanges ? 'block' : 'none'};">
@@ -744,6 +776,7 @@ function extractSceneAlerts(scene, sceneIndex, analysis) {
 
 /**
  * Extract AI suggestions from tags for a character
+ * Now also pulls from masterContext descriptionTags and appearanceChanges
  */
 function extractSuggestionsFromTags(sceneIndex, character) {
     const sceneTags = state.scriptTags[sceneIndex] || [];
@@ -751,9 +784,13 @@ function extractSuggestionsFromTags(sceneIndex, character) {
         hair: '',
         makeup: '',
         wardrobe: '',
-        changes: []
+        changes: [],
+        injuries: '',
+        condition: '',
+        hasAutoChanges: false
     };
 
+    // Source 1: Manual tags from state.scriptTags
     sceneTags.forEach(tag => {
         if (tag.character === character) {
             const text = tag.selectedText || tag.notes || '';
@@ -768,6 +805,149 @@ function extractSuggestionsFromTags(sceneIndex, character) {
             }
         }
     });
+
+    // Source 2: masterContext descriptionTags (from Phase 5 AI analysis)
+    const masterContext = window.masterContext || window.scriptMasterContext;
+    if (masterContext?.descriptionTags) {
+        masterContext.descriptionTags.forEach(tag => {
+            // Match by character (case-insensitive) and scene
+            if (tag.character?.toUpperCase() === character.toUpperCase() &&
+                tag.scene === (sceneIndex + 1)) {
+
+                const quote = tag.quote || '';
+
+                // Categorize based on tag category - comprehensive continuity event handling
+                switch (tag.category) {
+                    case 'hair':
+                        if (!suggestions.hair) suggestions.hair = quote;
+                        // Check for hair changes
+                        const hairLower = quote.toLowerCase();
+                        if (hairLower.includes('wet') || hairLower.includes('messy') || hairLower.includes('tangled') ||
+                            hairLower.includes('cut') || hairLower.includes('grows') || hairLower.includes('wind')) {
+                            suggestions.changes.push(`Hair change: ${quote}`);
+                            suggestions.hasAutoChanges = true;
+                        }
+                        break;
+
+                    case 'wardrobe':
+                        if (!suggestions.wardrobe) suggestions.wardrobe = quote;
+                        // Check for wardrobe damage/changes
+                        const wardrobeLower = quote.toLowerCase();
+                        if (wardrobeLower.includes('torn') || wardrobeLower.includes('ripped') ||
+                            wardrobeLower.includes('stained') || wardrobeLower.includes('damaged')) {
+                            suggestions.changes.push(`Wardrobe damage: ${quote}`);
+                            suggestions.hasAutoChanges = true;
+                        }
+                        break;
+
+                    case 'injury':
+                    case 'fight':
+                        suggestions.injuries = quote;
+                        suggestions.changes.push(`Injury: ${quote}`);
+                        suggestions.hasAutoChanges = true;
+                        break;
+
+                    case 'weather':
+                        suggestions.condition = quote;
+                        suggestions.changes.push(`Weather effect: ${quote}`);
+                        suggestions.hasAutoChanges = true;
+                        break;
+
+                    case 'illness':
+                        suggestions.condition = quote;
+                        suggestions.changes.push(`Illness/health: ${quote}`);
+                        suggestions.hasAutoChanges = true;
+                        break;
+
+                    case 'time_passage':
+                        suggestions.changes.push(`Time passage: ${quote}`);
+                        suggestions.hasAutoChanges = true;
+                        break;
+
+                    case 'condition':
+                        suggestions.condition = quote;
+                        suggestions.changes.push(`Condition: ${quote}`);
+                        suggestions.hasAutoChanges = true;
+                        break;
+
+                    case 'makeup':
+                        if (!suggestions.makeup) suggestions.makeup = quote;
+                        // Check for makeup changes
+                        const makeupLower = quote.toLowerCase();
+                        if (makeupLower.includes('smeared') || makeupLower.includes('running') ||
+                            makeupLower.includes('crying') || makeupLower.includes('tears')) {
+                            suggestions.changes.push(`Makeup change: ${quote}`);
+                            suggestions.hasAutoChanges = true;
+                        }
+                        break;
+
+                    case 'physical_appearance':
+                    case 'physical':
+                        // Check for appearance-changing keywords
+                        const lowerQuote = quote.toLowerCase();
+                        if (lowerQuote.includes('wet') || lowerQuote.includes('soaked') || lowerQuote.includes('drenched')) {
+                            suggestions.changes.push(`Gets wet: ${quote}`);
+                            suggestions.hasAutoChanges = true;
+                        }
+                        if (lowerQuote.includes('dirty') || lowerQuote.includes('mud') || lowerQuote.includes('grime') || lowerQuote.includes('filthy')) {
+                            suggestions.changes.push(`Gets dirty: ${quote}`);
+                            suggestions.hasAutoChanges = true;
+                        }
+                        if (lowerQuote.includes('blood') || lowerQuote.includes('bleeding') || lowerQuote.includes('bruise') || lowerQuote.includes('cut')) {
+                            suggestions.injuries = quote;
+                            suggestions.changes.push(`Blood/injury: ${quote}`);
+                            suggestions.hasAutoChanges = true;
+                        }
+                        if (lowerQuote.includes('older') || lowerQuote.includes('aged') || lowerQuote.includes('gray')) {
+                            suggestions.changes.push(`Aging: ${quote}`);
+                            suggestions.hasAutoChanges = true;
+                        }
+                        if (lowerQuote.includes('sick') || lowerQuote.includes('pale') || lowerQuote.includes('ill') || lowerQuote.includes('fever')) {
+                            suggestions.changes.push(`Illness: ${quote}`);
+                            suggestions.hasAutoChanges = true;
+                        }
+                        break;
+
+                    case 'age':
+                        // Age mentions that indicate time passage
+                        if (quote.toLowerCase().includes('older') || quote.toLowerCase().includes('years later')) {
+                            suggestions.changes.push(`Aging: ${quote}`);
+                            suggestions.hasAutoChanges = true;
+                        }
+                        break;
+                }
+            }
+        });
+    }
+
+    // Source 3: masterContext appearanceChanges (explicit changes from Phase 5)
+    if (masterContext?.appearanceChanges) {
+        masterContext.appearanceChanges.forEach(change => {
+            if (change.character?.toUpperCase() === character.toUpperCase() &&
+                change.start_scene === (sceneIndex + 1)) {
+
+                const desc = change.description || change.visual_notes || '';
+                suggestions.changes.push(`${change.change_type}: ${desc}`);
+                suggestions.hasAutoChanges = true;
+
+                // Also populate specific fields based on change type
+                if (change.change_type === 'injury' || change.change_type === 'injury_acquired') {
+                    suggestions.injuries = desc;
+                }
+            }
+        });
+    }
+
+    // Source 4: Character's extractedElements from masterContext
+    const charData = masterContext?.characters?.[character];
+    if (charData?.extractedElements?.mentionedAppearanceChanges) {
+        charData.extractedElements.mentionedAppearanceChanges.forEach(change => {
+            if (change.scene === (sceneIndex + 1)) {
+                suggestions.changes.push(`${change.type}: ${change.description}`);
+                suggestions.hasAutoChanges = true;
+            }
+        });
+    }
 
     return suggestions;
 }
@@ -1182,6 +1362,83 @@ window.showChangeFields = function(character, sceneIndex) {
     state.characterStates[sceneIndex][character].changeStatus = 'has-changes';
 
     console.log(`📝 ${character}: Recording changes in Scene ${sceneIndex + 1}`);
+
+    renderSceneBreakdown(sceneIndex);
+    saveToLocalStorage();
+};
+
+/**
+ * Apply auto-detected changes to the character's change fields
+ * Takes the AI-detected changes and populates the appropriate form fields
+ */
+window.applyAutoChanges = function(character, sceneIndex) {
+    // Get the suggestions which include auto-detected changes
+    const suggestions = extractSuggestionsFromTags(sceneIndex, character);
+
+    // Initialize state if needed
+    if (!state.characterStates[sceneIndex]) {
+        state.characterStates[sceneIndex] = {};
+    }
+    if (!state.characterStates[sceneIndex][character]) {
+        state.characterStates[sceneIndex][character] = {};
+    }
+
+    const charState = state.characterStates[sceneIndex][character];
+
+    // Set changeStatus to has-changes
+    charState.changeStatus = 'has-changes';
+
+    // Parse auto-detected changes and populate appropriate fields
+    const changes = suggestions.changes || [];
+    const hairChanges = [];
+    const makeupChanges = [];
+    const wardrobeChanges = [];
+    const injuryChanges = [];
+    const conditionChanges = [];
+
+    changes.forEach(change => {
+        const lowerChange = change.toLowerCase();
+
+        if (lowerChange.includes('hair') || lowerChange.includes('wet hair') || lowerChange.includes('messy')) {
+            hairChanges.push(change);
+        } else if (lowerChange.includes('makeup') || lowerChange.includes('face')) {
+            makeupChanges.push(change);
+        } else if (lowerChange.includes('wardrobe') || lowerChange.includes('clothes') || lowerChange.includes('torn')) {
+            wardrobeChanges.push(change);
+        } else if (lowerChange.includes('injury') || lowerChange.includes('blood') || lowerChange.includes('cut') || lowerChange.includes('bruise')) {
+            injuryChanges.push(change);
+        } else if (lowerChange.includes('wet') || lowerChange.includes('soaked') || lowerChange.includes('dirty') || lowerChange.includes('mud') || lowerChange.includes('condition')) {
+            conditionChanges.push(change);
+        } else {
+            // Default to condition for unrecognized changes
+            conditionChanges.push(change);
+        }
+    });
+
+    // Apply to fields (append to existing if present)
+    if (hairChanges.length > 0) {
+        charState.changeHair = [charState.changeHair, ...hairChanges].filter(Boolean).join('; ');
+    }
+    if (makeupChanges.length > 0) {
+        charState.changeMakeup = [charState.changeMakeup, ...makeupChanges].filter(Boolean).join('; ');
+    }
+    if (wardrobeChanges.length > 0) {
+        charState.changeWardrobe = [charState.changeWardrobe, ...wardrobeChanges].filter(Boolean).join('; ');
+    }
+    if (injuryChanges.length > 0 || suggestions.injuries) {
+        charState.changeInjuries = [charState.changeInjuries, suggestions.injuries, ...injuryChanges].filter(Boolean).join('; ');
+    }
+    if (conditionChanges.length > 0 || suggestions.condition) {
+        charState.changeDirt = [charState.changeDirt, suggestions.condition, ...conditionChanges].filter(Boolean).join('; ');
+    }
+
+    console.log(`✅ Applied auto-detected changes for ${character} in Scene ${sceneIndex + 1}:`, {
+        hair: charState.changeHair,
+        makeup: charState.changeMakeup,
+        wardrobe: charState.changeWardrobe,
+        injuries: charState.changeInjuries,
+        dirt: charState.changeDirt
+    });
 
     renderSceneBreakdown(sceneIndex);
     saveToLocalStorage();
