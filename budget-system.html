@@ -3152,8 +3152,12 @@
                         this.data.projectInfo = { ...this.data.projectInfo, ...data.projectInfo };
                         this.data.expenses = data.expenses || [];
                         this.data.receipts = data.receipts || [];
-                        this.data.apiSettings = data.apiSettings || { claudeApiKey: '' };
+                        // Ensure apiSettings has proper structure
+                        this.data.apiSettings = {
+                            claudeApiKey: data.apiSettings?.claudeApiKey || ''
+                        };
                         this.data.lastSaved = data.lastSaved;
+                        console.log('Data loaded, API key configured:', !!this.data.apiSettings.claudeApiKey);
 
                         // Ensure all expenses have receipt_id field (migration)
                         this.data.expenses.forEach(expense => {
@@ -3880,11 +3884,28 @@
         }
 
         function saveApiSettings() {
-            const apiKey = document.getElementById('claude-api-key').value;
+            const apiKey = document.getElementById('claude-api-key').value.trim();
+
+            if (!apiKey) {
+                budgetManager.showNotification('Please enter an API key', 'warning');
+                return;
+            }
+
+            if (!apiKey.startsWith('sk-ant-')) {
+                budgetManager.showNotification('API key should start with sk-ant-', 'warning');
+                return;
+            }
+
+            // Ensure apiSettings exists
+            if (!budgetManager.data.apiSettings) {
+                budgetManager.data.apiSettings = {};
+            }
+
             budgetManager.data.apiSettings.claudeApiKey = apiKey;
             budgetManager.save();
             closeModal('settingsModal');
-            budgetManager.showNotification('API settings saved', 'success');
+            budgetManager.showNotification('API key saved! You can now upload receipts.', 'success');
+            console.log('API key saved, length:', apiKey.length);
         }
 
         // Receipt Upload Functions
