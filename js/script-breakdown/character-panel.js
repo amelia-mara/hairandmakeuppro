@@ -282,10 +282,11 @@ window.characterManager = new CharacterManager();
  * @returns {Map} - Map of character name -> scene count
  */
 function getCharacterSceneCounts() {
+    const state = getState();
     const characterSceneCounts = new Map();
 
-    state.scenes.forEach((scene, index) => {
-        const breakdown = state.sceneBreakdowns[index];
+    (state?.scenes || []).forEach((scene, index) => {
+        const breakdown = state?.sceneBreakdowns?.[index];
         if (breakdown && breakdown.cast) {
             breakdown.cast.forEach(char => {
                 characterSceneCounts.set(char, (characterSceneCounts.get(char) || 0) + 1);
@@ -339,6 +340,7 @@ function getSupportingCharacters() {
  * This runs before generating tabs to ensure no duplicates
  */
 function aggressiveDeduplicate() {
+    const state = getState();
     console.log('🔄 Running aggressive deduplication...');
 
     // Manual duplicate mappings for common issues
@@ -354,11 +356,11 @@ function aggressiveDeduplicate() {
         'Jon': 'Jon Olafsson',
     };
 
-    state.scenes.forEach((scene, index) => {
-        const breakdown = state.sceneBreakdowns[index];
+    (state?.scenes || []).forEach((scene, index) => {
+        const breakdown = state?.sceneBreakdowns?.[index];
         if (breakdown && breakdown.cast) {
             breakdown.cast = breakdown.cast.map(char =>
-                duplicateMap[char] || window.characterManager.getCanonicalName(char) || char
+                duplicateMap[char] || window.characterManager?.getCanonicalName?.(char) || char
             );
 
             // Remove exact duplicates
@@ -366,11 +368,11 @@ function aggressiveDeduplicate() {
         }
 
         // Also normalize tags
-        if (state.scriptTags[index]) {
+        if (state?.scriptTags?.[index]) {
             state.scriptTags[index].forEach(tag => {
                 if (tag.character) {
                     tag.character = duplicateMap[tag.character] ||
-                                   window.characterManager.getCanonicalName(tag.character) ||
+                                   window.characterManager?.getCanonicalName?.(tag.character) ||
                                    tag.character;
                 }
             });
@@ -384,9 +386,18 @@ function aggressiveDeduplicate() {
 // CHARACTER TAB RENDERING
 // ============================================================================
 
-import { state } from './main.js';
+import { state as importedState } from './main.js';
 import { formatSceneRange, getComplexityIcon } from './utils.js';
 import { buildCharacterProfile } from './character-profiles.js';
+
+// Helper to get the current state - handles circular dependency issues
+function getState() {
+    // Prefer window.state (set by main.js after init) for reliability
+    if (typeof window !== 'undefined' && window.state) {
+        return window.state;
+    }
+    return importedState;
+}
 
 /**
  * Render character tabs in center panel with file divider system
@@ -394,7 +405,10 @@ import { buildCharacterProfile } from './character-profiles.js';
  * Shows script tab + confirmed character tabs
  */
 export function renderCharacterTabs() {
+    const state = getState();
     console.log('🔄 Rendering character tabs from confirmed characters...');
+    console.log('   state.confirmedCharacters:', state?.confirmedCharacters);
+    console.log('   confirmedCharacters size:', state?.confirmedCharacters?.size);
 
     const tabsContainer = document.querySelector('.center-tabs');
     if (!tabsContainer) {
@@ -419,14 +433,14 @@ export function renderCharacterTabs() {
     tabsContainer.appendChild(scriptTab);
 
     // CRITICAL: Only generate tabs if characters have been confirmed
-    if (!state.confirmedCharacters || state.confirmedCharacters.size === 0) {
+    if (!state?.confirmedCharacters || state.confirmedCharacters.size === 0) {
         console.log('⚠️ No confirmed characters - only showing Script tab');
         console.log('   User must run "Detect & Review Characters" and confirm selection first');
         return;
     }
 
-    // Convert confirmed characters Set to Array and sort alphabetically
-    const allConfirmedChars = Array.from(state.confirmedCharacters).sort();
+    // Convert confirmed characters Set to Array
+    const allConfirmedChars = Array.from(state.confirmedCharacters);
 
     // Filter to featured characters only (exclude extras, SAs, background)
     const featuredChars = allConfirmedChars.filter(charName => {
@@ -437,7 +451,22 @@ export function renderCharacterTabs() {
         return role !== 'extra' && role !== 'background' && role !== 'sa';
     });
 
-    console.log(`✓ Generating tabs for ${featuredChars.length} featured characters (filtered from ${allConfirmedChars.length} total):`, featuredChars);
+    // Sort by scene count (most appearances first), then alphabetically for ties
+    featuredChars.sort((a, b) => {
+        const countA = getCharacterSceneCount(a);
+        const countB = getCharacterSceneCount(b);
+
+        // If scene counts differ, sort by count (descending)
+        if (countB !== countA) {
+            return countB - countA;
+        }
+
+        // If scene counts are equal, sort alphabetically
+        return a.localeCompare(b);
+    });
+
+    console.log(`✓ Generating tabs for ${featuredChars.length} featured characters (sorted by scene count):`,
+        featuredChars.map(c => `${c} (${getCharacterSceneCount(c)} scenes)`));
 
     // Add tab for each featured character
     featuredChars.forEach(charName => {
@@ -494,6 +523,7 @@ function createCharacterPanel(charId, charName) {
  * CRITICAL: Only creates panels for confirmed characters
  */
 export function renderCharacterTabPanels() {
+    const state = getState();
     const contentContainer = document.querySelector('.center-tab-content');
     if (!contentContainer) return;
 
@@ -506,7 +536,7 @@ export function renderCharacterTabPanels() {
     });
 
     // Only create panels if characters have been confirmed
-    if (!state.confirmedCharacters || state.confirmedCharacters.size === 0) {
+    if (!state?.confirmedCharacters || state.confirmedCharacters.size === 0) {
         console.log('⚠️ No confirmed characters - no character panels created');
         return;
     }
@@ -532,6 +562,7 @@ export function renderCharacterTabPanels() {
  * @param {string} tabName - Tab identifier ('script' or 'character-{name}')
  */
 export function switchCenterTab(tabName) {
+    const state = getState();
     state.activeCenterTab = tabName;
 
     // Close supporting dropdown if open
@@ -649,9 +680,10 @@ function createCharacterProfilePanel(characterName) {
  * @returns {number} Number of scenes the character appears in
  */
 function getCharacterSceneCount(characterName) {
+    const state = getState();
     let count = 0;
-    state.scenes.forEach((scene, index) => {
-        const breakdown = state.sceneBreakdowns[index];
+    (state?.scenes || []).forEach((scene, index) => {
+        const breakdown = state?.sceneBreakdowns?.[index];
         if (breakdown && breakdown.cast && breakdown.cast.includes(characterName)) {
             count++;
         }
@@ -723,16 +755,38 @@ window.showProfileView = function(characterName, viewType) {
  * @returns {string} HTML for comprehensive profile view
  */
 function renderProfileView(characterName) {
-    const masterContext = window.scriptMasterContext;
+    // Check multiple sources for master context (different code paths store it differently)
+    const masterContext = window.scriptMasterContext || window.masterContext;
     const narrativeContext = window.scriptNarrativeContext;
 
     // Get character data from master context (new format) or narrative context (old format)
     let characterData = null;
+
+    // Try exact match first
     if (masterContext?.characters?.[characterName]) {
         characterData = masterContext.characters[characterName];
-    } else if (narrativeContext?.characters) {
+    }
+    // Try case-insensitive match
+    else if (masterContext?.characters) {
+        const matchingKey = Object.keys(masterContext.characters).find(
+            key => key.toUpperCase() === characterName.toUpperCase()
+        );
+        if (matchingKey) {
+            characterData = masterContext.characters[matchingKey];
+        }
+    }
+    // Fall back to narrative context
+    else if (narrativeContext?.characters) {
         characterData = narrativeContext.characters.find(c => c.name === characterName);
     }
+
+    // Debug logging
+    console.log(`📋 Loading profile for ${characterName}:`, {
+        hasMasterContext: !!masterContext,
+        hasCharacters: !!masterContext?.characters,
+        characterKeys: Object.keys(masterContext?.characters || {}),
+        foundData: !!characterData
+    });
 
     // If no data available, show helpful message with debug option
     if (!characterData) {
@@ -743,9 +797,14 @@ function renderProfileView(characterName) {
                     No detailed character analysis available yet.<br>
                     Run initial script analysis to generate comprehensive character profiles.
                 </div>
-                <button class="btn-primary" onclick="window.debugCharacterProfile('${escapeHtml(characterName)}')" style="margin-top: 20px;">
-                    Check Data in Console
-                </button>
+                <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: center;">
+                    <button class="btn-primary" onclick="window.debugCharacterProfile('${escapeHtml(characterName)}')" style="padding: 8px 16px;">
+                        Check Data in Console
+                    </button>
+                    <button class="btn-secondary" onclick="window.rerunCharacterAnalysis && window.rerunCharacterAnalysis('${escapeHtml(characterName)}')" style="padding: 8px 16px;">
+                        Re-analyze Character
+                    </button>
+                </div>
             </div>
         `;
     }
@@ -1181,14 +1240,31 @@ function renderTimelineView(characterName) {
 
 /**
  * Get character continuity events with scene data
+ * Now includes auto-detected events from masterContext
  * @param {string} characterName - Character name
  * @returns {Array} Array of continuity event objects
  */
 function getCharacterContinuityEvents(characterName) {
-    const events = state.continuityEvents[characterName] || [];
+    const manualEvents = state.continuityEvents[characterName] || [];
+    const autoDetectedEvents = getAutoDetectedEvents(characterName);
 
-    // Enrich events with scene information
-    return events.map(event => {
+    // Combine manual and auto-detected events
+    const allEvents = [...manualEvents];
+
+    // Add auto-detected events that don't already exist as manual events
+    autoDetectedEvents.forEach(autoEvent => {
+        const isDuplicate = manualEvents.some(manual =>
+            manual.startScene === autoEvent.startScene &&
+            manual.type === autoEvent.type &&
+            manual.character === autoEvent.character
+        );
+        if (!isDuplicate) {
+            allEvents.push(autoEvent);
+        }
+    });
+
+    // Enrich events with scene information and ensure IDs
+    return allEvents.map(event => {
         const enrichedEvent = { ...event };
 
         // Ensure event has an ID
@@ -1198,6 +1274,142 @@ function getCharacterContinuityEvents(characterName) {
 
         return enrichedEvent;
     });
+}
+
+/**
+ * Get auto-detected continuity events from masterContext
+ * Extracts events from appearanceChanges and descriptionTags
+ * @param {string} characterName - Character name
+ * @returns {Array} Array of auto-detected event objects
+ */
+function getAutoDetectedEvents(characterName) {
+    const events = [];
+    const masterContext = window.masterContext || window.scriptMasterContext;
+
+    if (!masterContext) return events;
+
+    // Source 1: appearanceChanges from Phase 5
+    if (masterContext.appearanceChanges && Array.isArray(masterContext.appearanceChanges)) {
+        masterContext.appearanceChanges.forEach(change => {
+            if (change.character?.toUpperCase() === characterName.toUpperCase()) {
+                events.push({
+                    id: `auto-${change.character}-${change.start_scene}-${change.change_type}`,
+                    character: characterName,
+                    type: mapChangeTypeToEventType(change.change_type),
+                    category: change.change_type,
+                    description: change.description || change.visual_notes || 'Auto-detected event',
+                    startScene: change.start_scene,
+                    endScene: change.end_scene || null,
+                    source: 'auto-detected',
+                    progression: [],
+                    visualNotes: change.visual_notes || ''
+                });
+            }
+        });
+    }
+
+    // Source 2: descriptionTags that indicate changes
+    if (masterContext.descriptionTags && Array.isArray(masterContext.descriptionTags)) {
+        const changeCategories = ['injury', 'fight', 'weather', 'illness', 'time_passage', 'condition'];
+
+        // Group tags by scene for change detection
+        const tagsByScene = {};
+        masterContext.descriptionTags.forEach(tag => {
+            if (tag.character?.toUpperCase() === characterName.toUpperCase() &&
+                changeCategories.includes(tag.category)) {
+
+                const sceneKey = tag.scene;
+                if (!tagsByScene[sceneKey]) {
+                    tagsByScene[sceneKey] = [];
+                }
+                tagsByScene[sceneKey].push(tag);
+            }
+        });
+
+        // Create events from grouped tags
+        Object.entries(tagsByScene).forEach(([scene, tags]) => {
+            tags.forEach(tag => {
+                // Check if this event already exists
+                const existingEvent = events.find(e =>
+                    e.startScene === parseInt(scene) &&
+                    e.category === tag.category
+                );
+
+                if (!existingEvent) {
+                    events.push({
+                        id: `auto-tag-${characterName}-${scene}-${tag.category}`,
+                        character: characterName,
+                        type: mapChangeTypeToEventType(tag.category),
+                        category: tag.category,
+                        description: tag.quote || 'Auto-detected from script',
+                        startScene: parseInt(scene),
+                        endScene: null,
+                        source: 'auto-detected',
+                        progression: [],
+                        visualNotes: ''
+                    });
+                }
+            });
+        });
+    }
+
+    // Source 3: Character's extractedElements
+    const charData = masterContext.characters?.[characterName];
+    if (charData?.extractedElements?.mentionedAppearanceChanges) {
+        charData.extractedElements.mentionedAppearanceChanges.forEach(change => {
+            const existingEvent = events.find(e =>
+                e.startScene === change.scene &&
+                e.category === change.type
+            );
+
+            if (!existingEvent) {
+                events.push({
+                    id: `auto-extracted-${characterName}-${change.scene}-${change.type}`,
+                    character: characterName,
+                    type: mapChangeTypeToEventType(change.type),
+                    category: change.type,
+                    description: change.description || 'Auto-detected change',
+                    startScene: change.scene,
+                    endScene: null,
+                    source: 'auto-detected',
+                    progression: [],
+                    visualNotes: change.notes || ''
+                });
+            }
+        });
+    }
+
+    // Filter out dismissed events (use safe getter to avoid circular dependency issues)
+    const dismissedEvents = getDismissedAutoEvents();
+    const filteredEvents = events.filter(e => !dismissedEvents.has(e.id));
+
+    // Sort by start scene
+    filteredEvents.sort((a, b) => a.startScene - b.startScene);
+
+    return filteredEvents;
+}
+
+/**
+ * Map change type strings to standardized event types
+ * @param {string} changeType - Raw change type from detection
+ * @returns {string} Standardized event type
+ */
+function mapChangeTypeToEventType(changeType) {
+    const typeMap = {
+        'injury': 'Injury',
+        'injury_acquired': 'Injury',
+        'fight': 'Fight/Action',
+        'weather': 'Weather Effect',
+        'illness': 'Illness/Health',
+        'time_passage': 'Time Passage',
+        'condition': 'Condition Change',
+        'hair': 'Hair Change',
+        'wardrobe': 'Wardrobe Change',
+        'makeup': 'Makeup Change',
+        'physical': 'Physical Change',
+        'physical_appearance': 'Physical Change'
+    };
+    return typeMap[changeType?.toLowerCase()] || changeType || 'Event';
 }
 
 /**
@@ -1267,11 +1479,16 @@ function renderProgressionStages(event, characterName) {
 
 /**
  * Render continuity events timeline
+ * Now shows auto-detected events with visual indicator
  * @param {string} characterName - Character name
  * @returns {string} HTML for continuity events timeline
  */
 function renderContinuityEventsTimeline(characterName) {
     const events = getCharacterContinuityEvents(characterName);
+
+    // Separate auto-detected from manual events
+    const autoEvents = events.filter(e => e.source === 'auto-detected');
+    const manualEvents = events.filter(e => e.source !== 'auto-detected');
 
     if (events.length === 0) {
         return `
@@ -1286,40 +1503,109 @@ function renderContinuityEventsTimeline(characterName) {
         `;
     }
 
+    // Get event type color
+    const getEventColor = (category) => {
+        const colors = {
+            'injury': '#FF6347', // Coral
+            'fight': '#FF6347',
+            'weather': '#87CEEB', // Sky blue
+            'illness': '#90EE90', // Light green
+            'time_passage': '#DDA0DD', // Plum
+            'condition': '#87CEEB',
+            'hair': '#E6E6FA', // Lavender
+            'wardrobe': '#98FB98', // Pale green
+            'makeup': '#FFB6C1', // Pink
+            'physical': '#FFD700' // Gold
+        };
+        return colors[category?.toLowerCase()] || '#C9A961';
+    };
+
     return `
         <div class="continuity-events-section">
-            ${events.map(event => `
-                <div class="event-timeline" data-event-id="${event.id}">
-                    <div class="event-timeline-header">
-                        <div class="event-info">
-                            <span class="event-type-badge">${escapeHtml(event.category || event.type || 'Event')}</span>
-                            <span class="event-name">${escapeHtml(event.description || 'Untitled Event')}</span>
-                        </div>
-                        <div class="event-meta">
-                            <span class="event-duration">
-                                ${event.startScene ? `Scene ${event.startScene}` : 'Not started'}
-                                ${event.endScene ? ` - ${event.endScene}` : ' (ongoing)'}
-                            </span>
-                        </div>
-                    </div>
-
-                    <div class="progression-bar">
-                        ${renderProgressionStages(event, characterName)}
-                    </div>
-
-                    <div class="event-timeline-actions">
-                        <button class="event-action-btn" onclick="fillProgressionGaps('${escapeHtml(characterName).replace(/'/g, "\\'")}', '${event.id}')" title="Use AI to fill progression gaps">
-                            ✨ Fill Gaps with AI
-                        </button>
-                        <button class="event-action-btn" onclick="editContinuityEvent('${escapeHtml(characterName).replace(/'/g, "\\'")}', '${event.id}')" title="Edit event details">
-                            ✏️ Edit Event
-                        </button>
-                        <button class="event-action-btn danger" onclick="deleteContinuityEvent('${escapeHtml(characterName).replace(/'/g, "\\'")}', '${event.id}')" title="Delete event">
-                            🗑️ Delete
-                        </button>
-                    </div>
+            <!-- Auto-detected events section -->
+            ${autoEvents.length > 0 ? `
+                <div class="auto-events-header" style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--glass-border);">
+                    <span style="color: var(--accent-gold); font-weight: 600;">⚡ Auto-Detected Events</span>
+                    <span style="font-size: 0.8em; opacity: 0.7;">(${autoEvents.length} found from script analysis)</span>
                 </div>
-            `).join('')}
+                ${autoEvents.map(event => `
+                    <div class="event-timeline auto-detected" data-event-id="${event.id}" style="background: rgba(201, 169, 97, 0.1); border: 1px solid var(--accent-gold); border-radius: 8px; padding: 12px; margin-bottom: 10px;">
+                        <div class="event-timeline-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                            <div class="event-info">
+                                <span class="event-type-badge" style="background: ${getEventColor(event.category)}; color: #000; padding: 2px 8px; border-radius: 4px; font-size: 0.75em; font-weight: 600;">
+                                    ${escapeHtml(event.type || event.category || 'Event')}
+                                </span>
+                                <span class="auto-badge" style="background: var(--accent-gold); color: var(--bg-dark); padding: 2px 6px; border-radius: 4px; font-size: 0.7em; margin-left: 4px;">
+                                    AUTO
+                                </span>
+                            </div>
+                            <div class="event-meta" style="font-size: 0.85em; opacity: 0.8;">
+                                Scene ${event.startScene || '?'}${event.endScene ? ` - ${event.endScene}` : ' (ongoing)'}
+                            </div>
+                        </div>
+                        <div class="event-description" style="font-size: 0.9em; margin-bottom: 8px; line-height: 1.4;">
+                            ${escapeHtml(event.description || 'No description')}
+                        </div>
+                        ${event.visualNotes ? `
+                            <div class="visual-notes" style="font-size: 0.8em; opacity: 0.8; font-style: italic; margin-bottom: 8px;">
+                                Visual notes: ${escapeHtml(event.visualNotes)}
+                            </div>
+                        ` : ''}
+                        <div class="event-timeline-actions" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <button class="event-action-btn" onclick="confirmAutoEvent('${escapeHtml(characterName).replace(/'/g, "\\'")}', '${event.id}')" title="Confirm and track this event" style="background: var(--accent-gold); color: var(--bg-dark); border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8em;">
+                                ✓ Confirm & Track
+                            </button>
+                            <button class="event-action-btn" onclick="setEventEndScene('${escapeHtml(characterName).replace(/'/g, "\\'")}', '${event.id}')" title="Set when this event ends" style="background: var(--glass-bg); border: 1px solid var(--glass-border); padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8em;">
+                                Set End Scene
+                            </button>
+                            <button class="event-action-btn" onclick="dismissAutoEvent('${escapeHtml(characterName).replace(/'/g, "\\'")}', '${event.id}')" title="Dismiss this detection" style="background: transparent; border: 1px solid var(--glass-border); padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8em; opacity: 0.7;">
+                                Dismiss
+                            </button>
+                        </div>
+                    </div>
+                `).join('')}
+            ` : ''}
+
+            <!-- Manual/Confirmed events section -->
+            ${manualEvents.length > 0 ? `
+                <div class="manual-events-header" style="display: flex; align-items: center; gap: 8px; margin-top: 16px; margin-bottom: 12px;">
+                    <span style="font-weight: 600;">Tracked Events</span>
+                    <span style="font-size: 0.8em; opacity: 0.7;">(${manualEvents.length} events)</span>
+                </div>
+                ${manualEvents.map(event => `
+                    <div class="event-timeline" data-event-id="${event.id}" style="background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 8px; padding: 12px; margin-bottom: 10px;">
+                        <div class="event-timeline-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                            <div class="event-info">
+                                <span class="event-type-badge" style="background: ${getEventColor(event.category)}; color: #000; padding: 2px 8px; border-radius: 4px; font-size: 0.75em; font-weight: 600;">
+                                    ${escapeHtml(event.category || event.type || 'Event')}
+                                </span>
+                            </div>
+                            <div class="event-meta" style="font-size: 0.85em; opacity: 0.8;">
+                                Scene ${event.startScene || '?'}${event.endScene ? ` - ${event.endScene}` : ' (ongoing)'}
+                            </div>
+                        </div>
+                        <div class="event-description" style="font-size: 0.9em; margin-bottom: 8px;">
+                            ${escapeHtml(event.description || 'Untitled Event')}
+                        </div>
+
+                        <div class="progression-bar">
+                            ${renderProgressionStages(event, characterName)}
+                        </div>
+
+                        <div class="event-timeline-actions" style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;">
+                            <button class="event-action-btn" onclick="fillProgressionGaps('${escapeHtml(characterName).replace(/'/g, "\\'")}', '${event.id}')" title="Use AI to fill progression gaps" style="background: var(--glass-bg); border: 1px solid var(--glass-border); padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8em;">
+                                ✨ Fill Gaps with AI
+                            </button>
+                            <button class="event-action-btn" onclick="editContinuityEvent('${escapeHtml(characterName).replace(/'/g, "\\'")}', '${event.id}')" title="Edit event details" style="background: var(--glass-bg); border: 1px solid var(--glass-border); padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8em;">
+                                ✏️ Edit
+                            </button>
+                            <button class="event-action-btn danger" onclick="deleteContinuityEvent('${escapeHtml(characterName).replace(/'/g, "\\'")}', '${event.id}')" title="Delete event" style="background: transparent; border: 1px solid #ef4444; color: #ef4444; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8em;">
+                                🗑️ Delete
+                            </button>
+                        </div>
+                    </div>
+                `).join('')}
+            ` : ''}
 
             <button class="add-event-btn" onclick="addContinuityEvent('${escapeHtml(characterName).replace(/'/g, "\\'")}')">
                 + Add Continuity Event
@@ -2854,17 +3140,31 @@ document.addEventListener('click', (e) => {
 window.debugCharacterProfile = function(characterName) {
     console.log(`\n=== 🔍 Debugging Character Profile: ${characterName} ===\n`);
 
-    // Check Master Context (new comprehensive format)
-    console.log('📦 Master Context (window.scriptMasterContext):');
+    // Check window.masterContext (primary source)
+    console.log('📦 Master Context (window.masterContext):');
+    if (window.masterContext?.characters?.[characterName]) {
+        console.log('✅ Found in window.masterContext');
+        console.log(window.masterContext.characters[characterName]);
+    } else {
+        console.log('❌ Not found in window.masterContext');
+        if (window.masterContext?.characters) {
+            console.log('Available characters:', Object.keys(window.masterContext.characters));
+        } else {
+            console.log('window.masterContext not initialized or has no characters');
+        }
+    }
+
+    // Check window.scriptMasterContext (secondary source)
+    console.log('\n📦 Script Master Context (window.scriptMasterContext):');
     if (window.scriptMasterContext?.characters?.[characterName]) {
-        console.log('✅ Found in Master Context');
+        console.log('✅ Found in window.scriptMasterContext');
         console.log(window.scriptMasterContext.characters[characterName]);
     } else {
-        console.log('❌ Not found in Master Context');
-        if (window.scriptMasterContext) {
-            console.log('Available characters:', Object.keys(window.scriptMasterContext.characters || {}));
+        console.log('❌ Not found in window.scriptMasterContext');
+        if (window.scriptMasterContext?.characters) {
+            console.log('Available characters:', Object.keys(window.scriptMasterContext.characters));
         } else {
-            console.log('Master Context not initialized');
+            console.log('window.scriptMasterContext not initialized');
         }
     }
 
@@ -2884,17 +3184,21 @@ window.debugCharacterProfile = function(characterName) {
     }
 
     // Check State
-    console.log('\n💾 State Data (window.state):');
-    console.log('Cast Profiles:', window.state?.castProfiles?.[characterName] || 'Not found');
-    console.log('Character Looks:', window.state?.characterLooks?.[characterName] || 'Not found');
+    console.log('\n💾 State Data:');
+    console.log('Cast Profiles:', state?.castProfiles?.[characterName] || 'Not found');
+    console.log('Character Looks:', state?.characterLooks?.[characterName] || 'Not found');
+    console.log('Confirmed Characters:', state?.confirmedCharacters ? Array.from(state.confirmedCharacters) : 'Not set');
 
     // Check localStorage
     console.log('\n💿 LocalStorage:');
-    const storedMaster = localStorage.getItem('scriptMasterContext');
+    const storedMaster = localStorage.getItem('masterContext') || localStorage.getItem('scriptMasterContext');
     if (storedMaster) {
         try {
             const parsed = JSON.parse(storedMaster);
             console.log('Master Context in localStorage:', parsed.characters?.[characterName] ? '✅ Found' : '❌ Not found');
+            if (parsed.characters?.[characterName]) {
+                console.log('Character data from localStorage:', parsed.characters[characterName]);
+            }
         } catch (e) {
             console.log('Error parsing localStorage:', e);
         }
@@ -2905,9 +3209,289 @@ window.debugCharacterProfile = function(characterName) {
     console.log('\n=== End Debug ===\n');
 
     return {
-        masterContext: window.scriptMasterContext?.characters?.[characterName],
+        masterContext: window.masterContext?.characters?.[characterName],
+        scriptMasterContext: window.scriptMasterContext?.characters?.[characterName],
         narrativeContext: window.scriptNarrativeContext?.characters?.find(c => c.name === characterName),
-        castProfile: window.state?.castProfiles?.[characterName],
-        characterLooks: window.state?.characterLooks?.[characterName]
+        castProfile: state?.castProfiles?.[characterName],
+        characterLooks: state?.characterLooks?.[characterName]
     };
+};
+
+// ============================================================================
+// AUTO-DETECTED EVENT MANAGEMENT
+// ============================================================================
+
+/**
+ * Initialize dismissed auto events storage (called lazily to avoid circular dependency issues)
+ */
+function initDismissedAutoEvents() {
+    if (state && !state.dismissedAutoEvents) {
+        state.dismissedAutoEvents = new Set();
+        // Try to restore from localStorage
+        try {
+            const stored = localStorage.getItem('dismissedAutoEvents');
+            if (stored) {
+                state.dismissedAutoEvents = new Set(JSON.parse(stored));
+            }
+        } catch (e) {
+            console.warn('Could not restore dismissed auto events:', e);
+        }
+    }
+}
+
+/**
+ * Get or initialize dismissed auto events set
+ */
+function getDismissedAutoEvents() {
+    if (!state) return new Set();
+    if (!state.dismissedAutoEvents) {
+        initDismissedAutoEvents();
+    }
+    return state.dismissedAutoEvents || new Set();
+}
+
+/**
+ * Save dismissed auto events to localStorage
+ */
+function saveDismissedAutoEvents() {
+    try {
+        const dismissed = getDismissedAutoEvents();
+        localStorage.setItem('dismissedAutoEvents', JSON.stringify([...dismissed]));
+    } catch (e) {
+        console.warn('Could not save dismissed auto events:', e);
+    }
+}
+
+/**
+ * Confirm an auto-detected event and add it to the tracked continuity events
+ * @param {string} characterName - Character name
+ * @param {string} eventId - Auto-detected event ID
+ */
+window.confirmAutoEvent = async function(characterName, eventId) {
+    console.log(`Confirming auto-detected event: ${eventId} for ${characterName}`);
+
+    // Get the auto-detected event
+    const autoEvents = getAutoDetectedEvents(characterName);
+    const autoEvent = autoEvents.find(e => e.id === eventId);
+
+    if (!autoEvent) {
+        console.error('Auto-detected event not found:', eventId);
+        showToast('Event not found', 'error');
+        return;
+    }
+
+    // Initialize continuity events storage if needed
+    if (!state.continuityEvents) {
+        state.continuityEvents = {};
+    }
+    if (!state.continuityEvents[characterName]) {
+        state.continuityEvents[characterName] = [];
+    }
+
+    // Create a confirmed event from the auto-detected one
+    const confirmedEvent = {
+        id: `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        character: characterName,
+        type: autoEvent.type,
+        category: autoEvent.category,
+        description: autoEvent.description,
+        startScene: autoEvent.startScene,
+        endScene: autoEvent.endScene,
+        source: 'confirmed',
+        originalAutoId: eventId,
+        progression: autoEvent.progression || [],
+        visualNotes: autoEvent.visualNotes || '',
+        confirmedAt: new Date().toISOString()
+    };
+
+    // Add to confirmed events
+    state.continuityEvents[characterName].push(confirmedEvent);
+
+    // Dismiss the auto-detected event so it doesn't show again
+    const dismissed = getDismissedAutoEvents();
+    dismissed.add(eventId);
+    saveDismissedAutoEvents();
+
+    // Save project
+    const { saveProject } = await import('./export-handlers.js');
+    saveProject();
+
+    // Show success notification
+    showToast(`Event confirmed and added to tracking for ${characterName}`, 'success');
+
+    // Refresh the events view
+    const contentId = `${characterName.toLowerCase().replace(/\s+/g, '-')}-content`;
+    const contentDiv = document.getElementById(contentId);
+    if (contentDiv) {
+        contentDiv.innerHTML = renderEventsView(characterName);
+    }
+
+    console.log('Confirmed event:', confirmedEvent);
+};
+
+/**
+ * Set the end scene for an auto-detected or tracked event
+ * @param {string} characterName - Character name
+ * @param {string} eventId - Event ID
+ */
+window.setEventEndScene = async function(characterName, eventId) {
+    console.log(`Setting end scene for event: ${eventId}`);
+
+    // Get current scene index
+    const currentSceneIndex = state.currentSceneIndex !== undefined ? state.currentSceneIndex : (state.currentScene || 0);
+    const currentScene = state.scenes[currentSceneIndex];
+    const sceneNumber = currentScene?.number || (currentSceneIndex + 1);
+
+    // Check if it's a tracked event first
+    if (state.continuityEvents?.[characterName]) {
+        const trackedEvent = state.continuityEvents[characterName].find(e => e.id === eventId);
+        if (trackedEvent) {
+            trackedEvent.endScene = sceneNumber;
+            const { saveProject } = await import('./export-handlers.js');
+            saveProject();
+            showToast(`Event end scene set to Scene ${sceneNumber}`, 'success');
+
+            // Refresh the view
+            const contentId = `${characterName.toLowerCase().replace(/\s+/g, '-')}-content`;
+            const contentDiv = document.getElementById(contentId);
+            if (contentDiv) {
+                contentDiv.innerHTML = renderEventsView(characterName);
+            }
+            return;
+        }
+    }
+
+    // If it's an auto-detected event, confirm it first then set end scene
+    const autoEvents = getAutoDetectedEvents(characterName);
+    const autoEvent = autoEvents.find(e => e.id === eventId);
+
+    if (autoEvent) {
+        // Confirm the event first
+        await window.confirmAutoEvent(characterName, eventId);
+
+        // Then set the end scene on the newly confirmed event
+        const confirmedEvents = state.continuityEvents?.[characterName] || [];
+        const newlyConfirmed = confirmedEvents.find(e => e.originalAutoId === eventId);
+        if (newlyConfirmed) {
+            newlyConfirmed.endScene = sceneNumber;
+            const { saveProject } = await import('./export-handlers.js');
+            saveProject();
+            showToast(`Event confirmed and end scene set to Scene ${sceneNumber}`, 'success');
+
+            // Refresh the view
+            const contentId = `${characterName.toLowerCase().replace(/\s+/g, '-')}-content`;
+            const contentDiv = document.getElementById(contentId);
+            if (contentDiv) {
+                contentDiv.innerHTML = renderEventsView(characterName);
+            }
+        }
+        return;
+    }
+
+    showToast('Event not found', 'error');
+};
+
+/**
+ * Dismiss an auto-detected event (mark as not relevant)
+ * @param {string} characterName - Character name
+ * @param {string} eventId - Auto-detected event ID
+ */
+window.dismissAutoEvent = function(characterName, eventId) {
+    console.log(`Dismissing auto-detected event: ${eventId} for ${characterName}`);
+
+    // Add to dismissed set
+    const dismissed = getDismissedAutoEvents();
+    dismissed.add(eventId);
+    saveDismissedAutoEvents();
+
+    showToast('Event dismissed', 'info');
+
+    // Refresh the events view
+    const contentId = `${characterName.toLowerCase().replace(/\s+/g, '-')}-content`;
+    const contentDiv = document.getElementById(contentId);
+    if (contentDiv) {
+        contentDiv.innerHTML = renderEventsView(characterName);
+    }
+};
+
+/**
+ * Clear all dismissed auto events (for testing/reset purposes)
+ */
+window.clearDismissedAutoEvents = function() {
+    const dismissed = getDismissedAutoEvents();
+    dismissed.clear();
+    saveDismissedAutoEvents();
+    showToast('Dismissed events cleared', 'info');
+};
+
+/**
+ * Add a progression stage to a tracked event
+ * @param {string} characterName - Character name
+ * @param {string} eventId - Event ID
+ * @param {number} sceneNumber - Scene number for this progression stage
+ * @param {string} description - Description of progression at this point
+ */
+window.addEventProgression = async function(characterName, eventId, sceneNumber, description) {
+    if (!state.continuityEvents?.[characterName]) {
+        showToast('No tracked events for this character', 'error');
+        return;
+    }
+
+    const event = state.continuityEvents[characterName].find(e => e.id === eventId);
+    if (!event) {
+        showToast('Event not found', 'error');
+        return;
+    }
+
+    // Initialize progression array if needed
+    if (!event.progression) {
+        event.progression = [];
+    }
+
+    // Add progression stage
+    event.progression.push({
+        sceneNumber: sceneNumber,
+        description: description,
+        addedAt: new Date().toISOString()
+    });
+
+    // Sort by scene number
+    event.progression.sort((a, b) => a.sceneNumber - b.sceneNumber);
+
+    const { saveProject } = await import('./export-handlers.js');
+    saveProject();
+    showToast(`Progression stage added at Scene ${sceneNumber}`, 'success');
+
+    // Refresh the view
+    const contentId = `${characterName.toLowerCase().replace(/\s+/g, '-')}-content`;
+    const contentDiv = document.getElementById(contentId);
+    if (contentDiv) {
+        contentDiv.innerHTML = renderEventsView(characterName);
+    }
+};
+
+/**
+ * Delete a tracked continuity event
+ * @param {string} characterName - Character name
+ * @param {string} eventId - Event ID to delete
+ */
+window.deleteTrackedEvent = async function(characterName, eventId) {
+    if (!state.continuityEvents?.[characterName]) {
+        return;
+    }
+
+    const index = state.continuityEvents[characterName].findIndex(e => e.id === eventId);
+    if (index !== -1) {
+        state.continuityEvents[characterName].splice(index, 1);
+        const { saveProject } = await import('./export-handlers.js');
+        saveProject();
+        showToast('Event deleted', 'info');
+
+        // Refresh the view
+        const contentId = `${characterName.toLowerCase().replace(/\s+/g, '-')}-content`;
+        const contentDiv = document.getElementById(contentId);
+        if (contentDiv) {
+            contentDiv.innerHTML = renderEventsView(characterName);
+        }
+    }
 };
