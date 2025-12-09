@@ -2500,6 +2500,21 @@ export function loadProjectData() {
             if (state.scenes.length > 0 && project.scriptContent) {
                 loadScript(project.scriptContent);
             }
+
+            // CRITICAL FIX: Populate characters for all scenes AFTER load is complete
+            // This ensures character detection works in scene breakdown for ALL scenes
+            setTimeout(() => {
+                if (window.masterContext?.characters && state.scenes.length > 0) {
+                    console.log('🔄 Post-load character population...');
+                    import('./tag-system.js').then(module => {
+                        if (module.populateCharactersForAllScenes) {
+                            module.populateCharactersForAllScenes();
+                        }
+                    }).catch(err => {
+                        console.warn('Could not load tag-system for character population:', err);
+                    });
+                }
+            }, 500);
         } else {
             console.log('⚠️ No saved project found');
 
