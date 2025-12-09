@@ -1556,7 +1556,7 @@ function populateInitialData(masterContext) {
         state.featuredCharacters = window.featuredCharacters;
         state.backgroundCharacters = window.backgroundCharacters;
 
-        console.log(`✓ Added ${characterNames.length} characters:`, {
+        console.log(`✓ Added ${Object.keys(masterContext.characters).length} characters:`, {
             featured: window.featuredCharacters.length,
             background: window.backgroundCharacters.length
         });
@@ -1604,7 +1604,7 @@ function populateInitialData(masterContext) {
             }
         });
 
-        console.log(`✓ Created enhanced profiles for ${characterNames.length} characters`);
+        console.log(`✓ Created enhanced profiles for ${Object.keys(masterContext.characters).length} characters`);
     }
 
     // Store story structure for timeline tracking
