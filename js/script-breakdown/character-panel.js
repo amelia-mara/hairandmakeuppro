@@ -1362,8 +1362,8 @@ function getAutoDetectedEvents(characterName) {
         });
     }
 
-    // Filter out dismissed events
-    const dismissedEvents = state.dismissedAutoEvents || new Set();
+    // Filter out dismissed events (use safe getter to avoid circular dependency issues)
+    const dismissedEvents = getDismissedAutoEvents();
     const filteredEvents = events.filter(e => !dismissedEvents.has(e.id));
 
     // Sort by start scene
@@ -3204,18 +3204,33 @@ window.debugCharacterProfile = function(characterName) {
 // AUTO-DETECTED EVENT MANAGEMENT
 // ============================================================================
 
-// Initialize storage for dismissed auto-detected events
-if (!state.dismissedAutoEvents) {
-    state.dismissedAutoEvents = new Set();
-    // Try to restore from localStorage
-    try {
-        const stored = localStorage.getItem('dismissedAutoEvents');
-        if (stored) {
-            state.dismissedAutoEvents = new Set(JSON.parse(stored));
+/**
+ * Initialize dismissed auto events storage (called lazily to avoid circular dependency issues)
+ */
+function initDismissedAutoEvents() {
+    if (state && !state.dismissedAutoEvents) {
+        state.dismissedAutoEvents = new Set();
+        // Try to restore from localStorage
+        try {
+            const stored = localStorage.getItem('dismissedAutoEvents');
+            if (stored) {
+                state.dismissedAutoEvents = new Set(JSON.parse(stored));
+            }
+        } catch (e) {
+            console.warn('Could not restore dismissed auto events:', e);
         }
-    } catch (e) {
-        console.warn('Could not restore dismissed auto events:', e);
     }
+}
+
+/**
+ * Get or initialize dismissed auto events set
+ */
+function getDismissedAutoEvents() {
+    if (!state) return new Set();
+    if (!state.dismissedAutoEvents) {
+        initDismissedAutoEvents();
+    }
+    return state.dismissedAutoEvents || new Set();
 }
 
 /**
@@ -3223,7 +3238,8 @@ if (!state.dismissedAutoEvents) {
  */
 function saveDismissedAutoEvents() {
     try {
-        localStorage.setItem('dismissedAutoEvents', JSON.stringify([...state.dismissedAutoEvents]));
+        const dismissed = getDismissedAutoEvents();
+        localStorage.setItem('dismissedAutoEvents', JSON.stringify([...dismissed]));
     } catch (e) {
         console.warn('Could not save dismissed auto events:', e);
     }
@@ -3275,7 +3291,8 @@ window.confirmAutoEvent = async function(characterName, eventId) {
     state.continuityEvents[characterName].push(confirmedEvent);
 
     // Dismiss the auto-detected event so it doesn't show again
-    state.dismissedAutoEvents.add(eventId);
+    const dismissed = getDismissedAutoEvents();
+    dismissed.add(eventId);
     saveDismissedAutoEvents();
 
     // Save project
@@ -3366,7 +3383,8 @@ window.dismissAutoEvent = function(characterName, eventId) {
     console.log(`Dismissing auto-detected event: ${eventId} for ${characterName}`);
 
     // Add to dismissed set
-    state.dismissedAutoEvents.add(eventId);
+    const dismissed = getDismissedAutoEvents();
+    dismissed.add(eventId);
     saveDismissedAutoEvents();
 
     showToast('Event dismissed', 'info');
@@ -3383,7 +3401,8 @@ window.dismissAutoEvent = function(characterName, eventId) {
  * Clear all dismissed auto events (for testing/reset purposes)
  */
 window.clearDismissedAutoEvents = function() {
-    state.dismissedAutoEvents.clear();
+    const dismissed = getDismissedAutoEvents();
+    dismissed.clear();
     saveDismissedAutoEvents();
     showToast('Dismissed events cleared', 'info');
 };
