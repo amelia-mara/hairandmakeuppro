@@ -320,17 +320,30 @@ function createCharacterConfirmationModal() {
                     <!-- Character items populated here -->
                 </div>
 
-                <div style="margin-top: 16px;">
-                    <label class="modal-label">Add Character Manually</label>
-                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                        <input type="text" class="modal-input" id="manual-character-name" placeholder="Character name..." style="flex: 1; min-width: 200px;">
-                        <select class="modal-select" id="manual-character-category" style="width: 150px;">
-                            <option value="LEAD">Lead</option>
-                            <option value="SUPPORTING" selected>Supporting</option>
-                            <option value="DAY_PLAYER">Day Player</option>
-                            <option value="BACKGROUND">Background</option>
-                        </select>
-                        <button class="modal-btn primary" onclick="addManualCharacter()">Add</button>
+                <div style="margin-top: 16px; display: flex; gap: 16px; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 250px;">
+                        <label class="modal-label">Add Character Manually</label>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <input type="text" class="modal-input" id="manual-character-name" placeholder="Character name..." style="flex: 1; min-width: 150px;">
+                            <select class="modal-select" id="manual-character-category" style="width: 130px;">
+                                <option value="LEAD">Lead</option>
+                                <option value="SUPPORTING" selected>Supporting</option>
+                                <option value="DAY_PLAYER">Day Player</option>
+                                <option value="BACKGROUND">Background</option>
+                            </select>
+                            <button class="modal-btn primary" onclick="addManualCharacter()">Add</button>
+                        </div>
+                    </div>
+                    <div style="flex: 1; min-width: 250px;">
+                        <label class="modal-label">Merge Duplicate Characters</label>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <button class="modal-btn" onclick="openMergeCharactersModal()" style="flex: 1;">
+                                🔗 Merge Duplicates...
+                            </button>
+                        </div>
+                        <div style="font-size: 0.75em; color: var(--text-muted); margin-top: 4px;">
+                            Combine characters that are the same person (e.g., "JOHN" and "JOHN SMITH")
+                        </div>
                     </div>
                 </div>
             </div>
@@ -588,6 +601,210 @@ window.addManualCharacter = function() {
 };
 
 /**
+ * Open merge characters modal
+ */
+window.openMergeCharactersModal = function() {
+    // Create modal if it doesn't exist
+    let modal = document.getElementById('merge-characters-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'merge-characters-modal';
+        modal.className = 'modal';
+        modal.style.zIndex = '10002'; // Above character confirm modal
+        document.body.appendChild(modal);
+    }
+
+    const characters = state.detectedCharacters || [];
+
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 700px; max-height: 80vh; display: flex; flex-direction: column;">
+            <div class="modal-title">Merge Duplicate Characters</div>
+
+            <div class="modal-note" style="margin-bottom: 16px;">
+                Select characters that are the same person to merge them. The first selected character's name will be used as the primary name.
+            </div>
+
+            <div style="flex: 1; overflow-y: auto; min-height: 0;">
+                <div id="merge-character-list" style="border: 1px solid var(--glass-border); border-radius: 8px; max-height: 300px; overflow-y: auto;">
+                    ${characters.map((char, idx) => `
+                        <div class="merge-char-item" style="display: flex; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--glass-border);">
+                            <input type="checkbox" class="merge-checkbox" data-index="${idx}" style="width: 18px; height: 18px; margin-right: 12px; cursor: pointer;">
+                            <span style="font-weight: 600; min-width: 150px;">${char.name}</span>
+                            <span style="color: var(--text-muted); font-size: 0.85em;">
+                                ${char.sceneCount} scene${char.sceneCount !== 1 ? 's' : ''}
+                            </span>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <div style="margin-top: 16px;">
+                    <label class="modal-label">Primary Name (after merge)</label>
+                    <input type="text" class="modal-input" id="merge-primary-name" placeholder="Enter the canonical name for merged character...">
+                    <div style="font-size: 0.75em; color: var(--text-muted); margin-top: 4px;">
+                        Leave empty to use the first selected character's name
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-actions" style="flex-shrink: 0; padding-top: 16px; border-top: 1px solid var(--glass-border); margin-top: 16px;">
+                <button class="modal-btn" onclick="closeMergeCharactersModal()">Cancel</button>
+                <button class="modal-btn primary" onclick="performCharacterMerge()" style="background: var(--accent-gold); color: var(--bg-dark);">
+                    🔗 Merge Selected Characters
+                </button>
+            </div>
+        </div>
+    `;
+
+    modal.style.display = 'flex';
+};
+
+/**
+ * Close merge characters modal
+ */
+window.closeMergeCharactersModal = function() {
+    const modal = document.getElementById('merge-characters-modal');
+    if (modal) modal.style.display = 'none';
+};
+
+/**
+ * Perform the character merge
+ */
+window.performCharacterMerge = function() {
+    const checkboxes = document.querySelectorAll('#merge-character-list .merge-checkbox:checked');
+    const indices = Array.from(checkboxes).map(cb => parseInt(cb.dataset.index));
+
+    if (indices.length < 2) {
+        alert('Please select at least 2 characters to merge');
+        return;
+    }
+
+    const primaryNameInput = document.getElementById('merge-primary-name');
+    let primaryName = primaryNameInput?.value.trim();
+
+    // Get the characters to merge
+    const charsToMerge = indices.map(idx => state.detectedCharacters[idx]).filter(Boolean);
+
+    if (charsToMerge.length < 2) {
+        alert('Error: Could not find selected characters');
+        return;
+    }
+
+    // Use provided primary name or first selected character's name
+    if (!primaryName) {
+        primaryName = charsToMerge[0].name;
+    }
+
+    // Combine data from all characters
+    const mergedChar = {
+        name: normalizeCharacterName(primaryName),
+        category: charsToMerge[0].category, // Use first character's category
+        sceneCount: 0,
+        firstAppearance: Infinity,
+        lastAppearance: 0,
+        hasDialogue: false,
+        selected: charsToMerge.some(c => c.selected),
+        scenesPresent: [],
+        mergedFrom: charsToMerge.map(c => c.name) // Track which names were merged
+    };
+
+    // Aggregate data from all merged characters
+    charsToMerge.forEach(char => {
+        mergedChar.sceneCount += char.sceneCount || 0;
+        mergedChar.firstAppearance = Math.min(mergedChar.firstAppearance, char.firstAppearance || Infinity);
+        mergedChar.lastAppearance = Math.max(mergedChar.lastAppearance, char.lastAppearance || 0);
+        mergedChar.hasDialogue = mergedChar.hasDialogue || char.hasDialogue;
+
+        if (char.scenesPresent && Array.isArray(char.scenesPresent)) {
+            mergedChar.scenesPresent = [...new Set([...mergedChar.scenesPresent, ...char.scenesPresent])];
+        }
+    });
+
+    // Fix edge cases
+    if (mergedChar.firstAppearance === Infinity) mergedChar.firstAppearance = 1;
+    if (mergedChar.lastAppearance === 0) mergedChar.lastAppearance = state.scenes.length;
+
+    // Remove scene duplicates and update count
+    mergedChar.scenesPresent = [...new Set(mergedChar.scenesPresent)].sort((a, b) => a - b);
+    if (mergedChar.scenesPresent.length > 0) {
+        mergedChar.sceneCount = mergedChar.scenesPresent.length;
+    }
+
+    // Remove old characters (sort indices descending to remove from end first)
+    indices.sort((a, b) => b - a).forEach(idx => {
+        state.detectedCharacters.splice(idx, 1);
+    });
+
+    // Add merged character
+    state.detectedCharacters.push(mergedChar);
+
+    // Re-sort by scene count
+    state.detectedCharacters.sort((a, b) => b.sceneCount - a.sceneCount);
+
+    // Update master context if available
+    if (window.masterContext?.characters) {
+        // Merge data in master context
+        const mergedMasterData = {};
+
+        charsToMerge.forEach(char => {
+            const charData = window.masterContext.characters[char.name];
+            if (charData) {
+                // Merge script descriptions
+                if (!mergedMasterData.scriptDescriptions) {
+                    mergedMasterData.scriptDescriptions = [];
+                }
+                if (charData.scriptDescriptions) {
+                    mergedMasterData.scriptDescriptions.push(...charData.scriptDescriptions);
+                }
+
+                // Merge scenes present
+                if (!mergedMasterData.scenesPresent) {
+                    mergedMasterData.scenesPresent = [];
+                }
+                if (charData.scenesPresent || charData.storyPresence?.scenesPresent) {
+                    const scenes = charData.scenesPresent || charData.storyPresence?.scenesPresent || [];
+                    mergedMasterData.scenesPresent = [...new Set([...mergedMasterData.scenesPresent, ...scenes])];
+                }
+
+                // Take first available profile data
+                if (!mergedMasterData.physicalProfile && charData.physicalProfile) {
+                    mergedMasterData.physicalProfile = charData.physicalProfile;
+                }
+                if (!mergedMasterData.characterAnalysis && charData.characterAnalysis) {
+                    mergedMasterData.characterAnalysis = charData.characterAnalysis;
+                }
+                if (!mergedMasterData.visualProfile && charData.visualProfile) {
+                    mergedMasterData.visualProfile = charData.visualProfile;
+                }
+
+                // Delete old entry
+                delete window.masterContext.characters[char.name];
+            }
+        });
+
+        // Add merged entry with combined data
+        window.masterContext.characters[mergedChar.name] = {
+            ...mergedMasterData,
+            sceneCount: mergedChar.sceneCount,
+            firstAppearance: mergedChar.firstAppearance,
+            lastAppearance: mergedChar.lastAppearance,
+            mergedFrom: mergedChar.mergedFrom
+        };
+
+        // Update localStorage
+        localStorage.setItem('masterContext', JSON.stringify(window.masterContext));
+        window.scriptMasterContext = window.masterContext;
+        localStorage.setItem('scriptMasterContext', JSON.stringify(window.masterContext));
+    }
+
+    // Close merge modal and refresh character list
+    closeMergeCharactersModal();
+    populateCharacterConfirmationList();
+
+    showToast(`Merged ${charsToMerge.length} characters into "${mergedChar.name}"`, 'success');
+    console.log('Merged characters:', charsToMerge.map(c => c.name), '→', mergedChar.name);
+};
+
+/**
  * Close character confirmation modal
  */
 window.closeCharacterConfirmModal = function() {
@@ -599,82 +816,92 @@ window.closeCharacterConfirmModal = function() {
  * Confirm characters and continue with breakdown
  */
 window.confirmCharactersAndContinue = async function() {
-    // Get selected characters
-    const selectedCharacters = (state.detectedCharacters || []).filter(c => c.selected);
+    console.log('🎬 confirmCharactersAndContinue called');
 
-    if (selectedCharacters.length === 0) {
-        alert('Please select at least one character to track');
-        return;
-    }
+    try {
+        // Get selected characters
+        const selectedCharacters = (state.detectedCharacters || []).filter(c => c.selected);
+        console.log('Selected characters:', selectedCharacters.length);
 
-    // Update confirmed characters in state
-    state.confirmedCharacters = new Set(selectedCharacters.map(c => c.name));
+        if (selectedCharacters.length === 0) {
+            alert('Please select at least one character to track');
+            return;
+        }
 
-    // Update master context with confirmed characters
-    if (window.masterContext?.characters) {
-        const confirmedCharsObj = {};
+        // Update confirmed characters in state
+        state.confirmedCharacters = new Set(selectedCharacters.map(c => c.name));
+        console.log('Confirmed characters set:', state.confirmedCharacters);
+
+        // Update master context with confirmed characters
+        if (window.masterContext?.characters) {
+            const confirmedCharsObj = {};
+            selectedCharacters.forEach(char => {
+                if (window.masterContext.characters[char.name]) {
+                    confirmedCharsObj[char.name] = {
+                        ...window.masterContext.characters[char.name],
+                        category: char.category,
+                        characterAnalysis: {
+                            ...window.masterContext.characters[char.name]?.characterAnalysis,
+                            role: char.category.toLowerCase()
+                        }
+                    };
+                } else {
+                    // Manually added character
+                    confirmedCharsObj[char.name] = {
+                        category: char.category,
+                        characterAnalysis: { role: char.category.toLowerCase() },
+                        storyPresence: {
+                            totalScenes: char.sceneCount || 0,
+                            scenesPresent: char.scenesPresent || []
+                        },
+                        firstAppearance: char.firstAppearance || 1,
+                        lastAppearance: char.lastAppearance || state.scenes.length,
+                        sceneCount: char.sceneCount || 0
+                    };
+                }
+            });
+
+            // Store the filtered master context
+            window.confirmedMasterContext = {
+                ...window.masterContext,
+                characters: confirmedCharsObj
+            };
+            console.log('Created confirmedMasterContext with', Object.keys(confirmedCharsObj).length, 'characters');
+        }
+
+        // Store character categories for use in breakdown
+        window.characterCategories = {};
         selectedCharacters.forEach(char => {
-            if (window.masterContext.characters[char.name]) {
-                confirmedCharsObj[char.name] = {
-                    ...window.masterContext.characters[char.name],
-                    category: char.category,
-                    characterAnalysis: {
-                        ...window.masterContext.characters[char.name]?.characterAnalysis,
-                        role: char.category.toLowerCase()
-                    }
-                };
-            } else {
-                // Manually added character
-                confirmedCharsObj[char.name] = {
-                    category: char.category,
-                    characterAnalysis: { role: char.category.toLowerCase() },
-                    storyPresence: {
-                        totalScenes: char.sceneCount || 0,
-                        scenesPresent: char.scenesPresent || []
-                    },
-                    firstAppearance: char.firstAppearance || 1,
-                    lastAppearance: char.lastAppearance || state.scenes.length,
-                    sceneCount: char.sceneCount || 0
-                };
-            }
+            window.characterCategories[char.name] = char.category;
         });
 
-        // Store the filtered master context
-        window.confirmedMasterContext = {
-            ...window.masterContext,
-            characters: confirmedCharsObj
-        };
+        // Populate initial data
+        console.log('Calling populateInitialData...');
+        populateInitialData(window.confirmedMasterContext || window.masterContext);
+
+        // Close modal
+        closeCharacterConfirmModal();
+
+        // Render character tabs and panels
+        console.log('Rendering character tabs and panels...');
+        renderCharacterTabs();
+        renderCharacterTabPanels();
+
+        // Render the script display with highlights
+        console.log('Rendering script...');
+        renderScript();
+
+        // Save project
+        saveProject();
+
+        // Show success message
+        showToast(`${selectedCharacters.length} characters confirmed. Breakdown ready!`, 'success');
+        console.log('✅ Character confirmation complete');
+
+    } catch (error) {
+        console.error('❌ Error in confirmCharactersAndContinue:', error);
+        alert('Error confirming characters: ' + error.message);
     }
-
-    // Store character categories for use in breakdown
-    window.characterCategories = {};
-    selectedCharacters.forEach(char => {
-        window.characterCategories[char.name] = char.category;
-    });
-
-    // Populate initial data
-    populateInitialData(window.confirmedMasterContext || window.masterContext);
-
-    // Close modal
-    closeCharacterConfirmModal();
-
-    // Render character tabs and panels
-    renderCharacterTabs();
-    renderCharacterTabPanels();
-
-    // Save project
-    saveProject();
-
-    // Show success message
-    showToast(`${selectedCharacters.length} characters confirmed. Ready to generate breakdown!`, 'success');
-
-    // Show option to go to breakdown page
-    setTimeout(() => {
-        const goToBreakdown = confirm('Would you like to go to the Breakdown Generation page now?');
-        if (goToBreakdown) {
-            window.location.href = 'generate-breakdown.html';
-        }
-    }, 500);
 };
 
 /**
