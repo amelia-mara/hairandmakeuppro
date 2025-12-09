@@ -98,6 +98,59 @@ function showTagInfo(tag) {
 }
 
 /**
+ * Find matching character from selected text
+ * @param {string} text - Selected text to match
+ * @returns {string|null} Matched character name or null
+ */
+function findMatchingCharacter(text) {
+    console.log('🔍 Finding character match for:', text);
+
+    const confirmedCharacters = state.confirmedCharacters ? Array.from(state.confirmedCharacters) : [];
+
+    if (confirmedCharacters.length === 0) {
+        console.warn('⚠️ No confirmed characters to match against');
+        return null;
+    }
+
+    // Normalize search text
+    const searchText = text.trim().toLowerCase();
+
+    // Try to find match
+    for (const character of confirmedCharacters) {
+        // Get character name parts
+        const characterLower = character.toLowerCase();
+        const parts = character.split(/\s+/);
+
+        // Check exact match (case-insensitive)
+        if (characterLower === searchText) {
+            console.log('✅ Exact match:', character);
+            return character;
+        }
+
+        // Check first name match
+        if (parts.length > 1 && parts[0].toLowerCase() === searchText) {
+            console.log('✅ First name match:', character);
+            return character;
+        }
+
+        // Check last name match
+        if (parts.length > 1 && parts[parts.length - 1].toLowerCase() === searchText) {
+            console.log('✅ Last name match:', character);
+            return character;
+        }
+
+        // Check if search text is contained in character name
+        if (characterLower.includes(searchText)) {
+            console.log('✅ Partial match:', character);
+            return character;
+        }
+    }
+
+    console.log('❌ No match found for:', text);
+    return null;
+}
+
+/**
  * Get all characters available in the current scene
  * @returns {Array} Array of character names
  */
@@ -136,65 +189,53 @@ function getAllCharactersInScene() {
 function populateCharacterDropdown(select) {
     const allCharacters = getAllCharactersInScene();
 
-    select.innerHTML = `
-        <option value="">General Note (no character)</option>
-        <option value="__ADD_NEW__" style="font-weight: bold; color: #667eea;">+ Add New Character</option>
-        ${allCharacters.length > 0 ? '<option disabled>──────────</option>' : ''}
-        ${allCharacters.map(char =>
-            `<option value="${escapeHtml(char)}">${escapeHtml(char)}</option>`
-        ).join('')}
-    `;
+    console.log('📋 Populating character dropdown');
 
-    // Add event listener for ADD_NEW option
-    select.addEventListener('change', function handleAddNew() {
-        if (this.value === '__ADD_NEW__') {
-            handleAddNewCharacter(select);
-        }
-    });
-}
+    // Clear existing
+    select.innerHTML = '';
 
-/**
- * Handle adding a new character via dropdown
- * @param {HTMLSelectElement} dropdown - The dropdown element
- */
-function handleAddNewCharacter(dropdown) {
-    // Create input field
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.placeholder = 'Character name (e.g., JOHN)';
-    input.className = 'modal-input';
-    input.style.textTransform = 'uppercase';
-    input.style.marginTop = '8px';
+    // Add "Auto-detect" option
+    const autoOption = document.createElement('option');
+    autoOption.value = '';
+    autoOption.textContent = 'Auto-detect from context';
+    select.appendChild(autoOption);
 
-    // Hide dropdown, show input
-    dropdown.style.display = 'none';
-    dropdown.parentNode.insertBefore(input, dropdown.nextSibling);
-    input.focus();
+    // Add separator
+    const separator1 = document.createElement('option');
+    separator1.disabled = true;
+    separator1.textContent = '──────────────';
+    select.appendChild(separator1);
 
-    // Handle input completion
-    const completeInput = () => {
-        const newName = input.value.trim().toUpperCase();
-        if (newName) {
-            // Add to system
-            addCharacterToSystem(newName);
-            // Update dropdown
-            populateCharacterDropdown(dropdown);
-            dropdown.value = newName;
-        } else {
-            // User canceled - reset dropdown
-            dropdown.value = '';
-        }
-        input.remove();
-        dropdown.style.display = 'block';
-    };
+    // Add confirmed characters
+    if (allCharacters.length > 0) {
+        allCharacters.forEach(char => {
+            const option = document.createElement('option');
+            option.value = char;
+            option.textContent = char;
+            select.appendChild(option);
+        });
+    } else {
+        const noCharsOption = document.createElement('option');
+        noCharsOption.disabled = true;
+        noCharsOption.textContent = '(Run "Detect & Review" first)';
+        select.appendChild(noCharsOption);
+    }
 
-    input.addEventListener('blur', completeInput);
-    input.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            completeInput();
-        }
-    });
+    // Add separator
+    const separator2 = document.createElement('option');
+    separator2.disabled = true;
+    separator2.textContent = '──────────────';
+    select.appendChild(separator2);
+
+    // Add "Create New Character" option
+    const newCharOption = document.createElement('option');
+    newCharOption.value = '__NEW_CHARACTER__';
+    newCharOption.textContent = '+ Add New Character';
+    newCharOption.style.color = 'var(--accent-gold)';
+    newCharOption.style.fontWeight = '600';
+    select.appendChild(newCharOption);
+
+    console.log('✅ Populated with', allCharacters.length, 'characters + New option');
 }
 
 /**
@@ -245,6 +286,8 @@ function addCharacterToSystem(characterName) {
 export function showTagPopup() {
     if (!currentSelection) return;
 
+    console.log('🏷️ Opening tag popup with text:', currentSelection.selectedText);
+
     // Populate popup - use correct ID 'tag-popup' (with hyphen)
     const popup = document.getElementById('tag-popup');
     if (!popup) {
@@ -268,9 +311,19 @@ export function showTagPopup() {
     if (characterSelect) {
         populateCharacterDropdown(characterSelect);
 
-        // Auto-select detected character if found
-        if (currentSelection.detectedCharacter) {
+        // AUTO-DETECT character from selected text
+        const matchedCharacter = findMatchingCharacter(currentSelection.selectedText);
+
+        if (matchedCharacter) {
+            characterSelect.value = matchedCharacter;
+            console.log('✅ Auto-selected character:', matchedCharacter);
+        } else if (currentSelection.detectedCharacter) {
+            // Fallback to context-based detection
             characterSelect.value = currentSelection.detectedCharacter;
+            console.log('✅ Context-detected character:', currentSelection.detectedCharacter);
+        } else {
+            characterSelect.value = '';
+            console.log('ℹ️ No auto-match, user can select or add new');
         }
     }
 
@@ -321,7 +374,18 @@ function handleCategoryChange() {
  * Handle character selection change to populate event dropdown
  */
 function handleCharacterChange() {
-    updateEventDropdown();
+    const select = document.getElementById('tag-character');
+    const value = select?.value;
+
+    console.log('👤 Character selection changed:', value);
+
+    if (value === '__NEW_CHARACTER__') {
+        // Show new character form
+        openNewCharacterForm();
+    } else {
+        // Update event dropdown for this character
+        updateEventDropdown();
+    }
 }
 
 /**
@@ -952,6 +1016,135 @@ export function initializeTagSystem() {
 }
 
 /**
+ * Open new character form modal
+ */
+function openNewCharacterForm() {
+    console.log('➕ Opening new character form');
+
+    // Get selected text to pre-fill name
+    const selectedText = document.getElementById('tag-selected-text')?.textContent || '';
+
+    // Pre-fill with selected text (converted to uppercase)
+    const nameInput = document.getElementById('new-char-name');
+    if (nameInput && selectedText) {
+        nameInput.value = selectedText.toUpperCase();
+    }
+
+    // Pre-fill scene number
+    const sceneInput = document.getElementById('new-char-first-scene');
+    if (sceneInput && state.currentScene !== null) {
+        sceneInput.value = state.currentScene + 1; // Scene number is 1-indexed
+    }
+
+    // Reset other fields
+    const importanceSelect = document.getElementById('new-char-importance');
+    if (importanceSelect) importanceSelect.value = 'supporting';
+
+    const notesTextarea = document.getElementById('new-char-notes');
+    if (notesTextarea) notesTextarea.value = '';
+
+    // Show modal
+    const modal = document.getElementById('new-character-modal');
+    if (modal) {
+        modal.style.display = 'flex';
+    }
+}
+
+/**
+ * Cancel new character creation
+ */
+function cancelNewCharacter() {
+    // Close modal
+    const modal = document.getElementById('new-character-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+
+    // Reset character dropdown to auto-detect
+    const select = document.getElementById('tag-character');
+    if (select) {
+        select.value = '';
+    }
+}
+
+/**
+ * Confirm and create new character
+ */
+function confirmNewCharacter() {
+    console.log('✅ Confirming new character');
+
+    try {
+        // Get form values
+        const name = document.getElementById('new-char-name')?.value.trim();
+        const firstScene = parseInt(document.getElementById('new-char-first-scene')?.value);
+        const importance = document.getElementById('new-char-importance')?.value;
+        const notes = document.getElementById('new-char-notes')?.value.trim();
+
+        // Validate
+        if (!name) {
+            alert('Please enter a character name');
+            return;
+        }
+
+        if (!firstScene || firstScene < 1) {
+            alert('Please enter a valid scene number');
+            return;
+        }
+
+        // Check if character already exists
+        const confirmedCharacters = state.confirmedCharacters ? Array.from(state.confirmedCharacters) : [];
+        if (confirmedCharacters.includes(name)) {
+            alert(`Character "${name}" already exists!`);
+            return;
+        }
+
+        console.log('📝 New character:', { name, firstScene, importance, notes });
+
+        // Add to system using existing function
+        addCharacterToSystem(name);
+
+        // Store additional metadata in masterContext
+        if (window.masterContext?.characters?.[name]) {
+            window.masterContext.characters[name].characterAnalysis = {
+                ...window.masterContext.characters[name].characterAnalysis,
+                importance: importance,
+                notes: notes,
+                addedManually: true,
+                addedAt: Date.now()
+            };
+        }
+
+        console.log('✅ Character added:', name);
+
+        // Close modal
+        const modal = document.getElementById('new-character-modal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+
+        // Update character dropdown in tag popup
+        const characterSelect = document.getElementById('tag-character');
+        if (characterSelect) {
+            populateCharacterDropdown(characterSelect);
+            characterSelect.value = name;
+        }
+
+        // Trigger event dropdown update
+        updateEventDropdown();
+
+        // Show success message
+        alert(`✅ Added new character: ${name}`);
+
+        // Save project
+        import('./export-handlers.js').then(module => module.saveProject());
+
+    } catch (error) {
+        console.error('❌ Error creating character:', error);
+        alert('Error creating character. Check console.');
+    }
+}
+
+/**
  * Debug function to inspect tag data across all scenes
  * Call from console: debugTags()
  */
@@ -1001,3 +1194,7 @@ window.saveTag = saveTag;
 window.renderAllHighlights = renderAllHighlights;
 window.handleTextSelection = handleTextSelection;
 window.debugTags = debugTags;
+window.openNewCharacterForm = openNewCharacterForm;
+window.cancelNewCharacter = cancelNewCharacter;
+window.confirmNewCharacter = confirmNewCharacter;
+window.findMatchingCharacter = findMatchingCharacter;
