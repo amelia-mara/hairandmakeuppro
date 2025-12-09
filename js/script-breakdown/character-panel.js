@@ -425,8 +425,8 @@ export function renderCharacterTabs() {
         return;
     }
 
-    // Convert confirmed characters Set to Array and sort alphabetically
-    const allConfirmedChars = Array.from(state.confirmedCharacters).sort();
+    // Convert confirmed characters Set to Array
+    const allConfirmedChars = Array.from(state.confirmedCharacters);
 
     // Filter to featured characters only (exclude extras, SAs, background)
     const featuredChars = allConfirmedChars.filter(charName => {
@@ -437,7 +437,22 @@ export function renderCharacterTabs() {
         return role !== 'extra' && role !== 'background' && role !== 'sa';
     });
 
-    console.log(`✓ Generating tabs for ${featuredChars.length} featured characters (filtered from ${allConfirmedChars.length} total):`, featuredChars);
+    // Sort by scene count (most appearances first), then alphabetically for ties
+    featuredChars.sort((a, b) => {
+        const countA = getCharacterSceneCount(a);
+        const countB = getCharacterSceneCount(b);
+
+        // If scene counts differ, sort by count (descending)
+        if (countB !== countA) {
+            return countB - countA;
+        }
+
+        // If scene counts are equal, sort alphabetically
+        return a.localeCompare(b);
+    });
+
+    console.log(`✓ Generating tabs for ${featuredChars.length} featured characters (sorted by scene count):`,
+        featuredChars.map(c => `${c} (${getCharacterSceneCount(c)} scenes)`));
 
     // Add tab for each featured character
     featuredChars.forEach(charName => {
@@ -723,16 +738,38 @@ window.showProfileView = function(characterName, viewType) {
  * @returns {string} HTML for comprehensive profile view
  */
 function renderProfileView(characterName) {
-    const masterContext = window.scriptMasterContext;
+    // Check multiple sources for master context (different code paths store it differently)
+    const masterContext = window.scriptMasterContext || window.masterContext;
     const narrativeContext = window.scriptNarrativeContext;
 
     // Get character data from master context (new format) or narrative context (old format)
     let characterData = null;
+
+    // Try exact match first
     if (masterContext?.characters?.[characterName]) {
         characterData = masterContext.characters[characterName];
-    } else if (narrativeContext?.characters) {
+    }
+    // Try case-insensitive match
+    else if (masterContext?.characters) {
+        const matchingKey = Object.keys(masterContext.characters).find(
+            key => key.toUpperCase() === characterName.toUpperCase()
+        );
+        if (matchingKey) {
+            characterData = masterContext.characters[matchingKey];
+        }
+    }
+    // Fall back to narrative context
+    else if (narrativeContext?.characters) {
         characterData = narrativeContext.characters.find(c => c.name === characterName);
     }
+
+    // Debug logging
+    console.log(`📋 Loading profile for ${characterName}:`, {
+        hasMasterContext: !!masterContext,
+        hasCharacters: !!masterContext?.characters,
+        characterKeys: Object.keys(masterContext?.characters || {}),
+        foundData: !!characterData
+    });
 
     // If no data available, show helpful message with debug option
     if (!characterData) {
@@ -743,9 +780,14 @@ function renderProfileView(characterName) {
                     No detailed character analysis available yet.<br>
                     Run initial script analysis to generate comprehensive character profiles.
                 </div>
-                <button class="btn-primary" onclick="window.debugCharacterProfile('${escapeHtml(characterName)}')" style="margin-top: 20px;">
-                    Check Data in Console
-                </button>
+                <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: center;">
+                    <button class="btn-primary" onclick="window.debugCharacterProfile('${escapeHtml(characterName)}')" style="padding: 8px 16px;">
+                        Check Data in Console
+                    </button>
+                    <button class="btn-secondary" onclick="window.rerunCharacterAnalysis && window.rerunCharacterAnalysis('${escapeHtml(characterName)}')" style="padding: 8px 16px;">
+                        Re-analyze Character
+                    </button>
+                </div>
             </div>
         `;
     }
@@ -2854,17 +2896,31 @@ document.addEventListener('click', (e) => {
 window.debugCharacterProfile = function(characterName) {
     console.log(`\n=== 🔍 Debugging Character Profile: ${characterName} ===\n`);
 
-    // Check Master Context (new comprehensive format)
-    console.log('📦 Master Context (window.scriptMasterContext):');
+    // Check window.masterContext (primary source)
+    console.log('📦 Master Context (window.masterContext):');
+    if (window.masterContext?.characters?.[characterName]) {
+        console.log('✅ Found in window.masterContext');
+        console.log(window.masterContext.characters[characterName]);
+    } else {
+        console.log('❌ Not found in window.masterContext');
+        if (window.masterContext?.characters) {
+            console.log('Available characters:', Object.keys(window.masterContext.characters));
+        } else {
+            console.log('window.masterContext not initialized or has no characters');
+        }
+    }
+
+    // Check window.scriptMasterContext (secondary source)
+    console.log('\n📦 Script Master Context (window.scriptMasterContext):');
     if (window.scriptMasterContext?.characters?.[characterName]) {
-        console.log('✅ Found in Master Context');
+        console.log('✅ Found in window.scriptMasterContext');
         console.log(window.scriptMasterContext.characters[characterName]);
     } else {
-        console.log('❌ Not found in Master Context');
-        if (window.scriptMasterContext) {
-            console.log('Available characters:', Object.keys(window.scriptMasterContext.characters || {}));
+        console.log('❌ Not found in window.scriptMasterContext');
+        if (window.scriptMasterContext?.characters) {
+            console.log('Available characters:', Object.keys(window.scriptMasterContext.characters));
         } else {
-            console.log('Master Context not initialized');
+            console.log('window.scriptMasterContext not initialized');
         }
     }
 
@@ -2884,17 +2940,21 @@ window.debugCharacterProfile = function(characterName) {
     }
 
     // Check State
-    console.log('\n💾 State Data (window.state):');
-    console.log('Cast Profiles:', window.state?.castProfiles?.[characterName] || 'Not found');
-    console.log('Character Looks:', window.state?.characterLooks?.[characterName] || 'Not found');
+    console.log('\n💾 State Data:');
+    console.log('Cast Profiles:', state?.castProfiles?.[characterName] || 'Not found');
+    console.log('Character Looks:', state?.characterLooks?.[characterName] || 'Not found');
+    console.log('Confirmed Characters:', state?.confirmedCharacters ? Array.from(state.confirmedCharacters) : 'Not set');
 
     // Check localStorage
     console.log('\n💿 LocalStorage:');
-    const storedMaster = localStorage.getItem('scriptMasterContext');
+    const storedMaster = localStorage.getItem('masterContext') || localStorage.getItem('scriptMasterContext');
     if (storedMaster) {
         try {
             const parsed = JSON.parse(storedMaster);
             console.log('Master Context in localStorage:', parsed.characters?.[characterName] ? '✅ Found' : '❌ Not found');
+            if (parsed.characters?.[characterName]) {
+                console.log('Character data from localStorage:', parsed.characters[characterName]);
+            }
         } catch (e) {
             console.log('Error parsing localStorage:', e);
         }
@@ -2905,9 +2965,10 @@ window.debugCharacterProfile = function(characterName) {
     console.log('\n=== End Debug ===\n');
 
     return {
-        masterContext: window.scriptMasterContext?.characters?.[characterName],
+        masterContext: window.masterContext?.characters?.[characterName],
+        scriptMasterContext: window.scriptMasterContext?.characters?.[characterName],
         narrativeContext: window.scriptNarrativeContext?.characters?.find(c => c.name === characterName),
-        castProfile: window.state?.castProfiles?.[characterName],
-        characterLooks: window.state?.characterLooks?.[characterName]
+        castProfile: state?.castProfiles?.[characterName],
+        characterLooks: state?.characterLooks?.[characterName]
     };
 };
