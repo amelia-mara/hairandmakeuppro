@@ -1614,8 +1614,11 @@
                             <div class="receipt-upload-zone" id="receipt-upload-zone" onclick="triggerReceiptUpload()">
                                 <div class="upload-icon">📄</div>
                                 <div class="upload-text">Drag & drop receipts here or click to browse</div>
-                                <div class="upload-subtext">Accepts JPG, PNG, HEIC, PDF (max 10MB each)</div>
+                                <div class="upload-subtext">JPG, PNG, HEIC recommended for auto-scan (PDF requires manual entry)</div>
                                 <input type="file" id="receipt-file-input" accept=".jpg,.jpeg,.png,.heic,.pdf,image/jpeg,image/png,image/heic,application/pdf" multiple style="display: none;" onchange="handleReceiptFiles(this.files)">
+                            </div>
+                            <div id="api-key-status" style="margin-top: 12px; padding: 12px; border-radius: 6px; font-size: 13px; display: none;">
+                                <!-- Dynamic API key status message -->
                             </div>
                         </div>
                     </div>
@@ -1986,7 +1989,7 @@
                 <div class="modal-title">Process Receipt</div>
                 <button class="modal-close" onclick="closeReceiptProcessingModal()">×</button>
             </div>
-            <div class="modal-body" style="display: flex; gap: 24px; padding: 0; max-height: calc(90vh - 140px);">
+            <div class="modal-body" style="display: flex; gap: 24px; padding: 0; max-height: calc(90vh - 140px); position: relative;">
                 <!-- Left: Receipt Viewer -->
                 <div class="receipt-viewer" style="flex: 1; min-width: 0; background: var(--bg-dark); display: flex; flex-direction: column;">
                     <div class="viewer-controls" style="padding: 12px; border-bottom: 1px solid var(--border); display: flex; gap: 8px;">
@@ -1999,6 +2002,13 @@
                     <div id="receipt-image-container" style="flex: 1; overflow: auto; padding: 16px; display: flex; align-items: center; justify-content: center;">
                         <img id="receipt-image-preview" src="" alt="Receipt" style="max-width: 100%; transition: transform 0.2s ease;">
                     </div>
+                </div>
+
+                <!-- OCR Loading Overlay -->
+                <div id="ocr-loading-overlay" style="display: none; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); z-index: 100; justify-content: center; align-items: center; flex-direction: column; gap: 16px;">
+                    <div class="loading-spinner" style="width: 48px; height: 48px; border: 4px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                    <div style="color: var(--text-primary); font-size: 16px; font-weight: 500;">Processing receipt with AI...</div>
+                    <div style="color: var(--text-secondary); font-size: 14px;">This may take a few seconds</div>
                 </div>
 
                 <!-- Right: Extracted Data Form -->
@@ -2216,7 +2226,7 @@
                 document.querySelectorAll('.tab-content').forEach(content => {
                     content.classList.remove('active');
                 });
-                
+
                 const targetTab = document.getElementById(`${tabName}-tab`);
                 if (targetTab) {
                     targetTab.classList.add('active');
@@ -2224,6 +2234,11 @@
 
                 // Update calculations when switching tabs
                 this.updateAllCalculations();
+
+                // Update API key status when switching to receipts tab
+                if (tabName === 'receipts') {
+                    updateApiKeyStatus();
+                }
             }
 
             renderCategories() {
@@ -3746,16 +3761,51 @@
         }
 
         function saveApiSettings() {
-            const apiKey = document.getElementById('claude-api-key').value;
+            const apiKey = document.getElementById('claude-api-key').value.trim();
+
+            // Validate API key format if provided
+            if (apiKey && !apiKey.startsWith('sk-ant-')) {
+                budgetManager.showNotification('Invalid API key format. Claude API keys should start with "sk-ant-"', 'warning');
+                return;
+            }
+
             budgetManager.data.apiSettings.claudeApiKey = apiKey;
             budgetManager.save();
             closeModal('settingsModal');
             budgetManager.showNotification('API settings saved', 'success');
+
+            // Update the API key status message
+            updateApiKeyStatus();
         }
 
         // Receipt Upload Functions
         function triggerReceiptUpload() {
             document.getElementById('receipt-file-input').click();
+        }
+
+        function updateApiKeyStatus() {
+            const statusEl = document.getElementById('api-key-status');
+            if (!statusEl) return;
+
+            const hasApiKey = budgetManager.data.apiSettings.claudeApiKey &&
+                              budgetManager.data.apiSettings.claudeApiKey.startsWith('sk-ant-');
+
+            if (hasApiKey) {
+                statusEl.style.display = 'none';
+            } else {
+                statusEl.style.display = 'block';
+                statusEl.style.background = 'rgba(232, 168, 124, 0.1)';
+                statusEl.style.border = '1px solid rgba(232, 168, 124, 0.3)';
+                statusEl.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 16px;">⚙️</span>
+                        <div>
+                            <div style="color: var(--text-primary); font-weight: 500;">Set up your API key for automatic receipt scanning</div>
+                            <div style="color: var(--text-secondary); margin-top: 4px;">Click "API Settings" above to add your Claude API key. Without it, you can still enter receipt data manually.</div>
+                        </div>
+                    </div>
+                `;
+            }
         }
 
         function handleReceiptFiles(files) {
@@ -3934,12 +3984,24 @@
                 throw new Error('API key not configured. Please set your Claude API key in Settings.');
             }
 
+            // Validate API key format
+            if (!apiKey.startsWith('sk-ant-')) {
+                throw new Error('Invalid API key format. Claude API keys should start with "sk-ant-"');
+            }
+
             // Extract base64 data from data URL
             const base64Data = imageBase64.split(',')[1];
+
+            if (!base64Data) {
+                throw new Error('Invalid image data. Please try uploading the receipt again.');
+            }
+
+            console.log('Calling Claude API with image data length:', base64Data.length, 'file type:', fileType);
 
             // Determine media type
             let mediaType = fileType;
             if (mediaType === 'image/heic') mediaType = 'image/jpeg'; // Claude doesn't support HEIC directly
+            if (!mediaType || mediaType === '') mediaType = 'image/jpeg'; // Default fallback
 
             const prompt = `Analyse this receipt/invoice image and extract the following data in JSON format:
 {
@@ -4005,23 +4067,56 @@ Return ONLY the JSON object, no markdown formatting or explanation.`;
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error?.message || 'API request failed');
+                let errorMessage = 'API request failed';
+                try {
+                    const errorData = await response.json();
+                    console.error('API Error Response:', errorData);
+                    errorMessage = errorData.error?.message || errorMessage;
+                } catch (e) {
+                    console.error('Could not parse error response');
+                }
+
+                // Provide more specific error messages based on status code
+                if (response.status === 401) {
+                    throw new Error('Invalid API key. Please check your Claude API key in Settings.');
+                } else if (response.status === 429) {
+                    throw new Error('Rate limit exceeded. Please wait a moment and try again.');
+                } else if (response.status === 400) {
+                    throw new Error('Bad request: ' + errorMessage);
+                } else if (response.status >= 500) {
+                    throw new Error('Claude API server error. Please try again later.');
+                }
+
+                throw new Error(errorMessage);
             }
 
             const data = await response.json();
+            console.log('Claude API Response:', data);
+
+            if (!data.content || !data.content[0] || !data.content[0].text) {
+                console.error('Unexpected API response structure:', data);
+                throw new Error('Unexpected response from Claude API');
+            }
+
             const content = data.content[0].text;
+            console.log('OCR Response content:', content);
 
             // Parse the JSON response
             try {
                 return JSON.parse(content);
             } catch (e) {
+                console.log('Direct JSON parse failed, trying to extract JSON from text');
                 // Try to extract JSON from the response
                 const jsonMatch = content.match(/\{[\s\S]*\}/);
                 if (jsonMatch) {
-                    return JSON.parse(jsonMatch[0]);
+                    try {
+                        return JSON.parse(jsonMatch[0]);
+                    } catch (parseError) {
+                        console.error('Failed to parse extracted JSON:', parseError);
+                    }
                 }
-                throw new Error('Could not parse OCR response');
+                console.error('Could not parse OCR response. Raw content:', content);
+                throw new Error('Could not parse receipt data from AI response');
             }
         }
 
@@ -4030,6 +4125,17 @@ Return ONLY the JSON object, no markdown formatting or explanation.`;
         async function processReceipt(receiptId) {
             const receipt = budgetManager.data.receipts.find(r => r.id === receiptId);
             if (!receipt) return;
+
+            // Check for PDF files - OCR requires images
+            const isPdf = receipt.file_type === 'application/pdf';
+            if (isPdf) {
+                budgetManager.showNotification('PDF files cannot be processed with OCR. Please upload a JPG/PNG image of your receipt, or enter details manually.', 'warning');
+            }
+
+            // Check API key before processing
+            if (!receipt.ocr_response && !isPdf && !budgetManager.data.apiSettings.claudeApiKey) {
+                budgetManager.showNotification('Please set your Claude API key in Settings to enable automatic receipt reading. Click the gear icon in the header.', 'warning');
+            }
 
             currentReceiptId = receiptId;
             currentReceiptData = {
@@ -4041,41 +4147,93 @@ Return ONLY the JSON object, no markdown formatting or explanation.`;
             // Show the processing modal
             document.getElementById('receiptProcessingModal').classList.add('active');
 
-            // Set the image
+            // Set the image (or PDF placeholder)
             const img = document.getElementById('receipt-image-preview');
-            img.src = receipt.file_data;
-            img.style.transform = 'rotate(0deg) scale(1)';
+            if (isPdf) {
+                img.src = '';
+                img.alt = 'PDF files cannot be previewed - enter data manually';
+                img.style.display = 'none';
+                document.getElementById('receipt-image-container').innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                        <div style="font-size: 64px; margin-bottom: 16px;">📄</div>
+                        <div style="font-size: 16px; font-weight: 500; color: var(--text-primary);">PDF Receipt</div>
+                        <div style="margin-top: 8px;">PDF files cannot be auto-scanned.</div>
+                        <div style="margin-top: 4px;">Please enter the receipt details manually.</div>
+                    </div>
+                `;
+            } else {
+                // Restore image element if it was replaced with PDF message
+                const imgContainer = document.getElementById('receipt-image-container');
+                if (!imgContainer.querySelector('img')) {
+                    imgContainer.innerHTML = '<img id="receipt-image-preview" src="" alt="Receipt" style="max-width: 100%; transition: transform 0.2s ease;">';
+                }
+                const imgEl = document.getElementById('receipt-image-preview');
+                imgEl.src = receipt.file_data;
+                imgEl.style.transform = 'rotate(0deg) scale(1)';
+                imgEl.style.display = 'block';
+            }
 
             // Clear previous data
             document.getElementById('receipt-supplier').value = receipt.supplier || '';
             document.getElementById('receipt-date').value = receipt.receipt_date || '';
             document.getElementById('receipt-invoice-number').value = receipt.invoice_number || '';
             document.getElementById('receipt-line-items').innerHTML = '';
+            document.getElementById('receipt-ocr-total').textContent = '£0.00';
+            document.getElementById('receipt-items-total').textContent = '£0.00';
+
+            // Hide loading overlay initially
+            const loadingOverlay = document.getElementById('ocr-loading-overlay');
+            loadingOverlay.style.display = 'none';
 
             // Check if already has OCR data
             if (receipt.ocr_response) {
                 populateFromOCR(receipt.ocr_response);
+            } else if (isPdf) {
+                // PDF files - manual entry only
+                addReceiptLineItem();
             } else {
                 // Call Claude API for OCR
                 if (!budgetManager.data.apiSettings.claudeApiKey) {
-                    budgetManager.showNotification('Please set your Claude API key in Settings first', 'warning');
                     addReceiptLineItem(); // Add empty line item for manual entry
                     return;
                 }
 
                 try {
-                    budgetManager.showNotification('Processing receipt with AI...', 'info');
+                    // Show loading overlay
+                    loadingOverlay.style.display = 'flex';
+
+                    console.log('Starting OCR processing for receipt:', receiptId);
                     const ocrResult = await callClaudeAPI(receipt.file_data, receipt.file_type);
+                    console.log('OCR Result:', ocrResult);
+
+                    // Hide loading overlay
+                    loadingOverlay.style.display = 'none';
 
                     // Store OCR response
                     receipt.ocr_response = ocrResult;
                     budgetManager.save();
 
                     populateFromOCR(ocrResult);
-                    budgetManager.showNotification('Receipt processed successfully', 'success');
+                    budgetManager.showNotification('Receipt processed successfully! Review the extracted data below.', 'success');
                 } catch (error) {
+                    // Hide loading overlay on error
+                    loadingOverlay.style.display = 'none';
+
                     console.error('OCR Error:', error);
-                    budgetManager.showNotification('OCR failed: ' + error.message + '. You can enter data manually.', 'warning');
+                    console.error('Error details:', error.message, error.stack);
+
+                    let errorMessage = 'OCR failed';
+                    if (error.message.includes('API key')) {
+                        errorMessage = 'Invalid API key. Please check your Claude API key in Settings.';
+                    } else if (error.message.includes('network') || error.message.includes('fetch')) {
+                        errorMessage = 'Network error. Please check your internet connection.';
+                    } else if (error.message.includes('rate') || error.message.includes('limit')) {
+                        errorMessage = 'Rate limit exceeded. Please wait a moment and try again.';
+                    } else {
+                        errorMessage = error.message || 'Unknown error occurred';
+                    }
+
+                    budgetManager.showNotification(errorMessage + ' You can enter receipt data manually.', 'danger');
                     addReceiptLineItem(); // Add empty line item for manual entry
                 }
             }
