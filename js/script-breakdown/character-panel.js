@@ -1223,14 +1223,31 @@ function renderTimelineView(characterName) {
 
 /**
  * Get character continuity events with scene data
+ * Now includes auto-detected events from masterContext
  * @param {string} characterName - Character name
  * @returns {Array} Array of continuity event objects
  */
 function getCharacterContinuityEvents(characterName) {
-    const events = state.continuityEvents[characterName] || [];
+    const manualEvents = state.continuityEvents[characterName] || [];
+    const autoDetectedEvents = getAutoDetectedEvents(characterName);
 
-    // Enrich events with scene information
-    return events.map(event => {
+    // Combine manual and auto-detected events
+    const allEvents = [...manualEvents];
+
+    // Add auto-detected events that don't already exist as manual events
+    autoDetectedEvents.forEach(autoEvent => {
+        const isDuplicate = manualEvents.some(manual =>
+            manual.startScene === autoEvent.startScene &&
+            manual.type === autoEvent.type &&
+            manual.character === autoEvent.character
+        );
+        if (!isDuplicate) {
+            allEvents.push(autoEvent);
+        }
+    });
+
+    // Enrich events with scene information and ensure IDs
+    return allEvents.map(event => {
         const enrichedEvent = { ...event };
 
         // Ensure event has an ID
@@ -1240,6 +1257,142 @@ function getCharacterContinuityEvents(characterName) {
 
         return enrichedEvent;
     });
+}
+
+/**
+ * Get auto-detected continuity events from masterContext
+ * Extracts events from appearanceChanges and descriptionTags
+ * @param {string} characterName - Character name
+ * @returns {Array} Array of auto-detected event objects
+ */
+function getAutoDetectedEvents(characterName) {
+    const events = [];
+    const masterContext = window.masterContext || window.scriptMasterContext;
+
+    if (!masterContext) return events;
+
+    // Source 1: appearanceChanges from Phase 5
+    if (masterContext.appearanceChanges && Array.isArray(masterContext.appearanceChanges)) {
+        masterContext.appearanceChanges.forEach(change => {
+            if (change.character?.toUpperCase() === characterName.toUpperCase()) {
+                events.push({
+                    id: `auto-${change.character}-${change.start_scene}-${change.change_type}`,
+                    character: characterName,
+                    type: mapChangeTypeToEventType(change.change_type),
+                    category: change.change_type,
+                    description: change.description || change.visual_notes || 'Auto-detected event',
+                    startScene: change.start_scene,
+                    endScene: change.end_scene || null,
+                    source: 'auto-detected',
+                    progression: [],
+                    visualNotes: change.visual_notes || ''
+                });
+            }
+        });
+    }
+
+    // Source 2: descriptionTags that indicate changes
+    if (masterContext.descriptionTags && Array.isArray(masterContext.descriptionTags)) {
+        const changeCategories = ['injury', 'fight', 'weather', 'illness', 'time_passage', 'condition'];
+
+        // Group tags by scene for change detection
+        const tagsByScene = {};
+        masterContext.descriptionTags.forEach(tag => {
+            if (tag.character?.toUpperCase() === characterName.toUpperCase() &&
+                changeCategories.includes(tag.category)) {
+
+                const sceneKey = tag.scene;
+                if (!tagsByScene[sceneKey]) {
+                    tagsByScene[sceneKey] = [];
+                }
+                tagsByScene[sceneKey].push(tag);
+            }
+        });
+
+        // Create events from grouped tags
+        Object.entries(tagsByScene).forEach(([scene, tags]) => {
+            tags.forEach(tag => {
+                // Check if this event already exists
+                const existingEvent = events.find(e =>
+                    e.startScene === parseInt(scene) &&
+                    e.category === tag.category
+                );
+
+                if (!existingEvent) {
+                    events.push({
+                        id: `auto-tag-${characterName}-${scene}-${tag.category}`,
+                        character: characterName,
+                        type: mapChangeTypeToEventType(tag.category),
+                        category: tag.category,
+                        description: tag.quote || 'Auto-detected from script',
+                        startScene: parseInt(scene),
+                        endScene: null,
+                        source: 'auto-detected',
+                        progression: [],
+                        visualNotes: ''
+                    });
+                }
+            });
+        });
+    }
+
+    // Source 3: Character's extractedElements
+    const charData = masterContext.characters?.[characterName];
+    if (charData?.extractedElements?.mentionedAppearanceChanges) {
+        charData.extractedElements.mentionedAppearanceChanges.forEach(change => {
+            const existingEvent = events.find(e =>
+                e.startScene === change.scene &&
+                e.category === change.type
+            );
+
+            if (!existingEvent) {
+                events.push({
+                    id: `auto-extracted-${characterName}-${change.scene}-${change.type}`,
+                    character: characterName,
+                    type: mapChangeTypeToEventType(change.type),
+                    category: change.type,
+                    description: change.description || 'Auto-detected change',
+                    startScene: change.scene,
+                    endScene: null,
+                    source: 'auto-detected',
+                    progression: [],
+                    visualNotes: change.notes || ''
+                });
+            }
+        });
+    }
+
+    // Filter out dismissed events
+    const dismissedEvents = state.dismissedAutoEvents || new Set();
+    const filteredEvents = events.filter(e => !dismissedEvents.has(e.id));
+
+    // Sort by start scene
+    filteredEvents.sort((a, b) => a.startScene - b.startScene);
+
+    return filteredEvents;
+}
+
+/**
+ * Map change type strings to standardized event types
+ * @param {string} changeType - Raw change type from detection
+ * @returns {string} Standardized event type
+ */
+function mapChangeTypeToEventType(changeType) {
+    const typeMap = {
+        'injury': 'Injury',
+        'injury_acquired': 'Injury',
+        'fight': 'Fight/Action',
+        'weather': 'Weather Effect',
+        'illness': 'Illness/Health',
+        'time_passage': 'Time Passage',
+        'condition': 'Condition Change',
+        'hair': 'Hair Change',
+        'wardrobe': 'Wardrobe Change',
+        'makeup': 'Makeup Change',
+        'physical': 'Physical Change',
+        'physical_appearance': 'Physical Change'
+    };
+    return typeMap[changeType?.toLowerCase()] || changeType || 'Event';
 }
 
 /**
@@ -1309,11 +1462,16 @@ function renderProgressionStages(event, characterName) {
 
 /**
  * Render continuity events timeline
+ * Now shows auto-detected events with visual indicator
  * @param {string} characterName - Character name
  * @returns {string} HTML for continuity events timeline
  */
 function renderContinuityEventsTimeline(characterName) {
     const events = getCharacterContinuityEvents(characterName);
+
+    // Separate auto-detected from manual events
+    const autoEvents = events.filter(e => e.source === 'auto-detected');
+    const manualEvents = events.filter(e => e.source !== 'auto-detected');
 
     if (events.length === 0) {
         return `
@@ -1328,40 +1486,109 @@ function renderContinuityEventsTimeline(characterName) {
         `;
     }
 
+    // Get event type color
+    const getEventColor = (category) => {
+        const colors = {
+            'injury': '#FF6347', // Coral
+            'fight': '#FF6347',
+            'weather': '#87CEEB', // Sky blue
+            'illness': '#90EE90', // Light green
+            'time_passage': '#DDA0DD', // Plum
+            'condition': '#87CEEB',
+            'hair': '#E6E6FA', // Lavender
+            'wardrobe': '#98FB98', // Pale green
+            'makeup': '#FFB6C1', // Pink
+            'physical': '#FFD700' // Gold
+        };
+        return colors[category?.toLowerCase()] || '#C9A961';
+    };
+
     return `
         <div class="continuity-events-section">
-            ${events.map(event => `
-                <div class="event-timeline" data-event-id="${event.id}">
-                    <div class="event-timeline-header">
-                        <div class="event-info">
-                            <span class="event-type-badge">${escapeHtml(event.category || event.type || 'Event')}</span>
-                            <span class="event-name">${escapeHtml(event.description || 'Untitled Event')}</span>
-                        </div>
-                        <div class="event-meta">
-                            <span class="event-duration">
-                                ${event.startScene ? `Scene ${event.startScene}` : 'Not started'}
-                                ${event.endScene ? ` - ${event.endScene}` : ' (ongoing)'}
-                            </span>
-                        </div>
-                    </div>
-
-                    <div class="progression-bar">
-                        ${renderProgressionStages(event, characterName)}
-                    </div>
-
-                    <div class="event-timeline-actions">
-                        <button class="event-action-btn" onclick="fillProgressionGaps('${escapeHtml(characterName).replace(/'/g, "\\'")}', '${event.id}')" title="Use AI to fill progression gaps">
-                            ✨ Fill Gaps with AI
-                        </button>
-                        <button class="event-action-btn" onclick="editContinuityEvent('${escapeHtml(characterName).replace(/'/g, "\\'")}', '${event.id}')" title="Edit event details">
-                            ✏️ Edit Event
-                        </button>
-                        <button class="event-action-btn danger" onclick="deleteContinuityEvent('${escapeHtml(characterName).replace(/'/g, "\\'")}', '${event.id}')" title="Delete event">
-                            🗑️ Delete
-                        </button>
-                    </div>
+            <!-- Auto-detected events section -->
+            ${autoEvents.length > 0 ? `
+                <div class="auto-events-header" style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--glass-border);">
+                    <span style="color: var(--accent-gold); font-weight: 600;">⚡ Auto-Detected Events</span>
+                    <span style="font-size: 0.8em; opacity: 0.7;">(${autoEvents.length} found from script analysis)</span>
                 </div>
-            `).join('')}
+                ${autoEvents.map(event => `
+                    <div class="event-timeline auto-detected" data-event-id="${event.id}" style="background: rgba(201, 169, 97, 0.1); border: 1px solid var(--accent-gold); border-radius: 8px; padding: 12px; margin-bottom: 10px;">
+                        <div class="event-timeline-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                            <div class="event-info">
+                                <span class="event-type-badge" style="background: ${getEventColor(event.category)}; color: #000; padding: 2px 8px; border-radius: 4px; font-size: 0.75em; font-weight: 600;">
+                                    ${escapeHtml(event.type || event.category || 'Event')}
+                                </span>
+                                <span class="auto-badge" style="background: var(--accent-gold); color: var(--bg-dark); padding: 2px 6px; border-radius: 4px; font-size: 0.7em; margin-left: 4px;">
+                                    AUTO
+                                </span>
+                            </div>
+                            <div class="event-meta" style="font-size: 0.85em; opacity: 0.8;">
+                                Scene ${event.startScene || '?'}${event.endScene ? ` - ${event.endScene}` : ' (ongoing)'}
+                            </div>
+                        </div>
+                        <div class="event-description" style="font-size: 0.9em; margin-bottom: 8px; line-height: 1.4;">
+                            ${escapeHtml(event.description || 'No description')}
+                        </div>
+                        ${event.visualNotes ? `
+                            <div class="visual-notes" style="font-size: 0.8em; opacity: 0.8; font-style: italic; margin-bottom: 8px;">
+                                Visual notes: ${escapeHtml(event.visualNotes)}
+                            </div>
+                        ` : ''}
+                        <div class="event-timeline-actions" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <button class="event-action-btn" onclick="confirmAutoEvent('${escapeHtml(characterName).replace(/'/g, "\\'")}', '${event.id}')" title="Confirm and track this event" style="background: var(--accent-gold); color: var(--bg-dark); border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8em;">
+                                ✓ Confirm & Track
+                            </button>
+                            <button class="event-action-btn" onclick="setEventEndScene('${escapeHtml(characterName).replace(/'/g, "\\'")}', '${event.id}')" title="Set when this event ends" style="background: var(--glass-bg); border: 1px solid var(--glass-border); padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8em;">
+                                Set End Scene
+                            </button>
+                            <button class="event-action-btn" onclick="dismissAutoEvent('${escapeHtml(characterName).replace(/'/g, "\\'")}', '${event.id}')" title="Dismiss this detection" style="background: transparent; border: 1px solid var(--glass-border); padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8em; opacity: 0.7;">
+                                Dismiss
+                            </button>
+                        </div>
+                    </div>
+                `).join('')}
+            ` : ''}
+
+            <!-- Manual/Confirmed events section -->
+            ${manualEvents.length > 0 ? `
+                <div class="manual-events-header" style="display: flex; align-items: center; gap: 8px; margin-top: 16px; margin-bottom: 12px;">
+                    <span style="font-weight: 600;">Tracked Events</span>
+                    <span style="font-size: 0.8em; opacity: 0.7;">(${manualEvents.length} events)</span>
+                </div>
+                ${manualEvents.map(event => `
+                    <div class="event-timeline" data-event-id="${event.id}" style="background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 8px; padding: 12px; margin-bottom: 10px;">
+                        <div class="event-timeline-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                            <div class="event-info">
+                                <span class="event-type-badge" style="background: ${getEventColor(event.category)}; color: #000; padding: 2px 8px; border-radius: 4px; font-size: 0.75em; font-weight: 600;">
+                                    ${escapeHtml(event.category || event.type || 'Event')}
+                                </span>
+                            </div>
+                            <div class="event-meta" style="font-size: 0.85em; opacity: 0.8;">
+                                Scene ${event.startScene || '?'}${event.endScene ? ` - ${event.endScene}` : ' (ongoing)'}
+                            </div>
+                        </div>
+                        <div class="event-description" style="font-size: 0.9em; margin-bottom: 8px;">
+                            ${escapeHtml(event.description || 'Untitled Event')}
+                        </div>
+
+                        <div class="progression-bar">
+                            ${renderProgressionStages(event, characterName)}
+                        </div>
+
+                        <div class="event-timeline-actions" style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;">
+                            <button class="event-action-btn" onclick="fillProgressionGaps('${escapeHtml(characterName).replace(/'/g, "\\'")}', '${event.id}')" title="Use AI to fill progression gaps" style="background: var(--glass-bg); border: 1px solid var(--glass-border); padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8em;">
+                                ✨ Fill Gaps with AI
+                            </button>
+                            <button class="event-action-btn" onclick="editContinuityEvent('${escapeHtml(characterName).replace(/'/g, "\\'")}', '${event.id}')" title="Edit event details" style="background: var(--glass-bg); border: 1px solid var(--glass-border); padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8em;">
+                                ✏️ Edit
+                            </button>
+                            <button class="event-action-btn danger" onclick="deleteContinuityEvent('${escapeHtml(characterName).replace(/'/g, "\\'")}', '${event.id}')" title="Delete event" style="background: transparent; border: 1px solid #ef4444; color: #ef4444; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8em;">
+                                🗑️ Delete
+                            </button>
+                        </div>
+                    </div>
+                `).join('')}
+            ` : ''}
 
             <button class="add-event-btn" onclick="addContinuityEvent('${escapeHtml(characterName).replace(/'/g, "\\'")}')">
                 + Add Continuity Event
@@ -2971,4 +3198,264 @@ window.debugCharacterProfile = function(characterName) {
         castProfile: state?.castProfiles?.[characterName],
         characterLooks: state?.characterLooks?.[characterName]
     };
+};
+
+// ============================================================================
+// AUTO-DETECTED EVENT MANAGEMENT
+// ============================================================================
+
+// Initialize storage for dismissed auto-detected events
+if (!state.dismissedAutoEvents) {
+    state.dismissedAutoEvents = new Set();
+    // Try to restore from localStorage
+    try {
+        const stored = localStorage.getItem('dismissedAutoEvents');
+        if (stored) {
+            state.dismissedAutoEvents = new Set(JSON.parse(stored));
+        }
+    } catch (e) {
+        console.warn('Could not restore dismissed auto events:', e);
+    }
+}
+
+/**
+ * Save dismissed auto events to localStorage
+ */
+function saveDismissedAutoEvents() {
+    try {
+        localStorage.setItem('dismissedAutoEvents', JSON.stringify([...state.dismissedAutoEvents]));
+    } catch (e) {
+        console.warn('Could not save dismissed auto events:', e);
+    }
+}
+
+/**
+ * Confirm an auto-detected event and add it to the tracked continuity events
+ * @param {string} characterName - Character name
+ * @param {string} eventId - Auto-detected event ID
+ */
+window.confirmAutoEvent = async function(characterName, eventId) {
+    console.log(`Confirming auto-detected event: ${eventId} for ${characterName}`);
+
+    // Get the auto-detected event
+    const autoEvents = getAutoDetectedEvents(characterName);
+    const autoEvent = autoEvents.find(e => e.id === eventId);
+
+    if (!autoEvent) {
+        console.error('Auto-detected event not found:', eventId);
+        showToast('Event not found', 'error');
+        return;
+    }
+
+    // Initialize continuity events storage if needed
+    if (!state.continuityEvents) {
+        state.continuityEvents = {};
+    }
+    if (!state.continuityEvents[characterName]) {
+        state.continuityEvents[characterName] = [];
+    }
+
+    // Create a confirmed event from the auto-detected one
+    const confirmedEvent = {
+        id: `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        character: characterName,
+        type: autoEvent.type,
+        category: autoEvent.category,
+        description: autoEvent.description,
+        startScene: autoEvent.startScene,
+        endScene: autoEvent.endScene,
+        source: 'confirmed',
+        originalAutoId: eventId,
+        progression: autoEvent.progression || [],
+        visualNotes: autoEvent.visualNotes || '',
+        confirmedAt: new Date().toISOString()
+    };
+
+    // Add to confirmed events
+    state.continuityEvents[characterName].push(confirmedEvent);
+
+    // Dismiss the auto-detected event so it doesn't show again
+    state.dismissedAutoEvents.add(eventId);
+    saveDismissedAutoEvents();
+
+    // Save project
+    const { saveProject } = await import('./export-handlers.js');
+    saveProject();
+
+    // Show success notification
+    showToast(`Event confirmed and added to tracking for ${characterName}`, 'success');
+
+    // Refresh the events view
+    const contentId = `${characterName.toLowerCase().replace(/\s+/g, '-')}-content`;
+    const contentDiv = document.getElementById(contentId);
+    if (contentDiv) {
+        contentDiv.innerHTML = renderEventsView(characterName);
+    }
+
+    console.log('Confirmed event:', confirmedEvent);
+};
+
+/**
+ * Set the end scene for an auto-detected or tracked event
+ * @param {string} characterName - Character name
+ * @param {string} eventId - Event ID
+ */
+window.setEventEndScene = async function(characterName, eventId) {
+    console.log(`Setting end scene for event: ${eventId}`);
+
+    // Get current scene index
+    const currentSceneIndex = state.currentSceneIndex !== undefined ? state.currentSceneIndex : (state.currentScene || 0);
+    const currentScene = state.scenes[currentSceneIndex];
+    const sceneNumber = currentScene?.number || (currentSceneIndex + 1);
+
+    // Check if it's a tracked event first
+    if (state.continuityEvents?.[characterName]) {
+        const trackedEvent = state.continuityEvents[characterName].find(e => e.id === eventId);
+        if (trackedEvent) {
+            trackedEvent.endScene = sceneNumber;
+            const { saveProject } = await import('./export-handlers.js');
+            saveProject();
+            showToast(`Event end scene set to Scene ${sceneNumber}`, 'success');
+
+            // Refresh the view
+            const contentId = `${characterName.toLowerCase().replace(/\s+/g, '-')}-content`;
+            const contentDiv = document.getElementById(contentId);
+            if (contentDiv) {
+                contentDiv.innerHTML = renderEventsView(characterName);
+            }
+            return;
+        }
+    }
+
+    // If it's an auto-detected event, confirm it first then set end scene
+    const autoEvents = getAutoDetectedEvents(characterName);
+    const autoEvent = autoEvents.find(e => e.id === eventId);
+
+    if (autoEvent) {
+        // Confirm the event first
+        await window.confirmAutoEvent(characterName, eventId);
+
+        // Then set the end scene on the newly confirmed event
+        const confirmedEvents = state.continuityEvents?.[characterName] || [];
+        const newlyConfirmed = confirmedEvents.find(e => e.originalAutoId === eventId);
+        if (newlyConfirmed) {
+            newlyConfirmed.endScene = sceneNumber;
+            const { saveProject } = await import('./export-handlers.js');
+            saveProject();
+            showToast(`Event confirmed and end scene set to Scene ${sceneNumber}`, 'success');
+
+            // Refresh the view
+            const contentId = `${characterName.toLowerCase().replace(/\s+/g, '-')}-content`;
+            const contentDiv = document.getElementById(contentId);
+            if (contentDiv) {
+                contentDiv.innerHTML = renderEventsView(characterName);
+            }
+        }
+        return;
+    }
+
+    showToast('Event not found', 'error');
+};
+
+/**
+ * Dismiss an auto-detected event (mark as not relevant)
+ * @param {string} characterName - Character name
+ * @param {string} eventId - Auto-detected event ID
+ */
+window.dismissAutoEvent = function(characterName, eventId) {
+    console.log(`Dismissing auto-detected event: ${eventId} for ${characterName}`);
+
+    // Add to dismissed set
+    state.dismissedAutoEvents.add(eventId);
+    saveDismissedAutoEvents();
+
+    showToast('Event dismissed', 'info');
+
+    // Refresh the events view
+    const contentId = `${characterName.toLowerCase().replace(/\s+/g, '-')}-content`;
+    const contentDiv = document.getElementById(contentId);
+    if (contentDiv) {
+        contentDiv.innerHTML = renderEventsView(characterName);
+    }
+};
+
+/**
+ * Clear all dismissed auto events (for testing/reset purposes)
+ */
+window.clearDismissedAutoEvents = function() {
+    state.dismissedAutoEvents.clear();
+    saveDismissedAutoEvents();
+    showToast('Dismissed events cleared', 'info');
+};
+
+/**
+ * Add a progression stage to a tracked event
+ * @param {string} characterName - Character name
+ * @param {string} eventId - Event ID
+ * @param {number} sceneNumber - Scene number for this progression stage
+ * @param {string} description - Description of progression at this point
+ */
+window.addEventProgression = async function(characterName, eventId, sceneNumber, description) {
+    if (!state.continuityEvents?.[characterName]) {
+        showToast('No tracked events for this character', 'error');
+        return;
+    }
+
+    const event = state.continuityEvents[characterName].find(e => e.id === eventId);
+    if (!event) {
+        showToast('Event not found', 'error');
+        return;
+    }
+
+    // Initialize progression array if needed
+    if (!event.progression) {
+        event.progression = [];
+    }
+
+    // Add progression stage
+    event.progression.push({
+        sceneNumber: sceneNumber,
+        description: description,
+        addedAt: new Date().toISOString()
+    });
+
+    // Sort by scene number
+    event.progression.sort((a, b) => a.sceneNumber - b.sceneNumber);
+
+    const { saveProject } = await import('./export-handlers.js');
+    saveProject();
+    showToast(`Progression stage added at Scene ${sceneNumber}`, 'success');
+
+    // Refresh the view
+    const contentId = `${characterName.toLowerCase().replace(/\s+/g, '-')}-content`;
+    const contentDiv = document.getElementById(contentId);
+    if (contentDiv) {
+        contentDiv.innerHTML = renderEventsView(characterName);
+    }
+};
+
+/**
+ * Delete a tracked continuity event
+ * @param {string} characterName - Character name
+ * @param {string} eventId - Event ID to delete
+ */
+window.deleteTrackedEvent = async function(characterName, eventId) {
+    if (!state.continuityEvents?.[characterName]) {
+        return;
+    }
+
+    const index = state.continuityEvents[characterName].findIndex(e => e.id === eventId);
+    if (index !== -1) {
+        state.continuityEvents[characterName].splice(index, 1);
+        const { saveProject } = await import('./export-handlers.js');
+        saveProject();
+        showToast('Event deleted', 'info');
+
+        // Refresh the view
+        const contentId = `${characterName.toLowerCase().replace(/\s+/g, '-')}-content`;
+        const contentDiv = document.getElementById(contentId);
+        if (contentDiv) {
+            contentDiv.innerHTML = renderEventsView(characterName);
+        }
+    }
 };
