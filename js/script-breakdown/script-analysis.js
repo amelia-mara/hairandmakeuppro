@@ -40,30 +40,36 @@ export async function analyzeScript(scriptText, scenes, progressCallback) {
         characters: null,
         continuityEvents: null,
         timeline: null,
+        appearanceDescriptions: null,
         success: false,
         errors: []
     };
 
     try {
         // Phase 1: Scene Structure Extraction
-        if (progressCallback) progressCallback('Phase 1/4: Extracting scene structure...', 10);
+        if (progressCallback) progressCallback('Phase 1/5: Extracting scene structure...', 8);
         results.sceneStructure = await extractSceneStructure(scriptText, scenes);
         console.log('Phase 1 complete: Scene structure extracted');
 
         // Phase 2: Character Discovery & Categorization
-        if (progressCallback) progressCallback('Phase 2/4: Discovering and categorizing characters...', 35);
+        if (progressCallback) progressCallback('Phase 2/5: Discovering and categorizing characters...', 25);
         results.characters = await discoverAndCategorizeCharacters(scriptText, scenes, results.sceneStructure);
         console.log('Phase 2 complete: Characters discovered');
 
         // Phase 3: Continuity Event Extraction
-        if (progressCallback) progressCallback('Phase 3/4: Extracting continuity events...', 60);
+        if (progressCallback) progressCallback('Phase 3/5: Extracting continuity events...', 45);
         results.continuityEvents = await extractContinuityEvents(scriptText, scenes, results.characters);
         console.log('Phase 3 complete: Continuity events extracted');
 
         // Phase 4: Story Day Timeline Construction
-        if (progressCallback) progressCallback('Phase 4/4: Constructing story timeline...', 85);
+        if (progressCallback) progressCallback('Phase 4/5: Constructing story timeline...', 60);
         results.timeline = await constructTimeline(scenes, results.sceneStructure);
         console.log('Phase 4 complete: Timeline constructed');
+
+        // Phase 5: Character Appearance & Description Extraction (NEW)
+        if (progressCallback) progressCallback('Phase 5/5: Extracting character appearances & descriptions...', 80);
+        results.appearanceDescriptions = await extractCharacterAppearances(scriptText, scenes, results.characters);
+        console.log('Phase 5 complete: Character appearances extracted');
 
         // Build master context from all phases
         if (progressCallback) progressCallback('Finalizing analysis...', 95);
@@ -439,6 +445,237 @@ IMPORTANT:
 - Mark uncertainty with confidence levels: "high", "medium", "low"
 - Don't guess wildly - mark uncertainty
 - Return ONLY valid JSON`;
+}
+
+/**
+ * PHASE 5: Character Appearance & Description Extraction
+ * Extracts all descriptive phrases about characters for H&MU breakdown
+ */
+async function extractCharacterAppearances(scriptText, scenes, characterData) {
+    console.log('Extracting character appearance descriptions...');
+
+    const characterNames = characterData?.characters
+        ? characterData.characters.map(c => c.name)
+        : [];
+
+    if (characterNames.length === 0) {
+        console.warn('No characters found for appearance extraction');
+        return { descriptions: [], tags: [] };
+    }
+
+    // Build scene summaries with full text for description extraction
+    const sceneSummaries = scenes.map((scene, idx) => {
+        const heading = scene.heading || `Scene ${idx + 1}`;
+        const content = scene.content || scene.text || '';
+        return `[SCENE ${idx + 1}] ${heading}\n${content}`;
+    }).join('\n\n---\n\n');
+
+    // Truncate if needed
+    const truncatedSummaries = sceneSummaries.length > 100000
+        ? sceneSummaries.substring(0, 100000) + '\n[Additional scenes truncated...]'
+        : sceneSummaries;
+
+    const prompt = buildAppearanceExtractionPrompt(truncatedSummaries, characterNames);
+
+    try {
+        const response = await callAIWithRetry(prompt, 8000);
+        const parsed = parseJSONResponse(response);
+
+        // Also extract descriptions via pattern matching as backup
+        const patternDescriptions = extractDescriptionsViaPatterns(scriptText, scenes, characterNames);
+
+        // Merge AI and pattern results
+        return mergeDescriptionResults(parsed, patternDescriptions);
+    } catch (error) {
+        console.warn('AI appearance extraction failed, using pattern fallback:', error);
+        return extractDescriptionsViaPatterns(scriptText, scenes, characterNames);
+    }
+}
+
+/**
+ * Build the character appearance extraction prompt (PROMPT 5)
+ */
+function buildAppearanceExtractionPrompt(sceneSummaries, characterNames) {
+    return `You are a Hair & Makeup professional analyzing a screenplay to extract ALL descriptions of character appearance.
+
+CHARACTERS TO TRACK: ${characterNames.join(', ')}
+
+YOUR TASK:
+Find and extract EVERY phrase that describes a character's:
+1. PHYSICAL APPEARANCE: Age, build, height, skin, facial features, distinctive marks
+2. HAIR: Color, style, length, condition, changes (cuts, grows, gets wet/messy)
+3. MAKEUP/FACE: Natural look, made-up, injuries (cuts, bruises), illness signs
+4. WARDROBE: Clothing descriptions, costume changes, uniforms, accessories
+5. CONDITION: Wet, dirty, sweaty, bloody, disheveled, polished, tired-looking
+
+EXTRACTION RULES:
+1. Extract the EXACT quote from the script (word-for-word)
+2. Note which scene number it appears in
+3. Identify which character it describes
+4. Categorize the description type
+5. Note if this represents a CHANGE from a previous state
+
+SCREENPLAY:
+${sceneSummaries}
+
+Return JSON:
+{
+  "character_descriptions": [
+    {
+      "character": "GWEN LAWSON",
+      "scene_number": 1,
+      "quote": "GWEN LAWSON (late 30s), carries herself with quiet determination. A small tattoo peeks from under her sleeve.",
+      "category": "physical_appearance",
+      "elements": {
+        "age": "late 30s",
+        "demeanor": "quiet determination",
+        "distinctive_features": ["small tattoo on wrist"]
+      }
+    },
+    {
+      "character": "PETER LAWSON",
+      "scene_number": 47,
+      "quote": "Peter's forehead hits the edge of the pier, blood beginning to trickle down his face.",
+      "category": "injury",
+      "elements": {
+        "injury_type": "forehead wound",
+        "visual_effect": "blood trickling down face"
+      },
+      "is_change": true,
+      "change_type": "injury_acquired"
+    },
+    {
+      "character": "SARAH",
+      "scene_number": 23,
+      "quote": "Sarah emerges from the shower, hair dripping wet, wrapped in a towel.",
+      "category": "condition",
+      "elements": {
+        "hair_state": "dripping wet",
+        "wardrobe": "wrapped in towel"
+      },
+      "is_change": true,
+      "change_type": "temporary_state"
+    }
+  ],
+  "wardrobe_mentions": [
+    {
+      "character": "GWEN LAWSON",
+      "scene_number": 1,
+      "description": "simple cotton dress",
+      "context": "arriving on ferry"
+    }
+  ],
+  "appearance_changes": [
+    {
+      "character": "PETER LAWSON",
+      "change_type": "injury",
+      "start_scene": 47,
+      "description": "forehead wound from hitting pier",
+      "visual_notes": "Fresh cut with blood initially, should show healing progression"
+    }
+  ]
+}
+
+IMPORTANT:
+- Be thorough - extract EVERY description, even minor ones
+- Include action lines that describe appearance (not just character intros)
+- Note costume/wardrobe for EVERY scene if mentioned
+- Track appearance CHANGES (injuries, getting wet, getting dirty, etc.)
+- Return ONLY valid JSON (no markdown, no code fences)`;
+}
+
+/**
+ * Extract descriptions via pattern matching (fallback)
+ */
+function extractDescriptionsViaPatterns(scriptText, scenes, characterNames) {
+    const descriptions = [];
+    const wardrobeMentions = [];
+    const appearanceChanges = [];
+
+    // Patterns for different description types
+    const patterns = {
+        age: /\(?\s*(\d+s?|early|mid|late)\s*(twenties|thirties|forties|fifties|sixties|teens)\s*\)?/gi,
+        physical: /\b(tall|short|slim|heavyset|muscular|athletic|thin|stocky|petite|large)\b/gi,
+        hair: /\b(hair|blonde|brunette|redhead|gray|grey|bald|curly|straight|wavy|ponytail|braids?|beard|stubble|shaved)\b/gi,
+        injury: /\b(cut|cuts|bleeding|blood|bruise|bruised|wound|wounded|scar|scarred|bandage|bandaged|injured)\b/gi,
+        condition: /\b(wet|soaked|drenched|sweaty|dirty|muddy|disheveled|tired|exhausted|pale|flushed)\b/gi,
+        wardrobe: /\b(wearing|wears|dressed|dress|suit|uniform|jacket|coat|shirt|pants|jeans|skirt|gown|robe|towel|pajamas)\b/gi
+    };
+
+    let currentScene = 0;
+    const lines = scriptText.split('\n');
+
+    lines.forEach((line, lineIdx) => {
+        // Track scene changes
+        if (/^\s*\d*\s*(INT|EXT)/i.test(line)) {
+            currentScene++;
+        }
+
+        // Check if line mentions any character
+        characterNames.forEach(charName => {
+            const charPattern = new RegExp('\\b' + charName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+
+            if (charPattern.test(line)) {
+                // Check each pattern type
+                Object.entries(patterns).forEach(([category, pattern]) => {
+                    if (pattern.test(line)) {
+                        descriptions.push({
+                            character: charName,
+                            scene_number: currentScene,
+                            quote: line.trim().substring(0, 300),
+                            category: category,
+                            line_number: lineIdx + 1
+                        });
+                        pattern.lastIndex = 0; // Reset regex
+                    }
+                });
+            }
+        });
+    });
+
+    return {
+        character_descriptions: descriptions,
+        wardrobe_mentions: wardrobeMentions,
+        appearance_changes: appearanceChanges
+    };
+}
+
+/**
+ * Merge AI and pattern-based description results
+ */
+function mergeDescriptionResults(aiResults, patternResults) {
+    const merged = {
+        character_descriptions: [],
+        wardrobe_mentions: [],
+        appearance_changes: []
+    };
+
+    // Add AI results first (higher quality)
+    if (aiResults?.character_descriptions) {
+        merged.character_descriptions.push(...aiResults.character_descriptions);
+    }
+    if (aiResults?.wardrobe_mentions) {
+        merged.wardrobe_mentions.push(...aiResults.wardrobe_mentions);
+    }
+    if (aiResults?.appearance_changes) {
+        merged.appearance_changes.push(...aiResults.appearance_changes);
+    }
+
+    // Add unique pattern results that weren't in AI results
+    if (patternResults?.character_descriptions) {
+        patternResults.character_descriptions.forEach(pd => {
+            const isDuplicate = merged.character_descriptions.some(
+                ad => ad.character === pd.character &&
+                      ad.scene_number === pd.scene_number &&
+                      ad.category === pd.category
+            );
+            if (!isDuplicate) {
+                merged.character_descriptions.push(pd);
+            }
+        });
+    }
+
+    return merged;
 }
 
 // ============================================================================
@@ -907,30 +1144,70 @@ function buildHeuristicTimeline(scenes) {
 function buildMasterContext(results, scenes) {
     const characters = {};
 
+    // Get appearance descriptions from Phase 5
+    const appearanceData = results.appearanceDescriptions || {};
+    const charDescriptions = appearanceData.character_descriptions || [];
+    const wardrobeMentions = appearanceData.wardrobe_mentions || [];
+    const appearanceChanges = appearanceData.appearance_changes || [];
+
     // Convert character array to object format
     if (results.characters?.characters) {
         results.characters.characters.forEach(char => {
             const name = char.name;
-            characters[name] = {
-                scriptDescriptions: char.physical_description ? [{
+
+            // Find all descriptions for this character from Phase 5
+            const thisCharDescriptions = charDescriptions.filter(d =>
+                d.character?.toUpperCase() === name.toUpperCase()
+            );
+            const thisCharWardrobe = wardrobeMentions.filter(w =>
+                w.character?.toUpperCase() === name.toUpperCase()
+            );
+            const thisCharChanges = appearanceChanges.filter(c =>
+                c.character?.toUpperCase() === name.toUpperCase()
+            );
+
+            // Build scriptDescriptions array from Phase 5 data
+            const scriptDescriptions = [];
+            if (char.physical_description) {
+                scriptDescriptions.push({
                     text: char.physical_description,
                     sceneNumber: char.first_appearance,
-                    type: 'description'
-                }] : [],
-                physicalProfile: {
-                    age: char.age || null,
-                    gender: char.gender || null,
-                    build: char.build || null
-                },
+                    type: 'introduction'
+                });
+            }
+            thisCharDescriptions.forEach(desc => {
+                scriptDescriptions.push({
+                    text: desc.quote,
+                    sceneNumber: desc.scene_number,
+                    type: desc.category || 'description',
+                    elements: desc.elements || {}
+                });
+            });
+
+            // Extract physical profile from descriptions
+            const physicalProfile = buildPhysicalProfile(char, thisCharDescriptions);
+
+            // Extract visual profile from descriptions
+            const visualProfile = buildVisualProfile(thisCharDescriptions, thisCharWardrobe);
+
+            // Build continuity notes from changes
+            const continuityNotes = buildContinuityNotes(char, thisCharChanges);
+
+            characters[name] = {
+                scriptDescriptions,
+                physicalProfile,
                 characterAnalysis: {
                     role: char.category?.toLowerCase() || 'supporting',
                     arc: char.character_arc || '',
-                    personality: ''
+                    personality: extractPersonality(thisCharDescriptions),
+                    occupation: '',
+                    socialClass: '',
+                    emotionalJourney: '',
+                    relationships: char.relationships?.map(r =>
+                        typeof r === 'string' ? r : `${r.character}: ${r.type}`
+                    ) || []
                 },
-                visualProfile: {
-                    overallVibe: '',
-                    styleChoices: ''
-                },
+                visualProfile,
                 storyPresence: {
                     firstAppearance: char.first_appearance || 1,
                     lastAppearance: char.last_appearance || scenes.length,
@@ -940,16 +1217,21 @@ function buildMasterContext(results, scenes) {
                     speakingScenes: char.scenes_appeared || []
                 },
                 extractedElements: {
-                    mentionedWardrobe: [],
-                    mentionedAppearanceChanges: [],
+                    mentionedWardrobe: thisCharWardrobe.map(w => ({
+                        scene: w.scene_number,
+                        description: w.description,
+                        context: w.context
+                    })),
+                    mentionedAppearanceChanges: thisCharChanges.map(c => ({
+                        scene: c.start_scene,
+                        type: c.change_type,
+                        description: c.description,
+                        notes: c.visual_notes
+                    })),
                     physicalActions: [],
                     environmentalExposure: []
                 },
-                continuityNotes: {
-                    keyLooks: '',
-                    transformations: char.character_arc || '',
-                    signature: ''
-                },
+                continuityNotes,
                 relationships: char.relationships || [],
                 category: char.category || 'SUPPORTING',
                 firstAppearance: char.first_appearance || 1,
@@ -959,6 +1241,15 @@ function buildMasterContext(results, scenes) {
             };
         });
     }
+
+    // Store raw description data for script tagging
+    const descriptionTags = charDescriptions.map(d => ({
+        character: d.character,
+        scene: d.scene_number,
+        quote: d.quote,
+        category: d.category,
+        lineNumber: d.line_number
+    }));
 
     // Build story structure from timeline
     const storyStructure = {
@@ -991,11 +1282,204 @@ function buildMasterContext(results, scenes) {
         emotionalBeats: {},
         dialogueReferences: {},
         majorEvents,
+        descriptionTags, // For highlighting in script
+        wardrobeMentions, // Raw wardrobe data
+        appearanceChanges, // Raw appearance change data
         continuityNotes: 'Generated by comprehensive multi-pass analysis',
         createdAt: new Date().toISOString(),
-        analysisVersion: '3.0-multipass',
+        analysisVersion: '4.0-with-appearances',
         statistics: results.characters?.statistics || {}
     };
+}
+
+/**
+ * Build physical profile from character data and descriptions
+ */
+function buildPhysicalProfile(char, descriptions) {
+    const profile = {
+        age: null,
+        gender: null,
+        ethnicity: null,
+        height: null,
+        build: null,
+        hairColor: null,
+        hairStyle: null,
+        eyeColor: null,
+        distinctiveFeatures: []
+    };
+
+    // Extract from base character data
+    if (char.age) profile.age = char.age;
+    if (char.gender) profile.gender = char.gender;
+    if (char.build) profile.build = char.build;
+
+    // Extract from descriptions
+    descriptions.forEach(desc => {
+        const elements = desc.elements || {};
+
+        // Age
+        if (elements.age && !profile.age) {
+            profile.age = elements.age;
+        }
+
+        // Hair
+        if (elements.hair_color && !profile.hairColor) {
+            profile.hairColor = elements.hair_color;
+        }
+        if (elements.hair_style && !profile.hairStyle) {
+            profile.hairStyle = elements.hair_style;
+        }
+
+        // Build/height
+        if (elements.build && !profile.build) {
+            profile.build = elements.build;
+        }
+        if (elements.height && !profile.height) {
+            profile.height = elements.height;
+        }
+
+        // Distinctive features
+        if (elements.distinctive_features) {
+            const features = Array.isArray(elements.distinctive_features)
+                ? elements.distinctive_features
+                : [elements.distinctive_features];
+            profile.distinctiveFeatures.push(...features);
+        }
+
+        // Try to extract from quote text if elements not parsed
+        if (desc.quote && desc.category === 'physical_appearance') {
+            extractPhysicalFromQuote(desc.quote, profile);
+        }
+    });
+
+    return profile;
+}
+
+/**
+ * Extract physical attributes from a quote
+ */
+function extractPhysicalFromQuote(quote, profile) {
+    const lowerQuote = quote.toLowerCase();
+
+    // Age patterns
+    const ageMatch = lowerQuote.match(/\(?\s*(early|mid|late)?\s*(\d+s?|twenties|thirties|forties|fifties|sixties|teens)\s*\)?/);
+    if (ageMatch && !profile.age) {
+        profile.age = ageMatch[0].replace(/[()]/g, '').trim();
+    }
+
+    // Hair color
+    const hairColors = ['blonde', 'brunette', 'redhead', 'auburn', 'gray', 'grey', 'black', 'brown', 'white', 'silver'];
+    hairColors.forEach(color => {
+        if (lowerQuote.includes(color) && !profile.hairColor) {
+            profile.hairColor = color.charAt(0).toUpperCase() + color.slice(1);
+        }
+    });
+
+    // Build
+    const builds = ['tall', 'short', 'slim', 'thin', 'heavyset', 'muscular', 'athletic', 'stocky', 'petite'];
+    builds.forEach(build => {
+        if (lowerQuote.includes(build) && !profile.build) {
+            profile.build = build.charAt(0).toUpperCase() + build.slice(1);
+        }
+    });
+}
+
+/**
+ * Build visual profile from descriptions and wardrobe
+ */
+function buildVisualProfile(descriptions, wardrobeMentions) {
+    const profile = {
+        overallVibe: '',
+        styleChoices: '',
+        groomingHabits: '',
+        makeupStyle: '',
+        quirks: '',
+        inspirations: []
+    };
+
+    // Build style choices from wardrobe mentions
+    if (wardrobeMentions.length > 0) {
+        const wardrobeDescriptions = wardrobeMentions
+            .map(w => w.description)
+            .filter(Boolean);
+        if (wardrobeDescriptions.length > 0) {
+            profile.styleChoices = wardrobeDescriptions.slice(0, 5).join('; ');
+        }
+    }
+
+    // Extract vibe from condition/physical descriptions
+    const conditionDescs = descriptions.filter(d =>
+        d.category === 'condition' || d.category === 'physical_appearance'
+    );
+    if (conditionDescs.length > 0) {
+        const vibeWords = [];
+        conditionDescs.forEach(d => {
+            const elements = d.elements || {};
+            if (elements.demeanor) vibeWords.push(elements.demeanor);
+            if (elements.overall_vibe) vibeWords.push(elements.overall_vibe);
+        });
+        if (vibeWords.length > 0) {
+            profile.overallVibe = vibeWords.join(', ');
+        }
+    }
+
+    return profile;
+}
+
+/**
+ * Build continuity notes from appearance changes
+ */
+function buildContinuityNotes(char, changes) {
+    const notes = {
+        keyLooks: '',
+        transformations: char.character_arc || '',
+        signature: ''
+    };
+
+    if (changes.length > 0) {
+        // Build key looks from changes
+        const keyLooks = changes.map(c =>
+            `Scene ${c.start_scene}: ${c.description}`
+        );
+        notes.keyLooks = keyLooks.join('; ');
+
+        // Build transformations
+        const transformations = changes
+            .filter(c => c.change_type !== 'temporary_state')
+            .map(c => c.visual_notes || c.description);
+        if (transformations.length > 0) {
+            notes.transformations = transformations.join('; ');
+        }
+    }
+
+    return notes;
+}
+
+/**
+ * Extract personality traits from descriptions
+ */
+function extractPersonality(descriptions) {
+    const traits = [];
+
+    descriptions.forEach(desc => {
+        const elements = desc.elements || {};
+        if (elements.demeanor) traits.push(elements.demeanor);
+        if (elements.personality) traits.push(elements.personality);
+
+        // Check quote for personality indicators
+        const quote = desc.quote?.toLowerCase() || '';
+        const personalityWords = [
+            'determined', 'nervous', 'confident', 'shy', 'bold',
+            'gentle', 'fierce', 'calm', 'anxious', 'composed'
+        ];
+        personalityWords.forEach(word => {
+            if (quote.includes(word) && !traits.includes(word)) {
+                traits.push(word);
+            }
+        });
+    });
+
+    return traits.slice(0, 5).join(', ');
 }
 
 /**
