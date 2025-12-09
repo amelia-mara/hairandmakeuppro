@@ -17,6 +17,7 @@ import { renderCharacterTabs, renderCharacterTabPanels } from './character-panel
 import { detectTimeOfDay, detectIntExt, extractLocation } from './utils.js';
 import { callAI } from './ai-integration.js';
 import { renderAllHighlights } from './tag-system.js';
+import { getAllVersions, getCurrentVersion, exportVersionData } from './version-manager.js';
 
 // Dynamic import for script-analysis module (loaded when needed to avoid circular deps)
 let scriptAnalysisModule = null;
@@ -83,6 +84,10 @@ function normalizeCharacterNameLocal(name) {
  * Export project data as JSON file
  */
 export function exportData() {
+    // Get version information
+    const versions = getAllVersions();
+    const currentVersion = getCurrentVersion();
+
     const data = {
         project: state.currentProject,
         scenes: state.scenes,
@@ -94,14 +99,42 @@ export function exportData() {
         continuityEvents: state.continuityEvents,
         sceneTimeline: state.sceneTimeline,
         scriptTags: state.scriptTags,
-        exportDate: new Date().toISOString()
+        exportDate: new Date().toISOString(),
+
+        // Version metadata
+        versionInfo: {
+            currentVersion: currentVersion ? {
+                id: currentVersion.version_id,
+                name: currentVersion.version_name,
+                color: currentVersion.version_color,
+                uploadDate: currentVersion.upload_date,
+                sceneCount: currentVersion.scenes?.length || 0,
+                breakdownCompletion: currentVersion.metadata?.breakdown_completion || 0
+            } : null,
+            totalVersions: versions.length,
+            allVersions: versions.map(v => ({
+                id: v.version_id,
+                name: v.version_name,
+                color: v.version_color,
+                uploadDate: v.upload_date,
+                isCurrent: v.is_current,
+                sceneCount: v.scenes?.length || 0,
+                breakdownCompletion: v.metadata?.breakdown_completion || 0
+            }))
+        },
+
+        // Full version data (optional - for complete backups)
+        script_versions: state.currentProject?.script_versions || []
     };
 
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${(state.currentProject?.name || 'project').replace(/\s+/g, '-')}-breakdown.json`;
+
+    // Include version name in filename if available
+    const versionSuffix = currentVersion?.version_name ? `_${currentVersion.version_name}` : '';
+    a.download = `${(state.currentProject?.name || 'project').replace(/\s+/g, '-')}${versionSuffix}-breakdown.json`;
     a.click();
     URL.revokeObjectURL(url);
 }

@@ -6,6 +6,7 @@
 import { state } from './main.js';
 import { formatSceneRange, getComplexityIcon, extractLocation, detectTimeOfDay, detectIntExt } from './utils.js';
 import { detectAIElements, generateDescription } from './ai-integration.js';
+import { getAllVersions, getCurrentVersion, getVersionById, copySceneFromVersion } from './version-manager.js';
 
 // ============================================================================
 // ELEMENT CATEGORIES
@@ -138,13 +139,85 @@ function renderSceneBreakdown(sceneIndex) {
     const environment = analysis.environments?.[`scene_${sceneIndex}`];
     const emotional = analysis.emotionalBeats?.[`scene_${sceneIndex}`];
 
+    // Check if there are other versions to copy from
+    const versions = getAllVersions();
+    const currentVersion = getCurrentVersion();
+    const otherVersionsWithBreakdown = versions.filter(v =>
+        v.version_id !== currentVersion?.version_id &&
+        v.breakdowns &&
+        v.breakdowns[(sceneIndex + 1).toString()]
+    );
+    const showCopyFromVersion = otherVersionsWithBreakdown.length > 0;
+
+    // Check if this breakdown needs review (inherited with changes)
+    const needsReview = breakdown._needs_review;
+    const inheritedChanges = breakdown._changes || [];
+
     panel.innerHTML = `
         <div class="scene-breakdown-wrapper">
             <!-- Scene Header -->
             <div class="breakdown-scene-header">
-                <h3>Scene ${sceneIndex + 1}</h3>
-                <div class="scene-heading">${escapeHtml(scene.heading)}</div>
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <h3>Scene ${sceneIndex + 1}</h3>
+                        <div class="scene-heading">${escapeHtml(scene.heading)}</div>
+                    </div>
+                    ${showCopyFromVersion ? `
+                        <button onclick="openCopyFromVersionModal(${sceneIndex})"
+                                class="copy-version-btn"
+                                style="
+                                    padding: 6px 12px;
+                                    background: transparent;
+                                    border: 1px solid var(--glass-border);
+                                    border-radius: 4px;
+                                    color: var(--text-muted);
+                                    cursor: pointer;
+                                    font-size: 0.8em;
+                                    white-space: nowrap;
+                                "
+                                title="Copy breakdown from another version">
+                            Copy from Version
+                        </button>
+                    ` : ''}
+                </div>
             </div>
+
+            ${needsReview ? `
+                <div class="needs-review-banner" style="
+                    padding: 12px;
+                    background: rgba(251, 191, 36, 0.1);
+                    border: 1px solid rgba(251, 191, 36, 0.3);
+                    border-radius: 8px;
+                    margin-bottom: 16px;
+                ">
+                    <div style="color: #fbbf24; font-weight: 600; margin-bottom: 4px;">
+                        ⚠️ Breakdown Needs Review
+                    </div>
+                    <div style="font-size: 0.85em; color: var(--text-muted);">
+                        This scene was changed in the new script version:
+                        <ul style="margin: 8px 0 0 16px; padding: 0;">
+                            ${inheritedChanges.map(c => `
+                                <li style="margin: 4px 0; color: ${c.severity === 'high' ? '#ef4444' : 'inherit'};">
+                                    ${c.type.startsWith('hmu') ? '🎨 ' : ''}${c.message}
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                    <button onclick="markBreakdownReviewed(${sceneIndex})" style="
+                        margin-top: 8px;
+                        padding: 6px 12px;
+                        background: var(--accent-gold);
+                        border: none;
+                        border-radius: 4px;
+                        color: var(--bg-dark);
+                        cursor: pointer;
+                        font-size: 0.85em;
+                        font-weight: 600;
+                    ">
+                        Mark as Reviewed
+                    </button>
+                </div>
+            ` : ''}
 
             ${alerts.length > 0 ? `
                 <div class="alerts-bar">
@@ -2289,6 +2362,177 @@ window.viewEventInTimeline = function(eventId) {
 
 // Expose renderTimelineEntries for AI integration
 window.renderTimelineEntries = renderTimelineEntries;
+
+// ============================================================================
+// COPY FROM VERSION FUNCTIONALITY
+// ============================================================================
+
+/**
+ * Open modal to copy breakdown from another version
+ */
+window.openCopyFromVersionModal = function(sceneIndex) {
+    const sceneNumber = (sceneIndex + 1).toString();
+    const versions = getAllVersions();
+    const currentVersion = getCurrentVersion();
+
+    // Find versions that have a breakdown for this scene
+    const versionsWithBreakdown = versions.filter(v =>
+        v.version_id !== currentVersion?.version_id &&
+        v.breakdowns &&
+        v.breakdowns[sceneNumber]
+    );
+
+    if (versionsWithBreakdown.length === 0) {
+        alert('No other versions have breakdowns for this scene.');
+        return;
+    }
+
+    let modal = document.getElementById('copy-from-version-modal');
+
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'copy-from-version-modal';
+        modal.className = 'modal';
+        document.body.appendChild(modal);
+    }
+
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-title">Copy Breakdown from Another Version</div>
+
+            <div style="margin-bottom: 16px; color: var(--text-muted); font-size: 0.9em;">
+                Select a version to copy the breakdown for Scene ${sceneIndex + 1}.
+                This will <strong>replace</strong> the current breakdown.
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 12px; max-height: 400px; overflow-y: auto;">
+                ${versionsWithBreakdown.map(v => {
+                    const breakdown = v.breakdowns[sceneNumber];
+                    const castCount = breakdown.cast?.length || 0;
+                    const hasElements = Object.keys(breakdown.elements || {}).length > 0;
+
+                    return `
+                        <div style="
+                            padding: 16px;
+                            background: var(--card-bg);
+                            border: 1px solid var(--glass-border);
+                            border-radius: 8px;
+                            cursor: pointer;
+                        "
+                        onclick="performCopyFromVersion(${sceneIndex}, '${v.version_id}')"
+                        onmouseover="this.style.borderColor='var(--accent-gold)'"
+                        onmouseout="this.style.borderColor='var(--glass-border)'">
+                            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                                <span style="
+                                    width: 14px;
+                                    height: 14px;
+                                    border-radius: 50%;
+                                    background: ${v.version_color};
+                                    border: 1px solid rgba(0,0,0,0.2);
+                                "></span>
+                                <span style="font-weight: 600;">${v.version_name}</span>
+                                <span style="color: var(--text-muted); font-size: 0.85em;">
+                                    ${new Date(v.upload_date).toLocaleDateString()}
+                                </span>
+                            </div>
+                            <div style="font-size: 0.85em; color: var(--text-muted);">
+                                ${castCount} character${castCount !== 1 ? 's' : ''} •
+                                ${hasElements ? 'Has elements' : 'No elements'}
+                                ${breakdown.synopsis ? ` • Synopsis: "${breakdown.synopsis.substring(0, 50)}..."` : ''}
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+
+            <div class="modal-actions" style="margin-top: 20px;">
+                <button class="modal-btn" onclick="closeCopyFromVersionModal()">Cancel</button>
+            </div>
+        </div>
+    `;
+
+    modal.style.display = 'flex';
+};
+
+/**
+ * Close copy from version modal
+ */
+window.closeCopyFromVersionModal = function() {
+    const modal = document.getElementById('copy-from-version-modal');
+    if (modal) modal.style.display = 'none';
+};
+
+/**
+ * Execute copy breakdown from another version
+ */
+window.performCopyFromVersion = function(sceneIndex, sourceVersionId) {
+    const sceneNumber = (sceneIndex + 1).toString();
+
+    if (!confirm('This will replace the current breakdown for this scene. Continue?')) {
+        return;
+    }
+
+    const success = copySceneFromVersion(sceneNumber, sourceVersionId);
+
+    if (success) {
+        closeCopyFromVersionModal();
+        renderBreakdownPanel();
+
+        // Show success toast
+        if (window.showToast) {
+            window.showToast('Breakdown copied successfully', 'success');
+        } else {
+            const toast = document.createElement('div');
+            toast.style.cssText = `
+                position: fixed;
+                bottom: 24px;
+                right: 24px;
+                padding: 12px 24px;
+                background: #22c55e;
+                color: white;
+                border-radius: 8px;
+                z-index: 10001;
+                font-size: 0.9em;
+                font-weight: 600;
+            `;
+            toast.textContent = 'Breakdown copied successfully';
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+    } else {
+        alert('Failed to copy breakdown. Please try again.');
+    }
+};
+
+/**
+ * Mark breakdown as reviewed (clear needs_review flag)
+ */
+window.markBreakdownReviewed = function(sceneIndex) {
+    const breakdown = state.sceneBreakdowns[sceneIndex];
+    if (breakdown) {
+        delete breakdown._needs_review;
+        delete breakdown._changes;
+
+        // Also update in current version
+        const currentVersion = getCurrentVersion();
+        if (currentVersion) {
+            const sceneNumber = (sceneIndex + 1).toString();
+            if (currentVersion.breakdowns[sceneNumber]) {
+                delete currentVersion.breakdowns[sceneNumber]._needs_review;
+                delete currentVersion.breakdowns[sceneNumber]._changes;
+            }
+        }
+
+        // Save and re-render
+        saveToLocalStorage();
+        renderBreakdownPanel();
+
+        // Show confirmation
+        if (window.showToast) {
+            window.showToast('Breakdown marked as reviewed', 'success');
+        }
+    }
+};
 
 // ============================================================================
 // EXPORTS

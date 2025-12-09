@@ -29,6 +29,9 @@ import './continuity-tracking.js';
 import './master-context-utils.js';
 // Debug utilities for troubleshooting data flow
 import './debug-utils.js';
+// Version management system
+import { initVersionManagement, saveCurrentVersionState } from './version-manager.js';
+import { renderVersionSelector } from './version-ui.js';
 
 // ============================================================================
 // GLOBAL APPLICATION STATE
@@ -106,6 +109,10 @@ export async function init() {
 
         // Load project data from localStorage
         loadProjectData();
+
+        // Initialize version management system
+        initVersionManagement();
+        console.log('✅ Version management initialized');
 
         // Load AI settings
         loadAISettings();
@@ -297,6 +304,9 @@ function handleSceneSearch(e) {
  * Render initial UI
  */
 function renderInitialUI() {
+    // Render version selector panel (if versions exist)
+    renderVersionSelector();
+
     // Render scene list
     renderSceneList();
 
@@ -392,6 +402,8 @@ export function showAutoSaveIndicator() {
  * Debounced auto-save function
  */
 const debouncedAutoSave = debounce(() => {
+    // Save current version state before saving project
+    saveCurrentVersionState();
     saveProject();
     showAutoSaveIndicator();
 }, 2000);
