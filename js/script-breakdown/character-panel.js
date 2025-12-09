@@ -282,10 +282,11 @@ window.characterManager = new CharacterManager();
  * @returns {Map} - Map of character name -> scene count
  */
 function getCharacterSceneCounts() {
+    const state = getState();
     const characterSceneCounts = new Map();
 
-    state.scenes.forEach((scene, index) => {
-        const breakdown = state.sceneBreakdowns[index];
+    (state?.scenes || []).forEach((scene, index) => {
+        const breakdown = state?.sceneBreakdowns?.[index];
         if (breakdown && breakdown.cast) {
             breakdown.cast.forEach(char => {
                 characterSceneCounts.set(char, (characterSceneCounts.get(char) || 0) + 1);
@@ -339,6 +340,7 @@ function getSupportingCharacters() {
  * This runs before generating tabs to ensure no duplicates
  */
 function aggressiveDeduplicate() {
+    const state = getState();
     console.log('🔄 Running aggressive deduplication...');
 
     // Manual duplicate mappings for common issues
@@ -354,11 +356,11 @@ function aggressiveDeduplicate() {
         'Jon': 'Jon Olafsson',
     };
 
-    state.scenes.forEach((scene, index) => {
-        const breakdown = state.sceneBreakdowns[index];
+    (state?.scenes || []).forEach((scene, index) => {
+        const breakdown = state?.sceneBreakdowns?.[index];
         if (breakdown && breakdown.cast) {
             breakdown.cast = breakdown.cast.map(char =>
-                duplicateMap[char] || window.characterManager.getCanonicalName(char) || char
+                duplicateMap[char] || window.characterManager?.getCanonicalName?.(char) || char
             );
 
             // Remove exact duplicates
@@ -366,11 +368,11 @@ function aggressiveDeduplicate() {
         }
 
         // Also normalize tags
-        if (state.scriptTags[index]) {
+        if (state?.scriptTags?.[index]) {
             state.scriptTags[index].forEach(tag => {
                 if (tag.character) {
                     tag.character = duplicateMap[tag.character] ||
-                                   window.characterManager.getCanonicalName(tag.character) ||
+                                   window.characterManager?.getCanonicalName?.(tag.character) ||
                                    tag.character;
                 }
             });
@@ -384,9 +386,18 @@ function aggressiveDeduplicate() {
 // CHARACTER TAB RENDERING
 // ============================================================================
 
-import { state } from './main.js';
+import { state as importedState } from './main.js';
 import { formatSceneRange, getComplexityIcon } from './utils.js';
 import { buildCharacterProfile } from './character-profiles.js';
+
+// Helper to get the current state - handles circular dependency issues
+function getState() {
+    // Prefer window.state (set by main.js after init) for reliability
+    if (typeof window !== 'undefined' && window.state) {
+        return window.state;
+    }
+    return importedState;
+}
 
 /**
  * Render character tabs in center panel with file divider system
@@ -394,7 +405,10 @@ import { buildCharacterProfile } from './character-profiles.js';
  * Shows script tab + confirmed character tabs
  */
 export function renderCharacterTabs() {
+    const state = getState();
     console.log('🔄 Rendering character tabs from confirmed characters...');
+    console.log('   state.confirmedCharacters:', state?.confirmedCharacters);
+    console.log('   confirmedCharacters size:', state?.confirmedCharacters?.size);
 
     const tabsContainer = document.querySelector('.center-tabs');
     if (!tabsContainer) {
@@ -419,7 +433,7 @@ export function renderCharacterTabs() {
     tabsContainer.appendChild(scriptTab);
 
     // CRITICAL: Only generate tabs if characters have been confirmed
-    if (!state.confirmedCharacters || state.confirmedCharacters.size === 0) {
+    if (!state?.confirmedCharacters || state.confirmedCharacters.size === 0) {
         console.log('⚠️ No confirmed characters - only showing Script tab');
         console.log('   User must run "Detect & Review Characters" and confirm selection first');
         return;
@@ -509,6 +523,7 @@ function createCharacterPanel(charId, charName) {
  * CRITICAL: Only creates panels for confirmed characters
  */
 export function renderCharacterTabPanels() {
+    const state = getState();
     const contentContainer = document.querySelector('.center-tab-content');
     if (!contentContainer) return;
 
@@ -521,7 +536,7 @@ export function renderCharacterTabPanels() {
     });
 
     // Only create panels if characters have been confirmed
-    if (!state.confirmedCharacters || state.confirmedCharacters.size === 0) {
+    if (!state?.confirmedCharacters || state.confirmedCharacters.size === 0) {
         console.log('⚠️ No confirmed characters - no character panels created');
         return;
     }
@@ -547,6 +562,7 @@ export function renderCharacterTabPanels() {
  * @param {string} tabName - Tab identifier ('script' or 'character-{name}')
  */
 export function switchCenterTab(tabName) {
+    const state = getState();
     state.activeCenterTab = tabName;
 
     // Close supporting dropdown if open
@@ -664,9 +680,10 @@ function createCharacterProfilePanel(characterName) {
  * @returns {number} Number of scenes the character appears in
  */
 function getCharacterSceneCount(characterName) {
+    const state = getState();
     let count = 0;
-    state.scenes.forEach((scene, index) => {
-        const breakdown = state.sceneBreakdowns[index];
+    (state?.scenes || []).forEach((scene, index) => {
+        const breakdown = state?.sceneBreakdowns?.[index];
         if (breakdown && breakdown.cast && breakdown.cast.includes(characterName)) {
             count++;
         }
