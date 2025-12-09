@@ -17,6 +17,7 @@ import { renderCharacterTabs, renderCharacterTabPanels } from './character-panel
 import { detectTimeOfDay, detectIntExt, extractLocation } from './utils.js';
 import { callAI } from './ai-integration.js';
 import { renderAllHighlights } from './tag-system.js';
+import { analyzeScript, extractCharacterNamesFromText, normalizeCharacterName } from './script-analysis.js';
 
 /**
  * Export project data as JSON file
@@ -74,6 +75,7 @@ export function closeImportModal() {
 
 /**
  * Process script from import modal
+ * Uses multi-pass AI analysis for comprehensive script breakdown
  */
 export async function processScript() {
     const scriptInput = document.getElementById('script-input');
@@ -89,10 +91,11 @@ export async function processScript() {
     }
 
     console.log('Processing script import...');
+    console.log(`Script length: ${text.length} characters`);
 
     // CRITICAL: Initialize state arrays if needed
     if (!state.continuityEvents || !Array.isArray(state.continuityEvents)) {
-        console.log('⚠️ Initializing continuityEvents array');
+        console.log('Initializing continuityEvents array');
         state.continuityEvents = [];
     }
 
@@ -102,6 +105,11 @@ export async function processScript() {
 
     if (!state.confirmedCharacters || !(state.confirmedCharacters instanceof Set)) {
         state.confirmedCharacters = new Set();
+    }
+
+    // Store detected but unconfirmed characters
+    if (!state.detectedCharacters) {
+        state.detectedCharacters = [];
     }
 
     // Store script text
@@ -119,61 +127,487 @@ export async function processScript() {
     state.scenes = detectScenes(text);
     console.log(`Found ${state.scenes.length} scenes`);
 
-    // COMPREHENSIVE INITIAL ANALYSIS
+    // Close import modal and show progress
+    closeImportModal();
     showTopLoadingBar('Analyzing Script', `Analyzing ${state.scenes.length} scenes...`, 0);
 
     try {
-        // Update progress during analysis
-        updateTopLoadingBar('Analyzing Script', 'Performing deep narrative analysis...', 25);
+        // Use new multi-pass analysis system
+        const progressCallback = (message, progress) => {
+            updateTopLoadingBar('Analyzing Script', message, progress);
+        };
 
-        const masterContext = await performDeepAnalysis(text, state.scenes);
+        const masterContext = await analyzeScript(text, state.scenes, progressCallback);
 
-        // Update progress
-        updateTopLoadingBar('Analyzing Script', 'Building character profiles...', 50);
-
-        // Store master context in BOTH locations for compatibility
+        // Store master context in all locations for compatibility
         window.masterContext = masterContext;
-        window.scriptMasterContext = masterContext; // Character profiles look for this!
+        window.scriptMasterContext = masterContext;
         localStorage.setItem('masterContext', JSON.stringify(masterContext));
         localStorage.setItem('scriptMasterContext', JSON.stringify(masterContext));
 
-        // Populate initial data from master context
-        updateTopLoadingBar('Analyzing Script', 'Populating initial data...', 75);
-        populateInitialData(masterContext);
+        // Store detected characters for confirmation step
+        if (masterContext.characters) {
+            state.detectedCharacters = Object.entries(masterContext.characters).map(([name, data]) => ({
+                name: name,
+                category: data.category || data.characterAnalysis?.role?.toUpperCase() || 'SUPPORTING',
+                sceneCount: data.sceneCount || data.storyPresence?.totalScenes || 0,
+                firstAppearance: data.firstAppearance || data.storyPresence?.firstAppearance || 1,
+                lastAppearance: data.lastAppearance || data.storyPresence?.lastAppearance || state.scenes.length,
+                hasDialogue: data.storyPresence?.hasDialogue !== false,
+                physicalDescription: data.scriptDescriptions?.[0]?.text || '',
+                scenesPresent: data.scenesPresent || data.storyPresence?.scenesPresent || [],
+                selected: true, // Default to selected
+                originalData: data
+            }));
 
-        // CRITICAL: Render character tabs immediately after data population
-        updateTopLoadingBar('Analyzing Script', 'Creating character tabs...', 90);
-        const { renderCharacterTabs, renderCharacterTabPanels } = await import('./character-panel.js');
-        renderCharacterTabs();
-        renderCharacterTabPanels();
-        console.log('✅ Character tabs created for', state.confirmedCharacters.size, 'characters');
+            // Sort by scene count descending
+            state.detectedCharacters.sort((a, b) => b.sceneCount - a.sceneCount);
 
-        // Complete
-        updateTopLoadingBar('Analysis Complete', `${state.scenes.length} scenes processed`, 100);
+            console.log(`Detected ${state.detectedCharacters.length} characters for confirmation`);
+        }
 
-        showToast('Script imported successfully. Proceed with scene-by-scene breakdown.', 'success');
+        closeTopLoadingBar();
+
+        // Show character confirmation modal
+        showCharacterConfirmationModal();
 
     } catch (error) {
         console.error('Analysis failed:', error);
-        showToast('Failed to analyze script. You can still process scenes manually.', 'warning');
-        closeTopLoadingBar(0); // Close immediately on error
+        closeTopLoadingBar();
+
+        // Try fallback processing
+        const characters = extractCharacterNamesFromText(text);
+        state.detectedCharacters = Array.from(characters).map(name => ({
+            name: name,
+            category: 'SUPPORTING',
+            sceneCount: 0,
+            selected: true
+        }));
+
+        showToast('AI analysis failed. Basic character detection used. Please review characters.', 'warning');
+        showCharacterConfirmationModal();
     }
 
-    // Load and render
+    // Load and render script display
     loadScript(text);
-
-    closeTopLoadingBar();
 
     // Update workflow status
     if (window.updateWorkflowStatus) {
-        updateWorkflowStatus();
+        window.updateWorkflowStatus();
+    }
+}
+
+/**
+ * Show character confirmation modal for user to review detected characters
+ */
+export function showCharacterConfirmationModal() {
+    // Create modal if it doesn't exist
+    let modal = document.getElementById('character-confirm-modal');
+    if (!modal) {
+        modal = createCharacterConfirmationModal();
+        document.body.appendChild(modal);
     }
 
-    // Close modal after a brief delay
-    setTimeout(() => {
-        closeImportModal();
-    }, 500);
+    // Populate character list
+    populateCharacterConfirmationList();
+
+    // Show modal
+    modal.style.display = 'flex';
 }
+
+/**
+ * Create the character confirmation modal HTML
+ */
+function createCharacterConfirmationModal() {
+    const modal = document.createElement('div');
+    modal.id = 'character-confirm-modal';
+    modal.className = 'modal';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 900px; max-height: 90vh;">
+            <div class="modal-title">Confirm Characters for H&MU Tracking</div>
+
+            <div class="modal-section">
+                <div class="modal-note" style="margin-bottom: 16px;">
+                    Review the detected characters below. Select which ones to include in your breakdown
+                    and assign them to the correct category. Characters are sorted by scene count.
+                </div>
+
+                <div style="display: flex; gap: 12px; margin-bottom: 16px;">
+                    <button class="modal-btn" onclick="selectAllCharactersByCategory('LEAD')">Select All Leads</button>
+                    <button class="modal-btn" onclick="selectAllCharactersByCategory('SUPPORTING')">Select All Supporting</button>
+                    <button class="modal-btn" onclick="selectAllCharactersByCategory('DAY_PLAYER')">Select All Day Players</button>
+                    <button class="modal-btn" onclick="toggleAllCharacters(true)">Select All</button>
+                    <button class="modal-btn" onclick="toggleAllCharacters(false)">Deselect All</button>
+                </div>
+
+                <div class="character-confirm-tabs" style="display: flex; gap: 8px; margin-bottom: 12px; border-bottom: 1px solid var(--glass-border); padding-bottom: 8px;">
+                    <button class="confirm-tab active" data-category="all" onclick="filterCharactersByCategory('all')">All (<span id="count-all">0</span>)</button>
+                    <button class="confirm-tab" data-category="LEAD" onclick="filterCharactersByCategory('LEAD')">Lead (<span id="count-lead">0</span>)</button>
+                    <button class="confirm-tab" data-category="SUPPORTING" onclick="filterCharactersByCategory('SUPPORTING')">Supporting (<span id="count-supporting">0</span>)</button>
+                    <button class="confirm-tab" data-category="DAY_PLAYER" onclick="filterCharactersByCategory('DAY_PLAYER')">Day Player (<span id="count-dayplayer">0</span>)</button>
+                    <button class="confirm-tab" data-category="BACKGROUND" onclick="filterCharactersByCategory('BACKGROUND')">Background (<span id="count-background">0</span>)</button>
+                </div>
+
+                <div id="character-confirm-list" style="max-height: 400px; overflow-y: auto; border: 1px solid var(--glass-border); border-radius: 8px;">
+                    <!-- Character items populated here -->
+                </div>
+            </div>
+
+            <div class="modal-section" style="margin-top: 16px;">
+                <label class="modal-label">Add Character Manually</label>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" class="modal-input" id="manual-character-name" placeholder="Character name..." style="flex: 1;">
+                    <select class="modal-select" id="manual-character-category" style="width: 150px;">
+                        <option value="LEAD">Lead</option>
+                        <option value="SUPPORTING" selected>Supporting</option>
+                        <option value="DAY_PLAYER">Day Player</option>
+                        <option value="BACKGROUND">Background</option>
+                    </select>
+                    <button class="modal-btn primary" onclick="addManualCharacter()">Add</button>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="modal-btn" onclick="closeCharacterConfirmModal()">Cancel</button>
+                <button class="modal-btn primary" onclick="confirmCharactersAndContinue()">
+                    Confirm Characters & Generate Breakdown
+                </button>
+            </div>
+        </div>
+    `;
+
+    // Add styles for tabs and list items
+    const style = document.createElement('style');
+    style.textContent = `
+        .confirm-tab {
+            padding: 8px 16px;
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            border-radius: 6px 6px 0 0;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 0.85em;
+            transition: all 0.2s;
+        }
+        .confirm-tab:hover {
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+        }
+        .confirm-tab.active {
+            background: var(--accent-gold);
+            border-color: var(--accent-gold);
+            color: var(--bg-dark);
+        }
+        .character-confirm-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--glass-border);
+            transition: background 0.2s;
+        }
+        .character-confirm-item:hover {
+            background: rgba(201, 169, 97, 0.05);
+        }
+        .character-confirm-item.unselected {
+            opacity: 0.5;
+        }
+        .character-confirm-item .char-checkbox {
+            width: 20px;
+            height: 20px;
+            margin-right: 12px;
+            cursor: pointer;
+        }
+        .character-confirm-item .char-name {
+            font-weight: 600;
+            min-width: 150px;
+        }
+        .character-confirm-item .char-stats {
+            color: var(--text-muted);
+            font-size: 0.85em;
+            flex: 1;
+        }
+        .character-confirm-item .char-category {
+            margin-left: 12px;
+        }
+        .char-category select {
+            padding: 4px 8px;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 4px;
+            color: var(--text-light);
+            font-size: 0.85em;
+        }
+        .category-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75em;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+        .category-badge.lead { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+        .category-badge.supporting { background: rgba(201, 169, 97, 0.2); color: var(--accent-gold); }
+        .category-badge.day_player { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+        .category-badge.background { background: rgba(107, 114, 128, 0.2); color: #9ca3af; }
+    `;
+    document.head.appendChild(style);
+
+    return modal;
+}
+
+/**
+ * Populate the character confirmation list
+ */
+function populateCharacterConfirmationList() {
+    const list = document.getElementById('character-confirm-list');
+    if (!list) return;
+
+    const characters = state.detectedCharacters || [];
+
+    // Update counts
+    document.getElementById('count-all').textContent = characters.length;
+    document.getElementById('count-lead').textContent = characters.filter(c => c.category === 'LEAD').length;
+    document.getElementById('count-supporting').textContent = characters.filter(c => c.category === 'SUPPORTING').length;
+    document.getElementById('count-dayplayer').textContent = characters.filter(c => c.category === 'DAY_PLAYER').length;
+    document.getElementById('count-background').textContent = characters.filter(c => c.category === 'BACKGROUND').length;
+
+    list.innerHTML = characters.map((char, idx) => `
+        <div class="character-confirm-item ${char.selected ? '' : 'unselected'}" data-index="${idx}" data-category="${char.category}">
+            <input type="checkbox" class="char-checkbox" ${char.selected ? 'checked' : ''} onchange="toggleCharacterSelection(${idx})">
+            <span class="char-name">${char.name}</span>
+            <span class="category-badge ${char.category.toLowerCase()}">${formatCategory(char.category)}</span>
+            <span class="char-stats">
+                ${char.sceneCount} scene${char.sceneCount !== 1 ? 's' : ''} (${char.firstAppearance}-${char.lastAppearance})
+                ${char.hasDialogue ? '' : ' [No dialogue]'}
+            </span>
+            <span class="char-category">
+                <select onchange="changeCharacterCategory(${idx}, this.value)">
+                    <option value="LEAD" ${char.category === 'LEAD' ? 'selected' : ''}>Lead</option>
+                    <option value="SUPPORTING" ${char.category === 'SUPPORTING' ? 'selected' : ''}>Supporting</option>
+                    <option value="DAY_PLAYER" ${char.category === 'DAY_PLAYER' ? 'selected' : ''}>Day Player</option>
+                    <option value="BACKGROUND" ${char.category === 'BACKGROUND' ? 'selected' : ''}>Background</option>
+                </select>
+            </span>
+        </div>
+    `).join('');
+}
+
+/**
+ * Format category for display
+ */
+function formatCategory(category) {
+    const formats = {
+        'LEAD': 'Lead',
+        'SUPPORTING': 'Supporting',
+        'DAY_PLAYER': 'Day Player',
+        'BACKGROUND': 'Background'
+    };
+    return formats[category] || category;
+}
+
+/**
+ * Toggle character selection
+ */
+window.toggleCharacterSelection = function(index) {
+    if (state.detectedCharacters && state.detectedCharacters[index]) {
+        state.detectedCharacters[index].selected = !state.detectedCharacters[index].selected;
+        populateCharacterConfirmationList();
+    }
+};
+
+/**
+ * Change character category
+ */
+window.changeCharacterCategory = function(index, newCategory) {
+    if (state.detectedCharacters && state.detectedCharacters[index]) {
+        state.detectedCharacters[index].category = newCategory;
+        populateCharacterConfirmationList();
+    }
+};
+
+/**
+ * Filter characters by category
+ */
+window.filterCharactersByCategory = function(category) {
+    const items = document.querySelectorAll('.character-confirm-item');
+    const tabs = document.querySelectorAll('.confirm-tab');
+
+    tabs.forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.category === category);
+    });
+
+    items.forEach(item => {
+        if (category === 'all' || item.dataset.category === category) {
+            item.style.display = 'flex';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+};
+
+/**
+ * Select all characters by category
+ */
+window.selectAllCharactersByCategory = function(category) {
+    if (!state.detectedCharacters) return;
+
+    state.detectedCharacters.forEach(char => {
+        if (char.category === category) {
+            char.selected = true;
+        }
+    });
+    populateCharacterConfirmationList();
+};
+
+/**
+ * Toggle all characters selection
+ */
+window.toggleAllCharacters = function(selected) {
+    if (!state.detectedCharacters) return;
+
+    state.detectedCharacters.forEach(char => {
+        char.selected = selected;
+    });
+    populateCharacterConfirmationList();
+};
+
+/**
+ * Add a character manually
+ */
+window.addManualCharacter = function() {
+    const nameInput = document.getElementById('manual-character-name');
+    const categorySelect = document.getElementById('manual-character-category');
+
+    if (!nameInput || !categorySelect) return;
+
+    const name = nameInput.value.trim();
+    const category = categorySelect.value;
+
+    if (!name) {
+        alert('Please enter a character name');
+        return;
+    }
+
+    // Check if character already exists
+    const exists = state.detectedCharacters?.some(c =>
+        c.name.toLowerCase() === name.toLowerCase()
+    );
+
+    if (exists) {
+        alert('This character already exists in the list');
+        return;
+    }
+
+    // Add to detected characters
+    if (!state.detectedCharacters) {
+        state.detectedCharacters = [];
+    }
+
+    state.detectedCharacters.push({
+        name: normalizeCharacterName(name),
+        category: category,
+        sceneCount: 0,
+        firstAppearance: 1,
+        lastAppearance: state.scenes.length,
+        hasDialogue: true,
+        selected: true,
+        manuallyAdded: true
+    });
+
+    // Clear input and refresh list
+    nameInput.value = '';
+    populateCharacterConfirmationList();
+};
+
+/**
+ * Close character confirmation modal
+ */
+window.closeCharacterConfirmModal = function() {
+    const modal = document.getElementById('character-confirm-modal');
+    if (modal) modal.style.display = 'none';
+};
+
+/**
+ * Confirm characters and continue with breakdown
+ */
+window.confirmCharactersAndContinue = async function() {
+    // Get selected characters
+    const selectedCharacters = (state.detectedCharacters || []).filter(c => c.selected);
+
+    if (selectedCharacters.length === 0) {
+        alert('Please select at least one character to track');
+        return;
+    }
+
+    // Update confirmed characters in state
+    state.confirmedCharacters = new Set(selectedCharacters.map(c => c.name));
+
+    // Update master context with confirmed characters
+    if (window.masterContext?.characters) {
+        const confirmedCharsObj = {};
+        selectedCharacters.forEach(char => {
+            if (window.masterContext.characters[char.name]) {
+                confirmedCharsObj[char.name] = {
+                    ...window.masterContext.characters[char.name],
+                    category: char.category,
+                    characterAnalysis: {
+                        ...window.masterContext.characters[char.name]?.characterAnalysis,
+                        role: char.category.toLowerCase()
+                    }
+                };
+            } else {
+                // Manually added character
+                confirmedCharsObj[char.name] = {
+                    category: char.category,
+                    characterAnalysis: { role: char.category.toLowerCase() },
+                    storyPresence: {
+                        totalScenes: char.sceneCount || 0,
+                        scenesPresent: char.scenesPresent || []
+                    },
+                    firstAppearance: char.firstAppearance || 1,
+                    lastAppearance: char.lastAppearance || state.scenes.length,
+                    sceneCount: char.sceneCount || 0
+                };
+            }
+        });
+
+        // Store the filtered master context
+        window.confirmedMasterContext = {
+            ...window.masterContext,
+            characters: confirmedCharsObj
+        };
+    }
+
+    // Store character categories for use in breakdown
+    window.characterCategories = {};
+    selectedCharacters.forEach(char => {
+        window.characterCategories[char.name] = char.category;
+    });
+
+    // Populate initial data
+    populateInitialData(window.confirmedMasterContext || window.masterContext);
+
+    // Close modal
+    closeCharacterConfirmModal();
+
+    // Render character tabs and panels
+    renderCharacterTabs();
+    renderCharacterTabPanels();
+
+    // Save project
+    saveProject();
+
+    // Show success message
+    showToast(`${selectedCharacters.length} characters confirmed. Ready to generate breakdown!`, 'success');
+
+    // Show option to go to breakdown page
+    setTimeout(() => {
+        const goToBreakdown = confirm('Would you like to go to the Breakdown Generation page now?');
+        if (goToBreakdown) {
+            window.location.href = 'generate-breakdown.html';
+        }
+    }, 500);
+};
 
 /**
  * Perform deep analysis of screenplay to create master context
@@ -1878,6 +2312,21 @@ export function saveProject() {
     // Save to localStorage
     try {
         localStorage.setItem('currentProject', JSON.stringify(state.currentProject));
+
+        // Save scenes separately for breakdown page access
+        if (state.scenes && state.scenes.length > 0) {
+            localStorage.setItem('checksHappyScenes', JSON.stringify(state.scenes));
+        }
+
+        // Save confirmed characters for breakdown page
+        if (state.confirmedCharacters && state.confirmedCharacters.size > 0) {
+            localStorage.setItem('checksHappyCharacters', JSON.stringify(Array.from(state.confirmedCharacters)));
+        }
+
+        // Save character categories if available
+        if (window.characterCategories) {
+            localStorage.setItem('checksHappyCharacterCategories', JSON.stringify(window.characterCategories));
+        }
 
         // Save to projects list
         const projects = JSON.parse(localStorage.getItem('checksHappyProjects') || '[]');

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Script Breakdown - Haunted Hearts</title>
+    <title>Master H&MU Breakdown</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * {
@@ -72,6 +72,12 @@
             font-weight: 600;
         }
 
+        .project-name {
+            color: var(--accent-gold);
+            font-size: 0.875em;
+            margin-left: 8px;
+        }
+
         .top-bar-right {
             display: flex;
             gap: 8px;
@@ -127,12 +133,55 @@
             margin: 0 8px;
         }
 
+        .toolbar-label {
+            color: var(--text-muted);
+            font-size: 0.8125em;
+            margin-right: 8px;
+        }
+
+        .toolbar-select {
+            padding: 6px 12px;
+            background: var(--bg-medium);
+            border: 1px solid var(--glass-border);
+            border-radius: 4px;
+            color: var(--text-light);
+            font-size: 0.8125em;
+            cursor: pointer;
+        }
+
         /* Sheet Container */
         .sheet-container {
             flex: 1;
             overflow: auto;
             background: var(--card-bg);
             position: relative;
+        }
+
+        /* Empty State */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-muted);
+        }
+
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+        }
+
+        .empty-state-title {
+            font-size: 1.25em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-light);
+        }
+
+        .empty-state-desc {
+            font-size: 0.875em;
+            margin-bottom: 24px;
         }
 
         /* Spreadsheet Table */
@@ -150,6 +199,7 @@
             text-align: left;
             overflow: hidden;
             text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         .breakdown-sheet th {
@@ -183,15 +233,19 @@
         /* Column widths */
         .col-scene { width: 60px; }
         .col-character { width: 130px; }
-        .col-day { width: 90px; }
+        .col-category { width: 90px; }
+        .col-day { width: 70px; }
         .col-time { width: 80px; }
         .col-int-ext { width: 70px; }
         .col-location { width: 150px; }
-        .col-synopsis { width: 250px; }
-        .col-hair { width: 180px; background: rgba(201, 169, 97, 0.05); }
-        .col-makeup { width: 180px; background: rgba(255, 107, 157, 0.05); }
-        .col-sfx { width: 180px; background: rgba(239, 68, 68, 0.05); }
-        .col-wardrobe { width: 180px; background: rgba(52, 211, 153, 0.05); }
+        .col-synopsis { width: 200px; }
+        .col-look-arc { width: 120px; background: rgba(201, 169, 97, 0.05); }
+        .col-hair { width: 150px; background: rgba(168, 85, 247, 0.05); }
+        .col-makeup { width: 150px; background: rgba(236, 72, 153, 0.05); }
+        .col-eye-bags { width: 100px; background: rgba(236, 72, 153, 0.05); }
+        .col-lesions { width: 100px; background: rgba(239, 68, 68, 0.05); }
+        .col-beard { width: 100px; background: rgba(168, 85, 247, 0.05); }
+        .col-wounds { width: 150px; background: rgba(239, 68, 68, 0.05); }
         .col-notes { width: 200px; }
 
         /* Editable cells */
@@ -210,6 +264,7 @@
         .breakdown-sheet td[contenteditable="true"]:focus {
             outline: 2px solid var(--accent-gold);
             background: rgba(201, 169, 97, 0.08);
+            white-space: normal;
         }
 
         /* Scene grouping */
@@ -220,6 +275,7 @@
         tr.scene-header td {
             font-weight: 600;
             background: rgba(201, 169, 97, 0.1);
+            white-space: normal;
         }
 
         /* Selected rows */
@@ -231,14 +287,7 @@
             background: rgba(201, 169, 97, 0.2) !important;
         }
 
-        /* Empty placeholder */
-        .empty-cell {
-            color: var(--text-muted);
-            font-style: italic;
-            opacity: 0.5;
-        }
-
-        /* Scene badge */
+        /* Badges */
         .scene-badge {
             display: inline-block;
             padding: 2px 6px;
@@ -247,75 +296,23 @@
             font-weight: 600;
         }
 
-        .int-day {
-            background: rgba(255, 193, 7, 0.2);
-            color: #fbbf24;
-        }
+        .int-day { background: rgba(255, 193, 7, 0.2); color: #fbbf24; }
+        .int-night { background: rgba(63, 81, 181, 0.2); color: #5c6bc0; }
+        .ext-day { background: rgba(76, 175, 80, 0.2); color: #66bb6a; }
+        .ext-night { background: rgba(103, 58, 183, 0.2); color: #9575cd; }
 
-        .int-night {
-            background: rgba(63, 81, 181, 0.2);
-            color: #5c6bc0;
-        }
-
-        .ext-day {
-            background: rgba(76, 175, 80, 0.2);
-            color: #66bb6a;
-        }
-
-        .ext-night {
-            background: rgba(103, 58, 183, 0.2);
-            color: #9575cd;
-        }
-
-        /* Context Menu */
-        .context-menu {
-            position: fixed;
-            background: var(--bg-medium);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--glass-border);
-            border-radius: 8px;
-            padding: 4px;
-            min-width: 180px;
-            z-index: 1000;
-            display: none;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-        }
-
-        .context-menu.active {
-            display: block;
-        }
-
-        .context-menu-item {
-            padding: 8px 12px;
-            cursor: pointer;
+        .category-badge {
+            display: inline-block;
+            padding: 2px 6px;
             border-radius: 4px;
-            font-size: 0.8125em;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.2s;
+            font-size: 0.7em;
+            font-weight: 600;
         }
 
-        .context-menu-item:hover {
-            background: rgba(201, 169, 97, 0.15);
-        }
-
-        .context-menu-item.disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
-        }
-
-        .context-menu-separator {
-            height: 1px;
-            background: var(--border);
-            margin: 4px 0;
-        }
-
-        .context-menu-item .shortcut {
-            margin-left: auto;
-            color: var(--text-muted);
-            font-size: 0.75em;
-        }
+        .category-badge.lead { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+        .category-badge.supporting { background: rgba(201, 169, 97, 0.2); color: var(--accent-gold); }
+        .category-badge.day_player { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+        .category-badge.background { background: rgba(107, 114, 128, 0.2); color: #9ca3af; }
 
         /* Status bar */
         .status-bar {
@@ -328,6 +325,90 @@
             font-size: 0.75em;
             color: var(--text-muted);
             gap: 16px;
+        }
+
+        /* Export Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .modal-title {
+            font-size: 1.25em;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .modal-section {
+            margin-bottom: 16px;
+        }
+
+        .modal-label {
+            display: block;
+            font-size: 0.875em;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .export-option {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .export-option:hover {
+            background: rgba(201, 169, 97, 0.1);
+            border-color: var(--accent-gold);
+        }
+
+        .export-option-icon {
+            font-size: 24px;
+            margin-right: 12px;
+        }
+
+        .export-option-info {
+            flex: 1;
+        }
+
+        .export-option-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .export-option-desc {
+            font-size: 0.8125em;
+            color: var(--text-muted);
         }
 
         /* Scrollbar */
@@ -344,6 +425,26 @@
             background: rgba(138, 127, 115, 0.4);
             border-radius: 5px;
         }
+
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            bottom: 80px;
+            right: 24px;
+            padding: 12px 24px;
+            background: var(--card-bg);
+            border: 1px solid var(--accent-gold);
+            border-radius: 8px;
+            color: var(--text-light);
+            font-size: 0.875em;
+            z-index: 1001;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
     </style>
 </head>
 <body>
@@ -351,196 +452,79 @@
         <!-- Top Bar -->
         <div class="top-bar">
             <div class="top-bar-left">
-                <a href="script-breakdown.html" class="back-link">← Back to Script</a>
-                <h1 class="page-title">Breakdown Sheet: Haunted Hearts</h1>
+                <a href="script-breakdown.html" class="back-link">Back to Script</a>
+                <h1 class="page-title">Master H&MU Breakdown</h1>
+                <span class="project-name" id="projectName"></span>
             </div>
             <div class="top-bar-right">
-                <button class="btn" onclick="undo()" id="undoBtn" disabled>↶ Undo</button>
-                <button class="btn" onclick="redo()" id="redoBtn" disabled>↷ Redo</button>
-                <button class="btn" onclick="saveBreakdown()">💾 Save</button>
-                <button class="btn btn-primary" onclick="exportBreakdown()">📤 Export</button>
+                <button class="btn" onclick="refreshData()">Refresh</button>
+                <button class="btn" onclick="saveBreakdown()">Save</button>
+                <button class="btn btn-primary" onclick="showExportModal()">Export</button>
             </div>
         </div>
 
         <!-- Toolbar -->
         <div class="toolbar">
-            <button class="btn" onclick="insertRowAbove()" id="insertAboveBtn" disabled>⬆ Insert Above</button>
-            <button class="btn" onclick="insertRowBelow()" id="insertBelowBtn" disabled>⬇ Insert Below</button>
-            <button class="btn" onclick="duplicateRow()" id="duplicateBtn" disabled>📋 Duplicate</button>
+            <span class="toolbar-label">Filter by Character:</span>
+            <select class="toolbar-select" id="characterFilter" onchange="filterByCharacter()">
+                <option value="all">All Characters</option>
+            </select>
+
             <div class="toolbar-separator"></div>
-            <button class="btn" onclick="deleteSelectedRows()" id="deleteBtn" disabled>🗑 Delete</button>
+
+            <span class="toolbar-label">Filter by Category:</span>
+            <select class="toolbar-select" id="categoryFilter" onchange="filterByCategory()">
+                <option value="all">All Categories</option>
+                <option value="LEAD">Lead Roles</option>
+                <option value="SUPPORTING">Supporting</option>
+                <option value="DAY_PLAYER">Day Players</option>
+            </select>
+
             <div class="toolbar-separator"></div>
-            <button class="btn" onclick="clearSelection()">✕ Clear Selection</button>
+
+            <span class="toolbar-label">Story Day:</span>
+            <select class="toolbar-select" id="dayFilter" onchange="filterByDay()">
+                <option value="all">All Days</option>
+            </select>
+
+            <div class="toolbar-separator"></div>
+
+            <button class="btn" onclick="collapseAllScenes()">Collapse All</button>
+            <button class="btn" onclick="expandAllScenes()">Expand All</button>
         </div>
 
-        <!-- Spreadsheet -->
-        <div class="sheet-container">
-            <table class="breakdown-sheet">
+        <!-- Spreadsheet Container -->
+        <div class="sheet-container" id="sheetContainer">
+            <div class="empty-state" id="emptyState">
+                <div class="empty-state-icon">📋</div>
+                <div class="empty-state-title">No Breakdown Data</div>
+                <div class="empty-state-desc">Import a script and confirm characters to generate the breakdown</div>
+                <a href="script-breakdown.html" class="btn btn-primary">Go to Script Import</a>
+            </div>
+
+            <table class="breakdown-sheet" id="breakdownTable" style="display: none;">
                 <thead>
                     <tr>
                         <th class="row-num">#</th>
                         <th class="col-scene">Scene</th>
                         <th class="col-character">Character</th>
+                        <th class="col-category">Category</th>
                         <th class="col-day">Story Day</th>
                         <th class="col-time">Time</th>
                         <th class="col-int-ext">INT/EXT</th>
                         <th class="col-location">Location</th>
                         <th class="col-synopsis">Synopsis</th>
+                        <th class="col-look-arc">Look Arc</th>
                         <th class="col-hair">Hair</th>
-                        <th class="col-makeup">Makeup</th>
-                        <th class="col-sfx">SFX/FX</th>
-                        <th class="col-wardrobe">Wardrobe</th>
+                        <th class="col-makeup">Makeup Base</th>
+                        <th class="col-eye-bags">Eye Bags</th>
+                        <th class="col-lesions">Lesions</th>
+                        <th class="col-beard">Beard</th>
+                        <th class="col-wounds">Wounds/Blood/SFX</th>
                         <th class="col-notes">Notes</th>
                     </tr>
                 </thead>
                 <tbody id="breakdownBody">
-                    <!-- Scene 1 -->
-                    <tr class="scene-header">
-                        <td class="row-num">1</td>
-                        <td>1</td>
-                        <td colspan="11"><strong>INT. EMMA'S BEDROOM - MORNING</strong></td>
-                    </tr>
-                    <tr data-row="2">
-                        <td class="row-num">2</td>
-                        <td></td>
-                        <td contenteditable="true">Emma Hart</td>
-                        <td contenteditable="true">Day 1</td>
-                        <td contenteditable="true">Morning</td>
-                        <td><span class="scene-badge int-day">INT DAY</span></td>
-                        <td contenteditable="true">Emma's Bedroom</td>
-                        <td contenteditable="true">Emma wakes up disoriented, memories flooding back</td>
-                        <td contenteditable="true">Disheveled, bedhead look</td>
-                        <td contenteditable="true">Natural, minimal. Dark circles under eyes</td>
-                        <td contenteditable="true" class="empty-cell">—</td>
-                        <td contenteditable="true">White cotton nightgown</td>
-                        <td contenteditable="true">First appearance, establish grief</td>
-                    </tr>
-                    <tr data-row="3">
-                        <td class="row-num">3</td>
-                        <td></td>
-                        <td contenteditable="true">David (Flashback)</td>
-                        <td contenteditable="true">Day 1</td>
-                        <td contenteditable="true">Morning</td>
-                        <td><span class="scene-badge int-day">INT DAY</span></td>
-                        <td contenteditable="true">Emma's Bedroom</td>
-                        <td contenteditable="true">Quick flashback - David's final moment</td>
-                        <td contenteditable="true">1940s style, slicked back</td>
-                        <td contenteditable="true">Period makeup, healthy glow</td>
-                        <td contenteditable="true" class="empty-cell">—</td>
-                        <td contenteditable="true">WWII military uniform, pristine</td>
-                        <td contenteditable="true">Flashback - young, vibrant</td>
-                    </tr>
-                    <tr data-row="4">
-                        <td class="row-num">4</td>
-                        <td></td>
-                        <td contenteditable="true">The Ghost</td>
-                        <td contenteditable="true">Day 1</td>
-                        <td contenteditable="true">Morning</td>
-                        <td><span class="scene-badge int-day">INT DAY</span></td>
-                        <td contenteditable="true">Emma's Bedroom</td>
-                        <td contenteditable="true">Shadowy figure in mirror</td>
-                        <td contenteditable="true">N/A - obscured</td>
-                        <td contenteditable="true">N/A - not visible</td>
-                        <td contenteditable="true">Translucent shadow effect</td>
-                        <td contenteditable="true">N/A - silhouette only</td>
-                        <td contenteditable="true">First ghost appearance</td>
-                    </tr>
-
-                    <!-- Scene 2 -->
-                    <tr class="scene-header">
-                        <td class="row-num">5</td>
-                        <td>2</td>
-                        <td colspan="11"><strong>INT. KITCHEN - LATE MORNING</strong></td>
-                    </tr>
-                    <tr data-row="6">
-                        <td class="row-num">6</td>
-                        <td></td>
-                        <td contenteditable="true">Emma Hart</td>
-                        <td contenteditable="true">Day 1</td>
-                        <td contenteditable="true">Late Morning</td>
-                        <td><span class="scene-badge int-day">INT DAY</span></td>
-                        <td contenteditable="true">Kitchen</td>
-                        <td contenteditable="true">Emma makes coffee, tries to act normal</td>
-                        <td contenteditable="true">Tied back in loose bun</td>
-                        <td contenteditable="true">Still minimal, slight concealer</td>
-                        <td contenteditable="true" class="empty-cell">—</td>
-                        <td contenteditable="true">Blue robe over nightgown</td>
-                        <td contenteditable="true">Hair change from Sc.1</td>
-                    </tr>
-                    <tr data-row="7">
-                        <td class="row-num">7</td>
-                        <td></td>
-                        <td contenteditable="true">Sarah Chen</td>
-                        <td contenteditable="true">Day 1</td>
-                        <td contenteditable="true">Late Morning</td>
-                        <td><span class="scene-badge int-day">INT DAY</span></td>
-                        <td contenteditable="true">Kitchen</td>
-                        <td contenteditable="true">Sarah arrives to check on Emma</td>
-                        <td contenteditable="true">Short pixie cut, professional</td>
-                        <td contenteditable="true">Full daily makeup, polished</td>
-                        <td contenteditable="true" class="empty-cell">—</td>
-                        <td contenteditable="true">Business casual - blazer, jeans</td>
-                        <td contenteditable="true">First appearance</td>
-                    </tr>
-
-                    <!-- Scene 3 -->
-                    <tr class="scene-header">
-                        <td class="row-num">8</td>
-                        <td>3</td>
-                        <td colspan="11"><strong>EXT. GARDEN PATH - AFTERNOON</strong></td>
-                    </tr>
-                    <tr data-row="9">
-                        <td class="row-num">9</td>
-                        <td></td>
-                        <td contenteditable="true">Emma Hart</td>
-                        <td contenteditable="true">Day 1</td>
-                        <td contenteditable="true">Afternoon</td>
-                        <td><span class="scene-badge ext-day">EXT DAY</span></td>
-                        <td contenteditable="true">Garden Path</td>
-                        <td contenteditable="true">Emma walks through overgrown garden</td>
-                        <td contenteditable="true">Bun loosening, windswept</td>
-                        <td contenteditable="true">Same as Sc.2, natural light</td>
-                        <td contenteditable="true" class="empty-cell">—</td>
-                        <td contenteditable="true">Long cardigan, comfortable pants</td>
-                        <td contenteditable="true">Wardrobe change</td>
-                    </tr>
-
-                    <!-- Scene 4 -->
-                    <tr class="scene-header">
-                        <td class="row-num">10</td>
-                        <td>4</td>
-                        <td colspan="11"><strong>INT. LIVING ROOM - EVENING</strong></td>
-                    </tr>
-                    <tr data-row="11">
-                        <td class="row-num">11</td>
-                        <td></td>
-                        <td contenteditable="true">Emma Hart</td>
-                        <td contenteditable="true">Day 1</td>
-                        <td contenteditable="true">Evening</td>
-                        <td><span class="scene-badge int-night">INT NIGHT</span></td>
-                        <td contenteditable="true">Living Room</td>
-                        <td contenteditable="true">Emma researches house history</td>
-                        <td contenteditable="true">Bun removed, hair down</td>
-                        <td contenteditable="true">Worn off from day, tired</td>
-                        <td contenteditable="true" class="empty-cell">—</td>
-                        <td contenteditable="true">Same as Sc.3</td>
-                        <td contenteditable="true">Laptop, dimly lit</td>
-                    </tr>
-                    <tr data-row="12">
-                        <td class="row-num">12</td>
-                        <td></td>
-                        <td contenteditable="true">David (Ghost)</td>
-                        <td contenteditable="true">Day 1</td>
-                        <td contenteditable="true">Evening</td>
-                        <td><span class="scene-badge int-night">INT NIGHT</span></td>
-                        <td contenteditable="true">Living Room</td>
-                        <td contenteditable="true">Ghost fully manifests - David revealed</td>
-                        <td contenteditable="true">1940s slicked back, period accurate</td>
-                        <td contenteditable="true">Pale, ethereal. Subtle shimmer</td>
-                        <td contenteditable="true">Full ghost effect, blue-white glow</td>
-                        <td contenteditable="true">1940s military uniform, weathered</td>
-                        <td contenteditable="true">Major SFX - full ghost look</td>
-                    </tr>
                 </tbody>
             </table>
         </div>
@@ -549,368 +533,460 @@
         <div class="status-bar">
             <span id="statusText">Ready</span>
             <span>|</span>
-            <span id="selectionInfo">No rows selected</span>
+            <span id="rowCount">0 rows</span>
+            <span>|</span>
+            <span id="characterCount">0 characters</span>
+            <span>|</span>
+            <span id="sceneCount">0 scenes</span>
         </div>
+    </div>
 
-        <!-- Context Menu -->
-        <div class="context-menu" id="contextMenu">
-            <div class="context-menu-item" onclick="insertRowAbove()">
-                ⬆ Insert Row Above
+    <!-- Export Modal -->
+    <div class="modal" id="exportModal">
+        <div class="modal-content">
+            <div class="modal-title">Export Breakdown</div>
+
+            <div class="modal-section">
+                <div class="export-option" onclick="exportToTSV()">
+                    <span class="export-option-icon">📊</span>
+                    <div class="export-option-info">
+                        <div class="export-option-title">Export as TSV</div>
+                        <div class="export-option-desc">Tab-separated values for Google Sheets</div>
+                    </div>
+                </div>
+
+                <div class="export-option" onclick="exportToCSV()">
+                    <span class="export-option-icon">📈</span>
+                    <div class="export-option-info">
+                        <div class="export-option-title">Export as CSV</div>
+                        <div class="export-option-desc">Comma-separated values for Excel</div>
+                    </div>
+                </div>
+
+                <div class="export-option" onclick="exportToPDF()">
+                    <span class="export-option-icon">📄</span>
+                    <div class="export-option-info">
+                        <div class="export-option-title">Export as PDF</div>
+                        <div class="export-option-desc">Printable document format</div>
+                    </div>
+                </div>
+
+                <div class="export-option" onclick="copyToClipboard()">
+                    <span class="export-option-icon">📋</span>
+                    <div class="export-option-info">
+                        <div class="export-option-title">Copy to Clipboard</div>
+                        <div class="export-option-desc">Quick paste into any application</div>
+                    </div>
+                </div>
             </div>
-            <div class="context-menu-item" onclick="insertRowBelow()">
-                ⬇ Insert Row Below
-            </div>
-            <div class="context-menu-item" onclick="duplicateRow()">
-                📋 Duplicate Row
-            </div>
-            <div class="context-menu-separator"></div>
-            <div class="context-menu-item" onclick="copyRow()">
-                📄 Copy <span class="shortcut">Ctrl+C</span>
-            </div>
-            <div class="context-menu-item" onclick="pasteRow()">
-                📋 Paste <span class="shortcut">Ctrl+V</span>
-            </div>
-            <div class="context-menu-separator"></div>
-            <div class="context-menu-item" onclick="deleteSelectedRows()">
-                🗑 Delete Row <span class="shortcut">Del</span>
+
+            <div class="modal-actions">
+                <button class="btn" onclick="closeExportModal()">Cancel</button>
             </div>
         </div>
     </div>
 
     <script>
-        let selectedRows = new Set();
-        let clipboard = null;
-        let undoStack = [];
-        let redoStack = [];
-        let maxUndoStack = 50;
+        // Global state
+        let breakdownData = [];
+        let scenes = [];
+        let characters = {};
+        let characterCategories = {};
+        let masterContext = null;
+        let storyTimeline = null;
 
-        // Initialize
+        // ============================================================================
+        // INITIALIZATION
+        // ============================================================================
+
         document.addEventListener('DOMContentLoaded', function() {
-            setupRowSelection();
-            setupContextMenu();
-            setupKeyboardShortcuts();
-            updateRowNumbers();
+            loadData();
         });
 
-        // Row Selection
-        function setupRowSelection() {
-            document.querySelectorAll('.row-num').forEach(rowNum => {
-                rowNum.addEventListener('click', function(e) {
-                    const row = this.closest('tr');
-                    if (row.classList.contains('scene-header')) return;
-                    
-                    if (e.ctrlKey || e.metaKey) {
-                        // Toggle selection
-                        toggleRowSelection(row);
-                    } else if (e.shiftKey && selectedRows.size > 0) {
-                        // Range selection
-                        selectRange(row);
-                    } else {
-                        // Single selection
-                        clearSelection();
-                        selectRow(row);
+        function loadData() {
+            console.log('Loading breakdown data...');
+
+            // Load master context
+            const masterContextStr = localStorage.getItem('masterContext') ||
+                                    localStorage.getItem('scriptMasterContext');
+            if (masterContextStr) {
+                try {
+                    masterContext = JSON.parse(masterContextStr);
+                    console.log('Master context loaded:', masterContext);
+                } catch (e) {
+                    console.error('Failed to parse master context:', e);
+                }
+            }
+
+            // Load scenes
+            const currentProject = localStorage.getItem('currentProject');
+            if (currentProject) {
+                try {
+                    const project = JSON.parse(currentProject);
+                    document.getElementById('projectName').textContent = project.name || 'Untitled Project';
+                } catch (e) {}
+            }
+
+            // Try to load from checksHappyBreakdown (saved breakdown data)
+            const savedBreakdown = localStorage.getItem('checksHappyBreakdown');
+            if (savedBreakdown) {
+                try {
+                    breakdownData = JSON.parse(savedBreakdown);
+                    console.log('Loaded saved breakdown:', breakdownData.length, 'rows');
+                } catch (e) {
+                    console.error('Failed to parse saved breakdown:', e);
+                }
+            }
+
+            // If no saved breakdown, generate from master context
+            if (breakdownData.length === 0 && masterContext) {
+                generateBreakdownFromContext();
+            }
+
+            if (breakdownData.length > 0) {
+                populateFilters();
+                renderBreakdownTable();
+                updateStatusBar();
+                document.getElementById('emptyState').style.display = 'none';
+                document.getElementById('breakdownTable').style.display = 'table';
+            }
+        }
+
+        // ============================================================================
+        // BREAKDOWN GENERATION
+        // ============================================================================
+
+        function generateBreakdownFromContext() {
+            if (!masterContext) {
+                console.warn('No master context available');
+                return;
+            }
+
+            console.log('Generating breakdown from master context...');
+
+            breakdownData = [];
+            characters = masterContext.characters || {};
+            storyTimeline = masterContext.storyStructure?.timeline || [];
+
+            // Get confirmed characters
+            const confirmedChars = Object.keys(characters);
+            if (confirmedChars.length === 0) {
+                console.warn('No characters in master context');
+                return;
+            }
+
+            // Build story day lookup
+            const sceneToDay = {};
+            storyTimeline.forEach(day => {
+                if (day.scenes) {
+                    day.scenes.forEach(sceneNum => {
+                        sceneToDay[sceneNum] = day.story_day || day.day;
+                    });
+                }
+            });
+
+            // Get all scenes from localStorage
+            const scenesStr = localStorage.getItem('checksHappyScenes');
+            if (scenesStr) {
+                try {
+                    scenes = JSON.parse(scenesStr);
+                } catch (e) {}
+            }
+
+            // If no scenes in storage, create from master context
+            if (scenes.length === 0) {
+                scenes = Array.from({ length: masterContext.totalScenes || 0 }, (_, i) => ({
+                    number: i + 1,
+                    heading: '',
+                    content: ''
+                }));
+            }
+
+            // Generate breakdown rows for each scene/character combination
+            scenes.forEach((scene, sceneIndex) => {
+                const sceneNum = scene.number || (sceneIndex + 1);
+                const heading = scene.heading || '';
+
+                // Parse scene heading
+                const intExt = /^(INT|EXT|INT\.\/EXT)/i.exec(heading)?.[0] || '';
+                const timeMatch = heading.match(/\b(DAY|NIGHT|MORNING|AFTERNOON|EVENING|DAWN|DUSK)\b/i);
+                const timeOfDay = timeMatch ? timeMatch[0].toUpperCase() : '';
+                const location = extractLocation(heading);
+                const storyDay = sceneToDay[sceneNum] || null;
+
+                // Find characters in this scene
+                confirmedChars.forEach(charName => {
+                    const charData = characters[charName];
+                    const scenesPresent = charData.scenesPresent ||
+                                         charData.storyPresence?.scenesPresent || [];
+
+                    // Check if character is in this scene
+                    if (scenesPresent.includes(sceneNum) ||
+                        (charData.firstAppearance <= sceneNum && charData.lastAppearance >= sceneNum)) {
+
+                        const category = charData.category ||
+                                        charData.characterAnalysis?.role?.toUpperCase() ||
+                                        'SUPPORTING';
+
+                        breakdownData.push({
+                            rowId: `${sceneNum}-${charName}`,
+                            sceneNum: sceneNum,
+                            sceneHeading: heading,
+                            character: charName,
+                            category: category,
+                            storyDay: storyDay,
+                            timeOfDay: timeOfDay,
+                            intExt: intExt,
+                            location: location,
+                            synopsis: scene.synopsis || '',
+                            lookArc: '',
+                            hair: '',
+                            makeupBase: '',
+                            eyeBags: '',
+                            lesions: '',
+                            beard: '',
+                            woundsSFX: '',
+                            notes: ''
+                        });
                     }
-                    updateSelectionInfo();
-                    updateToolbarButtons();
+                });
+            });
+
+            // Sort by scene number then character
+            breakdownData.sort((a, b) => {
+                if (a.sceneNum !== b.sceneNum) return a.sceneNum - b.sceneNum;
+                return a.character.localeCompare(b.character);
+            });
+
+            console.log('Generated breakdown:', breakdownData.length, 'rows');
+        }
+
+        function extractLocation(heading) {
+            if (!heading) return '';
+            // Remove INT/EXT and time indicators
+            let loc = heading.replace(/^(INT|EXT|INT\.\/EXT)\.?\s*/i, '');
+            loc = loc.replace(/\s*-\s*(DAY|NIGHT|MORNING|AFTERNOON|EVENING|DAWN|DUSK|CONTINUOUS|SAME|LATER|MOMENTS LATER).*$/i, '');
+            return loc.trim();
+        }
+
+        // ============================================================================
+        // RENDERING
+        // ============================================================================
+
+        function renderBreakdownTable() {
+            const tbody = document.getElementById('breakdownBody');
+            if (!tbody) return;
+
+            let html = '';
+            let currentScene = null;
+            let rowNum = 0;
+
+            breakdownData.forEach((row, index) => {
+                // Add scene header if new scene
+                if (row.sceneNum !== currentScene) {
+                    currentScene = row.sceneNum;
+                    rowNum++;
+                    html += `
+                        <tr class="scene-header" data-scene="${row.sceneNum}">
+                            <td class="row-num">${rowNum}</td>
+                            <td>${row.sceneNum}</td>
+                            <td colspan="15"><strong>${row.sceneHeading || `Scene ${row.sceneNum}`}</strong></td>
+                        </tr>
+                    `;
+                }
+
+                rowNum++;
+                const badgeClass = getBadgeClass(row.intExt, row.timeOfDay);
+                const categoryClass = row.category.toLowerCase().replace('_', '-');
+
+                html += `
+                    <tr data-row="${index}" data-scene="${row.sceneNum}" data-character="${row.character}" data-category="${row.category}">
+                        <td class="row-num">${rowNum}</td>
+                        <td></td>
+                        <td>${row.character}</td>
+                        <td><span class="category-badge ${categoryClass}">${formatCategory(row.category)}</span></td>
+                        <td contenteditable="true" data-field="storyDay">${row.storyDay || ''}</td>
+                        <td>${row.timeOfDay || ''}</td>
+                        <td><span class="scene-badge ${badgeClass}">${row.intExt}</span></td>
+                        <td>${row.location || ''}</td>
+                        <td contenteditable="true" data-field="synopsis">${row.synopsis || ''}</td>
+                        <td contenteditable="true" data-field="lookArc">${row.lookArc || ''}</td>
+                        <td contenteditable="true" data-field="hair">${row.hair || ''}</td>
+                        <td contenteditable="true" data-field="makeupBase">${row.makeupBase || ''}</td>
+                        <td contenteditable="true" data-field="eyeBags">${row.eyeBags || ''}</td>
+                        <td contenteditable="true" data-field="lesions">${row.lesions || ''}</td>
+                        <td contenteditable="true" data-field="beard">${row.beard || ''}</td>
+                        <td contenteditable="true" data-field="woundsSFX">${row.woundsSFX || ''}</td>
+                        <td contenteditable="true" data-field="notes">${row.notes || ''}</td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html;
+
+            // Setup cell editing listeners
+            setupCellEditing();
+        }
+
+        function getBadgeClass(intExt, timeOfDay) {
+            const isInt = /INT/i.test(intExt);
+            const isNight = /NIGHT|EVENING|DUSK/i.test(timeOfDay);
+
+            if (isInt && isNight) return 'int-night';
+            if (isInt) return 'int-day';
+            if (isNight) return 'ext-night';
+            return 'ext-day';
+        }
+
+        function formatCategory(category) {
+            const formats = {
+                'LEAD': 'Lead',
+                'SUPPORTING': 'Supporting',
+                'DAY_PLAYER': 'Day Player',
+                'BACKGROUND': 'Background'
+            };
+            return formats[category] || category;
+        }
+
+        function setupCellEditing() {
+            const cells = document.querySelectorAll('td[contenteditable="true"]');
+            cells.forEach(cell => {
+                cell.addEventListener('blur', function() {
+                    const row = this.closest('tr');
+                    const rowIndex = parseInt(row.dataset.row);
+                    const field = this.dataset.field;
+
+                    if (rowIndex >= 0 && field && breakdownData[rowIndex]) {
+                        breakdownData[rowIndex][field] = this.textContent.trim();
+                        saveBreakdown();
+                    }
                 });
             });
         }
 
-        function selectRow(row) {
-            row.classList.add('selected');
-            selectedRows.add(row);
-        }
+        // ============================================================================
+        // FILTERS
+        // ============================================================================
 
-        function deselectRow(row) {
-            row.classList.remove('selected');
-            selectedRows.delete(row);
-        }
-
-        function toggleRowSelection(row) {
-            if (selectedRows.has(row)) {
-                deselectRow(row);
-            } else {
-                selectRow(row);
-            }
-        }
-
-        function clearSelection() {
-            selectedRows.forEach(row => row.classList.remove('selected'));
-            selectedRows.clear();
-            updateSelectionInfo();
-            updateToolbarButtons();
-        }
-
-        function selectRange(endRow) {
-            const firstSelected = Array.from(selectedRows)[0];
-            const tbody = document.getElementById('breakdownBody');
-            const allRows = Array.from(tbody.querySelectorAll('tr:not(.scene-header)'));
-            
-            const startIndex = allRows.indexOf(firstSelected);
-            const endIndex = allRows.indexOf(endRow);
-            
-            const start = Math.min(startIndex, endIndex);
-            const end = Math.max(startIndex, endIndex);
-            
-            clearSelection();
-            for (let i = start; i <= end; i++) {
-                selectRow(allRows[i]);
-            }
-        }
-
-        // Context Menu
-        function setupContextMenu() {
-            const contextMenu = document.getElementById('contextMenu');
-            
-            document.addEventListener('contextmenu', function(e) {
-                const row = e.target.closest('tr');
-                if (row && row.closest('#breakdownBody') && !row.classList.contains('scene-header')) {
-                    e.preventDefault();
-                    
-                    if (!selectedRows.has(row)) {
-                        clearSelection();
-                        selectRow(row);
-                        updateSelectionInfo();
-                        updateToolbarButtons();
-                    }
-                    
-                    contextMenu.style.left = e.pageX + 'px';
-                    contextMenu.style.top = e.pageY + 'px';
-                    contextMenu.classList.add('active');
-                }
+        function populateFilters() {
+            // Character filter
+            const charFilter = document.getElementById('characterFilter');
+            const uniqueChars = [...new Set(breakdownData.map(r => r.character))].sort();
+            uniqueChars.forEach(char => {
+                const option = document.createElement('option');
+                option.value = char;
+                option.textContent = char;
+                charFilter.appendChild(option);
             });
-            
-            document.addEventListener('click', function(e) {
-                if (!e.target.closest('.context-menu')) {
-                    contextMenu.classList.remove('active');
-                }
+
+            // Day filter
+            const dayFilter = document.getElementById('dayFilter');
+            const uniqueDays = [...new Set(breakdownData.map(r => r.storyDay).filter(d => d))].sort((a, b) => a - b);
+            uniqueDays.forEach(day => {
+                const option = document.createElement('option');
+                option.value = day;
+                option.textContent = `Day ${day}`;
+                dayFilter.appendChild(option);
             });
         }
 
-        // Keyboard Shortcuts
-        function setupKeyboardShortcuts() {
-            document.addEventListener('keydown', function(e) {
-                // Save
-                if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-                    e.preventDefault();
-                    saveBreakdown();
-                }
-                
-                // Undo
-                if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
-                    e.preventDefault();
-                    undo();
-                }
-                
-                // Redo
-                if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
-                    e.preventDefault();
-                    redo();
-                }
-                
-                // Copy
-                if ((e.ctrlKey || e.metaKey) && e.key === 'c' && selectedRows.size > 0) {
-                    if (!document.activeElement.contentEditable || document.activeElement.contentEditable === 'false') {
-                        e.preventDefault();
-                        copyRow();
-                    }
-                }
-                
-                // Paste
-                if ((e.ctrlKey || e.metaKey) && e.key === 'v' && clipboard) {
-                    if (!document.activeElement.contentEditable || document.activeElement.contentEditable === 'false') {
-                        e.preventDefault();
-                        pasteRow();
-                    }
-                }
-                
-                // Delete
-                if (e.key === 'Delete' && selectedRows.size > 0) {
-                    if (!document.activeElement.contentEditable || document.activeElement.contentEditable === 'false') {
-                        e.preventDefault();
-                        deleteSelectedRows();
-                    }
-                }
-                
-                // Escape - clear selection
-                if (e.key === 'Escape') {
-                    clearSelection();
-                }
-            });
+        function filterByCharacter() {
+            const value = document.getElementById('characterFilter').value;
+            applyFilters();
         }
 
-        // Row Operations
-        function insertRowAbove() {
-            if (selectedRows.size === 0) return;
-            
-            saveState();
-            const firstRow = Array.from(selectedRows)[0];
-            const newRow = createEmptyRow();
-            firstRow.parentNode.insertBefore(newRow, firstRow);
-            
-            updateRowNumbers();
-            setupRowSelection();
-            updateStatus('Row inserted above');
+        function filterByCategory() {
+            const value = document.getElementById('categoryFilter').value;
+            applyFilters();
         }
 
-        function insertRowBelow() {
-            if (selectedRows.size === 0) return;
-            
-            saveState();
-            const lastRow = Array.from(selectedRows)[selectedRows.size - 1];
-            const newRow = createEmptyRow();
-            lastRow.parentNode.insertBefore(newRow, lastRow.nextSibling);
-            
-            updateRowNumbers();
-            setupRowSelection();
-            updateStatus('Row inserted below');
+        function filterByDay() {
+            const value = document.getElementById('dayFilter').value;
+            applyFilters();
         }
 
-        function duplicateRow() {
-            if (selectedRows.size === 0) return;
-            
-            saveState();
-            const row = Array.from(selectedRows)[0];
-            const newRow = row.cloneNode(true);
-            newRow.classList.remove('selected');
-            row.parentNode.insertBefore(newRow, row.nextSibling);
-            
-            updateRowNumbers();
-            setupRowSelection();
-            updateStatus('Row duplicated');
-        }
+        function applyFilters() {
+            const charFilter = document.getElementById('characterFilter').value;
+            const catFilter = document.getElementById('categoryFilter').value;
+            const dayFilter = document.getElementById('dayFilter').value;
 
-        function deleteSelectedRows() {
-            if (selectedRows.size === 0) return;
-            
-            if (confirm(`Delete ${selectedRows.size} row(s)?`)) {
-                saveState();
-                selectedRows.forEach(row => row.remove());
-                selectedRows.clear();
-                
-                updateRowNumbers();
-                setupRowSelection();
-                updateSelectionInfo();
-                updateToolbarButtons();
-                updateStatus(`${selectedRows.size} row(s) deleted`);
-            }
-        }
-
-        function copyRow() {
-            if (selectedRows.size === 0) return;
-            
-            clipboard = Array.from(selectedRows).map(row => row.cloneNode(true));
-            updateStatus(`${clipboard.length} row(s) copied`);
-        }
-
-        function pasteRow() {
-            if (!clipboard || selectedRows.size === 0) return;
-            
-            saveState();
-            const lastRow = Array.from(selectedRows)[selectedRows.size - 1];
-            
-            clipboard.forEach(copiedRow => {
-                const newRow = copiedRow.cloneNode(true);
-                newRow.classList.remove('selected');
-                lastRow.parentNode.insertBefore(newRow, lastRow.nextSibling);
-            });
-            
-            updateRowNumbers();
-            setupRowSelection();
-            updateStatus(`${clipboard.length} row(s) pasted`);
-        }
-
-        function createEmptyRow() {
-            const newRow = document.createElement('tr');
-            newRow.innerHTML = `
-                <td class="row-num"></td>
-                <td></td>
-                <td contenteditable="true"></td>
-                <td contenteditable="true">Day 1</td>
-                <td contenteditable="true"></td>
-                <td contenteditable="true"></td>
-                <td contenteditable="true"></td>
-                <td contenteditable="true"></td>
-                <td contenteditable="true"></td>
-                <td contenteditable="true"></td>
-                <td contenteditable="true"></td>
-                <td contenteditable="true"></td>
-                <td contenteditable="true"></td>
-            `;
-            return newRow;
-        }
-
-        // Update row numbers
-        function updateRowNumbers() {
             const rows = document.querySelectorAll('#breakdownBody tr');
-            rows.forEach((row, index) => {
-                const rowNum = row.querySelector('.row-num');
-                if (rowNum) {
-                    rowNum.textContent = index + 1;
+            let visibleScenes = new Set();
+
+            rows.forEach(row => {
+                if (row.classList.contains('scene-header')) {
+                    row.style.display = 'none'; // Hide all headers initially
+                    return;
+                }
+
+                const char = row.dataset.character;
+                const cat = row.dataset.category;
+                const scene = row.dataset.scene;
+
+                // Get story day from row
+                const rowIndex = parseInt(row.dataset.row);
+                const day = breakdownData[rowIndex]?.storyDay;
+
+                let show = true;
+
+                if (charFilter !== 'all' && char !== charFilter) show = false;
+                if (catFilter !== 'all' && cat !== catFilter) show = false;
+                if (dayFilter !== 'all' && day != dayFilter) show = false;
+
+                row.style.display = show ? '' : 'none';
+
+                if (show) {
+                    visibleScenes.add(scene);
                 }
             });
+
+            // Show scene headers for visible scenes
+            rows.forEach(row => {
+                if (row.classList.contains('scene-header')) {
+                    const scene = row.dataset.scene;
+                    row.style.display = visibleScenes.has(scene) ? '' : 'none';
+                }
+            });
+
+            updateStatusBar();
         }
 
-        // Undo/Redo
-        function saveState() {
-            const tbody = document.getElementById('breakdownBody');
-            const state = tbody.innerHTML;
-            
-            undoStack.push(state);
-            if (undoStack.length > maxUndoStack) {
-                undoStack.shift();
-            }
-            
-            redoStack = []; // Clear redo stack on new action
-            updateUndoRedoButtons();
+        // ============================================================================
+        // SCENE EXPANSION
+        // ============================================================================
+
+        function collapseAllScenes() {
+            const rows = document.querySelectorAll('#breakdownBody tr:not(.scene-header)');
+            rows.forEach(row => row.style.display = 'none');
         }
 
-        function undo() {
-            if (undoStack.length === 0) return;
-            
-            const tbody = document.getElementById('breakdownBody');
-            redoStack.push(tbody.innerHTML);
-            tbody.innerHTML = undoStack.pop();
-            
-            setupRowSelection();
-            updateRowNumbers();
-            clearSelection();
-            updateUndoRedoButtons();
-            updateStatus('Undo');
+        function expandAllScenes() {
+            const rows = document.querySelectorAll('#breakdownBody tr');
+            rows.forEach(row => row.style.display = '');
         }
 
-        function redo() {
-            if (redoStack.length === 0) return;
-            
-            const tbody = document.getElementById('breakdownBody');
-            undoStack.push(tbody.innerHTML);
-            tbody.innerHTML = redoStack.pop();
-            
-            setupRowSelection();
-            updateRowNumbers();
-            clearSelection();
-            updateUndoRedoButtons();
-            updateStatus('Redo');
+        // ============================================================================
+        // DATA MANAGEMENT
+        // ============================================================================
+
+        function refreshData() {
+            loadData();
+            showToast('Data refreshed');
         }
 
-        function updateUndoRedoButtons() {
-            document.getElementById('undoBtn').disabled = undoStack.length === 0;
-            document.getElementById('redoBtn').disabled = redoStack.length === 0;
+        function saveBreakdown() {
+            localStorage.setItem('checksHappyBreakdown', JSON.stringify(breakdownData));
+            updateStatus('Saved');
         }
 
-        // UI Updates
-        function updateSelectionInfo() {
-            const count = selectedRows.size;
-            const info = count === 0 ? 'No rows selected' : `${count} row(s) selected`;
-            document.getElementById('selectionInfo').textContent = info;
-        }
+        function updateStatusBar() {
+            const visibleRows = document.querySelectorAll('#breakdownBody tr:not(.scene-header):not([style*="display: none"])');
+            const uniqueChars = new Set(breakdownData.map(r => r.character));
+            const uniqueScenes = new Set(breakdownData.map(r => r.sceneNum));
 
-        function updateToolbarButtons() {
-            const hasSelection = selectedRows.size > 0;
-            document.getElementById('insertAboveBtn').disabled = !hasSelection;
-            document.getElementById('insertBelowBtn').disabled = !hasSelection;
-            document.getElementById('duplicateBtn').disabled = !hasSelection;
-            document.getElementById('deleteBtn').disabled = !hasSelection;
+            document.getElementById('rowCount').textContent = `${visibleRows.length} rows`;
+            document.getElementById('characterCount').textContent = `${uniqueChars.size} characters`;
+            document.getElementById('sceneCount').textContent = `${uniqueScenes.size} scenes`;
         }
 
         function updateStatus(message) {
@@ -920,80 +996,159 @@
             }, 3000);
         }
 
-        // Save & Export
-        function saveBreakdown() {
-            const data = [];
-            const rows = document.querySelectorAll('#breakdownBody tr:not(.scene-header)');
-            
-            rows.forEach(row => {
-                const cells = row.querySelectorAll('td');
-                if (cells.length > 1) {
-                    data.push({
-                        scene: cells[1].textContent,
-                        character: cells[2].textContent,
-                        day: cells[3].textContent,
-                        time: cells[4].textContent,
-                        intExt: cells[5].textContent,
-                        location: cells[6].textContent,
-                        synopsis: cells[7].textContent,
-                        hair: cells[8].textContent,
-                        makeup: cells[9].textContent,
-                        sfx: cells[10].textContent,
-                        wardrobe: cells[11].textContent,
-                        notes: cells[12].textContent
-                    });
-                }
-            });
-            
-            localStorage.setItem('breakdownData', JSON.stringify(data));
-            updateStatus('Breakdown saved!');
+        // ============================================================================
+        // EXPORT FUNCTIONS
+        // ============================================================================
+
+        function showExportModal() {
+            document.getElementById('exportModal').style.display = 'flex';
         }
 
-        function exportBreakdown() {
-            const rows = [];
-            
-            // Headers
-            rows.push([
-                'Scene', 'Character', 'Story Day', 'Time', 'INT/EXT', 
-                'Location', 'Synopsis', 'Hair', 'Makeup', 'SFX/FX', 
-                'Wardrobe', 'Notes'
+        function closeExportModal() {
+            document.getElementById('exportModal').style.display = 'none';
+        }
+
+        function getExportData() {
+            const headers = [
+                'Scene', 'Character', 'Category', 'Story Day', 'Time', 'INT/EXT',
+                'Location', 'Synopsis', 'Look Arc', 'Hair', 'Makeup Base',
+                'Eye Bags', 'Lesions', 'Beard', 'Wounds/Blood/SFX', 'Notes'
+            ];
+
+            const rows = breakdownData.map(row => [
+                row.sceneNum,
+                row.character,
+                formatCategory(row.category),
+                row.storyDay || '',
+                row.timeOfDay || '',
+                row.intExt || '',
+                row.location || '',
+                row.synopsis || '',
+                row.lookArc || '',
+                row.hair || '',
+                row.makeupBase || '',
+                row.eyeBags || '',
+                row.lesions || '',
+                row.beard || '',
+                row.woundsSFX || '',
+                row.notes || ''
             ]);
-            
-            // Data
-            document.querySelectorAll('#breakdownBody tr:not(.scene-header)').forEach(row => {
-                const cells = row.querySelectorAll('td');
-                if (cells.length > 1) {
-                    const rowData = [];
-                    for (let i = 1; i < cells.length; i++) {
-                        let text = cells[i].textContent.trim();
-                        text = text.replace(/INT DAY|INT NIGHT|EXT DAY|EXT NIGHT/g, '').trim();
-                        rowData.push(text);
-                    }
-                    rows.push(rowData);
+
+            return { headers, rows };
+        }
+
+        function exportToTSV() {
+            const { headers, rows } = getExportData();
+            const tsv = [headers.join('\t'), ...rows.map(r => r.join('\t'))].join('\n');
+
+            downloadFile(tsv, 'breakdown.tsv', 'text/tab-separated-values');
+            closeExportModal();
+            showToast('Exported as TSV');
+        }
+
+        function exportToCSV() {
+            const { headers, rows } = getExportData();
+
+            const escapeCSV = (val) => {
+                val = String(val || '');
+                if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+                    return `"${val.replace(/"/g, '""')}"`;
                 }
+                return val;
+            };
+
+            const csv = [
+                headers.map(escapeCSV).join(','),
+                ...rows.map(r => r.map(escapeCSV).join(','))
+            ].join('\n');
+
+            downloadFile(csv, 'breakdown.csv', 'text/csv');
+            closeExportModal();
+            showToast('Exported as CSV');
+        }
+
+        function exportToPDF() {
+            // Create a printable version
+            const { headers, rows } = getExportData();
+
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>H&MU Breakdown</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; font-size: 10px; }
+                        h1 { font-size: 16px; margin-bottom: 10px; }
+                        table { border-collapse: collapse; width: 100%; }
+                        th, td { border: 1px solid #ccc; padding: 4px 6px; text-align: left; }
+                        th { background: #f0f0f0; font-weight: bold; }
+                        tr:nth-child(even) { background: #f9f9f9; }
+                        @media print {
+                            @page { size: landscape; margin: 0.5in; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <h1>Hair & Makeup Breakdown</h1>
+                    <table>
+                        <thead>
+                            <tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>
+                        </thead>
+                        <tbody>
+                            ${rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}
+                        </tbody>
+                    </table>
+                    <script>window.onload = function() { window.print(); }</script>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+
+            closeExportModal();
+            showToast('Opening print dialog...');
+        }
+
+        function copyToClipboard() {
+            const { headers, rows } = getExportData();
+            const tsv = [headers.join('\t'), ...rows.map(r => r.join('\t'))].join('\n');
+
+            navigator.clipboard.writeText(tsv).then(() => {
+                closeExportModal();
+                showToast('Copied to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                showToast('Failed to copy to clipboard');
             });
-            
-            // Convert to CSV
-            const csv = rows.map(row => 
-                row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(',')
-            ).join('\n');
-            
-            // Download
-            const blob = new Blob([csv], { type: 'text/csv' });
+        }
+
+        function downloadFile(content, filename, mimeType) {
+            const blob = new Blob([content], { type: mimeType });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'breakdown_haunted_hearts.csv';
+            a.download = filename;
             a.click();
             URL.revokeObjectURL(url);
-            
-            updateStatus('Breakdown exported to CSV!');
         }
 
-        console.log('✓ Breakdown sheet loaded');
-        console.log('• Click row numbers to select');
-        console.log('• Right-click for context menu');
-        console.log('• Keyboard shortcuts: Ctrl+C/V, Delete, Ctrl+Z/Y');
+        // ============================================================================
+        // UTILITIES
+        // ============================================================================
+
+        function showToast(message) {
+            const existing = document.querySelector('.toast');
+            if (existing) existing.remove();
+
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        console.log('Breakdown sheet loaded');
     </script>
 </body>
 </html>
