@@ -291,16 +291,16 @@ function createCharacterConfirmationModal() {
     modal.id = 'character-confirm-modal';
     modal.className = 'modal';
     modal.innerHTML = `
-        <div class="modal-content" style="max-width: 900px; max-height: 90vh;">
+        <div class="modal-content" style="max-width: 900px; max-height: 90vh; display: flex; flex-direction: column;">
             <div class="modal-title">Confirm Characters for H&MU Tracking</div>
 
-            <div class="modal-section">
+            <div class="modal-section" style="flex: 1; overflow-y: auto; min-height: 0;">
                 <div class="modal-note" style="margin-bottom: 16px;">
                     Review the detected characters below. Select which ones to include in your breakdown
                     and assign them to the correct category. Characters are sorted by scene count.
                 </div>
 
-                <div style="display: flex; gap: 12px; margin-bottom: 16px;">
+                <div style="display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;">
                     <button class="modal-btn" onclick="selectAllCharactersByCategory('LEAD')">Select All Leads</button>
                     <button class="modal-btn" onclick="selectAllCharactersByCategory('SUPPORTING')">Select All Supporting</button>
                     <button class="modal-btn" onclick="selectAllCharactersByCategory('DAY_PLAYER')">Select All Day Players</button>
@@ -308,7 +308,7 @@ function createCharacterConfirmationModal() {
                     <button class="modal-btn" onclick="toggleAllCharacters(false)">Deselect All</button>
                 </div>
 
-                <div class="character-confirm-tabs" style="display: flex; gap: 8px; margin-bottom: 12px; border-bottom: 1px solid var(--glass-border); padding-bottom: 8px;">
+                <div class="character-confirm-tabs" style="display: flex; gap: 8px; margin-bottom: 12px; border-bottom: 1px solid var(--glass-border); padding-bottom: 8px; flex-wrap: wrap;">
                     <button class="confirm-tab active" data-category="all" onclick="filterCharactersByCategory('all')">All (<span id="count-all">0</span>)</button>
                     <button class="confirm-tab" data-category="LEAD" onclick="filterCharactersByCategory('LEAD')">Lead (<span id="count-lead">0</span>)</button>
                     <button class="confirm-tab" data-category="SUPPORTING" onclick="filterCharactersByCategory('SUPPORTING')">Supporting (<span id="count-supporting">0</span>)</button>
@@ -316,29 +316,29 @@ function createCharacterConfirmationModal() {
                     <button class="confirm-tab" data-category="BACKGROUND" onclick="filterCharactersByCategory('BACKGROUND')">Background (<span id="count-background">0</span>)</button>
                 </div>
 
-                <div id="character-confirm-list" style="max-height: 400px; overflow-y: auto; border: 1px solid var(--glass-border); border-radius: 8px;">
+                <div id="character-confirm-list" style="max-height: 300px; overflow-y: auto; border: 1px solid var(--glass-border); border-radius: 8px;">
                     <!-- Character items populated here -->
                 </div>
-            </div>
 
-            <div class="modal-section" style="margin-top: 16px;">
-                <label class="modal-label">Add Character Manually</label>
-                <div style="display: flex; gap: 8px;">
-                    <input type="text" class="modal-input" id="manual-character-name" placeholder="Character name..." style="flex: 1;">
-                    <select class="modal-select" id="manual-character-category" style="width: 150px;">
-                        <option value="LEAD">Lead</option>
-                        <option value="SUPPORTING" selected>Supporting</option>
-                        <option value="DAY_PLAYER">Day Player</option>
-                        <option value="BACKGROUND">Background</option>
-                    </select>
-                    <button class="modal-btn primary" onclick="addManualCharacter()">Add</button>
+                <div style="margin-top: 16px;">
+                    <label class="modal-label">Add Character Manually</label>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <input type="text" class="modal-input" id="manual-character-name" placeholder="Character name..." style="flex: 1; min-width: 200px;">
+                        <select class="modal-select" id="manual-character-category" style="width: 150px;">
+                            <option value="LEAD">Lead</option>
+                            <option value="SUPPORTING" selected>Supporting</option>
+                            <option value="DAY_PLAYER">Day Player</option>
+                            <option value="BACKGROUND">Background</option>
+                        </select>
+                        <button class="modal-btn primary" onclick="addManualCharacter()">Add</button>
+                    </div>
                 </div>
             </div>
 
-            <div class="modal-actions">
+            <div class="modal-actions" style="flex-shrink: 0; padding-top: 16px; border-top: 1px solid var(--glass-border); margin-top: 16px;">
                 <button class="modal-btn" onclick="closeCharacterConfirmModal()">Cancel</button>
-                <button class="modal-btn primary" onclick="confirmCharactersAndContinue()">
-                    Confirm Characters & Generate Breakdown
+                <button class="modal-btn primary" onclick="confirmCharactersAndContinue()" style="background: var(--accent-gold); color: var(--bg-dark); font-weight: 600;">
+                    ✓ Confirm Characters & Generate Breakdown
                 </button>
             </div>
         </div>
