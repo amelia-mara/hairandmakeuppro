@@ -11,7 +11,9 @@
  */
 
 import { callAI } from './ai-integration.js';
-import { state } from './main.js';
+
+// Note: We don't import state to avoid circular dependencies
+// All data is passed as parameters to functions
 
 // Analysis configuration
 const CONFIG = {

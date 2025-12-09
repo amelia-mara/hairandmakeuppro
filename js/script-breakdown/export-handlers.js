@@ -17,7 +17,67 @@ import { renderCharacterTabs, renderCharacterTabPanels } from './character-panel
 import { detectTimeOfDay, detectIntExt, extractLocation } from './utils.js';
 import { callAI } from './ai-integration.js';
 import { renderAllHighlights } from './tag-system.js';
-import { analyzeScript, extractCharacterNamesFromText, normalizeCharacterName } from './script-analysis.js';
+
+// Dynamic import for script-analysis module (loaded when needed to avoid circular deps)
+let scriptAnalysisModule = null;
+
+async function getScriptAnalysis() {
+    if (!scriptAnalysisModule) {
+        try {
+            scriptAnalysisModule = await import('./script-analysis.js');
+        } catch (e) {
+            console.warn('Failed to load script-analysis module:', e);
+            return null;
+        }
+    }
+    return scriptAnalysisModule;
+}
+
+/**
+ * Local fallback for character name extraction (used when module fails to load)
+ */
+function extractCharacterNamesLocal(scriptText) {
+    const characters = new Set();
+
+    // Pattern 1: Standard dialogue format (CHARACTER NAME on its own line)
+    const dialoguePattern = /^([A-Z][A-Z\s\.'-]{1,30})\s*(?:\([^)]*\))?\s*$/gm;
+
+    // Exclusion list
+    const exclusions = new Set([
+        'INT', 'EXT', 'FADE', 'CUT', 'DISSOLVE', 'CONTINUED', 'THE END',
+        'TITLE', 'SUPER', 'INSERT', 'BACK TO', 'FLASHBACK', 'END FLASHBACK',
+        'LATER', 'CONTINUOUS', 'SAME', 'MORNING', 'AFTERNOON', 'EVENING',
+        'NIGHT', 'DAY', 'DAWN', 'DUSK', 'MOMENTS', 'THE NEXT'
+    ]);
+
+    let match;
+    while ((match = dialoguePattern.exec(scriptText)) !== null) {
+        let name = match[1].trim();
+        // Remove V.O., O.S., (CONT'D) suffixes
+        name = name.replace(/\s*\(?(V\.?O\.?|O\.?S\.?|CONT'?D?)\)?$/gi, '').trim();
+
+        if (name.length >= 2 && name.length <= 40 && !exclusions.has(name) && !/^\d/.test(name)) {
+            // Title case conversion
+            const normalized = name.split(' ')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                .join(' ');
+            characters.add(normalized);
+        }
+    }
+
+    return characters;
+}
+
+/**
+ * Local fallback for character name normalization
+ */
+function normalizeCharacterNameLocal(name) {
+    let normalized = name.replace(/\s*\(?(V\.?O\.?|O\.?S\.?|CONT'?D?)\)?$/gi, '').trim();
+    normalized = normalized.split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+    return normalized;
+}
 
 /**
  * Export project data as JSON file
@@ -132,51 +192,59 @@ export async function processScript() {
     showTopLoadingBar('Analyzing Script', `Analyzing ${state.scenes.length} scenes...`, 0);
 
     try {
-        // Use new multi-pass analysis system
-        const progressCallback = (message, progress) => {
-            updateTopLoadingBar('Analyzing Script', message, progress);
-        };
+        // Load script analysis module dynamically
+        const scriptAnalysis = await getScriptAnalysis();
 
-        const masterContext = await analyzeScript(text, state.scenes, progressCallback);
+        if (scriptAnalysis && scriptAnalysis.analyzeScript) {
+            // Use new multi-pass analysis system
+            const progressCallback = (message, progress) => {
+                updateTopLoadingBar('Analyzing Script', message, progress);
+            };
 
-        // Store master context in all locations for compatibility
-        window.masterContext = masterContext;
-        window.scriptMasterContext = masterContext;
-        localStorage.setItem('masterContext', JSON.stringify(masterContext));
-        localStorage.setItem('scriptMasterContext', JSON.stringify(masterContext));
+            const masterContext = await scriptAnalysis.analyzeScript(text, state.scenes, progressCallback);
 
-        // Store detected characters for confirmation step
-        if (masterContext.characters) {
-            state.detectedCharacters = Object.entries(masterContext.characters).map(([name, data]) => ({
-                name: name,
-                category: data.category || data.characterAnalysis?.role?.toUpperCase() || 'SUPPORTING',
-                sceneCount: data.sceneCount || data.storyPresence?.totalScenes || 0,
-                firstAppearance: data.firstAppearance || data.storyPresence?.firstAppearance || 1,
-                lastAppearance: data.lastAppearance || data.storyPresence?.lastAppearance || state.scenes.length,
-                hasDialogue: data.storyPresence?.hasDialogue !== false,
-                physicalDescription: data.scriptDescriptions?.[0]?.text || '',
-                scenesPresent: data.scenesPresent || data.storyPresence?.scenesPresent || [],
-                selected: true, // Default to selected
-                originalData: data
-            }));
+            // Store master context in all locations for compatibility
+            window.masterContext = masterContext;
+            window.scriptMasterContext = masterContext;
+            localStorage.setItem('masterContext', JSON.stringify(masterContext));
+            localStorage.setItem('scriptMasterContext', JSON.stringify(masterContext));
 
-            // Sort by scene count descending
-            state.detectedCharacters.sort((a, b) => b.sceneCount - a.sceneCount);
+            // Store detected characters for confirmation step
+            if (masterContext.characters) {
+                state.detectedCharacters = Object.entries(masterContext.characters).map(([name, data]) => ({
+                    name: name,
+                    category: data.category || data.characterAnalysis?.role?.toUpperCase() || 'SUPPORTING',
+                    sceneCount: data.sceneCount || data.storyPresence?.totalScenes || 0,
+                    firstAppearance: data.firstAppearance || data.storyPresence?.firstAppearance || 1,
+                    lastAppearance: data.lastAppearance || data.storyPresence?.lastAppearance || state.scenes.length,
+                    hasDialogue: data.storyPresence?.hasDialogue !== false,
+                    physicalDescription: data.scriptDescriptions?.[0]?.text || '',
+                    scenesPresent: data.scenesPresent || data.storyPresence?.scenesPresent || [],
+                    selected: true, // Default to selected
+                    originalData: data
+                }));
 
-            console.log(`Detected ${state.detectedCharacters.length} characters for confirmation`);
+                // Sort by scene count descending
+                state.detectedCharacters.sort((a, b) => b.sceneCount - a.sceneCount);
+
+                console.log(`Detected ${state.detectedCharacters.length} characters for confirmation`);
+            }
+
+            closeTopLoadingBar();
+
+            // Show character confirmation modal
+            showCharacterConfirmationModal();
+        } else {
+            // Fallback to original deep analysis if module failed to load
+            throw new Error('Script analysis module not available');
         }
-
-        closeTopLoadingBar();
-
-        // Show character confirmation modal
-        showCharacterConfirmationModal();
 
     } catch (error) {
         console.error('Analysis failed:', error);
         closeTopLoadingBar();
 
-        // Try fallback processing
-        const characters = extractCharacterNamesFromText(text);
+        // Try fallback processing using local character extraction
+        const characters = extractCharacterNamesLocal(text);
         state.detectedCharacters = Array.from(characters).map(name => ({
             name: name,
             category: 'SUPPORTING',
@@ -4133,6 +4201,7 @@ window.confirmCharacterSelection = confirmCharacterSelection;
 window.mergeSelectedCharacters = mergeSelectedCharacters;
 window.openToolsPanel = openToolsPanel;
 window.closeToolsPanel = closeToolsPanel;
+window.showCharacterConfirmationModal = showCharacterConfirmationModal;
 // New timeline and lookbook functions
 window.generateCharacterTimelines = generateCharacterTimelines;
 window.generateCharacterLookbooks = generateCharacterLookbooks;
