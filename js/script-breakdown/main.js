@@ -30,7 +30,7 @@ import './master-context-utils.js';
 // Debug utilities for troubleshooting data flow
 import './debug-utils.js';
 // Version management system
-import { initVersionManagement, saveCurrentVersionState } from './version-manager.js';
+import { initVersionManagement, saveCurrentVersionState, setStateReference } from './version-manager.js';
 import { renderVersionSelector } from './version-ui.js';
 
 // ============================================================================
@@ -106,6 +106,10 @@ export async function init() {
         }
 
         console.log('✅ State initialized with continuityEvents:', state.continuityEvents);
+
+        // Expose state globally for version management modules
+        window.state = state;
+        setStateReference(state);
 
         // Load project data from localStorage
         loadProjectData();

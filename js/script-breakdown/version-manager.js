@@ -10,11 +10,64 @@
  * - Track inheritance and changes
  */
 
-import { state } from './main.js';
-import { renderSceneList } from './scene-list.js';
-import { renderScript } from './script-display.js';
-import { renderCharacterTabs, renderCharacterTabPanels } from './character-panel.js';
-import { detectScenes, saveProject } from './export-handlers.js';
+// LAZY IMPORTS to avoid circular dependency with main.js
+// These are loaded dynamically when needed
+let _stateModule = null;
+let _renderSceneList = null;
+let _renderScript = null;
+let _renderCharacterTabs = null;
+let _renderCharacterTabPanels = null;
+let _detectScenes = null;
+let _saveProject = null;
+
+// Lazy getter for state to avoid circular dependency
+// Uses window.state as fallback since main.js sets it globally
+function getState() {
+    // First check if we have a cached module reference
+    if (_stateModule) {
+        return _stateModule;
+    }
+    // Fall back to window.state which is set by main.js after initialization
+    // This is safe because version functions are only called after init
+    if (typeof window !== 'undefined' && window.state) {
+        _stateModule = window.state;
+        return _stateModule;
+    }
+    // Last resort - try to get from imported module
+    // But this may be null during initial load
+    return null;
+}
+
+// Set state reference - called from main.js after state is ready
+export function setStateReference(state) {
+    _stateModule = state;
+}
+
+// Lazy loader for render functions
+async function loadRenderFunctions() {
+    if (!_renderSceneList) {
+        const sceneListModule = await import('./scene-list.js');
+        _renderSceneList = sceneListModule.renderSceneList;
+    }
+    if (!_renderScript) {
+        const scriptDisplayModule = await import('./script-display.js');
+        _renderScript = scriptDisplayModule.renderScript;
+    }
+    if (!_renderCharacterTabs || !_renderCharacterTabPanels) {
+        const charPanelModule = await import('./character-panel.js');
+        _renderCharacterTabs = charPanelModule.renderCharacterTabs;
+        _renderCharacterTabPanels = charPanelModule.renderCharacterTabPanels;
+    }
+}
+
+// Lazy loader for export handlers
+async function loadExportHandlers() {
+    if (!_detectScenes || !_saveProject) {
+        const exportModule = await import('./export-handlers.js');
+        _detectScenes = exportModule.detectScenes;
+        _saveProject = exportModule.saveProject;
+    }
+}
 
 // ============================================================================
 // VERSION COLOR PRESETS
@@ -44,6 +97,7 @@ export const VERSION_COLORS = {
  * Call this on app initialization
  */
 export function initVersionManagement() {
+    const state = getState();
     // Initialize versions array if not present
     if (!state.currentProject) {
         state.currentProject = {
@@ -83,6 +137,7 @@ function generateVersionId(versionName, date = new Date()) {
  * Get all versions for current project
  */
 export function getAllVersions() {
+    const state = getState();
     return state.currentProject?.script_versions || [];
 }
 
@@ -90,6 +145,7 @@ export function getAllVersions() {
  * Get current active version
  */
 export function getCurrentVersion() {
+    const state = getState();
     const versions = getAllVersions();
     const currentId = state.currentProject?.current_version_id;
 
@@ -126,6 +182,7 @@ export function versionNameExists(versionName) {
  * @returns {Object} The created version object
  */
 export function createNewVersion(options) {
+    const state = getState();
     const {
         versionName,
         versionColor,
@@ -162,7 +219,7 @@ export function createNewVersion(options) {
 
         // Script file reference (for future file storage)
         script_file: {
-            filename: `${state.currentProject.name}_${versionName}_${now.toISOString().split('T')[0]}.txt`,
+            filename: `${state.currentProject?.name || 'Project'}_${versionName}_${now.toISOString().split('T')[0]}.txt`,
             content_length: scriptContent.length
         },
 
@@ -515,6 +572,7 @@ export function inheritBreakdowns(oldVersion, newVersion, comparison) {
  * @returns {boolean} Success status
  */
 export async function switchToVersion(versionId) {
+    const state = getState();
     const versions = getAllVersions();
     const targetVersion = versions.find(v => v.version_id === versionId);
 
@@ -534,14 +592,16 @@ export async function switchToVersion(versionId) {
     // Load version data into state
     loadVersionIntoState(targetVersion);
 
-    // Save project
-    saveProject();
+    // Save project - use dynamic import
+    await loadExportHandlers();
+    if (_saveProject) _saveProject();
 
-    // Re-render UI
-    renderSceneList();
-    renderScript();
-    renderCharacterTabs();
-    renderCharacterTabPanels();
+    // Re-render UI - use dynamic imports
+    await loadRenderFunctions();
+    if (_renderSceneList) _renderSceneList();
+    if (_renderScript) _renderScript();
+    if (_renderCharacterTabs) _renderCharacterTabs();
+    if (_renderCharacterTabPanels) _renderCharacterTabPanels();
 
     console.log('Switched to version:', versionId);
     return true;
@@ -551,6 +611,7 @@ export async function switchToVersion(versionId) {
  * Load a version's data into the application state
  */
 function loadVersionIntoState(version) {
+    const state = getState();
     // Load scenes
     state.scenes = version.scenes.map((scene, index) => ({
         number: parseInt(scene.scene_number) || index + 1,
@@ -597,11 +658,12 @@ function loadVersionIntoState(version) {
  * Save current state back to the active version
  */
 export function saveCurrentVersionState() {
+    const state = getState();
     const currentVersion = getCurrentVersion();
     if (!currentVersion) return;
 
     // Update scenes
-    currentVersion.scenes = state.scenes.map(scene => ({
+    currentVersion.scenes = (state.scenes || []).map(scene => ({
         scene_number: scene.number?.toString(),
         setting: scene.intExt || '',
         location: scene.location || '',
@@ -652,7 +714,8 @@ export function saveCurrentVersionState() {
  * @param {string} sourceVersionId - Source version ID
  * @param {string} targetVersionId - Target version ID (defaults to current)
  */
-export function copySceneFromVersion(sceneNumber, sourceVersionId, targetVersionId = null) {
+export async function copySceneFromVersion(sceneNumber, sourceVersionId, targetVersionId = null) {
+    const state = getState();
     const sourceVersion = getVersionById(sourceVersionId);
     const targetVersion = targetVersionId
         ? getVersionById(targetVersionId)
@@ -689,7 +752,9 @@ export function copySceneFromVersion(sceneNumber, sourceVersionId, targetVersion
         state.sceneBreakdowns[sceneIndex] = targetVersion.breakdowns[sceneNumber];
     }
 
-    saveProject();
+    // Save project - use dynamic import
+    await loadExportHandlers();
+    if (_saveProject) _saveProject();
     console.log(`Copied scene ${sceneNumber} from ${sourceVersionId} to ${targetVersion.version_id}`);
     return true;
 }
@@ -729,7 +794,10 @@ export function deleteVersion(versionId) {
     // Remove from array
     versions.splice(versionIndex, 1);
 
-    saveProject();
+    // Save project - use dynamic import (async but we return sync for simplicity)
+    loadExportHandlers().then(() => {
+        if (_saveProject) _saveProject();
+    });
     console.log('Deleted version:', versionId);
     return true;
 }
@@ -744,11 +812,12 @@ export function deleteVersion(versionId) {
  * @returns {Object} Export data
  */
 export function exportVersionData(versionId) {
+    const state = getState();
     const version = getVersionById(versionId) || getCurrentVersion();
     if (!version) return null;
 
     return {
-        project_name: state.currentProject.name,
+        project_name: state.currentProject?.name || 'Untitled',
         version_name: version.version_name,
         version_id: version.version_id,
         version_color: version.version_color,
