@@ -2141,6 +2141,12 @@
                 this.renderCategories();
                 this.updateAllCalculations();
                 this.setTodayDate();
+                // Render receipts on init in case there are saved receipts
+                if (typeof renderReceipts === 'function') {
+                    renderReceipts();
+                }
+                // Also render expenses table
+                this.renderExpenses();
             }
 
             setupEventListeners() {
@@ -3830,8 +3836,14 @@
         }
 
         async function processReceiptFile(file) {
+            console.log('=== RECEIPT UPLOAD START ===');
+            console.log('File:', file.name, 'Type:', file.type, 'Size:', file.size);
+
             try {
+                console.log('Converting file to base64...');
                 const base64 = await fileToBase64(file);
+                console.log('Base64 conversion complete, length:', base64.length);
+
                 const receipt = {
                     id: Date.now(),
                     project_id: budgetManager.data.projectInfo.code,
@@ -3847,13 +3859,21 @@
                     ocr_response: null
                 };
 
+                console.log('Receipt object created with ID:', receipt.id);
+
                 budgetManager.data.receipts.push(receipt);
+                console.log('Receipt added to array. Total receipts:', budgetManager.data.receipts.length);
+
                 budgetManager.save();
+                console.log('Data saved to localStorage');
+
                 renderReceipts();
+                console.log('Receipts rendered');
 
                 // Check if it's a PDF (can't auto-scan)
                 const isPdf = file.type === 'application/pdf';
                 if (isPdf) {
+                    console.log('PDF detected - skipping auto-scan');
                     budgetManager.showNotification('PDF uploaded. Click "Process" to enter details manually.', 'info');
                     return;
                 }
@@ -3862,22 +3882,28 @@
                 const hasApiKey = budgetManager.data.apiSettings.claudeApiKey &&
                                   budgetManager.data.apiSettings.claudeApiKey.startsWith('sk-ant-');
 
+                console.log('API key configured:', hasApiKey);
+
                 if (!hasApiKey) {
                     budgetManager.showNotification('Receipt uploaded. Set up your API key in Settings to enable auto-scanning.', 'info');
                     return;
                 }
 
                 // Automatically process the receipt with OCR
+                console.log('Starting automatic OCR processing...');
                 budgetManager.showNotification('Receipt uploaded - scanning with AI...', 'info');
 
                 // Small delay to let the UI update, then auto-process
                 setTimeout(() => {
+                    console.log('Calling processReceipt for ID:', receipt.id);
                     processReceipt(receipt.id);
                 }, 100);
 
             } catch (error) {
-                console.error('Error processing file:', error);
-                budgetManager.showNotification('Error processing file', 'danger');
+                console.error('=== RECEIPT UPLOAD ERROR ===');
+                console.error('Error:', error);
+                console.error('Stack:', error.stack);
+                budgetManager.showNotification('Error processing file: ' + error.message, 'danger');
             }
         }
 
@@ -4002,6 +4028,8 @@
         // ===== CLAUDE API INTEGRATION =====
 
         async function callClaudeAPI(imageBase64, fileType) {
+            console.log('=== CLAUDE API CALL START ===');
+
             const apiKey = budgetManager.data.apiSettings.claudeApiKey;
 
             if (!apiKey) {
@@ -4013,11 +4041,11 @@
                 throw new Error('Invalid API key format. Claude API keys should start with "sk-ant-"');
             }
 
-            console.log('Starting OCR request, image data length:', imageBase64.length, 'file type:', fileType);
+            console.log('API key validated. Image data length:', imageBase64.length, 'File type:', fileType);
 
             // Try server-side proxy first (works in production on Vercel)
             try {
-                console.log('Attempting server-side API proxy...');
+                console.log('Step 1: Attempting server-side API proxy at /api/claude-ocr...');
                 const proxyResponse = await fetch('/api/claude-ocr', {
                     method: 'POST',
                     headers: {
@@ -4030,27 +4058,40 @@
                     })
                 });
 
+                console.log('Proxy response status:', proxyResponse.status);
+
                 if (proxyResponse.ok) {
                     const result = await proxyResponse.json();
-                    console.log('Server proxy OCR result:', result);
+                    console.log('=== PROXY SUCCESS ===');
+                    console.log('OCR result:', result);
                     return result;
                 }
 
                 // If proxy returns an error, get the message
-                const proxyError = await proxyResponse.json();
+                let proxyErrorMsg = 'Unknown error';
+                try {
+                    const proxyError = await proxyResponse.json();
+                    proxyErrorMsg = proxyError.error || proxyErrorMsg;
+                    console.log('Proxy error response:', proxyError);
+                } catch (e) {
+                    console.log('Could not parse proxy error response');
+                }
+
                 if (proxyResponse.status !== 404) {
                     // Real error from proxy, throw it
-                    throw new Error(proxyError.error || 'OCR processing failed');
+                    throw new Error(proxyErrorMsg);
                 }
                 // 404 means proxy not available, fall through to direct call
-                console.log('Server proxy not available, trying direct API call...');
+                console.log('Proxy returned 404 - not available, trying direct API...');
             } catch (proxyError) {
                 // Network error or proxy not available - try direct call
-                console.log('Server proxy failed:', proxyError.message, '- trying direct API call...');
+                console.log('Proxy request failed:', proxyError.message);
+                console.log('Falling back to direct API call...');
             }
 
             // Fall back to direct API call (requires browser access enabled on API key)
-            console.log('Attempting direct Claude API call...');
+            console.log('Step 2: Attempting direct Claude API call to api.anthropic.com...');
+            console.log('NOTE: Direct browser calls require "dangerous direct browser access" enabled on your API key');
 
             // Extract base64 data from data URL
             const base64Data = imageBase64.split(',')[1];
@@ -4094,38 +4135,59 @@ For suggested_category, use your knowledge of hair and makeup department supplie
 
 Return ONLY the JSON object, no markdown formatting or explanation.`;
 
-            const response = await fetch('https://api.anthropic.com/v1/messages', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-api-key': apiKey,
-                    'anthropic-version': '2023-06-01',
-                    'anthropic-dangerous-direct-browser-access': 'true'
-                },
-                body: JSON.stringify({
-                    model: 'claude-sonnet-4-20250514',
-                    max_tokens: 2048,
-                    messages: [
-                        {
-                            role: 'user',
-                            content: [
-                                {
-                                    type: 'image',
-                                    source: {
-                                        type: 'base64',
-                                        media_type: mediaType,
-                                        data: base64Data
+            // Wrap direct API call in try-catch to handle CORS and network errors
+            let response;
+            try {
+                console.log('Making fetch request to api.anthropic.com...');
+                response = await fetch('https://api.anthropic.com/v1/messages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-api-key': apiKey,
+                        'anthropic-version': '2023-06-01',
+                        'anthropic-dangerous-direct-browser-access': 'true'
+                    },
+                    body: JSON.stringify({
+                        model: 'claude-sonnet-4-20250514',
+                        max_tokens: 2048,
+                        messages: [
+                            {
+                                role: 'user',
+                                content: [
+                                    {
+                                        type: 'image',
+                                        source: {
+                                            type: 'base64',
+                                            media_type: mediaType,
+                                            data: base64Data
+                                        }
+                                    },
+                                    {
+                                        type: 'text',
+                                        text: prompt
                                     }
-                                },
-                                {
-                                    type: 'text',
-                                    text: prompt
-                                }
-                            ]
-                        }
-                    ]
-                })
-            });
+                                ]
+                            }
+                        ]
+                    })
+                });
+                console.log('Direct API response received, status:', response.status);
+            } catch (fetchError) {
+                console.error('=== FETCH ERROR (likely CORS) ===');
+                console.error('Error:', fetchError);
+                console.error('Error name:', fetchError.name);
+                console.error('Error message:', fetchError.message);
+
+                // CORS errors typically appear as "TypeError: Failed to fetch"
+                if (fetchError.name === 'TypeError' && fetchError.message.includes('Failed to fetch')) {
+                    throw new Error(
+                        'CORS Error: Cannot call Claude API directly from browser. ' +
+                        'This app needs to be deployed to Vercel (or similar) where the /api/claude-ocr endpoint will work. ' +
+                        'For local development, you can enter receipt data manually.'
+                    );
+                }
+                throw fetchError;
+            }
 
             if (!response.ok) {
                 let errorMessage = 'API request failed';
@@ -4137,6 +4199,8 @@ Return ONLY the JSON object, no markdown formatting or explanation.`;
                     console.error('Could not parse error response');
                 }
 
+                console.error('API returned error status:', response.status, errorMessage);
+
                 if (response.status === 401) {
                     throw new Error('Invalid API key. Please check your Claude API key in Settings.');
                 } else if (response.status === 429) {
@@ -4144,7 +4208,7 @@ Return ONLY the JSON object, no markdown formatting or explanation.`;
                 } else if (response.status === 400) {
                     throw new Error('Bad request: ' + errorMessage);
                 } else if (response.status === 403) {
-                    throw new Error('API access denied. Your Claude API key may not have browser access enabled. Please contact support or try a different API key.');
+                    throw new Error('API access denied. Your Claude API key may not have browser access enabled.');
                 } else if (response.status >= 500) {
                     throw new Error('Claude API server error. Please try again later.');
                 }
@@ -4153,6 +4217,7 @@ Return ONLY the JSON object, no markdown formatting or explanation.`;
             }
 
             const data = await response.json();
+            console.log('=== DIRECT API SUCCESS ===');
             console.log('Claude API Response:', data);
 
             if (!data.content || !data.content[0] || !data.content[0].text) {
@@ -4165,13 +4230,17 @@ Return ONLY the JSON object, no markdown formatting or explanation.`;
 
             // Parse the JSON response
             try {
-                return JSON.parse(content);
+                const parsed = JSON.parse(content);
+                console.log('Parsed OCR result:', parsed);
+                return parsed;
             } catch (e) {
                 console.log('Direct JSON parse failed, trying to extract JSON from text');
                 const jsonMatch = content.match(/\{[\s\S]*\}/);
                 if (jsonMatch) {
                     try {
-                        return JSON.parse(jsonMatch[0]);
+                        const parsed = JSON.parse(jsonMatch[0]);
+                        console.log('Extracted and parsed OCR result:', parsed);
+                        return parsed;
                     } catch (parseError) {
                         console.error('Failed to parse extracted JSON:', parseError);
                     }
