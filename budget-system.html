@@ -3850,7 +3850,31 @@
                 budgetManager.data.receipts.push(receipt);
                 budgetManager.save();
                 renderReceipts();
-                budgetManager.showNotification('Receipt uploaded successfully', 'success');
+
+                // Check if it's a PDF (can't auto-scan)
+                const isPdf = file.type === 'application/pdf';
+                if (isPdf) {
+                    budgetManager.showNotification('PDF uploaded. Click "Process" to enter details manually.', 'info');
+                    return;
+                }
+
+                // Check if API key is configured
+                const hasApiKey = budgetManager.data.apiSettings.claudeApiKey &&
+                                  budgetManager.data.apiSettings.claudeApiKey.startsWith('sk-ant-');
+
+                if (!hasApiKey) {
+                    budgetManager.showNotification('Receipt uploaded. Set up your API key in Settings to enable auto-scanning.', 'info');
+                    return;
+                }
+
+                // Automatically process the receipt with OCR
+                budgetManager.showNotification('Receipt uploaded - scanning with AI...', 'info');
+
+                // Small delay to let the UI update, then auto-process
+                setTimeout(() => {
+                    processReceipt(receipt.id);
+                }, 100);
+
             } catch (error) {
                 console.error('Error processing file:', error);
                 budgetManager.showNotification('Error processing file', 'danger');
