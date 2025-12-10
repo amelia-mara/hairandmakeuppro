@@ -3989,6 +3989,45 @@
                 throw new Error('Invalid API key format. Claude API keys should start with "sk-ant-"');
             }
 
+            console.log('Starting OCR request, image data length:', imageBase64.length, 'file type:', fileType);
+
+            // Try server-side proxy first (works in production on Vercel)
+            try {
+                console.log('Attempting server-side API proxy...');
+                const proxyResponse = await fetch('/api/claude-ocr', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        imageBase64: imageBase64,
+                        fileType: fileType,
+                        apiKey: apiKey
+                    })
+                });
+
+                if (proxyResponse.ok) {
+                    const result = await proxyResponse.json();
+                    console.log('Server proxy OCR result:', result);
+                    return result;
+                }
+
+                // If proxy returns an error, get the message
+                const proxyError = await proxyResponse.json();
+                if (proxyResponse.status !== 404) {
+                    // Real error from proxy, throw it
+                    throw new Error(proxyError.error || 'OCR processing failed');
+                }
+                // 404 means proxy not available, fall through to direct call
+                console.log('Server proxy not available, trying direct API call...');
+            } catch (proxyError) {
+                // Network error or proxy not available - try direct call
+                console.log('Server proxy failed:', proxyError.message, '- trying direct API call...');
+            }
+
+            // Fall back to direct API call (requires browser access enabled on API key)
+            console.log('Attempting direct Claude API call...');
+
             // Extract base64 data from data URL
             const base64Data = imageBase64.split(',')[1];
 
@@ -3996,12 +4035,10 @@
                 throw new Error('Invalid image data. Please try uploading the receipt again.');
             }
 
-            console.log('Calling Claude API with image data length:', base64Data.length, 'file type:', fileType);
-
             // Determine media type
             let mediaType = fileType;
-            if (mediaType === 'image/heic') mediaType = 'image/jpeg'; // Claude doesn't support HEIC directly
-            if (!mediaType || mediaType === '') mediaType = 'image/jpeg'; // Default fallback
+            if (mediaType === 'image/heic') mediaType = 'image/jpeg';
+            if (!mediaType || mediaType === '') mediaType = 'image/jpeg';
 
             const prompt = `Analyse this receipt/invoice image and extract the following data in JSON format:
 {
@@ -4076,13 +4113,14 @@ Return ONLY the JSON object, no markdown formatting or explanation.`;
                     console.error('Could not parse error response');
                 }
 
-                // Provide more specific error messages based on status code
                 if (response.status === 401) {
                     throw new Error('Invalid API key. Please check your Claude API key in Settings.');
                 } else if (response.status === 429) {
                     throw new Error('Rate limit exceeded. Please wait a moment and try again.');
                 } else if (response.status === 400) {
                     throw new Error('Bad request: ' + errorMessage);
+                } else if (response.status === 403) {
+                    throw new Error('API access denied. Your Claude API key may not have browser access enabled. Please contact support or try a different API key.');
                 } else if (response.status >= 500) {
                     throw new Error('Claude API server error. Please try again later.');
                 }
@@ -4106,7 +4144,6 @@ Return ONLY the JSON object, no markdown formatting or explanation.`;
                 return JSON.parse(content);
             } catch (e) {
                 console.log('Direct JSON parse failed, trying to extract JSON from text');
-                // Try to extract JSON from the response
                 const jsonMatch = content.match(/\{[\s\S]*\}/);
                 if (jsonMatch) {
                     try {
