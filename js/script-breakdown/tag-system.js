@@ -991,6 +991,260 @@ function debugTags() {
 }
 
 // ============================================================================
+// TAG CONTEXT MENU FUNCTIONS
+// ============================================================================
+
+/**
+ * Currently selected tag for context menu operations
+ */
+let contextMenuTagId = null;
+
+/**
+ * Edit tag from context menu
+ */
+function editTagFromContext() {
+    if (!contextMenuTagId) return;
+
+    // Find the tag
+    let foundTag = null;
+    let foundSceneIndex = null;
+
+    for (const [sceneIndex, tags] of Object.entries(state.scriptTags)) {
+        const tag = tags.find(t => t.id === contextMenuTagId);
+        if (tag) {
+            foundTag = tag;
+            foundSceneIndex = parseInt(sceneIndex);
+            break;
+        }
+    }
+
+    if (!foundTag) {
+        console.warn('Tag not found:', contextMenuTagId);
+        closeContextMenu();
+        return;
+    }
+
+    // Show edit popup
+    showTagPopup(null, foundTag, foundSceneIndex);
+    closeContextMenu();
+}
+
+/**
+ * Remove tag from context menu
+ */
+function removeTagFromContext() {
+    if (!contextMenuTagId) return;
+
+    if (!confirm('Are you sure you want to delete this tag?')) {
+        closeContextMenu();
+        return;
+    }
+
+    // Find and remove the tag
+    for (const [sceneIndex, tags] of Object.entries(state.scriptTags)) {
+        const tagIndex = tags.findIndex(t => t.id === contextMenuTagId);
+        if (tagIndex !== -1) {
+            tags.splice(tagIndex, 1);
+
+            // Re-render highlights
+            renderAllHighlights();
+
+            // Save
+            if (typeof saveToLocalStorage === 'function') {
+                saveToLocalStorage();
+            }
+
+            console.log('Tag deleted:', contextMenuTagId);
+            break;
+        }
+    }
+
+    closeContextMenu();
+}
+
+/**
+ * Link tag to continuity event from context menu
+ */
+function linkToContinuityFromContext() {
+    if (!contextMenuTagId) return;
+
+    // Find the tag
+    let foundTag = null;
+
+    for (const tags of Object.values(state.scriptTags)) {
+        const tag = tags.find(t => t.id === contextMenuTagId);
+        if (tag) {
+            foundTag = tag;
+            break;
+        }
+    }
+
+    if (!foundTag) {
+        closeContextMenu();
+        return;
+    }
+
+    // Show continuity event linking modal (if available)
+    if (window.showLinkEventModal) {
+        window.showLinkEventModal(foundTag);
+    } else {
+        alert('Continuity event linking is not yet available for this tag.\n\nCharacter: ' + (foundTag.character || 'Unspecified'));
+    }
+
+    closeContextMenu();
+}
+
+/**
+ * Jump to tags tab from context menu
+ */
+function jumpToTagsTab() {
+    closeContextMenu();
+
+    // Switch to tags tab if it exists
+    const tagsTab = document.querySelector('[data-tab="tags"]');
+    if (tagsTab) {
+        tagsTab.click();
+    } else {
+        // Try opening tools panel with tags section
+        if (window.openToolsPanel) {
+            window.openToolsPanel();
+        }
+    }
+}
+
+/**
+ * Close the context menu
+ */
+function closeContextMenu() {
+    const menu = document.getElementById('tag-context-menu');
+    if (menu) {
+        menu.style.display = 'none';
+    }
+    contextMenuTagId = null;
+}
+
+/**
+ * Show context menu for a tag
+ */
+function showTagContextMenu(event, tagId) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    contextMenuTagId = tagId;
+
+    const menu = document.getElementById('tag-context-menu');
+    if (menu) {
+        menu.style.display = 'block';
+        menu.style.left = event.pageX + 'px';
+        menu.style.top = event.pageY + 'px';
+    }
+}
+
+// ============================================================================
+// ADD ELEMENT MODAL FUNCTIONS
+// ============================================================================
+
+/**
+ * Current element category being added
+ */
+let currentAddElementCategory = null;
+let currentAddElementSceneIndex = null;
+
+/**
+ * Open add element modal
+ */
+function openAddElementModal(category, sceneIndex) {
+    currentAddElementCategory = category;
+    currentAddElementSceneIndex = sceneIndex;
+
+    const modal = document.getElementById('addElementModal');
+    const input = document.getElementById('elementInput');
+
+    if (modal && input) {
+        // Update modal title if needed
+        const title = modal.querySelector('.modal-title');
+        if (title) {
+            title.textContent = `Add ${category.charAt(0).toUpperCase() + category.slice(1)} Element`;
+        }
+
+        input.value = '';
+        input.placeholder = `Enter ${category} element...`;
+        modal.style.display = 'flex';
+        input.focus();
+    }
+}
+
+/**
+ * Close add element modal
+ */
+function closeAddElementModal() {
+    const modal = document.getElementById('addElementModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    currentAddElementCategory = null;
+    currentAddElementSceneIndex = null;
+}
+
+/**
+ * Confirm adding element
+ */
+function confirmAddElement() {
+    const input = document.getElementById('elementInput');
+    if (!input) return;
+
+    const value = input.value.trim();
+    if (!value) {
+        alert('Please enter an element name');
+        return;
+    }
+
+    const category = currentAddElementCategory;
+    const sceneIndex = currentAddElementSceneIndex ?? state.currentScene;
+
+    if (sceneIndex === null || sceneIndex === undefined) {
+        alert('No scene selected');
+        closeAddElementModal();
+        return;
+    }
+
+    // Initialize breakdown if needed
+    if (!state.sceneBreakdowns[sceneIndex]) {
+        state.sceneBreakdowns[sceneIndex] = {
+            cast: [],
+            elements: {}
+        };
+    }
+
+    if (!state.sceneBreakdowns[sceneIndex].elements) {
+        state.sceneBreakdowns[sceneIndex].elements = {};
+    }
+
+    if (!state.sceneBreakdowns[sceneIndex].elements[category]) {
+        state.sceneBreakdowns[sceneIndex].elements[category] = [];
+    }
+
+    // Add element if not already present
+    if (!state.sceneBreakdowns[sceneIndex].elements[category].includes(value)) {
+        state.sceneBreakdowns[sceneIndex].elements[category].push(value);
+
+        // Save
+        if (typeof saveToLocalStorage === 'function') {
+            saveToLocalStorage();
+        }
+
+        // Re-render breakdown panel
+        if (window.renderBreakdownPanel) {
+            window.renderBreakdownPanel();
+        }
+
+        console.log(`Added ${category} element:`, value);
+    }
+
+    closeAddElementModal();
+}
+
+// ============================================================================
 // EXPOSE GLOBAL FUNCTIONS
 // ============================================================================
 
@@ -1001,3 +1255,16 @@ window.saveTag = saveTag;
 window.renderAllHighlights = renderAllHighlights;
 window.handleTextSelection = handleTextSelection;
 window.debugTags = debugTags;
+
+// Tag context menu functions
+window.editTagFromContext = editTagFromContext;
+window.removeTagFromContext = removeTagFromContext;
+window.linkToContinuityFromContext = linkToContinuityFromContext;
+window.jumpToTagsTab = jumpToTagsTab;
+window.showTagContextMenu = showTagContextMenu;
+window.closeContextMenu = closeContextMenu;
+
+// Add element modal functions
+window.openAddElementModal = openAddElementModal;
+window.closeAddElementModal = closeAddElementModal;
+window.confirmAddElement = confirmAddElement;

@@ -4873,3 +4873,4 @@ window.logMasterContextSummary = function() {
 window.updateWorkflowStatus = updateWorkflowStatus;
 window.processCurrentScene = processCurrentScene;
 window.processAllRemaining = processAllRemaining;
+window.showToast = showToast;
