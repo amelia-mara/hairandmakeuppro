@@ -2548,3 +2548,7 @@ export function selectScene(sceneIndex) {
 }
 
 export { renderSceneBreakdown };
+
+// Expose key functions to window for cross-module access
+window.renderBreakdownPanel = renderBreakdownPanel;
+window.saveToLocalStorage = saveToLocalStorage;
