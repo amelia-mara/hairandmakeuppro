@@ -634,9 +634,17 @@ window.addManualCharacter = function() {
 };
 
 /**
+ * Track selected primary character for merge
+ */
+let mergePrimaryIndex = null;
+
+/**
  * Open merge characters modal
  */
 window.openMergeCharactersModal = function() {
+    // Reset primary selection
+    mergePrimaryIndex = null;
+
     // Create modal if it doesn't exist
     let modal = document.getElementById('merge-characters-modal');
     if (!modal) {
@@ -654,28 +662,26 @@ window.openMergeCharactersModal = function() {
             <div class="modal-title">Merge Duplicate Characters</div>
 
             <div class="modal-note" style="margin-bottom: 16px;">
-                Select characters that are the same person to merge them. The first selected character's name will be used as the primary name.
+                <strong>Step 1:</strong> Check the characters that are the same person.<br>
+                <strong>Step 2:</strong> Click the star ⭐ next to the name you want to keep as the primary name.
             </div>
 
             <div style="flex: 1; overflow-y: auto; min-height: 0;">
                 <div id="merge-character-list" style="border: 1px solid var(--glass-border); border-radius: 8px; max-height: 300px; overflow-y: auto;">
-                    ${characters.map((char, idx) => `
-                        <div class="merge-char-item" style="display: flex; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--glass-border);">
-                            <input type="checkbox" class="merge-checkbox" data-index="${idx}" style="width: 18px; height: 18px; margin-right: 12px; cursor: pointer;">
-                            <span style="font-weight: 600; min-width: 150px;">${char.name}</span>
-                            <span style="color: var(--text-muted); font-size: 0.85em;">
-                                ${char.sceneCount} scene${char.sceneCount !== 1 ? 's' : ''}
-                            </span>
-                        </div>
-                    `).join('')}
+                    ${renderMergeCharacterItems(characters)}
                 </div>
 
-                <div style="margin-top: 16px;">
-                    <label class="modal-label">Primary Name (after merge)</label>
-                    <input type="text" class="modal-input" id="merge-primary-name" placeholder="Enter the canonical name for merged character...">
-                    <div style="font-size: 0.75em; color: var(--text-muted); margin-top: 4px;">
-                        Leave empty to use the first selected character's name
+                <div id="merge-primary-display" style="margin-top: 16px; padding: 12px; background: rgba(212, 175, 55, 0.1); border: 1px solid var(--accent-gold); border-radius: 8px; display: none;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 1.2em;">⭐</span>
+                        <span style="color: var(--text-muted);">Primary name:</span>
+                        <span id="merge-primary-name-display" style="font-weight: 700; color: var(--accent-gold);"></span>
                     </div>
+                </div>
+
+                <div style="margin-top: 12px;">
+                    <label class="modal-label" style="font-size: 0.85em;">Or enter a custom name:</label>
+                    <input type="text" class="modal-input" id="merge-primary-name" placeholder="Custom canonical name (optional)..." style="font-size: 0.9em;">
                 </div>
             </div>
 
@@ -691,7 +697,105 @@ window.openMergeCharactersModal = function() {
     `;
 
     modal.style.display = 'flex';
+
+    // Add event listeners for checkboxes
+    setupMergeCheckboxListeners();
 };
+
+/**
+ * Render merge character list items
+ */
+function renderMergeCharacterItems(characters) {
+    return characters.map((char, idx) => {
+        const isPrimary = mergePrimaryIndex === idx;
+        const primaryStyle = isPrimary ? 'background: rgba(212, 175, 55, 0.15); border-left: 3px solid var(--accent-gold);' : '';
+
+        return `
+            <div class="merge-char-item" data-index="${idx}" style="display: flex; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--glass-border); ${primaryStyle}">
+                <input type="checkbox" class="merge-checkbox" data-index="${idx}" ${isPrimary ? 'checked' : ''} style="width: 18px; height: 18px; margin-right: 12px; cursor: pointer;">
+                <button class="set-primary-btn" onclick="setMergePrimary(${idx})" data-index="${idx}" title="Set as primary name" style="
+                    background: ${isPrimary ? 'var(--accent-gold)' : 'transparent'};
+                    border: 1px solid ${isPrimary ? 'var(--accent-gold)' : 'var(--glass-border)'};
+                    border-radius: 4px;
+                    padding: 2px 6px;
+                    margin-right: 10px;
+                    cursor: pointer;
+                    font-size: 0.9em;
+                    transition: all 0.2s;
+                ">${isPrimary ? '⭐' : '☆'}</button>
+                <span style="font-weight: ${isPrimary ? '700' : '600'}; min-width: 150px; color: ${isPrimary ? 'var(--accent-gold)' : 'inherit'};">${char.name}</span>
+                <span style="color: var(--text-muted); font-size: 0.85em; margin-left: auto;">
+                    ${char.sceneCount} scene${char.sceneCount !== 1 ? 's' : ''}
+                    ${char.mergedFrom ? '<span style="color: var(--accent-gold);"> (merged)</span>' : ''}
+                </span>
+            </div>
+        `;
+    }).join('');
+}
+
+/**
+ * Set up event listeners for merge checkboxes
+ */
+function setupMergeCheckboxListeners() {
+    const checkboxes = document.querySelectorAll('#merge-character-list .merge-checkbox');
+    checkboxes.forEach(cb => {
+        cb.addEventListener('change', function() {
+            const idx = parseInt(this.dataset.index);
+            // If this is the first checkbox checked, auto-set as primary
+            const checkedBoxes = document.querySelectorAll('#merge-character-list .merge-checkbox:checked');
+            if (checkedBoxes.length === 1 && this.checked) {
+                setMergePrimary(idx);
+            }
+            // If unchecking the primary, reset primary to first checked
+            if (!this.checked && mergePrimaryIndex === idx) {
+                const firstChecked = document.querySelector('#merge-character-list .merge-checkbox:checked');
+                if (firstChecked) {
+                    setMergePrimary(parseInt(firstChecked.dataset.index));
+                } else {
+                    mergePrimaryIndex = null;
+                    updatePrimaryDisplay();
+                }
+            }
+        });
+    });
+}
+
+/**
+ * Set the primary character for merge
+ */
+window.setMergePrimary = function(index) {
+    mergePrimaryIndex = index;
+
+    // Also check this character's checkbox
+    const checkbox = document.querySelector(`#merge-character-list .merge-checkbox[data-index="${index}"]`);
+    if (checkbox) checkbox.checked = true;
+
+    // Refresh the list to show visual feedback
+    const listContainer = document.getElementById('merge-character-list');
+    if (listContainer) {
+        const characters = state.detectedCharacters || [];
+        listContainer.innerHTML = renderMergeCharacterItems(characters);
+        setupMergeCheckboxListeners();
+    }
+
+    updatePrimaryDisplay();
+};
+
+/**
+ * Update the primary name display
+ */
+function updatePrimaryDisplay() {
+    const display = document.getElementById('merge-primary-display');
+    const nameDisplay = document.getElementById('merge-primary-name-display');
+
+    if (mergePrimaryIndex !== null && state.detectedCharacters[mergePrimaryIndex]) {
+        const primaryChar = state.detectedCharacters[mergePrimaryIndex];
+        if (nameDisplay) nameDisplay.textContent = primaryChar.name;
+        if (display) display.style.display = 'block';
+    } else {
+        if (display) display.style.display = 'none';
+    }
+}
 
 /**
  * Close merge characters modal
@@ -724,15 +828,25 @@ window.performCharacterMerge = function() {
         return;
     }
 
-    // Use provided primary name or first selected character's name
+    // Use provided custom name, or selected primary, or first selected character's name
     if (!primaryName) {
-        primaryName = charsToMerge[0].name;
+        // Check if a primary was selected via the star button
+        if (mergePrimaryIndex !== null && state.detectedCharacters[mergePrimaryIndex]) {
+            primaryName = state.detectedCharacters[mergePrimaryIndex].name;
+        } else {
+            primaryName = charsToMerge[0].name;
+        }
     }
+
+    // Find the primary character for category (use selected primary or first)
+    const primaryChar = mergePrimaryIndex !== null && state.detectedCharacters[mergePrimaryIndex]
+        ? state.detectedCharacters[mergePrimaryIndex]
+        : charsToMerge[0];
 
     // Combine data from all characters
     const mergedChar = {
         name: normalizeCharacterName(primaryName),
-        category: charsToMerge[0].category, // Use first character's category
+        category: primaryChar.category, // Use primary character's category
         sceneCount: 0,
         firstAppearance: Infinity,
         lastAppearance: 0,
@@ -850,25 +964,25 @@ window.performCharacterMerge = function() {
  * Refresh the merge character list within the modal (without closing it)
  */
 function refreshMergeCharacterList() {
+    // Reset the primary selection for the next merge
+    mergePrimaryIndex = null;
+
     const listContainer = document.getElementById('merge-character-list');
     if (!listContainer) return;
 
     const characters = state.detectedCharacters || [];
 
-    listContainer.innerHTML = characters.map((char, idx) => `
-        <div class="merge-char-item" style="display: flex; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--glass-border);">
-            <input type="checkbox" class="merge-checkbox" data-index="${idx}" style="width: 18px; height: 18px; margin-right: 12px; cursor: pointer;">
-            <span style="font-weight: 600; min-width: 150px;">${char.name}</span>
-            <span style="color: var(--text-muted); font-size: 0.85em;">
-                ${char.sceneCount} scene${char.sceneCount !== 1 ? 's' : ''}
-                ${char.mergedFrom ? `<span style="color: var(--accent-gold);"> (merged)</span>` : ''}
-            </span>
-        </div>
-    `).join('');
+    // Use the new rendering function with star buttons
+    listContainer.innerHTML = renderMergeCharacterItems(characters);
 
-    // Clear the primary name input
+    // Re-attach event listeners
+    setupMergeCheckboxListeners();
+
+    // Clear the primary name input and hide the display
     const primaryNameInput = document.getElementById('merge-primary-name');
     if (primaryNameInput) primaryNameInput.value = '';
+
+    updatePrimaryDisplay();
 }
 
 /**
