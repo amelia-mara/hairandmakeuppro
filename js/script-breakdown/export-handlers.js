@@ -680,9 +680,11 @@ window.openMergeCharactersModal = function() {
             </div>
 
             <div class="modal-actions" style="flex-shrink: 0; padding-top: 16px; border-top: 1px solid var(--glass-border); margin-top: 16px;">
-                <button class="modal-btn" onclick="closeMergeCharactersModal()">Cancel</button>
                 <button class="modal-btn primary" onclick="performCharacterMerge()" style="background: var(--accent-gold); color: var(--bg-dark);">
-                    🔗 Merge Selected Characters
+                    🔗 Merge Selected
+                </button>
+                <button class="modal-btn" onclick="closeMergeCharactersModal()" style="background: var(--success-green); color: white;">
+                    ✓ Done Merging
                 </button>
             </div>
         </div>
@@ -829,13 +831,244 @@ window.performCharacterMerge = function() {
         localStorage.setItem('scriptMasterContext', JSON.stringify(window.masterContext));
     }
 
-    // Close merge modal and refresh character list
-    closeMergeCharactersModal();
+    // Get merged character names for cleanup
+    const mergedNames = charsToMerge.map(c => c.name);
+    const primaryCharName = mergedChar.name;
+
+    // Clean up all character data structures to remove merged characters
+    cleanupMergedCharacterData(mergedNames, primaryCharName);
+
+    // Refresh both the merge modal list AND the confirmation list (keep modal open)
+    refreshMergeCharacterList();
     populateCharacterConfirmationList();
 
     showToast(`Merged ${charsToMerge.length} characters into "${mergedChar.name}"`, 'success');
-    console.log('Merged characters:', charsToMerge.map(c => c.name), '→', mergedChar.name);
+    console.log('Merged characters:', mergedNames, '→', primaryCharName);
 };
+
+/**
+ * Refresh the merge character list within the modal (without closing it)
+ */
+function refreshMergeCharacterList() {
+    const listContainer = document.getElementById('merge-character-list');
+    if (!listContainer) return;
+
+    const characters = state.detectedCharacters || [];
+
+    listContainer.innerHTML = characters.map((char, idx) => `
+        <div class="merge-char-item" style="display: flex; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--glass-border);">
+            <input type="checkbox" class="merge-checkbox" data-index="${idx}" style="width: 18px; height: 18px; margin-right: 12px; cursor: pointer;">
+            <span style="font-weight: 600; min-width: 150px;">${char.name}</span>
+            <span style="color: var(--text-muted); font-size: 0.85em;">
+                ${char.sceneCount} scene${char.sceneCount !== 1 ? 's' : ''}
+                ${char.mergedFrom ? `<span style="color: var(--accent-gold);"> (merged)</span>` : ''}
+            </span>
+        </div>
+    `).join('');
+
+    // Clear the primary name input
+    const primaryNameInput = document.getElementById('merge-primary-name');
+    if (primaryNameInput) primaryNameInput.value = '';
+}
+
+/**
+ * Clean up all character data structures after a merge
+ * This removes merged characters from:
+ * - confirmedCharacters Set
+ * - castProfiles
+ * - sceneBreakdowns cast arrays
+ * - scriptTags (character references)
+ * - characterStates
+ * - characterLooks
+ * - continuityEvents
+ * - characterTabs
+ *
+ * @param {string[]} mergedNames - Names of characters that were merged (to be removed)
+ * @param {string} primaryName - The new primary character name (to keep/add)
+ */
+function cleanupMergedCharacterData(mergedNames, primaryName) {
+    console.log('🧹 Cleaning up merged character data:', mergedNames, '→', primaryName);
+
+    // 1. Update confirmedCharacters Set
+    if (state.confirmedCharacters instanceof Set) {
+        mergedNames.forEach(name => {
+            if (name !== primaryName) {
+                state.confirmedCharacters.delete(name);
+            }
+        });
+        // Ensure primary name is in the set if any merged names were
+        if (mergedNames.some(name => state.confirmedCharacters.has(name))) {
+            state.confirmedCharacters.add(primaryName);
+        }
+    }
+
+    // 2. Update castProfiles - merge data and remove old entries
+    if (state.castProfiles) {
+        const mergedProfile = { scenes: [], lookStates: [] };
+
+        mergedNames.forEach(name => {
+            const profile = state.castProfiles[name];
+            if (profile) {
+                // Merge scenes
+                if (profile.scenes) {
+                    mergedProfile.scenes = [...new Set([...mergedProfile.scenes, ...profile.scenes])];
+                }
+                // Take first available base description
+                if (!mergedProfile.baseDescription && profile.baseDescription) {
+                    mergedProfile.baseDescription = profile.baseDescription;
+                }
+                // Merge look states
+                if (profile.lookStates) {
+                    mergedProfile.lookStates = [...mergedProfile.lookStates, ...profile.lookStates];
+                }
+                // Delete old entry (except primary name)
+                if (name !== primaryName) {
+                    delete state.castProfiles[name];
+                }
+            }
+        });
+
+        // Set or merge the primary profile
+        if (Object.keys(mergedProfile).length > 0) {
+            state.castProfiles[primaryName] = {
+                ...state.castProfiles[primaryName],
+                ...mergedProfile,
+                mergedFrom: mergedNames.filter(n => n !== primaryName)
+            };
+        }
+    }
+
+    // 3. Update sceneBreakdowns cast arrays
+    if (state.sceneBreakdowns) {
+        Object.keys(state.sceneBreakdowns).forEach(sceneIdx => {
+            const breakdown = state.sceneBreakdowns[sceneIdx];
+            if (breakdown?.cast && Array.isArray(breakdown.cast)) {
+                // Check if any merged characters are in the cast
+                const hasAnyMerged = breakdown.cast.some(c => mergedNames.includes(c));
+                if (hasAnyMerged) {
+                    // Remove all merged names and add primary name once
+                    breakdown.cast = breakdown.cast.filter(c => !mergedNames.includes(c));
+                    if (!breakdown.cast.includes(primaryName)) {
+                        breakdown.cast.push(primaryName);
+                    }
+                }
+            }
+        });
+    }
+
+    // 4. Update scriptTags - update character references in tags
+    if (state.scriptTags) {
+        Object.keys(state.scriptTags).forEach(sceneIdx => {
+            const tags = state.scriptTags[sceneIdx];
+            if (Array.isArray(tags)) {
+                tags.forEach(tag => {
+                    // Update character field if it matches a merged name
+                    if (tag.character && mergedNames.includes(tag.character) && tag.character !== primaryName) {
+                        tag.character = primaryName;
+                    }
+                    // Update linkedCharacter field if present
+                    if (tag.linkedCharacter && mergedNames.includes(tag.linkedCharacter) && tag.linkedCharacter !== primaryName) {
+                        tag.linkedCharacter = primaryName;
+                    }
+                });
+            }
+        });
+    }
+
+    // 5. Update characterStates
+    if (state.characterStates) {
+        Object.keys(state.characterStates).forEach(sceneIdx => {
+            const sceneStates = state.characterStates[sceneIdx];
+            if (sceneStates) {
+                const mergedState = {};
+
+                mergedNames.forEach(name => {
+                    if (sceneStates[name]) {
+                        // Merge tags and notes
+                        if (!mergedState.tags) mergedState.tags = [];
+                        if (!mergedState.notes) mergedState.notes = '';
+
+                        if (sceneStates[name].tags) {
+                            mergedState.tags = [...mergedState.tags, ...sceneStates[name].tags];
+                        }
+                        if (sceneStates[name].notes) {
+                            mergedState.notes += (mergedState.notes ? '\n' : '') + sceneStates[name].notes;
+                        }
+
+                        // Delete old entry (except primary)
+                        if (name !== primaryName) {
+                            delete sceneStates[name];
+                        }
+                    }
+                });
+
+                // Set merged state for primary name
+                if (Object.keys(mergedState).length > 0) {
+                    sceneStates[primaryName] = {
+                        ...sceneStates[primaryName],
+                        ...mergedState
+                    };
+                }
+            }
+        });
+    }
+
+    // 6. Update characterLooks
+    if (state.characterLooks) {
+        const mergedLooks = [];
+
+        mergedNames.forEach(name => {
+            if (state.characterLooks[name]) {
+                mergedLooks.push(...state.characterLooks[name]);
+                if (name !== primaryName) {
+                    delete state.characterLooks[name];
+                }
+            }
+        });
+
+        if (mergedLooks.length > 0) {
+            state.characterLooks[primaryName] = [
+                ...(state.characterLooks[primaryName] || []),
+                ...mergedLooks
+            ];
+        }
+    }
+
+    // 7. Update continuityEvents
+    if (state.continuityEvents) {
+        const mergedEvents = [];
+
+        mergedNames.forEach(name => {
+            if (state.continuityEvents[name]) {
+                mergedEvents.push(...state.continuityEvents[name]);
+                if (name !== primaryName) {
+                    delete state.continuityEvents[name];
+                }
+            }
+        });
+
+        if (mergedEvents.length > 0) {
+            state.continuityEvents[primaryName] = [
+                ...(state.continuityEvents[primaryName] || []),
+                ...mergedEvents
+            ];
+        }
+    }
+
+    // 8. Update characterTabs - remove merged character tabs (except primary)
+    if (state.characterTabs && Array.isArray(state.characterTabs)) {
+        state.characterTabs = state.characterTabs.filter(tab =>
+            !mergedNames.includes(tab) || tab === primaryName
+        );
+        // Add primary name if any merged characters had tabs
+        if (!state.characterTabs.includes(primaryName) &&
+            mergedNames.some(name => state.characterTabs.includes(name))) {
+            state.characterTabs.push(primaryName);
+        }
+    }
+
+    console.log('✓ Character data cleanup complete');
+}
 
 /**
  * Close character confirmation modal
