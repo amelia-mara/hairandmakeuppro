@@ -1181,6 +1181,44 @@ function cleanupMergedCharacterData(mergedNames, primaryName) {
         }
     }
 
+    // 9. Update state.scenes[].castMembers - replace merged names with primary
+    if (state.scenes && Array.isArray(state.scenes)) {
+        state.scenes.forEach(scene => {
+            // Update castMembers
+            if (scene.castMembers && Array.isArray(scene.castMembers)) {
+                const hasAnyMerged = scene.castMembers.some(c => mergedNames.includes(c));
+                if (hasAnyMerged) {
+                    scene.castMembers = scene.castMembers.filter(c => !mergedNames.includes(c));
+                    if (!scene.castMembers.includes(primaryName)) {
+                        scene.castMembers.push(primaryName);
+                    }
+                }
+            }
+
+            // Update characters_present
+            if (scene.characters_present && Array.isArray(scene.characters_present)) {
+                const hasAnyMerged = scene.characters_present.some(c => mergedNames.includes(c));
+                if (hasAnyMerged) {
+                    scene.characters_present = scene.characters_present.filter(c => !mergedNames.includes(c));
+                    if (!scene.characters_present.includes(primaryName)) {
+                        scene.characters_present.push(primaryName);
+                    }
+                }
+            }
+
+            // Update aiData.characters_present if exists
+            if (scene.aiData?.characters_present && Array.isArray(scene.aiData.characters_present)) {
+                const hasAnyMerged = scene.aiData.characters_present.some(c => mergedNames.includes(c));
+                if (hasAnyMerged) {
+                    scene.aiData.characters_present = scene.aiData.characters_present.filter(c => !mergedNames.includes(c));
+                    if (!scene.aiData.characters_present.includes(primaryName)) {
+                        scene.aiData.characters_present.push(primaryName);
+                    }
+                }
+            }
+        });
+    }
+
     console.log('✓ Character data cleanup complete');
 }
 
@@ -1208,6 +1246,14 @@ window.confirmCharactersAndContinue = async function() {
             return;
         }
 
+        // CRITICAL: Build character name mapping and clean up ALL scene data
+        const selectedNames = new Set(selectedCharacters.map(c => c.name));
+        const mergeMapping = buildCharacterMergeMapping(selectedCharacters);
+        console.log('📋 Character merge mapping:', mergeMapping);
+
+        // Clean up all scene data to use only selected/canonical names
+        cleanupAllSceneCharacterData(selectedNames, mergeMapping);
+
         // Update confirmed characters in state
         state.confirmedCharacters = new Set(selectedCharacters.map(c => c.name));
         console.log('Confirmed characters set:', state.confirmedCharacters);
@@ -1223,7 +1269,9 @@ window.confirmCharactersAndContinue = async function() {
                         characterAnalysis: {
                             ...window.masterContext.characters[char.name]?.characterAnalysis,
                             role: char.category.toLowerCase()
-                        }
+                        },
+                        // Ensure scenesPresent is properly set from merged data
+                        scenesPresent: char.scenesPresent || window.masterContext.characters[char.name]?.scenesPresent || []
                     };
                 } else {
                     // Manually added character
@@ -1236,7 +1284,8 @@ window.confirmCharactersAndContinue = async function() {
                         },
                         firstAppearance: char.firstAppearance || 1,
                         lastAppearance: char.lastAppearance || state.scenes.length,
-                        sceneCount: char.sceneCount || 0
+                        sceneCount: char.sceneCount || 0,
+                        scenesPresent: char.scenesPresent || []
                     };
                 }
             });
@@ -1283,6 +1332,268 @@ window.confirmCharactersAndContinue = async function() {
         alert('Error confirming characters: ' + error.message);
     }
 };
+
+/**
+ * Build a mapping of old/merged character names to their canonical names
+ * @param {Array} selectedCharacters - Array of selected character objects
+ * @returns {Map} Map of oldName → canonicalName
+ */
+function buildCharacterMergeMapping(selectedCharacters) {
+    const mapping = new Map();
+
+    selectedCharacters.forEach(char => {
+        // Map the character's own name to itself
+        mapping.set(char.name, char.name);
+
+        // If this character was created from merging others, map those names too
+        if (char.mergedFrom && Array.isArray(char.mergedFrom)) {
+            char.mergedFrom.forEach(oldName => {
+                mapping.set(oldName, char.name);
+            });
+        }
+    });
+
+    return mapping;
+}
+
+/**
+ * Clean up ALL scene character data to only contain selected/canonical names
+ * This ensures merged characters are replaced and unselected characters are removed
+ *
+ * @param {Set} selectedNames - Set of selected canonical character names
+ * @param {Map} mergeMapping - Map of oldName → canonicalName
+ */
+function cleanupAllSceneCharacterData(selectedNames, mergeMapping) {
+    console.log('🧹 Cleaning up all scene character data...');
+
+    let scenesUpdated = 0;
+    let charactersRemoved = 0;
+    let charactersMerged = 0;
+
+    // Helper function to clean a character array
+    const cleanCharacterArray = (arr) => {
+        if (!arr || !Array.isArray(arr)) return arr;
+
+        const cleanedSet = new Set();
+
+        arr.forEach(charName => {
+            // Check if this character maps to a canonical name
+            const canonicalName = mergeMapping.get(charName);
+
+            if (canonicalName && selectedNames.has(canonicalName)) {
+                // This is a valid character (either selected or merged into selected)
+                cleanedSet.add(canonicalName);
+                if (charName !== canonicalName) {
+                    charactersMerged++;
+                }
+            } else if (selectedNames.has(charName)) {
+                // Direct match to selected character
+                cleanedSet.add(charName);
+            } else {
+                // Character not selected - remove it
+                charactersRemoved++;
+            }
+        });
+
+        return [...cleanedSet];
+    };
+
+    // 1. Clean state.scenes[].castMembers and characters_present
+    if (state.scenes && Array.isArray(state.scenes)) {
+        state.scenes.forEach((scene, idx) => {
+            let updated = false;
+
+            if (scene.castMembers) {
+                const before = scene.castMembers.length;
+                scene.castMembers = cleanCharacterArray(scene.castMembers);
+                if (scene.castMembers.length !== before) updated = true;
+            }
+
+            if (scene.characters_present) {
+                const before = scene.characters_present.length;
+                scene.characters_present = cleanCharacterArray(scene.characters_present);
+                if (scene.characters_present.length !== before) updated = true;
+            }
+
+            if (scene.aiData?.characters_present) {
+                const before = scene.aiData.characters_present.length;
+                scene.aiData.characters_present = cleanCharacterArray(scene.aiData.characters_present);
+                if (scene.aiData.characters_present.length !== before) updated = true;
+            }
+
+            if (updated) scenesUpdated++;
+        });
+    }
+
+    // 2. Clean state.sceneBreakdowns[].cast
+    if (state.sceneBreakdowns) {
+        Object.keys(state.sceneBreakdowns).forEach(sceneIdx => {
+            const breakdown = state.sceneBreakdowns[sceneIdx];
+            if (breakdown?.cast) {
+                breakdown.cast = cleanCharacterArray(breakdown.cast);
+            }
+        });
+    }
+
+    // 3. Clean state.castProfiles - remove non-selected and merge data
+    if (state.castProfiles) {
+        const newProfiles = {};
+
+        Object.entries(state.castProfiles).forEach(([name, profile]) => {
+            const canonicalName = mergeMapping.get(name);
+
+            if (canonicalName && selectedNames.has(canonicalName)) {
+                // Merge into canonical profile
+                if (!newProfiles[canonicalName]) {
+                    newProfiles[canonicalName] = { ...profile, name: canonicalName };
+                } else {
+                    // Merge data from this profile into existing
+                    if (profile.scenes) {
+                        newProfiles[canonicalName].scenes = [
+                            ...new Set([...(newProfiles[canonicalName].scenes || []), ...profile.scenes])
+                        ];
+                    }
+                    if (profile.lookStates) {
+                        newProfiles[canonicalName].lookStates = [
+                            ...(newProfiles[canonicalName].lookStates || []),
+                            ...profile.lookStates
+                        ];
+                    }
+                }
+            } else if (selectedNames.has(name)) {
+                newProfiles[name] = profile;
+            }
+            // Else: unselected character - don't include
+        });
+
+        state.castProfiles = newProfiles;
+    }
+
+    // 4. Clean state.scriptTags - update character references
+    if (state.scriptTags) {
+        Object.keys(state.scriptTags).forEach(sceneIdx => {
+            const tags = state.scriptTags[sceneIdx];
+            if (Array.isArray(tags)) {
+                // Filter out tags for unselected characters and update merged names
+                state.scriptTags[sceneIdx] = tags.filter(tag => {
+                    if (tag.character) {
+                        const canonicalName = mergeMapping.get(tag.character);
+                        if (canonicalName && selectedNames.has(canonicalName)) {
+                            tag.character = canonicalName;
+                            return true;
+                        } else if (selectedNames.has(tag.character)) {
+                            return true;
+                        }
+                        return false; // Remove tags for unselected characters
+                    }
+                    return true; // Keep tags without character field
+                });
+            }
+        });
+    }
+
+    // 5. Clean state.characterStates
+    if (state.characterStates) {
+        Object.keys(state.characterStates).forEach(sceneIdx => {
+            const sceneStates = state.characterStates[sceneIdx];
+            if (sceneStates) {
+                const newSceneStates = {};
+
+                Object.entries(sceneStates).forEach(([name, charState]) => {
+                    const canonicalName = mergeMapping.get(name);
+
+                    if (canonicalName && selectedNames.has(canonicalName)) {
+                        if (!newSceneStates[canonicalName]) {
+                            newSceneStates[canonicalName] = charState;
+                        } else {
+                            // Merge states
+                            if (charState.tags) {
+                                newSceneStates[canonicalName].tags = [
+                                    ...(newSceneStates[canonicalName].tags || []),
+                                    ...charState.tags
+                                ];
+                            }
+                            if (charState.notes) {
+                                newSceneStates[canonicalName].notes =
+                                    (newSceneStates[canonicalName].notes || '') +
+                                    (newSceneStates[canonicalName].notes ? '\n' : '') +
+                                    charState.notes;
+                            }
+                        }
+                    } else if (selectedNames.has(name)) {
+                        newSceneStates[name] = charState;
+                    }
+                });
+
+                state.characterStates[sceneIdx] = newSceneStates;
+            }
+        });
+    }
+
+    // 6. Clean state.characterLooks
+    if (state.characterLooks) {
+        const newLooks = {};
+
+        Object.entries(state.characterLooks).forEach(([name, looks]) => {
+            const canonicalName = mergeMapping.get(name);
+
+            if (canonicalName && selectedNames.has(canonicalName)) {
+                if (!newLooks[canonicalName]) {
+                    newLooks[canonicalName] = looks;
+                } else {
+                    newLooks[canonicalName] = [...newLooks[canonicalName], ...looks];
+                }
+            } else if (selectedNames.has(name)) {
+                newLooks[name] = looks;
+            }
+        });
+
+        state.characterLooks = newLooks;
+    }
+
+    // 7. Clean state.continuityEvents
+    if (state.continuityEvents) {
+        const newEvents = {};
+
+        Object.entries(state.continuityEvents).forEach(([name, events]) => {
+            const canonicalName = mergeMapping.get(name);
+
+            if (canonicalName && selectedNames.has(canonicalName)) {
+                if (!newEvents[canonicalName]) {
+                    newEvents[canonicalName] = events;
+                } else {
+                    newEvents[canonicalName] = [...newEvents[canonicalName], ...events];
+                }
+            } else if (selectedNames.has(name)) {
+                newEvents[name] = events;
+            }
+        });
+
+        state.continuityEvents = newEvents;
+    }
+
+    // 8. Clean state.characterTabs
+    if (state.characterTabs && Array.isArray(state.characterTabs)) {
+        const newTabs = new Set();
+
+        state.characterTabs.forEach(name => {
+            const canonicalName = mergeMapping.get(name);
+            if (canonicalName && selectedNames.has(canonicalName)) {
+                newTabs.add(canonicalName);
+            } else if (selectedNames.has(name)) {
+                newTabs.add(name);
+            }
+        });
+
+        state.characterTabs = [...newTabs];
+    }
+
+    console.log(`✓ Scene character data cleanup complete:`, {
+        scenesUpdated,
+        charactersRemoved,
+        charactersMerged
+    });
+}
 
 /**
  * Perform deep analysis of screenplay to create master context
