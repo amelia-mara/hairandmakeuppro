@@ -282,12 +282,21 @@ function detectTimeOfDay(heading) {
  * Send message to Anthropic API with streaming
  */
 async function sendMessageToAPI(userMessage, onChunk, onComplete, onError) {
-    // Get API key and provider settings
-    const apiKey = state.apiKey || localStorage.getItem('apiKey');
+    // Get provider settings
     const provider = state.aiProvider || localStorage.getItem('aiProvider') || 'anthropic';
 
+    // Get API key based on provider (matching ai-integration.js storage keys)
+    let apiKey;
+    if (provider === 'anthropic') {
+        apiKey = localStorage.getItem('anthropicApiKey') || state.apiKey;
+    } else if (provider === 'openai') {
+        apiKey = localStorage.getItem('openaiApiKey') || state.apiKey;
+    } else {
+        apiKey = state.apiKey || localStorage.getItem('apiKey');
+    }
+
     if (!apiKey) {
-        onError('No API key configured. Please set up AI Settings in the Tools panel.');
+        onError(`No ${provider === 'anthropic' ? 'Anthropic' : 'OpenAI'} API key configured. Please set up AI Settings in the Tools panel.`);
         return;
     }
 
