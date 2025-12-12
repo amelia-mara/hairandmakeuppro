@@ -634,9 +634,17 @@ window.addManualCharacter = function() {
 };
 
 /**
+ * Track selected primary character for merge
+ */
+let mergePrimaryIndex = null;
+
+/**
  * Open merge characters modal
  */
 window.openMergeCharactersModal = function() {
+    // Reset primary selection
+    mergePrimaryIndex = null;
+
     // Create modal if it doesn't exist
     let modal = document.getElementById('merge-characters-modal');
     if (!modal) {
@@ -654,42 +662,140 @@ window.openMergeCharactersModal = function() {
             <div class="modal-title">Merge Duplicate Characters</div>
 
             <div class="modal-note" style="margin-bottom: 16px;">
-                Select characters that are the same person to merge them. The first selected character's name will be used as the primary name.
+                <strong>Step 1:</strong> Check the characters that are the same person.<br>
+                <strong>Step 2:</strong> Click the star ⭐ next to the name you want to keep as the primary name.
             </div>
 
             <div style="flex: 1; overflow-y: auto; min-height: 0;">
                 <div id="merge-character-list" style="border: 1px solid var(--glass-border); border-radius: 8px; max-height: 300px; overflow-y: auto;">
-                    ${characters.map((char, idx) => `
-                        <div class="merge-char-item" style="display: flex; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--glass-border);">
-                            <input type="checkbox" class="merge-checkbox" data-index="${idx}" style="width: 18px; height: 18px; margin-right: 12px; cursor: pointer;">
-                            <span style="font-weight: 600; min-width: 150px;">${char.name}</span>
-                            <span style="color: var(--text-muted); font-size: 0.85em;">
-                                ${char.sceneCount} scene${char.sceneCount !== 1 ? 's' : ''}
-                            </span>
-                        </div>
-                    `).join('')}
+                    ${renderMergeCharacterItems(characters)}
                 </div>
 
-                <div style="margin-top: 16px;">
-                    <label class="modal-label">Primary Name (after merge)</label>
-                    <input type="text" class="modal-input" id="merge-primary-name" placeholder="Enter the canonical name for merged character...">
-                    <div style="font-size: 0.75em; color: var(--text-muted); margin-top: 4px;">
-                        Leave empty to use the first selected character's name
+                <div id="merge-primary-display" style="margin-top: 16px; padding: 12px; background: rgba(212, 175, 55, 0.1); border: 1px solid var(--accent-gold); border-radius: 8px; display: none;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 1.2em;">⭐</span>
+                        <span style="color: var(--text-muted);">Primary name:</span>
+                        <span id="merge-primary-name-display" style="font-weight: 700; color: var(--accent-gold);"></span>
                     </div>
+                </div>
+
+                <div style="margin-top: 12px;">
+                    <label class="modal-label" style="font-size: 0.85em;">Or enter a custom name:</label>
+                    <input type="text" class="modal-input" id="merge-primary-name" placeholder="Custom canonical name (optional)..." style="font-size: 0.9em;">
                 </div>
             </div>
 
             <div class="modal-actions" style="flex-shrink: 0; padding-top: 16px; border-top: 1px solid var(--glass-border); margin-top: 16px;">
-                <button class="modal-btn" onclick="closeMergeCharactersModal()">Cancel</button>
                 <button class="modal-btn primary" onclick="performCharacterMerge()" style="background: var(--accent-gold); color: var(--bg-dark);">
-                    🔗 Merge Selected Characters
+                    🔗 Merge Selected
+                </button>
+                <button class="modal-btn" onclick="closeMergeCharactersModal()" style="background: var(--success-green); color: white;">
+                    ✓ Done Merging
                 </button>
             </div>
         </div>
     `;
 
     modal.style.display = 'flex';
+
+    // Add event listeners for checkboxes
+    setupMergeCheckboxListeners();
 };
+
+/**
+ * Render merge character list items
+ */
+function renderMergeCharacterItems(characters) {
+    return characters.map((char, idx) => {
+        const isPrimary = mergePrimaryIndex === idx;
+        const primaryStyle = isPrimary ? 'background: rgba(212, 175, 55, 0.15); border-left: 3px solid var(--accent-gold);' : '';
+
+        return `
+            <div class="merge-char-item" data-index="${idx}" style="display: flex; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--glass-border); ${primaryStyle}">
+                <input type="checkbox" class="merge-checkbox" data-index="${idx}" ${isPrimary ? 'checked' : ''} style="width: 18px; height: 18px; margin-right: 12px; cursor: pointer;">
+                <button class="set-primary-btn" onclick="setMergePrimary(${idx})" data-index="${idx}" title="Set as primary name" style="
+                    background: ${isPrimary ? 'var(--accent-gold)' : 'transparent'};
+                    border: 1px solid ${isPrimary ? 'var(--accent-gold)' : 'var(--glass-border)'};
+                    border-radius: 4px;
+                    padding: 2px 6px;
+                    margin-right: 10px;
+                    cursor: pointer;
+                    font-size: 0.9em;
+                    transition: all 0.2s;
+                ">${isPrimary ? '⭐' : '☆'}</button>
+                <span style="font-weight: ${isPrimary ? '700' : '600'}; min-width: 150px; color: ${isPrimary ? 'var(--accent-gold)' : 'inherit'};">${char.name}</span>
+                <span style="color: var(--text-muted); font-size: 0.85em; margin-left: auto;">
+                    ${char.sceneCount} scene${char.sceneCount !== 1 ? 's' : ''}
+                    ${char.mergedFrom ? '<span style="color: var(--accent-gold);"> (merged)</span>' : ''}
+                </span>
+            </div>
+        `;
+    }).join('');
+}
+
+/**
+ * Set up event listeners for merge checkboxes
+ */
+function setupMergeCheckboxListeners() {
+    const checkboxes = document.querySelectorAll('#merge-character-list .merge-checkbox');
+    checkboxes.forEach(cb => {
+        cb.addEventListener('change', function() {
+            const idx = parseInt(this.dataset.index);
+            // If this is the first checkbox checked, auto-set as primary
+            const checkedBoxes = document.querySelectorAll('#merge-character-list .merge-checkbox:checked');
+            if (checkedBoxes.length === 1 && this.checked) {
+                setMergePrimary(idx);
+            }
+            // If unchecking the primary, reset primary to first checked
+            if (!this.checked && mergePrimaryIndex === idx) {
+                const firstChecked = document.querySelector('#merge-character-list .merge-checkbox:checked');
+                if (firstChecked) {
+                    setMergePrimary(parseInt(firstChecked.dataset.index));
+                } else {
+                    mergePrimaryIndex = null;
+                    updatePrimaryDisplay();
+                }
+            }
+        });
+    });
+}
+
+/**
+ * Set the primary character for merge
+ */
+window.setMergePrimary = function(index) {
+    mergePrimaryIndex = index;
+
+    // Also check this character's checkbox
+    const checkbox = document.querySelector(`#merge-character-list .merge-checkbox[data-index="${index}"]`);
+    if (checkbox) checkbox.checked = true;
+
+    // Refresh the list to show visual feedback
+    const listContainer = document.getElementById('merge-character-list');
+    if (listContainer) {
+        const characters = state.detectedCharacters || [];
+        listContainer.innerHTML = renderMergeCharacterItems(characters);
+        setupMergeCheckboxListeners();
+    }
+
+    updatePrimaryDisplay();
+};
+
+/**
+ * Update the primary name display
+ */
+function updatePrimaryDisplay() {
+    const display = document.getElementById('merge-primary-display');
+    const nameDisplay = document.getElementById('merge-primary-name-display');
+
+    if (mergePrimaryIndex !== null && state.detectedCharacters[mergePrimaryIndex]) {
+        const primaryChar = state.detectedCharacters[mergePrimaryIndex];
+        if (nameDisplay) nameDisplay.textContent = primaryChar.name;
+        if (display) display.style.display = 'block';
+    } else {
+        if (display) display.style.display = 'none';
+    }
+}
 
 /**
  * Close merge characters modal
@@ -722,15 +828,25 @@ window.performCharacterMerge = function() {
         return;
     }
 
-    // Use provided primary name or first selected character's name
+    // Use provided custom name, or selected primary, or first selected character's name
     if (!primaryName) {
-        primaryName = charsToMerge[0].name;
+        // Check if a primary was selected via the star button
+        if (mergePrimaryIndex !== null && state.detectedCharacters[mergePrimaryIndex]) {
+            primaryName = state.detectedCharacters[mergePrimaryIndex].name;
+        } else {
+            primaryName = charsToMerge[0].name;
+        }
     }
+
+    // Find the primary character for category (use selected primary or first)
+    const primaryChar = mergePrimaryIndex !== null && state.detectedCharacters[mergePrimaryIndex]
+        ? state.detectedCharacters[mergePrimaryIndex]
+        : charsToMerge[0];
 
     // Combine data from all characters
     const mergedChar = {
         name: normalizeCharacterName(primaryName),
-        category: charsToMerge[0].category, // Use first character's category
+        category: primaryChar.category, // Use primary character's category
         sceneCount: 0,
         firstAppearance: Infinity,
         lastAppearance: 0,
@@ -829,13 +945,282 @@ window.performCharacterMerge = function() {
         localStorage.setItem('scriptMasterContext', JSON.stringify(window.masterContext));
     }
 
-    // Close merge modal and refresh character list
-    closeMergeCharactersModal();
+    // Get merged character names for cleanup
+    const mergedNames = charsToMerge.map(c => c.name);
+    const primaryCharName = mergedChar.name;
+
+    // Clean up all character data structures to remove merged characters
+    cleanupMergedCharacterData(mergedNames, primaryCharName);
+
+    // Refresh both the merge modal list AND the confirmation list (keep modal open)
+    refreshMergeCharacterList();
     populateCharacterConfirmationList();
 
     showToast(`Merged ${charsToMerge.length} characters into "${mergedChar.name}"`, 'success');
-    console.log('Merged characters:', charsToMerge.map(c => c.name), '→', mergedChar.name);
+    console.log('Merged characters:', mergedNames, '→', primaryCharName);
 };
+
+/**
+ * Refresh the merge character list within the modal (without closing it)
+ */
+function refreshMergeCharacterList() {
+    // Reset the primary selection for the next merge
+    mergePrimaryIndex = null;
+
+    const listContainer = document.getElementById('merge-character-list');
+    if (!listContainer) return;
+
+    const characters = state.detectedCharacters || [];
+
+    // Use the new rendering function with star buttons
+    listContainer.innerHTML = renderMergeCharacterItems(characters);
+
+    // Re-attach event listeners
+    setupMergeCheckboxListeners();
+
+    // Clear the primary name input and hide the display
+    const primaryNameInput = document.getElementById('merge-primary-name');
+    if (primaryNameInput) primaryNameInput.value = '';
+
+    updatePrimaryDisplay();
+}
+
+/**
+ * Clean up all character data structures after a merge
+ * This removes merged characters from:
+ * - confirmedCharacters Set
+ * - castProfiles
+ * - sceneBreakdowns cast arrays
+ * - scriptTags (character references)
+ * - characterStates
+ * - characterLooks
+ * - continuityEvents
+ * - characterTabs
+ *
+ * @param {string[]} mergedNames - Names of characters that were merged (to be removed)
+ * @param {string} primaryName - The new primary character name (to keep/add)
+ */
+function cleanupMergedCharacterData(mergedNames, primaryName) {
+    console.log('🧹 Cleaning up merged character data:', mergedNames, '→', primaryName);
+
+    // 1. Update confirmedCharacters Set
+    if (state.confirmedCharacters instanceof Set) {
+        mergedNames.forEach(name => {
+            if (name !== primaryName) {
+                state.confirmedCharacters.delete(name);
+            }
+        });
+        // Ensure primary name is in the set if any merged names were
+        if (mergedNames.some(name => state.confirmedCharacters.has(name))) {
+            state.confirmedCharacters.add(primaryName);
+        }
+    }
+
+    // 2. Update castProfiles - merge data and remove old entries
+    if (state.castProfiles) {
+        const mergedProfile = { scenes: [], lookStates: [] };
+
+        mergedNames.forEach(name => {
+            const profile = state.castProfiles[name];
+            if (profile) {
+                // Merge scenes
+                if (profile.scenes) {
+                    mergedProfile.scenes = [...new Set([...mergedProfile.scenes, ...profile.scenes])];
+                }
+                // Take first available base description
+                if (!mergedProfile.baseDescription && profile.baseDescription) {
+                    mergedProfile.baseDescription = profile.baseDescription;
+                }
+                // Merge look states
+                if (profile.lookStates) {
+                    mergedProfile.lookStates = [...mergedProfile.lookStates, ...profile.lookStates];
+                }
+                // Delete old entry (except primary name)
+                if (name !== primaryName) {
+                    delete state.castProfiles[name];
+                }
+            }
+        });
+
+        // Set or merge the primary profile
+        if (Object.keys(mergedProfile).length > 0) {
+            state.castProfiles[primaryName] = {
+                ...state.castProfiles[primaryName],
+                ...mergedProfile,
+                mergedFrom: mergedNames.filter(n => n !== primaryName)
+            };
+        }
+    }
+
+    // 3. Update sceneBreakdowns cast arrays
+    if (state.sceneBreakdowns) {
+        Object.keys(state.sceneBreakdowns).forEach(sceneIdx => {
+            const breakdown = state.sceneBreakdowns[sceneIdx];
+            if (breakdown?.cast && Array.isArray(breakdown.cast)) {
+                // Check if any merged characters are in the cast
+                const hasAnyMerged = breakdown.cast.some(c => mergedNames.includes(c));
+                if (hasAnyMerged) {
+                    // Remove all merged names and add primary name once
+                    breakdown.cast = breakdown.cast.filter(c => !mergedNames.includes(c));
+                    if (!breakdown.cast.includes(primaryName)) {
+                        breakdown.cast.push(primaryName);
+                    }
+                }
+            }
+        });
+    }
+
+    // 4. Update scriptTags - update character references in tags
+    if (state.scriptTags) {
+        Object.keys(state.scriptTags).forEach(sceneIdx => {
+            const tags = state.scriptTags[sceneIdx];
+            if (Array.isArray(tags)) {
+                tags.forEach(tag => {
+                    // Update character field if it matches a merged name
+                    if (tag.character && mergedNames.includes(tag.character) && tag.character !== primaryName) {
+                        tag.character = primaryName;
+                    }
+                    // Update linkedCharacter field if present
+                    if (tag.linkedCharacter && mergedNames.includes(tag.linkedCharacter) && tag.linkedCharacter !== primaryName) {
+                        tag.linkedCharacter = primaryName;
+                    }
+                });
+            }
+        });
+    }
+
+    // 5. Update characterStates
+    if (state.characterStates) {
+        Object.keys(state.characterStates).forEach(sceneIdx => {
+            const sceneStates = state.characterStates[sceneIdx];
+            if (sceneStates) {
+                const mergedState = {};
+
+                mergedNames.forEach(name => {
+                    if (sceneStates[name]) {
+                        // Merge tags and notes
+                        if (!mergedState.tags) mergedState.tags = [];
+                        if (!mergedState.notes) mergedState.notes = '';
+
+                        if (sceneStates[name].tags) {
+                            mergedState.tags = [...mergedState.tags, ...sceneStates[name].tags];
+                        }
+                        if (sceneStates[name].notes) {
+                            mergedState.notes += (mergedState.notes ? '\n' : '') + sceneStates[name].notes;
+                        }
+
+                        // Delete old entry (except primary)
+                        if (name !== primaryName) {
+                            delete sceneStates[name];
+                        }
+                    }
+                });
+
+                // Set merged state for primary name
+                if (Object.keys(mergedState).length > 0) {
+                    sceneStates[primaryName] = {
+                        ...sceneStates[primaryName],
+                        ...mergedState
+                    };
+                }
+            }
+        });
+    }
+
+    // 6. Update characterLooks
+    if (state.characterLooks) {
+        const mergedLooks = [];
+
+        mergedNames.forEach(name => {
+            if (state.characterLooks[name]) {
+                mergedLooks.push(...state.characterLooks[name]);
+                if (name !== primaryName) {
+                    delete state.characterLooks[name];
+                }
+            }
+        });
+
+        if (mergedLooks.length > 0) {
+            state.characterLooks[primaryName] = [
+                ...(state.characterLooks[primaryName] || []),
+                ...mergedLooks
+            ];
+        }
+    }
+
+    // 7. Update continuityEvents
+    if (state.continuityEvents) {
+        const mergedEvents = [];
+
+        mergedNames.forEach(name => {
+            if (state.continuityEvents[name]) {
+                mergedEvents.push(...state.continuityEvents[name]);
+                if (name !== primaryName) {
+                    delete state.continuityEvents[name];
+                }
+            }
+        });
+
+        if (mergedEvents.length > 0) {
+            state.continuityEvents[primaryName] = [
+                ...(state.continuityEvents[primaryName] || []),
+                ...mergedEvents
+            ];
+        }
+    }
+
+    // 8. Update characterTabs - remove merged character tabs (except primary)
+    if (state.characterTabs && Array.isArray(state.characterTabs)) {
+        state.characterTabs = state.characterTabs.filter(tab =>
+            !mergedNames.includes(tab) || tab === primaryName
+        );
+        // Add primary name if any merged characters had tabs
+        if (!state.characterTabs.includes(primaryName) &&
+            mergedNames.some(name => state.characterTabs.includes(name))) {
+            state.characterTabs.push(primaryName);
+        }
+    }
+
+    // 9. Update state.scenes[].castMembers - replace merged names with primary
+    if (state.scenes && Array.isArray(state.scenes)) {
+        state.scenes.forEach(scene => {
+            // Update castMembers
+            if (scene.castMembers && Array.isArray(scene.castMembers)) {
+                const hasAnyMerged = scene.castMembers.some(c => mergedNames.includes(c));
+                if (hasAnyMerged) {
+                    scene.castMembers = scene.castMembers.filter(c => !mergedNames.includes(c));
+                    if (!scene.castMembers.includes(primaryName)) {
+                        scene.castMembers.push(primaryName);
+                    }
+                }
+            }
+
+            // Update characters_present
+            if (scene.characters_present && Array.isArray(scene.characters_present)) {
+                const hasAnyMerged = scene.characters_present.some(c => mergedNames.includes(c));
+                if (hasAnyMerged) {
+                    scene.characters_present = scene.characters_present.filter(c => !mergedNames.includes(c));
+                    if (!scene.characters_present.includes(primaryName)) {
+                        scene.characters_present.push(primaryName);
+                    }
+                }
+            }
+
+            // Update aiData.characters_present if exists
+            if (scene.aiData?.characters_present && Array.isArray(scene.aiData.characters_present)) {
+                const hasAnyMerged = scene.aiData.characters_present.some(c => mergedNames.includes(c));
+                if (hasAnyMerged) {
+                    scene.aiData.characters_present = scene.aiData.characters_present.filter(c => !mergedNames.includes(c));
+                    if (!scene.aiData.characters_present.includes(primaryName)) {
+                        scene.aiData.characters_present.push(primaryName);
+                    }
+                }
+            }
+        });
+    }
+
+    console.log('✓ Character data cleanup complete');
+}
 
 /**
  * Close character confirmation modal
@@ -861,6 +1246,14 @@ window.confirmCharactersAndContinue = async function() {
             return;
         }
 
+        // CRITICAL: Build character name mapping and clean up ALL scene data
+        const selectedNames = new Set(selectedCharacters.map(c => c.name));
+        const mergeMapping = buildCharacterMergeMapping(selectedCharacters);
+        console.log('📋 Character merge mapping:', mergeMapping);
+
+        // Clean up all scene data to use only selected/canonical names
+        cleanupAllSceneCharacterData(selectedNames, mergeMapping);
+
         // Update confirmed characters in state
         state.confirmedCharacters = new Set(selectedCharacters.map(c => c.name));
         console.log('Confirmed characters set:', state.confirmedCharacters);
@@ -876,7 +1269,9 @@ window.confirmCharactersAndContinue = async function() {
                         characterAnalysis: {
                             ...window.masterContext.characters[char.name]?.characterAnalysis,
                             role: char.category.toLowerCase()
-                        }
+                        },
+                        // Ensure scenesPresent is properly set from merged data
+                        scenesPresent: char.scenesPresent || window.masterContext.characters[char.name]?.scenesPresent || []
                     };
                 } else {
                     // Manually added character
@@ -889,7 +1284,8 @@ window.confirmCharactersAndContinue = async function() {
                         },
                         firstAppearance: char.firstAppearance || 1,
                         lastAppearance: char.lastAppearance || state.scenes.length,
-                        sceneCount: char.sceneCount || 0
+                        sceneCount: char.sceneCount || 0,
+                        scenesPresent: char.scenesPresent || []
                     };
                 }
             });
@@ -936,6 +1332,268 @@ window.confirmCharactersAndContinue = async function() {
         alert('Error confirming characters: ' + error.message);
     }
 };
+
+/**
+ * Build a mapping of old/merged character names to their canonical names
+ * @param {Array} selectedCharacters - Array of selected character objects
+ * @returns {Map} Map of oldName → canonicalName
+ */
+function buildCharacterMergeMapping(selectedCharacters) {
+    const mapping = new Map();
+
+    selectedCharacters.forEach(char => {
+        // Map the character's own name to itself
+        mapping.set(char.name, char.name);
+
+        // If this character was created from merging others, map those names too
+        if (char.mergedFrom && Array.isArray(char.mergedFrom)) {
+            char.mergedFrom.forEach(oldName => {
+                mapping.set(oldName, char.name);
+            });
+        }
+    });
+
+    return mapping;
+}
+
+/**
+ * Clean up ALL scene character data to only contain selected/canonical names
+ * This ensures merged characters are replaced and unselected characters are removed
+ *
+ * @param {Set} selectedNames - Set of selected canonical character names
+ * @param {Map} mergeMapping - Map of oldName → canonicalName
+ */
+function cleanupAllSceneCharacterData(selectedNames, mergeMapping) {
+    console.log('🧹 Cleaning up all scene character data...');
+
+    let scenesUpdated = 0;
+    let charactersRemoved = 0;
+    let charactersMerged = 0;
+
+    // Helper function to clean a character array
+    const cleanCharacterArray = (arr) => {
+        if (!arr || !Array.isArray(arr)) return arr;
+
+        const cleanedSet = new Set();
+
+        arr.forEach(charName => {
+            // Check if this character maps to a canonical name
+            const canonicalName = mergeMapping.get(charName);
+
+            if (canonicalName && selectedNames.has(canonicalName)) {
+                // This is a valid character (either selected or merged into selected)
+                cleanedSet.add(canonicalName);
+                if (charName !== canonicalName) {
+                    charactersMerged++;
+                }
+            } else if (selectedNames.has(charName)) {
+                // Direct match to selected character
+                cleanedSet.add(charName);
+            } else {
+                // Character not selected - remove it
+                charactersRemoved++;
+            }
+        });
+
+        return [...cleanedSet];
+    };
+
+    // 1. Clean state.scenes[].castMembers and characters_present
+    if (state.scenes && Array.isArray(state.scenes)) {
+        state.scenes.forEach((scene, idx) => {
+            let updated = false;
+
+            if (scene.castMembers) {
+                const before = scene.castMembers.length;
+                scene.castMembers = cleanCharacterArray(scene.castMembers);
+                if (scene.castMembers.length !== before) updated = true;
+            }
+
+            if (scene.characters_present) {
+                const before = scene.characters_present.length;
+                scene.characters_present = cleanCharacterArray(scene.characters_present);
+                if (scene.characters_present.length !== before) updated = true;
+            }
+
+            if (scene.aiData?.characters_present) {
+                const before = scene.aiData.characters_present.length;
+                scene.aiData.characters_present = cleanCharacterArray(scene.aiData.characters_present);
+                if (scene.aiData.characters_present.length !== before) updated = true;
+            }
+
+            if (updated) scenesUpdated++;
+        });
+    }
+
+    // 2. Clean state.sceneBreakdowns[].cast
+    if (state.sceneBreakdowns) {
+        Object.keys(state.sceneBreakdowns).forEach(sceneIdx => {
+            const breakdown = state.sceneBreakdowns[sceneIdx];
+            if (breakdown?.cast) {
+                breakdown.cast = cleanCharacterArray(breakdown.cast);
+            }
+        });
+    }
+
+    // 3. Clean state.castProfiles - remove non-selected and merge data
+    if (state.castProfiles) {
+        const newProfiles = {};
+
+        Object.entries(state.castProfiles).forEach(([name, profile]) => {
+            const canonicalName = mergeMapping.get(name);
+
+            if (canonicalName && selectedNames.has(canonicalName)) {
+                // Merge into canonical profile
+                if (!newProfiles[canonicalName]) {
+                    newProfiles[canonicalName] = { ...profile, name: canonicalName };
+                } else {
+                    // Merge data from this profile into existing
+                    if (profile.scenes) {
+                        newProfiles[canonicalName].scenes = [
+                            ...new Set([...(newProfiles[canonicalName].scenes || []), ...profile.scenes])
+                        ];
+                    }
+                    if (profile.lookStates) {
+                        newProfiles[canonicalName].lookStates = [
+                            ...(newProfiles[canonicalName].lookStates || []),
+                            ...profile.lookStates
+                        ];
+                    }
+                }
+            } else if (selectedNames.has(name)) {
+                newProfiles[name] = profile;
+            }
+            // Else: unselected character - don't include
+        });
+
+        state.castProfiles = newProfiles;
+    }
+
+    // 4. Clean state.scriptTags - update character references
+    if (state.scriptTags) {
+        Object.keys(state.scriptTags).forEach(sceneIdx => {
+            const tags = state.scriptTags[sceneIdx];
+            if (Array.isArray(tags)) {
+                // Filter out tags for unselected characters and update merged names
+                state.scriptTags[sceneIdx] = tags.filter(tag => {
+                    if (tag.character) {
+                        const canonicalName = mergeMapping.get(tag.character);
+                        if (canonicalName && selectedNames.has(canonicalName)) {
+                            tag.character = canonicalName;
+                            return true;
+                        } else if (selectedNames.has(tag.character)) {
+                            return true;
+                        }
+                        return false; // Remove tags for unselected characters
+                    }
+                    return true; // Keep tags without character field
+                });
+            }
+        });
+    }
+
+    // 5. Clean state.characterStates
+    if (state.characterStates) {
+        Object.keys(state.characterStates).forEach(sceneIdx => {
+            const sceneStates = state.characterStates[sceneIdx];
+            if (sceneStates) {
+                const newSceneStates = {};
+
+                Object.entries(sceneStates).forEach(([name, charState]) => {
+                    const canonicalName = mergeMapping.get(name);
+
+                    if (canonicalName && selectedNames.has(canonicalName)) {
+                        if (!newSceneStates[canonicalName]) {
+                            newSceneStates[canonicalName] = charState;
+                        } else {
+                            // Merge states
+                            if (charState.tags) {
+                                newSceneStates[canonicalName].tags = [
+                                    ...(newSceneStates[canonicalName].tags || []),
+                                    ...charState.tags
+                                ];
+                            }
+                            if (charState.notes) {
+                                newSceneStates[canonicalName].notes =
+                                    (newSceneStates[canonicalName].notes || '') +
+                                    (newSceneStates[canonicalName].notes ? '\n' : '') +
+                                    charState.notes;
+                            }
+                        }
+                    } else if (selectedNames.has(name)) {
+                        newSceneStates[name] = charState;
+                    }
+                });
+
+                state.characterStates[sceneIdx] = newSceneStates;
+            }
+        });
+    }
+
+    // 6. Clean state.characterLooks
+    if (state.characterLooks) {
+        const newLooks = {};
+
+        Object.entries(state.characterLooks).forEach(([name, looks]) => {
+            const canonicalName = mergeMapping.get(name);
+
+            if (canonicalName && selectedNames.has(canonicalName)) {
+                if (!newLooks[canonicalName]) {
+                    newLooks[canonicalName] = looks;
+                } else {
+                    newLooks[canonicalName] = [...newLooks[canonicalName], ...looks];
+                }
+            } else if (selectedNames.has(name)) {
+                newLooks[name] = looks;
+            }
+        });
+
+        state.characterLooks = newLooks;
+    }
+
+    // 7. Clean state.continuityEvents
+    if (state.continuityEvents) {
+        const newEvents = {};
+
+        Object.entries(state.continuityEvents).forEach(([name, events]) => {
+            const canonicalName = mergeMapping.get(name);
+
+            if (canonicalName && selectedNames.has(canonicalName)) {
+                if (!newEvents[canonicalName]) {
+                    newEvents[canonicalName] = events;
+                } else {
+                    newEvents[canonicalName] = [...newEvents[canonicalName], ...events];
+                }
+            } else if (selectedNames.has(name)) {
+                newEvents[name] = events;
+            }
+        });
+
+        state.continuityEvents = newEvents;
+    }
+
+    // 8. Clean state.characterTabs
+    if (state.characterTabs && Array.isArray(state.characterTabs)) {
+        const newTabs = new Set();
+
+        state.characterTabs.forEach(name => {
+            const canonicalName = mergeMapping.get(name);
+            if (canonicalName && selectedNames.has(canonicalName)) {
+                newTabs.add(canonicalName);
+            } else if (selectedNames.has(name)) {
+                newTabs.add(name);
+            }
+        });
+
+        state.characterTabs = [...newTabs];
+    }
+
+    console.log(`✓ Scene character data cleanup complete:`, {
+        scenesUpdated,
+        charactersRemoved,
+        charactersMerged
+    });
+}
 
 /**
  * Perform deep analysis of screenplay to create master context
@@ -4873,3 +5531,4 @@ window.logMasterContextSummary = function() {
 window.updateWorkflowStatus = updateWorkflowStatus;
 window.processCurrentScene = processCurrentScene;
 window.processAllRemaining = processAllRemaining;
+window.showToast = showToast;
