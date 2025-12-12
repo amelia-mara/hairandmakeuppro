@@ -32,6 +32,8 @@ import './debug-utils.js';
 // Version management system
 import { initVersionManagement, saveCurrentVersionState, setStateReference } from './version-manager.js';
 import { renderVersionSelector } from './version-ui.js';
+// AI Chat Assistant
+import './chat-assistant.js';
 
 // ============================================================================
 // GLOBAL APPLICATION STATE
