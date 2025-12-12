@@ -13282,6 +13282,184 @@
     opacity: 0.6;
 }
 
+/* ============================================================================
+   LOOK ARC & H&MU CONTINUITY ELEMENTS
+   ============================================================================ */
+
+/* Look Arc Section */
+.look-arc-section {
+    background: linear-gradient(135deg, rgba(201, 169, 97, 0.08) 0%, rgba(201, 169, 97, 0.02) 100%);
+    border: 1px solid rgba(201, 169, 97, 0.2);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 16px;
+}
+
+.look-arc-field {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.look-arc-select {
+    flex: 1;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(201, 169, 97, 0.3);
+    border-radius: 6px;
+    color: var(--text-light);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.look-arc-select:focus {
+    outline: none;
+    border-color: var(--accent-gold);
+    box-shadow: 0 0 0 2px rgba(201, 169, 97, 0.15);
+}
+
+.look-arc-custom {
+    flex: 1;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: var(--text-light);
+    font-size: 12px;
+}
+
+.look-arc-custom:focus {
+    outline: none;
+    border-color: var(--accent-gold);
+}
+
+/* H&MU Elements Section */
+.hmu-elements-section {
+    background: rgba(236, 72, 153, 0.05);
+    border: 1px solid rgba(236, 72, 153, 0.2);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 16px;
+}
+
+.hmu-elements-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.hmu-element {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.hmu-element label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.hmu-element select {
+    padding: 6px 10px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: var(--text-light);
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.hmu-element select:focus {
+    outline: none;
+    border-color: #ec4899;
+}
+
+.hmu-notes-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.hmu-notes-field label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.hmu-notes-field input {
+    width: 100%;
+    padding: 8px 10px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: var(--text-light);
+    font-size: 12px;
+}
+
+.hmu-notes-field input:focus {
+    outline: none;
+    border-color: #ec4899;
+}
+
+/* Story Day Tools */
+.story-day-tools {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.tool-btn {
+    padding: 6px 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: var(--text-muted);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.tool-btn:hover {
+    background: rgba(201, 169, 97, 0.15);
+    border-color: rgba(201, 169, 97, 0.4);
+    color: var(--accent-gold);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .hmu-elements-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .look-arc-field {
+        flex-direction: column;
+    }
+
+    .look-arc-select,
+    .look-arc-custom {
+        width: 100%;
+    }
+
+    .story-day-tools {
+        flex-direction: column;
+    }
+
+    .tool-btn {
+        width: 100%;
+        text-align: center;
+    }
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
     .character-profile-header {

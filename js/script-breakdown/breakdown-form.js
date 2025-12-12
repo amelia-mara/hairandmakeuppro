@@ -268,6 +268,7 @@ function renderSceneBreakdown(sceneIndex) {
                     <div class="field-group">
                         <label>Story Day</label>
                         <input type="text"
+                               id="story-day-input-${sceneIndex}"
                                value="${escapeHtml(storyDay)}"
                                placeholder="Day 1, Day 2, etc."
                                onchange="updateSceneField(${sceneIndex}, 'storyDay', this.value)">
@@ -283,6 +284,18 @@ function renderSceneBreakdown(sceneIndex) {
                             <option ${timeOfDay === 'Night' ? 'selected' : ''}>Night</option>
                         </select>
                     </div>
+                </div>
+                <!-- Story Day Bulk Tools -->
+                <div class="story-day-tools">
+                    <button class="tool-btn" onclick="copyStoryDayFromPrevious(${sceneIndex})" title="Copy story day from previous scene">
+                        ↓ Copy Previous
+                    </button>
+                    <button class="tool-btn" onclick="openApplyToRangeModal(${sceneIndex})" title="Apply this story day to a range of scenes">
+                        📋 Apply to Range
+                    </button>
+                    <button class="tool-btn" onclick="detectStoryDayFromScript(${sceneIndex})" title="AI detect story day from script cues">
+                        🤖 AI Detect
+                    </button>
                 </div>
                 <div class="field-row">
                     <label class="checkbox-field">
@@ -360,6 +373,7 @@ function renderSceneBreakdown(sceneIndex) {
 /**
  * Render character continuity fields with streamlined "No Change" workflow
  * Now auto-populates from AI-detected appearance changes
+ * Enhanced with Look Arc and H&MU-specific continuity elements
  */
 function renderCharacterFields(character, sceneIndex, scene) {
     const charData = state.characterStates[sceneIndex]?.[character] || {};
@@ -368,6 +382,15 @@ function renderCharacterFields(character, sceneIndex, scene) {
 
     // Character ID for HTML elements
     const charId = sanitizeCharacterId(character);
+
+    // Get Look Arc - overall character state for this scene
+    const lookArc = charData.lookArc || '';
+
+    // Get H&MU-specific continuity elements
+    const eyeBags = charData.eyeBags || '';      // Bondo/Painted/Small Bondo/Off
+    const lesions = charData.lesions || '';      // Stage 3/2/1/Gone/Returning
+    const beardStatus = charData.beardStatus || '';  // Clean/Full/Shaving/Stubble
+    const makeupBase = charData.makeupBase || '';    // Base makeup state
 
     // Get appearance data (with AI suggestions as fallback)
     const enterHair = charData.enterHair || suggestions.hair || '';
@@ -417,6 +440,102 @@ function renderCharacterFields(character, sceneIndex, scene) {
                         title="${prevScene ? `Copy from Scene ${prevScene + 1}` : 'No previous appearance'}">
                     ${prevScene !== null ? '↓ Copy Previous' : 'First Appearance'}
                 </button>
+            </div>
+
+            <!-- LOOK ARC - Overall character state for this scene -->
+            <div class="continuity-section look-arc-section">
+                <div class="continuity-section-header">
+                    <div class="continuity-label">LOOK ARC</div>
+                </div>
+                <div class="look-arc-field">
+                    <select class="look-arc-select"
+                            onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'lookArc', this.value)">
+                        <option value="">Select state...</option>
+                        <option ${lookArc === 'BASE' ? 'selected' : ''}>BASE</option>
+                        <option ${lookArc === 'ARRIVAL' ? 'selected' : ''}>ARRIVAL</option>
+                        <option ${lookArc === 'SICK' ? 'selected' : ''}>SICK</option>
+                        <option ${lookArc === 'HEALING' ? 'selected' : ''}>HEALING</option>
+                        <option ${lookArc === 'PEAK ILLNESS' ? 'selected' : ''}>PEAK ILLNESS</option>
+                        <option ${lookArc === 'RECOVERING' ? 'selected' : ''}>RECOVERING</option>
+                        <option ${lookArc === 'TIME JUMP' ? 'selected' : ''}>TIME JUMP</option>
+                        <option ${lookArc === 'FLASHBACK' ? 'selected' : ''}>FLASHBACK</option>
+                        <option ${lookArc === 'DREAM' ? 'selected' : ''}>DREAM</option>
+                        <option ${lookArc === 'DISGUISE' ? 'selected' : ''}>DISGUISE</option>
+                        <option ${lookArc === 'DETERIORATING' ? 'selected' : ''}>DETERIORATING</option>
+                    </select>
+                    <input type="text" class="look-arc-custom" placeholder="Or custom state..."
+                           value="${lookArc && !['BASE','ARRIVAL','SICK','HEALING','PEAK ILLNESS','RECOVERING','TIME JUMP','FLASHBACK','DREAM','DISGUISE','DETERIORATING'].includes(lookArc) ? escapeHtml(lookArc) : ''}"
+                           onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'lookArc', this.value)">
+                </div>
+            </div>
+
+            <!-- H&MU CONTINUITY ELEMENTS - Specific tracking for common H&MU items -->
+            <div class="continuity-section hmu-elements-section">
+                <div class="continuity-section-header">
+                    <div class="continuity-label">H&MU CONTINUITY ELEMENTS</div>
+                </div>
+                <div class="hmu-elements-grid">
+                    <!-- Eye Bags -->
+                    <div class="hmu-element">
+                        <label>Eye Bags</label>
+                        <select onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'eyeBags', this.value)">
+                            <option value="">N/A</option>
+                            <option ${eyeBags === 'Off' ? 'selected' : ''}>Off</option>
+                            <option ${eyeBags === 'Painted' ? 'selected' : ''}>Painted</option>
+                            <option ${eyeBags === 'Small Bondo' ? 'selected' : ''}>Small Bondo</option>
+                            <option ${eyeBags === 'Bondo' ? 'selected' : ''}>Bondo</option>
+                            <option ${eyeBags === 'Heavy' ? 'selected' : ''}>Heavy</option>
+                        </select>
+                    </div>
+
+                    <!-- Lesions -->
+                    <div class="hmu-element">
+                        <label>Lesions</label>
+                        <select onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'lesions', this.value)">
+                            <option value="">N/A</option>
+                            <option ${lesions === 'Gone' ? 'selected' : ''}>Gone</option>
+                            <option ${lesions === 'Stage 1' ? 'selected' : ''}>Stage 1</option>
+                            <option ${lesions === 'Stage 2' ? 'selected' : ''}>Stage 2</option>
+                            <option ${lesions === 'Stage 3' ? 'selected' : ''}>Stage 3</option>
+                            <option ${lesions === 'Returning' ? 'selected' : ''}>Returning</option>
+                        </select>
+                    </div>
+
+                    <!-- Beard Status -->
+                    <div class="hmu-element">
+                        <label>Beard</label>
+                        <select onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'beardStatus', this.value)">
+                            <option value="">N/A</option>
+                            <option ${beardStatus === 'Clean' ? 'selected' : ''}>Clean</option>
+                            <option ${beardStatus === 'Stubble' ? 'selected' : ''}>Stubble</option>
+                            <option ${beardStatus === 'Shaving' ? 'selected' : ''}>Shaving</option>
+                            <option ${beardStatus === 'Full' ? 'selected' : ''}>Full</option>
+                            <option ${beardStatus === 'Trimmed' ? 'selected' : ''}>Trimmed</option>
+                        </select>
+                    </div>
+
+                    <!-- Makeup Base -->
+                    <div class="hmu-element">
+                        <label>Makeup Base</label>
+                        <select onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'makeupBase', this.value)">
+                            <option value="">N/A</option>
+                            <option ${makeupBase === 'Clean' ? 'selected' : ''}>Clean</option>
+                            <option ${makeupBase === 'Natural' ? 'selected' : ''}>Natural</option>
+                            <option ${makeupBase === 'Beauty' ? 'selected' : ''}>Beauty</option>
+                            <option ${makeupBase === 'Sick' ? 'selected' : ''}>Sick</option>
+                            <option ${makeupBase === 'Pale' ? 'selected' : ''}>Pale</option>
+                            <option ${makeupBase === 'Flushed' ? 'selected' : ''}>Flushed</option>
+                            <option ${makeupBase === 'Sweaty' ? 'selected' : ''}>Sweaty</option>
+                            <option ${makeupBase === 'Dirty' ? 'selected' : ''}>Dirty</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="hmu-notes-field">
+                    <label>Additional SFX/Notes</label>
+                    <input type="text" placeholder="Wounds, blood, prosthetics..."
+                           value="${escapeHtml(charData.hmuNotes || '')}"
+                           onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'hmuNotes', this.value)">
+                </div>
             </div>
 
             <!-- ENTERS WITH -->
@@ -1347,6 +1466,7 @@ window.endEventAtScene = function(eventId, sceneIndex) {
 
 /**
  * Copy previous scene's exit appearance to current entry
+ * Includes Look Arc and H&MU continuity elements
  */
 window.copyPreviousAppearance = function(character, sceneIndex) {
     const prevScene = findPreviousCharacterAppearance(character, sceneIndex);
@@ -1371,14 +1491,26 @@ window.copyPreviousAppearance = function(character, sceneIndex) {
     }
 
     // Copy exit appearance from previous scene to entry of current scene
+    // Includes Look Arc and H&MU continuity elements
     state.characterStates[sceneIndex][character] = {
         ...state.characterStates[sceneIndex][character],
+        // Basic appearance
         enterHair: prevState.exitHair || prevState.enterHair || '',
         enterMakeup: prevState.exitMakeup || prevState.enterMakeup || '',
-        enterWardrobe: prevState.exitWardrobe || prevState.enterWardrobe || ''
+        enterWardrobe: prevState.exitWardrobe || prevState.enterWardrobe || '',
+        // Look Arc - carry forward unless there's a specific reason to change
+        lookArc: prevState.lookArc || '',
+        // H&MU Continuity Elements - carry forward
+        eyeBags: prevState.eyeBags || '',
+        lesions: prevState.lesions || '',
+        beardStatus: prevState.beardStatus || '',
+        makeupBase: prevState.makeupBase || '',
+        hmuNotes: prevState.hmuNotes || ''
     };
 
     console.log(`✅ Copied ${character}'s appearance from Scene ${prevScene + 1} to Scene ${sceneIndex + 1}`);
+    console.log(`   Look Arc: ${prevState.lookArc || 'none'}`);
+    console.log(`   H&MU Elements: Eye Bags=${prevState.eyeBags || 'none'}, Lesions=${prevState.lesions || 'none'}, Beard=${prevState.beardStatus || 'none'}`);
 
     renderSceneBreakdown(sceneIndex);
     saveToLocalStorage();
@@ -2531,6 +2663,309 @@ window.markBreakdownReviewed = function(sceneIndex) {
         if (window.showToast) {
             window.showToast('Breakdown marked as reviewed', 'success');
         }
+    }
+};
+
+// ============================================================================
+// STORY DAY BULK TOOLS
+// ============================================================================
+
+/**
+ * Copy story day from previous scene
+ */
+window.copyStoryDayFromPrevious = function(sceneIndex) {
+    if (sceneIndex === 0) {
+        alert('No previous scene to copy from.');
+        return;
+    }
+
+    const prevScene = state.scenes[sceneIndex - 1];
+    const prevStoryDay = prevScene?.storyDay;
+
+    if (!prevStoryDay) {
+        alert('Previous scene has no story day assigned.');
+        return;
+    }
+
+    // Update current scene
+    state.scenes[sceneIndex].storyDay = prevStoryDay;
+
+    console.log(`✅ Copied story day "${prevStoryDay}" from Scene ${sceneIndex} to Scene ${sceneIndex + 1}`);
+
+    // Save and re-render
+    saveToLocalStorage();
+    renderSceneBreakdown(sceneIndex);
+};
+
+/**
+ * Open modal to apply story day to a range of scenes
+ */
+window.openApplyToRangeModal = function(sceneIndex) {
+    const currentStoryDay = state.scenes[sceneIndex]?.storyDay || '';
+
+    let modal = document.getElementById('apply-story-day-modal');
+
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'apply-story-day-modal';
+        modal.className = 'modal';
+        document.body.appendChild(modal);
+    }
+
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-title">Apply Story Day to Scene Range</div>
+
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; margin-bottom: 8px; font-size: 12px; color: var(--text-muted);">STORY DAY</label>
+                <input type="text" id="range-story-day" value="${escapeHtml(currentStoryDay)}"
+                       placeholder="Day 1, Day 2, etc."
+                       style="width: 100%; padding: 10px; background: rgba(0,0,0,0.3);
+                              border: 1px solid var(--glass-border); border-radius: 6px;
+                              color: var(--text-light); font-size: 14px;">
+            </div>
+
+            <div style="display: flex; gap: 16px; margin-bottom: 16px;">
+                <div style="flex: 1;">
+                    <label style="display: block; margin-bottom: 8px; font-size: 12px; color: var(--text-muted);">FROM SCENE</label>
+                    <input type="number" id="range-start" value="${sceneIndex + 1}" min="1" max="${state.scenes.length}"
+                           style="width: 100%; padding: 10px; background: rgba(0,0,0,0.3);
+                                  border: 1px solid var(--glass-border); border-radius: 6px;
+                                  color: var(--text-light); font-size: 14px;">
+                </div>
+                <div style="flex: 1;">
+                    <label style="display: block; margin-bottom: 8px; font-size: 12px; color: var(--text-muted);">TO SCENE</label>
+                    <input type="number" id="range-end" value="${Math.min(sceneIndex + 10, state.scenes.length)}" min="1" max="${state.scenes.length}"
+                           style="width: 100%; padding: 10px; background: rgba(0,0,0,0.3);
+                                  border: 1px solid var(--glass-border); border-radius: 6px;
+                                  color: var(--text-light); font-size: 14px;">
+                </div>
+            </div>
+
+            <div style="margin-bottom: 20px; padding: 12px; background: rgba(201, 169, 97, 0.1);
+                        border: 1px solid rgba(201, 169, 97, 0.3); border-radius: 6px;">
+                <label style="display: flex; align-items: center; cursor: pointer; font-size: 13px;">
+                    <input type="checkbox" id="apply-to-characters" style="margin-right: 8px;">
+                    Also apply Look Arc and H&MU elements for selected character to all scenes
+                </label>
+                <select id="apply-character-select" style="width: 100%; margin-top: 8px; padding: 8px;
+                        background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border);
+                        border-radius: 6px; color: var(--text-light); font-size: 12px; display: none;">
+                    <option value="">Select character...</option>
+                    ${Array.from(state.characters || []).map(char =>
+                        `<option value="${escapeHtml(char)}">${escapeHtml(char)}</option>`
+                    ).join('')}
+                </select>
+            </div>
+
+            <div class="modal-actions">
+                <button class="modal-btn secondary" onclick="closeApplyToRangeModal()">Cancel</button>
+                <button class="modal-btn primary" onclick="executeApplyToRange()">Apply</button>
+            </div>
+        </div>
+    `;
+
+    // Add event listener for checkbox
+    modal.style.display = 'flex';
+
+    setTimeout(() => {
+        const checkbox = document.getElementById('apply-to-characters');
+        const select = document.getElementById('apply-character-select');
+        if (checkbox && select) {
+            checkbox.addEventListener('change', function() {
+                select.style.display = this.checked ? 'block' : 'none';
+            });
+        }
+    }, 100);
+};
+
+/**
+ * Close apply to range modal
+ */
+window.closeApplyToRangeModal = function() {
+    const modal = document.getElementById('apply-story-day-modal');
+    if (modal) modal.style.display = 'none';
+};
+
+/**
+ * Execute applying story day to scene range
+ */
+window.executeApplyToRange = function() {
+    const storyDay = document.getElementById('range-story-day')?.value;
+    const startScene = parseInt(document.getElementById('range-start')?.value) - 1;
+    const endScene = parseInt(document.getElementById('range-end')?.value) - 1;
+    const applyToCharacters = document.getElementById('apply-to-characters')?.checked;
+    const selectedCharacter = document.getElementById('apply-character-select')?.value;
+
+    if (!storyDay) {
+        alert('Please enter a story day.');
+        return;
+    }
+
+    if (isNaN(startScene) || isNaN(endScene) || startScene > endScene) {
+        alert('Invalid scene range.');
+        return;
+    }
+
+    let updatedCount = 0;
+
+    // Apply story day to all scenes in range
+    for (let i = startScene; i <= endScene; i++) {
+        if (state.scenes[i]) {
+            state.scenes[i].storyDay = storyDay;
+            updatedCount++;
+        }
+    }
+
+    // Optionally apply character H&MU elements
+    if (applyToCharacters && selectedCharacter) {
+        // Get character state from first scene in range
+        const sourceCharState = state.characterStates[startScene]?.[selectedCharacter];
+
+        if (sourceCharState) {
+            for (let i = startScene; i <= endScene; i++) {
+                if (!state.characterStates[i]) state.characterStates[i] = {};
+                if (!state.characterStates[i][selectedCharacter]) {
+                    state.characterStates[i][selectedCharacter] = {};
+                }
+
+                // Copy Look Arc and H&MU elements
+                state.characterStates[i][selectedCharacter] = {
+                    ...state.characterStates[i][selectedCharacter],
+                    lookArc: sourceCharState.lookArc || '',
+                    eyeBags: sourceCharState.eyeBags || '',
+                    lesions: sourceCharState.lesions || '',
+                    beardStatus: sourceCharState.beardStatus || '',
+                    makeupBase: sourceCharState.makeupBase || '',
+                    hmuNotes: sourceCharState.hmuNotes || ''
+                };
+            }
+
+            console.log(`✅ Applied ${selectedCharacter}'s H&MU elements to Scenes ${startScene + 1}-${endScene + 1}`);
+        }
+    }
+
+    console.log(`✅ Applied story day "${storyDay}" to ${updatedCount} scenes (${startScene + 1}-${endScene + 1})`);
+
+    // Save and close
+    saveToLocalStorage();
+    closeApplyToRangeModal();
+    renderSceneBreakdown(state.currentScene);
+
+    // Show confirmation
+    alert(`Applied "${storyDay}" to ${updatedCount} scenes (${startScene + 1} - ${endScene + 1})`);
+};
+
+/**
+ * AI detect story day from script cues
+ */
+window.detectStoryDayFromScript = async function(sceneIndex) {
+    const scene = state.scenes[sceneIndex];
+    if (!scene) {
+        alert('Scene not found.');
+        return;
+    }
+
+    const sceneContent = scene.content || scene.text || '';
+    const sceneHeading = scene.heading || '';
+    const prevStoryDay = sceneIndex > 0 ? state.scenes[sceneIndex - 1]?.storyDay : null;
+
+    // Check for common time cues in the scene content and heading
+    const timeJumpPatterns = [
+        /the next (morning|day|evening|night)/i,
+        /later that (day|night|evening)/i,
+        /\d+ (days?|weeks?|months?|years?) later/i,
+        /the following (day|morning|week)/i,
+        /a (week|month|year) later/i,
+        /sunrise|dawn|the next morning/i,
+        /that (same )?(night|evening|afternoon|morning)/i,
+        /moments later/i,
+        /continuous/i
+    ];
+
+    let suggestedDay = null;
+    let detectionReason = '';
+
+    // Check for CONTINUOUS in heading
+    if (sceneHeading.toUpperCase().includes('CONTINUOUS')) {
+        suggestedDay = prevStoryDay || 'Day 1';
+        detectionReason = 'Scene heading indicates CONTINUOUS';
+    } else {
+        // Check for time jump patterns
+        for (const pattern of timeJumpPatterns) {
+            const match = sceneContent.match(pattern) || sceneHeading.match(pattern);
+            if (match) {
+                const matchText = match[0].toLowerCase();
+
+                if (matchText.includes('next morning') || matchText.includes('next day') ||
+                    matchText.includes('following day') || matchText.includes('following morning')) {
+                    // Next day
+                    if (prevStoryDay && prevStoryDay.startsWith('Day ')) {
+                        const dayNum = parseInt(prevStoryDay.replace('Day ', ''));
+                        if (!isNaN(dayNum)) {
+                            suggestedDay = `Day ${dayNum + 1}`;
+                        }
+                    }
+                    detectionReason = `Found: "${match[0]}"`;
+                } else if (matchText.includes('same night') || matchText.includes('same evening') ||
+                           matchText.includes('same morning') || matchText.includes('same afternoon') ||
+                           matchText.includes('moments later') || matchText.includes('later that')) {
+                    // Same day
+                    suggestedDay = prevStoryDay || 'Day 1';
+                    detectionReason = `Found: "${match[0]}" - same day`;
+                } else if (matchText.match(/(\d+)\s*(days?)/i)) {
+                    // X days later
+                    const daysMatch = matchText.match(/(\d+)\s*(days?)/i);
+                    if (daysMatch && prevStoryDay && prevStoryDay.startsWith('Day ')) {
+                        const dayNum = parseInt(prevStoryDay.replace('Day ', ''));
+                        const daysLater = parseInt(daysMatch[1]);
+                        if (!isNaN(dayNum) && !isNaN(daysLater)) {
+                            suggestedDay = `Day ${dayNum + daysLater}`;
+                        }
+                    }
+                    detectionReason = `Found: "${match[0]}"`;
+                } else if (matchText.match(/(\d+)\s*(weeks?)/i)) {
+                    // X weeks later
+                    const weeksMatch = matchText.match(/(\d+)\s*(weeks?)/i);
+                    if (weeksMatch && prevStoryDay && prevStoryDay.startsWith('Day ')) {
+                        const dayNum = parseInt(prevStoryDay.replace('Day ', ''));
+                        const weeksLater = parseInt(weeksMatch[1]);
+                        if (!isNaN(dayNum) && !isNaN(weeksLater)) {
+                            suggestedDay = `Day ${dayNum + (weeksLater * 7)}`;
+                        }
+                    }
+                    detectionReason = `Found: "${match[0]}"`;
+                }
+
+                if (suggestedDay) break;
+            }
+        }
+    }
+
+    // If no pattern found, default to same as previous or Day 1
+    if (!suggestedDay) {
+        if (prevStoryDay) {
+            suggestedDay = prevStoryDay;
+            detectionReason = 'No time cues found - assuming same story day as previous scene';
+        } else {
+            suggestedDay = 'Day 1';
+            detectionReason = 'No time cues found - defaulting to Day 1';
+        }
+    }
+
+    // Show confirmation dialog
+    const confirmed = confirm(
+        `AI Story Day Detection for Scene ${sceneIndex + 1}:\n\n` +
+        `Suggested: ${suggestedDay}\n` +
+        `Reason: ${detectionReason}\n\n` +
+        `Apply this story day?`
+    );
+
+    if (confirmed) {
+        state.scenes[sceneIndex].storyDay = suggestedDay;
+        saveToLocalStorage();
+        renderSceneBreakdown(sceneIndex);
+        console.log(`✅ Applied AI-detected story day "${suggestedDay}" to Scene ${sceneIndex + 1}`);
     }
 };
 

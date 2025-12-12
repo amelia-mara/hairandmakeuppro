@@ -4414,6 +4414,557 @@ export function exportBible() {
     showToast('Continuity Bible exported successfully', 'success');
 }
 
+// ============================================================================
+// DAILY SHOOTING BREAKDOWN & ASSISTANT BRIEF EXPORTS
+// ============================================================================
+
+/**
+ * Export daily shooting breakdown
+ * Input: Array of scene numbers for the shooting day
+ */
+export function exportDailyShootingBreakdown(sceneNumbers = null) {
+    // If no scenes provided, prompt user
+    if (!sceneNumbers) {
+        const input = prompt(
+            'Enter scene numbers for today\'s shoot (comma-separated):\n' +
+            'Example: 36, 36A, 82, 84, 85'
+        );
+
+        if (!input) return;
+
+        // Parse scene numbers
+        sceneNumbers = input.split(',').map(s => s.trim()).filter(s => s);
+    }
+
+    if (!sceneNumbers || sceneNumbers.length === 0) {
+        alert('No scenes specified.');
+        return;
+    }
+
+    // Find matching scenes
+    const selectedScenes = [];
+    sceneNumbers.forEach(sceneNum => {
+        const sceneIndex = state.scenes?.findIndex(s => {
+            const sNum = s.number || s.sceneNumber || (state.scenes.indexOf(s) + 1).toString();
+            return sNum.toString() === sceneNum.toString();
+        });
+
+        if (sceneIndex !== -1 && sceneIndex !== undefined) {
+            selectedScenes.push({
+                index: sceneIndex,
+                scene: state.scenes[sceneIndex],
+                breakdown: state.sceneBreakdowns?.[sceneIndex] || {},
+                characterStates: state.characterStates?.[sceneIndex] || {}
+            });
+        }
+    });
+
+    if (selectedScenes.length === 0) {
+        alert('No matching scenes found. Please check scene numbers.');
+        return;
+    }
+
+    // Generate the daily breakdown
+    const dailyBreakdown = {
+        date: new Date().toLocaleDateString(),
+        scriptTitle: state.scriptData?.title || state.currentProject?.title || 'Untitled',
+        scenes: selectedScenes.map(item => ({
+            sceneNumber: item.scene.number || item.scene.sceneNumber || (item.index + 1).toString(),
+            heading: item.scene.heading || '',
+            storyDay: item.scene.storyDay || 'Not set',
+            timeOfDay: item.scene.timeOfDay || extractTimeFromHeading(item.scene.heading) || '',
+            intExt: item.scene.intExt || '',
+            synopsis: item.breakdown.synopsis || '',
+            cast: item.breakdown.cast || [],
+            characters: Object.entries(item.characterStates).map(([name, charState]) => ({
+                name,
+                lookArc: charState.lookArc || '',
+                eyeBags: charState.eyeBags || '',
+                lesions: charState.lesions || '',
+                beardStatus: charState.beardStatus || '',
+                makeupBase: charState.makeupBase || '',
+                enterHair: charState.enterHair || '',
+                enterMakeup: charState.enterMakeup || '',
+                changeStatus: charState.changeStatus || 'no-change',
+                changeNotes: charState.changeMakeup || charState.changeHair || charState.changeInjuries || '',
+                hmuNotes: charState.hmuNotes || ''
+            }))
+        }))
+    };
+
+    // Detect turnarounds (changes between scenes)
+    dailyBreakdown.turnarounds = detectTurnarounds(dailyBreakdown.scenes);
+
+    // Generate HTML
+    const html = generateDailyBreakdownHTML(dailyBreakdown);
+    downloadFile(`daily-breakdown-${new Date().toISOString().split('T')[0]}.html`, html, 'text/html');
+    showToast('Daily shooting breakdown exported', 'success');
+}
+
+/**
+ * Helper to extract time of day from heading
+ */
+function extractTimeFromHeading(heading) {
+    if (!heading) return '';
+    const upper = heading.toUpperCase();
+    if (upper.includes('MORNING')) return 'Morning';
+    if (upper.includes('AFTERNOON')) return 'Afternoon';
+    if (upper.includes('EVENING') || upper.includes('DUSK')) return 'Evening';
+    if (upper.includes('NIGHT')) return 'Night';
+    if (upper.includes('DAY')) return 'Day';
+    return '';
+}
+
+/**
+ * Detect turnarounds (H&MU changes) between scenes
+ */
+function detectTurnarounds(scenes) {
+    const turnarounds = [];
+
+    for (let i = 1; i < scenes.length; i++) {
+        const prevScene = scenes[i - 1];
+        const currentScene = scenes[i];
+
+        // Check each character for changes
+        currentScene.characters?.forEach(char => {
+            const prevChar = prevScene.characters?.find(c => c.name === char.name);
+
+            if (prevChar) {
+                const changes = [];
+
+                // Check for story day change
+                if (prevScene.storyDay !== currentScene.storyDay) {
+                    changes.push(`Story day: ${prevScene.storyDay} → ${currentScene.storyDay}`);
+                }
+
+                // Check for look arc change
+                if (prevChar.lookArc !== char.lookArc && char.lookArc) {
+                    changes.push(`Look Arc: ${prevChar.lookArc || 'none'} → ${char.lookArc}`);
+                }
+
+                // Check for eye bags change
+                if (prevChar.eyeBags !== char.eyeBags) {
+                    changes.push(`Eye Bags: ${prevChar.eyeBags || 'none'} → ${char.eyeBags || 'none'}`);
+                }
+
+                // Check for lesions change
+                if (prevChar.lesions !== char.lesions) {
+                    changes.push(`Lesions: ${prevChar.lesions || 'none'} → ${char.lesions || 'none'}`);
+                }
+
+                // Check for beard change
+                if (prevChar.beardStatus !== char.beardStatus) {
+                    changes.push(`Beard: ${prevChar.beardStatus || 'none'} → ${char.beardStatus || 'none'}`);
+                }
+
+                // Check for makeup base change
+                if (prevChar.makeupBase !== char.makeupBase) {
+                    changes.push(`Makeup Base: ${prevChar.makeupBase || 'none'} → ${char.makeupBase || 'none'}`);
+                }
+
+                if (changes.length > 0) {
+                    turnarounds.push({
+                        character: char.name,
+                        fromScene: prevScene.sceneNumber,
+                        toScene: currentScene.sceneNumber,
+                        changes
+                    });
+                }
+            }
+        });
+    }
+
+    return turnarounds;
+}
+
+/**
+ * Generate HTML for daily shooting breakdown
+ */
+function generateDailyBreakdownHTML(breakdown) {
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily H&MU Breakdown - ${breakdown.date}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.5;
+            color: #333;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        .header {
+            background: #1a1a1a;
+            color: white;
+            padding: 24px;
+            border-radius: 8px 8px 0 0;
+        }
+        .header h1 { color: #c9a961; font-size: 24px; margin-bottom: 4px; }
+        .header .meta { font-size: 14px; color: #aaa; }
+        .content { background: white; padding: 24px; border-radius: 0 0 8px 8px; }
+        .scene-card {
+            background: #fafafa;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        .scene-header {
+            background: #f0f0f0;
+            padding: 12px 16px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .scene-number {
+            font-weight: bold;
+            color: #c9a961;
+            font-size: 18px;
+        }
+        .story-day {
+            background: #c9a961;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .scene-heading {
+            font-size: 13px;
+            color: #666;
+            margin-top: 4px;
+        }
+        .scene-body { padding: 16px; }
+        .synopsis {
+            font-style: italic;
+            color: #555;
+            margin-bottom: 16px;
+            padding: 12px;
+            background: #fff9e6;
+            border-left: 3px solid #c9a961;
+        }
+        .character-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        .character-table th {
+            background: #1a1a1a;
+            color: #c9a961;
+            text-align: left;
+            padding: 8px 12px;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .character-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #e0e0e0;
+            vertical-align: top;
+        }
+        .character-table tr:last-child td { border-bottom: none; }
+        .char-name { font-weight: 600; color: #1a1a1a; }
+        .look-arc { color: #c9a961; font-weight: 500; }
+        .hmu-element {
+            display: inline-block;
+            padding: 2px 8px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            margin: 2px;
+            font-size: 11px;
+        }
+        .turnarounds {
+            margin-top: 30px;
+            padding: 20px;
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 8px;
+        }
+        .turnarounds h3 {
+            color: #856404;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .turnaround-item {
+            padding: 12px;
+            background: white;
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+        .turnaround-header {
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+        .change-list { font-size: 13px; color: #555; }
+        .change-list li { margin-left: 20px; }
+        @media print {
+            body { background: white; padding: 0; }
+            .scene-card { page-break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Daily H&MU Breakdown</h1>
+            <div class="meta">
+                ${breakdown.scriptTitle} | ${breakdown.date} | ${breakdown.scenes.length} scene(s)
+            </div>
+        </div>
+        <div class="content">
+            <!-- Scenes -->
+            ${breakdown.scenes.map((scene, idx) => `
+                <div class="scene-card">
+                    <div class="scene-header">
+                        <div>
+                            <div class="scene-number">Scene ${scene.sceneNumber}</div>
+                            <div class="scene-heading">${scene.heading || ''}</div>
+                        </div>
+                        <div class="story-day">${scene.storyDay}</div>
+                    </div>
+                    <div class="scene-body">
+                        ${scene.synopsis ? `<div class="synopsis">${scene.synopsis}</div>` : ''}
+                        ${scene.characters && scene.characters.length > 0 ? `
+                            <table class="character-table">
+                                <thead>
+                                    <tr>
+                                        <th>Character</th>
+                                        <th>Look Arc</th>
+                                        <th>H&MU Elements</th>
+                                        <th>Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${scene.characters.map(char => `
+                                        <tr>
+                                            <td class="char-name">${char.name}</td>
+                                            <td class="look-arc">${char.lookArc || '-'}</td>
+                                            <td>
+                                                ${char.eyeBags ? `<span class="hmu-element">Eyes: ${char.eyeBags}</span>` : ''}
+                                                ${char.lesions ? `<span class="hmu-element">Lesions: ${char.lesions}</span>` : ''}
+                                                ${char.beardStatus ? `<span class="hmu-element">Beard: ${char.beardStatus}</span>` : ''}
+                                                ${char.makeupBase ? `<span class="hmu-element">Base: ${char.makeupBase}</span>` : ''}
+                                                ${!char.eyeBags && !char.lesions && !char.beardStatus && !char.makeupBase ? '-' : ''}
+                                            </td>
+                                            <td>${char.hmuNotes || char.changeNotes || '-'}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        ` : '<p style="color: #888;">No characters tracked for this scene</p>'}
+                    </div>
+                </div>
+            `).join('')}
+
+            <!-- Turnarounds -->
+            ${breakdown.turnarounds && breakdown.turnarounds.length > 0 ? `
+                <div class="turnarounds">
+                    <h3>⚠️ Turnarounds / Changes</h3>
+                    ${breakdown.turnarounds.map(t => `
+                        <div class="turnaround-item">
+                            <div class="turnaround-header">
+                                ${t.character}: Scene ${t.fromScene} → Scene ${t.toScene}
+                            </div>
+                            <ul class="change-list">
+                                ${t.changes.map(c => `<li>${c}</li>`).join('')}
+                            </ul>
+                        </div>
+                    `).join('')}
+                </div>
+            ` : ''}
+        </div>
+    </div>
+</body>
+</html>`;
+}
+
+/**
+ * Export assistant brief (casual format for H&MU assistants)
+ */
+export function exportAssistantBrief(sceneNumbers = null) {
+    // If no scenes provided, prompt user
+    if (!sceneNumbers) {
+        const input = prompt(
+            'Enter scene numbers for the assistant brief (comma-separated):\n' +
+            'Example: 36, 36A, 82, 84, 85\n\n' +
+            'Or leave empty to include all scenes.'
+        );
+
+        if (input === null) return; // Cancelled
+
+        if (input.trim()) {
+            sceneNumbers = input.split(',').map(s => s.trim()).filter(s => s);
+        }
+    }
+
+    // Get all scenes or filter by provided numbers
+    let selectedScenes = [];
+
+    if (sceneNumbers && sceneNumbers.length > 0) {
+        sceneNumbers.forEach(sceneNum => {
+            const sceneIndex = state.scenes?.findIndex(s => {
+                const sNum = s.number || s.sceneNumber || (state.scenes.indexOf(s) + 1).toString();
+                return sNum.toString() === sceneNum.toString();
+            });
+
+            if (sceneIndex !== -1 && sceneIndex !== undefined) {
+                selectedScenes.push({
+                    index: sceneIndex,
+                    scene: state.scenes[sceneIndex],
+                    breakdown: state.sceneBreakdowns?.[sceneIndex] || {},
+                    characterStates: state.characterStates?.[sceneIndex] || {}
+                });
+            }
+        });
+    } else {
+        // Include all scenes
+        selectedScenes = state.scenes?.map((scene, index) => ({
+            index,
+            scene,
+            breakdown: state.sceneBreakdowns?.[index] || {},
+            characterStates: state.characterStates?.[index] || {}
+        })) || [];
+    }
+
+    if (selectedScenes.length === 0) {
+        alert('No scenes found.');
+        return;
+    }
+
+    // Group scenes by story day
+    const scenesByStoryDay = {};
+    selectedScenes.forEach(item => {
+        const storyDay = item.scene.storyDay || 'Unassigned';
+        if (!scenesByStoryDay[storyDay]) {
+            scenesByStoryDay[storyDay] = [];
+        }
+        scenesByStoryDay[storyDay].push(item);
+    });
+
+    // Generate the brief
+    const brief = {
+        date: new Date().toLocaleDateString(),
+        scriptTitle: state.scriptData?.title || state.currentProject?.title || 'Untitled',
+        scenesByStoryDay,
+        characters: window.confirmedCharacters || []
+    };
+
+    const text = generateAssistantBriefText(brief);
+    downloadFile(`assistant-brief-${new Date().toISOString().split('T')[0]}.txt`, text, 'text/plain');
+    showToast('Assistant brief exported', 'success');
+}
+
+/**
+ * Generate plain text assistant brief
+ */
+function generateAssistantBriefText(brief) {
+    let text = `H&MU ASSISTANT BRIEF
+====================
+${brief.scriptTitle}
+Generated: ${brief.date}
+
+`;
+
+    // Group by story day
+    Object.entries(brief.scenesByStoryDay).forEach(([storyDay, scenes]) => {
+        text += `\n${'='.repeat(50)}\n`;
+        text += `STORY ${storyDay.toUpperCase()}\n`;
+        text += `${'='.repeat(50)}\n\n`;
+
+        scenes.forEach(item => {
+            const scene = item.scene;
+            const sceneNum = scene.number || scene.sceneNumber || (item.index + 1).toString();
+
+            text += `Scene ${sceneNum}`;
+            if (scene.heading) text += ` - ${scene.heading}`;
+            text += '\n';
+            text += '-'.repeat(40) + '\n';
+
+            // Add synopsis if available
+            if (item.breakdown.synopsis) {
+                text += `Synopsis: ${item.breakdown.synopsis}\n\n`;
+            }
+
+            // Character looks
+            const chars = Object.entries(item.characterStates || {});
+            if (chars.length > 0) {
+                chars.forEach(([name, charState]) => {
+                    text += `  ${name}:\n`;
+
+                    if (charState.lookArc) {
+                        text += `    Look Arc: ${charState.lookArc}\n`;
+                    }
+
+                    const elements = [];
+                    if (charState.eyeBags) elements.push(`Eye bags ${charState.eyeBags}`);
+                    if (charState.lesions) elements.push(`Lesions ${charState.lesions}`);
+                    if (charState.beardStatus) elements.push(`Beard ${charState.beardStatus}`);
+                    if (charState.makeupBase) elements.push(`Base ${charState.makeupBase}`);
+
+                    if (elements.length > 0) {
+                        text += `    H&MU: ${elements.join(', ')}\n`;
+                    }
+
+                    if (charState.enterHair) {
+                        text += `    Hair: ${charState.enterHair}\n`;
+                    }
+
+                    if (charState.hmuNotes) {
+                        text += `    Notes: ${charState.hmuNotes}\n`;
+                    }
+
+                    if (charState.changeStatus === 'has-changes') {
+                        text += `    ⚠️ CHANGES IN THIS SCENE\n`;
+                        if (charState.changeHair) text += `      Hair change: ${charState.changeHair}\n`;
+                        if (charState.changeMakeup) text += `      Makeup change: ${charState.changeMakeup}\n`;
+                        if (charState.changeInjuries) text += `      Injuries: ${charState.changeInjuries}\n`;
+                    }
+
+                    text += '\n';
+                });
+            } else {
+                text += '  No character data logged\n\n';
+            }
+        });
+    });
+
+    // Add character summary
+    text += `\n${'='.repeat(50)}\n`;
+    text += `CHARACTER SUMMARY\n`;
+    text += `${'='.repeat(50)}\n\n`;
+
+    (brief.characters || []).forEach(character => {
+        text += `${character}\n`;
+
+        // Find all scenes this character appears in
+        const appearances = [];
+        Object.entries(brief.scenesByStoryDay).forEach(([storyDay, scenes]) => {
+            scenes.forEach(item => {
+                const charState = item.characterStates?.[character];
+                if (charState && Object.keys(charState).length > 0) {
+                    const sceneNum = item.scene.number || item.scene.sceneNumber || (item.index + 1).toString();
+                    appearances.push({ storyDay, sceneNum, lookArc: charState.lookArc });
+                }
+            });
+        });
+
+        if (appearances.length > 0) {
+            text += `  Scenes: ${appearances.map(a => `${a.sceneNum} (${a.storyDay}${a.lookArc ? ` - ${a.lookArc}` : ''})`).join(', ')}\n`;
+        }
+
+        text += '\n';
+    });
+
+    return text;
+}
+
 /**
  * Generate HTML for timeline export
  */
@@ -5141,6 +5692,9 @@ window.generateCharacterLookbooks = generateCharacterLookbooks;
 window.exportTimeline = exportTimeline;
 window.exportLookbook = exportLookbook;
 window.exportBible = exportBible;
+// Daily shooting breakdown and assistant brief exports
+window.exportDailyShootingBreakdown = exportDailyShootingBreakdown;
+window.exportAssistantBrief = exportAssistantBrief;
 
 /**
  * Initialize comprehensive AI context after script import
