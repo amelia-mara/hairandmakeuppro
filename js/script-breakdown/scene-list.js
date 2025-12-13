@@ -189,8 +189,10 @@ function getSceneIndicators(sceneIndex, analysis) {
 
 /**
  * Get story day badge info for scene card display
+ * Updated to show "Day X (note)" format for time jumps and flashbacks
+ *
  * @param {Object} scene - Scene object
- * @returns {Object} Badge info { show, label, confidence, tooltip }
+ * @returns {Object} Badge info { show, label, fullLabel, confidence, tooltip, hasNote }
  */
 function getStoryDayBadge(scene) {
     if (!scene.storyDay || !scene.storyDay.trim()) {
@@ -198,44 +200,52 @@ function getStoryDayBadge(scene) {
     }
 
     const storyDay = scene.storyDay.trim();
-    const confidence = scene.storyDayConfidence || 'low';
-    const source = scene.storyDaySource || 'unknown';
+    const storyDayNote = scene.storyDayNote;
+    const confidence = scene.storyDayConfidence || 'assumed';
+    const cueFound = scene.storyDayCue;
     const confirmed = scene.storyDayConfirmed;
 
-    // Build tooltip
-    let tooltipParts = [storyDay];
+    // Build full label with note
+    // e.g., "Day 4 (3 weeks later)" or "Day 7 (flashback)"
+    let fullLabel = storyDay;
+    if (storyDayNote) {
+        fullLabel += ` (${storyDayNote})`;
+    }
+
+    // Shorten label for compact badge display
+    // "Day 4" → "D4", but keep note indicator
+    let label = storyDay;
+    const dayMatch = storyDay.match(/Day\s*(\d+)/i);
+    if (dayMatch) {
+        label = `D${dayMatch[1]}`;
+        if (storyDayNote) {
+            // Add abbreviated note for time jumps
+            label += '*'; // Asterisk indicates there's a note
+        }
+    }
+
+    // Build tooltip with full info
+    let tooltipParts = [fullLabel];
     if (scene.storyTimeOfDay) {
         tooltipParts.push(scene.storyTimeOfDay);
     }
-    if (source && source !== 'unknown') {
-        const sourceLabels = {
-            'explicit_marker': 'From script marker',
-            'heading_embedded': 'From scene heading',
-            'same_day_marker': 'Same day as previous',
-            'time_passage': 'Time passage detected',
-            'day_night_transition': 'Day/night transition',
-            'user_assigned': 'User assigned',
-            'copied': 'Copied',
-            'inferred': 'AI inferred'
-        };
-        tooltipParts.push(`(${sourceLabels[source] || source})`);
+    if (cueFound) {
+        tooltipParts.push(`Detected: "${cueFound}"`);
+    }
+    if (confidence === 'assumed' || confidence === 'default') {
+        tooltipParts.push('(assumed - click to confirm)');
     }
     if (confirmed) {
         tooltipParts.push('✓ Confirmed');
     }
 
-    // Shorten label for badge display
-    let label = storyDay;
-    const dayMatch = storyDay.match(/Day\s*(\d+)/i);
-    if (dayMatch) {
-        label = `D${dayMatch[1]}`;
-    }
-
     return {
         show: true,
         label,
+        fullLabel,
         confidence,
-        tooltip: tooltipParts.join(' - ')
+        hasNote: !!storyDayNote,
+        tooltip: tooltipParts.join(' · ')
     };
 }
 
@@ -245,22 +255,35 @@ function getStoryDayBadge(scene) {
 function renderExpandedDetails(scene, cast, elementCounts) {
     const sceneIndex = state.scenes.indexOf(scene);
 
+    // Build story day display with note
+    // e.g., "Day 4 (3 weeks later)" or just "Day 3"
+    let storyDayDisplay = scene.storyDay || '';
+    if (scene.storyDayNote) {
+        storyDayDisplay += ` (${scene.storyDayNote})`;
+    }
+
     return `
         <div class="scene-expanded">
             <!-- READ-ONLY METADATA OVERVIEW -->
             <div class="scene-metadata-overview">
                 ${scene.storyDay ? `
-                    <div class="metadata-pill">
+                    <div class="metadata-pill ${scene.storyDayConfidence === 'assumed' || scene.storyDayConfidence === 'default' ? 'assumed' : ''}">
                         <span class="metadata-pill-icon">📅</span>
-                        <span class="metadata-pill-text">${escapeHtml(scene.storyDay)}</span>
+                        <span class="metadata-pill-text">${escapeHtml(storyDayDisplay)}</span>
+                        ${scene.storyDayCue ? `<span class="metadata-pill-hint" title="Detected: ${escapeHtml(scene.storyDayCue)}">💡</span>` : ''}
                     </div>
                 ` : ''}
-                ${scene.timeOfDay ? `
+                ${scene.storyTimeOfDay ? `
+                    <div class="metadata-pill">
+                        <span class="metadata-pill-icon">🕐</span>
+                        <span class="metadata-pill-text">${escapeHtml(scene.storyTimeOfDay)}</span>
+                    </div>
+                ` : (scene.timeOfDay ? `
                     <div class="metadata-pill">
                         <span class="metadata-pill-icon">🕐</span>
                         <span class="metadata-pill-text">${escapeHtml(scene.timeOfDay)}</span>
                     </div>
-                ` : ''}
+                ` : '')}
                 ${scene.location ? `
                     <div class="metadata-pill">
                         <span class="metadata-pill-icon">📍</span>

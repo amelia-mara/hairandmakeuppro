@@ -10195,6 +10195,26 @@
     margin-top: 8px;
 }
 
+.detection-hint {
+    font-size: 0.8em;
+    padding: 8px 12px;
+    background: rgba(129, 140, 248, 0.1);
+    border-left: 3px solid #818cf8;
+    border-radius: 4px;
+    color: #a5b4fc;
+    margin-bottom: 12px;
+}
+
+.metadata-pill.assumed {
+    opacity: 0.7;
+    border-style: dashed;
+}
+
+.metadata-pill-hint {
+    margin-left: 4px;
+    font-size: 0.8em;
+}
+
 /* ============================================================================
    END STORY DAY STYLES
    ============================================================================ */
