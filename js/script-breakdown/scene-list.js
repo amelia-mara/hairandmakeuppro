@@ -137,20 +137,21 @@ function getSceneIndicators(sceneIndex, analysis, scene = null) {
     const indicators = [];
 
     // Check scene type flags (auto-detected or user-set)
+    // Using text abbreviations instead of emojis for professional appearance
     if (scene?.isFlashback) {
-        indicators.push({ icon: '⏪', type: 'flashback', tooltip: 'Flashback' });
+        indicators.push({ icon: 'FB', type: 'flashback', tooltip: 'Flashback' });
     }
     if (scene?.isFlashForward) {
-        indicators.push({ icon: '⏩', type: 'flashforward', tooltip: 'Flash Forward' });
+        indicators.push({ icon: 'FF', type: 'flashforward', tooltip: 'Flash Forward' });
     }
     if (scene?.isTimeJump) {
-        indicators.push({ icon: '⏱️', type: 'timejump', tooltip: 'Time Jump' });
+        indicators.push({ icon: 'TJ', type: 'timejump', tooltip: 'Time Jump' });
     }
     if (scene?.isDream) {
-        indicators.push({ icon: '💭', type: 'dream', tooltip: 'Dream Sequence' });
+        indicators.push({ icon: 'DR', type: 'dream', tooltip: 'Dream Sequence' });
     }
     if (scene?.isMontage) {
-        indicators.push({ icon: '🎞️', type: 'montage', tooltip: 'Montage' });
+        indicators.push({ icon: 'MT', type: 'montage', tooltip: 'Montage' });
     }
 
     // Check for weather conditions
@@ -158,47 +159,47 @@ function getSceneIndicators(sceneIndex, analysis, scene = null) {
     if (environment?.conditions) {
         const conditions = Array.isArray(environment.conditions) ? environment.conditions : [];
         if (conditions.some(c => c.toLowerCase().includes('rain'))) {
-            indicators.push({ icon: '🌧️', type: 'weather', tooltip: 'Rain scene' });
+            indicators.push({ icon: 'WX', type: 'weather', tooltip: 'Rain scene' });
         }
         if (conditions.some(c => c.toLowerCase().includes('snow'))) {
-            indicators.push({ icon: '❄️', type: 'weather', tooltip: 'Snow scene' });
+            indicators.push({ icon: 'WX', type: 'weather', tooltip: 'Snow scene' });
         }
         if (conditions.some(c => c.toLowerCase().includes('wind'))) {
-            indicators.push({ icon: '💨', type: 'weather', tooltip: 'Windy scene' });
+            indicators.push({ icon: 'WX', type: 'weather', tooltip: 'Windy scene' });
         }
     }
 
     // Check for crowd scenes
     if (analysis.crowdScenes?.[`scene_${sceneIndex}`]) {
-        indicators.push({ icon: '👥', type: 'crowd', tooltip: 'Extras required' });
+        indicators.push({ icon: 'SA', type: 'crowd', tooltip: 'Extras required' });
     }
 
     // Check for action/fight scenes
     const interactions = analysis.interactions?.[`scene_${sceneIndex}`];
     if (interactions?.type === 'fight') {
-        indicators.push({ icon: '⚔️', type: 'action', tooltip: 'Fight scene' });
+        indicators.push({ icon: 'ST', type: 'action', tooltip: 'Fight scene' });
     }
 
     // Check for emotional beats
     if (analysis.emotionalBeats?.[`scene_${sceneIndex}`]) {
-        indicators.push({ icon: '😢', type: 'emotional', tooltip: 'Emotional scene' });
+        indicators.push({ icon: 'EM', type: 'emotional', tooltip: 'Emotional scene' });
     }
 
     // Check for special requirements
     if (analysis.specialRequirements?.[`scene_${sceneIndex}`]) {
-        indicators.push({ icon: '⚠️', type: 'special', tooltip: 'Special requirements' });
+        indicators.push({ icon: '!', type: 'special', tooltip: 'Special requirements' });
     }
 
     // Check for stunts/doubling needs
     if (analysis.doublingNeeds?.[`scene_${sceneIndex}`]) {
-        indicators.push({ icon: '🎬', type: 'stunt', tooltip: 'Stunt work required' });
+        indicators.push({ icon: 'ST', type: 'stunt', tooltip: 'Stunt work required' });
     }
 
     // Check if scene is continuous
     if (analysis.sceneFlow?.continuous) {
         for (let group of analysis.sceneFlow.continuous) {
             if (group.includes(sceneIndex)) {
-                indicators.push({ icon: '⚡', type: 'continuous', tooltip: 'Continuous scene' });
+                indicators.push({ icon: 'C', type: 'continuous', tooltip: 'Continuous scene' });
                 break;
             }
         }
@@ -343,7 +344,7 @@ function handleEditSynopsis(sceneIndex) {
     header.setAttribute('data-original-buttons', originalButtonsHtml);
 
     header.innerHTML = `
-        <span class="scene-synopsis-label">📝 Synopsis</span>
+        <span class="scene-synopsis-label">Synopsis</span>
         <div class="synopsis-edit-actions">
             <button class="synopsis-save-btn" onclick="event.stopPropagation(); handleSaveSynopsis(${sceneIndex})" title="Save (Enter)">
                 ✓

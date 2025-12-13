@@ -120,13 +120,12 @@ function renderTransitionCard(transition, character) {
     return `
         <div class="transition-card">
             <div class="transition-card-header">
-                <span class="transition-icon">⚡</span>
+                <span class="transition-icon">→</span>
                 <span class="transition-scene-label">TRANSITION in Scene ${transition.transitionScene}</span>
             </div>
             <div class="transition-event">${escapeHtml(transition.scriptEvent || 'Transition event not defined')}</div>
             ${transition.scriptQuote ? `
                 <div class="transition-quote">
-                    <span class="quote-icon">📝</span>
                     "${escapeHtml(transition.scriptQuote)}"
                 </div>
             ` : ''}
@@ -425,7 +424,6 @@ export function renderStoryDayContinuityTimeline(character) {
     if (!hasAnyData) {
         html += `
             <div class="empty-state-small" style="margin: 20px 0;">
-                <div class="empty-icon-small">📝</div>
                 <div class="empty-text-small">
                     No continuity data yet. Complete scene breakdowns (Hair, Makeup, SFX, Wardrobe fields) to populate this timeline.
                 </div>

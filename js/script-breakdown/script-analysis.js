@@ -893,7 +893,7 @@ export function detectStoryDays(scriptText, scenes) {
  * Returns "Day 4 (3 weeks later) · Morning" or "Day 3 · Night" etc.
  */
 export function formatStoryDay(scene) {
-    if (!scene.storyDay) return '❓ No story day';
+    if (!scene.storyDay) return '— No story day';
 
     let display = scene.storyDay;
 
