@@ -83,6 +83,9 @@ export function renderSceneList() {
             }
         });
 
+        // Story day badge info
+        const storyDayBadge = getStoryDayBadge(scene);
+
         return `
             <div class="scene-item ${sceneType} ${isActive ? 'active' : ''} ${isProcessed ? 'processed' : ''}" onclick="selectScene(${index})">
                 <div class="scene-header">
@@ -94,6 +97,11 @@ export function renderSceneList() {
                         <div class="scene-heading">${escapeHtml(scene.heading)}</div>
                         <div class="scene-meta">
                             <span class="scene-type-indicator ${sceneType}">${sceneTypeLabel}</span>
+                            ${storyDayBadge.show ? `
+                                <span class="story-day-badge ${storyDayBadge.confidence}" title="${storyDayBadge.tooltip}">
+                                    📅 ${escapeHtml(storyDayBadge.label)}
+                                </span>
+                            ` : ''}
                             ${contextIndicators.length > 0 ? `
                                 <div class="scene-context-indicators">
                                     ${contextIndicators.map(ind =>
@@ -177,6 +185,58 @@ function getSceneIndicators(sceneIndex, analysis) {
     }
 
     return indicators;
+}
+
+/**
+ * Get story day badge info for scene card display
+ * @param {Object} scene - Scene object
+ * @returns {Object} Badge info { show, label, confidence, tooltip }
+ */
+function getStoryDayBadge(scene) {
+    if (!scene.storyDay || !scene.storyDay.trim()) {
+        return { show: false };
+    }
+
+    const storyDay = scene.storyDay.trim();
+    const confidence = scene.storyDayConfidence || 'low';
+    const source = scene.storyDaySource || 'unknown';
+    const confirmed = scene.storyDayConfirmed;
+
+    // Build tooltip
+    let tooltipParts = [storyDay];
+    if (scene.storyTimeOfDay) {
+        tooltipParts.push(scene.storyTimeOfDay);
+    }
+    if (source && source !== 'unknown') {
+        const sourceLabels = {
+            'explicit_marker': 'From script marker',
+            'heading_embedded': 'From scene heading',
+            'same_day_marker': 'Same day as previous',
+            'time_passage': 'Time passage detected',
+            'day_night_transition': 'Day/night transition',
+            'user_assigned': 'User assigned',
+            'copied': 'Copied',
+            'inferred': 'AI inferred'
+        };
+        tooltipParts.push(`(${sourceLabels[source] || source})`);
+    }
+    if (confirmed) {
+        tooltipParts.push('✓ Confirmed');
+    }
+
+    // Shorten label for badge display
+    let label = storyDay;
+    const dayMatch = storyDay.match(/Day\s*(\d+)/i);
+    if (dayMatch) {
+        label = `D${dayMatch[1]}`;
+    }
+
+    return {
+        show: true,
+        label,
+        confidence,
+        tooltip: tooltipParts.join(' - ')
+    };
 }
 
 /**

@@ -28,6 +28,82 @@ const CONFIG = {
 };
 
 // ============================================================================
+// STORY DAY DETECTION PATTERNS
+// ============================================================================
+
+/**
+ * Comprehensive patterns for detecting story day markers in scripts
+ */
+export const STORY_DAY_CUES = {
+    // Explicit on-screen text markers
+    explicitMarkers: [
+        { pattern: /TITLE:\s*"?Day\s+(\d+)/i, extract: (m) => parseInt(m[1]) },
+        { pattern: /SUPER:\s*"?Day\s+(\d+)/i, extract: (m) => parseInt(m[1]) },
+        { pattern: /CHYRON:\s*"?Day\s+(\d+)/i, extract: (m) => parseInt(m[1]) },
+        { pattern: /CARD:\s*"?Day\s+(\d+)/i, extract: (m) => parseInt(m[1]) },
+        { pattern: /TEXT:\s*"?Day\s+(\d+)/i, extract: (m) => parseInt(m[1]) },
+        { pattern: /TITLE:\s*"?(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)/i, extract: (m) => m[1] },
+        { pattern: /SUPER:\s*"?(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)/i, extract: (m) => m[1] },
+        { pattern: /TITLE:\s*"?(\d+)\s+(hours?|days?|weeks?|months?|years?)\s+(later|earlier)/i, extract: (m) => ({ value: parseInt(m[1]), unit: m[2], direction: m[3] }) }
+    ],
+
+    // Same-day time progression markers
+    sameDayMarkers: [
+        /LATER THAT (DAY|NIGHT|AFTERNOON|EVENING|MORNING)/i,
+        /THAT (EVENING|NIGHT|AFTERNOON|MORNING)/i,
+        /MOMENTS LATER/i,
+        /A FEW MINUTES LATER/i,
+        /AN HOUR LATER/i,
+        /HOURS LATER/i,
+        /SHORTLY AFTER/i,
+        /CONTINUOUS/i,
+        /SAME TIME/i,
+        /SIMULTANEOUS/i,
+        /INTERCUT/i
+    ],
+
+    // New day transition markers
+    newDayMarkers: [
+        { pattern: /THE NEXT (DAY|MORNING)/i, days: 1 },
+        { pattern: /NEXT (DAY|MORNING)/i, days: 1 },
+        { pattern: /THE FOLLOWING (DAY|MORNING)/i, days: 1 },
+        { pattern: /A DAY LATER/i, days: 1 },
+        { pattern: /ONE DAY LATER/i, days: 1 },
+        { pattern: /TWO DAYS LATER/i, days: 2 },
+        { pattern: /THREE DAYS LATER/i, days: 3 },
+        { pattern: /FOUR DAYS LATER/i, days: 4 },
+        { pattern: /FIVE DAYS LATER/i, days: 5 },
+        { pattern: /(\d+) DAYS LATER/i, days: null }, // Dynamic capture
+        { pattern: /A WEEK LATER/i, days: 7 },
+        { pattern: /ONE WEEK LATER/i, days: 7 },
+        { pattern: /TWO WEEKS LATER/i, days: 14 },
+        { pattern: /(\d+) WEEKS LATER/i, days: null },
+        { pattern: /A MONTH LATER/i, days: 30 },
+        { pattern: /(\d+) MONTHS? LATER/i, days: null },
+        { pattern: /A YEAR LATER/i, days: 365 },
+        { pattern: /(\d+) YEARS? LATER/i, days: null }
+    ],
+
+    // Script direction markers that might indicate time passage
+    scriptDirections: [
+        /^\s*CUT TO:/i,
+        /^\s*SMASH CUT:/i,
+        /^\s*TIME CUT:/i,
+        /^\s*MATCH CUT:/i,
+        /^\s*DISSOLVE TO:/i,
+        /^\s*FADE TO:/i
+    ],
+
+    // Heading-embedded day markers
+    headingDayPatterns: [
+        { pattern: /STORY DAY\s*(\d+)/i, extract: (m) => parseInt(m[1]) },
+        { pattern: /\bDAY\s*(\d+)\b(?!\s*(DAY|NIGHT|MORNING|EVENING|AFTERNOON))/i, extract: (m) => parseInt(m[1]) },
+        { pattern: /\bD(\d+)\b/i, extract: (m) => parseInt(m[1]) },
+        { pattern: /\(DAY\s*(\d+)\)/i, extract: (m) => parseInt(m[1]) }
+    ]
+};
+
+// ============================================================================
 // SCENE HEADING PARSER - Handles A/B scene numbers properly
 // ============================================================================
 
@@ -491,50 +567,120 @@ export function scanScriptForHMUElements(scriptText, scenes) {
 
 /**
  * Detect story day markers throughout the script
+ * Enhanced version using STORY_DAY_CUES patterns
  * @param {string} scriptText - Full script text
  * @param {Array} scenes - Array of scene objects
- * @returns {Object} Story day assignments and timeline
+ * @returns {Object} Story day assignments and timeline with enhanced metadata
  */
 export function detectStoryDays(scriptText, scenes) {
     const storyDays = [];
     let currentStoryDay = 1;
     let lastTimeOfDay = null;
+    const detectionLog = []; // Track what triggered each assignment
 
     scenes.forEach((scene, idx) => {
         const sceneNum = idx + 1;
         const heading = scene.heading || '';
         const content = scene.content || scene.text || '';
+        const combinedText = `${heading}\n${content}`;
 
         // Parse the scene heading
         const parsed = parseSceneHeading(heading);
 
-        // Check for explicit story day in heading
-        if (parsed?.storyDay) {
-            currentStoryDay = parsed.storyDay;
+        let source = 'inferred';
+        let confidence = 'low';
+        let detectionDetails = null;
+        let timeJump = null;
+        let isSameDay = false;
+
+        // 1. Check for explicit markers (TITLE:, SUPER:, CHYRON:)
+        const explicitResult = detectExplicitDayMarker(combinedText);
+        if (explicitResult.found) {
+            if (typeof explicitResult.value === 'number') {
+                currentStoryDay = explicitResult.value;
+            } else if (typeof explicitResult.value === 'object' && explicitResult.value.direction === 'later') {
+                // Handle "X days later" type markers
+                const days = calculateDaysFromUnit(explicitResult.value);
+                currentStoryDay += days;
+                timeJump = { days, marker: explicitResult.marker };
+            }
+            source = 'explicit_marker';
+            confidence = 'high';
+            detectionDetails = { type: 'explicit', marker: explicitResult.marker };
         }
 
-        // Check for time passage markers in content
-        const timePassageMarkers = detectTimePassage(content);
-        if (timePassageMarkers.daysToAdd > 0) {
-            currentStoryDay += timePassageMarkers.daysToAdd;
-        }
-
-        // Infer day change from DAY/NIGHT transitions
-        const currentTimeOfDay = parsed?.timeOfDay || extractTimeOfDay(heading);
-        if (lastTimeOfDay === 'NIGHT' &&
-            (currentTimeOfDay === 'DAY' || currentTimeOfDay === 'MORNING' || currentTimeOfDay === 'DAWN')) {
-            // Night to day transition = new story day (unless CONTINUOUS)
-            if (currentTimeOfDay !== 'CONTINUOUS' && currentTimeOfDay !== 'SAME') {
-                currentStoryDay++;
+        // 2. Check heading for embedded story day (DAY 1, D3, etc.)
+        if (source === 'inferred') {
+            const headingDayResult = detectHeadingDayMarker(heading);
+            if (headingDayResult.found) {
+                currentStoryDay = headingDayResult.value;
+                source = 'heading_embedded';
+                confidence = 'high';
+                detectionDetails = { type: 'heading', marker: headingDayResult.marker };
             }
         }
 
-        storyDays.push({
+        // 3. Check for same-day markers (MOMENTS LATER, CONTINUOUS, etc.)
+        const sameDayResult = detectSameDayMarker(combinedText);
+        if (sameDayResult.found) {
+            isSameDay = true;
+            // Don't change story day, but record the marker
+            if (source === 'inferred') {
+                source = 'same_day_marker';
+                confidence = 'high';
+                detectionDetails = { type: 'same_day', marker: sameDayResult.marker };
+            }
+        }
+
+        // 4. Check for new day markers (THE NEXT DAY, etc.)
+        if (!isSameDay && source === 'inferred') {
+            const newDayResult = detectNewDayMarker(combinedText);
+            if (newDayResult.found) {
+                currentStoryDay += newDayResult.days;
+                source = 'time_passage';
+                confidence = 'medium';
+                timeJump = { days: newDayResult.days, marker: newDayResult.marker };
+                detectionDetails = { type: 'time_passage', marker: newDayResult.marker, days: newDayResult.days };
+            }
+        }
+
+        // 5. Infer from DAY/NIGHT transitions
+        const currentTimeOfDay = parsed?.timeOfDay || extractTimeOfDay(heading);
+        if (source === 'inferred' && !isSameDay) {
+            if (lastTimeOfDay === 'NIGHT' &&
+                (currentTimeOfDay === 'DAY' || currentTimeOfDay === 'MORNING' || currentTimeOfDay === 'DAWN')) {
+                // Night to day transition = new story day (unless CONTINUOUS)
+                if (currentTimeOfDay !== 'CONTINUOUS' && currentTimeOfDay !== 'SAME') {
+                    currentStoryDay++;
+                    source = 'day_night_transition';
+                    confidence = 'medium';
+                    detectionDetails = { type: 'transition', from: lastTimeOfDay, to: currentTimeOfDay };
+                }
+            }
+        }
+
+        // Build the story day assignment
+        const assignment = {
+            sceneIndex: idx,
             sceneNumber: sceneNum,
             storyDay: currentStoryDay,
-            timeOfDay: currentTimeOfDay,
-            confidence: parsed?.storyDay ? 'high' : (timePassageMarkers.found ? 'medium' : 'inferred'),
-            source: parsed?.storyDay ? 'explicit' : (timePassageMarkers.found ? 'time_passage' : 'inferred')
+            storyDayLabel: `Day ${currentStoryDay}`,
+            storyTimeOfDay: currentTimeOfDay,
+            timeJump,
+            source,
+            confidence,
+            detectionDetails,
+            isConfirmed: false, // User can confirm
+            isSameDay
+        };
+
+        storyDays.push(assignment);
+        detectionLog.push({
+            scene: sceneNum,
+            day: currentStoryDay,
+            source,
+            confidence,
+            details: detectionDetails
         });
 
         lastTimeOfDay = currentTimeOfDay;
@@ -543,55 +689,200 @@ export function detectStoryDays(scriptText, scenes) {
     // Group scenes by story day
     const dayGroups = {};
     storyDays.forEach(sd => {
-        if (!dayGroups[sd.storyDay]) {
-            dayGroups[sd.storyDay] = [];
+        const dayKey = sd.storyDay;
+        if (!dayGroups[dayKey]) {
+            dayGroups[dayKey] = {
+                storyDay: dayKey,
+                label: `Day ${dayKey}`,
+                scenes: [],
+                sceneIndices: []
+            };
         }
-        dayGroups[sd.storyDay].push(sd.sceneNumber);
+        dayGroups[dayKey].scenes.push(sd.sceneNumber);
+        dayGroups[dayKey].sceneIndices.push(sd.sceneIndex);
     });
+
+    // Generate timeline with day metadata
+    const timeline = Object.values(dayGroups).map(group => ({
+        storyDay: group.storyDay,
+        label: group.label,
+        scenes: group.scenes,
+        sceneIndices: group.sceneIndices,
+        sceneCount: group.scenes.length,
+        firstScene: group.scenes[0],
+        lastScene: group.scenes[group.scenes.length - 1]
+    }));
+
+    // Calculate validation warnings
+    const warnings = validateStoryDayAssignments(storyDays, scenes);
 
     return {
         sceneAssignments: storyDays,
         dayGroups,
-        totalStoryDays: Object.keys(dayGroups).length,
-        timeline: Object.entries(dayGroups).map(([day, scenes]) => ({
-            storyDay: parseInt(day),
-            scenes,
-            sceneCount: scenes.length
-        }))
+        totalStoryDays: timeline.length,
+        timeline,
+        detectionLog,
+        warnings,
+        summary: {
+            totalScenes: scenes.length,
+            totalStoryDays: timeline.length,
+            explicitAssignments: storyDays.filter(s => s.confidence === 'high').length,
+            inferredAssignments: storyDays.filter(s => s.confidence === 'low' || s.confidence === 'medium').length,
+            warningCount: warnings.length
+        }
     };
 }
 
 /**
- * Detect time passage markers in text
+ * Detect explicit day markers (TITLE:, SUPER:, CHYRON:)
  */
-function detectTimePassage(text) {
-    if (!text) return { found: false, daysToAdd: 0 };
+function detectExplicitDayMarker(text) {
+    if (!text) return { found: false };
 
-    const markers = [
-        { pattern: /THE\s+NEXT\s+DAY/i, days: 1 },
-        { pattern: /A\s+DAY\s+LATER/i, days: 1 },
-        { pattern: /TWO\s+DAYS\s+LATER/i, days: 2 },
-        { pattern: /THREE\s+DAYS\s+LATER/i, days: 3 },
-        { pattern: /A\s+WEEK\s+LATER/i, days: 7 },
-        { pattern: /WEEKS?\s+LATER/i, days: 7 },
-        { pattern: /A\s+MONTH\s+LATER/i, days: 30 },
-        { pattern: /MONTHS?\s+LATER/i, days: 30 },
-        { pattern: /(\d+)\s+DAYS?\s+LATER/i, days: null }, // Capture number
-        { pattern: /YEARS?\s+LATER/i, days: 365 }
-    ];
-
-    for (const marker of markers) {
-        const match = text.match(marker.pattern);
+    for (const markerDef of STORY_DAY_CUES.explicitMarkers) {
+        const match = text.match(markerDef.pattern);
         if (match) {
-            let days = marker.days;
-            if (days === null && match[1]) {
-                days = parseInt(match[1]);
-            }
-            return { found: true, daysToAdd: days || 1, marker: match[0] };
+            return {
+                found: true,
+                value: markerDef.extract(match),
+                marker: match[0]
+            };
         }
     }
 
-    return { found: false, daysToAdd: 0 };
+    return { found: false };
+}
+
+/**
+ * Detect story day embedded in heading (DAY 1, D3, etc.)
+ */
+function detectHeadingDayMarker(heading) {
+    if (!heading) return { found: false };
+
+    for (const markerDef of STORY_DAY_CUES.headingDayPatterns) {
+        const match = heading.match(markerDef.pattern);
+        if (match) {
+            return {
+                found: true,
+                value: markerDef.extract(match),
+                marker: match[0]
+            };
+        }
+    }
+
+    return { found: false };
+}
+
+/**
+ * Detect same-day markers (MOMENTS LATER, CONTINUOUS, etc.)
+ */
+function detectSameDayMarker(text) {
+    if (!text) return { found: false };
+
+    for (const pattern of STORY_DAY_CUES.sameDayMarkers) {
+        const match = text.match(pattern);
+        if (match) {
+            return { found: true, marker: match[0] };
+        }
+    }
+
+    return { found: false };
+}
+
+/**
+ * Detect new day markers (THE NEXT DAY, etc.)
+ */
+function detectNewDayMarker(text) {
+    if (!text) return { found: false, days: 0 };
+
+    for (const markerDef of STORY_DAY_CUES.newDayMarkers) {
+        const match = text.match(markerDef.pattern);
+        if (match) {
+            let days = markerDef.days;
+            // Handle dynamic capture (e.g., "5 DAYS LATER")
+            if (days === null && match[1]) {
+                days = parseInt(match[1]);
+            }
+            return { found: true, days: days || 1, marker: match[0] };
+        }
+    }
+
+    return { found: false, days: 0 };
+}
+
+/**
+ * Calculate days from unit object (e.g., { value: 2, unit: 'weeks', direction: 'later' })
+ */
+function calculateDaysFromUnit(unitObj) {
+    const multipliers = {
+        'hour': 0, 'hours': 0,
+        'day': 1, 'days': 1,
+        'week': 7, 'weeks': 7,
+        'month': 30, 'months': 30,
+        'year': 365, 'years': 365
+    };
+    const unit = unitObj.unit.toLowerCase();
+    const multiplier = multipliers[unit] || 1;
+    return unitObj.value * multiplier;
+}
+
+/**
+ * Validate story day assignments and generate warnings
+ */
+function validateStoryDayAssignments(assignments, scenes) {
+    const warnings = [];
+
+    // Check for large gaps in story days
+    let lastStoryDay = 0;
+    assignments.forEach((assignment, idx) => {
+        if (assignment.storyDay - lastStoryDay > 5 && lastStoryDay > 0) {
+            warnings.push({
+                type: 'large_gap',
+                sceneIndex: idx,
+                sceneNumber: assignment.sceneNumber,
+                message: `Large gap: Day ${lastStoryDay} to Day ${assignment.storyDay}`,
+                severity: 'warning'
+            });
+        }
+        lastStoryDay = assignment.storyDay;
+    });
+
+    // Check for many low-confidence assignments
+    const lowConfidence = assignments.filter(a => a.confidence === 'low');
+    if (lowConfidence.length > assignments.length * 0.5) {
+        warnings.push({
+            type: 'many_inferred',
+            message: `${lowConfidence.length} of ${assignments.length} story days are inferred - consider adding explicit markers`,
+            severity: 'info'
+        });
+    }
+
+    // Check for scenes with no story day info
+    assignments.forEach((assignment, idx) => {
+        if (!assignment.storyDay || assignment.storyDay < 1) {
+            warnings.push({
+                type: 'missing_day',
+                sceneIndex: idx,
+                sceneNumber: assignment.sceneNumber,
+                message: `Scene ${assignment.sceneNumber} has no story day assigned`,
+                severity: 'error'
+            });
+        }
+    });
+
+    return warnings;
+}
+
+/**
+ * Detect time passage markers in text (legacy compatibility wrapper)
+ */
+function detectTimePassage(text) {
+    const result = detectNewDayMarker(text);
+    return {
+        found: result.found,
+        daysToAdd: result.days,
+        marker: result.marker
+    };
 }
 
 /**
