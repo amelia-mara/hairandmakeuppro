@@ -11345,6 +11345,430 @@
 }
 
 /* ============================================================================ */
+/* LOOKBOOK - NEW DISTINCT LOOKS VIEW */
+/* ============================================================================ */
+
+.lookbook-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.lookbook-header h3 {
+    margin: 0;
+    font-size: 1.25em;
+    font-weight: 600;
+    color: var(--text-light);
+}
+
+.lookbook-view-toggle {
+    display: flex;
+    gap: 2px;
+    background: rgba(28, 25, 22, 0.5);
+    border: 1px solid var(--glass-border);
+    border-radius: 6px;
+    padding: 2px;
+}
+
+.view-toggle-btn {
+    padding: 6px 14px;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    color: var(--text-muted);
+    font-size: 0.8125em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.view-toggle-btn:hover {
+    color: var(--text-light);
+    background: rgba(212, 175, 122, 0.1);
+}
+
+.view-toggle-btn.active {
+    background: rgba(212, 175, 122, 0.2);
+    color: var(--accent-gold);
+}
+
+.lookbook-stats {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.lookbook-stat {
+    flex: 1;
+    padding: 16px;
+    background: rgba(28, 25, 22, 0.4);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    text-align: center;
+}
+
+.lookbook-stat .stat-value {
+    display: block;
+    font-size: 1.75em;
+    font-weight: 700;
+    color: var(--accent-gold);
+    line-height: 1.2;
+}
+
+.lookbook-stat .stat-label {
+    display: block;
+    font-size: 0.75em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 4px;
+}
+
+.lookbook-stat.warning .stat-value {
+    color: #f59e0b;
+}
+
+.lookbook-stat.warning {
+    border-color: rgba(245, 158, 11, 0.3);
+    background: rgba(245, 158, 11, 0.05);
+}
+
+.lookbook-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Lookbook Card - Compact/Expanded */
+.lookbook-card {
+    background: rgba(28, 25, 22, 0.4);
+    border: 1px solid var(--glass-border);
+    border-left: 3px solid rgba(212, 175, 122, 0.3);
+    border-radius: 8px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.lookbook-card:hover {
+    border-color: rgba(212, 175, 122, 0.4);
+    border-left-color: var(--accent-gold);
+}
+
+.lookbook-card.has-content {
+    border-left-color: var(--accent-gold);
+}
+
+.lookbook-card.undefined-look {
+    border-left-color: rgba(245, 158, 11, 0.5);
+    background: rgba(245, 158, 11, 0.03);
+}
+
+.lookbook-card.undefined-look:hover {
+    border-left-color: #f59e0b;
+}
+
+.lookbook-card-header {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.lookbook-card-header:hover {
+    background: rgba(212, 175, 122, 0.05);
+}
+
+.lookbook-card-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.look-expand-icon {
+    font-size: 0.75em;
+    color: var(--accent-gold);
+    min-width: 12px;
+}
+
+.look-name {
+    flex: 1;
+    font-size: 0.9375em;
+    font-weight: 600;
+    color: var(--text-light);
+}
+
+.look-scene-count {
+    font-size: 0.75em;
+    color: var(--text-muted);
+    padding: 3px 8px;
+    background: rgba(28, 25, 22, 0.5);
+    border-radius: 10px;
+}
+
+.look-scene-ranges {
+    font-size: 0.8125em;
+    color: var(--text-muted);
+    padding-left: 22px;
+}
+
+.lookbook-card-body {
+    padding: 16px;
+    padding-top: 0;
+    border-top: 1px solid var(--glass-border);
+}
+
+.lookbook-card.expanded .lookbook-card-body {
+    padding-top: 16px;
+}
+
+.look-undefined-message {
+    padding: 12px;
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+    border-radius: 6px;
+    font-size: 0.875em;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.look-details-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.look-detail-row {
+    display: flex;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.look-detail-row:last-child {
+    border-bottom: none;
+}
+
+.look-detail-label {
+    min-width: 80px;
+    font-size: 0.75em;
+    font-weight: 600;
+    color: var(--accent-gold);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.look-detail-value {
+    flex: 1;
+    font-size: 0.875em;
+    color: var(--text-light);
+    line-height: 1.5;
+}
+
+.look-story-days {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding: 10px 0;
+    border-top: 1px solid var(--glass-border);
+}
+
+.look-days-label {
+    font-size: 0.75em;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.look-day-badge {
+    padding: 3px 10px;
+    background: rgba(212, 175, 122, 0.1);
+    border: 1px solid rgba(212, 175, 122, 0.25);
+    border-radius: 12px;
+    font-size: 0.75em;
+    color: var(--accent-gold);
+}
+
+.look-events-section {
+    margin-bottom: 16px;
+    padding: 12px;
+    background: rgba(59, 130, 246, 0.05);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    border-radius: 6px;
+}
+
+.look-events-header {
+    font-size: 0.75em;
+    font-weight: 600;
+    color: #60a5fa;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+}
+
+.look-event-item {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(59, 130, 246, 0.1);
+}
+
+.look-event-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.look-event-scene {
+    font-size: 0.75em;
+    font-weight: 600;
+    color: #60a5fa;
+    white-space: nowrap;
+}
+
+.look-event-desc {
+    flex: 1;
+    font-size: 0.8125em;
+    color: var(--text-light);
+}
+
+.look-scene-list {
+    padding-top: 12px;
+    border-top: 1px solid var(--glass-border);
+}
+
+.look-scenes-header {
+    font-size: 0.75em;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+}
+
+.look-scene-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.look-scene-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    padding: 4px 10px;
+    background: rgba(28, 25, 22, 0.5);
+    border: 1px solid var(--glass-border);
+    border-radius: 4px;
+    font-size: 0.75em;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.look-scene-chip:hover {
+    background: rgba(212, 175, 122, 0.15);
+    border-color: var(--accent-gold);
+    color: var(--accent-gold);
+}
+
+.look-events-indicator {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    padding: 3px 8px;
+    background: rgba(59, 130, 246, 0.15);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 10px;
+    font-size: 0.6875em;
+    font-weight: 600;
+    color: #60a5fa;
+}
+
+.lookbook-card {
+    position: relative;
+}
+
+/* By Day View - Scene Cards */
+.lookbook-by-day {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.day-scene-card {
+    padding: 12px 14px;
+    background: rgba(28, 25, 22, 0.4);
+    border: 1px solid var(--glass-border);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.day-scene-card:hover {
+    background: rgba(28, 25, 22, 0.6);
+    border-color: rgba(212, 175, 122, 0.3);
+}
+
+.day-scene-card.has-content {
+    border-left: 3px solid var(--accent-gold);
+}
+
+.day-scene-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+}
+
+.day-scene-number {
+    font-size: 0.8125em;
+    font-weight: 600;
+    color: var(--accent-gold);
+}
+
+.day-scene-heading {
+    flex: 1;
+    font-size: 0.8125em;
+    color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.day-scene-look {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.day-look-item {
+    font-size: 0.75em;
+    color: var(--text-light);
+}
+
+.day-look-label {
+    font-weight: 600;
+    color: var(--accent-gold);
+}
+
+.day-scene-no-look {
+    font-size: 0.75em;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+/* ============================================================================ */
 /* CONTINUITY EVENTS TIMELINE */
 /* ============================================================================ */
 
