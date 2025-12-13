@@ -27,6 +27,573 @@ const CONFIG = {
     RETRY_DELAY: 2000
 };
 
+// ============================================================================
+// SCENE HEADING PARSER - Handles A/B scene numbers properly
+// ============================================================================
+
+/**
+ * Parse a scene heading line and extract all components
+ * Handles scene numbers like "36", "36A", "12B", etc.
+ * @param {string} line - The scene heading line to parse
+ * @returns {Object|null} Parsed scene data or null if not a scene heading
+ */
+export function parseSceneHeading(line) {
+    if (!line || typeof line !== 'string') return null;
+
+    const trimmedLine = line.trim();
+
+    // Check for OMITTED scenes first (e.g., "36A OMITTED")
+    const omittedRegex = /^(\d+[A-Z]?)\s*OMITTED\s*$/i;
+    const omittedMatch = trimmedLine.match(omittedRegex);
+    if (omittedMatch) {
+        return {
+            sceneNumber: omittedMatch[1],
+            setting: null,
+            location: 'OMITTED',
+            timeOfDay: null,
+            storyDay: null,
+            isOmitted: true,
+            rawLine: line
+        };
+    }
+
+    // Main scene heading pattern
+    // Handles: "36A INT. FARMHOUSE - KITCHEN - DAY" or "INT. FARMHOUSE - KITCHEN - DAY 36A"
+    // Scene number can be at start or end, with optional letter suffix (A, B, C, etc.)
+    const patterns = [
+        // Scene number at START: "36A INT. LOCATION - TIME"
+        /^(\d+[A-Z]?)\s+(INT\.|EXT\.|INT\.\/EXT\.|I\/E\.)\s*(.+?)\s*[-–—]\s*(DAY|NIGHT|DAWN|DUSK|MORNING|AFTERNOON|EVENING|CONTINUOUS|LATER|SAME|MOMENTS LATER)(.*)$/i,
+        // Scene number at END: "INT. LOCATION - TIME - 36A" or "INT. LOCATION - TIME 36A"
+        /^(INT\.|EXT\.|INT\.\/EXT\.|I\/E\.)\s*(.+?)\s*[-–—]\s*(DAY|NIGHT|DAWN|DUSK|MORNING|AFTERNOON|EVENING|CONTINUOUS|LATER|SAME|MOMENTS LATER)(?:\s*[-–—]?\s*)?(\d+[A-Z]?)?\s*$/i,
+        // No scene number: "INT. LOCATION - TIME"
+        /^(INT\.|EXT\.|INT\.\/EXT\.|I\/E\.)\s*(.+?)\s*[-–—]\s*(DAY|NIGHT|DAWN|DUSK|MORNING|AFTERNOON|EVENING|CONTINUOUS|LATER|SAME|MOMENTS LATER)(.*)$/i
+    ];
+
+    let sceneNumber = null;
+    let setting = null;
+    let location = null;
+    let timeOfDay = null;
+    let remainder = '';
+
+    // Try pattern 1: Scene number at start
+    let match = trimmedLine.match(patterns[0]);
+    if (match) {
+        sceneNumber = match[1];
+        setting = normalizeSettingType(match[2]);
+        location = match[3].trim();
+        timeOfDay = match[4].toUpperCase();
+        remainder = match[5] || '';
+    } else {
+        // Try pattern 2: Scene number at end
+        match = trimmedLine.match(patterns[1]);
+        if (match) {
+            setting = normalizeSettingType(match[1]);
+            location = match[2].trim();
+            timeOfDay = match[3].toUpperCase();
+            sceneNumber = match[4] || null;
+        } else {
+            // Try pattern 3: No scene number
+            match = trimmedLine.match(patterns[2]);
+            if (match) {
+                setting = normalizeSettingType(match[1]);
+                location = match[2].trim();
+                timeOfDay = match[3].toUpperCase();
+                remainder = match[4] || '';
+            }
+        }
+    }
+
+    if (!match) return null;
+
+    // Extract story day if present (e.g., "DAY 1", "D3", "STORY DAY 2")
+    const storyDay = extractStoryDayFromText(remainder) || extractStoryDayFromText(location);
+
+    // Clean up location - remove any trailing story day markers
+    location = cleanLocation(location);
+
+    return {
+        sceneNumber,
+        setting,
+        location,
+        timeOfDay,
+        storyDay,
+        isOmitted: false,
+        rawLine: line
+    };
+}
+
+/**
+ * Normalize setting type to standard format
+ */
+function normalizeSettingType(setting) {
+    if (!setting) return null;
+    const upper = setting.toUpperCase().replace(/\.$/, '');
+    if (upper === 'I/E' || upper === 'INT/EXT' || upper === 'INT./EXT') return 'INT/EXT';
+    if (upper === 'INT') return 'INT';
+    if (upper === 'EXT') return 'EXT';
+    return upper;
+}
+
+/**
+ * Extract story day from text (e.g., "DAY 1", "D3", "STORY DAY 2")
+ */
+function extractStoryDayFromText(text) {
+    if (!text) return null;
+
+    const patterns = [
+        /STORY\s*DAY\s*(\d+)/i,
+        /\bDAY\s*(\d+)\b/i,
+        /\bD(\d+)\b/i,
+        /\bDAY\s*ONE\b/i,
+        /\bDAY\s*TWO\b/i,
+        /\bDAY\s*THREE\b/i
+    ];
+
+    for (const pattern of patterns) {
+        const match = text.match(pattern);
+        if (match) {
+            if (match[1]) return parseInt(match[1]);
+            // Handle word-based day numbers
+            const lower = match[0].toLowerCase();
+            if (lower.includes('one')) return 1;
+            if (lower.includes('two')) return 2;
+            if (lower.includes('three')) return 3;
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Clean location string by removing story day markers and extra whitespace
+ */
+function cleanLocation(location) {
+    if (!location) return '';
+    return location
+        .replace(/\s*[-–—]\s*(STORY\s*)?DAY\s*\d+\s*$/i, '')
+        .replace(/\s*[-–—]\s*D\d+\s*$/i, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+// ============================================================================
+// CHARACTER DETECTION - From dialogue headers and action lines
+// ============================================================================
+
+/**
+ * Detect characters from script text using multiple methods
+ * @param {string} scriptText - Full script text
+ * @returns {Object} Object with characters array and detection details
+ */
+export function detectCharacters(scriptText) {
+    const detectedCharacters = new Map(); // name -> character data
+
+    // Exclusion list - words that look like character names but aren't
+    const exclusions = new Set([
+        'INT', 'EXT', 'FADE', 'CUT', 'DISSOLVE', 'CONTINUED', 'THE END',
+        'TITLE', 'SUPER', 'INSERT', 'BACK TO', 'FLASHBACK', 'END FLASHBACK',
+        'LATER', 'CONTINUOUS', 'SAME', 'MORNING', 'AFTERNOON', 'EVENING',
+        'NIGHT', 'DAY', 'DAWN', 'DUSK', 'MOMENTS', 'THE NEXT', 'MORE',
+        'ANGLE ON', 'CLOSE ON', 'WIDE ON', 'POV', 'INTERCUT', 'PRELAP',
+        'BEGIN', 'END', 'RESUME', 'OMITTED', 'REVISED', 'FINAL DRAFT'
+    ]);
+
+    // Flag list - words that need context to determine if character
+    const flagWords = new Set([
+        'DOCTOR', 'NURSE', 'POLICE', 'OFFICER', 'GUARD', 'DRIVER',
+        'WAITER', 'WAITRESS', 'BARTENDER', 'RECEPTIONIST', 'CLERK'
+    ]);
+
+    const lines = scriptText.split('\n');
+    let currentScene = 0;
+
+    lines.forEach((line, lineIdx) => {
+        const trimmedLine = line.trim();
+
+        // Track scene changes
+        if (parseSceneHeading(trimmedLine)) {
+            currentScene++;
+            return;
+        }
+
+        // Method 1: Dialogue headers (CHARACTER NAME on own line, possibly with parenthetical)
+        // Standard format: "JOHN" or "JOHN (V.O.)" or "JOHN (CONT'D)"
+        const dialogueMatch = trimmedLine.match(/^([A-Z][A-Z\s\.'-]{1,35})(?:\s*\([^)]*\))?\s*$/);
+        if (dialogueMatch) {
+            const name = cleanCharacterName(dialogueMatch[1]);
+            if (name && !exclusions.has(name) && name.length >= 2) {
+                addOrUpdateCharacter(detectedCharacters, name, {
+                    scene: currentScene,
+                    line: lineIdx + 1,
+                    source: 'dialogue',
+                    hasDialogue: true
+                });
+            }
+        }
+
+        // Method 2: Action line character introductions
+        // Patterns: "JOHN (40s, rugged)" or "We meet SARAH, a..." or "enters MIKE, who..."
+        const introPatterns = [
+            // "CHARACTER_NAME (age, description)"
+            /\b([A-Z][A-Z]+(?:\s+[A-Z]+)?)\s*\((\d+s?|early|mid|late)\s*(.*?)\)/g,
+            // "We see/meet CHARACTER_NAME"
+            /(?:we\s+(?:see|meet|find)|enter[s]?|introduce[s]?)\s+([A-Z][A-Z]+(?:\s+[A-Z]+)?)\b/gi,
+            // "CHARACTER_NAME enters/appears/walks"
+            /\b([A-Z][A-Z]+(?:\s+[A-Z]+)?)\s+(?:enters?|appears?|walks?|stands?|sits?|runs?|looks?)\b/g
+        ];
+
+        introPatterns.forEach(pattern => {
+            let introMatch;
+            pattern.lastIndex = 0; // Reset regex
+            while ((introMatch = pattern.exec(trimmedLine)) !== null) {
+                const name = cleanCharacterName(introMatch[1]);
+                if (name && !exclusions.has(name) && name.length >= 2) {
+                    // Extract description if present
+                    const description = introMatch[2] && introMatch[3]
+                        ? `${introMatch[2]}, ${introMatch[3]}`.trim()
+                        : null;
+
+                    addOrUpdateCharacter(detectedCharacters, name, {
+                        scene: currentScene,
+                        line: lineIdx + 1,
+                        source: 'action_intro',
+                        description: description,
+                        rawLine: trimmedLine.substring(0, 200)
+                    });
+                }
+            }
+        });
+    });
+
+    // Convert Map to array and calculate categories
+    const characters = Array.from(detectedCharacters.entries()).map(([name, data]) => {
+        const sceneCount = data.scenes.size;
+        let category = 'BACKGROUND';
+        if (data.hasDialogue && sceneCount >= 10) category = 'LEAD';
+        else if (data.hasDialogue && sceneCount >= 5) category = 'SUPPORTING';
+        else if (data.hasDialogue) category = 'DAY_PLAYER';
+
+        return {
+            name,
+            category,
+            sceneCount,
+            scenes: Array.from(data.scenes).sort((a, b) => a - b),
+            firstAppearance: Math.min(...data.scenes),
+            hasDialogue: data.hasDialogue,
+            introDescription: data.introDescription || null,
+            sources: Array.from(data.sources)
+        };
+    });
+
+    // Sort by scene count descending
+    characters.sort((a, b) => b.sceneCount - a.sceneCount);
+
+    return {
+        characters,
+        totalCharacters: characters.length,
+        leads: characters.filter(c => c.category === 'LEAD').length,
+        supporting: characters.filter(c => c.category === 'SUPPORTING').length,
+        dayPlayers: characters.filter(c => c.category === 'DAY_PLAYER').length,
+        background: characters.filter(c => c.category === 'BACKGROUND').length
+    };
+}
+
+/**
+ * Clean and normalize a character name
+ */
+function cleanCharacterName(name) {
+    if (!name) return null;
+    // Remove V.O., O.S., CONT'D suffixes
+    let cleaned = name.replace(/\s*\(?(V\.?O\.?|O\.?S\.?|CONT'?D?|O\.?C\.?)\)?$/gi, '').trim();
+    // Remove trailing punctuation
+    cleaned = cleaned.replace(/[.,;:!?]+$/, '').trim();
+    // Skip if too short or starts with number
+    if (cleaned.length < 2 || /^\d/.test(cleaned)) return null;
+    return cleaned;
+}
+
+/**
+ * Add or update character in the detection map
+ */
+function addOrUpdateCharacter(map, name, data) {
+    if (!map.has(name)) {
+        map.set(name, {
+            scenes: new Set(),
+            sources: new Set(),
+            hasDialogue: false,
+            introDescription: null
+        });
+    }
+
+    const charData = map.get(name);
+    if (data.scene > 0) charData.scenes.add(data.scene);
+    charData.sources.add(data.source);
+    if (data.hasDialogue) charData.hasDialogue = true;
+    if (data.description && !charData.introDescription) {
+        charData.introDescription = data.description;
+    }
+}
+
+// ============================================================================
+// H&MU ELEMENT DETECTION
+// ============================================================================
+
+/**
+ * H&MU element detection keywords organized by category
+ */
+const HMU_KEYWORDS = {
+    wounds: [
+        'cut', 'cuts', 'bleeding', 'blood', 'bloody', 'bruise', 'bruised', 'bruising',
+        'wound', 'wounded', 'scar', 'scarred', 'scarring', 'bandage', 'bandaged',
+        'injured', 'injury', 'black eye', 'swollen', 'split lip', 'broken nose',
+        'stitches', 'gash', 'abrasion', 'burn', 'burned', 'burnt', 'scrape', 'scraped'
+    ],
+    illness: [
+        'sick', 'ill', 'illness', 'pale', 'pallid', 'fever', 'feverish', 'cough',
+        'coughing', 'sneeze', 'sneezing', 'vomit', 'vomiting', 'nausea', 'nauseous',
+        'lesion', 'lesions', 'rash', 'spots', 'sore', 'sores', 'weak', 'weakened',
+        'frail', 'gaunt', 'haggard', 'recovering', 'dying', 'dead', 'corpse',
+        'jaundice', 'yellowing', 'bloodshot', 'dark circles', 'sunken'
+    ],
+    grooming: [
+        'beard', 'stubble', 'clean-shaven', 'shaved', 'shaves', 'mustache', 'goatee',
+        'sideburns', 'five o\'clock shadow', 'unshaven', 'facial hair', 'haircut',
+        'hair grows', 'grown out', 'trim', 'trimmed', 'unkempt', 'disheveled',
+        'well-groomed', 'manicured', 'polished'
+    ],
+    hair: [
+        'hair', 'blonde', 'brunette', 'redhead', 'gray', 'grey', 'graying', 'white hair',
+        'bald', 'balding', 'receding', 'curly', 'straight', 'wavy', 'ponytail',
+        'braid', 'braids', 'updo', 'bun', 'wig', 'extensions', 'messy hair',
+        'tangled', 'wind-blown', 'windswept', 'wet hair', 'damp hair', 'dyed',
+        'highlights', 'roots showing', 'short hair', 'long hair', 'bob', 'pixie'
+    ],
+    states: [
+        'wet', 'soaked', 'drenched', 'sweaty', 'sweating', 'perspiring', 'dirty',
+        'muddy', 'filthy', 'grimy', 'dusty', 'sandy', 'disheveled', 'unkempt',
+        'tired', 'exhausted', 'fatigued', 'weary', 'rested', 'refreshed',
+        'drunk', 'intoxicated', 'hungover', 'drugged', 'sedated', 'flushed',
+        'crying', 'tears', 'tear-stained', 'red-eyed', 'puffy eyes'
+    ],
+    makeup: [
+        'makeup', 'make-up', 'lipstick', 'mascara', 'foundation', 'blush', 'rouge',
+        'eyeliner', 'eye shadow', 'eyeshadow', 'powder', 'concealer', 'smeared',
+        'smudged', 'running mascara', 'no makeup', 'bare-faced', 'natural look',
+        'glamorous', 'done up', 'made up', 'theatrical', 'stage makeup',
+        'prosthetic', 'prosthetics', 'appliance', 'special effects'
+    ],
+    aging: [
+        'older', 'younger', 'aged', 'aging', 'years later', 'months later',
+        'time jump', 'wrinkles', 'wrinkled', 'crow\'s feet', 'age spots',
+        'weathered', 'sun-damaged', 'youthful', 'rejuvenated', 'gray streaks'
+    ],
+    tattoos: [
+        'tattoo', 'tattoos', 'tattooed', 'inked', 'piercing', 'piercings',
+        'pierced', 'nose ring', 'lip ring', 'eyebrow ring', 'ear gauges',
+        'body art', 'tribal', 'sleeve tattoo'
+    ],
+    weather: [
+        'rain', 'raining', 'rainy', 'snow', 'snowing', 'snowy', 'frozen', 'frost',
+        'frostbite', 'sunburn', 'sunburned', 'windswept', 'wind-blown', 'storm',
+        'hail', 'humid', 'heat', 'cold', 'chapped', 'flushed from cold'
+    ]
+};
+
+/**
+ * Detect H&MU elements in text
+ * @param {string} text - Text to search for H&MU elements
+ * @param {string} character - Optional character name to associate with
+ * @param {number} sceneNumber - Optional scene number
+ * @returns {Array} Array of detected H&MU elements
+ */
+export function detectHMUElements(text, character = null, sceneNumber = null) {
+    if (!text) return [];
+
+    const detectedElements = [];
+    const lowerText = text.toLowerCase();
+
+    Object.entries(HMU_KEYWORDS).forEach(([category, keywords]) => {
+        keywords.forEach(keyword => {
+            // Create regex that matches whole words
+            const regex = new RegExp(`\\b${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
+            let match;
+
+            while ((match = regex.exec(text)) !== null) {
+                // Get context around the match (50 chars before and after)
+                const start = Math.max(0, match.index - 50);
+                const end = Math.min(text.length, match.index + keyword.length + 50);
+                const context = text.substring(start, end).trim();
+
+                detectedElements.push({
+                    category,
+                    keyword: match[0],
+                    context,
+                    position: match.index,
+                    character,
+                    sceneNumber
+                });
+            }
+        });
+    });
+
+    // Remove duplicates (same keyword at same position)
+    const unique = detectedElements.filter((elem, idx, self) =>
+        idx === self.findIndex(e => e.position === elem.position && e.keyword.toLowerCase() === elem.keyword.toLowerCase())
+    );
+
+    return unique.sort((a, b) => a.position - b.position);
+}
+
+/**
+ * Scan entire script for H&MU elements by scene
+ * @param {string} scriptText - Full script text
+ * @param {Array} scenes - Array of scene objects
+ * @returns {Object} H&MU elements organized by scene
+ */
+export function scanScriptForHMUElements(scriptText, scenes) {
+    const elementsByScene = {};
+    const elementsByCategory = {};
+
+    // Initialize category totals
+    Object.keys(HMU_KEYWORDS).forEach(cat => {
+        elementsByCategory[cat] = [];
+    });
+
+    scenes.forEach((scene, idx) => {
+        const sceneNum = idx + 1;
+        const content = scene.content || scene.text || '';
+        const elements = detectHMUElements(content, null, sceneNum);
+
+        if (elements.length > 0) {
+            elementsByScene[sceneNum] = elements;
+
+            // Add to category totals
+            elements.forEach(elem => {
+                elementsByCategory[elem.category].push({
+                    ...elem,
+                    sceneNumber: sceneNum
+                });
+            });
+        }
+    });
+
+    return {
+        byScene: elementsByScene,
+        byCategory: elementsByCategory,
+        totalElements: Object.values(elementsByScene).flat().length,
+        scenesWithElements: Object.keys(elementsByScene).length
+    };
+}
+
+// ============================================================================
+// STORY DAY DETECTION
+// ============================================================================
+
+/**
+ * Detect story day markers throughout the script
+ * @param {string} scriptText - Full script text
+ * @param {Array} scenes - Array of scene objects
+ * @returns {Object} Story day assignments and timeline
+ */
+export function detectStoryDays(scriptText, scenes) {
+    const storyDays = [];
+    let currentStoryDay = 1;
+    let lastTimeOfDay = null;
+
+    scenes.forEach((scene, idx) => {
+        const sceneNum = idx + 1;
+        const heading = scene.heading || '';
+        const content = scene.content || scene.text || '';
+
+        // Parse the scene heading
+        const parsed = parseSceneHeading(heading);
+
+        // Check for explicit story day in heading
+        if (parsed?.storyDay) {
+            currentStoryDay = parsed.storyDay;
+        }
+
+        // Check for time passage markers in content
+        const timePassageMarkers = detectTimePassage(content);
+        if (timePassageMarkers.daysToAdd > 0) {
+            currentStoryDay += timePassageMarkers.daysToAdd;
+        }
+
+        // Infer day change from DAY/NIGHT transitions
+        const currentTimeOfDay = parsed?.timeOfDay || extractTimeOfDay(heading);
+        if (lastTimeOfDay === 'NIGHT' &&
+            (currentTimeOfDay === 'DAY' || currentTimeOfDay === 'MORNING' || currentTimeOfDay === 'DAWN')) {
+            // Night to day transition = new story day (unless CONTINUOUS)
+            if (currentTimeOfDay !== 'CONTINUOUS' && currentTimeOfDay !== 'SAME') {
+                currentStoryDay++;
+            }
+        }
+
+        storyDays.push({
+            sceneNumber: sceneNum,
+            storyDay: currentStoryDay,
+            timeOfDay: currentTimeOfDay,
+            confidence: parsed?.storyDay ? 'high' : (timePassageMarkers.found ? 'medium' : 'inferred'),
+            source: parsed?.storyDay ? 'explicit' : (timePassageMarkers.found ? 'time_passage' : 'inferred')
+        });
+
+        lastTimeOfDay = currentTimeOfDay;
+    });
+
+    // Group scenes by story day
+    const dayGroups = {};
+    storyDays.forEach(sd => {
+        if (!dayGroups[sd.storyDay]) {
+            dayGroups[sd.storyDay] = [];
+        }
+        dayGroups[sd.storyDay].push(sd.sceneNumber);
+    });
+
+    return {
+        sceneAssignments: storyDays,
+        dayGroups,
+        totalStoryDays: Object.keys(dayGroups).length,
+        timeline: Object.entries(dayGroups).map(([day, scenes]) => ({
+            storyDay: parseInt(day),
+            scenes,
+            sceneCount: scenes.length
+        }))
+    };
+}
+
+/**
+ * Detect time passage markers in text
+ */
+function detectTimePassage(text) {
+    if (!text) return { found: false, daysToAdd: 0 };
+
+    const markers = [
+        { pattern: /THE\s+NEXT\s+DAY/i, days: 1 },
+        { pattern: /A\s+DAY\s+LATER/i, days: 1 },
+        { pattern: /TWO\s+DAYS\s+LATER/i, days: 2 },
+        { pattern: /THREE\s+DAYS\s+LATER/i, days: 3 },
+        { pattern: /A\s+WEEK\s+LATER/i, days: 7 },
+        { pattern: /WEEKS?\s+LATER/i, days: 7 },
+        { pattern: /A\s+MONTH\s+LATER/i, days: 30 },
+        { pattern: /MONTHS?\s+LATER/i, days: 30 },
+        { pattern: /(\d+)\s+DAYS?\s+LATER/i, days: null }, // Capture number
+        { pattern: /YEARS?\s+LATER/i, days: 365 }
+    ];
+
+    for (const marker of markers) {
+        const match = text.match(marker.pattern);
+        if (match) {
+            let days = marker.days;
+            if (days === null && match[1]) {
+                days = parseInt(match[1]);
+            }
+            return { found: true, daysToAdd: days || 1, marker: match[0] };
+        }
+    }
+
+    return { found: false, daysToAdd: 0 };
+}
+
 /**
  * Main entry point for comprehensive script analysis
  * Processes the entire script through all 5 analysis phases
@@ -1530,11 +2097,14 @@ function buildFallbackContext(scriptText, scenes, partialResults) {
     }, scenes);
 }
 
-// Export for use in export-handlers.js
+// Export for use in export-handlers.js and other modules
+// Note: parseSceneHeading, detectCharacters, detectHMUElements,
+// scanScriptForHMUElements, detectStoryDays are already exported inline
 export {
     extractCharacterNamesFromText,
     normalizeCharacterName,
     findCharacterAppearances,
     buildHeuristicTimeline,
-    extractTimeOfDay
+    extractTimeOfDay,
+    HMU_KEYWORDS
 };
