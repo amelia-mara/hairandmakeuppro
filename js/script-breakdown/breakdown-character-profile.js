@@ -16,6 +16,70 @@ import { escapeHtml, getState, showToast } from './breakdown-character-utils.js'
 import { generateLooksFromBreakdown } from './breakdown-character-lookbook.js';
 
 /**
+ * Normalize AI-detected physical profile field names to match form fields
+ * The AI analysis uses different field names than the form expects
+ * @param {Object} aiProfile - AI-detected physical attributes with original field names
+ * @returns {Object} Normalized profile with form-compatible field names
+ */
+function normalizeAiPhysicalProfile(aiProfile) {
+    if (!aiProfile) return {};
+
+    // Map AI field names to form field names
+    const normalized = {
+        age: aiProfile.age || '',
+        gender: aiProfile.gender || '',
+        hairColour: aiProfile.hairColor || aiProfile.hairColour || aiProfile.hair_color || '',
+        hairType: aiProfile.hairStyle || aiProfile.hairType || aiProfile.hair_style || '',
+        eyeColour: aiProfile.eyeColor || aiProfile.eyeColour || aiProfile.eye_color || '',
+        skinTone: aiProfile.skinTone || aiProfile.skin_tone || aiProfile.ethnicity || '',
+        build: aiProfile.build || aiProfile.height || '',
+        distinguishing: '',
+        notes: ''
+    };
+
+    // Handle distinctive features (may be array)
+    if (aiProfile.distinctiveFeatures) {
+        normalized.distinguishing = Array.isArray(aiProfile.distinctiveFeatures)
+            ? aiProfile.distinctiveFeatures.filter(f => f).join(', ')
+            : aiProfile.distinctiveFeatures;
+    } else if (aiProfile.distinctive_features) {
+        normalized.distinguishing = Array.isArray(aiProfile.distinctive_features)
+            ? aiProfile.distinctive_features.filter(f => f).join(', ')
+            : aiProfile.distinctive_features;
+    }
+
+    return normalized;
+}
+
+/**
+ * Merge AI-detected physical profile with user-edited profile
+ * User values take priority over AI-detected values
+ * @param {Object} aiProfile - AI-detected physical attributes
+ * @param {Object} userProfile - User-edited physical attributes
+ * @returns {Object} Merged profile
+ */
+function mergePhysicalProfiles(aiProfile, userProfile) {
+    const fields = ['age', 'gender', 'hairColour', 'hairType', 'eyeColour', 'skinTone', 'build', 'distinguishing', 'notes'];
+    const merged = {};
+
+    // Normalize AI profile field names first
+    const normalizedAi = normalizeAiPhysicalProfile(aiProfile);
+
+    for (const field of fields) {
+        // User value takes priority, fall back to AI value
+        if (userProfile[field] !== undefined && userProfile[field] !== '') {
+            merged[field] = userProfile[field];
+        } else if (normalizedAi[field] !== undefined && normalizedAi[field] !== '') {
+            merged[field] = normalizedAi[field];
+        } else {
+            merged[field] = '';
+        }
+    }
+
+    return merged;
+}
+
+/**
  * Render comprehensive character profile view
  * Shows all collected data with new hierarchy
  * @param {string} characterName - Character name
@@ -38,15 +102,22 @@ export function renderProfileView(characterName) {
         }
     }
 
-    // Get physical profile from state (editable data)
-    const physicalProfile = state.castProfiles?.[characterName]?.physicalProfile || {};
+    // Get AI-detected physical profile from master context
+    const aiPhysicalProfile = characterData?.physicalProfile || {};
+
+    // Get user-edited physical profile from state
+    const userPhysicalProfile = state.castProfiles?.[characterName]?.physicalProfile || {};
+
+    // Merge profiles: user edits take priority over AI-detected values
+    const mergedPhysicalProfile = mergePhysicalProfiles(aiPhysicalProfile, userPhysicalProfile);
+
     const visualIdentity = state.castProfiles?.[characterName]?.visualIdentity || null;
 
     return `
         <div class="character-profile-content">
 
             <!-- 1. PHYSICAL PROFILE (Top - Editable) -->
-            ${renderPhysicalProfileSection(characterName, physicalProfile)}
+            ${renderPhysicalProfileSection(characterName, mergedPhysicalProfile, aiPhysicalProfile)}
 
             <!-- 2. VISUAL IDENTITY (AI Generated) -->
             ${renderVisualIdentitySection(characterName, visualIdentity, characterData)}
@@ -63,91 +134,80 @@ export function renderProfileView(characterName) {
 
 /**
  * Render editable physical profile section
+ * Fields are auto-filled from AI analysis but remain manually editable
  * @param {string} characterName - Character name
- * @param {Object} profile - Physical profile data
+ * @param {Object} profile - Merged physical profile data
+ * @param {Object} aiProfile - AI-detected values (for showing source indicator)
  * @returns {string} HTML for physical profile section
  */
-function renderPhysicalProfileSection(characterName, profile) {
+function renderPhysicalProfileSection(characterName, profile, aiProfile = {}) {
     const escapedName = escapeHtml(characterName).replace(/'/g, "\\'");
+    const state = getState();
+    const userProfile = state.castProfiles?.[characterName]?.physicalProfile || {};
+
+    // Normalize AI profile for comparison
+    const normalizedAi = normalizeAiPhysicalProfile(aiProfile);
+
+    /**
+     * Helper to check if a field value came from AI (not user-edited)
+     */
+    const isAiValue = (field) => {
+        // Value exists and matches normalized AI value, and user hasn't overwritten it
+        return normalizedAi[field] && profile[field] === normalizedAi[field] &&
+               (!userProfile[field] || userProfile[field] === '');
+    };
+
+    /**
+     * Render a profile field with AI indicator
+     */
+    const renderField = (field, label, placeholder, isTextarea = false) => {
+        const value = escapeHtml(profile[field] || '');
+        const aiDetected = isAiValue(field);
+        const aiIndicator = aiDetected ? '<span class="ai-indicator" title="Auto-detected from script">AI</span>' : '';
+
+        if (isTextarea) {
+            return `
+                <div class="profile-field full-width ${aiDetected ? 'ai-filled' : ''}">
+                    <label>${label}${aiIndicator}</label>
+                    <textarea
+                        placeholder="${placeholder}"
+                        onchange="updatePhysicalProfile('${escapedName}', '${field}', this.value)"
+                    >${value}</textarea>
+                </div>
+            `;
+        }
+
+        return `
+            <div class="profile-field ${aiDetected ? 'ai-filled' : ''}">
+                <label>${label}${aiIndicator}</label>
+                <input type="text"
+                       value="${value}"
+                       placeholder="${placeholder}"
+                       onchange="updatePhysicalProfile('${escapedName}', '${field}', this.value)">
+            </div>
+        `;
+    };
+
+    // Check if any fields have AI values (using normalized profile)
+    const hasAiData = Object.keys(normalizedAi).some(k => normalizedAi[k]);
 
     return `
         <div class="profile-section physical-profile">
             <div class="section-header">
                 <h3>PHYSICAL PROFILE</h3>
+                ${hasAiData ? '<span class="ai-hint">Fields marked "AI" were auto-detected from script</span>' : ''}
             </div>
 
             <div class="profile-grid">
-                <div class="profile-field">
-                    <label>Age</label>
-                    <input type="text"
-                           value="${escapeHtml(profile.age || '')}"
-                           placeholder="e.g., 40s, late 20s"
-                           onchange="updatePhysicalProfile('${escapedName}', 'age', this.value)">
-                </div>
-
-                <div class="profile-field">
-                    <label>Gender</label>
-                    <input type="text"
-                           value="${escapeHtml(profile.gender || '')}"
-                           placeholder="e.g., Female, Male"
-                           onchange="updatePhysicalProfile('${escapedName}', 'gender', this.value)">
-                </div>
-
-                <div class="profile-field">
-                    <label>Hair Colour</label>
-                    <input type="text"
-                           value="${escapeHtml(profile.hairColour || '')}"
-                           placeholder="e.g., Dark brown, Blonde"
-                           onchange="updatePhysicalProfile('${escapedName}', 'hairColour', this.value)">
-                </div>
-
-                <div class="profile-field">
-                    <label>Hair Type</label>
-                    <input type="text"
-                           value="${escapeHtml(profile.hairType || '')}"
-                           placeholder="e.g., Straight, shoulder length"
-                           onchange="updatePhysicalProfile('${escapedName}', 'hairType', this.value)">
-                </div>
-
-                <div class="profile-field">
-                    <label>Eye Colour</label>
-                    <input type="text"
-                           value="${escapeHtml(profile.eyeColour || '')}"
-                           placeholder="e.g., Brown, Blue"
-                           onchange="updatePhysicalProfile('${escapedName}', 'eyeColour', this.value)">
-                </div>
-
-                <div class="profile-field">
-                    <label>Skin Tone</label>
-                    <input type="text"
-                           value="${escapeHtml(profile.skinTone || '')}"
-                           placeholder="e.g., Fair, Medium, Dark"
-                           onchange="updatePhysicalProfile('${escapedName}', 'skinTone', this.value)">
-                </div>
-
-                <div class="profile-field">
-                    <label>Build</label>
-                    <input type="text"
-                           value="${escapeHtml(profile.build || '')}"
-                           placeholder="e.g., Slim, Athletic"
-                           onchange="updatePhysicalProfile('${escapedName}', 'build', this.value)">
-                </div>
-
-                <div class="profile-field">
-                    <label>Distinguishing Features</label>
-                    <input type="text"
-                           value="${escapeHtml(profile.distinguishing || '')}"
-                           placeholder="e.g., Scar on left cheek, tattoo"
-                           onchange="updatePhysicalProfile('${escapedName}', 'distinguishing', this.value)">
-                </div>
-
-                <div class="profile-field full-width">
-                    <label>Notes</label>
-                    <textarea
-                        placeholder="Additional physical notes..."
-                        onchange="updatePhysicalProfile('${escapedName}', 'notes', this.value)"
-                    >${escapeHtml(profile.notes || '')}</textarea>
-                </div>
+                ${renderField('age', 'Age', 'e.g., 40s, late 20s')}
+                ${renderField('gender', 'Gender', 'e.g., Female, Male')}
+                ${renderField('hairColour', 'Hair Colour', 'e.g., Dark brown, Blonde')}
+                ${renderField('hairType', 'Hair Type', 'e.g., Straight, shoulder length')}
+                ${renderField('eyeColour', 'Eye Colour', 'e.g., Brown, Blue')}
+                ${renderField('skinTone', 'Skin Tone', 'e.g., Fair, Medium, Dark')}
+                ${renderField('build', 'Build', 'e.g., Slim, Athletic')}
+                ${renderField('distinguishing', 'Distinguishing Features', 'e.g., Scar on left cheek, tattoo')}
+                ${renderField('notes', 'Notes', 'Additional physical notes...', true)}
             </div>
         </div>
     `;
