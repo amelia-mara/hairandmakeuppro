@@ -691,46 +691,123 @@
         function loadBreakdownState() {
             console.log('Loading breakdown state...');
 
-            // Try to load from localStorage
-            const projectData = localStorage.getItem('checksHappyProject');
-            if (projectData) {
+            // Initialize empty state
+            breakdownState = {
+                projectName: 'Untitled Project',
+                scenes: [],
+                sceneBreakdowns: {},
+                confirmedCharacters: [],
+                characters: {},
+                characterStates: {},
+                continuityEvents: {},
+                scriptTags: {},
+                lastSaved: null
+            };
+
+            // Try to load from currentProject first
+            const currentProjectStr = localStorage.getItem('currentProject');
+            if (currentProjectStr) {
                 try {
-                    const project = JSON.parse(projectData);
-                    breakdownState = {
-                        projectName: project.projectName || project.name || 'Untitled Project',
-                        scenes: project.scenes || [],
-                        sceneBreakdowns: project.sceneBreakdowns || {},
-                        confirmedCharacters: project.confirmedCharacters || [],
-                        characters: project.castProfiles || {},
-                        characterStates: project.characterStates || {},
-                        continuityEvents: project.continuityEvents || {},
-                        scriptTags: project.scriptTags || {},
-                        lastSaved: project.lastSaved || null
-                    };
-                    console.log('Loaded project data:', breakdownState);
+                    const project = JSON.parse(currentProjectStr);
+                    breakdownState.projectName = project.projectName || project.name || 'Untitled Project';
+                    breakdownState.scenes = project.scenes || [];
+                    breakdownState.sceneBreakdowns = project.sceneBreakdowns || {};
+                    breakdownState.confirmedCharacters = project.confirmedCharacters || [];
+                    breakdownState.characters = project.castProfiles || {};
+                    breakdownState.characterStates = project.characterStates || {};
+                    breakdownState.continuityEvents = project.continuityEvents || {};
+                    breakdownState.scriptTags = project.scriptTags || {};
+                    breakdownState.lastSaved = project.lastSaved || null;
+                    console.log('Loaded from currentProject:', breakdownState);
                 } catch (e) {
-                    console.error('Failed to parse project data:', e);
+                    console.error('Failed to parse currentProject:', e);
                 }
             }
 
-            // Fallback: try individual localStorage keys
-            if (!breakdownState || breakdownState.scenes.length === 0) {
+            // Try checksHappyScenes if no scenes yet
+            if (breakdownState.scenes.length === 0) {
                 const scenesStr = localStorage.getItem('checksHappyScenes');
-                const breakdownsStr = localStorage.getItem('checksHappySceneBreakdowns');
-                const charactersStr = localStorage.getItem('checksHappyConfirmedCharacters');
-                const eventsStr = localStorage.getItem('checksHappyContinuityEvents');
+                if (scenesStr) {
+                    try {
+                        breakdownState.scenes = JSON.parse(scenesStr);
+                        console.log('Loaded scenes from checksHappyScenes:', breakdownState.scenes.length);
+                    } catch (e) {
+                        console.error('Failed to parse checksHappyScenes:', e);
+                    }
+                }
+            }
 
-                breakdownState = {
-                    projectName: 'Untitled Project',
-                    scenes: scenesStr ? JSON.parse(scenesStr) : [],
-                    sceneBreakdowns: breakdownsStr ? JSON.parse(breakdownsStr) : {},
-                    confirmedCharacters: charactersStr ? JSON.parse(charactersStr) : [],
-                    characters: {},
-                    characterStates: {},
-                    continuityEvents: eventsStr ? JSON.parse(eventsStr) : {},
-                    scriptTags: {},
-                    lastSaved: null
-                };
+            // Try checksHappyCharacters for confirmed characters
+            if (breakdownState.confirmedCharacters.length === 0) {
+                const charsStr = localStorage.getItem('checksHappyCharacters');
+                if (charsStr) {
+                    try {
+                        breakdownState.confirmedCharacters = JSON.parse(charsStr);
+                        console.log('Loaded characters from checksHappyCharacters:', breakdownState.confirmedCharacters.length);
+                    } catch (e) {
+                        console.error('Failed to parse checksHappyCharacters:', e);
+                    }
+                }
+            }
+
+            // Load masterContext for additional character data
+            const masterContextStr = localStorage.getItem('masterContext') || localStorage.getItem('scriptMasterContext');
+            if (masterContextStr) {
+                try {
+                    const masterContext = JSON.parse(masterContextStr);
+
+                    // If no scenes yet, try getting from masterContext
+                    if (breakdownState.scenes.length === 0 && masterContext.scenes) {
+                        breakdownState.scenes = masterContext.scenes;
+                    }
+
+                    // Get confirmed characters from masterContext if needed
+                    if (breakdownState.confirmedCharacters.length === 0 && masterContext.characters) {
+                        breakdownState.confirmedCharacters = Object.keys(masterContext.characters);
+                    }
+
+                    // Merge character data from masterContext
+                    if (masterContext.characters) {
+                        Object.entries(masterContext.characters).forEach(([name, data]) => {
+                            if (!breakdownState.characters[name]) {
+                                breakdownState.characters[name] = {};
+                            }
+                            // Merge in masterContext data
+                            breakdownState.characters[name] = {
+                                ...breakdownState.characters[name],
+                                physicalProfile: data.physicalProfile || breakdownState.characters[name].physicalProfile,
+                                visualProfile: data.visualProfile || breakdownState.characters[name].visualProfile,
+                                characterAnalysis: data.characterAnalysis,
+                                scriptDescriptions: data.scriptDescriptions
+                            };
+                        });
+                    }
+
+                    // Get scene breakdowns if available
+                    if (masterContext.sceneBreakdowns && Object.keys(breakdownState.sceneBreakdowns).length === 0) {
+                        breakdownState.sceneBreakdowns = masterContext.sceneBreakdowns;
+                    }
+
+                    // Get character states if available
+                    if (masterContext.characterStates && Object.keys(breakdownState.characterStates).length === 0) {
+                        breakdownState.characterStates = masterContext.characterStates;
+                    }
+
+                    console.log('Merged masterContext data');
+                } catch (e) {
+                    console.error('Failed to parse masterContext:', e);
+                }
+            }
+
+            // Build sceneBreakdowns from scenes if needed (each scene may have cast list)
+            if (Object.keys(breakdownState.sceneBreakdowns).length === 0 && breakdownState.scenes.length > 0) {
+                breakdownState.scenes.forEach((scene, index) => {
+                    if (scene.cast || scene.characters) {
+                        breakdownState.sceneBreakdowns[index] = {
+                            cast: scene.cast || scene.characters || []
+                        };
+                    }
+                });
             }
 
             // Update project name
