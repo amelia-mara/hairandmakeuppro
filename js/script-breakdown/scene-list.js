@@ -11,7 +11,7 @@
  */
 
 import { state, selectScene } from './main.js';
-import { getSceneType, getSceneTypeLabel } from './utils.js';
+import { getSceneType, getSceneTypeLabel, getSceneTypeClass } from './utils.js';
 
 // Element categories for counting
 const categories = [
@@ -60,6 +60,7 @@ export function renderSceneList() {
     container.innerHTML = state.scenes.map((scene, index) => {
         const sceneType = getSceneType(scene.heading);
         const sceneTypeLabel = getSceneTypeLabel(sceneType);
+        const sceneTypeClassName = getSceneTypeClass(sceneType);
         const breakdown = state.sceneBreakdowns[index] || {};
         const cast = breakdown.cast || [];
         const isActive = state.currentScene === index;
@@ -87,7 +88,7 @@ export function renderSceneList() {
         const storyDayBadge = getStoryDayBadge(scene);
 
         return `
-            <div class="scene-item ${sceneType} ${isActive ? 'active' : ''} ${isProcessed ? 'processed' : ''}" onclick="selectScene(${index})">
+            <div class="scene-item ${sceneTypeClassName} ${isActive ? 'active' : ''} ${isProcessed ? 'processed' : ''}" onclick="selectScene(${index})">
                 <div class="scene-header">
                     <div class="scene-status-icon" title="${isProcessed ? 'Processed' : 'Not Processed'}">
                         ${isProcessed ? '✓' : '○'}
@@ -96,7 +97,7 @@ export function renderSceneList() {
                     <div class="scene-info">
                         <div class="scene-heading">${escapeHtml(scene.heading)}</div>
                         <div class="scene-meta">
-                            <span class="scene-type-indicator ${sceneType}">${sceneTypeLabel}</span>
+                            <span class="scene-type-indicator ${sceneTypeClassName}">${sceneTypeLabel}</span>
                             ${storyDayBadge.show ? `
                                 <span class="story-day-badge ${storyDayBadge.confidence}" title="${storyDayBadge.tooltip}">
                                     📅 ${escapeHtml(storyDayBadge.label)}
