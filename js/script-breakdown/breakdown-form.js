@@ -261,30 +261,88 @@ function renderSceneBreakdown(sceneIndex) {
                 </div>
             ` : ''}
 
-            <!-- TIMELINE SECTION -->
+            <!-- TIMELINE SECTION - Enhanced -->
             <div class="breakdown-section timeline-section">
-                <h4 class="section-title">TIMELINE</h4>
-                <div class="field-row">
-                    <div class="field-group">
+                <div class="section-header-row">
+                    <h4 class="section-title">TIMELINE</h4>
+                    <button class="small-btn bulk-assign-btn" onclick="openBulkStoryDayModal()" title="Bulk assign story days">
+                        📋 Bulk Assign
+                    </button>
+                </div>
+
+                <!-- Detection Hint (shows what triggered auto-detection) -->
+                ${scene.storyDayCue ? `
+                    <div class="detection-hint">
+                        💡 Detected: "${escapeHtml(scene.storyDayCue)}" (${scene.storyDayConfidence || 'auto'} confidence)
+                    </div>
+                ` : ''}
+
+                <!-- Story Day Row with Enhanced Controls -->
+                <div class="field-row story-day-row">
+                    <div class="field-group story-day-group">
                         <label>Story Day</label>
-                        <input type="text"
-                               value="${escapeHtml(storyDay)}"
-                               placeholder="Day 1, Day 2, etc."
-                               onchange="updateSceneField(${sceneIndex}, 'storyDay', this.value)">
+                        <div class="story-day-input-group">
+                            ${renderStoryDayDropdown(sceneIndex, storyDay)}
+                            <input type="text"
+                                   id="story-day-input-${sceneIndex}"
+                                   class="story-day-text-input"
+                                   value="${escapeHtml(storyDay)}"
+                                   placeholder="Day 1, Day 2..."
+                                   onchange="updateStoryDayFromInput(${sceneIndex}, this.value)"
+                                   style="${getExistingStoryDays().length > 0 ? 'display: none;' : ''}">
+                        </div>
                     </div>
                     <div class="field-group">
-                        <label>Time</label>
-                        <select onchange="updateSceneField(${sceneIndex}, 'timeOfDay', this.value)">
+                        <label>Time of Day</label>
+                        <select onchange="updateSceneField(${sceneIndex}, 'storyTimeOfDay', this.value)">
                             <option value="">Select...</option>
-                            <option ${timeOfDay === 'Early Morning' ? 'selected' : ''}>Early Morning</option>
-                            <option ${timeOfDay === 'Morning' ? 'selected' : ''}>Morning</option>
-                            <option ${timeOfDay === 'Afternoon' ? 'selected' : ''}>Afternoon</option>
-                            <option ${timeOfDay === 'Evening' ? 'selected' : ''}>Evening</option>
-                            <option ${timeOfDay === 'Night' ? 'selected' : ''}>Night</option>
+                            <option value="Dawn" ${(scene.storyTimeOfDay || timeOfDay) === 'Dawn' ? 'selected' : ''}>Dawn</option>
+                            <option value="Morning" ${(scene.storyTimeOfDay || timeOfDay) === 'Morning' ? 'selected' : ''}>Morning</option>
+                            <option value="Afternoon" ${(scene.storyTimeOfDay || timeOfDay) === 'Afternoon' ? 'selected' : ''}>Afternoon</option>
+                            <option value="Evening" ${(scene.storyTimeOfDay || timeOfDay) === 'Evening' ? 'selected' : ''}>Evening</option>
+                            <option value="Night" ${(scene.storyTimeOfDay || timeOfDay) === 'Night' ? 'selected' : ''}>Night</option>
                         </select>
                     </div>
                 </div>
+
+                <!-- Story Day Note (for time jumps/flashbacks) -->
                 <div class="field-row">
+                    <div class="field-group" style="flex: 1;">
+                        <label>Note (time jump/flashback)</label>
+                        <input type="text"
+                               id="story-day-note-${sceneIndex}"
+                               value="${escapeHtml(scene.storyDayNote || '')}"
+                               placeholder="e.g., 3 weeks later, flashback"
+                               onchange="updateStoryDayNote(${sceneIndex}, this.value)">
+                    </div>
+                </div>
+
+                <!-- Story Day Action Buttons -->
+                <div class="field-row story-day-actions">
+                    <button class="small-btn copy-forward-btn"
+                            onclick="copyStoryDayToFollowing(${sceneIndex})"
+                            title="Apply this story day to following scenes until a day change">
+                        Copy to Next →
+                    </button>
+                    <button class="small-btn copy-prev-btn"
+                            onclick="copyStoryDayFromPrevious(${sceneIndex})"
+                            title="Copy story day from previous scene"
+                            ${sceneIndex === 0 ? 'disabled' : ''}>
+                        ← Copy from Previous
+                    </button>
+                    ${scene.storyDayConfirmed ? `
+                        <span class="confirmed-badge" title="Story day confirmed">✓ Confirmed</span>
+                    ` : `
+                        <button class="small-btn confirm-btn"
+                                onclick="confirmStoryDay(${sceneIndex})"
+                                title="Mark this story day as confirmed">
+                            ✓ Confirm
+                        </button>
+                    `}
+                </div>
+
+                <!-- Flashback/Dream Row -->
+                <div class="field-row special-time-flags">
                     <label class="checkbox-field">
                         <input type="checkbox"
                                ${scene.isFlashback ? 'checked' : ''}
@@ -296,6 +354,12 @@ function renderSceneBreakdown(sceneIndex) {
                                ${scene.isDream ? 'checked' : ''}
                                onchange="updateSceneField(${sceneIndex}, 'isDream', this.checked)">
                         Dream
+                    </label>
+                    <label class="checkbox-field">
+                        <input type="checkbox"
+                               ${scene.isMontage ? 'checked' : ''}
+                               onchange="updateSceneField(${sceneIndex}, 'isMontage', this.checked)">
+                        Montage
                     </label>
                 </div>
             </div>
@@ -803,6 +867,890 @@ function extractStoryDay(sceneIndex) {
     }
 
     return '';
+}
+
+// ============================================================================
+// STORY DAY MANAGEMENT FUNCTIONS
+// ============================================================================
+
+/**
+ * Get all unique story days that have been assigned across scenes
+ */
+function getExistingStoryDays() {
+    const storyDays = new Set();
+    (state.scenes || []).forEach(scene => {
+        if (scene.storyDay && scene.storyDay.trim()) {
+            storyDays.add(scene.storyDay.trim());
+        }
+    });
+    // Sort naturally (Day 1, Day 2, ... Day 10, Day 11)
+    return Array.from(storyDays).sort((a, b) => {
+        const numA = parseInt(a.match(/\d+/)?.[0] || '0');
+        const numB = parseInt(b.match(/\d+/)?.[0] || '0');
+        return numA - numB;
+    });
+}
+
+/**
+ * Render story day dropdown with existing options
+ */
+function renderStoryDayDropdown(sceneIndex, currentValue) {
+    const existingDays = getExistingStoryDays();
+
+    if (existingDays.length === 0) {
+        // No existing story days, show text input only
+        return '';
+    }
+
+    return `
+        <select id="story-day-select-${sceneIndex}"
+                class="story-day-select"
+                onchange="updateStoryDayFromSelect(${sceneIndex}, this.value)">
+            <option value="">Select or type...</option>
+            ${existingDays.map(day => `
+                <option value="${escapeHtml(day)}" ${currentValue === day ? 'selected' : ''}>
+                    ${escapeHtml(day)}
+                </option>
+            `).join('')}
+            <option value="__new__">+ New Day...</option>
+        </select>
+    `;
+}
+
+/**
+ * Get icon for story day source
+ */
+function getSourceIcon(source) {
+    const icons = {
+        'explicit_marker': '📌',
+        'heading_embedded': '📄',
+        'same_day_marker': '🔄',
+        'time_passage': '⏳',
+        'day_night_transition': '🌙',
+        'user_assigned': '👤',
+        'copied': '📋',
+        'inferred': '🔮'
+    };
+    return icons[source] || '❓';
+}
+
+/**
+ * Format source for display
+ */
+function formatSource(source) {
+    const labels = {
+        'explicit_marker': 'From script marker',
+        'heading_embedded': 'From scene heading',
+        'same_day_marker': 'Same day as previous',
+        'time_passage': 'Time passage detected',
+        'day_night_transition': 'Day/night transition',
+        'user_assigned': 'User assigned',
+        'copied': 'Copied from another scene',
+        'inferred': 'AI inferred'
+    };
+    return labels[source] || source;
+}
+
+/**
+ * Update story day from dropdown selection
+ */
+window.updateStoryDayFromSelect = function(sceneIndex, value) {
+    if (value === '__new__') {
+        // Show the text input for new value
+        const textInput = document.getElementById(`story-day-input-${sceneIndex}`);
+        if (textInput) {
+            textInput.style.display = 'block';
+            textInput.focus();
+            textInput.value = '';
+        }
+        // Reset dropdown
+        const select = document.getElementById(`story-day-select-${sceneIndex}`);
+        if (select) select.value = '';
+        return;
+    }
+
+    updateStoryDayWithMetadata(sceneIndex, value, 'user_assigned');
+};
+
+/**
+ * Update story day from text input
+ */
+window.updateStoryDayFromInput = function(sceneIndex, value) {
+    updateStoryDayWithMetadata(sceneIndex, value.trim(), 'user_assigned');
+};
+
+/**
+ * Update story day with source metadata
+ */
+function updateStoryDayWithMetadata(sceneIndex, value, source) {
+    if (!state.scenes[sceneIndex]) return;
+
+    state.scenes[sceneIndex].storyDay = value;
+    state.scenes[sceneIndex].storyDaySource = source;
+    state.scenes[sceneIndex].storyDayConfidence = source === 'user_assigned' ? 'high' : 'medium';
+    state.scenes[sceneIndex].storyDayConfirmed = source === 'user_assigned';
+
+    saveToLocalStorage();
+
+    // Re-render the panel to update the dropdown
+    renderBreakdownPanel();
+}
+
+/**
+ * Copy story day to all following scenes until a day change marker is detected
+ */
+window.copyStoryDayToFollowing = function(sceneIndex) {
+    const scene = state.scenes[sceneIndex];
+    if (!scene || !scene.storyDay) {
+        alert('Please set a story day for this scene first.');
+        return;
+    }
+
+    const storyDay = scene.storyDay;
+    let count = 0;
+
+    for (let i = sceneIndex + 1; i < state.scenes.length; i++) {
+        const nextScene = state.scenes[i];
+
+        // Stop if we hit a scene with a confirmed different story day
+        if (nextScene.storyDayConfirmed && nextScene.storyDay !== storyDay) {
+            break;
+        }
+
+        // Stop if we detect a time passage marker in the heading
+        const heading = (nextScene.heading || '').toUpperCase();
+        if (heading.includes('NEXT DAY') ||
+            heading.includes('NEXT MORNING') ||
+            heading.includes('DAYS LATER') ||
+            heading.includes('WEEK LATER')) {
+            break;
+        }
+
+        // Apply the story day
+        nextScene.storyDay = storyDay;
+        nextScene.storyDaySource = 'copied';
+        nextScene.storyDayConfidence = 'medium';
+        count++;
+    }
+
+    saveToLocalStorage();
+
+    if (count > 0) {
+        showStoryDayToast(`Applied "${storyDay}" to ${count} following scene${count > 1 ? 's' : ''}`);
+        // Re-render to show updated badges
+        if (typeof renderSceneList === 'function') {
+            renderSceneList();
+        }
+    } else {
+        showStoryDayToast('No scenes updated (day change detected or end of script)', 'info');
+    }
+};
+
+/**
+ * Copy story day from previous scene
+ */
+window.copyStoryDayFromPrevious = function(sceneIndex) {
+    if (sceneIndex === 0) return;
+
+    const prevScene = state.scenes[sceneIndex - 1];
+    if (!prevScene || !prevScene.storyDay) {
+        showStoryDayToast('Previous scene has no story day assigned', 'warning');
+        return;
+    }
+
+    updateStoryDayWithMetadata(sceneIndex, prevScene.storyDay, 'copied');
+    showStoryDayToast(`Copied "${prevScene.storyDay}" from previous scene`);
+};
+
+/**
+ * Confirm the story day assignment
+ */
+window.confirmStoryDay = function(sceneIndex) {
+    if (!state.scenes[sceneIndex]) return;
+
+    state.scenes[sceneIndex].storyDayConfirmed = true;
+    state.scenes[sceneIndex].storyDayConfidence = 'high';
+
+    saveToLocalStorage();
+    renderBreakdownPanel();
+    showStoryDayToast('Story day confirmed');
+};
+
+/**
+ * Update story day note (for time jumps/flashbacks)
+ * e.g., "3 weeks later", "flashback", "10 years earlier"
+ */
+window.updateStoryDayNote = function(sceneIndex, value) {
+    if (!state.scenes[sceneIndex]) return;
+
+    state.scenes[sceneIndex].storyDayNote = value.trim() || null;
+    state.scenes[sceneIndex].storyDayConfirmed = true;
+
+    saveToLocalStorage();
+
+    // Re-render scene list to update badge display
+    if (typeof renderSceneList === 'function') {
+        renderSceneList();
+    }
+};
+
+/**
+ * Show a toast notification for story day operations
+ */
+function showStoryDayToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `story-day-toast ${type}`;
+    toast.textContent = message;
+    toast.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: ${type === 'success' ? '#10b981' : type === 'warning' ? '#f59e0b' : '#3b82f6'};
+        color: white;
+        padding: 12px 20px;
+        border-radius: 6px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        z-index: 10000;
+        animation: slideInUp 0.3s ease;
+    `;
+
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.animation = 'slideOutDown 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// ============================================================================
+// BULK STORY DAY ASSIGNMENT MODAL
+// ============================================================================
+
+/**
+ * Open the bulk story day assignment modal
+ */
+window.openBulkStoryDayModal = function() {
+    // Get current story day summary
+    const storyDaySummary = getStoryDaySummary();
+
+    const modalHtml = `
+        <div class="bulk-story-day-overlay" onclick="closeBulkStoryDayModal()">
+            <div class="bulk-story-day-modal" onclick="event.stopPropagation()">
+                <div class="bulk-modal-header">
+                    <h3>📅 Bulk Story Day Assignment</h3>
+                    <button class="modal-close-btn" onclick="closeBulkStoryDayModal()">×</button>
+                </div>
+
+                <div class="bulk-modal-content">
+                    <!-- Summary Section -->
+                    <div class="story-day-summary">
+                        <div class="summary-stat">
+                            <span class="stat-value">${storyDaySummary.totalScenes}</span>
+                            <span class="stat-label">Total Scenes</span>
+                        </div>
+                        <div class="summary-stat">
+                            <span class="stat-value">${storyDaySummary.assignedScenes}</span>
+                            <span class="stat-label">Assigned</span>
+                        </div>
+                        <div class="summary-stat">
+                            <span class="stat-value">${storyDaySummary.unassignedScenes}</span>
+                            <span class="stat-label">Unassigned</span>
+                        </div>
+                        <div class="summary-stat">
+                            <span class="stat-value">${storyDaySummary.totalStoryDays}</span>
+                            <span class="stat-label">Story Days</span>
+                        </div>
+                    </div>
+
+                    <!-- Actions Section -->
+                    <div class="bulk-actions-section">
+                        <h4>Quick Actions</h4>
+                        <div class="bulk-action-buttons">
+                            <button class="bulk-action-btn" onclick="autoDetectAllStoryDays()">
+                                🔍 Auto-Detect All
+                            </button>
+                            <button class="bulk-action-btn" onclick="fillUnassignedStoryDays()">
+                                📝 Fill Unassigned
+                            </button>
+                            <button class="bulk-action-btn warning" onclick="clearAllStoryDays()">
+                                🗑️ Clear All
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Range Assignment Section -->
+                    <div class="range-assignment-section">
+                        <h4>Assign Range</h4>
+                        <div class="range-form">
+                            <div class="range-row">
+                                <label>From Scene:</label>
+                                <input type="number" id="bulk-from-scene" min="1" max="${state.scenes.length}" value="1">
+                                <label>To Scene:</label>
+                                <input type="number" id="bulk-to-scene" min="1" max="${state.scenes.length}" value="${state.scenes.length}">
+                            </div>
+                            <div class="range-row">
+                                <label>Story Day:</label>
+                                <select id="bulk-story-day-select">
+                                    <option value="">Select existing or type new...</option>
+                                    ${getExistingStoryDays().map(day =>
+                                        `<option value="${escapeHtml(day)}">${escapeHtml(day)}</option>`
+                                    ).join('')}
+                                </select>
+                                <input type="text" id="bulk-story-day-input" placeholder="Or type new (e.g., Day 3)">
+                            </div>
+                            <button class="apply-range-btn" onclick="applyBulkStoryDay()">
+                                Apply to Range
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Story Day Groups Preview -->
+                    <div class="story-day-groups-section">
+                        <h4>Current Story Day Groups</h4>
+                        <div class="story-day-groups">
+                            ${renderStoryDayGroups()}
+                        </div>
+                    </div>
+
+                    <!-- Warnings Section -->
+                    ${storyDaySummary.warnings.length > 0 ? `
+                        <div class="warnings-section">
+                            <h4>⚠️ Warnings</h4>
+                            <div class="warnings-list">
+                                ${storyDaySummary.warnings.map(w =>
+                                    `<div class="warning-item ${w.severity}">
+                                        <span class="warning-icon">${w.severity === 'error' ? '❌' : '⚠️'}</span>
+                                        ${escapeHtml(w.message)}
+                                    </div>`
+                                ).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+
+                <div class="bulk-modal-footer">
+                    <button class="modal-btn secondary" onclick="closeBulkStoryDayModal()">Close</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Add modal styles if not already added
+    addBulkModalStyles();
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+};
+
+/**
+ * Close the bulk story day modal
+ */
+window.closeBulkStoryDayModal = function() {
+    const overlay = document.querySelector('.bulk-story-day-overlay');
+    if (overlay) overlay.remove();
+};
+
+/**
+ * Get story day summary statistics
+ */
+function getStoryDaySummary() {
+    const scenes = state.scenes || [];
+    const assigned = scenes.filter(s => s.storyDay && s.storyDay.trim());
+    const unassigned = scenes.filter(s => !s.storyDay || !s.storyDay.trim());
+    const uniqueDays = new Set(assigned.map(s => s.storyDay.trim()));
+
+    // Generate warnings
+    const warnings = [];
+
+    // Check for gaps
+    const sortedDays = Array.from(uniqueDays)
+        .map(d => parseInt(d.match(/\d+/)?.[0] || '0'))
+        .filter(n => n > 0)
+        .sort((a, b) => a - b);
+
+    for (let i = 1; i < sortedDays.length; i++) {
+        if (sortedDays[i] - sortedDays[i-1] > 1) {
+            warnings.push({
+                type: 'gap',
+                message: `Gap detected: Day ${sortedDays[i-1]} to Day ${sortedDays[i]}`,
+                severity: 'warning'
+            });
+        }
+    }
+
+    // Check for many unassigned
+    if (unassigned.length > scenes.length * 0.3) {
+        warnings.push({
+            type: 'unassigned',
+            message: `${unassigned.length} scenes have no story day assigned`,
+            severity: 'warning'
+        });
+    }
+
+    return {
+        totalScenes: scenes.length,
+        assignedScenes: assigned.length,
+        unassignedScenes: unassigned.length,
+        totalStoryDays: uniqueDays.size,
+        warnings
+    };
+}
+
+/**
+ * Render story day groups preview
+ */
+function renderStoryDayGroups() {
+    const groups = {};
+    (state.scenes || []).forEach((scene, idx) => {
+        const day = scene.storyDay || 'Unassigned';
+        if (!groups[day]) {
+            groups[day] = [];
+        }
+        groups[day].push({ index: idx, number: scene.number || (idx + 1) });
+    });
+
+    const sortedDays = Object.keys(groups).sort((a, b) => {
+        if (a === 'Unassigned') return 1;
+        if (b === 'Unassigned') return -1;
+        const numA = parseInt(a.match(/\d+/)?.[0] || '0');
+        const numB = parseInt(b.match(/\d+/)?.[0] || '0');
+        return numA - numB;
+    });
+
+    return sortedDays.map(day => `
+        <div class="story-day-group ${day === 'Unassigned' ? 'unassigned' : ''}">
+            <div class="group-header">
+                <span class="group-label">${escapeHtml(day)}</span>
+                <span class="group-count">${groups[day].length} scene${groups[day].length > 1 ? 's' : ''}</span>
+            </div>
+            <div class="group-scenes">
+                ${groups[day].slice(0, 10).map(s =>
+                    `<span class="scene-chip" onclick="selectScene(${s.index}); closeBulkStoryDayModal();">${s.number}</span>`
+                ).join('')}
+                ${groups[day].length > 10 ? `<span class="more-scenes">+${groups[day].length - 10} more</span>` : ''}
+            </div>
+        </div>
+    `).join('');
+}
+
+/**
+ * Auto-detect all story days using the enhanced detection
+ */
+window.autoDetectAllStoryDays = async function() {
+    try {
+        const { detectStoryDays } = await import('./script-analysis.js');
+        const scriptText = state.scenes.map(s => `${s.heading}\n${s.content || s.text || ''}`).join('\n\n');
+        const result = detectStoryDays(scriptText, state.scenes);
+
+        // Apply the detected assignments
+        result.sceneAssignments.forEach(assignment => {
+            const scene = state.scenes[assignment.sceneIndex];
+            if (scene) {
+                scene.storyDay = assignment.storyDayLabel;
+                scene.storyDaySource = assignment.source;
+                scene.storyDayConfidence = assignment.confidence;
+                scene.storyTimeOfDay = assignment.storyTimeOfDay;
+                scene.timeJump = assignment.timeJump;
+            }
+        });
+
+        saveToLocalStorage();
+        closeBulkStoryDayModal();
+        openBulkStoryDayModal(); // Refresh
+        showStoryDayToast(`Auto-detected story days for ${result.sceneAssignments.length} scenes`);
+
+        // Refresh scene list
+        if (typeof renderSceneList === 'function') {
+            renderSceneList();
+        }
+    } catch (error) {
+        console.error('Error auto-detecting story days:', error);
+        showStoryDayToast('Error detecting story days: ' + error.message, 'warning');
+    }
+};
+
+/**
+ * Fill unassigned scenes with interpolated story days
+ */
+window.fillUnassignedStoryDays = function() {
+    let lastKnownDay = 'Day 1';
+    let filled = 0;
+
+    state.scenes.forEach((scene, idx) => {
+        if (scene.storyDay && scene.storyDay.trim()) {
+            lastKnownDay = scene.storyDay;
+        } else {
+            scene.storyDay = lastKnownDay;
+            scene.storyDaySource = 'inferred';
+            scene.storyDayConfidence = 'low';
+            filled++;
+        }
+    });
+
+    saveToLocalStorage();
+    closeBulkStoryDayModal();
+    openBulkStoryDayModal(); // Refresh
+    showStoryDayToast(`Filled ${filled} unassigned scenes`);
+
+    if (typeof renderSceneList === 'function') {
+        renderSceneList();
+    }
+};
+
+/**
+ * Clear all story day assignments
+ */
+window.clearAllStoryDays = function() {
+    if (!confirm('Are you sure you want to clear all story day assignments? This cannot be undone.')) {
+        return;
+    }
+
+    state.scenes.forEach(scene => {
+        scene.storyDay = '';
+        scene.storyDaySource = null;
+        scene.storyDayConfidence = null;
+        scene.storyDayConfirmed = false;
+        scene.timeJump = null;
+    });
+
+    saveToLocalStorage();
+    closeBulkStoryDayModal();
+    openBulkStoryDayModal(); // Refresh
+    showStoryDayToast('All story days cleared');
+
+    if (typeof renderSceneList === 'function') {
+        renderSceneList();
+    }
+};
+
+/**
+ * Apply bulk story day to range
+ */
+window.applyBulkStoryDay = function() {
+    const fromScene = parseInt(document.getElementById('bulk-from-scene')?.value) || 1;
+    const toScene = parseInt(document.getElementById('bulk-to-scene')?.value) || state.scenes.length;
+    const selectValue = document.getElementById('bulk-story-day-select')?.value;
+    const inputValue = document.getElementById('bulk-story-day-input')?.value?.trim();
+
+    const storyDay = inputValue || selectValue;
+
+    if (!storyDay) {
+        showStoryDayToast('Please select or enter a story day', 'warning');
+        return;
+    }
+
+    let count = 0;
+    for (let i = fromScene - 1; i < toScene && i < state.scenes.length; i++) {
+        state.scenes[i].storyDay = storyDay;
+        state.scenes[i].storyDaySource = 'user_assigned';
+        state.scenes[i].storyDayConfidence = 'high';
+        state.scenes[i].storyDayConfirmed = true;
+        count++;
+    }
+
+    saveToLocalStorage();
+    closeBulkStoryDayModal();
+    openBulkStoryDayModal(); // Refresh
+    showStoryDayToast(`Applied "${storyDay}" to ${count} scenes`);
+
+    if (typeof renderSceneList === 'function') {
+        renderSceneList();
+    }
+};
+
+/**
+ * Add bulk modal styles if not already present
+ */
+function addBulkModalStyles() {
+    if (document.getElementById('bulk-story-day-styles')) return;
+
+    const styles = document.createElement('style');
+    styles.id = 'bulk-story-day-styles';
+    styles.textContent = `
+        .bulk-story-day-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+
+        .bulk-story-day-modal {
+            background: var(--bg-secondary, #1e1e2e);
+            border-radius: 12px;
+            width: 90%;
+            max-width: 700px;
+            max-height: 85vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .bulk-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            background: var(--bg-tertiary, #252536);
+            border-bottom: 1px solid var(--border-color, #3d3d5c);
+        }
+
+        .bulk-modal-header h3 {
+            margin: 0;
+            color: var(--text-primary, #e4e4e7);
+        }
+
+        .modal-close-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary, #a1a1aa);
+            font-size: 24px;
+            cursor: pointer;
+            padding: 4px 8px;
+        }
+
+        .bulk-modal-content {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .story-day-summary {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .summary-stat {
+            background: var(--bg-tertiary, #252536);
+            padding: 16px 20px;
+            border-radius: 8px;
+            text-align: center;
+            flex: 1;
+            min-width: 100px;
+        }
+
+        .stat-value {
+            display: block;
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--accent-color, #818cf8);
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 12px;
+            color: var(--text-secondary, #a1a1aa);
+            margin-top: 4px;
+        }
+
+        .bulk-actions-section, .range-assignment-section, .story-day-groups-section, .warnings-section {
+            margin-bottom: 24px;
+        }
+
+        .bulk-actions-section h4, .range-assignment-section h4, .story-day-groups-section h4, .warnings-section h4 {
+            margin: 0 0 12px 0;
+            color: var(--text-secondary, #a1a1aa);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .bulk-action-buttons {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .bulk-action-btn {
+            background: var(--bg-tertiary, #252536);
+            border: 1px solid var(--border-color, #3d3d5c);
+            color: var(--text-primary, #e4e4e7);
+            padding: 10px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .bulk-action-btn:hover {
+            background: var(--accent-color, #818cf8);
+            border-color: var(--accent-color, #818cf8);
+        }
+
+        .bulk-action-btn.warning:hover {
+            background: #ef4444;
+            border-color: #ef4444;
+        }
+
+        .range-form {
+            background: var(--bg-tertiary, #252536);
+            padding: 16px;
+            border-radius: 8px;
+        }
+
+        .range-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        .range-row label {
+            color: var(--text-secondary, #a1a1aa);
+            min-width: 80px;
+        }
+
+        .range-row input, .range-row select {
+            background: var(--bg-primary, #13131a);
+            border: 1px solid var(--border-color, #3d3d5c);
+            color: var(--text-primary, #e4e4e7);
+            padding: 8px 12px;
+            border-radius: 4px;
+            flex: 1;
+            min-width: 100px;
+        }
+
+        .apply-range-btn {
+            width: 100%;
+            background: var(--accent-color, #818cf8);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            margin-top: 4px;
+        }
+
+        .apply-range-btn:hover {
+            background: #6366f1;
+        }
+
+        .story-day-groups {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .story-day-group {
+            background: var(--bg-tertiary, #252536);
+            padding: 12px;
+            border-radius: 8px;
+        }
+
+        .story-day-group.unassigned {
+            border-left: 3px solid #f59e0b;
+        }
+
+        .group-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .group-label {
+            font-weight: 500;
+            color: var(--text-primary, #e4e4e7);
+        }
+
+        .group-count {
+            color: var(--text-secondary, #a1a1aa);
+            font-size: 12px;
+        }
+
+        .group-scenes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .scene-chip {
+            background: var(--bg-primary, #13131a);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            color: var(--text-secondary, #a1a1aa);
+            cursor: pointer;
+        }
+
+        .scene-chip:hover {
+            background: var(--accent-color, #818cf8);
+            color: white;
+        }
+
+        .more-scenes {
+            color: var(--text-secondary, #a1a1aa);
+            font-size: 12px;
+            padding: 4px 8px;
+        }
+
+        .warnings-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .warning-item {
+            background: rgba(245, 158, 11, 0.1);
+            border-left: 3px solid #f59e0b;
+            padding: 10px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .warning-item.error {
+            background: rgba(239, 68, 68, 0.1);
+            border-left-color: #ef4444;
+        }
+
+        .warning-icon {
+            margin-right: 8px;
+        }
+
+        .bulk-modal-footer {
+            padding: 16px 20px;
+            background: var(--bg-tertiary, #252536);
+            border-top: 1px solid var(--border-color, #3d3d5c);
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .modal-btn {
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .modal-btn.secondary {
+            background: var(--bg-tertiary, #252536);
+            border: 1px solid var(--border-color, #3d3d5c);
+            color: var(--text-primary, #e4e4e7);
+        }
+
+        /* Toast animations */
+        @keyframes slideInUp {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        @keyframes slideOutDown {
+            from { transform: translateY(0); opacity: 1; }
+            to { transform: translateY(100%); opacity: 0; }
+        }
+    `;
+
+    document.head.appendChild(styles);
 }
 
 /**
