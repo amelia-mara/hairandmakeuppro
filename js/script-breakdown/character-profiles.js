@@ -404,16 +404,17 @@ export class CharacterTimeline {
      * @returns {string} Emoji icon
      */
     getEventIcon(category) {
+        // Text abbreviations for professional appearance
         const icons = {
-            'injury': '🩹',
-            'injuries': '🩹',
-            'hair': '✂️',
-            'makeup': '💄',
-            'wardrobe': '👔',
-            'health': '🏥',
-            'sfx': '🎭',
-            'emotional': '😔',
-            'appearance': '👤'
+            'injury': 'INJ',
+            'injuries': 'INJ',
+            'hair': 'HR',
+            'makeup': 'MU',
+            'wardrobe': 'WD',
+            'health': 'HL',
+            'sfx': 'SFX',
+            'emotional': 'EM',
+            'appearance': 'AP'
         };
         return icons[category] || '●';
     }

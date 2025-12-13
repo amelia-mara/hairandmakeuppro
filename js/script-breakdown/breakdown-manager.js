@@ -345,7 +345,7 @@ export class SceneBreakdownManager {
             if (prevScene?.heading?.toUpperCase().includes('CONTINUOUS')) {
                 alerts.push({
                     type: 'continuous',
-                    icon: '🔄',
+                    icon: 'C',
                     text: 'CONTINUOUS from previous scene'
                 });
             }
@@ -356,14 +356,14 @@ export class SceneBreakdownManager {
         if (heading.includes('RAIN')) {
             alerts.push({
                 type: 'weather',
-                icon: '🌧️',
+                icon: 'WX',
                 text: 'Rain scene - waterproof makeup needed'
             });
         }
         if (heading.includes('SNOW')) {
             alerts.push({
                 type: 'weather',
-                icon: '❄️',
+                icon: 'WX',
                 text: 'Snow scene - cold weather considerations'
             });
         }
@@ -372,14 +372,14 @@ export class SceneBreakdownManager {
         if (heading.includes('NIGHT')) {
             alerts.push({
                 type: 'time',
-                icon: '🌙',
+                icon: 'NT',
                 text: 'Night scene - consider lighting for continuity'
             });
         }
         if (heading.includes('DAWN') || heading.includes('DUSK')) {
             alerts.push({
                 type: 'time',
-                icon: '🌅',
+                icon: 'TW',
                 text: 'Transition lighting - monitor continuity closely'
             });
         }
@@ -390,7 +390,7 @@ export class SceneBreakdownManager {
         if (hasStunt) {
             alerts.push({
                 type: 'action',
-                icon: '🎬',
+                icon: 'ST',
                 text: 'Action/stunt sequence - prepare for touch-ups'
             });
         }
@@ -400,7 +400,7 @@ export class SceneBreakdownManager {
         if (hasInjury) {
             alerts.push({
                 type: 'injury',
-                icon: '🩹',
+                icon: 'INJ',
                 text: 'Injuries in scene - SFX required'
             });
         }
@@ -410,7 +410,7 @@ export class SceneBreakdownManager {
         if (hasSFX) {
             alerts.push({
                 type: 'sfx',
-                icon: '🎭',
+                icon: 'SFX',
                 text: 'Special effects makeup required'
             });
         }
@@ -806,20 +806,16 @@ export class SceneBreakdownManager {
                 <h4 class="quick-add-title">Quick Add Continuity</h4>
                 <div class="quick-add-grid">
                     <button class="quick-add-btn" onclick="window.breakdownManager.quickAdd('injury')">
-                        <span class="quick-add-icon">🩹</span>
-                        <span class="quick-add-label">Injury</span>
+                        <span class="quick-add-label">+ Injury</span>
                     </button>
                     <button class="quick-add-btn" onclick="window.breakdownManager.quickAdd('hair')">
-                        <span class="quick-add-icon">✂️</span>
-                        <span class="quick-add-label">Hair Change</span>
+                        <span class="quick-add-label">+ Hair Change</span>
                     </button>
                     <button class="quick-add-btn" onclick="window.breakdownManager.quickAdd('makeup')">
-                        <span class="quick-add-icon">💄</span>
-                        <span class="quick-add-label">Makeup</span>
+                        <span class="quick-add-label">+ Makeup</span>
                     </button>
                     <button class="quick-add-btn" onclick="window.breakdownManager.quickAdd('wardrobe')">
-                        <span class="quick-add-icon">👔</span>
-                        <span class="quick-add-label">Wardrobe</span>
+                        <span class="quick-add-label">+ Wardrobe</span>
                     </button>
                 </div>
             </div>
@@ -883,17 +879,18 @@ export class SceneBreakdownManager {
      * @returns {string} Emoji icon
      */
     getCategoryIcon(category) {
+        // Using text abbreviations for professional appearance
         const icons = {
-            'injury': '🩹',
-            'injuries': '🩹',
-            'hair': '✂️',
-            'makeup': '💄',
-            'wardrobe': '👔',
-            'health': '🏥',
-            'sfx': '🎭',
-            'stunts': '🎬',
-            'weather': '🌤️',
-            'extras': '👥'
+            'injury': 'INJ',
+            'injuries': 'INJ',
+            'hair': 'HR',
+            'makeup': 'MU',
+            'wardrobe': 'WD',
+            'health': 'HL',
+            'sfx': 'SFX',
+            'stunts': 'ST',
+            'weather': 'WX',
+            'extras': 'SA'
         };
         return icons[category] || '●';
     }

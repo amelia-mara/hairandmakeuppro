@@ -311,11 +311,11 @@ export function applySmartTags(sceneIndex, tagsData) {
         }
 
         // Log with importance indicator
-        const importanceIcon = smartTag.importance >= 8 ? '🔴' : smartTag.importance >= 6 ? '🟡' : '🟢';
+        const importanceIcon = smartTag.importance >= 8 ? '[HIGH]' : smartTag.importance >= 6 ? '[MED]' : '[LOW]';
         console.log(`  ${importanceIcon} [${smartTag.importance}/10] ${smartTag.category}: "${smartTag.text.substring(0, 40)}..." ${canonicalName ? `(${canonicalName})` : ''}`);
     });
 
-    console.log(`✓ Applied ${tagsData.tags.length} smart tags to Scene ${scene.number}`);
+    console.log(`Applied ${tagsData.tags.length} smart tags to Scene ${scene.number}`);
 }
 
 /**

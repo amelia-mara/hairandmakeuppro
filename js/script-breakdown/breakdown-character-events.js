@@ -352,7 +352,7 @@ export function renderContinuityEventsTimeline(characterName) {
             <!-- Auto-detected events section -->
             ${autoEvents.length > 0 ? `
                 <div class="auto-events-header" style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--glass-border);">
-                    <span style="color: var(--accent-gold); font-weight: 600;">⚡ Auto-Detected Events</span>
+                    <span style="color: var(--accent-gold); font-weight: 600;">Auto-Detected Events</span>
                     <span style="font-size: 0.8em; opacity: 0.7;">(${autoEvents.length} found from script analysis)</span>
                 </div>
                 ${autoEvents.map(event => `
@@ -421,13 +421,13 @@ export function renderContinuityEventsTimeline(characterName) {
 
                         <div class="event-timeline-actions" style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;">
                             <button class="event-action-btn" onclick="fillProgressionGaps('${escapeHtml(characterName).replace(/'/g, "\\'")}', '${event.id}')" title="Use AI to fill progression gaps" style="background: var(--glass-bg); border: 1px solid var(--glass-border); padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8em;">
-                                ✨ Fill Gaps with AI
+                                Fill Gaps with AI
                             </button>
                             <button class="event-action-btn" onclick="editContinuityEvent('${escapeHtml(characterName).replace(/'/g, "\\'")}', '${event.id}')" title="Edit event details" style="background: var(--glass-bg); border: 1px solid var(--glass-border); padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8em;">
-                                ✏️ Edit
+                                Edit
                             </button>
                             <button class="event-action-btn danger" onclick="deleteContinuityEvent('${escapeHtml(characterName).replace(/'/g, "\\'")}', '${event.id}')" title="Delete event" style="background: transparent; border: 1px solid #ef4444; color: #ef4444; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8em;">
-                                🗑️ Delete
+                                Delete
                             </button>
                         </div>
                     </div>

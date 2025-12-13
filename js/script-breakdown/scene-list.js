@@ -11,25 +11,11 @@
  */
 
 import { state, selectScene } from './main.js';
-import { getSceneType, getSceneTypeLabel } from './utils.js';
-
-// Element categories for counting
-const categories = [
-    { id: 'cast', name: 'Cast Members' },
-    { id: 'hair', name: 'Hair' },
-    { id: 'makeup', name: 'Makeup' },
-    { id: 'sfx', name: 'SFX Makeup' },
-    { id: 'health', name: 'Health/Illness' },
-    { id: 'injuries', name: 'Injuries/Wounds' },
-    { id: 'stunts', name: 'Stunts/Action' },
-    { id: 'weather', name: 'Weather Effects' },
-    { id: 'wardrobe', name: 'Costume/Wardrobe' },
-    { id: 'extras', name: 'Supporting Artists' }
-];
+import { getSceneType, getSceneTypeLabel, getSceneTypeClass, extractLocation } from './utils.js';
 
 /**
  * Render the scene list in the left sidebar
- * Shows scene cards with metadata, cast, and element counts
+ * Clean, simplified design with scene type colors
  */
 export function renderSceneList() {
     const container = document.getElementById('scene-list');
@@ -59,126 +45,161 @@ export function renderSceneList() {
 
     container.innerHTML = state.scenes.map((scene, index) => {
         const sceneType = getSceneType(scene.heading);
-        const sceneTypeLabel = getSceneTypeLabel(sceneType);
+        const sceneTypeClassName = getSceneTypeClass(sceneType);
         const breakdown = state.sceneBreakdowns[index] || {};
         const cast = breakdown.cast || [];
         const isActive = state.currentScene === index;
+        const characterCount = cast.length;
 
-        // Determine processing status
-        const hasSynopsis = scene.synopsis && scene.synopsis.trim().length > 0;
-        const sceneTags = state.scriptTags[index] || [];
-        const hasTags = sceneTags.length > 0;
-        const hasContinuity = scene.characterStates && Object.keys(scene.characterStates).length > 0;
-        const isProcessed = scene.processed || (hasSynopsis && hasTags);
+        // Extract location from heading (without INT/EXT and DAY/NIGHT)
+        const location = extractLocation(scene.heading);
 
-        // Get scene indicators from master context
-        const contextIndicators = getSceneIndicators(index, analysis);
+        // Get scene indicators for special types (flashback, weather, etc.)
+        const contextIndicators = getSceneIndicators(index, analysis, scene);
 
-        // Count elements (excluding cast)
-        let elementCounts = [];
-        categories.forEach(cat => {
-            const items = breakdown[cat.id] || [];
-            if (items.length > 0 && cat.id !== 'cast') {
-                elementCounts.push(`${cat.name}: ${items.length}`);
-            }
-        });
-
-        // Story day badge info
-        const storyDayBadge = getStoryDayBadge(scene);
+        // Build info line: "Day X · Time · INT/EXT"
+        const infoLine = buildInfoLine(scene, sceneType);
 
         return `
-            <div class="scene-item ${sceneType} ${isActive ? 'active' : ''} ${isProcessed ? 'processed' : ''}" onclick="selectScene(${index})">
+            <div class="scene-item ${sceneTypeClassName} ${isActive ? 'active' : ''}"
+                 onclick="selectScene(${index})"
+                 data-scene-index="${index}">
+
                 <div class="scene-header">
-                    <div class="scene-status-icon" title="${isProcessed ? 'Processed' : 'Not Processed'}">
-                        ${isProcessed ? '✓' : '○'}
-                    </div>
-                    <div class="scene-number">${scene.number}</div>
-                    <div class="scene-info">
-                        <div class="scene-heading">${escapeHtml(scene.heading)}</div>
-                        <div class="scene-meta">
-                            <span class="scene-type-indicator ${sceneType}">${sceneTypeLabel}</span>
-                            ${storyDayBadge.show ? `
-                                <span class="story-day-badge ${storyDayBadge.confidence}" title="${storyDayBadge.tooltip}">
-                                    📅 ${escapeHtml(storyDayBadge.label)}
-                                </span>
-                            ` : ''}
-                            ${contextIndicators.length > 0 ? `
-                                <div class="scene-context-indicators">
-                                    ${contextIndicators.map(ind =>
-                                        `<span class="context-indicator ${ind.type}" title="${ind.tooltip}">${ind.icon}</span>`
-                                    ).join('')}
-                                </div>
-                            ` : ''}
-                        </div>
-                    </div>
-                    <div class="scene-indicators">
-                        ${isProcessed ? '<span class="indicator processed" title="Processed">P</span>' : ''}
-                        ${hasContinuity ? '<span class="indicator continuity" title="Has Continuity">C</span>' : ''}
-                        ${hasTags ? `<span class="indicator tags" title="${sceneTags.length} tags">${sceneTags.length}</span>` : ''}
-                    </div>
+                    <span class="scene-number">${scene.number || index + 1}</span>
+                    <span class="scene-location">${escapeHtml(truncateText(location, 30))}</span>
+                    ${sceneType.timeOfDay ? `<span class="scene-time-badge">${sceneType.timeOfDay}</span>` : ''}
+                    ${characterCount > 0 ? `<span class="char-count" title="${characterCount} characters">${characterCount}</span>` : ''}
                 </div>
 
-                ${isActive ? renderExpandedDetails(scene, cast, elementCounts) : ''}
+                <div class="scene-info-line">
+                    ${infoLine}
+                    ${contextIndicators.length > 0 ? `
+                        <span class="scene-context-indicators">
+                            ${contextIndicators.map(ind =>
+                                `<span class="context-indicator ${ind.type}" title="${ind.tooltip}">${ind.icon}</span>`
+                            ).join('')}
+                        </span>
+                    ` : ''}
+                </div>
+
+                ${isActive ? renderExpandedDetails(scene, cast) : ''}
             </div>
         `;
     }).join('');
 }
 
 /**
- * Get scene indicators based on master context analysis
+ * Build the info line for scene card: "Day X · Time · INT/EXT"
+ */
+function buildInfoLine(scene, sceneType) {
+    const parts = [];
+
+    // Story Day with optional note
+    if (scene.storyDay) {
+        let dayText = scene.storyDay;
+        if (scene.storyDayNote) {
+            dayText += ` (${scene.storyDayNote})`;
+        }
+        parts.push(escapeHtml(dayText));
+    }
+
+    // Time of day (prefer storyTimeOfDay, fall back to detected)
+    if (scene.storyTimeOfDay) {
+        parts.push(escapeHtml(scene.storyTimeOfDay));
+    }
+
+    // INT/EXT
+    if (sceneType.intExt) {
+        parts.push(sceneType.intExt);
+    }
+
+    return parts.join(' · ');
+}
+
+/**
+ * Truncate text to specified length with ellipsis
+ */
+function truncateText(text, maxLength) {
+    if (!text) return '';
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength - 1) + '…';
+}
+
+/**
+ * Get scene indicators based on master context analysis and scene flags
  * @param {number} sceneIndex - Scene index
  * @param {Object} analysis - Master context analysis
+ * @param {Object} scene - Scene object (optional)
  * @returns {Array} Array of indicator objects
  */
-function getSceneIndicators(sceneIndex, analysis) {
+function getSceneIndicators(sceneIndex, analysis, scene = null) {
     const indicators = [];
+
+    // Check scene type flags (auto-detected or user-set)
+    // Using text abbreviations instead of emojis for professional appearance
+    if (scene?.isFlashback) {
+        indicators.push({ icon: 'FB', type: 'flashback', tooltip: 'Flashback' });
+    }
+    if (scene?.isFlashForward) {
+        indicators.push({ icon: 'FF', type: 'flashforward', tooltip: 'Flash Forward' });
+    }
+    if (scene?.isTimeJump) {
+        indicators.push({ icon: 'TJ', type: 'timejump', tooltip: 'Time Jump' });
+    }
+    if (scene?.isDream) {
+        indicators.push({ icon: 'DR', type: 'dream', tooltip: 'Dream Sequence' });
+    }
+    if (scene?.isMontage) {
+        indicators.push({ icon: 'MT', type: 'montage', tooltip: 'Montage' });
+    }
 
     // Check for weather conditions
     const environment = analysis.environments?.[`scene_${sceneIndex}`];
     if (environment?.conditions) {
         const conditions = Array.isArray(environment.conditions) ? environment.conditions : [];
         if (conditions.some(c => c.toLowerCase().includes('rain'))) {
-            indicators.push({ icon: '🌧️', type: 'weather', tooltip: 'Rain scene' });
+            indicators.push({ icon: 'WX', type: 'weather', tooltip: 'Rain scene' });
         }
         if (conditions.some(c => c.toLowerCase().includes('snow'))) {
-            indicators.push({ icon: '❄️', type: 'weather', tooltip: 'Snow scene' });
+            indicators.push({ icon: 'WX', type: 'weather', tooltip: 'Snow scene' });
         }
         if (conditions.some(c => c.toLowerCase().includes('wind'))) {
-            indicators.push({ icon: '💨', type: 'weather', tooltip: 'Windy scene' });
+            indicators.push({ icon: 'WX', type: 'weather', tooltip: 'Windy scene' });
         }
     }
 
     // Check for crowd scenes
     if (analysis.crowdScenes?.[`scene_${sceneIndex}`]) {
-        indicators.push({ icon: '👥', type: 'crowd', tooltip: 'Extras required' });
+        indicators.push({ icon: 'SA', type: 'crowd', tooltip: 'Extras required' });
     }
 
     // Check for action/fight scenes
     const interactions = analysis.interactions?.[`scene_${sceneIndex}`];
     if (interactions?.type === 'fight') {
-        indicators.push({ icon: '⚔️', type: 'action', tooltip: 'Fight scene' });
+        indicators.push({ icon: 'ST', type: 'action', tooltip: 'Fight scene' });
     }
 
     // Check for emotional beats
     if (analysis.emotionalBeats?.[`scene_${sceneIndex}`]) {
-        indicators.push({ icon: '😢', type: 'emotional', tooltip: 'Emotional scene' });
+        indicators.push({ icon: 'EM', type: 'emotional', tooltip: 'Emotional scene' });
     }
 
     // Check for special requirements
     if (analysis.specialRequirements?.[`scene_${sceneIndex}`]) {
-        indicators.push({ icon: '⚠️', type: 'special', tooltip: 'Special requirements' });
+        indicators.push({ icon: '!', type: 'special', tooltip: 'Special requirements' });
     }
 
     // Check for stunts/doubling needs
     if (analysis.doublingNeeds?.[`scene_${sceneIndex}`]) {
-        indicators.push({ icon: '🎬', type: 'stunt', tooltip: 'Stunt work required' });
+        indicators.push({ icon: 'ST', type: 'stunt', tooltip: 'Stunt work required' });
     }
 
     // Check if scene is continuous
     if (analysis.sceneFlow?.continuous) {
         for (let group of analysis.sceneFlow.continuous) {
             if (group.includes(sceneIndex)) {
-                indicators.push({ icon: '⚡', type: 'continuous', tooltip: 'Continuous scene' });
+                indicators.push({ icon: 'C', type: 'continuous', tooltip: 'Continuous scene' });
                 break;
             }
         }
@@ -188,117 +209,21 @@ function getSceneIndicators(sceneIndex, analysis) {
 }
 
 /**
- * Get story day badge info for scene card display
- * Updated to show "Day X (note)" format for time jumps and flashbacks
- *
- * @param {Object} scene - Scene object
- * @returns {Object} Badge info { show, label, fullLabel, confidence, tooltip, hasNote }
- */
-function getStoryDayBadge(scene) {
-    if (!scene.storyDay || !scene.storyDay.trim()) {
-        return { show: false };
-    }
-
-    const storyDay = scene.storyDay.trim();
-    const storyDayNote = scene.storyDayNote;
-    const confidence = scene.storyDayConfidence || 'assumed';
-    const cueFound = scene.storyDayCue;
-    const confirmed = scene.storyDayConfirmed;
-
-    // Build full label with note
-    // e.g., "Day 4 (3 weeks later)" or "Day 7 (flashback)"
-    let fullLabel = storyDay;
-    if (storyDayNote) {
-        fullLabel += ` (${storyDayNote})`;
-    }
-
-    // Shorten label for compact badge display
-    // "Day 4" → "D4", but keep note indicator
-    let label = storyDay;
-    const dayMatch = storyDay.match(/Day\s*(\d+)/i);
-    if (dayMatch) {
-        label = `D${dayMatch[1]}`;
-        if (storyDayNote) {
-            // Add abbreviated note for time jumps
-            label += '*'; // Asterisk indicates there's a note
-        }
-    }
-
-    // Build tooltip with full info
-    let tooltipParts = [fullLabel];
-    if (scene.storyTimeOfDay) {
-        tooltipParts.push(scene.storyTimeOfDay);
-    }
-    if (cueFound) {
-        tooltipParts.push(`Detected: "${cueFound}"`);
-    }
-    if (confidence === 'assumed' || confidence === 'default') {
-        tooltipParts.push('(assumed - click to confirm)');
-    }
-    if (confirmed) {
-        tooltipParts.push('✓ Confirmed');
-    }
-
-    return {
-        show: true,
-        label,
-        fullLabel,
-        confidence,
-        hasNote: !!storyDayNote,
-        tooltip: tooltipParts.join(' · ')
-    };
-}
-
-/**
  * Render expanded details for the active scene
+ * Clean design without emoji pills
  */
-function renderExpandedDetails(scene, cast, elementCounts) {
+function renderExpandedDetails(scene, cast) {
     const sceneIndex = state.scenes.indexOf(scene);
-
-    // Build story day display with note
-    // e.g., "Day 4 (3 weeks later)" or just "Day 3"
-    let storyDayDisplay = scene.storyDay || '';
-    if (scene.storyDayNote) {
-        storyDayDisplay += ` (${scene.storyDayNote})`;
-    }
 
     return `
         <div class="scene-expanded">
-            <!-- READ-ONLY METADATA OVERVIEW -->
-            <div class="scene-metadata-overview">
-                ${scene.storyDay ? `
-                    <div class="metadata-pill ${scene.storyDayConfidence === 'assumed' || scene.storyDayConfidence === 'default' ? 'assumed' : ''}">
-                        <span class="metadata-pill-icon">📅</span>
-                        <span class="metadata-pill-text">${escapeHtml(storyDayDisplay)}</span>
-                        ${scene.storyDayCue ? `<span class="metadata-pill-hint" title="Detected: ${escapeHtml(scene.storyDayCue)}">💡</span>` : ''}
-                    </div>
-                ` : ''}
-                ${scene.storyTimeOfDay ? `
-                    <div class="metadata-pill">
-                        <span class="metadata-pill-icon">🕐</span>
-                        <span class="metadata-pill-text">${escapeHtml(scene.storyTimeOfDay)}</span>
-                    </div>
-                ` : (scene.timeOfDay ? `
-                    <div class="metadata-pill">
-                        <span class="metadata-pill-icon">🕐</span>
-                        <span class="metadata-pill-text">${escapeHtml(scene.timeOfDay)}</span>
-                    </div>
-                ` : '')}
-                ${scene.location ? `
-                    <div class="metadata-pill">
-                        <span class="metadata-pill-icon">📍</span>
-                        <span class="metadata-pill-text">${escapeHtml(scene.location)}</span>
-                    </div>
-                ` : ''}
-            </div>
-
             <!-- SYNOPSIS SECTION -->
             <div class="scene-synopsis-section" data-scene-index="${sceneIndex}">
                 <div class="scene-synopsis-header">
-                    <span class="scene-synopsis-label">📝 Synopsis</span>
+                    <span class="scene-synopsis-label">Synopsis</span>
                     ${scene.synopsis
                         ? `<button class="scene-synopsis-edit-btn" onclick="event.stopPropagation(); handleEditSynopsis(${sceneIndex})" title="Edit synopsis">
-                            ✏️
+                            Edit
                         </button>`
                         : `<button class="scene-synopsis-generate-btn" onclick="event.stopPropagation(); handleGenerateSceneSynopsis(${sceneIndex})">
                             Generate AI
@@ -307,19 +232,13 @@ function renderExpandedDetails(scene, cast, elementCounts) {
                 </div>
                 ${scene.synopsis
                     ? `<div class="scene-synopsis" data-original-synopsis="${escapeHtml(scene.synopsis).replace(/"/g, '&quot;')}">${escapeHtml(scene.synopsis)}</div>`
-                    : `<div class="scene-synopsis placeholder">No synopsis yet - click Generate AI</div>`
+                    : `<div class="scene-synopsis placeholder">No synopsis yet</div>`
                 }
             </div>
 
             ${cast.length > 0 ? `
                 <div class="scene-cast-list">
-                    ${cast.map(c => `<div class="cast-chip">${escapeHtml(c)}</div>`).join('')}
-                </div>
-            ` : ''}
-
-            ${elementCounts.length > 0 ? `
-                <div class="element-summary">
-                    ${elementCounts.slice(0, 3).map(e => `<div class="element-count">${escapeHtml(e)}</div>`).join('')}
+                    ${cast.map(c => `<span class="char-pill">${escapeHtml(c)}</span>`).join('')}
                 </div>
             ` : ''}
         </div>
@@ -425,7 +344,7 @@ function handleEditSynopsis(sceneIndex) {
     header.setAttribute('data-original-buttons', originalButtonsHtml);
 
     header.innerHTML = `
-        <span class="scene-synopsis-label">📝 Synopsis</span>
+        <span class="scene-synopsis-label">Synopsis</span>
         <div class="synopsis-edit-actions">
             <button class="synopsis-save-btn" onclick="event.stopPropagation(); handleSaveSynopsis(${sceneIndex})" title="Save (Enter)">
                 ✓
