@@ -12,13 +12,36 @@
 import { state } from '../main.js';
 import { showProgressModal, updateProgressModal, closeProgressModal, showToast } from './export-core.js';
 
-// Try to import callAI from AI module, fallback to window
-let callAI;
-try {
-    const aiModule = await import('../ai-module.js').catch(() => null);
-    callAI = aiModule?.callAI || window.callAI;
-} catch {
-    callAI = window.callAI;
+// Cached AI module reference
+let _callAI = null;
+
+/**
+ * Get callAI function - loads dynamically if needed
+ * @returns {Promise<Function>} callAI function
+ */
+async function getCallAI() {
+    if (_callAI) return _callAI;
+
+    // Try window first (most common case)
+    if (window.callAI) {
+        _callAI = window.callAI;
+        return _callAI;
+    }
+
+    // Try dynamic import from ai-integration.js
+    try {
+        const aiModule = await import('../ai-integration.js');
+        if (aiModule?.callAI) {
+            _callAI = aiModule.callAI;
+            return _callAI;
+        }
+    } catch (e) {
+        console.warn('Could not load ai-integration module:', e);
+    }
+
+    // Fallback to window.callAI
+    _callAI = window.callAI;
+    return _callAI;
 }
 
 /**
@@ -121,7 +144,7 @@ Return as JSON array with this structure:
 Keep descriptions concise and focused on visual continuity for hair and makeup departments.`;
 
     try {
-        const aiCall = callAI || window.callAI;
+        const aiCall = await getCallAI();
         if (!aiCall) {
             throw new Error('AI module not available');
         }
@@ -301,7 +324,7 @@ Format as structured JSON:
 Focus on practical, actionable information for the crew.`;
 
     try {
-        const aiCall = callAI || window.callAI;
+        const aiCall = await getCallAI();
         if (!aiCall) {
             throw new Error('AI module not available');
         }
