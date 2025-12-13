@@ -24,28 +24,32 @@ import { generateLooksFromBreakdown } from './breakdown-character-lookbook.js';
 function normalizeAiPhysicalProfile(aiProfile) {
     if (!aiProfile) return {};
 
-    // Map AI field names to form field names
+    // Map AI field names to form field names (handle multiple naming conventions)
     const normalized = {
-        age: aiProfile.age || '',
-        gender: aiProfile.gender || '',
-        hairColour: aiProfile.hairColor || aiProfile.hairColour || aiProfile.hair_color || '',
-        hairType: aiProfile.hairStyle || aiProfile.hairType || aiProfile.hair_style || '',
-        eyeColour: aiProfile.eyeColor || aiProfile.eyeColour || aiProfile.eye_color || '',
-        skinTone: aiProfile.skinTone || aiProfile.skin_tone || aiProfile.ethnicity || '',
-        build: aiProfile.build || aiProfile.height || '',
+        age: aiProfile.age || aiProfile.Age || '',
+        gender: aiProfile.gender || aiProfile.Gender || '',
+        hairColour: aiProfile.hairColor || aiProfile.hairColour || aiProfile.hair_color ||
+                    aiProfile.HairColor || aiProfile.HairColour || '',
+        hairType: aiProfile.hairStyle || aiProfile.hairType || aiProfile.hair_style ||
+                  aiProfile.HairStyle || aiProfile.HairType || '',
+        eyeColour: aiProfile.eyeColor || aiProfile.eyeColour || aiProfile.eye_color ||
+                   aiProfile.EyeColor || aiProfile.EyeColour || '',
+        skinTone: aiProfile.skinTone || aiProfile.skin_tone || aiProfile.ethnicity ||
+                  aiProfile.SkinTone || aiProfile.Ethnicity || '',
+        build: aiProfile.build || aiProfile.height || aiProfile.Build || aiProfile.Height || '',
         distinguishing: '',
-        notes: ''
+        notes: aiProfile.notes || aiProfile.Notes || ''
     };
 
-    // Handle distinctive features (may be array)
-    if (aiProfile.distinctiveFeatures) {
-        normalized.distinguishing = Array.isArray(aiProfile.distinctiveFeatures)
-            ? aiProfile.distinctiveFeatures.filter(f => f).join(', ')
-            : aiProfile.distinctiveFeatures;
-    } else if (aiProfile.distinctive_features) {
-        normalized.distinguishing = Array.isArray(aiProfile.distinctive_features)
-            ? aiProfile.distinctive_features.filter(f => f).join(', ')
-            : aiProfile.distinctive_features;
+    // Handle distinctive features (may be array or string, various field names)
+    const distinctiveSource = aiProfile.distinctiveFeatures || aiProfile.distinctive_features ||
+                              aiProfile.DistinctiveFeatures || aiProfile.distinguishing ||
+                              aiProfile.Distinguishing || null;
+
+    if (distinctiveSource) {
+        normalized.distinguishing = Array.isArray(distinctiveSource)
+            ? distinctiveSource.filter(f => f).join(', ')
+            : String(distinctiveSource);
     }
 
     return normalized;
@@ -87,23 +91,56 @@ function mergePhysicalProfiles(aiProfile, userProfile) {
  */
 export function renderProfileView(characterName) {
     const state = getState();
-    const masterContext = window.scriptMasterContext || window.masterContext;
 
-    // Get character data from master context
-    let characterData = null;
-    if (masterContext?.characters?.[characterName]) {
-        characterData = masterContext.characters[characterName];
-    } else if (masterContext?.characters) {
-        const matchingKey = Object.keys(masterContext.characters).find(
-            key => key.toUpperCase() === characterName.toUpperCase()
-        );
-        if (matchingKey) {
-            characterData = masterContext.characters[matchingKey];
+    // Try multiple sources for master context
+    let masterContext = window.scriptMasterContext || window.masterContext;
+
+    // If not in window, try loading from localStorage
+    if (!masterContext || !masterContext.characters) {
+        try {
+            const stored = localStorage.getItem('masterContext') || localStorage.getItem('scriptMasterContext');
+            if (stored) {
+                masterContext = JSON.parse(stored);
+                // Also set on window for future use
+                if (!window.masterContext) {
+                    window.masterContext = masterContext;
+                }
+            }
+        } catch (e) {
+            console.warn('Could not load masterContext from localStorage:', e);
         }
     }
 
-    // Get AI-detected physical profile from master context
-    const aiPhysicalProfile = characterData?.physicalProfile || {};
+    // Get character data from master context (case-insensitive lookup)
+    let characterData = null;
+    if (masterContext?.characters) {
+        // Try exact match first
+        if (masterContext.characters[characterName]) {
+            characterData = masterContext.characters[characterName];
+        } else {
+            // Try case-insensitive match
+            const matchingKey = Object.keys(masterContext.characters).find(
+                key => key.toUpperCase() === characterName.toUpperCase()
+            );
+            if (matchingKey) {
+                characterData = masterContext.characters[matchingKey];
+            }
+        }
+    }
+
+    // Also check window.characterProfiles (populated by populateInitialData)
+    if (!characterData && window.characterProfiles?.[characterName]) {
+        characterData = window.characterProfiles[characterName];
+    }
+
+    // Get AI-detected physical profile from multiple sources
+    let aiPhysicalProfile = characterData?.physicalProfile || {};
+
+    // Also check castProfiles which may have been populated from master context
+    if (Object.keys(aiPhysicalProfile).length === 0 && state.castProfiles?.[characterName]?.physicalProfile) {
+        // If state.castProfiles has data but aiPhysicalProfile is empty, use it
+        aiPhysicalProfile = state.castProfiles[characterName].physicalProfile;
+    }
 
     // Get user-edited physical profile from state
     const userPhysicalProfile = state.castProfiles?.[characterName]?.physicalProfile || {};
@@ -230,8 +267,9 @@ function renderVisualIdentitySection(characterName, identity, characterData) {
     // Use AI-generated identity if available, otherwise show generate button
     const hasIdentity = identity && (identity.vibe || identity.approach);
 
-    // Also check if we have legacy data to display
-    const hasLegacyData = masterVisual.overallVibe || masterAnalysis.arc || masterAnalysis.emotionalJourney;
+    // Also check if we have legacy data to display (from script analysis)
+    const hasLegacyData = masterVisual.overallVibe || masterVisual.styleChoices || masterVisual.groomingHabits || masterVisual.makeupStyle ||
+                          masterAnalysis.arc || masterAnalysis.emotionalJourney || masterAnalysis.personality || masterAnalysis.role;
 
     if (hasIdentity) {
         return `
@@ -291,8 +329,9 @@ function renderVisualIdentitySection(characterName, identity, characterData) {
             <div class="profile-section visual-identity">
                 <div class="section-header">
                     <h3>VISUAL IDENTITY</h3>
+                    <span class="ai-hint">From script analysis</span>
                     <button class="generate-btn" onclick="generateVisualIdentity('${escapedName}')">
-                        Generate Analysis
+                        Enhance with AI
                     </button>
                 </div>
 
@@ -318,16 +357,44 @@ function renderVisualIdentitySection(characterName, identity, characterData) {
                         </div>
                     ` : ''}
 
+                    ${masterAnalysis.personality ? `
+                        <div class="identity-block">
+                            <h4>PERSONALITY</h4>
+                            <p>${escapeHtml(masterAnalysis.personality)}</p>
+                        </div>
+                    ` : ''}
+
                     ${masterVisual.styleChoices ? `
                         <div class="identity-block">
                             <h4>STYLE CHOICES</h4>
                             <p>${escapeHtml(masterVisual.styleChoices)}</p>
                         </div>
                     ` : ''}
+
+                    ${masterVisual.groomingHabits ? `
+                        <div class="identity-block">
+                            <h4>GROOMING NOTES</h4>
+                            <p>${escapeHtml(masterVisual.groomingHabits)}</p>
+                        </div>
+                    ` : ''}
+
+                    ${masterVisual.makeupStyle ? `
+                        <div class="identity-block">
+                            <h4>MAKEUP STYLE</h4>
+                            <p>${escapeHtml(masterVisual.makeupStyle)}</p>
+                        </div>
+                    ` : ''}
+
+                    ${masterAnalysis.role ? `
+                        <div class="identity-block">
+                            <h4>ROLE</h4>
+                            <p>${escapeHtml(masterAnalysis.role)}</p>
+                        </div>
+                    ` : ''}
                 </div>
 
                 <div class="identity-hint">
-                    Click "Generate Analysis" for a comprehensive visual identity analysis tailored for hair and makeup.
+                    Click "Enhance with AI" for a comprehensive visual identity analysis tailored for hair and makeup.
                 </div>
             </div>
         `;
@@ -437,11 +504,11 @@ function renderScriptDescriptionsSection(characterName, characterData) {
 
     if (descriptions.length === 0) {
         return `
-            <div class="profile-section script-descriptions collapsed">
+            <div class="profile-section script-descriptions">
                 <div class="section-header" onclick="toggleProfileSection(this)">
                     <h3>SCRIPT DESCRIPTIONS</h3>
                     <span class="description-count">0 found</span>
-                    <span class="toggle-icon">+</span>
+                    <span class="toggle-icon">-</span>
                 </div>
                 <div class="section-content">
                     <p class="empty-hint">No descriptions found in script.</p>
@@ -451,11 +518,11 @@ function renderScriptDescriptionsSection(characterName, characterData) {
     }
 
     return `
-        <div class="profile-section script-descriptions collapsed">
+        <div class="profile-section script-descriptions">
             <div class="section-header" onclick="toggleProfileSection(this)">
                 <h3>SCRIPT DESCRIPTIONS</h3>
                 <span class="description-count">${descriptions.length} found</span>
-                <span class="toggle-icon">+</span>
+                <span class="toggle-icon">-</span>
             </div>
 
             <div class="section-content">
