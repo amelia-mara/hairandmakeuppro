@@ -13,6 +13,7 @@
 let _stateModule = null;
 let _detectScenes = null;
 let _saveProject = null;
+let _scriptAnalysis = null;
 
 // Lazy getter for state to avoid circular dependency
 // Uses window.state as fallback since main.js sets it globally
@@ -31,12 +32,19 @@ function getState() {
     return null;
 }
 
-// Lazy loader for export handlers
+// Lazy loader for export handlers and script analysis
 async function loadExportHandlers() {
     if (!_detectScenes || !_saveProject) {
         const exportModule = await import('./export-handlers.js');
         _detectScenes = exportModule.detectScenes;
         _saveProject = exportModule.saveProject;
+    }
+    if (!_scriptAnalysis) {
+        try {
+            _scriptAnalysis = await import('../script-analysis.js');
+        } catch (err) {
+            console.warn('Script analysis module not available for version upload:', err);
+        }
     }
 }
 
@@ -195,6 +203,17 @@ window.processVersionUpload = async function() {
         // Detect scenes from script
         const scenes = _detectScenes(scriptContent);
         updateVersionLoadingBar('Processing Script', `Found ${scenes.length} scenes`, 30);
+
+        // AUTO-FILL: Apply story day and scene type detection
+        if (_scriptAnalysis && scenes.length > 0) {
+            if (_scriptAnalysis.detectStoryDays) {
+                _scriptAnalysis.detectStoryDays(scriptContent, scenes);
+            }
+            if (_scriptAnalysis.detectAllSceneTypes) {
+                _scriptAnalysis.detectAllSceneTypes(scenes);
+            }
+            updateVersionLoadingBar('Processing Script', 'Story days auto-detected', 40);
+        }
 
         if (scenes.length === 0) {
             closeVersionLoadingBar();

@@ -142,6 +142,33 @@ export function loadProjectData() {
             // Load project data
             state.currentProject = project;
             state.scenes = project.scenes || [];
+
+            // AUTO-FILL: Run story day and scene type detection for scenes missing data
+            // This ensures older saved projects get the new auto-detection features
+            if (state.scenes.length > 0) {
+                const needsStoryDayDetection = state.scenes.some(s => !s.storyDay || s.storyDay === '');
+                const needsSceneTypeDetection = state.scenes.some(s => s.isFlashback === undefined);
+
+                if (needsStoryDayDetection || needsSceneTypeDetection) {
+                    console.log('🔄 Running auto-detection on loaded project scenes...');
+                    import('../script-analysis.js').then(scriptAnalysis => {
+                        if (needsStoryDayDetection && scriptAnalysis.detectStoryDays) {
+                            const scriptText = project.scriptContent || state.scenes.map(s => s.heading + '\n' + (s.content || '')).join('\n\n');
+                            scriptAnalysis.detectStoryDays(scriptText, state.scenes);
+                            console.log('✅ Story days auto-filled for loaded project');
+                        }
+                        if (needsSceneTypeDetection && scriptAnalysis.detectAllSceneTypes) {
+                            scriptAnalysis.detectAllSceneTypes(state.scenes);
+                            console.log('✅ Scene types auto-detected for loaded project');
+                        }
+                        // Save the updated scenes
+                        state.currentProject.scenes = state.scenes;
+                    }).catch(err => {
+                        console.warn('Auto-detection on loaded project failed (non-critical):', err);
+                    });
+                }
+            }
+
             state.sceneBreakdowns = project.sceneBreakdowns || {};
             state.castProfiles = project.castProfiles || {};
             state.characterStates = project.characterStates || {};
