@@ -410,13 +410,7 @@ function renderCharacterFields(character, sceneIndex, scene) {
     const exitMakeup = charData.exitMakeup || enterMakeup;
     const exitWardrobe = charData.exitWardrobe || enterWardrobe;
 
-    // Build entry tags
-    const entryTags = [];
-    if (enterHair) entryTags.push(`Hair: ${enterHair}`);
-    if (enterMakeup) entryTags.push(`Makeup: ${enterMakeup}`);
-    if (enterWardrobe) entryTags.push(`Wardrobe: ${enterWardrobe}`);
-
-    // Build exit tags (show if different from entry)
+    // Build exit tags (show if different from entry or has changes)
     const exitTags = [];
     if (hasChanges || exitHair !== enterHair) exitTags.push(`Hair: ${exitHair}`);
     if (hasChanges || exitMakeup !== enterMakeup) exitTags.push(`Makeup: ${exitMakeup}`);
@@ -447,22 +441,22 @@ function renderCharacterFields(character, sceneIndex, scene) {
                 <div class="continuity-section-header">
                     <div class="continuity-label">ENTERS WITH</div>
                 </div>
-                ${entryTags.length > 0 ? `
-                    <div class="continuity-tags" id="enters-tags-${charId}">
-                        ${entryTags.map(tag => `<span class="continuity-tag">${escapeHtml(tag)}</span>`).join('')}
-                    </div>
-                ` : `
-                    <div class="continuity-empty">
-                        Click "Copy Previous" or enter appearance below
-                    </div>
-                `}
                 <div class="continuity-entry-fields">
-                    <input type="text" placeholder="Hair..." value="${escapeHtml(enterHair)}"
-                           onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'enterHair', this.value)">
-                    <input type="text" placeholder="Makeup..." value="${escapeHtml(enterMakeup)}"
-                           onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'enterMakeup', this.value)">
-                    <input type="text" placeholder="Wardrobe..." value="${escapeHtml(enterWardrobe)}"
-                           onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'enterWardrobe', this.value)">
+                    <div class="field-row">
+                        <label>Hair</label>
+                        <input type="text" placeholder="Hair description..." value="${escapeHtml(enterHair)}"
+                               onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'enterHair', this.value)">
+                    </div>
+                    <div class="field-row">
+                        <label>Makeup</label>
+                        <input type="text" placeholder="Makeup description..." value="${escapeHtml(enterMakeup)}"
+                               onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'enterMakeup', this.value)">
+                    </div>
+                    <div class="field-row">
+                        <label>Wardrobe</label>
+                        <input type="text" placeholder="Wardrobe description..." value="${escapeHtml(enterWardrobe)}"
+                               onchange="updateCharField(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', 'enterWardrobe', this.value)">
+                    </div>
                 </div>
             </div>
 
