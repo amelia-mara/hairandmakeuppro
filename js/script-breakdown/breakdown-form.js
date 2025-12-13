@@ -311,11 +311,11 @@ function renderSceneBreakdown(sceneIndex) {
                         `}
                     </div>
                     <div class="timeline-flags">
-                        <label title="Flashback"><input type="checkbox" ${scene.isFlashback ? 'checked' : ''} onchange="updateSceneField(${sceneIndex}, 'isFlashback', this.checked)">Fb</label>
-                        <label title="Flash Forward"><input type="checkbox" ${scene.isFlashForward ? 'checked' : ''} onchange="updateSceneField(${sceneIndex}, 'isFlashForward', this.checked)">Ff</label>
-                        <label title="Time Jump"><input type="checkbox" ${scene.isTimeJump ? 'checked' : ''} onchange="updateSceneField(${sceneIndex}, 'isTimeJump', this.checked)">Tj</label>
-                        <label title="Dream"><input type="checkbox" ${scene.isDream ? 'checked' : ''} onchange="updateSceneField(${sceneIndex}, 'isDream', this.checked)">Dr</label>
-                        <label title="Montage"><input type="checkbox" ${scene.isMontage ? 'checked' : ''} onchange="updateSceneField(${sceneIndex}, 'isMontage', this.checked)">Mo</label>
+                        <label><input type="checkbox" ${scene.isFlashback ? 'checked' : ''} onchange="updateSceneField(${sceneIndex}, 'isFlashback', this.checked)">Flashback</label>
+                        <label><input type="checkbox" ${scene.isFlashForward ? 'checked' : ''} onchange="updateSceneField(${sceneIndex}, 'isFlashForward', this.checked)">Flash Fwd</label>
+                        <label><input type="checkbox" ${scene.isTimeJump ? 'checked' : ''} onchange="updateSceneField(${sceneIndex}, 'isTimeJump', this.checked)">Time Jump</label>
+                        <label><input type="checkbox" ${scene.isDream ? 'checked' : ''} onchange="updateSceneField(${sceneIndex}, 'isDream', this.checked)">Dream</label>
+                        <label><input type="checkbox" ${scene.isMontage ? 'checked' : ''} onchange="updateSceneField(${sceneIndex}, 'isMontage', this.checked)">Montage</label>
                     </div>
                 </div>
             </div>
