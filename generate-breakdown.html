@@ -168,9 +168,9 @@
         }
 
         /* ═══════════════════════════════════════════════════════════════
-           SHEET TABS
+           TAB NAVIGATION
            ═══════════════════════════════════════════════════════════════ */
-        .sheet-tabs {
+        .tab-nav {
             display: flex;
             gap: 4px;
             padding: 12px 24px;
@@ -178,24 +178,25 @@
             border-bottom: 1px solid var(--glass-border);
         }
 
-        .sheet-tab {
-            padding: 10px 20px;
+        .tab-btn {
+            padding: 10px 24px;
             background: transparent;
             border: 1px solid transparent;
             border-radius: 6px 6px 0 0;
             color: var(--text-muted);
             cursor: pointer;
-            font-size: 0.85em;
+            font-size: 0.9em;
+            font-weight: 500;
             font-family: inherit;
             transition: all 0.2s;
         }
 
-        .sheet-tab:hover {
+        .tab-btn:hover {
             color: var(--text-primary);
             background: rgba(255, 255, 255, 0.03);
         }
 
-        .sheet-tab.active {
+        .tab-btn.active {
             color: var(--accent-gold);
             background: var(--bg-primary);
             border-color: var(--glass-border);
@@ -203,86 +204,37 @@
         }
 
         /* ═══════════════════════════════════════════════════════════════
-           SHEET CONTAINER
+           TAB CONTENT CONTAINER
            ═══════════════════════════════════════════════════════════════ */
-        .sheet-container {
+        .tab-container {
             flex: 1;
             overflow: auto;
             padding: 24px;
             background: var(--bg-primary);
         }
 
-        .sheet-content {
+        .tab-content {
             max-width: 1600px;
             margin: 0 auto;
         }
 
         /* ═══════════════════════════════════════════════════════════════
-           SCENE OVERVIEW TABLE
+           MASTER BREAKDOWN TAB - SCENE BLOCKS
            ═══════════════════════════════════════════════════════════════ */
-        .breakdown-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.85em;
-        }
-
-        .breakdown-table th {
-            padding: 12px 16px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            text-align: left;
-            font-weight: 600;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            font-size: 0.75em;
-            letter-spacing: 0.5px;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-
-        .breakdown-table td {
-            padding: 10px 16px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            color: var(--text-primary);
-            vertical-align: top;
-        }
-
-        .breakdown-table tr:hover td {
-            background: rgba(255, 255, 255, 0.02);
-        }
-
-        /* Column widths - Scene Overview */
-        .col-sc { width: 50px; text-align: center; }
-        .col-day { width: 60px; text-align: center; }
-        .col-day-note { width: 120px; font-style: italic; color: var(--text-muted); }
-        .col-location { width: 200px; }
-        .col-time { width: 80px; }
-        .col-cast { width: 60px; text-align: center; }
-        .col-synopsis { min-width: 300px; }
-
-        /* Scene type colors */
-        .scene-row.flashback td { background: rgba(128, 90, 213, 0.1); }
-        .scene-row.time-jump td { background: rgba(234, 179, 8, 0.1); }
-        .scene-row.dream td { background: rgba(59, 130, 246, 0.1); }
-
-        /* ═══════════════════════════════════════════════════════════════
-           CHARACTER BREAKDOWN (GROUPED)
-           ═══════════════════════════════════════════════════════════════ */
-        .scene-group {
+        .scene-block {
             margin-bottom: 24px;
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 8px;
             overflow: hidden;
         }
 
-        .scene-header {
+        .scene-block-header {
             padding: 16px;
             background: rgba(255, 255, 255, 0.05);
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .scene-header-main {
+        .scene-block-header-main {
             display: flex;
             align-items: center;
             gap: 12px;
@@ -293,18 +245,20 @@
         .scene-number {
             font-weight: 700;
             color: var(--accent-gold);
+            font-size: 1.1em;
         }
 
         .scene-day {
-            padding: 2px 8px;
+            padding: 2px 10px;
             background: rgba(255, 255, 255, 0.1);
             border-radius: 4px;
-            font-size: 0.8em;
+            font-size: 0.85em;
             color: var(--text-secondary);
         }
 
         .scene-location {
             color: var(--text-primary);
+            font-weight: 500;
         }
 
         .scene-badge {
@@ -314,6 +268,7 @@
             font-size: 0.7em;
             color: #ff9999;
             text-transform: uppercase;
+            font-weight: 600;
         }
 
         .scene-synopsis {
@@ -322,13 +277,13 @@
             font-style: italic;
         }
 
-        /* Character Table within Scene */
-        .character-table {
+        /* Character Table within Scene Block */
+        .scene-character-table {
             width: 100%;
             border-collapse: collapse;
         }
 
-        .character-table th {
+        .scene-character-table th {
             padding: 10px 12px;
             background: rgba(0, 0, 0, 0.2);
             border: 1px solid rgba(255, 255, 255, 0.05);
@@ -340,96 +295,53 @@
             letter-spacing: 0.5px;
         }
 
-        .character-table td {
+        .scene-character-table td {
             padding: 10px 12px;
             border: 1px solid rgba(255, 255, 255, 0.05);
             color: var(--text-primary);
             font-size: 0.85em;
+            vertical-align: top;
         }
 
-        .character-table tr:hover td {
+        .scene-character-table tr:hover td {
             background: rgba(255, 255, 255, 0.02);
         }
 
-        .character-table .col-character { width: 140px; font-weight: 600; }
-        .character-table .col-first { width: 40px; text-align: center; color: var(--accent-gold); }
-        .character-table .col-hair { width: 150px; }
-        .character-table .col-makeup { width: 150px; }
-        .character-table .col-sfx { width: 140px; }
-        .character-table .col-continuity { width: 160px; }
-        .character-table .col-notes { min-width: 150px; }
+        .scene-character-table .col-character { width: 140px; font-weight: 600; }
+        .scene-character-table .col-first { width: 40px; text-align: center; color: var(--accent-gold); }
+        .scene-character-table .col-hair { width: 160px; }
+        .scene-character-table .col-makeup { width: 160px; }
+        .scene-character-table .col-sfx { width: 140px; }
+        .scene-character-table .col-continuity-notes { min-width: 180px; }
 
-        /* Highlight rows with changes or continuity */
-        .character-row.has-change {
-            background: rgba(255, 200, 100, 0.05);
+        /* Row states */
+        .character-row.first-appearance {
+            background: rgba(201, 169, 97, 0.08);
         }
 
         .character-row.has-continuity {
             border-left: 3px solid rgba(192, 57, 43, 0.7);
         }
 
-        .character-row.first-appearance {
-            background: rgba(201, 169, 97, 0.08);
-        }
-
-        .exit-info {
-            margin-top: 6px;
-            padding: 4px 8px;
-            background: rgba(255, 200, 100, 0.1);
-            border-radius: 4px;
-            font-size: 0.85em;
-            color: var(--accent-gold);
-        }
-
         .no-characters {
             text-align: center;
             color: var(--text-muted);
             font-style: italic;
-            padding: 16px;
+            padding: 20px;
         }
 
         /* ═══════════════════════════════════════════════════════════════
-           CONTINUITY TRACKER
+           LOOKBOOK TAB - CHARACTER SECTIONS
            ═══════════════════════════════════════════════════════════════ */
-        .continuity-tracker .col-character { width: 130px; }
-        .continuity-tracker .col-event { width: 140px; }
-        .continuity-tracker .col-type { width: 100px; }
-        .continuity-tracker .col-start { width: 70px; }
-        .continuity-tracker .col-end { width: 70px; }
-        .continuity-tracker .col-stage { width: 100px; }
-        .continuity-tracker .col-scenes { width: 120px; }
-        .continuity-tracker .col-description { min-width: 200px; }
-        .continuity-tracker .col-app-notes { min-width: 180px; }
-
-        .type-badge {
-            display: inline-block;
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-size: 0.75em;
-            text-transform: uppercase;
-            font-weight: 600;
-        }
-
-        .type-badge.injuries { background: rgba(192, 57, 43, 0.3); color: #e74c3c; }
-        .type-badge.health { background: rgba(155, 89, 182, 0.3); color: #9b59b6; }
-        .type-badge.sfx { background: rgba(231, 76, 60, 0.3); color: #e74c3c; }
-        .type-badge.aging { background: rgba(149, 165, 166, 0.3); color: #95a5a6; }
-        .type-badge.pregnancy { background: rgba(241, 196, 15, 0.3); color: #f1c40f; }
-        .type-badge.dirt { background: rgba(150, 120, 80, 0.3); color: #c9a86c; }
-        .type-badge.other { background: rgba(52, 152, 219, 0.3); color: #3498db; }
-
-        /* ═══════════════════════════════════════════════════════════════
-           CHARACTER PROFILES
-           ═══════════════════════════════════════════════════════════════ */
-        .character-profile-block {
+        .character-lookbook {
             background: rgba(255, 255, 255, 0.02);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 8px;
             padding: 24px;
-            margin-bottom: 24px;
+            margin-bottom: 32px;
         }
 
-        .profile-header {
+        .lookbook-header {
             display: flex;
             align-items: center;
             gap: 16px;
@@ -438,17 +350,19 @@
             margin-bottom: 20px;
         }
 
-        .profile-header h2 {
+        .lookbook-header h2 {
             margin: 0;
             color: var(--accent-gold);
+            font-size: 1.3em;
         }
 
         .role-badge {
-            padding: 4px 10px;
+            padding: 4px 12px;
             background: rgba(255, 215, 0, 0.15);
             border-radius: 4px;
             font-size: 0.8em;
             color: var(--accent-gold);
+            font-weight: 500;
         }
 
         .scene-count {
@@ -456,16 +370,18 @@
             font-size: 0.85em;
         }
 
-        .profile-section {
-            margin-bottom: 20px;
+        /* Physical Profile Section */
+        .physical-profile {
+            margin-bottom: 24px;
         }
 
-        .profile-section h3 {
+        .section-title {
             margin: 0 0 12px 0;
             font-size: 0.75em;
             letter-spacing: 1px;
             color: var(--text-muted);
             text-transform: uppercase;
+            font-weight: 600;
         }
 
         .profile-grid {
@@ -474,18 +390,44 @@
             gap: 16px;
         }
 
-        .profile-grid span {
+        .profile-item {
             font-size: 0.9em;
             color: var(--text-primary);
         }
 
-        .profile-section ul {
-            margin: 0;
-            padding-left: 20px;
+        .profile-item span {
+            color: var(--text-muted);
         }
 
-        .profile-section li {
+        .distinguishing-features {
+            margin-top: 12px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+            font-size: 0.9em;
+            color: var(--text-secondary);
+        }
+
+        /* Key Identifiers Section */
+        .key-identifiers {
+            margin-bottom: 24px;
+        }
+
+        .identifier-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .identifier-item {
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
             margin-bottom: 8px;
+        }
+
+        .identifier-name {
+            font-weight: 600;
             color: var(--text-primary);
         }
 
@@ -494,33 +436,77 @@
             padding: 2px 6px;
             border-radius: 3px;
             margin-left: 8px;
+            text-transform: uppercase;
+            font-weight: 600;
         }
 
         .source-badge.script { background: rgba(231, 76, 60, 0.2); color: #e74c3c; }
         .source-badge.creative { background: rgba(52, 152, 219, 0.2); color: #3498db; }
         .source-badge.continuity { background: rgba(243, 156, 18, 0.2); color: #f39c12; }
 
-        .look-summary {
-            padding: 10px;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 4px;
-            margin-bottom: 8px;
-        }
-
-        .look-details {
+        .identifier-implementation {
             font-size: 0.85em;
-            color: var(--text-secondary);
+            color: var(--text-muted);
             margin-top: 4px;
         }
 
-        .progression {
-            font-size: 0.85em;
+        /* Look Detail Blocks */
+        .looks-section {
+            margin-bottom: 16px;
+        }
+
+        .look-block {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 6px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+
+        .look-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .look-name {
+            font-weight: 600;
+            color: var(--accent-gold);
+            font-size: 1em;
+        }
+
+        .look-scenes {
             color: var(--text-muted);
+            font-size: 0.85em;
+        }
+
+        .look-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+        }
+
+        .look-detail-item {
+            font-size: 0.9em;
+        }
+
+        .look-detail-item .label {
+            color: var(--text-muted);
+            font-size: 0.8em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 2px;
+        }
+
+        .look-detail-item .value {
+            color: var(--text-primary);
         }
 
         .empty-hint {
             color: var(--text-muted);
             font-style: italic;
+            font-size: 0.9em;
         }
 
         /* ═══════════════════════════════════════════════════════════════
@@ -608,22 +594,18 @@
            ═══════════════════════════════════════════════════════════════ */
         @media print {
             .breakdown-header,
-            .sheet-tabs,
+            .tab-nav,
             .breakdown-footer {
                 display: none;
             }
 
-            .sheet-container {
+            .tab-container {
                 padding: 0;
                 overflow: visible;
             }
 
-            .scene-group {
-                break-inside: avoid;
-                page-break-inside: avoid;
-            }
-
-            .character-profile-block {
+            .scene-block,
+            .character-lookbook {
                 break-inside: avoid;
                 page-break-inside: avoid;
             }
@@ -633,10 +615,8 @@
                 color: black;
             }
 
-            .breakdown-table th,
-            .breakdown-table td,
-            .character-table th,
-            .character-table td {
+            .scene-character-table th,
+            .scene-character-table td {
                 border-color: #ccc;
             }
         }
@@ -656,8 +636,8 @@
                 <div class="export-dropdown">
                     <button class="btn" onclick="toggleExportMenu()">Export</button>
                     <div class="export-menu" id="export-menu">
-                        <button onclick="exportCurrentSheet('csv')">Export Current (CSV)</button>
-                        <button onclick="exportCurrentSheet('tsv')">Export Current (TSV)</button>
+                        <button onclick="exportCurrentTab('csv')">Export Current (CSV)</button>
+                        <button onclick="exportCurrentTab('tsv')">Export Current (TSV)</button>
                         <button onclick="exportToPDF()">Export as PDF</button>
                         <button onclick="copyToClipboard()">Copy to Clipboard</button>
                     </div>
@@ -667,23 +647,17 @@
         </header>
 
         <!-- Tab Navigation -->
-        <nav class="sheet-tabs">
-            <button class="sheet-tab active" data-sheet="scene-overview" onclick="switchSheet('scene-overview')">
-                Scene Overview
+        <nav class="tab-nav">
+            <button class="tab-btn active" data-tab="master-breakdown" onclick="switchTab('master-breakdown')">
+                Master Breakdown
             </button>
-            <button class="sheet-tab" data-sheet="character-breakdown" onclick="switchSheet('character-breakdown')">
-                Character Breakdown
-            </button>
-            <button class="sheet-tab" data-sheet="continuity-tracker" onclick="switchSheet('continuity-tracker')">
-                Continuity Tracker
-            </button>
-            <button class="sheet-tab" data-sheet="character-profiles" onclick="switchSheet('character-profiles')">
-                Character Profiles
+            <button class="tab-btn" data-tab="lookbook" onclick="switchTab('lookbook')">
+                Lookbook
             </button>
         </nav>
 
-        <!-- Sheet Content -->
-        <main class="sheet-container" id="sheet-container">
+        <!-- Tab Content -->
+        <main class="tab-container" id="tab-container">
             <!-- Content rendered by JavaScript -->
         </main>
 
@@ -702,7 +676,7 @@
         // GLOBAL STATE
         // ============================================================================
         let breakdownState = null;
-        let currentSheet = 'scene-overview';
+        let currentTab = 'master-breakdown';
         let characterFirstAppearances = {};
 
         // ============================================================================
@@ -710,7 +684,7 @@
         // ============================================================================
         document.addEventListener('DOMContentLoaded', function() {
             loadBreakdownState();
-            renderCurrentSheet();
+            renderCurrentTab();
             updateFooterStats();
         });
 
@@ -790,22 +764,22 @@
         }
 
         // ============================================================================
-        // SHEET SWITCHING
+        // TAB SWITCHING
         // ============================================================================
-        function switchSheet(sheetId) {
-            currentSheet = sheetId;
+        function switchTab(tabId) {
+            currentTab = tabId;
 
-            // Update active tab
-            document.querySelectorAll('.sheet-tab').forEach(tab => {
-                tab.classList.toggle('active', tab.dataset.sheet === sheetId);
+            // Update active tab button
+            document.querySelectorAll('.tab-btn').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.tab === tabId);
             });
 
-            // Render selected sheet
-            renderCurrentSheet();
+            // Render selected tab
+            renderCurrentTab();
         }
 
-        function renderCurrentSheet() {
-            const container = document.getElementById('sheet-container');
+        function renderCurrentTab() {
+            const container = document.getElementById('tab-container');
 
             if (!breakdownState || breakdownState.scenes.length === 0) {
                 container.innerHTML = `
@@ -818,92 +792,26 @@
                 return;
             }
 
-            switch(currentSheet) {
-                case 'scene-overview':
-                    container.innerHTML = renderSceneOverviewSheet();
+            switch(currentTab) {
+                case 'master-breakdown':
+                    container.innerHTML = renderMasterBreakdownTab();
                     break;
-                case 'character-breakdown':
-                    container.innerHTML = renderCharacterBreakdownSheet();
-                    break;
-                case 'continuity-tracker':
-                    container.innerHTML = renderContinuityTrackerSheet();
-                    break;
-                case 'character-profiles':
-                    container.innerHTML = renderCharacterProfilesSheet();
+                case 'lookbook':
+                    container.innerHTML = renderLookbookTab();
                     break;
             }
         }
 
         // ============================================================================
-        // SHEET 1: SCENE OVERVIEW
+        // TAB 1: MASTER BREAKDOWN
+        // Scene-by-scene grouped H&MU breakdown
         // ============================================================================
-        function renderSceneOverviewSheet() {
-            const scenes = breakdownState?.scenes || [];
-            const breakdowns = breakdownState?.sceneBreakdowns || {};
-
-            let html = `
-                <div class="sheet-content scene-overview">
-                    <table class="breakdown-table">
-                        <thead>
-                            <tr>
-                                <th class="col-sc">Sc</th>
-                                <th class="col-day">Day</th>
-                                <th class="col-day-note">Note</th>
-                                <th class="col-location">Location</th>
-                                <th class="col-time">Time</th>
-                                <th class="col-cast">Cast</th>
-                                <th class="col-synopsis">Synopsis</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-            `;
-
-            scenes.forEach((scene, index) => {
-                const breakdown = breakdowns[index] || {};
-                const dayNote = scene.storyDayNote || '';
-                const intExt = extractIntExt(scene.heading);
-                const location = extractLocation(scene.heading);
-                const fullLocation = intExt ? `${intExt}. ${location}` : location;
-                const cast = breakdown.cast || [];
-                const castCount = cast.length;
-
-                let rowClass = 'scene-row';
-                if (scene.isFlashback) rowClass += ' flashback';
-                if (scene.isTimeJump) rowClass += ' time-jump';
-                if (scene.isDream) rowClass += ' dream';
-
-                html += `
-                    <tr class="${rowClass}" data-scene-index="${index}">
-                        <td class="col-sc">${scene.number || index + 1}</td>
-                        <td class="col-day">${formatDayShort(scene.storyDay)}</td>
-                        <td class="col-day-note">${escapeHtml(dayNote)}</td>
-                        <td class="col-location">${escapeHtml(fullLocation)}</td>
-                        <td class="col-time">${escapeHtml(scene.storyTimeOfDay || scene.timeOfDay || '')}</td>
-                        <td class="col-cast" title="${escapeHtml(cast.join(', '))}">${castCount}</td>
-                        <td class="col-synopsis">${escapeHtml(scene.synopsis || '')}</td>
-                    </tr>
-                `;
-            });
-
-            html += `
-                        </tbody>
-                    </table>
-                </div>
-            `;
-
-            return html;
-        }
-
-        // ============================================================================
-        // SHEET 2: CHARACTER BREAKDOWN (Grouped Format)
-        // ============================================================================
-        function renderCharacterBreakdownSheet() {
+        function renderMasterBreakdownTab() {
             const scenes = breakdownState?.scenes || [];
             const breakdowns = breakdownState?.sceneBreakdowns || {};
             const charStates = breakdownState?.characterStates || {};
-            const continuityEvents = breakdownState?.continuityEvents || {};
 
-            let html = '<div class="sheet-content character-breakdown">';
+            let html = '<div class="tab-content master-breakdown">';
 
             scenes.forEach((scene, index) => {
                 const breakdown = breakdowns[index] || {};
@@ -928,9 +836,9 @@
                 if (scene.isMontage) badges.push('MONTAGE');
 
                 html += `
-                    <div class="scene-group" data-scene-index="${index}">
-                        <div class="scene-header">
-                            <div class="scene-header-main">
+                    <div class="scene-block" data-scene-index="${index}">
+                        <div class="scene-block-header">
+                            <div class="scene-block-header-main">
                                 <span class="scene-number">SC ${sceneNum}</span>
                                 <span class="scene-day">${storyDay}${escapeHtml(dayNote)}</span>
                                 <span class="scene-location">${escapeHtml(fullLocation)} - ${escapeHtml(timeOfDay)}</span>
@@ -938,7 +846,7 @@
                             </div>
                             <div class="scene-synopsis">${escapeHtml(scene.synopsis || '')}</div>
                         </div>
-                        <table class="character-table">
+                        <table class="scene-character-table">
                             <thead>
                                 <tr>
                                     <th class="col-character">Character</th>
@@ -946,8 +854,7 @@
                                     <th class="col-hair">Hair</th>
                                     <th class="col-makeup">Makeup</th>
                                     <th class="col-sfx">SFX/Prosthetics</th>
-                                    <th class="col-continuity">Continuity</th>
-                                    <th class="col-notes">Notes</th>
+                                    <th class="col-continuity-notes">Continuity Notes</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -957,35 +864,25 @@
                     const charState = charStates[index]?.[charName] || {};
                     const isFirst = characterFirstAppearances[charName] === index;
                     const activeEvents = getActiveEventsForCharacterInScene(charName, index);
-                    const hasChange = charState.changeStatus === 'has-changes';
 
                     let rowClass = 'character-row';
-                    if (hasChange) rowClass += ' has-change';
-                    if (activeEvents.length > 0) rowClass += ' has-continuity';
                     if (isFirst) rowClass += ' first-appearance';
+                    if (activeEvents.length > 0) rowClass += ' has-continuity';
 
-                    // Format continuity events
-                    const continuityText = activeEvents.map(e => {
-                        return e.name || e.eventName || 'Event';
-                    }).join(', ');
-
-                    // Build notes - include exit info if applicable
-                    let notes = charState.notes || '';
-                    let exitInfo = '';
-                    if (hasChange) {
-                        const exitParts = [];
-                        if (charState.exitHair) exitParts.push(`Hair: ${charState.exitHair}`);
-                        if (charState.exitMakeup) exitParts.push(`MU: ${charState.exitMakeup}`);
-                        if (exitParts.length > 0) {
-                            exitInfo = `EXITS: ${exitParts.join(', ')}`;
-                        }
+                    // Build continuity notes
+                    let continuityNotes = '';
+                    if (activeEvents.length > 0) {
+                        continuityNotes = activeEvents.map(e => e.name || e.eventName || 'Event').join(', ');
+                    }
+                    if (charState.notes) {
+                        continuityNotes = continuityNotes ? `${continuityNotes}; ${charState.notes}` : charState.notes;
                     }
 
-                    // Check if same as previous
-                    if (!charState.enterHair && !charState.enterMakeup) {
+                    // Check if same as previous scene
+                    if (!charState.enterHair && !charState.enterMakeup && !continuityNotes) {
                         const prevScene = findPreviousSceneForCharacter(charName, index);
-                        if (prevScene !== null && !notes) {
-                            notes = `Same as Sc ${prevScene + 1}`;
+                        if (prevScene !== null) {
+                            continuityNotes = `Same as Sc ${prevScene + 1}`;
                         }
                     }
 
@@ -996,11 +893,7 @@
                             <td class="col-hair">${escapeHtml(charState.enterHair || '')}</td>
                             <td class="col-makeup">${escapeHtml(charState.enterMakeup || '')}</td>
                             <td class="col-sfx">${escapeHtml(charState.sfx || charState.changeInjuries || '')}</td>
-                            <td class="col-continuity">${escapeHtml(continuityText)}</td>
-                            <td class="col-notes">
-                                ${escapeHtml(notes)}
-                                ${exitInfo ? `<div class="exit-info">${escapeHtml(exitInfo)}</div>` : ''}
-                            </td>
+                            <td class="col-continuity-notes">${escapeHtml(continuityNotes)}</td>
                         </tr>
                     `;
                 });
@@ -1017,214 +910,112 @@
         }
 
         // ============================================================================
-        // SHEET 3: CONTINUITY TRACKER
+        // TAB 2: LOOKBOOK
+        // Detailed looks per character
         // ============================================================================
-        function renderContinuityTrackerSheet() {
-            const continuityEvents = breakdownState?.continuityEvents || {};
-
-            // Flatten all events across characters
-            const allEvents = [];
-            Object.keys(continuityEvents).forEach(charName => {
-                const events = continuityEvents[charName] || [];
-                events.forEach(event => {
-                    if (event.progression && event.progression.length > 0) {
-                        // One row per stage
-                        event.progression.forEach(stage => {
-                            allEvents.push({
-                                character: charName,
-                                event: event.name || event.eventName || 'Event',
-                                type: event.category || event.type || 'other',
-                                startScene: event.startScene,
-                                endScene: event.endScene,
-                                stage: stage.label || stage.status || '',
-                                scenes: compressSceneRanges(stage.scenes || []),
-                                description: stage.description || '',
-                                notes: stage.applicationNotes || ''
-                            });
-                        });
-                    } else {
-                        // Single row for event without stages
-                        allEvents.push({
-                            character: charName,
-                            event: event.name || event.eventName || 'Event',
-                            type: event.category || event.type || 'other',
-                            startScene: event.startScene,
-                            endScene: event.endScene,
-                            stage: '',
-                            scenes: event.startScene !== undefined && event.endScene !== undefined
-                                ? `${event.startScene + 1}-${event.endScene + 1}` : '',
-                            description: event.description || event.initialDescription || '',
-                            notes: event.applicationNotes || ''
-                        });
-                    }
-                });
-            });
-
-            // Sort by character, then start scene
-            allEvents.sort((a, b) => {
-                if (a.character !== b.character) return a.character.localeCompare(b.character);
-                return (a.startScene || 0) - (b.startScene || 0);
-            });
-
-            let html = `
-                <div class="sheet-content continuity-tracker">
-                    <table class="breakdown-table">
-                        <thead>
-                            <tr>
-                                <th class="col-character">Character</th>
-                                <th class="col-event">Event</th>
-                                <th class="col-type">Type</th>
-                                <th class="col-start">Start</th>
-                                <th class="col-end">End</th>
-                                <th class="col-stage">Stage</th>
-                                <th class="col-scenes">Scenes</th>
-                                <th class="col-description">Description</th>
-                                <th class="col-app-notes">Application Notes</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-            `;
-
-            if (allEvents.length === 0) {
-                html += `
-                    <tr>
-                        <td colspan="9" class="no-characters">No continuity events tracked</td>
-                    </tr>
-                `;
-            } else {
-                allEvents.forEach(event => {
-                    html += `
-                        <tr class="continuity-row type-${event.type}">
-                            <td class="col-character">${escapeHtml(event.character)}</td>
-                            <td class="col-event">${escapeHtml(event.event)}</td>
-                            <td class="col-type"><span class="type-badge ${event.type}">${event.type}</span></td>
-                            <td class="col-start">${event.startScene !== undefined ? 'Sc ' + (event.startScene + 1) : ''}</td>
-                            <td class="col-end">${event.endScene !== undefined ? 'Sc ' + (event.endScene + 1) : 'Active'}</td>
-                            <td class="col-stage">${escapeHtml(event.stage)}</td>
-                            <td class="col-scenes">${escapeHtml(event.scenes)}</td>
-                            <td class="col-description">${escapeHtml(event.description)}</td>
-                            <td class="col-app-notes">${escapeHtml(event.notes)}</td>
-                        </tr>
-                    `;
-                });
-            }
-
-            html += `
-                        </tbody>
-                    </table>
-                </div>
-            `;
-
-            return html;
-        }
-
-        // ============================================================================
-        // SHEET 4: CHARACTER PROFILES
-        // ============================================================================
-        function renderCharacterProfilesSheet() {
+        function renderLookbookTab() {
             const confirmedCharacters = breakdownState?.confirmedCharacters || [];
             const characters = breakdownState?.characters || {};
-            const continuityEvents = breakdownState?.continuityEvents || {};
 
             if (confirmedCharacters.length === 0) {
                 return `
-                    <div class="sheet-content character-profiles">
+                    <div class="tab-content lookbook">
                         <div class="empty-state">
                             <div class="empty-state-title">No Characters</div>
-                            <div class="empty-state-desc">Confirm characters in the Script Breakdown to view profiles</div>
+                            <div class="empty-state-desc">Confirm characters in the Script Breakdown to view lookbook</div>
                         </div>
                     </div>
                 `;
             }
 
-            let html = '<div class="sheet-content character-profiles">';
+            let html = '<div class="tab-content lookbook">';
 
             confirmedCharacters.forEach(charName => {
                 const charData = characters[charName] || {};
                 const physicalProfile = charData.physicalProfile || {};
                 const keyIdentifiers = charData.keyIdentifiers || [];
-                const events = continuityEvents[charName] || [];
                 const sceneNumbers = getCharacterSceneNumbers(charName);
                 const looks = generateLooksFromBreakdown(charName);
 
-                // Determine role
+                // Determine role based on scene count
                 let role = charData.role || 'Unknown';
                 if (sceneNumbers.length > 10) role = 'Lead';
                 else if (sceneNumbers.length > 5) role = 'Supporting';
                 else if (sceneNumbers.length > 0) role = 'Featured';
 
                 html += `
-                    <div class="character-profile-block">
-                        <div class="profile-header">
+                    <div class="character-lookbook">
+                        <div class="lookbook-header">
                             <h2>${escapeHtml(charName)}</h2>
                             <span class="role-badge">${role}</span>
-                            <span class="scene-count">${sceneNumbers.length} scenes</span>
+                            <span class="scene-count">${sceneNumbers.length} scenes (${compressSceneRanges(sceneNumbers)})</span>
                         </div>
 
-                        <div class="profile-section physical">
-                            <h3>PHYSICAL PROFILE</h3>
+                        <!-- Physical Profile -->
+                        <div class="physical-profile">
+                            <h3 class="section-title">Physical Profile</h3>
                             <div class="profile-grid">
-                                ${physicalProfile.age ? `<span>Age: ${escapeHtml(physicalProfile.age)}</span>` : ''}
-                                ${physicalProfile.gender ? `<span>Gender: ${escapeHtml(physicalProfile.gender)}</span>` : ''}
-                                ${physicalProfile.hairColour ? `<span>Hair: ${escapeHtml(physicalProfile.hairColour)}</span>` : ''}
-                                ${physicalProfile.eyeColour ? `<span>Eyes: ${escapeHtml(physicalProfile.eyeColour)}</span>` : ''}
-                                ${physicalProfile.skinTone ? `<span>Skin: ${escapeHtml(physicalProfile.skinTone)}</span>` : ''}
-                                ${physicalProfile.build ? `<span>Build: ${escapeHtml(physicalProfile.build)}</span>` : ''}
+                                ${physicalProfile.age ? `<div class="profile-item"><span>Age:</span> ${escapeHtml(physicalProfile.age)}</div>` : ''}
+                                ${physicalProfile.gender ? `<div class="profile-item"><span>Gender:</span> ${escapeHtml(physicalProfile.gender)}</div>` : ''}
+                                ${physicalProfile.hairColour ? `<div class="profile-item"><span>Hair Color:</span> ${escapeHtml(physicalProfile.hairColour)}</div>` : ''}
+                                ${physicalProfile.eyeColour ? `<div class="profile-item"><span>Eye Color:</span> ${escapeHtml(physicalProfile.eyeColour)}</div>` : ''}
+                                ${physicalProfile.skinTone ? `<div class="profile-item"><span>Skin Tone:</span> ${escapeHtml(physicalProfile.skinTone)}</div>` : ''}
+                                ${physicalProfile.build ? `<div class="profile-item"><span>Build:</span> ${escapeHtml(physicalProfile.build)}</div>` : ''}
                             </div>
                             ${physicalProfile.distinguishing ? `
-                                <div style="margin-top: 8px; color: var(--text-secondary);">
-                                    Distinguishing: ${escapeHtml(physicalProfile.distinguishing)}
+                                <div class="distinguishing-features">
+                                    <strong>Distinguishing Features:</strong> ${escapeHtml(physicalProfile.distinguishing)}
                                 </div>
                             ` : ''}
                         </div>
 
+                        <!-- Key Identifiers -->
                         ${keyIdentifiers.length > 0 ? `
-                            <div class="profile-section identifiers">
-                                <h3>KEY IDENTIFIERS</h3>
-                                <ul>
+                            <div class="key-identifiers">
+                                <h3 class="section-title">Key Identifiers</h3>
+                                <ul class="identifier-list">
                                     ${keyIdentifiers.map(id => `
-                                        <li>
-                                            <strong>${escapeHtml(id.name)}</strong>
+                                        <li class="identifier-item">
+                                            <span class="identifier-name">${escapeHtml(id.name)}</span>
                                             <span class="source-badge ${id.source || 'creative'}">${id.source || 'creative'}</span>
-                                            ${id.implementation ? `<br><span style="color: var(--text-muted); font-size: 0.85em;">${escapeHtml(id.implementation)}</span>` : ''}
+                                            ${id.implementation ? `<div class="identifier-implementation">${escapeHtml(id.implementation)}</div>` : ''}
                                         </li>
                                     `).join('')}
                                 </ul>
                             </div>
                         ` : ''}
 
-                        <div class="profile-section looks">
-                            <h3>LOOKS SUMMARY</h3>
+                        <!-- Looks -->
+                        <div class="looks-section">
+                            <h3 class="section-title">Looks</h3>
                             ${looks.length > 0 ? looks.map(look => `
-                                <div class="look-summary">
-                                    <strong>${escapeHtml(look.name)}</strong> (${look.scenes})
+                                <div class="look-block">
+                                    <div class="look-header">
+                                        <span class="look-name">${escapeHtml(look.name)}</span>
+                                        <span class="look-scenes">${look.scenes}</span>
+                                    </div>
                                     <div class="look-details">
-                                        ${look.hair ? `Hair: ${escapeHtml(look.hair)}` : ''}
-                                        ${look.hair && look.makeup ? ' | ' : ''}
-                                        ${look.makeup ? `Makeup: ${escapeHtml(look.makeup)}` : ''}
+                                        ${look.hair ? `
+                                            <div class="look-detail-item">
+                                                <div class="label">Hair</div>
+                                                <div class="value">${escapeHtml(look.hair)}</div>
+                                            </div>
+                                        ` : ''}
+                                        ${look.makeup ? `
+                                            <div class="look-detail-item">
+                                                <div class="label">Makeup</div>
+                                                <div class="value">${escapeHtml(look.makeup)}</div>
+                                            </div>
+                                        ` : ''}
+                                        ${look.wardrobe ? `
+                                            <div class="look-detail-item">
+                                                <div class="label">Wardrobe</div>
+                                                <div class="value">${escapeHtml(look.wardrobe)}</div>
+                                            </div>
+                                        ` : ''}
                                     </div>
                                 </div>
-                            `).join('') : '<p class="empty-hint">No looks defined</p>'}
-                        </div>
-
-                        ${events.length > 0 ? `
-                            <div class="profile-section events">
-                                <h3>CONTINUITY EVENTS</h3>
-                                <ul>
-                                    ${events.map(e => `
-                                        <li>
-                                            <strong>${escapeHtml(e.name || e.eventName || 'Event')}</strong>
-                                            (Sc ${(e.startScene || 0) + 1}-${e.endScene !== undefined ? (e.endScene + 1) : 'Active'})
-                                            ${e.progression ? `<br><span class="progression">${e.progression.map(s => s.label || s.status).join(' -> ')}</span>` : ''}
-                                        </li>
-                                    `).join('')}
-                                </ul>
-                            </div>
-                        ` : ''}
-
-                        <div class="profile-section scenes">
-                            <h3>SCENES</h3>
-                            <p>${compressSceneRanges(sceneNumbers)}</p>
+                            `).join('') : '<p class="empty-hint">No looks defined yet. Add hair and makeup details in the Script Breakdown.</p>'}
                         </div>
                     </div>
                 `;
@@ -1404,49 +1195,21 @@
             }
         });
 
-        function getSheetData() {
-            switch(currentSheet) {
-                case 'scene-overview':
-                    return getSceneOverviewData();
-                case 'character-breakdown':
-                    return getCharacterBreakdownData();
-                case 'continuity-tracker':
-                    return getContinuityTrackerData();
-                case 'character-profiles':
-                    return getCharacterProfilesData();
+        function getTabData() {
+            switch(currentTab) {
+                case 'master-breakdown':
+                    return getMasterBreakdownData();
+                case 'lookbook':
+                    return getLookbookData();
             }
         }
 
-        function getSceneOverviewData() {
-            const scenes = breakdownState?.scenes || [];
-            const breakdowns = breakdownState?.sceneBreakdowns || {};
-
-            const headers = ['Scene', 'Day', 'Day Note', 'Location', 'Time', 'Cast Count', 'Synopsis'];
-            const rows = scenes.map((scene, index) => {
-                const breakdown = breakdowns[index] || {};
-                const intExt = extractIntExt(scene.heading);
-                const location = extractLocation(scene.heading);
-
-                return [
-                    scene.number || index + 1,
-                    formatDayShort(scene.storyDay),
-                    scene.storyDayNote || '',
-                    intExt ? `${intExt}. ${location}` : location,
-                    scene.storyTimeOfDay || scene.timeOfDay || '',
-                    (breakdown.cast || []).length,
-                    scene.synopsis || ''
-                ];
-            });
-
-            return { headers, rows };
-        }
-
-        function getCharacterBreakdownData() {
+        function getMasterBreakdownData() {
             const scenes = breakdownState?.scenes || [];
             const breakdowns = breakdownState?.sceneBreakdowns || {};
             const charStates = breakdownState?.characterStates || {};
 
-            const headers = ['Scene', 'Character', '1st', 'Hair', 'Makeup', 'SFX', 'Continuity', 'Notes'];
+            const headers = ['Scene', 'Character', '1st', 'Hair', 'Makeup', 'SFX', 'Continuity Notes'];
             const rows = [];
 
             scenes.forEach((scene, index) => {
@@ -1458,6 +1221,11 @@
                     const isFirst = characterFirstAppearances[charName] === index;
                     const events = getActiveEventsForCharacterInScene(charName, index);
 
+                    let continuityNotes = events.map(e => e.name || e.eventName).join(', ');
+                    if (state.notes) {
+                        continuityNotes = continuityNotes ? `${continuityNotes}; ${state.notes}` : state.notes;
+                    }
+
                     rows.push([
                         scene.number || index + 1,
                         charName,
@@ -1465,8 +1233,7 @@
                         state.enterHair || '',
                         state.enterMakeup || '',
                         state.sfx || state.changeInjuries || '',
-                        events.map(e => e.name || e.eventName).join(', '),
-                        state.notes || ''
+                        continuityNotes
                     ]);
                 });
             });
@@ -1474,38 +1241,11 @@
             return { headers, rows };
         }
 
-        function getContinuityTrackerData() {
-            const continuityEvents = breakdownState?.continuityEvents || {};
-
-            const headers = ['Character', 'Event', 'Type', 'Start', 'End', 'Stage', 'Scenes', 'Description', 'Notes'];
-            const rows = [];
-
-            Object.keys(continuityEvents).forEach(charName => {
-                const events = continuityEvents[charName] || [];
-                events.forEach(event => {
-                    rows.push([
-                        charName,
-                        event.name || event.eventName || 'Event',
-                        event.category || event.type || 'other',
-                        event.startScene !== undefined ? `Sc ${event.startScene + 1}` : '',
-                        event.endScene !== undefined ? `Sc ${event.endScene + 1}` : 'Active',
-                        '',
-                        event.startScene !== undefined && event.endScene !== undefined
-                            ? `${event.startScene + 1}-${event.endScene + 1}` : '',
-                        event.description || event.initialDescription || '',
-                        event.applicationNotes || ''
-                    ]);
-                });
-            });
-
-            return { headers, rows };
-        }
-
-        function getCharacterProfilesData() {
+        function getLookbookData() {
             const confirmedCharacters = breakdownState?.confirmedCharacters || [];
             const characters = breakdownState?.characters || {};
 
-            const headers = ['Character', 'Role', 'Scenes', 'Age', 'Gender', 'Hair', 'Eyes', 'Distinguishing'];
+            const headers = ['Character', 'Role', 'Scenes', 'Age', 'Gender', 'Hair Color', 'Eye Color', 'Distinguishing'];
             const rows = confirmedCharacters.map(charName => {
                 const data = characters[charName] || {};
                 const profile = data.physicalProfile || {};
@@ -1526,9 +1266,9 @@
             return { headers, rows };
         }
 
-        function exportCurrentSheet(format) {
-            const { headers, rows } = getSheetData();
-            const filename = `breakdown_${currentSheet}_${Date.now()}`;
+        function exportCurrentTab(format) {
+            const { headers, rows } = getTabData();
+            const filename = `breakdown_${currentTab}_${Date.now()}`;
 
             if (format === 'csv') {
                 downloadCSV(headers, rows, filename);
@@ -1582,7 +1322,7 @@
         }
 
         function copyToClipboard() {
-            const { headers, rows } = getSheetData();
+            const { headers, rows } = getTabData();
             const tsv = [
                 headers.join('\t'),
                 ...rows.map(r => r.join('\t'))
