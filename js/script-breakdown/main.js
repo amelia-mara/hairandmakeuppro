@@ -288,22 +288,194 @@ function closeAllModals() {
 }
 
 /**
- * Handle scene search input
+ * Handle scene search input - searches entire script content
  */
 function handleSceneSearch(e) {
-    const query = e.target.value.toLowerCase().trim();
+    const query = e.target.value.trim();
 
-    const sceneItems = document.querySelectorAll('.scene-item');
-    sceneItems.forEach(item => {
-        const heading = item.querySelector('.scene-heading')?.textContent.toLowerCase() || '';
-        const synopsis = item.querySelector('.scene-synopsis')?.textContent.toLowerCase() || '';
+    // Clear search - show all scenes
+    if (!query) {
+        clearSearchHighlights();
+        renderSceneList();
+        return;
+    }
 
-        if (heading.includes(query) || synopsis.includes(query)) {
-            item.style.display = '';
-        } else {
-            item.style.display = 'none';
+    // Perform search
+    const results = searchScenes(query);
+
+    if (results.length === 0) {
+        showNoSearchResults(query);
+        return;
+    }
+
+    // Highlight matching scenes and hide non-matching
+    highlightSearchResults(results);
+
+    // Auto-select best match
+    if (results.length > 0) {
+        selectScene(results[0].sceneIndex);
+    }
+}
+
+/**
+ * Search scenes by query - searches headings, content, characters, synopsis
+ * @param {string} query - Search term
+ * @returns {Array} Array of matching scene results with scores
+ */
+function searchScenes(query) {
+    const searchTerm = query.toLowerCase();
+    const results = [];
+
+    state.scenes.forEach((scene, index) => {
+        let score = 0;
+        let matchType = null;
+
+        const sceneNumber = String(scene.number || index + 1).toLowerCase();
+        const heading = (scene.heading || '').toLowerCase();
+        const content = (scene.content || '').toLowerCase();
+        const synopsis = (scene.synopsis || '').toLowerCase();
+        const breakdown = state.sceneBreakdowns[index] || {};
+        const characters = (breakdown.cast || []).join(' ').toLowerCase();
+
+        // Priority 1: Exact scene number match
+        if (sceneNumber === searchTerm || `scene ${sceneNumber}` === searchTerm.toLowerCase()) {
+            score = 100;
+            matchType = 'scene_number';
+        }
+        // Priority 2: Scene number partial match
+        else if (sceneNumber.startsWith(searchTerm) || searchTerm === sceneNumber.replace(/[a-z]/gi, '')) {
+            score = 95;
+            matchType = 'scene_number';
+        }
+        // Priority 3: Heading match
+        else if (heading.includes(searchTerm)) {
+            score = 80;
+            matchType = 'heading';
+        }
+        // Priority 4: Character name match
+        else if (characters.includes(searchTerm)) {
+            score = 70;
+            matchType = 'character';
+        }
+        // Priority 5: Synopsis match
+        else if (synopsis.includes(searchTerm)) {
+            score = 60;
+            matchType = 'synopsis';
+        }
+        // Priority 6: FULL CONTENT match - this searches the actual script text
+        else if (content.includes(searchTerm)) {
+            // Count occurrences for ranking
+            const occurrences = countOccurrences(content, searchTerm);
+            score = 40 + Math.min(occurrences * 3, 25);
+            matchType = 'content';
+        }
+
+        if (score > 0) {
+            results.push({
+                sceneIndex: index,
+                sceneNumber: scene.number || index + 1,
+                score: score,
+                matchType: matchType
+            });
         }
     });
+
+    // Sort by score (highest first)
+    results.sort((a, b) => b.score - a.score);
+
+    return results;
+}
+
+/**
+ * Count occurrences of a term in text
+ */
+function countOccurrences(text, term) {
+    if (!text || !term) return 0;
+    const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(escaped, 'gi');
+    const matches = text.match(regex);
+    return matches ? matches.length : 0;
+}
+
+/**
+ * Clear all search highlights
+ */
+function clearSearchHighlights() {
+    document.querySelectorAll('.scene-item').forEach(item => {
+        item.classList.remove('search-match', 'search-best-match', 'search-hidden');
+        item.style.display = '';
+    });
+
+    // Remove "no results" message if shown
+    const noResults = document.querySelector('.no-search-results');
+    if (noResults) noResults.remove();
+}
+
+/**
+ * Highlight scenes that match search
+ */
+function highlightSearchResults(results) {
+    const matchingIndices = results.map(r => r.sceneIndex);
+
+    document.querySelectorAll('.scene-item').forEach(item => {
+        const index = parseInt(item.dataset.sceneIndex);
+
+        if (matchingIndices.includes(index)) {
+            item.style.display = '';
+            item.classList.remove('search-hidden');
+            item.classList.add('search-match');
+
+            // Best match gets special highlight
+            if (index === results[0].sceneIndex) {
+                item.classList.add('search-best-match');
+            } else {
+                item.classList.remove('search-best-match');
+            }
+        } else {
+            // Hide non-matching scenes
+            item.style.display = 'none';
+            item.classList.add('search-hidden');
+            item.classList.remove('search-match', 'search-best-match');
+        }
+    });
+
+    // Scroll best match into view
+    const bestMatchItem = document.querySelector('.scene-item.search-best-match');
+    if (bestMatchItem) {
+        bestMatchItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+}
+
+/**
+ * Show "no results" message
+ */
+function showNoSearchResults(query) {
+    // Hide all scene items
+    document.querySelectorAll('.scene-item').forEach(item => {
+        item.style.display = 'none';
+        item.classList.add('search-hidden');
+    });
+
+    const sceneList = document.getElementById('scene-list');
+    if (!sceneList) return;
+
+    // Remove existing message if any
+    const existing = sceneList.querySelector('.no-search-results');
+    if (existing) existing.remove();
+
+    // Escape HTML
+    const div = document.createElement('div');
+    div.textContent = query;
+    const escapedQuery = div.innerHTML;
+
+    const message = document.createElement('div');
+    message.className = 'no-search-results';
+    message.innerHTML = `
+        <div class="no-results-title">No scenes found for "${escapedQuery}"</div>
+        <div class="no-results-hint">Search looks in: scene numbers, headings, full script content, character names, and synopsis</div>
+    `;
+
+    sceneList.prepend(message);
 }
 
 /**

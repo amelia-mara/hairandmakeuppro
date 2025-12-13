@@ -247,7 +247,40 @@
             font-size: 0.8125em;
         }
         .scene-search:focus { outline: none; border-color: var(--accent-gold); }
-        
+
+        /* Search Results Styling */
+        .scene-item.search-match {
+            border-left-color: var(--accent-gold);
+        }
+
+        .scene-item.search-best-match {
+            border-left-color: var(--accent-gold);
+            background: rgba(212, 175, 122, 0.15) !important;
+            box-shadow: 0 0 0 1px rgba(212, 175, 122, 0.4);
+        }
+
+        .scene-item.search-hidden {
+            display: none;
+        }
+
+        .no-search-results {
+            padding: 24px 16px;
+            text-align: center;
+            color: var(--text-muted);
+        }
+
+        .no-results-title {
+            font-size: 0.9375em;
+            margin-bottom: 8px;
+            color: var(--text-light);
+        }
+
+        .no-results-hint {
+            font-size: 0.75em;
+            opacity: 0.7;
+            line-height: 1.5;
+        }
+
         .scene-list { flex: 1; overflow-y: auto; padding: 12px; }
         
         /* Scene Card - Collapsed State */
