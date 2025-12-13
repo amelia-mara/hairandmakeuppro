@@ -263,10 +263,22 @@
             position: relative;
         }
 
-        .scene-item.int-day { border-left: 3px solid var(--int-day-border); }
-        .scene-item.ext-day { border-left: 3px solid var(--ext-day-border); }
-        .scene-item.int-night { border-left: 3px solid var(--int-night-border); }
-        .scene-item.ext-night { border-left: 3px solid var(--ext-night-border); }
+        .scene-item.int-day {
+            border-left: 3px solid var(--int-day-border);
+            background: var(--int-day);
+        }
+        .scene-item.ext-day {
+            border-left: 3px solid var(--ext-day-border);
+            background: var(--ext-day);
+        }
+        .scene-item.int-night {
+            border-left: 3px solid var(--int-night-border);
+            background: var(--int-night);
+        }
+        .scene-item.ext-night {
+            border-left: 3px solid var(--ext-night-border);
+            background: var(--ext-night);
+        }
         
         .scene-item:hover {
             border-color: var(--accent-gold);
