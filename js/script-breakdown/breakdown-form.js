@@ -270,6 +270,13 @@ function renderSceneBreakdown(sceneIndex) {
                     </button>
                 </div>
 
+                <!-- Detection Hint (shows what triggered auto-detection) -->
+                ${scene.storyDayCue ? `
+                    <div class="detection-hint">
+                        💡 Detected: "${escapeHtml(scene.storyDayCue)}" (${scene.storyDayConfidence || 'auto'} confidence)
+                    </div>
+                ` : ''}
+
                 <!-- Story Day Row with Enhanced Controls -->
                 <div class="field-row story-day-row">
                     <div class="field-group story-day-group">
@@ -284,26 +291,29 @@ function renderSceneBreakdown(sceneIndex) {
                                    onchange="updateStoryDayFromInput(${sceneIndex}, this.value)"
                                    style="${getExistingStoryDays().length > 0 ? 'display: none;' : ''}">
                         </div>
-                        ${scene.storyDaySource ? `
-                            <div class="story-day-source ${scene.storyDayConfidence || 'low'}">
-                                ${getSourceIcon(scene.storyDaySource)} ${formatSource(scene.storyDaySource)}
-                            </div>
-                        ` : ''}
                     </div>
                     <div class="field-group">
                         <label>Time of Day</label>
-                        <select onchange="updateSceneField(${sceneIndex}, 'timeOfDay', this.value)">
+                        <select onchange="updateSceneField(${sceneIndex}, 'storyTimeOfDay', this.value)">
                             <option value="">Select...</option>
-                            <option value="Dawn" ${timeOfDay === 'Dawn' ? 'selected' : ''}>Dawn</option>
-                            <option value="Early Morning" ${timeOfDay === 'Early Morning' ? 'selected' : ''}>Early Morning</option>
-                            <option value="Morning" ${timeOfDay === 'Morning' ? 'selected' : ''}>Morning</option>
-                            <option value="Midday" ${timeOfDay === 'Midday' ? 'selected' : ''}>Midday</option>
-                            <option value="Afternoon" ${timeOfDay === 'Afternoon' ? 'selected' : ''}>Afternoon</option>
-                            <option value="Evening" ${timeOfDay === 'Evening' ? 'selected' : ''}>Evening</option>
-                            <option value="Dusk" ${timeOfDay === 'Dusk' ? 'selected' : ''}>Dusk</option>
-                            <option value="Night" ${timeOfDay === 'Night' ? 'selected' : ''}>Night</option>
-                            <option value="Late Night" ${timeOfDay === 'Late Night' ? 'selected' : ''}>Late Night</option>
+                            <option value="Dawn" ${(scene.storyTimeOfDay || timeOfDay) === 'Dawn' ? 'selected' : ''}>Dawn</option>
+                            <option value="Morning" ${(scene.storyTimeOfDay || timeOfDay) === 'Morning' ? 'selected' : ''}>Morning</option>
+                            <option value="Afternoon" ${(scene.storyTimeOfDay || timeOfDay) === 'Afternoon' ? 'selected' : ''}>Afternoon</option>
+                            <option value="Evening" ${(scene.storyTimeOfDay || timeOfDay) === 'Evening' ? 'selected' : ''}>Evening</option>
+                            <option value="Night" ${(scene.storyTimeOfDay || timeOfDay) === 'Night' ? 'selected' : ''}>Night</option>
                         </select>
+                    </div>
+                </div>
+
+                <!-- Story Day Note (for time jumps/flashbacks) -->
+                <div class="field-row">
+                    <div class="field-group" style="flex: 1;">
+                        <label>Note (time jump/flashback)</label>
+                        <input type="text"
+                               id="story-day-note-${sceneIndex}"
+                               value="${escapeHtml(scene.storyDayNote || '')}"
+                               placeholder="e.g., 3 weeks later, flashback"
+                               onchange="updateStoryDayNote(${sceneIndex}, this.value)">
                     </div>
                 </div>
 
@@ -312,13 +322,13 @@ function renderSceneBreakdown(sceneIndex) {
                     <button class="small-btn copy-forward-btn"
                             onclick="copyStoryDayToFollowing(${sceneIndex})"
                             title="Apply this story day to following scenes until a day change">
-                        📋 Copy to Following
+                        Copy to Next →
                     </button>
                     <button class="small-btn copy-prev-btn"
                             onclick="copyStoryDayFromPrevious(${sceneIndex})"
                             title="Copy story day from previous scene"
                             ${sceneIndex === 0 ? 'disabled' : ''}>
-                        ⬆️ From Previous
+                        ← Copy from Previous
                     </button>
                     ${scene.storyDayConfirmed ? `
                         <span class="confirmed-badge" title="Story day confirmed">✓ Confirmed</span>
@@ -330,14 +340,6 @@ function renderSceneBreakdown(sceneIndex) {
                         </button>
                     `}
                 </div>
-
-                <!-- Time Jump Indicator (if applicable) -->
-                ${scene.timeJump ? `
-                    <div class="time-jump-indicator">
-                        ⏳ Time Jump: +${scene.timeJump.days} day${scene.timeJump.days > 1 ? 's' : ''}
-                        ${scene.timeJump.marker ? `<span class="jump-marker">(${escapeHtml(scene.timeJump.marker)})</span>` : ''}
-                    </div>
-                ` : ''}
 
                 <!-- Flashback/Dream Row -->
                 <div class="field-row special-time-flags">
@@ -1072,6 +1074,24 @@ window.confirmStoryDay = function(sceneIndex) {
     saveToLocalStorage();
     renderBreakdownPanel();
     showStoryDayToast('Story day confirmed');
+};
+
+/**
+ * Update story day note (for time jumps/flashbacks)
+ * e.g., "3 weeks later", "flashback", "10 years earlier"
+ */
+window.updateStoryDayNote = function(sceneIndex, value) {
+    if (!state.scenes[sceneIndex]) return;
+
+    state.scenes[sceneIndex].storyDayNote = value.trim() || null;
+    state.scenes[sceneIndex].storyDayConfirmed = true;
+
+    saveToLocalStorage();
+
+    // Re-render scene list to update badge display
+    if (typeof renderSceneList === 'function') {
+        renderSceneList();
+    }
 };
 
 /**
