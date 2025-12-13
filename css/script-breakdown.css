@@ -16,15 +16,16 @@
             --error: #ff6b6b;
             --warning: #e8a87c;
             
-            --int-day: rgba(255, 255, 255, 0.15);
+            /* Scene type color coding per spec: INT/DAY=White, EXT/DAY=Yellow, INT/NIGHT=Blue, EXT/NIGHT=Green */
+            --int-day: rgba(255, 255, 255, 0.12);
             --ext-day: rgba(251, 191, 36, 0.15);
-            --int-night: rgba(52, 211, 153, 0.15);
-            --ext-night: rgba(56, 189, 248, 0.15);
-            
-            --int-day-border: rgba(255, 255, 255, 0.3);
-            --ext-day-border: rgba(251, 191, 36, 0.4);
-            --int-night-border: rgba(52, 211, 153, 0.4);
-            --ext-night-border: rgba(56, 189, 248, 0.4);
+            --int-night: rgba(56, 189, 248, 0.15);
+            --ext-night: rgba(52, 211, 153, 0.15);
+
+            --int-day-border: rgba(255, 255, 255, 0.35);
+            --ext-day-border: rgba(251, 191, 36, 0.45);
+            --int-night-border: rgba(56, 189, 248, 0.45);
+            --ext-night-border: rgba(52, 211, 153, 0.45);
         }
 
         ::-webkit-scrollbar { width: 8px; height: 8px; }
