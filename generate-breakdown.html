@@ -61,8 +61,38 @@
 
         .header-left {
             display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px;
+        }
+
+        .header-title-row {
+            display: flex;
             align-items: center;
             gap: 16px;
+        }
+
+        .breadcrumb-nav {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .breadcrumb-nav .back-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.8em;
+            transition: color 0.2s;
+        }
+
+        .breadcrumb-nav .back-link:hover {
+            color: var(--accent-gold);
+        }
+
+        .breadcrumb-separator {
+            color: var(--text-muted);
+            opacity: 0.5;
+            font-size: 0.8em;
         }
 
         .back-link {
@@ -628,9 +658,15 @@
         <!-- Header -->
         <header class="breakdown-header">
             <div class="header-left">
-                <a href="script-breakdown.html" class="back-link">Back to Breakdown</a>
-                <h1>MASTER BREAKDOWN</h1>
-                <span class="project-name" id="projectName"></span>
+                <nav class="breadcrumb-nav">
+                    <a href="dashboard.html" class="back-link">← Dashboard</a>
+                    <span class="breadcrumb-separator">/</span>
+                    <a href="script-breakdown.html" class="back-link">Back to Script</a>
+                </nav>
+                <div class="header-title-row">
+                    <h1>MASTER BREAKDOWN</h1>
+                    <span class="project-name" id="projectName"></span>
+                </div>
             </div>
             <div class="header-right">
                 <div class="export-dropdown">
