@@ -6713,7 +6713,330 @@
 /* Visual Timeline */
 .character-timeline {
     margin-bottom: 32px;
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   SWIMLANE TIMELINE - Gantt Chart Style
+   ═══════════════════════════════════════════════════════════════ */
+
+.timeline-view-container {
+    padding: 16px;
+}
+
+.timeline-view-container .timeline-header {
+    margin-bottom: 16px;
+}
+
+.timeline-view-container .timeline-title {
+    font-size: 0.85em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-primary);
+    margin: 0 0 4px 0;
+}
+
+.timeline-view-container .timeline-subtitle {
+    font-size: 0.75em;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+.timeline-scroll {
+    overflow-x: auto;
+    padding-bottom: 8px;
+    position: relative;
+}
+
+.timeline-scroll::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 8px;
+    width: 40px;
+    background: linear-gradient(to right, transparent, rgba(0, 0, 0, 0.3));
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.timeline-scroll.has-overflow::after {
+    opacity: 1;
+}
+
+/* Timeline Table */
+.timeline-table {
+    border-collapse: collapse;
+    width: max-content;
+    min-width: 100%;
+}
+
+.timeline-table th,
+.timeline-table td {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0;
+    text-align: center;
+    vertical-align: middle;
+}
+
+/* Row Labels (left column - sticky) */
+.timeline-table .row-label {
+    position: sticky;
+    left: 0;
+    background: rgba(30, 30, 30, 1);
+    z-index: 10;
+    min-width: 120px;
+    max-width: 160px;
+    padding: 8px 12px;
+    text-align: left;
+    border-right: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Scene Number Row */
+.scene-row th.scene-cell {
+    padding: 8px 4px;
+    font-size: 0.75em;
+    font-weight: 600;
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.05);
+    cursor: pointer;
+    transition: background 0.2s;
+    min-width: 50px;
+}
+
+.scene-row th.scene-cell:hover {
+    background: rgba(255, 215, 0, 0.2);
+    color: var(--accent-gold);
+}
+
+/* Story Day Row */
+.day-row th.day-cell {
+    padding: 4px;
+    font-size: 0.65em;
+    font-weight: 500;
+    color: var(--text-muted);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+/* Look Rows */
+.look-row {
+    height: 48px;
+}
+
+.look-row .row-label {
+    background: rgba(30, 30, 30, 1);
+}
+
+.look-label {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.look-label .look-name {
+    font-size: 0.8em;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.look-label .look-name.undefined {
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.look-label .look-subtitle {
+    font-size: 0.7em;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Bar Cells */
+.look-row .bar-cell {
+    padding: 4px 2px;
+    background: transparent;
+}
+
+.look-row .bar-cell.active {
+    background: transparent;
+}
+
+.look-row .look-bar {
+    height: 24px;
+    background: var(--look-colour, #4a90d9);
+    border-radius: 3px;
+    opacity: 0.85;
+    margin: 0 1px;
+}
+
+/* Hover states for look rows */
+.look-row:hover .look-bar {
+    opacity: 1;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.3);
+}
+
+/* Undefined look row styling */
+.look-row.undefined-look {
+    opacity: 0.6;
+}
+
+.look-row.undefined-look .look-bar {
+    background: repeating-linear-gradient(
+        45deg,
+        #666,
+        #666 4px,
+        #555 4px,
+        #555 8px
+    );
+}
+
+/* Section Divider */
+.section-divider td {
+    height: 16px;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+/* Event Rows */
+.event-row {
+    height: 44px;
+}
+
+.event-row .row-label {
+    background: rgba(30, 30, 30, 1);
+}
+
+.event-label {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.event-label .event-type {
+    font-size: 0.6em;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+}
+
+.event-label .event-name {
+    font-size: 0.8em;
+    font-weight: 500;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.event-row .bar-cell {
+    padding: 4px 2px;
+}
+
+.event-row .event-bar {
+    height: 20px;
+    background: rgba(192, 57, 43, 0.7);
+    border-radius: 2px;
+    margin: 0 1px;
+}
+
+/* Event progression stages - different opacity */
+.event-row .bar-cell.stage-0 .event-bar {
+    background: rgba(192, 57, 43, 0.9);  /* Fresh - darkest */
+}
+
+.event-row .bar-cell.stage-1 .event-bar {
+    background: rgba(192, 57, 43, 0.65);  /* Healing - medium */
+}
+
+.event-row .bar-cell.stage-2 .event-bar {
+    background: rgba(192, 57, 43, 0.4);  /* Scarred - lightest */
+}
+
+/* Hover states for event rows */
+.event-row:hover .event-bar {
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.3);
+}
+
+/* No events message */
+.timeline-table .no-events .empty-cell {
+    font-size: 0.8em;
+    color: var(--text-muted);
+    font-style: italic;
+    text-align: left;
+    padding: 12px;
+}
+
+/* Column highlight on hover */
+.timeline-table .column-highlight {
+    background: rgba(255, 215, 0, 0.1) !important;
+}
+
+/* Legend */
+.timeline-legend {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.75em;
+    color: var(--text-muted);
+}
+
+.legend-bar {
+    display: inline-block;
+    width: 24px;
+    height: 12px;
+    border-radius: 2px;
+}
+
+.legend-bar.look-bar {
+    background: #4a90d9;
+}
+
+.legend-bar.event-bar {
+    background: rgba(192, 57, 43, 0.7);
+}
+
+.legend-hint {
+    margin-left: auto;
+    font-size: 0.7em;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+/* Empty state */
+.timeline-empty {
+    padding: 40px;
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.timeline-empty p {
+    margin: 0 0 8px 0;
+}
+
+.timeline-empty .hint {
+    font-size: 0.85em;
+    opacity: 0.7;
+}
+
+/* ═══════════════════════════════════════════════════════════════ */
 
 .timeline-container {
     background: rgba(28, 25, 22, 0.4);
