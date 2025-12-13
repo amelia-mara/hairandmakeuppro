@@ -13554,6 +13554,63 @@
     cursor: not-allowed;
 }
 
+/* Character Header Actions */
+.character-header-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+/* Remove Character Button */
+.remove-character-btn {
+    padding: 4px 8px;
+    background: transparent;
+    border: 1px solid rgba(255, 100, 100, 0.3);
+    border-radius: 4px;
+    color: var(--text-muted);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    line-height: 1;
+}
+
+.remove-character-btn:hover {
+    background: rgba(255, 100, 100, 0.15);
+    border-color: #ff6b6b;
+    color: #ff6b6b;
+}
+
+/* Add Character to Scene Button */
+.add-character-btn {
+    width: 100%;
+    padding: 10px 16px;
+    margin-top: 12px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px dashed rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    color: var(--text-muted);
+    font-size: 0.85em;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.add-character-btn:hover {
+    background: rgba(212, 175, 122, 0.1);
+    border-color: var(--accent-gold);
+    border-style: solid;
+    color: var(--accent-gold);
+}
+
+/* Character Count Badge */
+.section-header .character-count {
+    background: rgba(212, 175, 122, 0.2);
+    color: var(--accent-gold);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.75em;
+    font-weight: 600;
+}
+
 /* Continuity Sections */
 .continuity-section {
     margin-bottom: 16px;

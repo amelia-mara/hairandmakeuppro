@@ -323,26 +323,22 @@ function renderSceneBreakdown(sceneIndex) {
             <!-- CHARACTER CONTINUITY SECTION -->
             <div class="breakdown-section character-section">
                 <div class="section-header">
-                    <h4 class="section-title">CHARACTER CONTINUITY</h4>
-                    ${characters.length === 0 ? `
-                        <button class="small-btn detect-chars-btn" onclick="detectSceneCharacters(${sceneIndex})">
-                            🔍 Detect Characters
-                        </button>
-                    ` : ''}
+                    <h4 class="section-title">CHARACTERS IN SCENE</h4>
+                    <span class="character-count">${characters.length}</span>
                 </div>
                 ${characters.length > 0 ?
                     characters.map(char => renderCharacterFields(char, sceneIndex, scene)).join('')
                     : `<div class="no-characters">
-                        <div>No characters from masterContext found in this scene.</div>
-                        <div style="font-size: 0.9em; margin-top: 8px; opacity: 0.7;">
-                            Master characters: ${Object.keys(window.masterContext?.characters || {}).length > 0
-                                ? Object.keys(window.masterContext.characters).join(', ')
-                                : 'None in masterContext'}
-                        </div>
-                        <div style="font-size: 0.85em; margin-top: 4px; opacity: 0.6;">
-                            Scene preview: ${escapeHtml((scene.content || scene.text || '')?.substring(0, 100) || 'No content')}...
-                        </div>
+                        <div>No characters detected in this scene.</div>
+                        <button class="small-btn detect-chars-btn" onclick="detectSceneCharacters(${sceneIndex})" style="margin-top: 8px;">
+                            🔍 Auto-Detect Characters
+                        </button>
                     </div>`}
+
+                <!-- Add Character to Scene Button -->
+                <button class="add-character-btn" onclick="openAddCharacterModal(${sceneIndex})">
+                    + Add Character to Scene
+                </button>
             </div>
 
             <!-- CONTINUITY EVENTS SECTION -->
@@ -428,15 +424,22 @@ function renderCharacterFields(character, sceneIndex, scene) {
 
     return `
         <div class="character-profile" data-character="${escapeHtml(character)}">
-            <!-- Header with character name and copy button -->
+            <!-- Header with character name, copy button, and remove button -->
             <div class="character-profile-header">
                 <div class="character-name">${escapeHtml(character)}</div>
-                <button class="copy-previous-btn"
-                        onclick="copyPreviousAppearance('${escapeHtml(character).replace(/'/g, "\\'")}', ${sceneIndex})"
-                        ${!prevScene ? 'disabled' : ''}
-                        title="${prevScene ? `Copy from Scene ${prevScene + 1}` : 'No previous appearance'}">
-                    ${prevScene !== null ? '↓ Copy Previous' : 'First Appearance'}
-                </button>
+                <div class="character-header-actions">
+                    <button class="copy-previous-btn"
+                            onclick="copyPreviousAppearance('${escapeHtml(character).replace(/'/g, "\\'")}', ${sceneIndex})"
+                            ${!prevScene ? 'disabled' : ''}
+                            title="${prevScene ? `Copy from Scene ${prevScene + 1}` : 'No previous appearance'}">
+                        ${prevScene !== null ? '↓ Copy' : '1st'}
+                    </button>
+                    <button class="remove-character-btn"
+                            onclick="removeCharacterFromScene(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}')"
+                            title="Remove ${escapeHtml(character)} from this scene">
+                        ✕
+                    </button>
+                </div>
             </div>
 
             <!-- ENTERS WITH -->
@@ -1497,6 +1500,281 @@ window.updateSceneField = function(sceneIndex, field, value) {
     state.scenes[sceneIndex][field] = value;
     saveToLocalStorage();
 };
+
+// ============================================================================
+// CHARACTER MANAGEMENT - Add/Remove Characters from Scene
+// ============================================================================
+
+/**
+ * Remove a character from a scene
+ */
+window.removeCharacterFromScene = function(sceneIndex, characterName) {
+    const scene = state.scenes[sceneIndex];
+    if (!scene || !characterName) return;
+
+    // Confirm removal
+    if (!confirm(`Remove ${characterName} from Scene ${scene.number || sceneIndex + 1}?`)) {
+        return;
+    }
+
+    // Remove from scene breakdown cast
+    const breakdown = state.sceneBreakdowns[sceneIndex];
+    if (breakdown?.cast) {
+        breakdown.cast = breakdown.cast.filter(c => c !== characterName);
+    }
+
+    // Remove character state data for this scene
+    if (state.characterStates[sceneIndex]?.[characterName]) {
+        delete state.characterStates[sceneIndex][characterName];
+    }
+
+    // Save and refresh
+    saveToLocalStorage();
+    renderBreakdownPanel();
+
+    // Refresh scene list if available
+    if (typeof renderSceneList === 'function') {
+        renderSceneList();
+    }
+
+    showStoryDayToast(`${characterName} removed from scene`);
+};
+
+/**
+ * Open modal to add a character to a scene
+ */
+window.openAddCharacterModal = function(sceneIndex) {
+    const scene = state.scenes[sceneIndex];
+    const confirmedCharacters = Array.from(state.confirmedCharacters || []);
+
+    // Get characters already in this scene
+    const breakdown = state.sceneBreakdowns[sceneIndex] || {};
+    const currentCharacters = breakdown.cast || [];
+
+    // Get characters NOT already in this scene
+    const availableCharacters = confirmedCharacters.filter(c => !currentCharacters.includes(c));
+
+    if (availableCharacters.length === 0 && confirmedCharacters.length === 0) {
+        alert('No confirmed characters found. Import a script first to detect characters.');
+        return;
+    }
+
+    if (availableCharacters.length === 0) {
+        alert('All confirmed characters are already in this scene.');
+        return;
+    }
+
+    // Create modal HTML
+    const modalHTML = `
+        <div class="add-character-modal-overlay" onclick="closeAddCharacterModal()">
+            <div class="add-character-modal" onclick="event.stopPropagation()">
+                <div class="modal-header">
+                    <h3>Add Character to Scene ${scene.number || sceneIndex + 1}</h3>
+                    <button class="modal-close-btn" onclick="closeAddCharacterModal()">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Select character:</label>
+                        <select id="add-character-select">
+                            <option value="">-- Select Character --</option>
+                            ${availableCharacters.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('')}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="modal-btn secondary" onclick="closeAddCharacterModal()">Cancel</button>
+                    <button class="modal-btn primary" onclick="confirmAddCharacterToScene(${sceneIndex})">Add Character</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Add modal styles if not already present
+    addCharacterModalStyles();
+
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+};
+
+/**
+ * Close add character modal
+ */
+window.closeAddCharacterModal = function() {
+    const modal = document.querySelector('.add-character-modal-overlay');
+    if (modal) modal.remove();
+};
+
+/**
+ * Confirm adding character to scene
+ */
+window.confirmAddCharacterToScene = function(sceneIndex) {
+    const select = document.getElementById('add-character-select');
+    const characterName = select?.value;
+
+    if (!characterName) {
+        alert('Please select a character');
+        return;
+    }
+
+    // Initialize breakdown if needed
+    if (!state.sceneBreakdowns[sceneIndex]) {
+        state.sceneBreakdowns[sceneIndex] = {};
+    }
+
+    const breakdown = state.sceneBreakdowns[sceneIndex];
+
+    // Add to cast
+    if (!breakdown.cast) breakdown.cast = [];
+    if (!breakdown.cast.includes(characterName)) {
+        breakdown.cast.push(characterName);
+    }
+
+    // Initialize character state for this scene
+    if (!state.characterStates[sceneIndex]) {
+        state.characterStates[sceneIndex] = {};
+    }
+    if (!state.characterStates[sceneIndex][characterName]) {
+        state.characterStates[sceneIndex][characterName] = {
+            enterHair: '',
+            enterMakeup: '',
+            enterWardrobe: '',
+            changeStatus: 'no-change'
+        };
+    }
+
+    // Close modal and refresh
+    closeAddCharacterModal();
+    saveToLocalStorage();
+    renderBreakdownPanel();
+
+    // Refresh scene list if available
+    if (typeof renderSceneList === 'function') {
+        renderSceneList();
+    }
+
+    showStoryDayToast(`${characterName} added to scene`);
+};
+
+/**
+ * Add modal styles for character management
+ */
+function addCharacterModalStyles() {
+    if (document.getElementById('character-modal-styles')) return;
+
+    const styles = document.createElement('style');
+    styles.id = 'character-modal-styles';
+    styles.textContent = `
+        .add-character-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+
+        .add-character-modal {
+            background: var(--bg-secondary, #1e1e2e);
+            border-radius: 12px;
+            width: 90%;
+            max-width: 400px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .add-character-modal .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            background: var(--bg-tertiary, #252536);
+            border-bottom: 1px solid var(--border-color, #3d3d5c);
+        }
+
+        .add-character-modal .modal-header h3 {
+            margin: 0;
+            font-size: 1em;
+            color: var(--text-primary, #e4e4e7);
+        }
+
+        .add-character-modal .modal-close-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary, #a1a1aa);
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .add-character-modal .modal-body {
+            padding: 20px;
+        }
+
+        .add-character-modal .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .add-character-modal .form-group label {
+            font-size: 0.85em;
+            color: var(--text-secondary, #a1a1aa);
+        }
+
+        .add-character-modal select {
+            padding: 10px 12px;
+            background: var(--bg-primary, #13131a);
+            border: 1px solid var(--border-color, #3d3d5c);
+            border-radius: 6px;
+            color: var(--text-primary, #e4e4e7);
+            font-size: 0.95em;
+        }
+
+        .add-character-modal .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            padding: 16px 20px;
+            background: var(--bg-tertiary, #252536);
+            border-top: 1px solid var(--border-color, #3d3d5c);
+        }
+
+        .add-character-modal .modal-btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .add-character-modal .modal-btn.secondary {
+            background: transparent;
+            border: 1px solid var(--border-color, #3d3d5c);
+            color: var(--text-secondary, #a1a1aa);
+        }
+
+        .add-character-modal .modal-btn.secondary:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .add-character-modal .modal-btn.primary {
+            background: var(--accent-gold, #d4af7a);
+            border: none;
+            color: #000;
+            font-weight: 500;
+        }
+
+        .add-character-modal .modal-btn.primary:hover {
+            background: #c9a066;
+        }
+    `;
+
+    document.head.appendChild(styles);
+}
 
 /**
  * Update character field
