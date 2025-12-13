@@ -700,8 +700,17 @@ window.performCharacterMerge = function() {
     refreshMergeCharacterList();
     populateCharacterConfirmationList();
 
+    // Refresh the scene list to show updated character names
+    renderSceneList();
+
     showToast(`Merged ${charsToMerge.length} characters into "${mergedChar.name}"`, 'success');
     console.log('Merged characters:', mergedNames, '→', primaryCharName);
+
+    // Run audit to verify no orphans remain
+    const orphans = auditCharacterReferences();
+    if (Object.values(orphans).some(arr => arr.length > 0)) {
+        console.warn('Warning: Found orphaned character references after merge:', orphans);
+    }
 };
 
 /**
@@ -992,9 +1001,19 @@ window.confirmCharactersAndContinue = async function() {
         renderCharacterTabs();
         renderCharacterTabPanels();
 
+        // Render the scene list to show updated character counts
+        console.log('Rendering scene list...');
+        renderSceneList();
+
         // Render the script display with highlights
         console.log('Rendering script...');
         renderScript();
+
+        // Run audit to verify no orphans
+        const orphans = auditCharacterReferences();
+        if (Object.values(orphans).some(arr => arr.length > 0)) {
+            console.warn('Warning: Found orphaned character references after confirmation:', orphans);
+        }
 
         // Save project
         saveProject();
@@ -1257,17 +1276,168 @@ function cleanupAllSceneCharacterData(selectedNames, mergeMapping) {
     });
 }
 
+/**
+ * Audit all character references to find orphaned names
+ * Used for validation after merge operations
+ * @returns {Object} Object with arrays of orphaned references by location
+ */
+export function auditCharacterReferences() {
+    // Get valid character names from both confirmed and detected
+    const validCharacters = new Set();
+
+    if (state.confirmedCharacters instanceof Set) {
+        state.confirmedCharacters.forEach(name => validCharacters.add(name));
+    } else if (Array.isArray(state.confirmedCharacters)) {
+        state.confirmedCharacters.forEach(name => validCharacters.add(name));
+    }
+
+    // Also include detected characters if not yet confirmed
+    if (state.detectedCharacters && Array.isArray(state.detectedCharacters)) {
+        state.detectedCharacters
+            .filter(c => c.selected)
+            .forEach(c => validCharacters.add(c.name));
+    }
+
+    const orphans = {
+        inScenes: [],
+        inBreakdowns: [],
+        inTags: [],
+        inCharacterStates: [],
+        inCharacterLooks: [],
+        inContinuityEvents: [],
+        inCastProfiles: [],
+        inCharacterTabs: []
+    };
+
+    // Check state.scenes
+    if (state.scenes && Array.isArray(state.scenes)) {
+        state.scenes.forEach((scene, index) => {
+            ['castMembers', 'characters_present'].forEach(field => {
+                const chars = scene[field];
+                if (Array.isArray(chars)) {
+                    chars.forEach(char => {
+                        if (!validCharacters.has(char)) {
+                            orphans.inScenes.push({ scene: index, field, character: char });
+                        }
+                    });
+                }
+            });
+            if (scene.aiData?.characters_present) {
+                scene.aiData.characters_present.forEach(char => {
+                    if (!validCharacters.has(char)) {
+                        orphans.inScenes.push({ scene: index, field: 'aiData.characters_present', character: char });
+                    }
+                });
+            }
+        });
+    }
+
+    // Check state.sceneBreakdowns
+    if (state.sceneBreakdowns) {
+        Object.keys(state.sceneBreakdowns).forEach(sceneIdx => {
+            const breakdown = state.sceneBreakdowns[sceneIdx];
+            if (breakdown?.cast && Array.isArray(breakdown.cast)) {
+                breakdown.cast.forEach(char => {
+                    if (!validCharacters.has(char)) {
+                        orphans.inBreakdowns.push({ scene: sceneIdx, character: char });
+                    }
+                });
+            }
+        });
+    }
+
+    // Check state.scriptTags
+    if (state.scriptTags) {
+        Object.keys(state.scriptTags).forEach(sceneIdx => {
+            const tags = state.scriptTags[sceneIdx];
+            if (Array.isArray(tags)) {
+                tags.forEach((tag, tagIdx) => {
+                    if (tag.character && !validCharacters.has(tag.character)) {
+                        orphans.inTags.push({ scene: sceneIdx, tagIndex: tagIdx, character: tag.character });
+                    }
+                    if (tag.linkedCharacter && !validCharacters.has(tag.linkedCharacter)) {
+                        orphans.inTags.push({ scene: sceneIdx, tagIndex: tagIdx, character: tag.linkedCharacter, field: 'linkedCharacter' });
+                    }
+                });
+            }
+        });
+    }
+
+    // Check state.characterStates
+    if (state.characterStates) {
+        Object.keys(state.characterStates).forEach(sceneIdx => {
+            const sceneStates = state.characterStates[sceneIdx];
+            if (sceneStates) {
+                Object.keys(sceneStates).forEach(char => {
+                    if (!validCharacters.has(char)) {
+                        orphans.inCharacterStates.push({ scene: sceneIdx, character: char });
+                    }
+                });
+            }
+        });
+    }
+
+    // Check state.characterLooks
+    if (state.characterLooks) {
+        Object.keys(state.characterLooks).forEach(char => {
+            if (!validCharacters.has(char)) {
+                orphans.inCharacterLooks.push({ character: char });
+            }
+        });
+    }
+
+    // Check state.continuityEvents
+    if (state.continuityEvents) {
+        Object.keys(state.continuityEvents).forEach(char => {
+            if (!validCharacters.has(char)) {
+                orphans.inContinuityEvents.push({ character: char });
+            }
+        });
+    }
+
+    // Check state.castProfiles
+    if (state.castProfiles) {
+        Object.keys(state.castProfiles).forEach(char => {
+            if (!validCharacters.has(char)) {
+                orphans.inCastProfiles.push({ character: char });
+            }
+        });
+    }
+
+    // Check state.characterTabs
+    if (state.characterTabs && Array.isArray(state.characterTabs)) {
+        state.characterTabs.forEach(char => {
+            if (!validCharacters.has(char)) {
+                orphans.inCharacterTabs.push({ character: char });
+            }
+        });
+    }
+
+    // Log summary
+    const totalOrphans = Object.values(orphans).reduce((sum, arr) => sum + arr.length, 0);
+    if (totalOrphans > 0) {
+        console.log(`Audit found ${totalOrphans} orphaned character references:`, orphans);
+    } else {
+        console.log('Audit complete: No orphaned character references found');
+    }
+
+    return orphans;
+}
+
 // ============================================================================
 // EXPOSE GLOBAL FUNCTIONS
 // ============================================================================
 
 window.showCharacterConfirmationModal = showCharacterConfirmationModal;
 window.closeCharacterConfirmModal = closeCharacterConfirmModal;
+window.auditCharacterReferences = auditCharacterReferences;
 
 export default {
     showCharacterConfirmationModal,
     closeCharacterConfirmModal,
-    normalizeCharacterName
+    normalizeCharacterName,
+    auditCharacterReferences
 };
 
+// Note: auditCharacterReferences is already exported inline
 export { normalizeCharacterName };
