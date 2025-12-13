@@ -261,115 +261,62 @@ function renderSceneBreakdown(sceneIndex) {
                 </div>
             ` : ''}
 
-            <!-- TIMELINE SECTION - Enhanced -->
+            <!-- TIMELINE SECTION - Compact -->
             <div class="breakdown-section timeline-section">
-                <div class="section-header-row">
-                    <h4 class="section-title">TIMELINE</h4>
-                </div>
+                <h4 class="section-title">TIMELINE</h4>
 
-                <!-- Detection Hint (shows what triggered auto-detection) -->
+                <!-- Detection Hint (compact) -->
                 ${scene.storyDayCue ? `
-                    <div class="detection-hint">
-                        💡 Detected: "${escapeHtml(scene.storyDayCue)}" (${scene.storyDayConfidence || 'auto'} confidence)
+                    <div class="detection-hint-compact">
+                        💡 "${escapeHtml(scene.storyDayCue)}" (${scene.storyDayConfidence || 'auto'})
                     </div>
                 ` : ''}
 
-                <!-- Story Day Row with Enhanced Controls -->
-                <div class="field-row story-day-row">
-                    <div class="field-group story-day-group">
-                        <label>Story Day</label>
-                        <div class="story-day-input-group">
-                            ${renderStoryDayDropdown(sceneIndex, storyDay)}
-                            <input type="text"
-                                   id="story-day-input-${sceneIndex}"
-                                   class="story-day-text-input"
-                                   value="${escapeHtml(storyDay)}"
-                                   placeholder="Day 1, Day 2..."
-                                   onchange="updateStoryDayFromInput(${sceneIndex}, this.value)"
-                                   style="${getExistingStoryDays().length > 0 ? 'display: none;' : ''}">
-                        </div>
+                <!-- Row 1: Story Day + Time + Note -->
+                <div class="timeline-row-1">
+                    <div class="timeline-field story-day-field">
+                        <label>Day</label>
+                        ${renderStoryDayDropdown(sceneIndex, storyDay)}
                     </div>
-                    <div class="field-group">
-                        <label>Time of Day</label>
-                        <select onchange="updateSceneField(${sceneIndex}, 'storyTimeOfDay', this.value)">
-                            <option value="">Select...</option>
+                    <div class="timeline-field time-field">
+                        <label>Time</label>
+                        <select class="timeline-select" onchange="updateSceneField(${sceneIndex}, 'storyTimeOfDay', this.value)">
+                            <option value="">--</option>
                             <option value="Dawn" ${(scene.storyTimeOfDay || timeOfDay) === 'Dawn' ? 'selected' : ''}>Dawn</option>
-                            <option value="Morning" ${(scene.storyTimeOfDay || timeOfDay) === 'Morning' ? 'selected' : ''}>Morning</option>
-                            <option value="Afternoon" ${(scene.storyTimeOfDay || timeOfDay) === 'Afternoon' ? 'selected' : ''}>Afternoon</option>
-                            <option value="Evening" ${(scene.storyTimeOfDay || timeOfDay) === 'Evening' ? 'selected' : ''}>Evening</option>
+                            <option value="Morning" ${(scene.storyTimeOfDay || timeOfDay) === 'Morning' ? 'selected' : ''}>Morn</option>
+                            <option value="Afternoon" ${(scene.storyTimeOfDay || timeOfDay) === 'Afternoon' ? 'selected' : ''}>Aftn</option>
+                            <option value="Evening" ${(scene.storyTimeOfDay || timeOfDay) === 'Evening' ? 'selected' : ''}>Eve</option>
                             <option value="Night" ${(scene.storyTimeOfDay || timeOfDay) === 'Night' ? 'selected' : ''}>Night</option>
                         </select>
                     </div>
-                </div>
-
-                <!-- Story Day Note (for time jumps/flashbacks) -->
-                <div class="field-row">
-                    <div class="field-group" style="flex: 1;">
-                        <label>Note (time jump/flashback)</label>
+                    <div class="timeline-field note-field">
+                        <label>Note</label>
                         <input type="text"
-                               id="story-day-note-${sceneIndex}"
+                               class="timeline-input"
                                value="${escapeHtml(scene.storyDayNote || '')}"
-                               placeholder="e.g., 3 weeks later, flashback"
+                               placeholder="e.g., 3 weeks later"
                                onchange="updateStoryDayNote(${sceneIndex}, this.value)">
                     </div>
                 </div>
 
-                <!-- Story Day Action Buttons -->
-                <div class="field-row story-day-actions">
-                    <button class="small-btn copy-forward-btn"
-                            onclick="copyStoryDayToFollowing(${sceneIndex})"
-                            title="Apply this story day to following scenes until a day change">
-                        Copy to Next →
-                    </button>
-                    <button class="small-btn copy-prev-btn"
-                            onclick="copyStoryDayFromPrevious(${sceneIndex})"
-                            title="Copy story day from previous scene"
-                            ${sceneIndex === 0 ? 'disabled' : ''}>
-                        ← Copy from Previous
-                    </button>
-                    ${scene.storyDayConfirmed ? `
-                        <span class="confirmed-badge" title="Story day confirmed">✓ Confirmed</span>
-                    ` : `
-                        <button class="small-btn confirm-btn"
-                                onclick="confirmStoryDay(${sceneIndex})"
-                                title="Mark this story day as confirmed">
-                            ✓ Confirm
-                        </button>
-                    `}
-                </div>
-
-                <!-- Scene Type Flags Row -->
-                <div class="field-row special-time-flags">
-                    <label class="checkbox-field">
-                        <input type="checkbox"
-                               ${scene.isFlashback ? 'checked' : ''}
-                               onchange="updateSceneField(${sceneIndex}, 'isFlashback', this.checked)">
-                        Flashback
-                    </label>
-                    <label class="checkbox-field">
-                        <input type="checkbox"
-                               ${scene.isFlashForward ? 'checked' : ''}
-                               onchange="updateSceneField(${sceneIndex}, 'isFlashForward', this.checked)">
-                        Flash Forward
-                    </label>
-                    <label class="checkbox-field">
-                        <input type="checkbox"
-                               ${scene.isTimeJump ? 'checked' : ''}
-                               onchange="updateSceneField(${sceneIndex}, 'isTimeJump', this.checked)">
-                        Time Jump
-                    </label>
-                    <label class="checkbox-field">
-                        <input type="checkbox"
-                               ${scene.isDream ? 'checked' : ''}
-                               onchange="updateSceneField(${sceneIndex}, 'isDream', this.checked)">
-                        Dream
-                    </label>
-                    <label class="checkbox-field">
-                        <input type="checkbox"
-                               ${scene.isMontage ? 'checked' : ''}
-                               onchange="updateSceneField(${sceneIndex}, 'isMontage', this.checked)">
-                        Montage
-                    </label>
+                <!-- Row 2: Buttons + Scene Type Flags -->
+                <div class="timeline-row-2">
+                    <div class="timeline-buttons">
+                        <button class="timeline-btn" onclick="copyStoryDayFromPrevious(${sceneIndex})" title="Copy from previous" ${sceneIndex === 0 ? 'disabled' : ''}>←</button>
+                        <button class="timeline-btn" onclick="copyStoryDayToFollowing(${sceneIndex})" title="Copy to next">→</button>
+                        ${scene.storyDayConfirmed ? `
+                            <span class="timeline-confirmed" title="Confirmed">✓</span>
+                        ` : `
+                            <button class="timeline-btn confirm" onclick="confirmStoryDay(${sceneIndex})" title="Confirm">✓</button>
+                        `}
+                    </div>
+                    <div class="timeline-flags">
+                        <label title="Flashback"><input type="checkbox" ${scene.isFlashback ? 'checked' : ''} onchange="updateSceneField(${sceneIndex}, 'isFlashback', this.checked)">Fb</label>
+                        <label title="Flash Forward"><input type="checkbox" ${scene.isFlashForward ? 'checked' : ''} onchange="updateSceneField(${sceneIndex}, 'isFlashForward', this.checked)">Ff</label>
+                        <label title="Time Jump"><input type="checkbox" ${scene.isTimeJump ? 'checked' : ''} onchange="updateSceneField(${sceneIndex}, 'isTimeJump', this.checked)">Tj</label>
+                        <label title="Dream"><input type="checkbox" ${scene.isDream ? 'checked' : ''} onchange="updateSceneField(${sceneIndex}, 'isDream', this.checked)">Dr</label>
+                        <label title="Montage"><input type="checkbox" ${scene.isMontage ? 'checked' : ''} onchange="updateSceneField(${sceneIndex}, 'isMontage', this.checked)">Mo</label>
+                    </div>
                 </div>
             </div>
 
