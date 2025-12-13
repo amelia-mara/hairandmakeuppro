@@ -353,9 +353,22 @@ export function selectScene(index) {
     // Scroll script to scene
     scrollToScene(index);
 
+    // Scroll breakdown panel to top so user can start working on new scene
+    scrollBreakdownPanelToTop();
+
     // Auto-save (debounced)
     if (state.autoSaveEnabled) {
         debouncedAutoSave();
+    }
+}
+
+/**
+ * Scroll the breakdown panel to top when navigating to a new scene
+ */
+function scrollBreakdownPanelToTop() {
+    const panel = document.getElementById('breakdown-panel');
+    if (panel) {
+        panel.scrollTo({ top: 0, behavior: 'smooth' });
     }
 }
 
