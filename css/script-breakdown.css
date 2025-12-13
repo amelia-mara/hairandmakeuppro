@@ -293,87 +293,71 @@
             padding: 14px;
         }
         
-        .scene-header { display: flex; align-items: flex-start; gap: 12px; }
-        
-        .scene-number {
-            width: 32px;
-            height: 32px;
-            background: linear-gradient(135deg, var(--accent-gold), #b89651);
-            color: #0a0908;
-            border-radius: 8px;
+        /* Scene Card Header - Clean Design */
+        .scene-header {
             display: flex;
             align-items: center;
-            justify-content: center;
+            gap: 8px;
+        }
+
+        .scene-number {
             font-weight: 700;
-            font-size: 0.875em;
-            flex-shrink: 0;
+            font-size: 0.9em;
+            color: var(--accent-gold);
+            min-width: 20px;
         }
-        
-        .scene-item.active .scene-number {
-            width: 36px;
-            height: 36px;
-            font-size: 0.9375em;
+
+        .scene-location {
+            flex: 1;
+            font-size: 0.85em;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-weight: 500;
         }
-        
-        .scene-info { flex: 1; min-width: 0; }
-        .scene-heading { 
-            font-size: 0.8125em; 
-            font-weight: 600; 
-            line-height: 1.4;
-            margin-bottom: 4px;
-            word-break: break-word;
-        }
-        
-        .scene-meta {
-            display: flex;
-            gap: 6px;
-            font-size: 0.6875em;
-            color: var(--text-muted);
-        }
-        
-        .scene-type-indicator {
-            font-size: 0.625em;
-            padding: 2px 6px;
-            border-radius: 4px;
+
+        .scene-time-badge {
+            font-size: 0.65em;
             font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .scene-type-indicator.int-day { background: var(--int-day); border: 1px solid var(--int-day-border); color: rgba(255, 255, 255, 0.9); }
-        .scene-type-indicator.ext-day { background: var(--ext-day); border: 1px solid var(--ext-day-border); color: #0a0908; }
-        .scene-type-indicator.int-night { background: var(--int-night); border: 1px solid var(--int-night-border); color: #0a0908; }
-        .scene-type-indicator.ext-night { background: var(--ext-night); border: 1px solid var(--ext-night-border); color: #0a0908; }
-
-        /* Story Day Badge */
-        .story-day-badge {
-            font-size: 0.625em;
+            color: var(--text-muted);
             padding: 2px 6px;
-            border-radius: 4px;
-            background: rgba(129, 140, 248, 0.2);
-            border: 1px solid rgba(129, 140, 248, 0.4);
-            color: #a5b4fc;
-            font-weight: 500;
-            white-space: nowrap;
-            margin-left: 4px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 3px;
+            letter-spacing: 0.03em;
         }
 
-        .story-day-badge.high {
-            background: rgba(16, 185, 129, 0.2);
-            border-color: rgba(16, 185, 129, 0.4);
-            color: #6ee7b7;
+        .char-count {
+            font-size: 0.7em;
+            font-weight: 600;
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2px 6px;
+            border-radius: 10px;
+            min-width: 18px;
+            text-align: center;
         }
 
-        .story-day-badge.medium {
-            background: rgba(251, 191, 36, 0.2);
-            border-color: rgba(251, 191, 36, 0.4);
-            color: #fcd34d;
+        /* Scene Info Line - "Day X · Time · INT/EXT" */
+        .scene-info-line {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            padding-left: 28px;
+            margin-top: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
-        .story-day-badge.low {
-            background: rgba(156, 163, 175, 0.2);
-            border-color: rgba(156, 163, 175, 0.4);
-            color: #9ca3af;
+        .scene-context-indicators {
+            display: inline-flex;
+            gap: 4px;
+        }
+
+        .context-indicator {
+            font-size: 0.9em;
+            opacity: 0.8;
         }
 
         /* Expanded content */
@@ -546,17 +530,16 @@
             display: flex;
             flex-wrap: wrap;
             gap: 4px;
-            margin-bottom: 8px;
+            margin-top: 8px;
         }
-        
-        .cast-chip {
-            padding: 3px 7px;
-            background: rgba(251, 191, 36, 0.2);
-            border: 1px solid rgba(251, 191, 36, 0.4);
-            color: #fbbf24;
-            border-radius: 4px;
-            font-size: 0.625em;
-            font-weight: 600;
+
+        .char-pill {
+            font-size: 0.7em;
+            padding: 3px 8px;
+            background: rgba(212, 175, 122, 0.15);
+            color: var(--accent-gold);
+            border-radius: 12px;
+            white-space: nowrap;
         }
         
         .element-summary {
@@ -11846,45 +11829,7 @@
     padding: 12px;
 }
 
-.scene-status-icon {
-    width: 20px;
-    color: var(--accent-gold);
-    font-size: 16px;
-    text-align: center;
-}
-
-.scene-item.processed .scene-status-icon {
-    color: var(--success);
-}
-
-.scene-indicators {
-    display: flex;
-    gap: 4px;
-    margin-left: auto;
-}
-
-.indicator {
-    padding: 2px 6px;
-    border-radius: 3px;
-    font-size: 0.7em;
-    font-weight: bold;
-    line-height: 1;
-}
-
-.indicator.processed {
-    background: rgba(76, 175, 80, 0.2);
-    color: #4caf50;
-}
-
-.indicator.continuity {
-    background: rgba(201, 169, 97, 0.2);
-    color: var(--accent-gold);
-}
-
-.indicator.tags {
-    background: rgba(33, 150, 243, 0.2);
-    color: #2196f3;
-}
+/* Old scene-status-icon and indicator styles removed - using clean design */
 
 /* ============================================================================
    CHARACTER PROFILE COMPONENTS - Script Descriptions & Character Bible
