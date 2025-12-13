@@ -258,6 +258,27 @@ export async function processScript() {
     state.scenes = detectScenes(text);
     console.log(`Found ${state.scenes.length} scenes`);
 
+    // AUTO-FILL: Apply story day detection and scene type detection immediately
+    try {
+        const scriptAnalysis = await getScriptAnalysis();
+        if (scriptAnalysis) {
+            // Apply story day detection to all scenes
+            if (scriptAnalysis.detectStoryDays) {
+                console.log('Auto-filling story days...');
+                scriptAnalysis.detectStoryDays(text, state.scenes);
+                console.log('Story days auto-filled for all scenes');
+            }
+            // Apply scene type detection to all scenes
+            if (scriptAnalysis.detectAllSceneTypes) {
+                console.log('Auto-detecting scene types...');
+                scriptAnalysis.detectAllSceneTypes(state.scenes);
+                console.log('Scene types auto-detected for all scenes');
+            }
+        }
+    } catch (err) {
+        console.warn('Auto-detection failed (non-critical):', err);
+    }
+
     // Close import modal and show progress
     closeImportModal();
     showTopLoadingBar('Analyzing Script', `Analyzing ${state.scenes.length} scenes...`, 0);

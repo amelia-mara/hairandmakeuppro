@@ -916,6 +916,44 @@ export function formatStoryDay(scene) {
 }
 
 /**
+ * Detect scene type flags from heading and content
+ * Identifies: isFlashback, isFlashForward, isTimeJump, isDream, isMontage
+ *
+ * @param {Object} scene - Scene object with heading and content
+ * @returns {Object} Scene type flags
+ */
+export function detectSceneType(scene) {
+    const heading = (scene.heading || '').toUpperCase();
+    const contentStart = (scene.content || scene.text || '').substring(0, 500).toUpperCase();
+    const text = heading + ' ' + contentStart;
+
+    return {
+        isFlashback: /\bFLASHBACK\b|\bFLASH\s*BACK\b|\bYEARS?\s*(EARLIER|AGO|BEFORE)\b|\bMONTHS?\s*(EARLIER|AGO)\b/i.test(text),
+        isFlashForward: /\bFLASH\s*FORWARD\b|\bFLASH\s*FWD\b|\bYEARS?\s*LATER\b|\bMONTHS?\s*LATER\b|\bIN\s+THE\s+FUTURE\b/i.test(text),
+        isTimeJump: /\b(WEEKS?|MONTHS?|YEARS?|DAYS?)\s*(LATER|EARLIER|AGO|BEFORE|PASS|ELAPSE)\b|\b(LATER|EARLIER)\s+THAT\s+(DAY|WEEK|MONTH|YEAR)\b|\bTIME\s+(PASSES?|ELAPSES?|JUMPS?)\b/i.test(text),
+        isDream: /\bDREAM\b|\bNIGHTMARE\b|\bFANTASY\b|\bIMAGINATION\b|\bVISION\b/i.test(text),
+        isMontage: /\bMONTAGE\b|\bSERIES\s+OF\s+SHOTS?\b|\bINTERCUT\b/i.test(text)
+    };
+}
+
+/**
+ * Apply scene type detection to all scenes
+ * Called during initial script analysis
+ *
+ * @param {Array} scenes - Array of scene objects
+ */
+export function detectAllSceneTypes(scenes) {
+    scenes.forEach(scene => {
+        const types = detectSceneType(scene);
+        scene.isFlashback = types.isFlashback;
+        scene.isFlashForward = types.isFlashForward;
+        scene.isTimeJump = types.isTimeJump;
+        scene.isDream = types.isDream;
+        scene.isMontage = types.isMontage;
+    });
+}
+
+/**
  * Main entry point for comprehensive script analysis
  * Processes the entire script through all 5 analysis phases
  */

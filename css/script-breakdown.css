@@ -12287,6 +12287,57 @@
     transform: scale(1.1);
 }
 
+/* Scene Type Indicators */
+.context-indicator.flashback {
+    background: rgba(156, 39, 176, 0.2);
+    border: 1px solid rgba(156, 39, 176, 0.4);
+}
+
+.context-indicator.flashback:hover {
+    background: rgba(156, 39, 176, 0.3);
+    transform: scale(1.1);
+}
+
+.context-indicator.flashforward {
+    background: rgba(0, 188, 212, 0.2);
+    border: 1px solid rgba(0, 188, 212, 0.4);
+}
+
+.context-indicator.flashforward:hover {
+    background: rgba(0, 188, 212, 0.3);
+    transform: scale(1.1);
+}
+
+.context-indicator.timejump {
+    background: rgba(255, 152, 0, 0.2);
+    border: 1px solid rgba(255, 152, 0, 0.4);
+}
+
+.context-indicator.timejump:hover {
+    background: rgba(255, 152, 0, 0.3);
+    transform: scale(1.1);
+}
+
+.context-indicator.dream {
+    background: rgba(103, 58, 183, 0.2);
+    border: 1px solid rgba(103, 58, 183, 0.4);
+}
+
+.context-indicator.dream:hover {
+    background: rgba(103, 58, 183, 0.3);
+    transform: scale(1.1);
+}
+
+.context-indicator.montage {
+    background: rgba(233, 30, 99, 0.2);
+    border: 1px solid rgba(233, 30, 99, 0.4);
+}
+
+.context-indicator.montage:hover {
+    background: rgba(233, 30, 99, 0.3);
+    transform: scale(1.1);
+}
+
 /* Print Styles for Character Profiles */
 @media print {
     .character-section {
