@@ -13696,6 +13696,26 @@
     opacity: 0.6;
 }
 
+/* Field Row - Label beside input */
+.continuity-entry-fields .field-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.continuity-entry-fields .field-row label {
+    min-width: 70px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.continuity-entry-fields .field-row input {
+    flex: 1;
+}
+
 /* Change Fields */
 .change-fields {
     margin-top: 12px;
