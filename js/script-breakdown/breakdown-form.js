@@ -299,17 +299,8 @@ function renderSceneBreakdown(sceneIndex) {
                     </div>
                 </div>
 
-                <!-- Row 2: Buttons + Scene Type Flags -->
+                <!-- Row 2: Scene Type Flags -->
                 <div class="timeline-row-2">
-                    <div class="timeline-buttons">
-                        <button class="timeline-btn" onclick="copyStoryDayFromPrevious(${sceneIndex})" title="Copy from previous" ${sceneIndex === 0 ? 'disabled' : ''}>←</button>
-                        <button class="timeline-btn" onclick="copyStoryDayToFollowing(${sceneIndex})" title="Copy to next">→</button>
-                        ${scene.storyDayConfirmed ? `
-                            <span class="timeline-confirmed" title="Confirmed">✓</span>
-                        ` : `
-                            <button class="timeline-btn confirm" onclick="confirmStoryDay(${sceneIndex})" title="Confirm">✓</button>
-                        `}
-                    </div>
                     <div class="timeline-flags">
                         <label><input type="checkbox" ${scene.isFlashback ? 'checked' : ''} onchange="updateSceneField(${sceneIndex}, 'isFlashback', this.checked)">Flashback</label>
                         <label><input type="checkbox" ${scene.isFlashForward ? 'checked' : ''} onchange="updateSceneField(${sceneIndex}, 'isFlashForward', this.checked)">Flash Fwd</label>
