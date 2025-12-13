@@ -196,13 +196,82 @@ function getEventsForLook(characterName, sceneIndices) {
 }
 
 /**
- * Render a compact look card (collapsed by default)
+ * Render a single look card with editable fields (legacy - for backwards compatibility)
+ * @param {string} characterName - Character name
+ * @param {Object} look - Look object with scene and appearance data
+ * @returns {string} HTML for look card
+ */
+export function renderLookCard(characterName, look) {
+    const hasContent = look.hair || look.makeup || look.sfx || look.wardrobe || look.notes;
+
+    return `
+        <div class="look-card ${hasContent ? 'has-content' : ''}" data-scene="${look.sceneIndex}">
+            <div class="look-card-header" onclick="navigateToScene(${look.sceneIndex})">
+                <span class="look-scene-badge">Scene ${look.sceneNumber}</span>
+                <span class="look-scene-heading">${escapeHtml(look.heading.substring(0, 50))}${look.heading.length > 50 ? '...' : ''}</span>
+            </div>
+
+            <div class="look-details">
+                <div class="look-field">
+                    <label>Hair:</label>
+                    <input type="text"
+                           value="${escapeHtml(look.hair)}"
+                           placeholder="Hair description..."
+                           onchange="updateCharacterLook('${escapeHtml(characterName).replace(/'/g, "\\'")}', ${look.sceneIndex}, 'hair', this.value)">
+                </div>
+
+                <div class="look-field">
+                    <label>Makeup:</label>
+                    <input type="text"
+                           value="${escapeHtml(look.makeup)}"
+                           placeholder="Makeup description..."
+                           onchange="updateCharacterLook('${escapeHtml(characterName).replace(/'/g, "\\'")}', ${look.sceneIndex}, 'makeup', this.value)">
+                </div>
+
+                <div class="look-field">
+                    <label>SFX:</label>
+                    <input type="text"
+                           value="${escapeHtml(look.sfx)}"
+                           placeholder="SFX/prosthetics..."
+                           onchange="updateCharacterLook('${escapeHtml(characterName).replace(/'/g, "\\'")}', ${look.sceneIndex}, 'sfx', this.value)">
+                </div>
+
+                <div class="look-field">
+                    <label>Wardrobe:</label>
+                    <input type="text"
+                           value="${escapeHtml(look.wardrobe)}"
+                           placeholder="Wardrobe description..."
+                           onchange="updateCharacterLook('${escapeHtml(characterName).replace(/'/g, "\\'")}', ${look.sceneIndex}, 'wardrobe', this.value)">
+                </div>
+
+                <div class="look-field look-field-notes">
+                    <label>Notes:</label>
+                    <textarea
+                        placeholder="Additional continuity notes..."
+                        onchange="updateCharacterLook('${escapeHtml(characterName).replace(/'/g, "\\'")}', ${look.sceneIndex}, 'notes', this.value)">${escapeHtml(look.notes)}</textarea>
+                </div>
+            </div>
+
+            <div class="look-actions">
+                <button class="look-action-btn" onclick="applyLookForward('${escapeHtml(characterName).replace(/'/g, "\\'")}', ${look.sceneIndex})" title="Copy this look to all following scenes in this day">
+                    Apply Forward
+                </button>
+                <button class="look-action-btn" onclick="alert('Photo attachment feature coming soon')" title="Attach reference photos">
+                    Add Photo
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Render a compact lookbook card (collapsed by default) - NEW design
  * @param {string} characterName - Character name
  * @param {Object} look - Look object
  * @param {number} index - Look index for ID
  * @returns {string} HTML for look card
  */
-function renderLookCard(characterName, look, index) {
+function renderLookbookCard(characterName, look, index) {
     const cardId = `look-card-${characterName.toLowerCase().replace(/\s+/g, '-')}-${index}`;
     const isExpanded = expandedLookCards.has(cardId);
     const isUndefined = look.id === '__undefined__';
@@ -430,8 +499,8 @@ export function renderLookbookView(characterName) {
             </div>
 
             <div class="lookbook-cards">
-                ${definedLooks.map((look, index) => renderLookCard(characterName, look, index)).join('')}
-                ${undefinedLook ? renderLookCard(characterName, undefinedLook, looks.length - 1) : ''}
+                ${definedLooks.map((look, index) => renderLookbookCard(characterName, look, index)).join('')}
+                ${undefinedLook ? renderLookbookCard(characterName, undefinedLook, looks.length - 1) : ''}
             </div>
         </div>
     `;
@@ -649,6 +718,70 @@ export async function applyLookToScenes(characterName, look, targetSceneIndices)
     showToast(`Applied look to ${targetSceneIndices.length} scene(s)`, 'success');
 }
 
+/**
+ * Apply current look forward to all following scenes in the same day
+ * @param {string} characterName - Character name
+ * @param {number} sourceSceneIndex - Scene index to copy from
+ */
+export async function applyLookForward(characterName, sourceSceneIndex) {
+    const state = getState();
+    const sourceScene = state.scenes[sourceSceneIndex];
+    if (!sourceScene) return;
+
+    const sourceState = state.characterStates?.[sourceSceneIndex]?.[characterName];
+    if (!sourceState || Object.keys(sourceState).length === 0) {
+        showToast('No look data to copy from this scene', 'warning');
+        return;
+    }
+
+    const storyDay = sourceScene.storyDay || 'Unassigned';
+
+    // Find all following scenes in the same story day where character appears
+    let updatedCount = 0;
+
+    (state.scenes || []).forEach((scene, sceneIndex) => {
+        if (sceneIndex <= sourceSceneIndex) return;
+        if ((scene.storyDay || 'Unassigned') !== storyDay) return;
+
+        const breakdown = state.sceneBreakdowns?.[sceneIndex];
+        if (!breakdown || !breakdown.cast || !breakdown.cast.includes(characterName)) return;
+
+        // Initialize structures if needed
+        if (!state.characterStates[sceneIndex]) {
+            state.characterStates[sceneIndex] = {};
+        }
+        if (!state.characterStates[sceneIndex][characterName]) {
+            state.characterStates[sceneIndex][characterName] = {};
+        }
+
+        // Copy all look fields
+        ['hair', 'makeup', 'sfx', 'wardrobe'].forEach(field => {
+            if (sourceState[field]) {
+                state.characterStates[sceneIndex][characterName][field] = sourceState[field];
+            }
+        });
+
+        updatedCount++;
+    });
+
+    if (updatedCount > 0) {
+        // Save project
+        const { saveProject } = await import('./export-handlers.js');
+        saveProject();
+
+        // Refresh the view
+        const contentId = `${characterName.toLowerCase().replace(/\s+/g, '-')}-content`;
+        const contentDiv = document.getElementById(contentId);
+        if (contentDiv) {
+            contentDiv.innerHTML = renderLookbookView(characterName);
+        }
+
+        showToast(`Applied look forward to ${updatedCount} scene${updatedCount !== 1 ? 's' : ''} in ${storyDay}`, 'success');
+    } else {
+        showToast(`No following scenes found in ${storyDay}`, 'info');
+    }
+}
+
 // Legacy function for backwards compatibility
 export function getCharacterLooksByDay(characterName) {
     const state = getState();
@@ -687,10 +820,12 @@ window.toggleDaySection = toggleDaySection;
 window.switchLookbookView = switchLookbookView;
 window.updateCharacterLook = updateCharacterLook;
 window.applyLookToScenes = applyLookToScenes;
+window.applyLookForward = applyLookForward;
 
 export default {
     generateLooksFromBreakdown,
     compressSceneRanges,
+    renderLookCard,
     renderLookbookView,
     renderLookbookByDay,
     toggleLookCard,
@@ -698,5 +833,6 @@ export default {
     switchLookbookView,
     updateCharacterLook,
     applyLookToScenes,
+    applyLookForward,
     getCharacterLooksByDay
 };
