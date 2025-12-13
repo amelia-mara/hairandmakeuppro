@@ -3,54 +3,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Master H&MU Breakdown</title>
+    <title>Master Breakdown - Hair & Makeup Pro</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        /* ═══════════════════════════════════════════════════════════════
+           CSS VARIABLES
+           ═══════════════════════════════════════════════════════════════ */
         :root {
             --bg-dark: #0d0b0a;
+            --bg-primary: #121110;
+            --bg-secondary: rgba(26, 22, 18, 0.9);
             --bg-medium: rgba(26, 22, 18, 0.7);
-            --card-bg: #242019;
-            --text-light: #e8e6e3;
+            --card-bg: #1a1612;
+            --text-primary: #e8e6e3;
+            --text-secondary: #b8b4ae;
             --text-muted: #8a7f73;
             --accent-gold: #c9a961;
             --border: rgba(45, 41, 37, 0.5);
             --glass-border: rgba(255, 255, 255, 0.08);
         }
 
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             background: linear-gradient(135deg, #0d0b0a 0%, #1a1612 50%, #0d0b0a 100%);
-            color: var(--text-light);
+            color: var(--text-primary);
             height: 100vh;
             overflow: hidden;
         }
 
-        .container {
+        /* ═══════════════════════════════════════════════════════════════
+           MASTER BREAKDOWN PAGE LAYOUT
+           ═══════════════════════════════════════════════════════════════ */
+        .master-breakdown-page {
             display: flex;
             flex-direction: column;
             height: 100vh;
         }
 
-        /* Top Bar */
-        .top-bar {
-            height: 60px;
-            background: var(--bg-medium);
+        /* ═══════════════════════════════════════════════════════════════
+           HEADER
+           ═══════════════════════════════════════════════════════════════ */
+        .breakdown-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 24px;
+            background: var(--bg-secondary);
             backdrop-filter: blur(20px);
             border-bottom: 1px solid var(--glass-border);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 24px;
-            z-index: 100;
         }
 
-        .top-bar-left {
+        .header-left {
             display: flex;
             align-items: center;
             gap: 16px;
@@ -59,7 +68,7 @@
         .back-link {
             color: var(--text-muted);
             text-decoration: none;
-            font-size: 0.875em;
+            font-size: 0.85em;
             transition: color 0.2s;
         }
 
@@ -67,37 +76,38 @@
             color: var(--accent-gold);
         }
 
-        .page-title {
-            font-size: 1.125em;
-            font-weight: 600;
+        .breakdown-header h1 {
+            margin: 0;
+            font-size: 1.2em;
+            letter-spacing: 1px;
+            color: var(--accent-gold);
         }
 
         .project-name {
-            color: var(--accent-gold);
-            font-size: 0.875em;
-            margin-left: 8px;
+            color: var(--text-secondary);
+            font-size: 0.9em;
         }
 
-        .top-bar-right {
+        .header-right {
             display: flex;
-            gap: 8px;
+            gap: 12px;
         }
 
         .btn {
             padding: 8px 16px;
-            background: transparent;
-            border: 1px solid var(--glass-border);
-            border-radius: 6px;
-            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 4px;
+            color: var(--text-primary);
             cursor: pointer;
-            font-size: 0.8125em;
-            transition: all 0.2s;
+            font-size: 0.85em;
             font-family: inherit;
+            transition: all 0.2s;
         }
 
         .btn:hover {
+            background: rgba(255, 255, 255, 0.1);
             border-color: var(--accent-gold);
-            color: var(--accent-gold);
         }
 
         .btn:disabled {
@@ -115,303 +125,470 @@
             background: #d4b16d;
         }
 
-        /* Toolbar */
-        .toolbar {
-            height: 48px;
-            background: var(--card-bg);
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            padding: 0 24px;
-            gap: 8px;
-        }
-
-        .toolbar-separator {
-            width: 1px;
-            height: 24px;
-            background: var(--border);
-            margin: 0 8px;
-        }
-
-        .toolbar-label {
-            color: var(--text-muted);
-            font-size: 0.8125em;
-            margin-right: 8px;
-        }
-
-        .toolbar-select {
-            padding: 6px 12px;
-            background: var(--bg-medium);
-            border: 1px solid var(--glass-border);
-            border-radius: 4px;
-            color: var(--text-light);
-            font-size: 0.8125em;
-            cursor: pointer;
-        }
-
-        /* Sheet Container */
-        .sheet-container {
-            flex: 1;
-            overflow: auto;
-            background: var(--card-bg);
+        /* Export Dropdown */
+        .export-dropdown {
             position: relative;
         }
 
-        /* Empty State */
+        .export-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 4px;
+            background: var(--bg-secondary);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 6px;
+            overflow: hidden;
+            z-index: 100;
+            min-width: 200px;
+        }
+
+        .export-menu.open {
+            display: block;
+        }
+
+        .export-menu button {
+            display: block;
+            width: 100%;
+            padding: 10px 16px;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            text-align: left;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-family: inherit;
+            white-space: nowrap;
+        }
+
+        .export-menu button:hover {
+            background: rgba(255, 215, 0, 0.1);
+            color: var(--accent-gold);
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           SHEET TABS
+           ═══════════════════════════════════════════════════════════════ */
+        .sheet-tabs {
+            display: flex;
+            gap: 4px;
+            padding: 12px 24px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .sheet-tab {
+            padding: 10px 20px;
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 6px 6px 0 0;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 0.85em;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+
+        .sheet-tab:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .sheet-tab.active {
+            color: var(--accent-gold);
+            background: var(--bg-primary);
+            border-color: var(--glass-border);
+            border-bottom-color: var(--bg-primary);
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           SHEET CONTAINER
+           ═══════════════════════════════════════════════════════════════ */
+        .sheet-container {
+            flex: 1;
+            overflow: auto;
+            padding: 24px;
+            background: var(--bg-primary);
+        }
+
+        .sheet-content {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           SCENE OVERVIEW TABLE
+           ═══════════════════════════════════════════════════════════════ */
+        .breakdown-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85em;
+        }
+
+        .breakdown-table th {
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-size: 0.75em;
+            letter-spacing: 0.5px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .breakdown-table td {
+            padding: 10px 16px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: var(--text-primary);
+            vertical-align: top;
+        }
+
+        .breakdown-table tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        /* Column widths - Scene Overview */
+        .col-sc { width: 50px; text-align: center; }
+        .col-day { width: 60px; text-align: center; }
+        .col-day-note { width: 120px; font-style: italic; color: var(--text-muted); }
+        .col-location { width: 200px; }
+        .col-time { width: 80px; }
+        .col-cast { width: 60px; text-align: center; }
+        .col-synopsis { min-width: 300px; }
+
+        /* Scene type colors */
+        .scene-row.flashback td { background: rgba(128, 90, 213, 0.1); }
+        .scene-row.time-jump td { background: rgba(234, 179, 8, 0.1); }
+        .scene-row.dream td { background: rgba(59, 130, 246, 0.1); }
+
+        /* ═══════════════════════════════════════════════════════════════
+           CHARACTER BREAKDOWN (GROUPED)
+           ═══════════════════════════════════════════════════════════════ */
+        .scene-group {
+            margin-bottom: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .scene-header {
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .scene-header-main {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+        }
+
+        .scene-number {
+            font-weight: 700;
+            color: var(--accent-gold);
+        }
+
+        .scene-day {
+            padding: 2px 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            font-size: 0.8em;
+            color: var(--text-secondary);
+        }
+
+        .scene-location {
+            color: var(--text-primary);
+        }
+
+        .scene-badge {
+            padding: 2px 8px;
+            background: rgba(255, 100, 100, 0.2);
+            border-radius: 4px;
+            font-size: 0.7em;
+            color: #ff9999;
+            text-transform: uppercase;
+        }
+
+        .scene-synopsis {
+            font-size: 0.9em;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        /* Character Table within Scene */
+        .character-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .character-table th {
+            padding: 10px 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-size: 0.7em;
+            letter-spacing: 0.5px;
+        }
+
+        .character-table td {
+            padding: 10px 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+            font-size: 0.85em;
+        }
+
+        .character-table tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .character-table .col-character { width: 140px; font-weight: 600; }
+        .character-table .col-first { width: 40px; text-align: center; color: var(--accent-gold); }
+        .character-table .col-hair { width: 150px; }
+        .character-table .col-makeup { width: 150px; }
+        .character-table .col-sfx { width: 140px; }
+        .character-table .col-continuity { width: 160px; }
+        .character-table .col-notes { min-width: 150px; }
+
+        /* Highlight rows with changes or continuity */
+        .character-row.has-change {
+            background: rgba(255, 200, 100, 0.05);
+        }
+
+        .character-row.has-continuity {
+            border-left: 3px solid rgba(192, 57, 43, 0.7);
+        }
+
+        .character-row.first-appearance {
+            background: rgba(201, 169, 97, 0.08);
+        }
+
+        .exit-info {
+            margin-top: 6px;
+            padding: 4px 8px;
+            background: rgba(255, 200, 100, 0.1);
+            border-radius: 4px;
+            font-size: 0.85em;
+            color: var(--accent-gold);
+        }
+
+        .no-characters {
+            text-align: center;
+            color: var(--text-muted);
+            font-style: italic;
+            padding: 16px;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           CONTINUITY TRACKER
+           ═══════════════════════════════════════════════════════════════ */
+        .continuity-tracker .col-character { width: 130px; }
+        .continuity-tracker .col-event { width: 140px; }
+        .continuity-tracker .col-type { width: 100px; }
+        .continuity-tracker .col-start { width: 70px; }
+        .continuity-tracker .col-end { width: 70px; }
+        .continuity-tracker .col-stage { width: 100px; }
+        .continuity-tracker .col-scenes { width: 120px; }
+        .continuity-tracker .col-description { min-width: 200px; }
+        .continuity-tracker .col-app-notes { min-width: 180px; }
+
+        .type-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.75em;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .type-badge.injuries { background: rgba(192, 57, 43, 0.3); color: #e74c3c; }
+        .type-badge.health { background: rgba(155, 89, 182, 0.3); color: #9b59b6; }
+        .type-badge.sfx { background: rgba(231, 76, 60, 0.3); color: #e74c3c; }
+        .type-badge.aging { background: rgba(149, 165, 166, 0.3); color: #95a5a6; }
+        .type-badge.pregnancy { background: rgba(241, 196, 15, 0.3); color: #f1c40f; }
+        .type-badge.dirt { background: rgba(150, 120, 80, 0.3); color: #c9a86c; }
+        .type-badge.other { background: rgba(52, 152, 219, 0.3); color: #3498db; }
+
+        /* ═══════════════════════════════════════════════════════════════
+           CHARACTER PROFILES
+           ═══════════════════════════════════════════════════════════════ */
+        .character-profile-block {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .profile-header h2 {
+            margin: 0;
+            color: var(--accent-gold);
+        }
+
+        .role-badge {
+            padding: 4px 10px;
+            background: rgba(255, 215, 0, 0.15);
+            border-radius: 4px;
+            font-size: 0.8em;
+            color: var(--accent-gold);
+        }
+
+        .scene-count {
+            color: var(--text-muted);
+            font-size: 0.85em;
+        }
+
+        .profile-section {
+            margin-bottom: 20px;
+        }
+
+        .profile-section h3 {
+            margin: 0 0 12px 0;
+            font-size: 0.75em;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .profile-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .profile-grid span {
+            font-size: 0.9em;
+            color: var(--text-primary);
+        }
+
+        .profile-section ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .profile-section li {
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        .source-badge {
+            font-size: 0.7em;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-left: 8px;
+        }
+
+        .source-badge.script { background: rgba(231, 76, 60, 0.2); color: #e74c3c; }
+        .source-badge.creative { background: rgba(52, 152, 219, 0.2); color: #3498db; }
+        .source-badge.continuity { background: rgba(243, 156, 18, 0.2); color: #f39c12; }
+
+        .look-summary {
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+            margin-bottom: 8px;
+        }
+
+        .look-details {
+            font-size: 0.85em;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .progression {
+            font-size: 0.85em;
+            color: var(--text-muted);
+        }
+
+        .empty-hint {
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           FOOTER
+           ═══════════════════════════════════════════════════════════════ */
+        .breakdown-footer {
+            display: flex;
+            gap: 24px;
+            padding: 12px 24px;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--glass-border);
+            font-size: 0.8em;
+            color: var(--text-muted);
+        }
+
+        .breakdown-footer .last-saved {
+            margin-left: auto;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           EMPTY STATE
+           ═══════════════════════════════════════════════════════════════ */
         .empty-state {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 100%;
-            color: var(--text-muted);
-        }
-
-        .empty-state-icon {
-            font-size: 64px;
-            margin-bottom: 16px;
+            padding: 80px 24px;
+            text-align: center;
         }
 
         .empty-state-title {
             font-size: 1.25em;
             font-weight: 600;
             margin-bottom: 8px;
-            color: var(--text-light);
+            color: var(--text-primary);
         }
 
         .empty-state-desc {
-            font-size: 0.875em;
+            color: var(--text-muted);
             margin-bottom: 24px;
         }
 
-        /* Spreadsheet Table */
-        .breakdown-sheet {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.8125em;
-            table-layout: fixed;
-        }
-
-        .breakdown-sheet th,
-        .breakdown-sheet td {
-            border: 1px solid var(--border);
-            padding: 8px 10px;
-            text-align: left;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .breakdown-sheet th {
-            background: var(--bg-medium);
-            backdrop-filter: blur(20px);
-            font-weight: 600;
-            font-size: 0.75em;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: var(--text-muted);
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-
-        /* Row number column */
-        .row-num {
-            width: 40px;
-            background: var(--bg-medium);
-            text-align: center;
-            cursor: pointer;
-            user-select: none;
-            color: var(--text-muted);
-            font-size: 0.75em;
-        }
-
-        .row-num:hover {
-            background: rgba(201, 169, 97, 0.2);
-        }
-
-        /* Column widths */
-        .col-scene { width: 60px; }
-        .col-character { width: 130px; }
-        .col-category { width: 90px; }
-        .col-day { width: 70px; }
-        .col-time { width: 80px; }
-        .col-int-ext { width: 70px; }
-        .col-location { width: 150px; }
-        .col-synopsis { width: 200px; }
-        .col-look-arc { width: 120px; background: rgba(201, 169, 97, 0.05); }
-        .col-hair { width: 150px; background: rgba(168, 85, 247, 0.05); }
-        .col-makeup { width: 150px; background: rgba(236, 72, 153, 0.05); }
-        .col-eye-bags { width: 100px; background: rgba(236, 72, 153, 0.05); }
-        .col-lesions { width: 100px; background: rgba(239, 68, 68, 0.05); }
-        .col-beard { width: 100px; background: rgba(168, 85, 247, 0.05); }
-        .col-wounds { width: 150px; background: rgba(239, 68, 68, 0.05); }
-        .col-notes { width: 200px; }
-
-        /* Editable cells */
-        .breakdown-sheet td {
-            background: var(--card-bg);
-        }
-
-        .breakdown-sheet td[contenteditable="true"] {
-            cursor: text;
-        }
-
-        .breakdown-sheet td[contenteditable="true"]:hover {
-            background: rgba(201, 169, 97, 0.05);
-        }
-
-        .breakdown-sheet td[contenteditable="true"]:focus {
-            outline: 2px solid var(--accent-gold);
-            background: rgba(201, 169, 97, 0.08);
-            white-space: normal;
-        }
-
-        /* Scene grouping */
-        tr.scene-header {
-            background: rgba(201, 169, 97, 0.1);
-        }
-
-        tr.scene-header td {
-            font-weight: 600;
-            background: rgba(201, 169, 97, 0.1);
-            white-space: normal;
-        }
-
-        /* Selected rows */
-        tr.selected {
-            background: rgba(201, 169, 97, 0.2) !important;
-        }
-
-        tr.selected td {
-            background: rgba(201, 169, 97, 0.2) !important;
-        }
-
-        /* Badges */
-        .scene-badge {
-            display: inline-block;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 0.7em;
-            font-weight: 600;
-        }
-
-        .int-day { background: rgba(255, 193, 7, 0.2); color: #fbbf24; }
-        .int-night { background: rgba(63, 81, 181, 0.2); color: #5c6bc0; }
-        .ext-day { background: rgba(76, 175, 80, 0.2); color: #66bb6a; }
-        .ext-night { background: rgba(103, 58, 183, 0.2); color: #9575cd; }
-
-        .category-badge {
-            display: inline-block;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 0.7em;
-            font-weight: 600;
-        }
-
-        .category-badge.lead { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
-        .category-badge.supporting { background: rgba(201, 169, 97, 0.2); color: var(--accent-gold); }
-        .category-badge.day_player { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
-        .category-badge.background { background: rgba(107, 114, 128, 0.2); color: #9ca3af; }
-
-        /* Status bar */
-        .status-bar {
-            height: 32px;
-            background: var(--bg-medium);
-            border-top: 1px solid var(--glass-border);
-            display: flex;
-            align-items: center;
-            padding: 0 24px;
-            font-size: 0.75em;
-            color: var(--text-muted);
-            gap: 16px;
-        }
-
-        /* Export Modal */
-        .modal {
-            display: none;
+        /* ═══════════════════════════════════════════════════════════════
+           TOAST NOTIFICATION
+           ═══════════════════════════════════════════════════════════════ */
+        .toast {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(4px);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .modal-content {
+            bottom: 80px;
+            right: 24px;
+            padding: 12px 24px;
             background: var(--card-bg);
-            border: 1px solid var(--glass-border);
-            border-radius: 12px;
-            padding: 24px;
-            max-width: 500px;
-            width: 90%;
-        }
-
-        .modal-title {
-            font-size: 1.25em;
-            font-weight: 600;
-            margin-bottom: 20px;
-        }
-
-        .modal-section {
-            margin-bottom: 16px;
-        }
-
-        .modal-label {
-            display: block;
-            font-size: 0.875em;
-            color: var(--text-muted);
-            margin-bottom: 8px;
-        }
-
-        .modal-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 12px;
-            margin-top: 24px;
-        }
-
-        .export-option {
-            display: flex;
-            align-items: center;
-            padding: 12px;
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid var(--glass-border);
+            border: 1px solid var(--accent-gold);
             border-radius: 8px;
-            margin-bottom: 8px;
-            cursor: pointer;
-            transition: all 0.2s;
+            color: var(--text-primary);
+            font-size: 0.875em;
+            z-index: 1001;
+            animation: slideIn 0.3s ease;
         }
 
-        .export-option:hover {
-            background: rgba(201, 169, 97, 0.1);
-            border-color: var(--accent-gold);
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
         }
 
-        .export-option-icon {
-            font-size: 24px;
-            margin-right: 12px;
-        }
-
-        .export-option-info {
-            flex: 1;
-        }
-
-        .export-option-title {
-            font-weight: 600;
-            margin-bottom: 4px;
-        }
-
-        .export-option-desc {
-            font-size: 0.8125em;
-            color: var(--text-muted);
-        }
-
-        /* Scrollbar */
+        /* ═══════════════════════════════════════════════════════════════
+           SCROLLBAR
+           ═══════════════════════════════════════════════════════════════ */
         ::-webkit-scrollbar {
             width: 10px;
             height: 10px;
@@ -426,629 +603,944 @@
             border-radius: 5px;
         }
 
-        /* Toast notification */
-        .toast {
-            position: fixed;
-            bottom: 80px;
-            right: 24px;
-            padding: 12px 24px;
-            background: var(--card-bg);
-            border: 1px solid var(--accent-gold);
-            border-radius: 8px;
-            color: var(--text-light);
-            font-size: 0.875em;
-            z-index: 1001;
-            animation: slideIn 0.3s ease;
-        }
+        /* ═══════════════════════════════════════════════════════════════
+           PRINT STYLES
+           ═══════════════════════════════════════════════════════════════ */
+        @media print {
+            .breakdown-header,
+            .sheet-tabs,
+            .breakdown-footer {
+                display: none;
+            }
 
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
+            .sheet-container {
+                padding: 0;
+                overflow: visible;
+            }
+
+            .scene-group {
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+
+            .character-profile-block {
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+
+            body {
+                background: white;
+                color: black;
+            }
+
+            .breakdown-table th,
+            .breakdown-table td,
+            .character-table th,
+            .character-table td {
+                border-color: #ccc;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <!-- Top Bar -->
-        <div class="top-bar">
-            <div class="top-bar-left">
-                <a href="script-breakdown.html" class="back-link">Back to Script</a>
-                <h1 class="page-title">Master H&MU Breakdown</h1>
+    <div class="master-breakdown-page">
+
+        <!-- Header -->
+        <header class="breakdown-header">
+            <div class="header-left">
+                <a href="script-breakdown.html" class="back-link">Back to Breakdown</a>
+                <h1>MASTER BREAKDOWN</h1>
                 <span class="project-name" id="projectName"></span>
             </div>
-            <div class="top-bar-right">
-                <button class="btn" onclick="refreshData()">Refresh</button>
-                <button class="btn" onclick="saveBreakdown()">Save</button>
-                <button class="btn btn-primary" onclick="showExportModal()">Export</button>
-            </div>
-        </div>
-
-        <!-- Toolbar -->
-        <div class="toolbar">
-            <span class="toolbar-label">Filter by Character:</span>
-            <select class="toolbar-select" id="characterFilter" onchange="filterByCharacter()">
-                <option value="all">All Characters</option>
-            </select>
-
-            <div class="toolbar-separator"></div>
-
-            <span class="toolbar-label">Filter by Category:</span>
-            <select class="toolbar-select" id="categoryFilter" onchange="filterByCategory()">
-                <option value="all">All Categories</option>
-                <option value="LEAD">Lead Roles</option>
-                <option value="SUPPORTING">Supporting</option>
-                <option value="DAY_PLAYER">Day Players</option>
-            </select>
-
-            <div class="toolbar-separator"></div>
-
-            <span class="toolbar-label">Story Day:</span>
-            <select class="toolbar-select" id="dayFilter" onchange="filterByDay()">
-                <option value="all">All Days</option>
-            </select>
-
-            <div class="toolbar-separator"></div>
-
-            <button class="btn" onclick="collapseAllScenes()">Collapse All</button>
-            <button class="btn" onclick="expandAllScenes()">Expand All</button>
-        </div>
-
-        <!-- Spreadsheet Container -->
-        <div class="sheet-container" id="sheetContainer">
-            <div class="empty-state" id="emptyState">
-                <div class="empty-state-icon">📋</div>
-                <div class="empty-state-title">No Breakdown Data</div>
-                <div class="empty-state-desc">Import a script and confirm characters to generate the breakdown</div>
-                <a href="script-breakdown.html" class="btn btn-primary">Go to Script Import</a>
-            </div>
-
-            <table class="breakdown-sheet" id="breakdownTable" style="display: none;">
-                <thead>
-                    <tr>
-                        <th class="row-num">#</th>
-                        <th class="col-scene">Scene</th>
-                        <th class="col-character">Character</th>
-                        <th class="col-category">Category</th>
-                        <th class="col-day">Story Day</th>
-                        <th class="col-time">Time</th>
-                        <th class="col-int-ext">INT/EXT</th>
-                        <th class="col-location">Location</th>
-                        <th class="col-synopsis">Synopsis</th>
-                        <th class="col-look-arc">Look Arc</th>
-                        <th class="col-hair">Hair</th>
-                        <th class="col-makeup">Makeup Base</th>
-                        <th class="col-eye-bags">Eye Bags</th>
-                        <th class="col-lesions">Lesions</th>
-                        <th class="col-beard">Beard</th>
-                        <th class="col-wounds">Wounds/Blood/SFX</th>
-                        <th class="col-notes">Notes</th>
-                    </tr>
-                </thead>
-                <tbody id="breakdownBody">
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Status Bar -->
-        <div class="status-bar">
-            <span id="statusText">Ready</span>
-            <span>|</span>
-            <span id="rowCount">0 rows</span>
-            <span>|</span>
-            <span id="characterCount">0 characters</span>
-            <span>|</span>
-            <span id="sceneCount">0 scenes</span>
-        </div>
-    </div>
-
-    <!-- Export Modal -->
-    <div class="modal" id="exportModal">
-        <div class="modal-content">
-            <div class="modal-title">Export Breakdown</div>
-
-            <div class="modal-section">
-                <div class="export-option" onclick="exportToTSV()">
-                    <span class="export-option-icon">📊</span>
-                    <div class="export-option-info">
-                        <div class="export-option-title">Export as TSV</div>
-                        <div class="export-option-desc">Tab-separated values for Google Sheets</div>
+            <div class="header-right">
+                <div class="export-dropdown">
+                    <button class="btn" onclick="toggleExportMenu()">Export</button>
+                    <div class="export-menu" id="export-menu">
+                        <button onclick="exportCurrentSheet('csv')">Export Current (CSV)</button>
+                        <button onclick="exportCurrentSheet('tsv')">Export Current (TSV)</button>
+                        <button onclick="exportToPDF()">Export as PDF</button>
+                        <button onclick="copyToClipboard()">Copy to Clipboard</button>
                     </div>
                 </div>
-
-                <div class="export-option" onclick="exportToCSV()">
-                    <span class="export-option-icon">📈</span>
-                    <div class="export-option-info">
-                        <div class="export-option-title">Export as CSV</div>
-                        <div class="export-option-desc">Comma-separated values for Excel</div>
-                    </div>
-                </div>
-
-                <div class="export-option" onclick="exportToPDF()">
-                    <span class="export-option-icon">📄</span>
-                    <div class="export-option-info">
-                        <div class="export-option-title">Export as PDF</div>
-                        <div class="export-option-desc">Printable document format</div>
-                    </div>
-                </div>
-
-                <div class="export-option" onclick="copyToClipboard()">
-                    <span class="export-option-icon">📋</span>
-                    <div class="export-option-info">
-                        <div class="export-option-title">Copy to Clipboard</div>
-                        <div class="export-option-desc">Quick paste into any application</div>
-                    </div>
-                </div>
+                <button class="btn" onclick="printBreakdown()">Print</button>
             </div>
+        </header>
 
-            <div class="modal-actions">
-                <button class="btn" onclick="closeExportModal()">Cancel</button>
-            </div>
-        </div>
+        <!-- Tab Navigation -->
+        <nav class="sheet-tabs">
+            <button class="sheet-tab active" data-sheet="scene-overview" onclick="switchSheet('scene-overview')">
+                Scene Overview
+            </button>
+            <button class="sheet-tab" data-sheet="character-breakdown" onclick="switchSheet('character-breakdown')">
+                Character Breakdown
+            </button>
+            <button class="sheet-tab" data-sheet="continuity-tracker" onclick="switchSheet('continuity-tracker')">
+                Continuity Tracker
+            </button>
+            <button class="sheet-tab" data-sheet="character-profiles" onclick="switchSheet('character-profiles')">
+                Character Profiles
+            </button>
+        </nav>
+
+        <!-- Sheet Content -->
+        <main class="sheet-container" id="sheet-container">
+            <!-- Content rendered by JavaScript -->
+        </main>
+
+        <!-- Footer Stats -->
+        <footer class="breakdown-footer">
+            <span id="sceneCountFooter">0 scenes</span>
+            <span id="characterCountFooter">0 characters</span>
+            <span id="eventCountFooter">0 continuity events</span>
+            <span class="last-saved" id="lastSaved">Last saved: --</span>
+        </footer>
+
     </div>
 
     <script>
-        // Global state
-        let breakdownData = [];
-        let scenes = [];
-        let characters = {};
-        let characterCategories = {};
-        let masterContext = null;
-        let storyTimeline = null;
+        // ============================================================================
+        // GLOBAL STATE
+        // ============================================================================
+        let breakdownState = null;
+        let currentSheet = 'scene-overview';
+        let characterFirstAppearances = {};
 
         // ============================================================================
         // INITIALIZATION
         // ============================================================================
-
         document.addEventListener('DOMContentLoaded', function() {
-            loadData();
+            loadBreakdownState();
+            renderCurrentSheet();
+            updateFooterStats();
         });
 
-        function loadData() {
-            console.log('Loading breakdown data...');
+        function loadBreakdownState() {
+            console.log('Loading breakdown state...');
 
-            // Load master context
-            const masterContextStr = localStorage.getItem('masterContext') ||
-                                    localStorage.getItem('scriptMasterContext');
-            if (masterContextStr) {
+            // Try to load from localStorage
+            const projectData = localStorage.getItem('checksHappyProject');
+            if (projectData) {
                 try {
-                    masterContext = JSON.parse(masterContextStr);
-                    console.log('Master context loaded:', masterContext);
+                    const project = JSON.parse(projectData);
+                    breakdownState = {
+                        projectName: project.projectName || project.name || 'Untitled Project',
+                        scenes: project.scenes || [],
+                        sceneBreakdowns: project.sceneBreakdowns || {},
+                        confirmedCharacters: project.confirmedCharacters || [],
+                        characters: project.castProfiles || {},
+                        characterStates: project.characterStates || {},
+                        continuityEvents: project.continuityEvents || {},
+                        scriptTags: project.scriptTags || {},
+                        lastSaved: project.lastSaved || null
+                    };
+                    console.log('Loaded project data:', breakdownState);
                 } catch (e) {
-                    console.error('Failed to parse master context:', e);
+                    console.error('Failed to parse project data:', e);
                 }
             }
 
-            // Load scenes
-            const currentProject = localStorage.getItem('currentProject');
-            if (currentProject) {
-                try {
-                    const project = JSON.parse(currentProject);
-                    document.getElementById('projectName').textContent = project.name || 'Untitled Project';
-                } catch (e) {}
+            // Fallback: try individual localStorage keys
+            if (!breakdownState || breakdownState.scenes.length === 0) {
+                const scenesStr = localStorage.getItem('checksHappyScenes');
+                const breakdownsStr = localStorage.getItem('checksHappySceneBreakdowns');
+                const charactersStr = localStorage.getItem('checksHappyConfirmedCharacters');
+                const eventsStr = localStorage.getItem('checksHappyContinuityEvents');
+
+                breakdownState = {
+                    projectName: 'Untitled Project',
+                    scenes: scenesStr ? JSON.parse(scenesStr) : [],
+                    sceneBreakdowns: breakdownsStr ? JSON.parse(breakdownsStr) : {},
+                    confirmedCharacters: charactersStr ? JSON.parse(charactersStr) : [],
+                    characters: {},
+                    characterStates: {},
+                    continuityEvents: eventsStr ? JSON.parse(eventsStr) : {},
+                    scriptTags: {},
+                    lastSaved: null
+                };
             }
 
-            // Try to load from checksHappyBreakdown (saved breakdown data)
-            const savedBreakdown = localStorage.getItem('checksHappyBreakdown');
-            if (savedBreakdown) {
-                try {
-                    breakdownData = JSON.parse(savedBreakdown);
-                    console.log('Loaded saved breakdown:', breakdownData.length, 'rows');
-                } catch (e) {
-                    console.error('Failed to parse saved breakdown:', e);
-                }
+            // Update project name
+            document.getElementById('projectName').textContent = breakdownState.projectName;
+
+            // Update last saved
+            if (breakdownState.lastSaved) {
+                document.getElementById('lastSaved').textContent =
+                    'Last saved: ' + formatLastSaved(breakdownState.lastSaved);
             }
 
-            // If no saved breakdown, generate from master context
-            if (breakdownData.length === 0 && masterContext) {
-                generateBreakdownFromContext();
+            // Calculate first appearances
+            calculateFirstAppearances();
+        }
+
+        function calculateFirstAppearances() {
+            characterFirstAppearances = {};
+            const scenes = breakdownState?.scenes || [];
+            const breakdowns = breakdownState?.sceneBreakdowns || {};
+
+            scenes.forEach((scene, index) => {
+                const breakdown = breakdowns[index] || {};
+                const cast = breakdown.cast || [];
+
+                cast.forEach(charName => {
+                    if (!(charName in characterFirstAppearances)) {
+                        characterFirstAppearances[charName] = index;
+                    }
+                });
+            });
+        }
+
+        // ============================================================================
+        // SHEET SWITCHING
+        // ============================================================================
+        function switchSheet(sheetId) {
+            currentSheet = sheetId;
+
+            // Update active tab
+            document.querySelectorAll('.sheet-tab').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.sheet === sheetId);
+            });
+
+            // Render selected sheet
+            renderCurrentSheet();
+        }
+
+        function renderCurrentSheet() {
+            const container = document.getElementById('sheet-container');
+
+            if (!breakdownState || breakdownState.scenes.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-title">No Breakdown Data</div>
+                        <div class="empty-state-desc">Import a script and confirm characters to generate the breakdown</div>
+                        <a href="script-breakdown.html" class="btn btn-primary">Go to Script Import</a>
+                    </div>
+                `;
+                return;
             }
 
-            if (breakdownData.length > 0) {
-                populateFilters();
-                renderBreakdownTable();
-                updateStatusBar();
-                document.getElementById('emptyState').style.display = 'none';
-                document.getElementById('breakdownTable').style.display = 'table';
+            switch(currentSheet) {
+                case 'scene-overview':
+                    container.innerHTML = renderSceneOverviewSheet();
+                    break;
+                case 'character-breakdown':
+                    container.innerHTML = renderCharacterBreakdownSheet();
+                    break;
+                case 'continuity-tracker':
+                    container.innerHTML = renderContinuityTrackerSheet();
+                    break;
+                case 'character-profiles':
+                    container.innerHTML = renderCharacterProfilesSheet();
+                    break;
             }
         }
 
         // ============================================================================
-        // BREAKDOWN GENERATION
+        // SHEET 1: SCENE OVERVIEW
         // ============================================================================
+        function renderSceneOverviewSheet() {
+            const scenes = breakdownState?.scenes || [];
+            const breakdowns = breakdownState?.sceneBreakdowns || {};
 
-        function generateBreakdownFromContext() {
-            if (!masterContext) {
-                console.warn('No master context available');
-                return;
-            }
+            let html = `
+                <div class="sheet-content scene-overview">
+                    <table class="breakdown-table">
+                        <thead>
+                            <tr>
+                                <th class="col-sc">Sc</th>
+                                <th class="col-day">Day</th>
+                                <th class="col-day-note">Note</th>
+                                <th class="col-location">Location</th>
+                                <th class="col-time">Time</th>
+                                <th class="col-cast">Cast</th>
+                                <th class="col-synopsis">Synopsis</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
 
-            console.log('Generating breakdown from master context...');
+            scenes.forEach((scene, index) => {
+                const breakdown = breakdowns[index] || {};
+                const dayNote = scene.storyDayNote || '';
+                const intExt = extractIntExt(scene.heading);
+                const location = extractLocation(scene.heading);
+                const fullLocation = intExt ? `${intExt}. ${location}` : location;
+                const cast = breakdown.cast || [];
+                const castCount = cast.length;
 
-            breakdownData = [];
-            characters = masterContext.characters || {};
-            storyTimeline = masterContext.storyStructure?.timeline || [];
+                let rowClass = 'scene-row';
+                if (scene.isFlashback) rowClass += ' flashback';
+                if (scene.isTimeJump) rowClass += ' time-jump';
+                if (scene.isDream) rowClass += ' dream';
 
-            // Get confirmed characters
-            const confirmedChars = Object.keys(characters);
-            if (confirmedChars.length === 0) {
-                console.warn('No characters in master context');
-                return;
-            }
-
-            // Build story day lookup
-            const sceneToDay = {};
-            storyTimeline.forEach(day => {
-                if (day.scenes) {
-                    day.scenes.forEach(sceneNum => {
-                        sceneToDay[sceneNum] = day.story_day || day.day;
-                    });
-                }
+                html += `
+                    <tr class="${rowClass}" data-scene-index="${index}">
+                        <td class="col-sc">${scene.number || index + 1}</td>
+                        <td class="col-day">${formatDayShort(scene.storyDay)}</td>
+                        <td class="col-day-note">${escapeHtml(dayNote)}</td>
+                        <td class="col-location">${escapeHtml(fullLocation)}</td>
+                        <td class="col-time">${escapeHtml(scene.storyTimeOfDay || scene.timeOfDay || '')}</td>
+                        <td class="col-cast" title="${escapeHtml(cast.join(', '))}">${castCount}</td>
+                        <td class="col-synopsis">${escapeHtml(scene.synopsis || '')}</td>
+                    </tr>
+                `;
             });
 
-            // Get all scenes from localStorage
-            const scenesStr = localStorage.getItem('checksHappyScenes');
-            if (scenesStr) {
-                try {
-                    scenes = JSON.parse(scenesStr);
-                } catch (e) {}
-            }
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
 
-            // If no scenes in storage, create from master context
-            if (scenes.length === 0) {
-                scenes = Array.from({ length: masterContext.totalScenes || 0 }, (_, i) => ({
-                    number: i + 1,
-                    heading: '',
-                    content: ''
-                }));
-            }
+            return html;
+        }
 
-            // Generate breakdown rows for each scene/character combination
-            scenes.forEach((scene, sceneIndex) => {
-                const sceneNum = scene.number || (sceneIndex + 1);
-                const heading = scene.heading || '';
+        // ============================================================================
+        // SHEET 2: CHARACTER BREAKDOWN (Grouped Format)
+        // ============================================================================
+        function renderCharacterBreakdownSheet() {
+            const scenes = breakdownState?.scenes || [];
+            const breakdowns = breakdownState?.sceneBreakdowns || {};
+            const charStates = breakdownState?.characterStates || {};
+            const continuityEvents = breakdownState?.continuityEvents || {};
 
-                // Parse scene heading
-                const intExt = /^(INT|EXT|INT\.\/EXT)/i.exec(heading)?.[0] || '';
-                const timeMatch = heading.match(/\b(DAY|NIGHT|MORNING|AFTERNOON|EVENING|DAWN|DUSK)\b/i);
-                const timeOfDay = timeMatch ? timeMatch[0].toUpperCase() : '';
-                const location = extractLocation(heading);
-                const storyDay = sceneToDay[sceneNum] || null;
+            let html = '<div class="sheet-content character-breakdown">';
 
-                // Find characters in this scene
-                confirmedChars.forEach(charName => {
-                    const charData = characters[charName];
-                    const scenesPresent = charData.scenesPresent ||
-                                         charData.storyPresence?.scenesPresent || [];
+            scenes.forEach((scene, index) => {
+                const breakdown = breakdowns[index] || {};
+                const cast = breakdown.cast || [];
 
-                    // Check if character is in this scene
-                    if (scenesPresent.includes(sceneNum) ||
-                        (charData.firstAppearance <= sceneNum && charData.lastAppearance >= sceneNum)) {
+                if (cast.length === 0) return; // Skip scenes with no characters
 
-                        const category = charData.category ||
-                                        charData.characterAnalysis?.role?.toUpperCase() ||
-                                        'SUPPORTING';
+                const sceneNum = scene.number || index + 1;
+                const intExt = extractIntExt(scene.heading);
+                const location = extractLocation(scene.heading);
+                const fullLocation = intExt ? `${intExt}. ${location}` : location;
+                const timeOfDay = scene.storyTimeOfDay || scene.timeOfDay || '';
+                const storyDay = formatDayShort(scene.storyDay);
+                const dayNote = scene.storyDayNote ? ` (${scene.storyDayNote})` : '';
 
-                        breakdownData.push({
-                            rowId: `${sceneNum}-${charName}`,
-                            sceneNum: sceneNum,
-                            sceneHeading: heading,
+                // Scene type badges
+                const badges = [];
+                if (scene.isFlashback) badges.push('FLASHBACK');
+                if (scene.isFlashForward) badges.push('FLASH FORWARD');
+                if (scene.isTimeJump) badges.push('TIME JUMP');
+                if (scene.isDream) badges.push('DREAM');
+                if (scene.isMontage) badges.push('MONTAGE');
+
+                html += `
+                    <div class="scene-group" data-scene-index="${index}">
+                        <div class="scene-header">
+                            <div class="scene-header-main">
+                                <span class="scene-number">SC ${sceneNum}</span>
+                                <span class="scene-day">${storyDay}${escapeHtml(dayNote)}</span>
+                                <span class="scene-location">${escapeHtml(fullLocation)} - ${escapeHtml(timeOfDay)}</span>
+                                ${badges.map(b => `<span class="scene-badge">${b}</span>`).join('')}
+                            </div>
+                            <div class="scene-synopsis">${escapeHtml(scene.synopsis || '')}</div>
+                        </div>
+                        <table class="character-table">
+                            <thead>
+                                <tr>
+                                    <th class="col-character">Character</th>
+                                    <th class="col-first">1st</th>
+                                    <th class="col-hair">Hair</th>
+                                    <th class="col-makeup">Makeup</th>
+                                    <th class="col-sfx">SFX/Prosthetics</th>
+                                    <th class="col-continuity">Continuity</th>
+                                    <th class="col-notes">Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+
+                cast.forEach(charName => {
+                    const charState = charStates[index]?.[charName] || {};
+                    const isFirst = characterFirstAppearances[charName] === index;
+                    const activeEvents = getActiveEventsForCharacterInScene(charName, index);
+                    const hasChange = charState.changeStatus === 'has-changes';
+
+                    let rowClass = 'character-row';
+                    if (hasChange) rowClass += ' has-change';
+                    if (activeEvents.length > 0) rowClass += ' has-continuity';
+                    if (isFirst) rowClass += ' first-appearance';
+
+                    // Format continuity events
+                    const continuityText = activeEvents.map(e => {
+                        return e.name || e.eventName || 'Event';
+                    }).join(', ');
+
+                    // Build notes - include exit info if applicable
+                    let notes = charState.notes || '';
+                    let exitInfo = '';
+                    if (hasChange) {
+                        const exitParts = [];
+                        if (charState.exitHair) exitParts.push(`Hair: ${charState.exitHair}`);
+                        if (charState.exitMakeup) exitParts.push(`MU: ${charState.exitMakeup}`);
+                        if (exitParts.length > 0) {
+                            exitInfo = `EXITS: ${exitParts.join(', ')}`;
+                        }
+                    }
+
+                    // Check if same as previous
+                    if (!charState.enterHair && !charState.enterMakeup) {
+                        const prevScene = findPreviousSceneForCharacter(charName, index);
+                        if (prevScene !== null && !notes) {
+                            notes = `Same as Sc ${prevScene + 1}`;
+                        }
+                    }
+
+                    html += `
+                        <tr class="${rowClass}">
+                            <td class="col-character">${escapeHtml(charName)}</td>
+                            <td class="col-first">${isFirst ? '*' : ''}</td>
+                            <td class="col-hair">${escapeHtml(charState.enterHair || '')}</td>
+                            <td class="col-makeup">${escapeHtml(charState.enterMakeup || '')}</td>
+                            <td class="col-sfx">${escapeHtml(charState.sfx || charState.changeInjuries || '')}</td>
+                            <td class="col-continuity">${escapeHtml(continuityText)}</td>
+                            <td class="col-notes">
+                                ${escapeHtml(notes)}
+                                ${exitInfo ? `<div class="exit-info">${escapeHtml(exitInfo)}</div>` : ''}
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                html += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            return html;
+        }
+
+        // ============================================================================
+        // SHEET 3: CONTINUITY TRACKER
+        // ============================================================================
+        function renderContinuityTrackerSheet() {
+            const continuityEvents = breakdownState?.continuityEvents || {};
+
+            // Flatten all events across characters
+            const allEvents = [];
+            Object.keys(continuityEvents).forEach(charName => {
+                const events = continuityEvents[charName] || [];
+                events.forEach(event => {
+                    if (event.progression && event.progression.length > 0) {
+                        // One row per stage
+                        event.progression.forEach(stage => {
+                            allEvents.push({
+                                character: charName,
+                                event: event.name || event.eventName || 'Event',
+                                type: event.category || event.type || 'other',
+                                startScene: event.startScene,
+                                endScene: event.endScene,
+                                stage: stage.label || stage.status || '',
+                                scenes: compressSceneRanges(stage.scenes || []),
+                                description: stage.description || '',
+                                notes: stage.applicationNotes || ''
+                            });
+                        });
+                    } else {
+                        // Single row for event without stages
+                        allEvents.push({
                             character: charName,
-                            category: category,
-                            storyDay: storyDay,
-                            timeOfDay: timeOfDay,
-                            intExt: intExt,
-                            location: location,
-                            synopsis: scene.synopsis || '',
-                            lookArc: '',
-                            hair: '',
-                            makeupBase: '',
-                            eyeBags: '',
-                            lesions: '',
-                            beard: '',
-                            woundsSFX: '',
-                            notes: ''
+                            event: event.name || event.eventName || 'Event',
+                            type: event.category || event.type || 'other',
+                            startScene: event.startScene,
+                            endScene: event.endScene,
+                            stage: '',
+                            scenes: event.startScene !== undefined && event.endScene !== undefined
+                                ? `${event.startScene + 1}-${event.endScene + 1}` : '',
+                            description: event.description || event.initialDescription || '',
+                            notes: event.applicationNotes || ''
                         });
                     }
                 });
             });
 
-            // Sort by scene number then character
-            breakdownData.sort((a, b) => {
-                if (a.sceneNum !== b.sceneNum) return a.sceneNum - b.sceneNum;
-                return a.character.localeCompare(b.character);
+            // Sort by character, then start scene
+            allEvents.sort((a, b) => {
+                if (a.character !== b.character) return a.character.localeCompare(b.character);
+                return (a.startScene || 0) - (b.startScene || 0);
             });
 
-            console.log('Generated breakdown:', breakdownData.length, 'rows');
+            let html = `
+                <div class="sheet-content continuity-tracker">
+                    <table class="breakdown-table">
+                        <thead>
+                            <tr>
+                                <th class="col-character">Character</th>
+                                <th class="col-event">Event</th>
+                                <th class="col-type">Type</th>
+                                <th class="col-start">Start</th>
+                                <th class="col-end">End</th>
+                                <th class="col-stage">Stage</th>
+                                <th class="col-scenes">Scenes</th>
+                                <th class="col-description">Description</th>
+                                <th class="col-app-notes">Application Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            if (allEvents.length === 0) {
+                html += `
+                    <tr>
+                        <td colspan="9" class="no-characters">No continuity events tracked</td>
+                    </tr>
+                `;
+            } else {
+                allEvents.forEach(event => {
+                    html += `
+                        <tr class="continuity-row type-${event.type}">
+                            <td class="col-character">${escapeHtml(event.character)}</td>
+                            <td class="col-event">${escapeHtml(event.event)}</td>
+                            <td class="col-type"><span class="type-badge ${event.type}">${event.type}</span></td>
+                            <td class="col-start">${event.startScene !== undefined ? 'Sc ' + (event.startScene + 1) : ''}</td>
+                            <td class="col-end">${event.endScene !== undefined ? 'Sc ' + (event.endScene + 1) : 'Active'}</td>
+                            <td class="col-stage">${escapeHtml(event.stage)}</td>
+                            <td class="col-scenes">${escapeHtml(event.scenes)}</td>
+                            <td class="col-description">${escapeHtml(event.description)}</td>
+                            <td class="col-app-notes">${escapeHtml(event.notes)}</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            return html;
+        }
+
+        // ============================================================================
+        // SHEET 4: CHARACTER PROFILES
+        // ============================================================================
+        function renderCharacterProfilesSheet() {
+            const confirmedCharacters = breakdownState?.confirmedCharacters || [];
+            const characters = breakdownState?.characters || {};
+            const continuityEvents = breakdownState?.continuityEvents || {};
+
+            if (confirmedCharacters.length === 0) {
+                return `
+                    <div class="sheet-content character-profiles">
+                        <div class="empty-state">
+                            <div class="empty-state-title">No Characters</div>
+                            <div class="empty-state-desc">Confirm characters in the Script Breakdown to view profiles</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            let html = '<div class="sheet-content character-profiles">';
+
+            confirmedCharacters.forEach(charName => {
+                const charData = characters[charName] || {};
+                const physicalProfile = charData.physicalProfile || {};
+                const keyIdentifiers = charData.keyIdentifiers || [];
+                const events = continuityEvents[charName] || [];
+                const sceneNumbers = getCharacterSceneNumbers(charName);
+                const looks = generateLooksFromBreakdown(charName);
+
+                // Determine role
+                let role = charData.role || 'Unknown';
+                if (sceneNumbers.length > 10) role = 'Lead';
+                else if (sceneNumbers.length > 5) role = 'Supporting';
+                else if (sceneNumbers.length > 0) role = 'Featured';
+
+                html += `
+                    <div class="character-profile-block">
+                        <div class="profile-header">
+                            <h2>${escapeHtml(charName)}</h2>
+                            <span class="role-badge">${role}</span>
+                            <span class="scene-count">${sceneNumbers.length} scenes</span>
+                        </div>
+
+                        <div class="profile-section physical">
+                            <h3>PHYSICAL PROFILE</h3>
+                            <div class="profile-grid">
+                                ${physicalProfile.age ? `<span>Age: ${escapeHtml(physicalProfile.age)}</span>` : ''}
+                                ${physicalProfile.gender ? `<span>Gender: ${escapeHtml(physicalProfile.gender)}</span>` : ''}
+                                ${physicalProfile.hairColour ? `<span>Hair: ${escapeHtml(physicalProfile.hairColour)}</span>` : ''}
+                                ${physicalProfile.eyeColour ? `<span>Eyes: ${escapeHtml(physicalProfile.eyeColour)}</span>` : ''}
+                                ${physicalProfile.skinTone ? `<span>Skin: ${escapeHtml(physicalProfile.skinTone)}</span>` : ''}
+                                ${physicalProfile.build ? `<span>Build: ${escapeHtml(physicalProfile.build)}</span>` : ''}
+                            </div>
+                            ${physicalProfile.distinguishing ? `
+                                <div style="margin-top: 8px; color: var(--text-secondary);">
+                                    Distinguishing: ${escapeHtml(physicalProfile.distinguishing)}
+                                </div>
+                            ` : ''}
+                        </div>
+
+                        ${keyIdentifiers.length > 0 ? `
+                            <div class="profile-section identifiers">
+                                <h3>KEY IDENTIFIERS</h3>
+                                <ul>
+                                    ${keyIdentifiers.map(id => `
+                                        <li>
+                                            <strong>${escapeHtml(id.name)}</strong>
+                                            <span class="source-badge ${id.source || 'creative'}">${id.source || 'creative'}</span>
+                                            ${id.implementation ? `<br><span style="color: var(--text-muted); font-size: 0.85em;">${escapeHtml(id.implementation)}</span>` : ''}
+                                        </li>
+                                    `).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+
+                        <div class="profile-section looks">
+                            <h3>LOOKS SUMMARY</h3>
+                            ${looks.length > 0 ? looks.map(look => `
+                                <div class="look-summary">
+                                    <strong>${escapeHtml(look.name)}</strong> (${look.scenes})
+                                    <div class="look-details">
+                                        ${look.hair ? `Hair: ${escapeHtml(look.hair)}` : ''}
+                                        ${look.hair && look.makeup ? ' | ' : ''}
+                                        ${look.makeup ? `Makeup: ${escapeHtml(look.makeup)}` : ''}
+                                    </div>
+                                </div>
+                            `).join('') : '<p class="empty-hint">No looks defined</p>'}
+                        </div>
+
+                        ${events.length > 0 ? `
+                            <div class="profile-section events">
+                                <h3>CONTINUITY EVENTS</h3>
+                                <ul>
+                                    ${events.map(e => `
+                                        <li>
+                                            <strong>${escapeHtml(e.name || e.eventName || 'Event')}</strong>
+                                            (Sc ${(e.startScene || 0) + 1}-${e.endScene !== undefined ? (e.endScene + 1) : 'Active'})
+                                            ${e.progression ? `<br><span class="progression">${e.progression.map(s => s.label || s.status).join(' -> ')}</span>` : ''}
+                                        </li>
+                                    `).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+
+                        <div class="profile-section scenes">
+                            <h3>SCENES</h3>
+                            <p>${compressSceneRanges(sceneNumbers)}</p>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            return html;
+        }
+
+        // ============================================================================
+        // HELPER FUNCTIONS
+        // ============================================================================
+        function escapeHtml(text) {
+            if (!text) return '';
+            return String(text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function formatDayShort(storyDay) {
+            if (!storyDay) return '';
+            const match = String(storyDay).match(/\d+/);
+            return match ? `D${match[0]}` : storyDay.substring(0, 5);
+        }
+
+        function extractIntExt(heading) {
+            if (!heading) return '';
+            const match = heading.match(/^(INT|EXT|INT\.\/EXT)/i);
+            return match ? match[0].toUpperCase() : '';
         }
 
         function extractLocation(heading) {
             if (!heading) return '';
-            // Remove INT/EXT and time indicators
             let loc = heading.replace(/^(INT|EXT|INT\.\/EXT)\.?\s*/i, '');
             loc = loc.replace(/\s*-\s*(DAY|NIGHT|MORNING|AFTERNOON|EVENING|DAWN|DUSK|CONTINUOUS|SAME|LATER|MOMENTS LATER).*$/i, '');
             return loc.trim();
         }
 
-        // ============================================================================
-        // RENDERING
-        // ============================================================================
+        function compressSceneRanges(sceneNumbers) {
+            if (!sceneNumbers || sceneNumbers.length === 0) return '';
 
-        function renderBreakdownTable() {
-            const tbody = document.getElementById('breakdownBody');
-            if (!tbody) return;
+            // Convert to numbers and sort
+            const nums = sceneNumbers.map(n => parseInt(n) || n).sort((a, b) => a - b);
 
-            let html = '';
-            let currentScene = null;
-            let rowNum = 0;
+            if (nums.length === 1) return `Sc ${nums[0]}`;
 
-            breakdownData.forEach((row, index) => {
-                // Add scene header if new scene
-                if (row.sceneNum !== currentScene) {
-                    currentScene = row.sceneNum;
-                    rowNum++;
-                    html += `
-                        <tr class="scene-header" data-scene="${row.sceneNum}">
-                            <td class="row-num">${rowNum}</td>
-                            <td>${row.sceneNum}</td>
-                            <td colspan="15"><strong>${row.sceneHeading || `Scene ${row.sceneNum}`}</strong></td>
-                        </tr>
-                    `;
+            const ranges = [];
+            let start = nums[0];
+            let end = nums[0];
+
+            for (let i = 1; i < nums.length; i++) {
+                if (nums[i] === end + 1) {
+                    end = nums[i];
+                } else {
+                    ranges.push(start === end ? `${start}` : `${start}-${end}`);
+                    start = nums[i];
+                    end = nums[i];
                 }
+            }
+            ranges.push(start === end ? `${start}` : `${start}-${end}`);
 
-                rowNum++;
-                const badgeClass = getBadgeClass(row.intExt, row.timeOfDay);
-                const categoryClass = row.category.toLowerCase().replace('_', '-');
-
-                html += `
-                    <tr data-row="${index}" data-scene="${row.sceneNum}" data-character="${row.character}" data-category="${row.category}">
-                        <td class="row-num">${rowNum}</td>
-                        <td></td>
-                        <td>${row.character}</td>
-                        <td><span class="category-badge ${categoryClass}">${formatCategory(row.category)}</span></td>
-                        <td contenteditable="true" data-field="storyDay">${row.storyDay || ''}</td>
-                        <td>${row.timeOfDay || ''}</td>
-                        <td><span class="scene-badge ${badgeClass}">${row.intExt}</span></td>
-                        <td>${row.location || ''}</td>
-                        <td contenteditable="true" data-field="synopsis">${row.synopsis || ''}</td>
-                        <td contenteditable="true" data-field="lookArc">${row.lookArc || ''}</td>
-                        <td contenteditable="true" data-field="hair">${row.hair || ''}</td>
-                        <td contenteditable="true" data-field="makeupBase">${row.makeupBase || ''}</td>
-                        <td contenteditable="true" data-field="eyeBags">${row.eyeBags || ''}</td>
-                        <td contenteditable="true" data-field="lesions">${row.lesions || ''}</td>
-                        <td contenteditable="true" data-field="beard">${row.beard || ''}</td>
-                        <td contenteditable="true" data-field="woundsSFX">${row.woundsSFX || ''}</td>
-                        <td contenteditable="true" data-field="notes">${row.notes || ''}</td>
-                    </tr>
-                `;
-            });
-
-            tbody.innerHTML = html;
-
-            // Setup cell editing listeners
-            setupCellEditing();
+            return 'Sc ' + ranges.join(', ');
         }
 
-        function getBadgeClass(intExt, timeOfDay) {
-            const isInt = /INT/i.test(intExt);
-            const isNight = /NIGHT|EVENING|DUSK/i.test(timeOfDay);
+        function getCharacterSceneNumbers(charName) {
+            const scenes = breakdownState?.scenes || [];
+            const breakdowns = breakdownState?.sceneBreakdowns || {};
+            const sceneNumbers = [];
 
-            if (isInt && isNight) return 'int-night';
-            if (isInt) return 'int-day';
-            if (isNight) return 'ext-night';
-            return 'ext-day';
-        }
-
-        function formatCategory(category) {
-            const formats = {
-                'LEAD': 'Lead',
-                'SUPPORTING': 'Supporting',
-                'DAY_PLAYER': 'Day Player',
-                'BACKGROUND': 'Background'
-            };
-            return formats[category] || category;
-        }
-
-        function setupCellEditing() {
-            const cells = document.querySelectorAll('td[contenteditable="true"]');
-            cells.forEach(cell => {
-                cell.addEventListener('blur', function() {
-                    const row = this.closest('tr');
-                    const rowIndex = parseInt(row.dataset.row);
-                    const field = this.dataset.field;
-
-                    if (rowIndex >= 0 && field && breakdownData[rowIndex]) {
-                        breakdownData[rowIndex][field] = this.textContent.trim();
-                        saveBreakdown();
-                    }
-                });
-            });
-        }
-
-        // ============================================================================
-        // FILTERS
-        // ============================================================================
-
-        function populateFilters() {
-            // Character filter
-            const charFilter = document.getElementById('characterFilter');
-            const uniqueChars = [...new Set(breakdownData.map(r => r.character))].sort();
-            uniqueChars.forEach(char => {
-                const option = document.createElement('option');
-                option.value = char;
-                option.textContent = char;
-                charFilter.appendChild(option);
-            });
-
-            // Day filter
-            const dayFilter = document.getElementById('dayFilter');
-            const uniqueDays = [...new Set(breakdownData.map(r => r.storyDay).filter(d => d))].sort((a, b) => a - b);
-            uniqueDays.forEach(day => {
-                const option = document.createElement('option');
-                option.value = day;
-                option.textContent = `Day ${day}`;
-                dayFilter.appendChild(option);
-            });
-        }
-
-        function filterByCharacter() {
-            const value = document.getElementById('characterFilter').value;
-            applyFilters();
-        }
-
-        function filterByCategory() {
-            const value = document.getElementById('categoryFilter').value;
-            applyFilters();
-        }
-
-        function filterByDay() {
-            const value = document.getElementById('dayFilter').value;
-            applyFilters();
-        }
-
-        function applyFilters() {
-            const charFilter = document.getElementById('characterFilter').value;
-            const catFilter = document.getElementById('categoryFilter').value;
-            const dayFilter = document.getElementById('dayFilter').value;
-
-            const rows = document.querySelectorAll('#breakdownBody tr');
-            let visibleScenes = new Set();
-
-            rows.forEach(row => {
-                if (row.classList.contains('scene-header')) {
-                    row.style.display = 'none'; // Hide all headers initially
-                    return;
-                }
-
-                const char = row.dataset.character;
-                const cat = row.dataset.category;
-                const scene = row.dataset.scene;
-
-                // Get story day from row
-                const rowIndex = parseInt(row.dataset.row);
-                const day = breakdownData[rowIndex]?.storyDay;
-
-                let show = true;
-
-                if (charFilter !== 'all' && char !== charFilter) show = false;
-                if (catFilter !== 'all' && cat !== catFilter) show = false;
-                if (dayFilter !== 'all' && day != dayFilter) show = false;
-
-                row.style.display = show ? '' : 'none';
-
-                if (show) {
-                    visibleScenes.add(scene);
+            scenes.forEach((scene, index) => {
+                const breakdown = breakdowns[index] || {};
+                if ((breakdown.cast || []).includes(charName)) {
+                    sceneNumbers.push(scene.number || index + 1);
                 }
             });
 
-            // Show scene headers for visible scenes
-            rows.forEach(row => {
-                if (row.classList.contains('scene-header')) {
-                    const scene = row.dataset.scene;
-                    row.style.display = visibleScenes.has(scene) ? '' : 'none';
+            return sceneNumbers;
+        }
+
+        function findPreviousSceneForCharacter(charName, currentIndex) {
+            const breakdowns = breakdownState?.sceneBreakdowns || {};
+
+            for (let i = currentIndex - 1; i >= 0; i--) {
+                const breakdown = breakdowns[i] || {};
+                if ((breakdown.cast || []).includes(charName)) {
+                    return i;
                 }
+            }
+            return null;
+        }
+
+        function getActiveEventsForCharacterInScene(charName, sceneIndex) {
+            const continuityEvents = breakdownState?.continuityEvents || {};
+            const events = continuityEvents[charName] || [];
+
+            return events.filter(event => {
+                const start = event.startScene;
+                const end = event.endScene;
+
+                if (start === undefined) return false;
+                if (sceneIndex < start) return false;
+                if (end !== undefined && sceneIndex > end) return false;
+
+                return true;
+            });
+        }
+
+        function generateLooksFromBreakdown(charName) {
+            const scenes = breakdownState?.scenes || [];
+            const charStates = breakdownState?.characterStates || {};
+            const looks = {};
+
+            scenes.forEach((scene, index) => {
+                const state = charStates[index]?.[charName];
+                if (!state) return;
+
+                const hair = state.enterHair || '';
+                const makeup = state.enterMakeup || '';
+                const wardrobe = state.enterWardrobe || '';
+
+                if (!hair && !makeup) return;
+
+                const key = `${hair}||${makeup}||${wardrobe}`;
+                if (!looks[key]) {
+                    looks[key] = {
+                        name: `Look ${Object.keys(looks).length + 1}`,
+                        hair: hair,
+                        makeup: makeup,
+                        wardrobe: wardrobe,
+                        sceneIndices: []
+                    };
+                }
+                looks[key].sceneIndices.push(scene.number || index + 1);
             });
 
-            updateStatusBar();
+            return Object.values(looks).map(look => ({
+                ...look,
+                scenes: compressSceneRanges(look.sceneIndices)
+            }));
         }
 
-        // ============================================================================
-        // SCENE EXPANSION
-        // ============================================================================
-
-        function collapseAllScenes() {
-            const rows = document.querySelectorAll('#breakdownBody tr:not(.scene-header)');
-            rows.forEach(row => row.style.display = 'none');
+        function formatLastSaved(timestamp) {
+            if (!timestamp) return '--';
+            const date = new Date(timestamp);
+            return date.toLocaleString();
         }
 
-        function expandAllScenes() {
-            const rows = document.querySelectorAll('#breakdownBody tr');
-            rows.forEach(row => row.style.display = '');
-        }
+        function updateFooterStats() {
+            const scenes = breakdownState?.scenes || [];
+            const confirmedCharacters = breakdownState?.confirmedCharacters || [];
+            const continuityEvents = breakdownState?.continuityEvents || {};
 
-        // ============================================================================
-        // DATA MANAGEMENT
-        // ============================================================================
+            let eventCount = 0;
+            Object.values(continuityEvents).forEach(events => {
+                eventCount += (events || []).length;
+            });
 
-        function refreshData() {
-            loadData();
-            showToast('Data refreshed');
-        }
-
-        function saveBreakdown() {
-            localStorage.setItem('checksHappyBreakdown', JSON.stringify(breakdownData));
-            updateStatus('Saved');
-        }
-
-        function updateStatusBar() {
-            const visibleRows = document.querySelectorAll('#breakdownBody tr:not(.scene-header):not([style*="display: none"])');
-            const uniqueChars = new Set(breakdownData.map(r => r.character));
-            const uniqueScenes = new Set(breakdownData.map(r => r.sceneNum));
-
-            document.getElementById('rowCount').textContent = `${visibleRows.length} rows`;
-            document.getElementById('characterCount').textContent = `${uniqueChars.size} characters`;
-            document.getElementById('sceneCount').textContent = `${uniqueScenes.size} scenes`;
-        }
-
-        function updateStatus(message) {
-            document.getElementById('statusText').textContent = message;
-            setTimeout(() => {
-                document.getElementById('statusText').textContent = 'Ready';
-            }, 3000);
+            document.getElementById('sceneCountFooter').textContent = `${scenes.length} scenes`;
+            document.getElementById('characterCountFooter').textContent = `${confirmedCharacters.length} characters`;
+            document.getElementById('eventCountFooter').textContent = `${eventCount} continuity events`;
         }
 
         // ============================================================================
         // EXPORT FUNCTIONS
         // ============================================================================
-
-        function showExportModal() {
-            document.getElementById('exportModal').style.display = 'flex';
+        function toggleExportMenu() {
+            const menu = document.getElementById('export-menu');
+            menu.classList.toggle('open');
         }
 
-        function closeExportModal() {
-            document.getElementById('exportModal').style.display = 'none';
+        // Close menu when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.export-dropdown')) {
+                document.getElementById('export-menu').classList.remove('open');
+            }
+        });
+
+        function getSheetData() {
+            switch(currentSheet) {
+                case 'scene-overview':
+                    return getSceneOverviewData();
+                case 'character-breakdown':
+                    return getCharacterBreakdownData();
+                case 'continuity-tracker':
+                    return getContinuityTrackerData();
+                case 'character-profiles':
+                    return getCharacterProfilesData();
+            }
         }
 
-        function getExportData() {
-            const headers = [
-                'Scene', 'Character', 'Category', 'Story Day', 'Time', 'INT/EXT',
-                'Location', 'Synopsis', 'Look Arc', 'Hair', 'Makeup Base',
-                'Eye Bags', 'Lesions', 'Beard', 'Wounds/Blood/SFX', 'Notes'
-            ];
+        function getSceneOverviewData() {
+            const scenes = breakdownState?.scenes || [];
+            const breakdowns = breakdownState?.sceneBreakdowns || {};
 
-            const rows = breakdownData.map(row => [
-                row.sceneNum,
-                row.character,
-                formatCategory(row.category),
-                row.storyDay || '',
-                row.timeOfDay || '',
-                row.intExt || '',
-                row.location || '',
-                row.synopsis || '',
-                row.lookArc || '',
-                row.hair || '',
-                row.makeupBase || '',
-                row.eyeBags || '',
-                row.lesions || '',
-                row.beard || '',
-                row.woundsSFX || '',
-                row.notes || ''
-            ]);
+            const headers = ['Scene', 'Day', 'Day Note', 'Location', 'Time', 'Cast Count', 'Synopsis'];
+            const rows = scenes.map((scene, index) => {
+                const breakdown = breakdowns[index] || {};
+                const intExt = extractIntExt(scene.heading);
+                const location = extractLocation(scene.heading);
+
+                return [
+                    scene.number || index + 1,
+                    formatDayShort(scene.storyDay),
+                    scene.storyDayNote || '',
+                    intExt ? `${intExt}. ${location}` : location,
+                    scene.storyTimeOfDay || scene.timeOfDay || '',
+                    (breakdown.cast || []).length,
+                    scene.synopsis || ''
+                ];
+            });
 
             return { headers, rows };
         }
 
-        function exportToTSV() {
-            const { headers, rows } = getExportData();
-            const tsv = [headers.join('\t'), ...rows.map(r => r.join('\t'))].join('\n');
+        function getCharacterBreakdownData() {
+            const scenes = breakdownState?.scenes || [];
+            const breakdowns = breakdownState?.sceneBreakdowns || {};
+            const charStates = breakdownState?.characterStates || {};
 
-            downloadFile(tsv, 'breakdown.tsv', 'text/tab-separated-values');
-            closeExportModal();
-            showToast('Exported as TSV');
+            const headers = ['Scene', 'Character', '1st', 'Hair', 'Makeup', 'SFX', 'Continuity', 'Notes'];
+            const rows = [];
+
+            scenes.forEach((scene, index) => {
+                const breakdown = breakdowns[index] || {};
+                const cast = breakdown.cast || [];
+
+                cast.forEach(charName => {
+                    const state = charStates[index]?.[charName] || {};
+                    const isFirst = characterFirstAppearances[charName] === index;
+                    const events = getActiveEventsForCharacterInScene(charName, index);
+
+                    rows.push([
+                        scene.number || index + 1,
+                        charName,
+                        isFirst ? '*' : '',
+                        state.enterHair || '',
+                        state.enterMakeup || '',
+                        state.sfx || state.changeInjuries || '',
+                        events.map(e => e.name || e.eventName).join(', '),
+                        state.notes || ''
+                    ]);
+                });
+            });
+
+            return { headers, rows };
         }
 
-        function exportToCSV() {
-            const { headers, rows } = getExportData();
+        function getContinuityTrackerData() {
+            const continuityEvents = breakdownState?.continuityEvents || {};
 
+            const headers = ['Character', 'Event', 'Type', 'Start', 'End', 'Stage', 'Scenes', 'Description', 'Notes'];
+            const rows = [];
+
+            Object.keys(continuityEvents).forEach(charName => {
+                const events = continuityEvents[charName] || [];
+                events.forEach(event => {
+                    rows.push([
+                        charName,
+                        event.name || event.eventName || 'Event',
+                        event.category || event.type || 'other',
+                        event.startScene !== undefined ? `Sc ${event.startScene + 1}` : '',
+                        event.endScene !== undefined ? `Sc ${event.endScene + 1}` : 'Active',
+                        '',
+                        event.startScene !== undefined && event.endScene !== undefined
+                            ? `${event.startScene + 1}-${event.endScene + 1}` : '',
+                        event.description || event.initialDescription || '',
+                        event.applicationNotes || ''
+                    ]);
+                });
+            });
+
+            return { headers, rows };
+        }
+
+        function getCharacterProfilesData() {
+            const confirmedCharacters = breakdownState?.confirmedCharacters || [];
+            const characters = breakdownState?.characters || {};
+
+            const headers = ['Character', 'Role', 'Scenes', 'Age', 'Gender', 'Hair', 'Eyes', 'Distinguishing'];
+            const rows = confirmedCharacters.map(charName => {
+                const data = characters[charName] || {};
+                const profile = data.physicalProfile || {};
+                const sceneNumbers = getCharacterSceneNumbers(charName);
+
+                return [
+                    charName,
+                    data.role || 'Unknown',
+                    compressSceneRanges(sceneNumbers),
+                    profile.age || '',
+                    profile.gender || '',
+                    profile.hairColour || '',
+                    profile.eyeColour || '',
+                    profile.distinguishing || ''
+                ];
+            });
+
+            return { headers, rows };
+        }
+
+        function exportCurrentSheet(format) {
+            const { headers, rows } = getSheetData();
+            const filename = `breakdown_${currentSheet}_${Date.now()}`;
+
+            if (format === 'csv') {
+                downloadCSV(headers, rows, filename);
+            } else if (format === 'tsv') {
+                downloadTSV(headers, rows, filename);
+            }
+
+            document.getElementById('export-menu').classList.remove('open');
+            showToast(`Exported as ${format.toUpperCase()}`);
+        }
+
+        function downloadCSV(headers, rows, filename) {
             const escapeCSV = (val) => {
                 val = String(val || '');
                 if (val.includes(',') || val.includes('"') || val.includes('\n')) {
@@ -1062,64 +1554,16 @@
                 ...rows.map(r => r.map(escapeCSV).join(','))
             ].join('\n');
 
-            downloadFile(csv, 'breakdown.csv', 'text/csv');
-            closeExportModal();
-            showToast('Exported as CSV');
+            downloadFile(csv, `${filename}.csv`, 'text/csv');
         }
 
-        function exportToPDF() {
-            // Create a printable version
-            const { headers, rows } = getExportData();
+        function downloadTSV(headers, rows, filename) {
+            const tsv = [
+                headers.join('\t'),
+                ...rows.map(r => r.join('\t'))
+            ].join('\n');
 
-            const printWindow = window.open('', '_blank');
-            printWindow.document.write(`
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <title>H&MU Breakdown</title>
-                    <style>
-                        body { font-family: Arial, sans-serif; font-size: 10px; }
-                        h1 { font-size: 16px; margin-bottom: 10px; }
-                        table { border-collapse: collapse; width: 100%; }
-                        th, td { border: 1px solid #ccc; padding: 4px 6px; text-align: left; }
-                        th { background: #f0f0f0; font-weight: bold; }
-                        tr:nth-child(even) { background: #f9f9f9; }
-                        @media print {
-                            @page { size: landscape; margin: 0.5in; }
-                        }
-                    </style>
-                </head>
-                <body>
-                    <h1>Hair & Makeup Breakdown</h1>
-                    <table>
-                        <thead>
-                            <tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>
-                        </thead>
-                        <tbody>
-                            ${rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}
-                        </tbody>
-                    </table>
-                    <script>window.onload = function() { window.print(); }</script>
-                </body>
-                </html>
-            `);
-            printWindow.document.close();
-
-            closeExportModal();
-            showToast('Opening print dialog...');
-        }
-
-        function copyToClipboard() {
-            const { headers, rows } = getExportData();
-            const tsv = [headers.join('\t'), ...rows.map(r => r.join('\t'))].join('\n');
-
-            navigator.clipboard.writeText(tsv).then(() => {
-                closeExportModal();
-                showToast('Copied to clipboard!');
-            }).catch(err => {
-                console.error('Failed to copy:', err);
-                showToast('Failed to copy to clipboard');
-            });
+            downloadFile(tsv, `${filename}.tsv`, 'text/tab-separated-values');
         }
 
         function downloadFile(content, filename, mimeType) {
@@ -1132,9 +1576,30 @@
             URL.revokeObjectURL(url);
         }
 
-        // ============================================================================
-        // UTILITIES
-        // ============================================================================
+        function exportToPDF() {
+            document.getElementById('export-menu').classList.remove('open');
+            printBreakdown();
+        }
+
+        function copyToClipboard() {
+            const { headers, rows } = getSheetData();
+            const tsv = [
+                headers.join('\t'),
+                ...rows.map(r => r.join('\t'))
+            ].join('\n');
+
+            navigator.clipboard.writeText(tsv).then(() => {
+                document.getElementById('export-menu').classList.remove('open');
+                showToast('Copied to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                showToast('Failed to copy to clipboard');
+            });
+        }
+
+        function printBreakdown() {
+            window.print();
+        }
 
         function showToast(message) {
             const existing = document.querySelector('.toast');
@@ -1148,7 +1613,7 @@
             setTimeout(() => toast.remove(), 3000);
         }
 
-        console.log('Breakdown sheet loaded');
+        console.log('Master Breakdown page loaded');
     </script>
 </body>
 </html>
