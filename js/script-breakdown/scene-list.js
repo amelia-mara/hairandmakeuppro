@@ -71,8 +71,8 @@ export function renderSceneList() {
         const hasContinuity = scene.characterStates && Object.keys(scene.characterStates).length > 0;
         const isProcessed = scene.processed || (hasSynopsis && hasTags);
 
-        // Get scene indicators from master context
-        const contextIndicators = getSceneIndicators(index, analysis);
+        // Get scene indicators from master context and scene flags
+        const contextIndicators = getSceneIndicators(index, analysis, scene);
 
         // Count elements (excluding cast)
         let elementCounts = [];
@@ -125,13 +125,31 @@ export function renderSceneList() {
 }
 
 /**
- * Get scene indicators based on master context analysis
+ * Get scene indicators based on master context analysis and scene flags
  * @param {number} sceneIndex - Scene index
  * @param {Object} analysis - Master context analysis
+ * @param {Object} scene - Scene object (optional)
  * @returns {Array} Array of indicator objects
  */
-function getSceneIndicators(sceneIndex, analysis) {
+function getSceneIndicators(sceneIndex, analysis, scene = null) {
     const indicators = [];
+
+    // Check scene type flags (auto-detected or user-set)
+    if (scene?.isFlashback) {
+        indicators.push({ icon: '⏪', type: 'flashback', tooltip: 'Flashback' });
+    }
+    if (scene?.isFlashForward) {
+        indicators.push({ icon: '⏩', type: 'flashforward', tooltip: 'Flash Forward' });
+    }
+    if (scene?.isTimeJump) {
+        indicators.push({ icon: '⏱️', type: 'timejump', tooltip: 'Time Jump' });
+    }
+    if (scene?.isDream) {
+        indicators.push({ icon: '💭', type: 'dream', tooltip: 'Dream Sequence' });
+    }
+    if (scene?.isMontage) {
+        indicators.push({ icon: '🎞️', type: 'montage', tooltip: 'Montage' });
+    }
 
     // Check for weather conditions
     const environment = analysis.environments?.[`scene_${sceneIndex}`];
