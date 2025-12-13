@@ -1,41 +1,477 @@
 /**
  * breakdown-character-timeline.js
- * Character timeline and story day visualization
+ * Character timeline - Swimlane/Gantt Chart visualization
  *
  * Responsibilities:
- * - Render character timeline with look states
- * - Render story day timeline visualization
- * - Render transition cards between looks
- * - Render continuity scene cards with entering/exiting states
- * - Handle timeline navigation
+ * - Render horizontal swimlane chart showing looks and events
+ * - Scene numbers across the top, story days as column groups
+ * - Looks and events as horizontal bar rows
+ * - Click to navigate to scene breakdown
  */
 
 import { getState, escapeHtml, showToast } from './breakdown-character-utils.js';
-import { getCharacterScenes, groupScenesByStoryDay } from './breakdown-character-filtering.js';
-import { formatSceneRange, getComplexityIcon } from './utils.js';
-import { buildCharacterProfile } from './character-profiles.js';
+import { generateLooksFromBreakdown } from './breakdown-character-lookbook.js';
 
 /**
- * Render story day timeline visualization
- * Shows a horizontal timeline with clickable day segments
+ * Generate timeline data for a character
+ * @param {string} characterName - Character name
+ * @returns {Object} Timeline data with scenes, storyDays, looks, events
+ */
+function generateTimelineData(characterName) {
+    const state = getState();
+    const scenes = state?.scenes || [];
+
+    // Get looks from lookbook
+    let looks = [];
+    try {
+        looks = generateLooksFromBreakdown(characterName);
+    } catch (e) {
+        console.warn('Could not generate looks:', e);
+    }
+
+    // Get continuity events
+    const events = state.continuityEvents?.[characterName] || [];
+
+    // Get scenes this character appears in (in order)
+    const characterScenes = [];
+    scenes.forEach((scene, index) => {
+        const breakdown = state.sceneBreakdowns?.[index];
+        if (breakdown?.cast?.includes(characterName)) {
+            characterScenes.push({
+                index: index,
+                number: scene.number || index + 1,
+                storyDay: scene.storyDay || 'Day 1',
+                heading: scene.heading || ''
+            });
+        }
+    });
+
+    // Group scenes by story day for column headers
+    const storyDays = [];
+    let currentDay = null;
+    characterScenes.forEach(scene => {
+        if (scene.storyDay !== currentDay) {
+            currentDay = scene.storyDay;
+            storyDays.push({
+                label: currentDay,
+                startIndex: characterScenes.indexOf(scene),
+                scenes: []
+            });
+        }
+        storyDays[storyDays.length - 1].scenes.push(scene);
+    });
+
+    return {
+        characterName,
+        scenes: characterScenes,
+        storyDays,
+        looks,
+        events
+    };
+}
+
+/**
+ * Format story day to short form
+ * @param {string} storyDay - Story day label
+ * @returns {string} Short form (e.g., "Day 1" -> "D1")
+ */
+function formatDayShort(storyDay) {
+    if (!storyDay) return '';
+    const match = storyDay.match(/\d+/);
+    return match ? `D${match[0]}` : storyDay.substring(0, 3);
+}
+
+/**
+ * Truncate text for display
+ * @param {string} text - Text to truncate
+ * @param {number} maxLen - Maximum length
+ * @returns {string} Truncated text
+ */
+function truncate(text, maxLen) {
+    if (!text) return '';
+    return text.length > maxLen ? text.substring(0, maxLen) + '...' : text;
+}
+
+/**
+ * Get scene range from start to end
+ * @param {number|string} start - Start scene
+ * @param {number|string} end - End scene
+ * @returns {Array<number>} Array of scene numbers
+ */
+function getSceneRange(start, end) {
+    const range = [];
+    for (let i = parseInt(start); i <= parseInt(end); i++) {
+        range.push(i);
+    }
+    return range;
+}
+
+/**
+ * Render a look row in the timeline table
+ * @param {Object} look - Look object
+ * @param {Array} scenes - All character scenes
+ * @param {number} index - Look index for coloring
+ * @returns {string} HTML for look row
+ */
+function renderLookRow(look, scenes, index) {
+    // Determine which scene columns this look spans
+    const lookSceneNumbers = look.scenes || [];
+
+    // Build cells - filled or empty for each scene
+    const cells = scenes.map(scene => {
+        const sceneNum = parseInt(scene.number) || scene.number;
+        const isActive = lookSceneNumbers.includes(sceneNum) ||
+                        lookSceneNumbers.includes(scene.number);
+        return `
+            <td class="bar-cell ${isActive ? 'active' : ''}">
+                ${isActive ? '<div class="look-bar"></div>' : ''}
+            </td>
+        `;
+    }).join('');
+
+    // Assign colour based on index
+    const colours = ['#4a90d9', '#50c878', '#daa520', '#cd5c5c', '#9370db', '#20b2aa'];
+    const colour = colours[index % colours.length];
+
+    // Skip undefined looks row if empty
+    if (look.id === '__undefined__') {
+        return `
+            <tr class="look-row undefined-look" data-look-id="${look.id}" style="--look-colour: #666">
+                <td class="row-label">
+                    <div class="look-label">
+                        <span class="look-name undefined">Undefined</span>
+                    </div>
+                </td>
+                ${cells}
+            </tr>
+        `;
+    }
+
+    return `
+        <tr class="look-row" data-look-id="${escapeHtml(look.id)}" style="--look-colour: ${colour}">
+            <td class="row-label">
+                <div class="look-label">
+                    <span class="look-name">${escapeHtml(look.name || 'Look ' + (index + 1))}</span>
+                    ${look.hair || look.makeup ? `
+                        <span class="look-subtitle">${look.hair ? truncate(look.hair, 15) : truncate(look.makeup, 15)}</span>
+                    ` : ''}
+                </div>
+            </td>
+            ${cells}
+        </tr>
+    `;
+}
+
+/**
+ * Render an event row in the timeline table
+ * @param {Object} event - Continuity event object
+ * @param {Array} scenes - All character scenes
+ * @returns {string} HTML for event row
+ */
+function renderEventRow(event, scenes) {
+    // Determine which scene columns this event spans
+    let eventScenes = [];
+
+    if (event.progression && event.progression.length > 0) {
+        // Event has stages with scene arrays
+        eventScenes = event.progression.flatMap(s => s.scenes || []);
+    } else if (event.startScene && event.endScene) {
+        // Event has start/end range
+        eventScenes = getSceneRange(event.startScene, event.endScene);
+    } else if (event.sceneIndex !== undefined) {
+        // Single scene event - find the scene number
+        const state = getState();
+        const scene = state.scenes?.[event.sceneIndex];
+        if (scene) {
+            eventScenes = [scene.number || event.sceneIndex + 1];
+        }
+    } else if (event.scenes) {
+        eventScenes = event.scenes;
+    }
+
+    // Build cells
+    const cells = scenes.map(scene => {
+        const sceneNum = parseInt(scene.number) || scene.number;
+        const isActive = eventScenes.includes(sceneNum) ||
+                        eventScenes.includes(scene.number);
+
+        // If event has stages, determine which stage
+        let stageClass = '';
+        if (isActive && event.progression) {
+            const stage = event.progression.find(s =>
+                (s.scenes || []).includes(sceneNum) ||
+                (s.scenes || []).includes(scene.number)
+            );
+            if (stage) {
+                const stageIndex = event.progression.indexOf(stage);
+                stageClass = `stage-${stageIndex}`;
+            }
+        }
+
+        return `
+            <td class="bar-cell ${isActive ? 'active' : ''} ${stageClass}">
+                ${isActive ? '<div class="event-bar"></div>' : ''}
+            </td>
+        `;
+    }).join('');
+
+    return `
+        <tr class="event-row" data-event-id="${escapeHtml(event.id || '')}">
+            <td class="row-label">
+                <div class="event-label">
+                    <span class="event-type">${escapeHtml(event.type || 'event')}</span>
+                    <span class="event-name">${escapeHtml(event.name || event.description || 'Event')}</span>
+                </div>
+            </td>
+            ${cells}
+        </tr>
+    `;
+}
+
+/**
+ * Render the swimlane timeline chart
+ * @param {string} characterName - Character name
+ * @returns {string} HTML for timeline
+ */
+function renderTimeline(characterName) {
+    const data = generateTimelineData(characterName);
+
+    if (data.scenes.length === 0) {
+        return `
+            <div class="timeline-empty">
+                <p>No scenes found for this character.</p>
+                <p class="hint">Add this character to scene breakdowns to populate the timeline.</p>
+            </div>
+        `;
+    }
+
+    const sceneCount = data.scenes.length;
+    const colWidth = Math.max(50, Math.min(80, 800 / sceneCount)); // Responsive column width
+    const escapedName = escapeHtml(characterName).replace(/'/g, "\\'");
+
+    // Filter out undefined looks for cleaner display
+    const definedLooks = data.looks.filter(l => l.id !== '__undefined__');
+    const undefinedLook = data.looks.find(l => l.id === '__undefined__');
+
+    return `
+        <div class="character-timeline" data-character="${escapeHtml(characterName)}">
+
+            <div class="timeline-scroll" id="timeline-scroll-${escapeHtml(characterName).replace(/\s+/g, '-')}">
+                <table class="timeline-table">
+
+                    <!-- Header Row 1: Scene Numbers -->
+                    <thead>
+                        <tr class="scene-row">
+                            <th class="row-label"></th>
+                            ${data.scenes.map((scene, i) => `
+                                <th class="scene-cell"
+                                    data-scene-index="${scene.index}"
+                                    data-col-index="${i}"
+                                    title="${escapeHtml(scene.heading)}"
+                                    onclick="goToScene(${scene.index})"
+                                    style="width: ${colWidth}px">
+                                    Sc${scene.number}
+                                </th>
+                            `).join('')}
+                        </tr>
+
+                        <!-- Header Row 2: Story Days -->
+                        <tr class="day-row">
+                            <th class="row-label"></th>
+                            ${data.scenes.map(scene => `
+                                <th class="day-cell">${formatDayShort(scene.storyDay)}</th>
+                            `).join('')}
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        <!-- Looks Section -->
+                        ${definedLooks.map((look, i) => renderLookRow(look, data.scenes, i)).join('')}
+
+                        ${undefinedLook && undefinedLook.scenes.length > 0 ? `
+                            ${renderLookRow(undefinedLook, data.scenes, definedLooks.length)}
+                        ` : ''}
+
+                        <!-- Divider -->
+                        <tr class="section-divider">
+                            <td colspan="${data.scenes.length + 1}"></td>
+                        </tr>
+
+                        <!-- Events Section -->
+                        ${data.events.length > 0 ? `
+                            ${data.events.map(event => renderEventRow(event, data.scenes)).join('')}
+                        ` : `
+                            <tr class="no-events">
+                                <td class="row-label">EVENTS</td>
+                                <td colspan="${data.scenes.length}" class="empty-cell">No continuity events</td>
+                            </tr>
+                        `}
+                    </tbody>
+
+                </table>
+            </div>
+
+            <!-- Legend -->
+            <div class="timeline-legend">
+                <div class="legend-item">
+                    <span class="legend-bar look-bar"></span>
+                    <span>Look active</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-bar event-bar"></span>
+                    <span>Event active</span>
+                </div>
+                <div class="legend-hint">Click scene to jump to breakdown</div>
+            </div>
+
+        </div>
+    `;
+}
+
+/**
+ * Navigate to a specific scene
+ * @param {number} sceneIndex - Scene index to navigate to
+ */
+function goToScene(sceneIndex) {
+    // Try to find the scene selector or navigation function
+    if (typeof window.selectScene === 'function') {
+        window.selectScene(sceneIndex);
+    } else if (typeof window.navigateToScene === 'function') {
+        window.navigateToScene(sceneIndex);
+    } else {
+        // Fallback: try to click on the scene in the scene list
+        const sceneItem = document.querySelector(`.scene-item[data-index="${sceneIndex}"]`);
+        if (sceneItem) {
+            sceneItem.click();
+        }
+    }
+
+    // Scroll to top of breakdown panel
+    const breakdownPanel = document.querySelector('.breakdown-panel');
+    if (breakdownPanel) {
+        breakdownPanel.scrollTop = 0;
+    }
+}
+
+/**
+ * Initialize timeline hover effects
+ * @param {string} characterName - Character name
+ */
+function initTimelineHover(characterName) {
+    const containerId = `timeline-scroll-${characterName.replace(/\s+/g, '-')}`;
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const table = container.querySelector('.timeline-table');
+    if (!table) return;
+
+    const sceneCells = table.querySelectorAll('.scene-cell');
+
+    sceneCells.forEach((cell) => {
+        const colIndex = parseInt(cell.dataset.colIndex);
+
+        cell.addEventListener('mouseenter', () => {
+            // Highlight all cells in this column (+2 for row-label and 1-indexed)
+            const colSelector = colIndex + 2;
+            table.querySelectorAll(`tbody td:nth-child(${colSelector})`).forEach(td => {
+                td.classList.add('column-highlight');
+            });
+        });
+
+        cell.addEventListener('mouseleave', () => {
+            table.querySelectorAll('.column-highlight').forEach(td => {
+                td.classList.remove('column-highlight');
+            });
+        });
+    });
+}
+
+/**
+ * Check if timeline has horizontal overflow
+ * @param {string} characterName - Character name
+ */
+function checkTimelineOverflow(characterName) {
+    const containerId = `timeline-scroll-${characterName.replace(/\s+/g, '-')}`;
+    const scrollContainer = document.getElementById(containerId);
+    if (!scrollContainer) return;
+
+    const hasOverflow = scrollContainer.scrollWidth > scrollContainer.clientWidth;
+    scrollContainer.classList.toggle('has-overflow', hasOverflow);
+}
+
+/**
+ * Render the character timeline view (main export)
+ * @param {string} characterName - Character name
+ * @returns {string} HTML for timeline view
+ */
+export function renderCharacterTimeline(characterName) {
+    // Render the swimlane timeline
+    const timelineHtml = renderTimeline(characterName);
+
+    // Schedule hover initialization after render
+    setTimeout(() => {
+        initTimelineHover(characterName);
+        checkTimelineOverflow(characterName);
+    }, 100);
+
+    return `
+        <div class="timeline-view-container">
+            <div class="timeline-header">
+                <h3 class="timeline-title">TIMELINE</h3>
+                <p class="timeline-subtitle">Visual overview of looks and continuity events across scenes</p>
+            </div>
+            ${timelineHtml}
+        </div>
+    `;
+}
+
+/**
+ * Render timeline view (alias)
+ * @param {string} characterName - Character name
+ * @returns {string} HTML for timeline view
+ */
+export function renderTimelineView(characterName) {
+    return renderCharacterTimeline(characterName);
+}
+
+// ============================================================================
+// LEGACY FUNCTIONS (kept for backwards compatibility)
+// ============================================================================
+
+/**
+ * Render story day timeline visualization (legacy)
  * @param {string} characterName - Character name
  * @returns {string} HTML for story day timeline
  */
 export function renderStoryDayTimeline(characterName) {
     const state = getState();
-    const characterScenes = getCharacterScenes(characterName);
+    const scenes = state?.scenes || [];
+
+    // Get scenes this character appears in
+    const characterScenes = [];
+    scenes.forEach((scene, index) => {
+        const breakdown = state.sceneBreakdowns?.[index];
+        if (breakdown?.cast?.includes(characterName)) {
+            characterScenes.push({ scene, index });
+        }
+    });
 
     if (characterScenes.length === 0) {
         return '';
     }
 
-    const dayGroups = groupScenesByStoryDay(characterScenes);
+    // Group by story day
+    const dayGroups = {};
+    characterScenes.forEach(({ scene, index }) => {
+        const day = scene.storyDay || 'Unassigned';
+        if (!dayGroups[day]) dayGroups[day] = [];
+        dayGroups[day].push({ scene, index });
+    });
 
-    // Sort days (natural sort for "Day 1", "Day 2", etc.)
+    // Sort days
     const sortedDays = Object.keys(dayGroups).sort((a, b) => {
         if (a === 'Unassigned') return 1;
         if (b === 'Unassigned') return -1;
-
         const numA = parseInt(a.match(/\d+/)?.[0] || 0);
         const numB = parseInt(b.match(/\d+/)?.[0] || 0);
         return numA - numB;
@@ -45,21 +481,23 @@ export function renderStoryDayTimeline(characterName) {
         return '';
     }
 
+    const escapedName = escapeHtml(characterName).replace(/'/g, "\\'");
+
     return `
         <div class="story-day-timeline">
             ${sortedDays.map(day => {
-                const scenes = dayGroups[day];
-                const sceneNumbers = scenes.map(idx => state.scenes[idx].number);
+                const dayScenes = dayGroups[day];
+                const sceneNumbers = dayScenes.map(d => d.scene.number || d.index + 1);
                 const firstScene = Math.min(...sceneNumbers);
                 const lastScene = Math.max(...sceneNumbers);
                 const sceneRange = firstScene === lastScene ? `Sc ${firstScene}` : `Sc ${firstScene}-${lastScene}`;
 
                 return `
-                    <div class="timeline-day" onclick="scrollToStoryDay('${escapeHtml(day).replace(/'/g, "\\'")}', '${escapeHtml(characterName).replace(/'/g, "\\'")}')">
+                    <div class="timeline-day" onclick="scrollToStoryDay('${escapeHtml(day).replace(/'/g, "\\'")}', '${escapedName}')">
                         <div class="day-label">${escapeHtml(day)}</div>
-                        <div class="day-bar" data-scenes="${scenes.length}">
+                        <div class="day-bar" data-scenes="${dayScenes.length}">
                             <div class="scene-range">${sceneRange}</div>
-                            <div class="scene-count">${scenes.length} scene${scenes.length !== 1 ? 's' : ''}</div>
+                            <div class="scene-count">${dayScenes.length} scene${dayScenes.length !== 1 ? 's' : ''}</div>
                         </div>
                     </div>
                 `;
@@ -69,12 +507,11 @@ export function renderStoryDayTimeline(characterName) {
 }
 
 /**
- * Scroll to a specific story day section in the character timeline
+ * Scroll to a specific story day section (legacy)
  * @param {string} storyDay - Story day label
  * @param {string} characterName - Character name
  */
 export function scrollToStoryDay(storyDay, characterName) {
-    // Find the story day section in the current view
     const storyDayGroups = document.querySelectorAll('.story-day-group');
 
     for (const group of storyDayGroups) {
@@ -82,7 +519,6 @@ export function scrollToStoryDay(storyDay, characterName) {
         if (dayLabel && dayLabel.textContent.trim() === storyDay) {
             group.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-            // Add highlight effect
             group.style.transition = 'background 0.5s ease';
             group.style.background = 'rgba(212, 175, 122, 0.15)';
             setTimeout(() => {
@@ -95,509 +531,24 @@ export function scrollToStoryDay(storyDay, characterName) {
 }
 
 /**
- * Find transition between two looks
+ * Render story day continuity timeline (legacy)
  * @param {string} character - Character name
- * @param {string} fromLookId - Source look ID
- * @param {string} toLookId - Target look ID
- * @returns {Object|undefined} Transition object if found
- */
-function findTransition(character, fromLookId, toLookId) {
-    const state = getState();
-    return (state.lookTransitions || []).find(t =>
-        t.character === character &&
-        t.fromLookId === fromLookId &&
-        t.toLookId === toLookId
-    );
-}
-
-/**
- * Render transition card
- * @param {Object} transition - Transition object
- * @param {string} character - Character name
- * @returns {string} HTML for transition card
- */
-function renderTransitionCard(transition, character) {
-    return `
-        <div class="transition-card">
-            <div class="transition-card-header">
-                <span class="transition-icon">→</span>
-                <span class="transition-scene-label">TRANSITION in Scene ${transition.transitionScene}</span>
-            </div>
-            <div class="transition-event">${escapeHtml(transition.scriptEvent || 'Transition event not defined')}</div>
-            ${transition.scriptQuote ? `
-                <div class="transition-quote">
-                    "${escapeHtml(transition.scriptQuote)}"
-                </div>
-            ` : ''}
-            <button class="edit-transition-mini-btn" onclick="alert('Edit transition feature coming soon')">
-                Edit Transition
-            </button>
-        </div>
-    `;
-}
-
-/**
- * Render undefined transition placeholder
- * @param {string} character - Character name
- * @param {string} lookId - Look ID
- * @returns {string} HTML for undefined transition card
- */
-function renderUndefinedTransitionCard(character, lookId) {
-    return `
-        <div class="transition-card undefined">
-            <div class="transition-card-header">
-                <span class="transition-scene-label">TRANSITION NOT DEFINED</span>
-            </div>
-            <button class="edit-transition-mini-btn" onclick="alert('Define transition feature coming soon')">
-                Define Transition
-            </button>
-        </div>
-    `;
-}
-
-/**
- * Render look state card
- * @param {Object} look - Look state object
- * @returns {string} HTML for look state card
- */
-function renderLookStateCard(look) {
-    const sceneRangeText = formatSceneRange(look.scenes || []);
-    const complexityIcon = getComplexityIcon(look.complexity);
-
-    // Build appearance preview
-    const appearancePreviews = [];
-    if (look.appearance?.hair) {
-        const preview = look.appearance.hair.substring(0, 40);
-        appearancePreviews.push(`Hair: ${preview}${look.appearance.hair.length > 40 ? '...' : ''}`);
-    }
-    if (look.appearance?.makeup) {
-        const preview = look.appearance.makeup.substring(0, 40);
-        appearancePreviews.push(`Makeup: ${preview}${look.appearance.makeup.length > 40 ? '...' : ''}`);
-    }
-    if (look.appearance?.sfx) {
-        const preview = look.appearance.sfx.substring(0, 40);
-        appearancePreviews.push(`SFX: ${preview}${look.appearance.sfx.length > 40 ? '...' : ''}`);
-    }
-    if (look.appearance?.wardrobe) {
-        const preview = look.appearance.wardrobe.substring(0, 40);
-        appearancePreviews.push(`Wardrobe: ${preview}${look.appearance.wardrobe.length > 40 ? '...' : ''}`);
-    }
-
-    return `
-        <div class="look-state-timeline-card">
-            <div class="look-card-header">
-                <div class="look-card-title">
-                    <span class="look-name">${escapeHtml(look.lookName || 'Untitled Look')}</span>
-                    <span class="complexity-badge">${complexityIcon} ${(look.complexity || 'low').toUpperCase()}</span>
-                </div>
-            </div>
-
-            <div class="look-card-body">
-                <div class="look-info-row">
-                    <span class="info-label">Scenes:</span>
-                    <span class="info-value">${sceneRangeText} (${(look.scenes || []).length} scenes)</span>
-                </div>
-
-                ${look.storyTime ? `
-                    <div class="look-info-row">
-                        <span class="info-label">Story Time:</span>
-                        <span class="info-value">${escapeHtml(look.storyTime)}</span>
-                    </div>
-                ` : ''}
-
-                ${appearancePreviews.length > 0 ? `
-                    <div class="appearance-preview">
-                        ${appearancePreviews.map(preview => `
-                            <div class="preview-line">${escapeHtml(preview)}</div>
-                        `).join('')}
-                    </div>
-                ` : ''}
-            </div>
-
-            <div class="look-card-actions">
-                <button class="look-card-btn primary" onclick="alert('Edit look feature coming soon')">
-                    Edit Look
-                </button>
-            </div>
-        </div>
-    `;
-}
-
-/**
- * Find the previous scene index where this character appears
- * @param {number} currentIndex - Current scene index
- * @param {Array} allCharacterScenes - All scenes with this character
- * @returns {number|null} Previous scene index or null
- */
-function findPreviousSceneIndex(currentIndex, allCharacterScenes) {
-    const currentSceneInList = allCharacterScenes.findIndex(s => s.index === currentIndex);
-    if (currentSceneInList > 0) {
-        return allCharacterScenes[currentSceneInList - 1].index;
-    }
-    return null;
-}
-
-/**
- * Render a single continuity note with category color coding
- * @param {Object} note - Note object with category and text
- * @param {number} sceneIndex - Scene index
- * @param {string} character - Character name
- * @param {string} phase - Phase ('entering' or 'during')
- * @returns {string} HTML for continuity note
- */
-function renderContinuityNote(note, sceneIndex, character, phase) {
-    const colors = {
-        hair: '#a855f7',
-        makeup: '#ec4899',
-        sfx: '#ef4444',
-        wardrobe: '#34d399',
-        health: '#f59e0b',
-        injuries: '#dc2626',
-        stunts: '#f97316'
-    };
-
-    const categoryLabels = {
-        hair: 'Hair',
-        makeup: 'Makeup',
-        sfx: 'SFX',
-        wardrobe: 'Wardrobe',
-        health: 'Health',
-        injuries: 'Injuries',
-        stunts: 'Stunts'
-    };
-
-    const color = colors[note.category] || '#9ca3af';
-    const label = categoryLabels[note.category] || note.category;
-
-    return `
-        <div class="continuity-note"
-             style="border-left: 3px solid ${color}; background: linear-gradient(90deg, ${color}15, transparent);"
-             onclick="openContinuityEditModal(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}', '${note.category}')">
-            <span class="note-category" style="color: ${color};">${label}:</span>
-            <span class="note-text">${escapeHtml(note.text)}</span>
-        </div>
-    `;
-}
-
-/**
- * Render a single scene card with continuity states
- * @param {Object} scene - Scene object
- * @param {number} sceneIndex - Scene index
- * @param {string} character - Character name
- * @param {Array} allCharacterScenes - All scenes with this character
- * @returns {string} HTML for continuity scene card
- */
-function renderContinuitySceneCard(scene, sceneIndex, character, allCharacterScenes) {
-    const state = getState();
-
-    // Get current scene's character state (DURING/EXITS)
-    const currentState = state.characterStates?.[sceneIndex]?.[character] || {};
-
-    // Get previous scene's state (ENTERS - what they looked like at end of previous scene)
-    const previousSceneIndex = findPreviousSceneIndex(sceneIndex, allCharacterScenes);
-    const enteringState = previousSceneIndex !== null
-        ? state.characterStates?.[previousSceneIndex]?.[character] || {}
-        : null;
-
-    // Extract location from heading (e.g., "INT. FERRY - DAY" -> "FERRY")
-    const locationMatch = scene.heading.match(/(?:INT\.|EXT\.|INT\/EXT\.?)\s+(.+?)(?:\s+-\s+|\s*$)/i);
-    const location = locationMatch ? locationMatch[1].trim() : scene.heading;
-
-    // Build entering notes (from previous scene)
-    const enteringNotes = [];
-    if (enteringState) {
-        if (enteringState.hair) enteringNotes.push({ category: 'hair', text: enteringState.hair });
-        if (enteringState.makeup) enteringNotes.push({ category: 'makeup', text: enteringState.makeup });
-        if (enteringState.sfx) enteringNotes.push({ category: 'sfx', text: enteringState.sfx });
-        if (enteringState.wardrobe) enteringNotes.push({ category: 'wardrobe', text: enteringState.wardrobe });
-    }
-
-    // Build during/exits notes (from current scene)
-    const duringNotes = [];
-    if (currentState.hair) duringNotes.push({ category: 'hair', text: currentState.hair });
-    if (currentState.makeup) duringNotes.push({ category: 'makeup', text: currentState.makeup });
-    if (currentState.sfx) duringNotes.push({ category: 'sfx', text: currentState.sfx });
-    if (currentState.wardrobe) duringNotes.push({ category: 'wardrobe', text: currentState.wardrobe });
-
-    return `
-        <div class="continuity-scene-card">
-            <div class="continuity-scene-header" onclick="navigateToScene(${sceneIndex})">
-                <span class="scene-number-badge">Scene ${scene.number}</span>
-                <span class="scene-location">${escapeHtml(location)}</span>
-            </div>
-
-            <div class="continuity-states">
-                <!-- ENTERING STATE -->
-                <div class="continuity-state entering">
-                    <div class="state-label">ENTERS:</div>
-                    <div class="state-notes">
-                        ${enteringNotes.length > 0
-                            ? enteringNotes.map(note => renderContinuityNote(note, sceneIndex, character, 'entering')).join('')
-                            : '<div class="no-notes">—</div>'
-                        }
-                    </div>
-                </div>
-
-                <!-- DURING/EXITING STATE -->
-                <div class="continuity-state during">
-                    <div class="state-label">DURING/EXITS:</div>
-                    <div class="state-notes">
-                        ${duringNotes.length > 0
-                            ? duringNotes.map(note => renderContinuityNote(note, sceneIndex, character, 'during')).join('')
-                            : '<div class="no-notes">No changes noted</div>'
-                        }
-                        <button class="add-continuity-note-btn"
-                                onclick="openContinuityEditModal(${sceneIndex}, '${escapeHtml(character).replace(/'/g, "\\'")}')">
-                            + Add Note
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-/**
- * Render story day continuity timeline
- * Shows character's journey organized by story days with entering/exiting states
- * @param {string} character - Character name
- * @returns {string} HTML for story day continuity timeline
+ * @returns {string} HTML for continuity timeline
  */
 export function renderStoryDayContinuityTimeline(character) {
-    const state = getState();
-
-    // Get all scenes this character appears in
-    const characterScenes = [];
-    (state?.scenes || []).forEach((scene, index) => {
-        const breakdown = state.sceneBreakdowns?.[index] || {};
-        if (breakdown.cast && breakdown.cast.includes(character)) {
-            characterScenes.push({ scene, index });
-        }
-    });
-
-    if (characterScenes.length === 0) {
-        return `
-            <div class="empty-state" style="margin-top: 40px;">
-                <div class="empty-title">No Scenes Found</div>
-                <div class="empty-desc">This character doesn't appear in any scenes yet.</div>
-            </div>
-        `;
-    }
-
-    // Group scenes by story day
-    const scenesByDay = {};
-    characterScenes.forEach(({ scene, index }) => {
-        const storyDay = scene.storyDay || 'Unassigned';
-        if (!scenesByDay[storyDay]) {
-            scenesByDay[storyDay] = [];
-        }
-        scenesByDay[storyDay].push({ scene, index });
-    });
-
-    // Sort days (natural sort for "Day 1", "Day 2", etc.)
-    const sortedDays = Object.keys(scenesByDay).sort((a, b) => {
-        if (a === 'Unassigned') return 1;
-        if (b === 'Unassigned') return -1;
-
-        const numA = parseInt(a.match(/\d+/)?.[0] || 0);
-        const numB = parseInt(b.match(/\d+/)?.[0] || 0);
-        return numA - numB;
-    });
-
-    // Check if any continuity data exists
-    const hasAnyData = characterScenes.some(({ index }) => {
-        const charState = state.characterStates?.[index]?.[character];
-        return charState && (charState.hair || charState.makeup || charState.sfx || charState.wardrobe);
-    });
-
-    let html = `
-        <div class="continuity-timeline-container">
-            <div class="timeline-intro">
-                <h3 class="timeline-title">STORY DAY CONTINUITY</h3>
-                <p class="timeline-description">
-                    Track ${escapeHtml(character)}'s appearance changes scene-by-scene.
-                    Fill in scene breakdowns to auto-populate this timeline.
-                </p>
-            </div>
-    `;
-
-    if (!hasAnyData) {
-        html += `
-            <div class="empty-state-small" style="margin: 20px 0;">
-                <div class="empty-text-small">
-                    No continuity data yet. Complete scene breakdowns (Hair, Makeup, SFX, Wardrobe fields) to populate this timeline.
-                </div>
-            </div>
-        `;
-    }
-
-    // Render each story day
-    sortedDays.forEach(day => {
-        const dayScenes = scenesByDay[day];
-
-        html += `
-            <div class="story-day-group">
-                <div class="story-day-header">
-                    <span class="story-day-label">${escapeHtml(day)}</span>
-                    <span class="story-day-count">${dayScenes.length} scene${dayScenes.length !== 1 ? 's' : ''}</span>
-                </div>
-
-                <div class="story-day-scenes">
-                    ${dayScenes.map(({ scene, index }) => renderContinuitySceneCard(scene, index, character, characterScenes)).join('')}
-                </div>
-            </div>
-        `;
-    });
-
-    html += `</div>`;
-    return html;
-}
-
-/**
- * Render enhanced character profile with narrative context
- * @param {string} character - Character name
- * @returns {string} HTML for enhanced character profile
- */
-function renderEnhancedCharacterProfile(character) {
-    try {
-        return buildCharacterProfile(character);
-    } catch (error) {
-        console.error('Error building character profile:', error);
-        return `
-            <div class="empty-state" style="margin-top: 40px;">
-                <div class="empty-title">Error Loading Profile</div>
-                <div class="empty-desc">${escapeHtml(error.message)}</div>
-            </div>
-        `;
-    }
-}
-
-/**
- * Render character timeline
- * Shows look states, transitions, and story day progression
- * If narrative context is available, uses enhanced profile system
- * @param {string} character - Character name
- * @returns {string} HTML for character timeline
- */
-export function renderCharacterTimeline(character) {
-    const state = getState();
-
-    // Check if narrative context is available and use enhanced profile
-    if (window.scriptNarrativeContext && window.scriptNarrativeContext.characters) {
-        try {
-            // Use enhanced profile system
-            return renderEnhancedCharacterProfile(character);
-        } catch (error) {
-            console.error('Error rendering enhanced profile, falling back to classic view:', error);
-        }
-    }
-
-    // Fallback to classic timeline view
-    const profile = state.castProfiles?.[character] || {};
-    const looks = state.characterLooks?.[character] || [];
-    const events = state.continuityEvents?.[character] || [];
-
-    // Check if character has look states defined
-    const hasLooks = looks.length > 0;
-
-    // Get transition count
-    const transitionCount = (state.lookTransitions || []).filter(t => t.character === character).length;
-
-    // Build HTML - Look State Timeline
-    let html = `
-        <div class="character-timeline-view">
-            <!-- Header -->
-            <div class="timeline-header">
-                <div class="character-info">
-                    <div class="character-name-title">${escapeHtml(character)}</div>
-                    <div class="character-base-info">${escapeHtml(profile.baseDescription) || '<em style="opacity: 0.6;">No description yet</em>'}</div>
-                </div>
-                <div class="timeline-stats">
-                    ${hasLooks ? `
-                        <div class="stat">
-                            <span class="stat-value">${looks.length}</span>
-                            <span class="stat-label">Look States</span>
-                        </div>
-                    ` : ''}
-                    <div class="stat">
-                        <span class="stat-value">${transitionCount}</span>
-                        <span class="stat-label">Transitions</span>
-                    </div>
-                    <div class="stat">
-                        <span class="stat-value">${events.length}</span>
-                        <span class="stat-label">Events</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Manage Look States Button -->
-            <div class="timeline-controls">
-                <button class="manage-looks-btn" onclick="alert('Manage look states feature coming soon')">
-                    Manage Look States
-                </button>
-            </div>
-
-            <!-- Story Day Timeline Visualization -->
-            ${renderStoryDayTimeline(character)}
-    `;
-
-    if (hasLooks) {
-        // LOOK STATE TIMELINE
-        html += `<div class="look-state-timeline">`;
-        html += `<div class="timeline-title">CHARACTER JOURNEY</div>`;
-
-        // Sort looks chronologically
-        const sortedLooks = [...looks].sort((a, b) => {
-            const firstSceneA = Math.min(...(a.scenes || [Infinity]));
-            const firstSceneB = Math.min(...(b.scenes || [Infinity]));
-            return firstSceneA - firstSceneB;
-        });
-
-        sortedLooks.forEach((look, index) => {
-            const previousLook = index > 0 ? sortedLooks[index - 1] : null;
-
-            // TRANSITION CARD (if not first look)
-            if (previousLook) {
-                const transition = findTransition(character, previousLook.id, look.id);
-                if (transition) {
-                    html += renderTransitionCard(transition, character);
-                } else {
-                    html += renderUndefinedTransitionCard(character, look.id);
-                }
-            }
-
-            // LOOK STATE CARD
-            html += renderLookStateCard(look);
-        });
-
-        html += `</div>`;
-
-    } else {
-        // FALLBACK: Show story day continuity timeline if no looks defined
-        html += renderStoryDayContinuityTimeline(character);
-    }
-
-    html += `</div>`;
-
-    return html;
-}
-
-/**
- * Render timeline view (alias for renderCharacterTimeline)
- * @param {string} characterName - Character name
- * @returns {string} HTML for timeline view
- */
-export function renderTimelineView(characterName) {
-    return renderCharacterTimeline(characterName);
+    // Redirect to new timeline
+    return renderCharacterTimeline(character);
 }
 
 // Expose global functions for HTML onclick handlers
 window.scrollToStoryDay = scrollToStoryDay;
+window.goToScene = goToScene;
 
 export default {
     renderStoryDayTimeline,
     renderCharacterTimeline,
     renderTimelineView,
     renderStoryDayContinuityTimeline,
-    scrollToStoryDay
+    scrollToStoryDay,
+    goToScene
 };
