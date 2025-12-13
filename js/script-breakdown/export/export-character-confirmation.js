@@ -20,6 +20,9 @@ import { saveProject } from './export-project.js';
 // Track selected primary character for merge
 let mergePrimaryIndex = null;
 
+// Track filtered characters shown in merge modal (only selected ones)
+let mergeModalCharacters = [];
+
 /**
  * Normalize character name to title case
  * @param {string} name - Character name
@@ -383,6 +386,7 @@ window.addManualCharacter = function() {
 
 /**
  * Open merge characters modal
+ * BUG FIX: Only show SELECTED characters (filter out deselected ones)
  */
 window.openMergeCharactersModal = function() {
     // Reset primary selection
@@ -398,7 +402,13 @@ window.openMergeCharactersModal = function() {
         document.body.appendChild(modal);
     }
 
-    const characters = state.detectedCharacters || [];
+    // BUG FIX: Filter to only show SELECTED characters
+    // Deselected characters should not appear in the merge modal
+    const allCharacters = state.detectedCharacters || [];
+    const characters = allCharacters.filter(char => char.selected !== false);
+
+    // Store filtered list for use by setMergePrimary and performCharacterMerge
+    mergeModalCharacters = characters;
 
     modal.innerHTML = `
         <div class="modal-content" style="max-width: 700px; max-height: 80vh; display: flex; flex-direction: column;">
@@ -519,8 +529,8 @@ window.setMergePrimary = function(index) {
     // Refresh the list to show visual feedback
     const listContainer = document.getElementById('merge-character-list');
     if (listContainer) {
-        const characters = state.detectedCharacters || [];
-        listContainer.innerHTML = renderMergeCharacterItems(characters);
+        // Use the filtered mergeModalCharacters instead of all detectedCharacters
+        listContainer.innerHTML = renderMergeCharacterItems(mergeModalCharacters);
         setupMergeCheckboxListeners();
     }
 
@@ -553,6 +563,7 @@ window.closeMergeCharactersModal = function() {
 
 /**
  * Perform the character merge
+ * BUG FIX: Use mergeModalCharacters (filtered list) instead of state.detectedCharacters
  */
 window.performCharacterMerge = function() {
     const checkboxes = document.querySelectorAll('#merge-character-list .merge-checkbox:checked');
@@ -566,8 +577,8 @@ window.performCharacterMerge = function() {
     const primaryNameInput = document.getElementById('merge-primary-name');
     let primaryName = primaryNameInput?.value.trim();
 
-    // Get the characters to merge
-    const charsToMerge = indices.map(idx => state.detectedCharacters[idx]).filter(Boolean);
+    // BUG FIX: Get characters from mergeModalCharacters (the filtered list shown in modal)
+    const charsToMerge = indices.map(idx => mergeModalCharacters[idx]).filter(Boolean);
 
     if (charsToMerge.length < 2) {
         alert('Error: Could not find selected characters');
@@ -576,16 +587,18 @@ window.performCharacterMerge = function() {
 
     // Use provided custom name, or selected primary, or first selected character's name
     if (!primaryName) {
-        if (mergePrimaryIndex !== null && state.detectedCharacters[mergePrimaryIndex]) {
-            primaryName = state.detectedCharacters[mergePrimaryIndex].name;
+        // BUG FIX: Use mergeModalCharacters for primary lookup
+        if (mergePrimaryIndex !== null && mergeModalCharacters[mergePrimaryIndex]) {
+            primaryName = mergeModalCharacters[mergePrimaryIndex].name;
         } else {
             primaryName = charsToMerge[0].name;
         }
     }
 
     // Find the primary character for category
-    const primaryChar = mergePrimaryIndex !== null && state.detectedCharacters[mergePrimaryIndex]
-        ? state.detectedCharacters[mergePrimaryIndex]
+    // BUG FIX: Use mergeModalCharacters for primary lookup
+    const primaryChar = mergePrimaryIndex !== null && mergeModalCharacters[mergePrimaryIndex]
+        ? mergeModalCharacters[mergePrimaryIndex]
         : charsToMerge[0];
 
     // Combine data from all characters
@@ -623,10 +636,11 @@ window.performCharacterMerge = function() {
         mergedChar.sceneCount = mergedChar.scenesPresent.length;
     }
 
-    // Remove old characters (sort indices descending to remove from end first)
-    indices.sort((a, b) => b - a).forEach(idx => {
-        state.detectedCharacters.splice(idx, 1);
-    });
+    // BUG FIX: Remove old characters by name (since indices are into mergeModalCharacters, not detectedCharacters)
+    const namesToRemove = charsToMerge.map(c => c.name);
+    state.detectedCharacters = state.detectedCharacters.filter(
+        char => !namesToRemove.includes(char.name)
+    );
 
     // Add merged character
     state.detectedCharacters.push(mergedChar);
@@ -715,6 +729,7 @@ window.performCharacterMerge = function() {
 
 /**
  * Refresh the merge character list within the modal
+ * BUG FIX: Filter to only selected characters and update mergeModalCharacters
  */
 function refreshMergeCharacterList() {
     mergePrimaryIndex = null;
@@ -722,8 +737,11 @@ function refreshMergeCharacterList() {
     const listContainer = document.getElementById('merge-character-list');
     if (!listContainer) return;
 
-    const characters = state.detectedCharacters || [];
-    listContainer.innerHTML = renderMergeCharacterItems(characters);
+    // BUG FIX: Filter to only show selected characters
+    const allCharacters = state.detectedCharacters || [];
+    mergeModalCharacters = allCharacters.filter(char => char.selected !== false);
+
+    listContainer.innerHTML = renderMergeCharacterItems(mergeModalCharacters);
     setupMergeCheckboxListeners();
 
     // Clear the primary name input and hide the display
@@ -980,6 +998,13 @@ window.confirmCharactersAndContinue = async function() {
                 characters: confirmedCharsObj
             };
             console.log('Created confirmedMasterContext with', Object.keys(confirmedCharsObj).length, 'characters');
+
+            // BUG FIX: Also update window.masterContext so renderCharacterTabs() can find character data
+            // renderCharacterTabs() checks window.masterContext.characters for role information
+            window.masterContext = window.confirmedMasterContext;
+            window.scriptMasterContext = window.confirmedMasterContext;
+            localStorage.setItem('masterContext', JSON.stringify(window.masterContext));
+            localStorage.setItem('scriptMasterContext', JSON.stringify(window.masterContext));
         }
 
         // Store character categories for use in breakdown
