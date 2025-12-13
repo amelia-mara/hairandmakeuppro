@@ -234,14 +234,14 @@ export function calculateAppearanceSimilarity(app1, app2) {
 }
 
 /**
- * Get complexity icon for look complexity level
+ * Get complexity indicator for look complexity level (text-based)
  */
 export function getComplexityIcon(complexity) {
     switch (complexity) {
-        case 'low': return '⚪';
-        case 'medium': return '🟡';
-        case 'high': return '🔴';
-        default: return '⚪';
+        case 'low': return '○';
+        case 'medium': return '●';
+        case 'high': return '◉';
+        default: return '○';
     }
 }
 

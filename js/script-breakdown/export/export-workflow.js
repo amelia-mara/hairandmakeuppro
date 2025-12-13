@@ -53,7 +53,6 @@ export function updateWorkflowStatus() {
         if (characterCount > 0) {
             charactersStatusEl.style.display = 'flex';
             charactersStatusEl.innerHTML = `
-                <span class="workflow-icon">👥</span>
                 <span class="workflow-text">Characters: ${characterCount}</span>
             `;
         } else {
@@ -70,7 +69,6 @@ export function updateWorkflowStatus() {
         if (totalScenes > 0) {
             scenesStatusEl.style.display = 'flex';
             scenesStatusEl.innerHTML = `
-                <span class="workflow-icon">🎬</span>
                 <span class="workflow-text">Scenes: ${processedScenes}/${totalScenes} processed</span>
             `;
         } else {

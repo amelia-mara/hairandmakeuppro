@@ -191,14 +191,14 @@ function renderSceneBreakdown(sceneIndex) {
                     margin-bottom: 16px;
                 ">
                     <div style="color: #fbbf24; font-weight: 600; margin-bottom: 4px;">
-                        ⚠️ Breakdown Needs Review
+                        ! Breakdown Needs Review
                     </div>
                     <div style="font-size: 0.85em; color: var(--text-muted);">
                         This scene was changed in the new script version:
                         <ul style="margin: 8px 0 0 16px; padding: 0;">
                             ${inheritedChanges.map(c => `
                                 <li style="margin: 4px 0; color: ${c.severity === 'high' ? '#ef4444' : 'inherit'};">
-                                    ${c.type.startsWith('hmu') ? '🎨 ' : ''}${c.message}
+                                    ${c.message}
                                 </li>
                             `).join('')}
                         </ul>
@@ -242,7 +242,7 @@ function renderSceneBreakdown(sceneIndex) {
                                 ).join('')}
                             </div>
                             ${environment.impactOnAppearance ? `
-                                <div class="impact-note">💡 ${escapeHtml(environment.impactOnAppearance)}</div>
+                                <div class="impact-note">Note: ${escapeHtml(environment.impactOnAppearance)}</div>
                             ` : ''}
                         </div>
                     ` : ''}
@@ -253,7 +253,7 @@ function renderSceneBreakdown(sceneIndex) {
                                 ${emotional.character ? `<strong>${escapeHtml(emotional.character)}</strong>: ` : ''}
                                 ${escapeHtml(emotional.emotion || '')}
                                 ${emotional.visualImpact ? `
-                                    <div class="impact-note">💄 ${escapeHtml(emotional.visualImpact)}</div>
+                                    <div class="impact-note">Visual: ${escapeHtml(emotional.visualImpact)}</div>
                                 ` : ''}
                             </div>
                         </div>
@@ -268,7 +268,7 @@ function renderSceneBreakdown(sceneIndex) {
                 <!-- Detection Hint (compact) -->
                 ${scene.storyDayCue ? `
                     <div class="detection-hint-compact">
-                        💡 "${escapeHtml(scene.storyDayCue)}" (${scene.storyDayConfidence || 'auto'})
+                        Auto: "${escapeHtml(scene.storyDayCue)}" (${scene.storyDayConfidence || 'auto'})
                     </div>
                 ` : ''}
 
@@ -469,7 +469,7 @@ function renderCharacterFields(character, sceneIndex, scene) {
             <!-- CHANGES -->
             <div class="continuity-section">
                 <div class="continuity-section-header">
-                    <div class="continuity-label">CHANGES ${hasAutoChanges ? '<span style="color: var(--accent-gold); font-size: 0.8em; margin-left: 8px;">⚡ Auto-detected</span>' : ''}</div>
+                    <div class="continuity-label">CHANGES ${hasAutoChanges ? '<span style="color: var(--accent-gold); font-size: 0.8em; margin-left: 8px;">[Auto]</span>' : ''}</div>
                     <div class="continuity-actions">
                         <button class="continuity-btn no-change-btn ${!hasChanges ? 'active' : ''}"
                                 onclick="setNoChange('${escapeHtml(character).replace(/'/g, "\\'")}', ${sceneIndex})">
@@ -877,20 +877,20 @@ function renderStoryDayDropdown(sceneIndex, currentValue) {
 }
 
 /**
- * Get icon for story day source
+ * Get icon for story day source (text-based for professional appearance)
  */
 function getSourceIcon(source) {
     const icons = {
-        'explicit_marker': '📌',
-        'heading_embedded': '📄',
-        'same_day_marker': '🔄',
-        'time_passage': '⏳',
-        'day_night_transition': '🌙',
-        'user_assigned': '👤',
-        'copied': '📋',
-        'inferred': '🔮'
+        'explicit_marker': '[M]',
+        'heading_embedded': '[H]',
+        'same_day_marker': '[S]',
+        'time_passage': '[T]',
+        'day_night_transition': '[D]',
+        'user_assigned': '[U]',
+        'copied': '[C]',
+        'inferred': '[I]'
     };
-    return icons[source] || '❓';
+    return icons[source] || '[-]';
 }
 
 /**
@@ -1109,16 +1109,16 @@ function extractSceneAlerts(scene, sceneIndex, analysis) {
     if (environment?.conditions) {
         const conditions = Array.isArray(environment.conditions) ? environment.conditions : [];
         if (conditions.some(c => c.toLowerCase().includes('rain'))) {
-            alerts.push({ type: 'weather', icon: '🌧️', text: 'Rain - waterproof makeup needed' });
+            alerts.push({ type: 'weather', icon: 'WX', text: 'Rain - waterproof makeup needed' });
         }
         if (conditions.some(c => c.toLowerCase().includes('wind'))) {
-            alerts.push({ type: 'weather', icon: '💨', text: 'Wind - hair protection needed' });
+            alerts.push({ type: 'weather', icon: 'WX', text: 'Wind - hair protection needed' });
         }
     }
 
     const interactions = analysis.interactions?.[`scene_${sceneIndex}`];
     if (interactions?.type === 'fight') {
-        alerts.push({ type: 'action', icon: '⚔️', text: 'Fight scene - injury makeup may be needed' });
+        alerts.push({ type: 'action', icon: 'ST', text: 'Fight scene - injury makeup may be needed' });
     }
 
     return alerts;

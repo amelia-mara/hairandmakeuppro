@@ -44,10 +44,10 @@ export function renderSceneDetails(sceneIndex) {
             </div>
 
             <div class="scene-details-metadata">
-                ${scene.storyDay ? `<div class="metadata-item">📅 ${escapeHtml(scene.storyDay)}</div>` : ''}
-                ${scene.timeOfDay ? `<div class="metadata-item">🕐 ${escapeHtml(scene.timeOfDay)}</div>` : ''}
-                ${scene.intExt ? `<div class="metadata-item">🏠 ${escapeHtml(scene.intExt)}</div>` : ''}
-                ${scene.location ? `<div class="metadata-item">📍 ${escapeHtml(scene.location)}</div>` : ''}
+                ${scene.storyDay ? `<div class="metadata-item">${escapeHtml(scene.storyDay)}</div>` : ''}
+                ${scene.timeOfDay ? `<div class="metadata-item">${escapeHtml(scene.timeOfDay)}</div>` : ''}
+                ${scene.intExt ? `<div class="metadata-item">${escapeHtml(scene.intExt)}</div>` : ''}
+                ${scene.location ? `<div class="metadata-item">${escapeHtml(scene.location)}</div>` : ''}
             </div>
 
             ${scene.synopsis ? `

@@ -177,7 +177,6 @@ function renderSuggestionCard(suggestion) {
                     <button onclick="editSuggestion('${suggestion.id}')"
                             class="action-btn edit-btn"
                             title="Edit">
-                        <span class="btn-icon">✏️</span>
                         <span class="btn-label">Edit</span>
                     </button>
                     <button onclick="rejectSuggestion('${suggestion.id}')"
@@ -265,7 +264,7 @@ function renderConfirmedItem(item, sceneIndex) {
                 <button onclick="deleteItem(${sceneIndex}, '${item.id}', false)"
                         class="action-btn delete-btn"
                         title="Delete">
-                    <span class="btn-icon">🗑️</span>
+                    <span class="btn-icon">×</span>
                 </button>
             </div>
         </div>
@@ -338,7 +337,7 @@ function renderManualItem(item, sceneIndex) {
                 <button onclick="deleteItem(${sceneIndex}, '${item.id}', true)"
                         class="action-btn delete-btn"
                         title="Delete">
-                    <span class="btn-icon">🗑️</span>
+                    <span class="btn-icon">×</span>
                 </button>
             </div>
         </div>
@@ -417,7 +416,7 @@ function getStatusLabel(status) {
         case SuggestionStatus.REJECTED:
             return '✗ Rejected';
         case SuggestionStatus.EDITED:
-            return '✏️ Edited & Accepted';
+            return 'Edited & Accepted';
         default:
             return 'Pending';
     }
