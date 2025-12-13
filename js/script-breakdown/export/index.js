@@ -1,29 +1,29 @@
 /**
- * export-handlers.js
- * Main entry point for export and import functionality
+ * export/index.js
+ * Main entry point for export functionality
  *
  * This is a slim coordinator module that imports and re-exports
- * all export-related functionality from specialized modules in ./export/
+ * all export-related functionality from specialized modules.
  *
  * Module Structure:
- * - export/export-core.js: Progress modals, loading bars, toast, downloadFile
- * - export/export-project.js: Project save/load/import/export
- * - export/export-script-import.js: Script import and processing
- * - export/export-character-confirmation.js: Character confirmation modal and merge
- * - export/export-deep-analysis.js: Character detection and extraction
- * - export/export-master-context.js: Master context population
- * - export/export-character-review.js: Character review modal
- * - export/export-generation.js: Timeline and lookbook generation
- * - export/export-html.js: HTML exports for timelines/lookbooks/bible
- * - export/export-workflow.js: Workflow status and processing
+ * - export-core.js: Progress modals, loading bars, toast, downloadFile
+ * - export-project.js: Project save/load/import/export
+ * - export-script-import.js: Script import and processing
+ * - export-character-confirmation.js: Character confirmation modal and merge
+ * - export-deep-analysis.js: Character detection and extraction
+ * - export-master-context.js: Master context population
+ * - export-character-review.js: Character review modal
+ * - export-generation.js: Timeline and lookbook generation
+ * - export-html.js: HTML exports for timelines/lookbooks/bible
+ * - export-workflow.js: Workflow status and processing
  */
 
 // ============================================================================
-// IMPORTS FROM MODULAR STRUCTURE
+// IMPORTS
 // ============================================================================
 
 // Core utilities
-export {
+import {
     showProgressModal,
     updateProgressModal,
     closeProgressModal,
@@ -32,76 +32,77 @@ export {
     closeTopLoadingBar,
     showToast,
     downloadFile
-} from './export/export-core.js';
+} from './export-core.js';
 
 // Project management
-export {
+import {
     saveProject,
     loadProjectData,
     importProjectFile,
     createNewProject,
     renameProject,
     exportData
-} from './export/export-project.js';
+} from './export-project.js';
 
 // Script import
-export {
+import {
     openImportModal,
     closeImportModal,
     processScript,
     detectScenes,
     loadScript
-} from './export/export-script-import.js';
+} from './export-script-import.js';
 
 // Character confirmation
-export {
-    showCharacterConfirmationModal
-} from './export/export-character-confirmation.js';
+import {
+    showCharacterConfirmationModal,
+    normalizeCharacterName as normalizeCharacterNameConfirm
+} from './export-character-confirmation.js';
 
 // Deep analysis
-export {
+import {
     CharacterDetector,
     extractCharactersFromScenes,
     normalizeCharacterName,
     normalizeCharacterNameWithAlias,
     createCharacterAliasMap,
     initializeCharacterTabs
-} from './export/export-deep-analysis.js';
+} from './export-deep-analysis.js';
 
 // Master context
-export {
+import {
     populateInitialData,
     createTagsFromMasterContext
-} from './export/export-master-context.js';
+} from './export-master-context.js';
 
 // Character review
-export {
+import {
     reviewCharacters,
     closeCharacterReviewModal,
     selectAllCharacters,
     deselectAllCharacters,
     confirmCharacterSelection,
     mergeSelectedCharacters
-} from './export/export-character-review.js';
+} from './export-character-review.js';
 
 // Generation
-export {
+import {
     generateCharacterTimelines,
     generateCharacterLookbooks,
     getCharacterTimeline,
     getCharacterLookbook,
     getCharacterContinuity
-} from './export/export-generation.js';
+} from './export-generation.js';
 
 // HTML exports
-export {
+import {
     exportTimeline,
     exportLookbook,
     exportBible
-} from './export/export-html.js';
+} from './export-html.js';
 
 // Workflow
-export {
+import {
     updateWorkflowStatus,
     processCurrentScene,
     processAllRemaining,
@@ -110,14 +111,14 @@ export {
     initializeAIContext,
     openToolsPanel,
     closeToolsPanel
-} from './export/export-workflow.js';
+} from './export-workflow.js';
 
 // ============================================================================
-// DEFAULT EXPORT
+// RE-EXPORTS
 // ============================================================================
 
-// Import all for default export
-import {
+export {
+    // Core utilities
     showProgressModal,
     updateProgressModal,
     closeProgressModal,
@@ -125,66 +126,59 @@ import {
     updateTopLoadingBar,
     closeTopLoadingBar,
     showToast,
-    downloadFile
-} from './export/export-core.js';
+    downloadFile,
 
-import {
+    // Project management
     saveProject,
     loadProjectData,
     importProjectFile,
     createNewProject,
     renameProject,
-    exportData
-} from './export/export-project.js';
+    exportData,
 
-import {
+    // Script import
     openImportModal,
     closeImportModal,
     processScript,
-    detectScenes
-} from './export/export-script-import.js';
+    detectScenes,
+    loadScript,
 
-import {
-    showCharacterConfirmationModal
-} from './export/export-character-confirmation.js';
+    // Character confirmation
+    showCharacterConfirmationModal,
 
-import {
+    // Deep analysis
     CharacterDetector,
     extractCharactersFromScenes,
     normalizeCharacterName,
+    normalizeCharacterNameWithAlias,
     createCharacterAliasMap,
-    initializeCharacterTabs
-} from './export/export-deep-analysis.js';
+    initializeCharacterTabs,
 
-import {
+    // Master context
     populateInitialData,
-    createTagsFromMasterContext
-} from './export/export-master-context.js';
+    createTagsFromMasterContext,
 
-import {
+    // Character review
     reviewCharacters,
     closeCharacterReviewModal,
     selectAllCharacters,
     deselectAllCharacters,
     confirmCharacterSelection,
-    mergeSelectedCharacters
-} from './export/export-character-review.js';
+    mergeSelectedCharacters,
 
-import {
+    // Generation
     generateCharacterTimelines,
     generateCharacterLookbooks,
     getCharacterTimeline,
     getCharacterLookbook,
-    getCharacterContinuity
-} from './export/export-generation.js';
+    getCharacterContinuity,
 
-import {
+    // HTML exports
     exportTimeline,
     exportLookbook,
-    exportBible
-} from './export/export-html.js';
+    exportBible,
 
-import {
+    // Workflow
     updateWorkflowStatus,
     processCurrentScene,
     processAllRemaining,
@@ -193,7 +187,11 @@ import {
     initializeAIContext,
     openToolsPanel,
     closeToolsPanel
-} from './export/export-workflow.js';
+};
+
+// ============================================================================
+// DEFAULT EXPORT
+// ============================================================================
 
 export default {
     // Core utilities
