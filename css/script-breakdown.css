@@ -16,15 +16,16 @@
             --error: #ff6b6b;
             --warning: #e8a87c;
             
-            --int-day: rgba(255, 255, 255, 0.15);
+            /* Scene type color coding per spec: INT/DAY=White, EXT/DAY=Yellow, INT/NIGHT=Blue, EXT/NIGHT=Green */
+            --int-day: rgba(255, 255, 255, 0.12);
             --ext-day: rgba(251, 191, 36, 0.15);
-            --int-night: rgba(52, 211, 153, 0.15);
-            --ext-night: rgba(56, 189, 248, 0.15);
-            
-            --int-day-border: rgba(255, 255, 255, 0.3);
-            --ext-day-border: rgba(251, 191, 36, 0.4);
-            --int-night-border: rgba(52, 211, 153, 0.4);
-            --ext-night-border: rgba(56, 189, 248, 0.4);
+            --int-night: rgba(56, 189, 248, 0.15);
+            --ext-night: rgba(52, 211, 153, 0.15);
+
+            --int-day-border: rgba(255, 255, 255, 0.35);
+            --ext-day-border: rgba(251, 191, 36, 0.45);
+            --int-night-border: rgba(56, 189, 248, 0.45);
+            --ext-night-border: rgba(52, 211, 153, 0.45);
         }
 
         ::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -331,7 +332,38 @@
         .scene-type-indicator.ext-day { background: var(--ext-day); border: 1px solid var(--ext-day-border); color: #0a0908; }
         .scene-type-indicator.int-night { background: var(--int-night); border: 1px solid var(--int-night-border); color: #0a0908; }
         .scene-type-indicator.ext-night { background: var(--ext-night); border: 1px solid var(--ext-night-border); color: #0a0908; }
-        
+
+        /* Story Day Badge */
+        .story-day-badge {
+            font-size: 0.625em;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: rgba(129, 140, 248, 0.2);
+            border: 1px solid rgba(129, 140, 248, 0.4);
+            color: #a5b4fc;
+            font-weight: 500;
+            white-space: nowrap;
+            margin-left: 4px;
+        }
+
+        .story-day-badge.high {
+            background: rgba(16, 185, 129, 0.2);
+            border-color: rgba(16, 185, 129, 0.4);
+            color: #6ee7b7;
+        }
+
+        .story-day-badge.medium {
+            background: rgba(251, 191, 36, 0.2);
+            border-color: rgba(251, 191, 36, 0.4);
+            color: #fcd34d;
+        }
+
+        .story-day-badge.low {
+            background: rgba(156, 163, 175, 0.2);
+            border-color: rgba(156, 163, 175, 0.4);
+            color: #9ca3af;
+        }
+
         /* Expanded content */
         .scene-expanded {
             display: none;
@@ -10019,6 +10051,173 @@
 .checkbox-field input[type="checkbox"] {
     cursor: pointer;
 }
+
+/* ============================================================================
+   ENHANCED STORY DAY TIMELINE STYLES
+   ============================================================================ */
+
+.section-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.bulk-assign-btn {
+    font-size: 0.75em;
+    padding: 4px 10px;
+    background: rgba(129, 140, 248, 0.2);
+    border: 1px solid rgba(129, 140, 248, 0.4);
+    color: #a5b4fc;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.bulk-assign-btn:hover {
+    background: rgba(129, 140, 248, 0.3);
+    border-color: rgba(129, 140, 248, 0.6);
+}
+
+.story-day-row {
+    flex-wrap: wrap;
+}
+
+.story-day-group {
+    min-width: 150px;
+    flex: 1.5;
+}
+
+.story-day-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.story-day-select,
+.story-day-text-input {
+    width: 100%;
+    padding: 6px 10px;
+    background: var(--bg-dark);
+    border: 1px solid var(--glass-border);
+    color: var(--text-light);
+    border-radius: 4px;
+    font-size: 0.875em;
+}
+
+.story-day-select:focus,
+.story-day-text-input:focus {
+    outline: none;
+    border-color: var(--accent-gold);
+}
+
+.story-day-source {
+    font-size: 0.7em;
+    margin-top: 4px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.story-day-source.high {
+    color: #6ee7b7;
+}
+
+.story-day-source.medium {
+    color: #fcd34d;
+}
+
+.story-day-source.low {
+    color: #9ca3af;
+}
+
+.story-day-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.copy-forward-btn,
+.copy-prev-btn,
+.confirm-btn {
+    font-size: 0.75em;
+    padding: 4px 8px;
+    background: rgba(36, 32, 25, 0.6);
+    border: 1px solid var(--glass-border);
+    color: var(--text-light);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.copy-forward-btn:hover,
+.copy-prev-btn:hover,
+.confirm-btn:hover {
+    background: rgba(212, 175, 122, 0.2);
+    border-color: var(--accent-gold);
+}
+
+.copy-forward-btn:disabled,
+.copy-prev-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.confirmed-badge {
+    font-size: 0.75em;
+    padding: 4px 8px;
+    background: rgba(16, 185, 129, 0.2);
+    border: 1px solid rgba(16, 185, 129, 0.4);
+    color: #6ee7b7;
+    border-radius: 4px;
+}
+
+.time-jump-indicator {
+    font-size: 0.8em;
+    padding: 8px 12px;
+    background: rgba(251, 191, 36, 0.1);
+    border-left: 3px solid #f59e0b;
+    border-radius: 4px;
+    color: #fcd34d;
+    margin-top: 8px;
+}
+
+.time-jump-indicator .jump-marker {
+    color: var(--text-muted);
+    margin-left: 8px;
+}
+
+.special-time-flags {
+    padding-top: 8px;
+    border-top: 1px solid var(--glass-border);
+    margin-top: 8px;
+}
+
+.detection-hint {
+    font-size: 0.8em;
+    padding: 8px 12px;
+    background: rgba(129, 140, 248, 0.1);
+    border-left: 3px solid #818cf8;
+    border-radius: 4px;
+    color: #a5b4fc;
+    margin-bottom: 12px;
+}
+
+.metadata-pill.assumed {
+    opacity: 0.7;
+    border-style: dashed;
+}
+
+.metadata-pill-hint {
+    margin-left: 4px;
+    font-size: 0.8em;
+}
+
+/* ============================================================================
+   END STORY DAY STYLES
+   ============================================================================ */
 
 .character-continuity-block {
     background: rgba(201, 169, 97, 0.05);

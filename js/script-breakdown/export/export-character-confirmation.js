@@ -20,6 +20,9 @@ import { saveProject } from './export-project.js';
 // Track selected primary character for merge
 let mergePrimaryIndex = null;
 
+// Track filtered characters shown in merge modal (only selected ones)
+let mergeModalCharacters = [];
+
 /**
  * Normalize character name to title case
  * @param {string} name - Character name
@@ -383,6 +386,7 @@ window.addManualCharacter = function() {
 
 /**
  * Open merge characters modal
+ * BUG FIX: Only show SELECTED characters (filter out deselected ones)
  */
 window.openMergeCharactersModal = function() {
     // Reset primary selection
@@ -398,7 +402,13 @@ window.openMergeCharactersModal = function() {
         document.body.appendChild(modal);
     }
 
-    const characters = state.detectedCharacters || [];
+    // BUG FIX: Filter to only show SELECTED characters
+    // Deselected characters should not appear in the merge modal
+    const allCharacters = state.detectedCharacters || [];
+    const characters = allCharacters.filter(char => char.selected !== false);
+
+    // Store filtered list for use by setMergePrimary and performCharacterMerge
+    mergeModalCharacters = characters;
 
     modal.innerHTML = `
         <div class="modal-content" style="max-width: 700px; max-height: 80vh; display: flex; flex-direction: column;">
@@ -519,8 +529,8 @@ window.setMergePrimary = function(index) {
     // Refresh the list to show visual feedback
     const listContainer = document.getElementById('merge-character-list');
     if (listContainer) {
-        const characters = state.detectedCharacters || [];
-        listContainer.innerHTML = renderMergeCharacterItems(characters);
+        // Use the filtered mergeModalCharacters instead of all detectedCharacters
+        listContainer.innerHTML = renderMergeCharacterItems(mergeModalCharacters);
         setupMergeCheckboxListeners();
     }
 
@@ -553,6 +563,7 @@ window.closeMergeCharactersModal = function() {
 
 /**
  * Perform the character merge
+ * BUG FIX: Use mergeModalCharacters (filtered list) instead of state.detectedCharacters
  */
 window.performCharacterMerge = function() {
     const checkboxes = document.querySelectorAll('#merge-character-list .merge-checkbox:checked');
@@ -566,8 +577,8 @@ window.performCharacterMerge = function() {
     const primaryNameInput = document.getElementById('merge-primary-name');
     let primaryName = primaryNameInput?.value.trim();
 
-    // Get the characters to merge
-    const charsToMerge = indices.map(idx => state.detectedCharacters[idx]).filter(Boolean);
+    // BUG FIX: Get characters from mergeModalCharacters (the filtered list shown in modal)
+    const charsToMerge = indices.map(idx => mergeModalCharacters[idx]).filter(Boolean);
 
     if (charsToMerge.length < 2) {
         alert('Error: Could not find selected characters');
@@ -576,16 +587,18 @@ window.performCharacterMerge = function() {
 
     // Use provided custom name, or selected primary, or first selected character's name
     if (!primaryName) {
-        if (mergePrimaryIndex !== null && state.detectedCharacters[mergePrimaryIndex]) {
-            primaryName = state.detectedCharacters[mergePrimaryIndex].name;
+        // BUG FIX: Use mergeModalCharacters for primary lookup
+        if (mergePrimaryIndex !== null && mergeModalCharacters[mergePrimaryIndex]) {
+            primaryName = mergeModalCharacters[mergePrimaryIndex].name;
         } else {
             primaryName = charsToMerge[0].name;
         }
     }
 
     // Find the primary character for category
-    const primaryChar = mergePrimaryIndex !== null && state.detectedCharacters[mergePrimaryIndex]
-        ? state.detectedCharacters[mergePrimaryIndex]
+    // BUG FIX: Use mergeModalCharacters for primary lookup
+    const primaryChar = mergePrimaryIndex !== null && mergeModalCharacters[mergePrimaryIndex]
+        ? mergeModalCharacters[mergePrimaryIndex]
         : charsToMerge[0];
 
     // Combine data from all characters
@@ -623,10 +636,11 @@ window.performCharacterMerge = function() {
         mergedChar.sceneCount = mergedChar.scenesPresent.length;
     }
 
-    // Remove old characters (sort indices descending to remove from end first)
-    indices.sort((a, b) => b - a).forEach(idx => {
-        state.detectedCharacters.splice(idx, 1);
-    });
+    // BUG FIX: Remove old characters by name (since indices are into mergeModalCharacters, not detectedCharacters)
+    const namesToRemove = charsToMerge.map(c => c.name);
+    state.detectedCharacters = state.detectedCharacters.filter(
+        char => !namesToRemove.includes(char.name)
+    );
 
     // Add merged character
     state.detectedCharacters.push(mergedChar);
@@ -700,12 +714,22 @@ window.performCharacterMerge = function() {
     refreshMergeCharacterList();
     populateCharacterConfirmationList();
 
+    // Refresh the scene list to show updated character names
+    renderSceneList();
+
     showToast(`Merged ${charsToMerge.length} characters into "${mergedChar.name}"`, 'success');
     console.log('Merged characters:', mergedNames, '→', primaryCharName);
+
+    // Run audit to verify no orphans remain
+    const orphans = auditCharacterReferences();
+    if (Object.values(orphans).some(arr => arr.length > 0)) {
+        console.warn('Warning: Found orphaned character references after merge:', orphans);
+    }
 };
 
 /**
  * Refresh the merge character list within the modal
+ * BUG FIX: Filter to only selected characters and update mergeModalCharacters
  */
 function refreshMergeCharacterList() {
     mergePrimaryIndex = null;
@@ -713,8 +737,11 @@ function refreshMergeCharacterList() {
     const listContainer = document.getElementById('merge-character-list');
     if (!listContainer) return;
 
-    const characters = state.detectedCharacters || [];
-    listContainer.innerHTML = renderMergeCharacterItems(characters);
+    // BUG FIX: Filter to only show selected characters
+    const allCharacters = state.detectedCharacters || [];
+    mergeModalCharacters = allCharacters.filter(char => char.selected !== false);
+
+    listContainer.innerHTML = renderMergeCharacterItems(mergeModalCharacters);
     setupMergeCheckboxListeners();
 
     // Clear the primary name input and hide the display
@@ -971,6 +998,13 @@ window.confirmCharactersAndContinue = async function() {
                 characters: confirmedCharsObj
             };
             console.log('Created confirmedMasterContext with', Object.keys(confirmedCharsObj).length, 'characters');
+
+            // BUG FIX: Also update window.masterContext so renderCharacterTabs() can find character data
+            // renderCharacterTabs() checks window.masterContext.characters for role information
+            window.masterContext = window.confirmedMasterContext;
+            window.scriptMasterContext = window.confirmedMasterContext;
+            localStorage.setItem('masterContext', JSON.stringify(window.masterContext));
+            localStorage.setItem('scriptMasterContext', JSON.stringify(window.masterContext));
         }
 
         // Store character categories for use in breakdown
@@ -992,9 +1026,19 @@ window.confirmCharactersAndContinue = async function() {
         renderCharacterTabs();
         renderCharacterTabPanels();
 
+        // Render the scene list to show updated character counts
+        console.log('Rendering scene list...');
+        renderSceneList();
+
         // Render the script display with highlights
         console.log('Rendering script...');
         renderScript();
+
+        // Run audit to verify no orphans
+        const orphans = auditCharacterReferences();
+        if (Object.values(orphans).some(arr => arr.length > 0)) {
+            console.warn('Warning: Found orphaned character references after confirmation:', orphans);
+        }
 
         // Save project
         saveProject();
@@ -1257,17 +1301,168 @@ function cleanupAllSceneCharacterData(selectedNames, mergeMapping) {
     });
 }
 
+/**
+ * Audit all character references to find orphaned names
+ * Used for validation after merge operations
+ * @returns {Object} Object with arrays of orphaned references by location
+ */
+export function auditCharacterReferences() {
+    // Get valid character names from both confirmed and detected
+    const validCharacters = new Set();
+
+    if (state.confirmedCharacters instanceof Set) {
+        state.confirmedCharacters.forEach(name => validCharacters.add(name));
+    } else if (Array.isArray(state.confirmedCharacters)) {
+        state.confirmedCharacters.forEach(name => validCharacters.add(name));
+    }
+
+    // Also include detected characters if not yet confirmed
+    if (state.detectedCharacters && Array.isArray(state.detectedCharacters)) {
+        state.detectedCharacters
+            .filter(c => c.selected)
+            .forEach(c => validCharacters.add(c.name));
+    }
+
+    const orphans = {
+        inScenes: [],
+        inBreakdowns: [],
+        inTags: [],
+        inCharacterStates: [],
+        inCharacterLooks: [],
+        inContinuityEvents: [],
+        inCastProfiles: [],
+        inCharacterTabs: []
+    };
+
+    // Check state.scenes
+    if (state.scenes && Array.isArray(state.scenes)) {
+        state.scenes.forEach((scene, index) => {
+            ['castMembers', 'characters_present'].forEach(field => {
+                const chars = scene[field];
+                if (Array.isArray(chars)) {
+                    chars.forEach(char => {
+                        if (!validCharacters.has(char)) {
+                            orphans.inScenes.push({ scene: index, field, character: char });
+                        }
+                    });
+                }
+            });
+            if (scene.aiData?.characters_present) {
+                scene.aiData.characters_present.forEach(char => {
+                    if (!validCharacters.has(char)) {
+                        orphans.inScenes.push({ scene: index, field: 'aiData.characters_present', character: char });
+                    }
+                });
+            }
+        });
+    }
+
+    // Check state.sceneBreakdowns
+    if (state.sceneBreakdowns) {
+        Object.keys(state.sceneBreakdowns).forEach(sceneIdx => {
+            const breakdown = state.sceneBreakdowns[sceneIdx];
+            if (breakdown?.cast && Array.isArray(breakdown.cast)) {
+                breakdown.cast.forEach(char => {
+                    if (!validCharacters.has(char)) {
+                        orphans.inBreakdowns.push({ scene: sceneIdx, character: char });
+                    }
+                });
+            }
+        });
+    }
+
+    // Check state.scriptTags
+    if (state.scriptTags) {
+        Object.keys(state.scriptTags).forEach(sceneIdx => {
+            const tags = state.scriptTags[sceneIdx];
+            if (Array.isArray(tags)) {
+                tags.forEach((tag, tagIdx) => {
+                    if (tag.character && !validCharacters.has(tag.character)) {
+                        orphans.inTags.push({ scene: sceneIdx, tagIndex: tagIdx, character: tag.character });
+                    }
+                    if (tag.linkedCharacter && !validCharacters.has(tag.linkedCharacter)) {
+                        orphans.inTags.push({ scene: sceneIdx, tagIndex: tagIdx, character: tag.linkedCharacter, field: 'linkedCharacter' });
+                    }
+                });
+            }
+        });
+    }
+
+    // Check state.characterStates
+    if (state.characterStates) {
+        Object.keys(state.characterStates).forEach(sceneIdx => {
+            const sceneStates = state.characterStates[sceneIdx];
+            if (sceneStates) {
+                Object.keys(sceneStates).forEach(char => {
+                    if (!validCharacters.has(char)) {
+                        orphans.inCharacterStates.push({ scene: sceneIdx, character: char });
+                    }
+                });
+            }
+        });
+    }
+
+    // Check state.characterLooks
+    if (state.characterLooks) {
+        Object.keys(state.characterLooks).forEach(char => {
+            if (!validCharacters.has(char)) {
+                orphans.inCharacterLooks.push({ character: char });
+            }
+        });
+    }
+
+    // Check state.continuityEvents
+    if (state.continuityEvents) {
+        Object.keys(state.continuityEvents).forEach(char => {
+            if (!validCharacters.has(char)) {
+                orphans.inContinuityEvents.push({ character: char });
+            }
+        });
+    }
+
+    // Check state.castProfiles
+    if (state.castProfiles) {
+        Object.keys(state.castProfiles).forEach(char => {
+            if (!validCharacters.has(char)) {
+                orphans.inCastProfiles.push({ character: char });
+            }
+        });
+    }
+
+    // Check state.characterTabs
+    if (state.characterTabs && Array.isArray(state.characterTabs)) {
+        state.characterTabs.forEach(char => {
+            if (!validCharacters.has(char)) {
+                orphans.inCharacterTabs.push({ character: char });
+            }
+        });
+    }
+
+    // Log summary
+    const totalOrphans = Object.values(orphans).reduce((sum, arr) => sum + arr.length, 0);
+    if (totalOrphans > 0) {
+        console.log(`Audit found ${totalOrphans} orphaned character references:`, orphans);
+    } else {
+        console.log('Audit complete: No orphaned character references found');
+    }
+
+    return orphans;
+}
+
 // ============================================================================
 // EXPOSE GLOBAL FUNCTIONS
 // ============================================================================
 
 window.showCharacterConfirmationModal = showCharacterConfirmationModal;
 window.closeCharacterConfirmModal = closeCharacterConfirmModal;
+window.auditCharacterReferences = auditCharacterReferences;
 
 export default {
     showCharacterConfirmationModal,
     closeCharacterConfirmModal,
-    normalizeCharacterName
+    normalizeCharacterName,
+    auditCharacterReferences
 };
 
+// Note: auditCharacterReferences is already exported inline
 export { normalizeCharacterName };
