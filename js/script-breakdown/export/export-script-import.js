@@ -279,6 +279,10 @@ export async function processScript() {
         console.warn('Auto-detection failed (non-critical):', err);
     }
 
+    // CRITICAL: Update currentProject.scenes with the auto-detected data
+    // This ensures loadScript() doesn't overwrite with old localStorage data
+    state.currentProject.scenes = state.scenes;
+
     // Close import modal and show progress
     closeImportModal();
     showTopLoadingBar('Analyzing Script', `Analyzing ${state.scenes.length} scenes...`, 0);
