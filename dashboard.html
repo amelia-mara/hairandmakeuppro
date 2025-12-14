@@ -939,6 +939,770 @@
 
         /* SVG Icons */
         .icon { fill: currentColor; }
+
+        /* ═══════════════════════════════════════════════════════════════
+           TODAY'S SHOOT SECTION
+           ═══════════════════════════════════════════════════════════════ */
+        .todays-shoot-section {
+            margin-bottom: 24px;
+        }
+
+        .todays-shoot-card {
+            background: linear-gradient(135deg, rgba(201, 169, 97, 0.08), rgba(201, 169, 97, 0.03));
+            backdrop-filter: blur(30px) saturate(110%);
+            -webkit-backdrop-filter: blur(30px) saturate(110%);
+            border: 1px solid rgba(201, 169, 97, 0.2);
+            border-radius: 16px;
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
+                        inset 0 1px 1px rgba(255, 255, 255, 0.1);
+        }
+
+        .todays-shoot-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60%;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, transparent 100%);
+            pointer-events: none;
+            border-radius: 16px 16px 0 0;
+        }
+
+        .todays-shoot-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .todays-shoot-title {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--accent-gold);
+            margin-bottom: 4px;
+        }
+
+        .todays-shoot-date {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .shoot-day-main {
+            margin-bottom: 16px;
+        }
+
+        .shoot-day-label {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .shoot-day-location {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .shoot-day-details {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+            margin-bottom: 20px;
+        }
+
+        .shoot-detail {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .shoot-detail-label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+            opacity: 0.7;
+        }
+
+        .shoot-detail-value {
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+
+        .shoot-detail-value.highlight {
+            color: var(--accent-gold);
+            font-weight: 600;
+        }
+
+        .shoot-times {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .shoot-time-box {
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.2));
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 12px 16px;
+            text-align: center;
+            min-width: 100px;
+        }
+
+        .shoot-time-label {
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .shoot-time-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--accent-gold);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .todays-shoot-actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .shoot-action-btn {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+
+        .shoot-action-btn:hover {
+            background: linear-gradient(135deg, rgba(201, 169, 97, 0.1), rgba(201, 169, 97, 0.05));
+            border-color: rgba(201, 169, 97, 0.3);
+            color: var(--accent-gold);
+            transform: translateY(-1px);
+        }
+
+        .shoot-action-btn.primary {
+            background: linear-gradient(135deg, rgba(201, 169, 97, 0.15), rgba(201, 169, 97, 0.1));
+            border-color: rgba(201, 169, 97, 0.3);
+            color: var(--accent-gold);
+        }
+
+        .shoot-action-btn.primary:hover {
+            background: linear-gradient(135deg, rgba(201, 169, 97, 0.2), rgba(201, 169, 97, 0.15));
+        }
+
+        .todays-shoot-empty {
+            text-align: center;
+            padding: 32px 20px;
+        }
+
+        .todays-shoot-empty-icon {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 16px;
+            opacity: 0.4;
+            color: var(--accent-gold);
+        }
+
+        .todays-shoot-empty-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .todays-shoot-empty-desc {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           ENHANCED CALL SHEET WIDGET
+           ═══════════════════════════════════════════════════════════════ */
+        .call-sheet-dropzone {
+            border: 2px dashed rgba(201, 169, 97, 0.3);
+            border-radius: 10px;
+            padding: 32px 20px;
+            text-align: center;
+            transition: all 0.2s ease;
+            background: linear-gradient(135deg, rgba(201, 169, 97, 0.02), transparent);
+            cursor: pointer;
+        }
+
+        .call-sheet-dropzone:hover,
+        .call-sheet-dropzone.dragover {
+            border-color: var(--accent-gold);
+            background: linear-gradient(135deg, rgba(201, 169, 97, 0.08), rgba(201, 169, 97, 0.03));
+        }
+
+        .call-sheet-dropzone-icon {
+            width: 40px;
+            height: 40px;
+            margin: 0 auto 12px;
+            opacity: 0.5;
+            color: var(--accent-gold);
+        }
+
+        .call-sheet-dropzone-text {
+            font-size: 14px;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .call-sheet-dropzone-hint {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+
+        .call-sheet-browse-btn {
+            padding: 8px 16px;
+            background: linear-gradient(135deg, rgba(201, 169, 97, 0.12), rgba(201, 169, 97, 0.08));
+            border: 1px solid rgba(201, 169, 97, 0.25);
+            border-radius: 6px;
+            color: var(--accent-gold);
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            font-family: inherit;
+        }
+
+        .call-sheet-browse-btn:hover {
+            background: linear-gradient(135deg, rgba(201, 169, 97, 0.18), rgba(201, 169, 97, 0.12));
+            transform: translateY(-1px);
+        }
+
+        .call-sheet-schedule-select {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .call-sheet-schedule-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .call-sheet-schedule-dropdown {
+            width: 100%;
+            padding: 10px 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 13px;
+            font-family: inherit;
+            cursor: pointer;
+        }
+
+        .call-sheet-schedule-dropdown:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+        }
+
+        .call-sheet-processing {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .call-sheet-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(201, 169, 97, 0.2);
+            border-top-color: var(--accent-gold);
+            border-radius: 50%;
+            margin: 0 auto 16px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .call-sheet-processing-text {
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+
+        .call-sheet-uploaded {
+            padding: 0;
+        }
+
+        .call-sheet-file-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: linear-gradient(135deg, rgba(82, 193, 134, 0.08), rgba(82, 193, 134, 0.04));
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+
+        .call-sheet-file-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--success), rgba(82, 193, 134, 0.8));
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--bg-dark);
+        }
+
+        .call-sheet-file-name {
+            flex: 1;
+            font-size: 13px;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .call-sheet-file-date {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .call-sheet-extracted-data {
+            margin-bottom: 16px;
+        }
+
+        .call-sheet-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .call-sheet-row:last-child {
+            border-bottom: none;
+        }
+
+        .call-sheet-row-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .call-sheet-row-value {
+            font-size: 14px;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .call-sheet-row-value.time {
+            color: var(--accent-gold);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .call-sheet-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .call-sheet-action-btn {
+            flex: 1;
+            min-width: 100px;
+            padding: 10px 12px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02));
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            font-size: 11px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            font-family: inherit;
+            text-align: center;
+        }
+
+        .call-sheet-action-btn:hover {
+            background: linear-gradient(135deg, rgba(201, 169, 97, 0.1), rgba(201, 169, 97, 0.05));
+            border-color: rgba(201, 169, 97, 0.3);
+            color: var(--accent-gold);
+        }
+
+        .call-sheet-action-btn.primary {
+            background: linear-gradient(135deg, rgba(201, 169, 97, 0.15), rgba(201, 169, 97, 0.1));
+            border-color: rgba(201, 169, 97, 0.3);
+            color: var(--accent-gold);
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           DAILY BREAKDOWN MODAL
+           ═══════════════════════════════════════════════════════════════ */
+        .breakdown-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            z-index: 1001;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .breakdown-modal-overlay.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .breakdown-modal {
+            width: 90%;
+            max-width: 800px;
+            max-height: 85vh;
+            background: linear-gradient(135deg, rgba(26, 22, 18, 0.98), rgba(20, 17, 15, 0.95));
+            backdrop-filter: blur(40px) saturate(120%);
+            -webkit-backdrop-filter: blur(40px) saturate(120%);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6),
+                        inset 0 1px 2px rgba(255, 255, 255, 0.1);
+            animation: slideUp 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .breakdown-modal-header {
+            padding: 20px 24px;
+            background: linear-gradient(135deg, rgba(30, 26, 22, 0.7), rgba(26, 22, 18, 0.8));
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .breakdown-modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .breakdown-modal-subtitle {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .breakdown-modal-close {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+        }
+
+        .breakdown-modal-close:hover {
+            background: linear-gradient(135deg, rgba(201, 169, 97, 0.1), rgba(201, 169, 97, 0.05));
+            border-color: rgba(201, 169, 97, 0.3);
+            color: var(--accent-gold);
+        }
+
+        .breakdown-modal-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+        }
+
+        .breakdown-section {
+            margin-bottom: 24px;
+        }
+
+        .breakdown-section-title {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--accent-gold);
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(201, 169, 97, 0.2);
+        }
+
+        .cast-breakdown-item {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+
+        .cast-breakdown-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .cast-breakdown-name {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .cast-breakdown-actor {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .cast-breakdown-scenes {
+            font-size: 12px;
+            color: var(--accent-gold);
+            background: linear-gradient(135deg, rgba(201, 169, 97, 0.12), rgba(201, 169, 97, 0.08));
+            padding: 4px 10px;
+            border-radius: 12px;
+        }
+
+        .cast-breakdown-times {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 12px;
+            font-size: 12px;
+        }
+
+        .cast-breakdown-time {
+            color: var(--text-secondary);
+        }
+
+        .cast-breakdown-time strong {
+            color: var(--text-primary);
+        }
+
+        .cast-breakdown-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+        }
+
+        .cast-breakdown-detail {
+            font-size: 12px;
+        }
+
+        .cast-breakdown-detail-label {
+            color: var(--text-secondary);
+            margin-bottom: 2px;
+        }
+
+        .cast-breakdown-detail-value {
+            color: var(--text-primary);
+        }
+
+        .cast-breakdown-alert {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            background: linear-gradient(135deg, rgba(232, 168, 124, 0.15), rgba(232, 168, 124, 0.1));
+            border: 1px solid rgba(232, 168, 124, 0.25);
+            border-radius: 6px;
+            font-size: 11px;
+            color: var(--warning);
+            margin-top: 12px;
+        }
+
+        .scene-order-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .scene-order-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.02), transparent);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+        }
+
+        .scene-order-number {
+            width: 28px;
+            height: 28px;
+            background: linear-gradient(135deg, var(--accent-gold), rgba(201, 169, 97, 0.8));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--bg-dark);
+        }
+
+        .scene-order-info {
+            flex: 1;
+        }
+
+        .scene-order-heading {
+            font-size: 13px;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+        }
+
+        .scene-order-cast {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .breakdown-modal-footer {
+            padding: 16px 24px;
+            background: linear-gradient(135deg, rgba(30, 26, 22, 0.7), rgba(26, 22, 18, 0.8));
+            border-top: 1px solid var(--glass-border);
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+        }
+
+        .breakdown-modal-btn {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            font-family: inherit;
+        }
+
+        .breakdown-modal-btn:hover {
+            background: linear-gradient(135deg, rgba(201, 169, 97, 0.1), rgba(201, 169, 97, 0.05));
+            border-color: rgba(201, 169, 97, 0.3);
+            color: var(--accent-gold);
+        }
+
+        .breakdown-modal-btn.primary {
+            background: linear-gradient(135deg, rgba(201, 169, 97, 0.15), rgba(201, 169, 97, 0.1));
+            border-color: rgba(201, 169, 97, 0.3);
+            color: var(--accent-gold);
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           UPCOMING SHOOT DAYS
+           ═══════════════════════════════════════════════════════════════ */
+        .upcoming-shoot-days {
+            margin-top: 24px;
+        }
+
+        .upcoming-shoot-title {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            opacity: 0.6;
+        }
+
+        .upcoming-shoot-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .upcoming-shoot-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 14px 16px;
+            background: linear-gradient(135deg, rgba(36, 32, 25, 0.6), rgba(30, 26, 22, 0.5));
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .upcoming-shoot-item:hover {
+            background: linear-gradient(135deg, rgba(201, 169, 97, 0.08), rgba(201, 169, 97, 0.04));
+            border-color: rgba(201, 169, 97, 0.2);
+            transform: translateX(4px);
+        }
+
+        .upcoming-shoot-date {
+            font-size: 13px;
+            color: var(--text-primary);
+            font-weight: 500;
+            min-width: 80px;
+        }
+
+        .upcoming-shoot-day {
+            font-size: 12px;
+            color: var(--accent-gold);
+            font-weight: 600;
+            min-width: 60px;
+        }
+
+        .upcoming-shoot-location {
+            flex: 1;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .upcoming-shoot-scenes {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .upcoming-shoot-cast {
+            font-size: 11px;
+            color: var(--text-secondary);
+            opacity: 0.7;
+        }
+
+        .view-full-schedule-btn {
+            display: block;
+            margin-top: 12px;
+            padding: 12px;
+            background: transparent;
+            border: 1px dashed rgba(201, 169, 97, 0.3);
+            border-radius: 8px;
+            color: var(--accent-gold);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            text-align: center;
+            font-family: inherit;
+            width: 100%;
+        }
+
+        .view-full-schedule-btn:hover {
+            background: linear-gradient(135deg, rgba(201, 169, 97, 0.05), transparent);
+            border-style: solid;
+        }
     </style>
 </head>
 <body>
@@ -1042,7 +1806,7 @@
                     <svg class="nav-icon"><use xlink:href="#icon-generate"/></svg>
                     Breakdown
                 </div>
-                <div class="nav-item" onclick="window.location.href='characters.html'">
+                <div class="nav-item" onclick="window.location.href='character-design.html'">
                     <svg class="nav-icon"><use xlink:href="#icon-character"/></svg>
                     Character Design
                 </div>
@@ -1086,6 +1850,68 @@
 
             <!-- Dashboard -->
             <div class="dashboard">
+                <!-- Today's Shoot Section -->
+                <div class="todays-shoot-section" id="todaysShootSection">
+                    <div class="todays-shoot-card" id="todaysShootCard">
+                        <!-- Empty state - shown when no call sheet -->
+                        <div class="todays-shoot-empty" id="todaysShootEmpty">
+                            <svg class="todays-shoot-empty-icon"><use xlink:href="#icon-calendar"/></svg>
+                            <div class="todays-shoot-empty-title">No Shoot Data for Today</div>
+                            <div class="todays-shoot-empty-desc">Upload a call sheet or select from your shooting schedule</div>
+                            <button class="shoot-action-btn primary" onclick="document.getElementById('callSheetFileInput').click()">
+                                Upload Call Sheet
+                            </button>
+                        </div>
+
+                        <!-- Populated state - shown when call sheet is loaded -->
+                        <div class="todays-shoot-populated" id="todaysShootPopulated" style="display: none;">
+                            <div class="todays-shoot-header">
+                                <div>
+                                    <div class="todays-shoot-title">TODAY'S SHOOT</div>
+                                    <div class="todays-shoot-date" id="todaysShootDate">Loading...</div>
+                                </div>
+                            </div>
+
+                            <div class="shoot-day-main">
+                                <div class="shoot-day-label" id="shootDayLabel">SHOOT DAY 1</div>
+                                <div class="shoot-day-location" id="shootDayLocation">Location TBD</div>
+                            </div>
+
+                            <div class="shoot-day-details">
+                                <div class="shoot-detail">
+                                    <div class="shoot-detail-label">Scenes</div>
+                                    <div class="shoot-detail-value" id="shootDayScenes">--</div>
+                                </div>
+                                <div class="shoot-detail">
+                                    <div class="shoot-detail-label">Cast</div>
+                                    <div class="shoot-detail-value" id="shootDayCast">--</div>
+                                </div>
+                            </div>
+
+                            <div class="shoot-times">
+                                <div class="shoot-time-box">
+                                    <div class="shoot-time-label">H&MU Call</div>
+                                    <div class="shoot-time-value" id="shootTimeHMU">--:--</div>
+                                </div>
+                                <div class="shoot-time-box">
+                                    <div class="shoot-time-label">General Call</div>
+                                    <div class="shoot-time-value" id="shootTimeGeneral">--:--</div>
+                                </div>
+                                <div class="shoot-time-box">
+                                    <div class="shoot-time-label">First Shot</div>
+                                    <div class="shoot-time-value" id="shootTimeFirst">--:--</div>
+                                </div>
+                            </div>
+
+                            <div class="todays-shoot-actions">
+                                <button class="shoot-action-btn primary" onclick="openDailyBreakdownModal()">View Daily Breakdown</button>
+                                <button class="shoot-action-btn" onclick="openLiveContinuity()">Open Live Continuity</button>
+                                <button class="shoot-action-btn" onclick="shareWithTeam()">Share with Team</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="widgets-grid" id="widgetsGrid">
                     
                     <!-- Today's Call Sheet Widget -->
@@ -1094,7 +1920,7 @@
                             <div class="widget-title">
                                 <svg class="widget-icon"><use xlink:href="#icon-calendar"/></svg>
                                 Today's Call Sheet
-                                <span class="widget-status">live</span>
+                                <span class="widget-status" id="callSheetStatus">upload</span>
                             </div>
                             <div class="widget-actions">
                                 <button class="widget-btn widget-btn-resize" title="Toggle size">
@@ -1108,23 +1934,84 @@
                                 </button>
                             </div>
                         </div>
-                        <div class="widget-content">
-                            <div class="upload-zone" id="callSheetUpload">
-                                <svg class="upload-icon"><use xlink:href="#icon-upload"/></svg>
-                                <div class="upload-text">Drop today's call sheet here</div>
-                                <div class="upload-hint">PDF from 2nd AD</div>
+                        <div class="widget-content" id="callSheetWidgetContent">
+                            <!-- Upload State -->
+                            <div id="callSheetUploadState">
+                                <div class="call-sheet-dropzone" id="callSheetDropzone"
+                                     ondragover="handleCallSheetDragOver(event)"
+                                     ondragleave="handleCallSheetDragLeave(event)"
+                                     ondrop="handleCallSheetDrop(event)">
+                                    <svg class="call-sheet-dropzone-icon"><use xlink:href="#icon-upload"/></svg>
+                                    <div class="call-sheet-dropzone-text">Drop call sheet here</div>
+                                    <div class="call-sheet-dropzone-hint">PDF or Image from 2nd AD</div>
+                                    <button class="call-sheet-browse-btn" onclick="document.getElementById('callSheetFileInput').click()">Browse Files</button>
+                                </div>
+                                <input type="file" id="callSheetFileInput" accept=".pdf,.jpg,.jpeg,.png" onchange="handleCallSheetUpload(event)" hidden>
+
+                                <div class="call-sheet-schedule-select">
+                                    <div class="call-sheet-schedule-label">Or select from schedule:</div>
+                                    <select class="call-sheet-schedule-dropdown" id="callSheetScheduleSelect" onchange="loadFromSchedule(this.value)">
+                                        <option value="">Select shoot day...</option>
+                                    </select>
+                                </div>
                             </div>
-                            <div class="stat-row">
-                                <span class="stat-label">General Call</span>
-                                <span class="stat-value highlight">6:00 AM</span>
+
+                            <!-- Processing State -->
+                            <div id="callSheetProcessingState" style="display: none;">
+                                <div class="call-sheet-processing">
+                                    <div class="call-sheet-spinner"></div>
+                                    <div class="call-sheet-processing-text">Extracting call sheet data...</div>
+                                </div>
                             </div>
-                            <div class="stat-row">
-                                <span class="stat-label">H&MU Call</span>
-                                <span class="stat-value highlight">5:30 AM</span>
-                            </div>
-                            <div class="stat-row">
-                                <span class="stat-label">First Shot</span>
-                                <span class="stat-value">8:00 AM</span>
+
+                            <!-- Uploaded State -->
+                            <div id="callSheetUploadedState" class="call-sheet-uploaded" style="display: none;">
+                                <div class="call-sheet-file-info">
+                                    <div class="call-sheet-file-icon">
+                                        <svg width="16" height="16"><use xlink:href="#icon-script"/></svg>
+                                    </div>
+                                    <div>
+                                        <div class="call-sheet-file-name" id="callSheetFileName">call_sheet.pdf</div>
+                                        <div class="call-sheet-file-date" id="callSheetFileDate">Uploaded just now</div>
+                                    </div>
+                                </div>
+
+                                <div class="call-sheet-extracted-data">
+                                    <div class="call-sheet-row">
+                                        <span class="call-sheet-row-label">Date</span>
+                                        <span class="call-sheet-row-value" id="extractedDate">--</span>
+                                    </div>
+                                    <div class="call-sheet-row">
+                                        <span class="call-sheet-row-label">Location</span>
+                                        <span class="call-sheet-row-value" id="extractedLocation">--</span>
+                                    </div>
+                                    <div class="call-sheet-row">
+                                        <span class="call-sheet-row-label">H&MU Call</span>
+                                        <span class="call-sheet-row-value time" id="extractedHMUCall">--</span>
+                                    </div>
+                                    <div class="call-sheet-row">
+                                        <span class="call-sheet-row-label">General Call</span>
+                                        <span class="call-sheet-row-value time" id="extractedGeneralCall">--</span>
+                                    </div>
+                                    <div class="call-sheet-row">
+                                        <span class="call-sheet-row-label">First Shot</span>
+                                        <span class="call-sheet-row-value time" id="extractedFirstShot">--</span>
+                                    </div>
+                                    <div class="call-sheet-row">
+                                        <span class="call-sheet-row-label">Scenes</span>
+                                        <span class="call-sheet-row-value" id="extractedScenes">--</span>
+                                    </div>
+                                    <div class="call-sheet-row">
+                                        <span class="call-sheet-row-label">Cast</span>
+                                        <span class="call-sheet-row-value" id="extractedCast">--</span>
+                                    </div>
+                                </div>
+
+                                <div class="call-sheet-actions">
+                                    <button class="call-sheet-action-btn" onclick="viewOriginalCallSheet()">View Original</button>
+                                    <button class="call-sheet-action-btn" onclick="reuploadCallSheet()">Re-upload</button>
+                                    <button class="call-sheet-action-btn primary" onclick="generateDailyBreakdown()">Generate Breakdown</button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1313,27 +2200,74 @@
                         </div>
                         <div class="widget-content">
                             <div class="quick-actions">
-                                <div class="quick-action" onclick="window.location.href='continuity.html'">
+                                <div class="quick-action" onclick="document.getElementById('callSheetFileInput').click()">
+                                    <svg class="quick-action-icon"><use xlink:href="#icon-upload"/></svg>
+                                    <div class="quick-action-label">Upload Call Sheet</div>
+                                </div>
+                                <div class="quick-action" onclick="openDailyBreakdownModal()">
+                                    <svg class="quick-action-icon"><use xlink:href="#icon-report"/></svg>
+                                    <div class="quick-action-label">Today's Breakdown</div>
+                                </div>
+                                <div class="quick-action" onclick="openLiveContinuity()">
                                     <svg class="quick-action-icon"><use xlink:href="#icon-photo"/></svg>
-                                    <div class="quick-action-label">Upload Photo</div>
+                                    <div class="quick-action-label">Live Continuity</div>
                                 </div>
-                                <div class="quick-action" onclick="startNewTimer()">
-                                    <svg class="quick-action-icon"><use xlink:href="#icon-time"/></svg>
-                                    <div class="quick-action-label">Start Timer</div>
-                                </div>
-                                <div class="quick-action" onclick="addExpense()">
-                                    <svg class="quick-action-icon"><use xlink:href="#icon-budget"/></svg>
-                                    <div class="quick-action-label">Add Expense</div>
-                                </div>
-                                <div class="quick-action" onclick="viewCharacters()">
+                                <div class="quick-action" onclick="shareWithTeam()">
                                     <svg class="quick-action-icon"><use xlink:href="#icon-character"/></svg>
-                                    <div class="quick-action-label">Characters</div>
+                                    <div class="quick-action-label">Share with Team</div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                 </div>
+
+                <!-- Upcoming Shoot Days Section -->
+                <div class="upcoming-shoot-days" id="upcomingShootDays">
+                    <div class="upcoming-shoot-title">Upcoming Shoot Days</div>
+                    <div class="upcoming-shoot-list" id="upcomingShootList">
+                        <!-- Populated dynamically -->
+                    </div>
+                    <button class="view-full-schedule-btn" onclick="window.location.href='generate-breakdown.html'">View Full Schedule</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Daily Breakdown Modal -->
+    <div class="breakdown-modal-overlay" id="dailyBreakdownModal">
+        <div class="breakdown-modal">
+            <div class="breakdown-modal-header">
+                <div>
+                    <div class="breakdown-modal-title">DAILY H&MU BREAKDOWN</div>
+                    <div class="breakdown-modal-subtitle" id="breakdownModalSubtitle">Loading...</div>
+                </div>
+                <button class="breakdown-modal-close" onclick="closeDailyBreakdownModal()">
+                    <svg width="14" height="14"><use xlink:href="#icon-close"/></svg>
+                </button>
+            </div>
+            <div class="breakdown-modal-content" id="breakdownModalContent">
+                <!-- Cast Breakdown Section -->
+                <div class="breakdown-section">
+                    <div class="breakdown-section-title">Cast Breakdown</div>
+                    <div id="castBreakdownList">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+
+                <!-- Scene Order Section -->
+                <div class="breakdown-section">
+                    <div class="breakdown-section-title">Scene Order</div>
+                    <div class="scene-order-list" id="sceneOrderList">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            </div>
+            <div class="breakdown-modal-footer">
+                <button class="breakdown-modal-btn" onclick="downloadBreakdownPDF()">Download PDF</button>
+                <button class="breakdown-modal-btn" onclick="copyBreakdownLink()">Copy Link</button>
+                <button class="breakdown-modal-btn" onclick="sendToTeam()">Send to Team</button>
+                <button class="breakdown-modal-btn primary" onclick="printBreakdown()">Print</button>
             </div>
         </div>
     </div>
@@ -2770,14 +3704,14 @@
         }
 
         function viewCharacters() {
-            window.location.href = 'characters.html';
+            window.location.href = 'character-design.html';
         }
 
         // Widget navigation - map widget types to their corresponding pages
         const widgetPageMap = {
             'call-sheet': 'dashboard.html',
             'chair-timer': null, // Interactive widget, stays on dashboard
-            'cast-today': 'characters.html',
+            'cast-today': 'character-design.html',
             'scene-requirements': 'generate-breakdown.html',
             'dept-budget': 'budget-system.html',
             'quick-actions': null, // Has its own internal links
@@ -2831,6 +3765,748 @@
 
         // Initialize widget navigation after a short delay to ensure DOM is ready
         setTimeout(initializeWidgetNavigation, 100);
+
+        // ============================================================================
+        // CALL SHEET & DAILY BREAKDOWN INTEGRATION
+        // ============================================================================
+
+        // State for today's call sheet data
+        let todaysCallSheet = null;
+        let todaysDailyBreakdown = null;
+
+        // Initialize call sheet data on page load
+        function initializeCallSheetData() {
+            // Try to load from localStorage
+            const todayKey = getTodayDateKey();
+            const stored = localStorage.getItem(`callSheet_${todayKey}`);
+
+            if (stored) {
+                todaysCallSheet = JSON.parse(stored);
+                showUploadedState();
+                updateTodaysShootSection();
+            }
+
+            // Populate schedule dropdown
+            populateScheduleDropdown();
+
+            // Populate upcoming shoot days
+            populateUpcomingShootDays();
+        }
+
+        function getTodayDateKey() {
+            const now = new Date();
+            return now.toISOString().split('T')[0];
+        }
+
+        function formatDateDisplay(dateStr) {
+            if (!dateStr) return '--';
+            const date = new Date(dateStr);
+            const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+            return date.toLocaleDateString('en-US', options);
+        }
+
+        // ============================================================================
+        // CALL SHEET UPLOAD HANDLING
+        // ============================================================================
+        function handleCallSheetDragOver(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('dragover');
+        }
+
+        function handleCallSheetDragLeave(e) {
+            e.currentTarget.classList.remove('dragover');
+        }
+
+        function handleCallSheetDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('dragover');
+
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                processCallSheetFile(files[0]);
+            }
+        }
+
+        function handleCallSheetUpload(event) {
+            const file = event.target.files?.[0];
+            if (file) {
+                processCallSheetFile(file);
+            }
+        }
+
+        function processCallSheetFile(file) {
+            const validTypes = ['.pdf', '.jpg', '.jpeg', '.png'];
+            const ext = '.' + file.name.split('.').pop().toLowerCase();
+
+            if (!validTypes.includes(ext)) {
+                alert('Please upload a PDF or image file');
+                return;
+            }
+
+            // Show processing state
+            showProcessingState();
+
+            // Store file name
+            const fileName = file.name;
+
+            // Simulate AI extraction (in real app, this would call an API)
+            setTimeout(() => {
+                // Simulated extraction result
+                const extractedData = simulateAIExtraction(fileName);
+
+                // Store the call sheet data
+                todaysCallSheet = {
+                    id: `cs-${getTodayDateKey()}`,
+                    date: getTodayDateKey(),
+                    uploadedAt: new Date().toISOString(),
+                    fileName: fileName,
+                    extracted: extractedData
+                };
+
+                // Save to localStorage
+                localStorage.setItem(`callSheet_${getTodayDateKey()}`, JSON.stringify(todaysCallSheet));
+
+                // Update UI
+                showUploadedState();
+                updateTodaysShootSection();
+            }, 2000);
+        }
+
+        function simulateAIExtraction(fileName) {
+            // Simulated extraction - in production this would use AI
+            const today = new Date();
+            const dayNum = Math.floor(Math.random() * 20) + 1;
+
+            return {
+                date: today.toISOString().split('T')[0],
+                dayOfDays: `Day ${dayNum} of 24`,
+                location: 'Forensics Tent / Car Park',
+                generalCall: '06:00',
+                hmCall: '05:30',
+                firstShot: '08:00',
+                scenes: ['7', '8', '9'],
+                cast: [
+                    { name: 'Sarah Jones', character: 'JOANNA', callTime: '05:30' },
+                    { name: 'Tom Hardy', character: 'MATT', callTime: '06:00' },
+                    { name: 'Emma Stone', character: 'EMMA', callTime: '06:30' }
+                ],
+                notes: ''
+            };
+        }
+
+        function showProcessingState() {
+            document.getElementById('callSheetUploadState').style.display = 'none';
+            document.getElementById('callSheetProcessingState').style.display = 'block';
+            document.getElementById('callSheetUploadedState').style.display = 'none';
+            document.getElementById('callSheetStatus').textContent = 'processing';
+        }
+
+        function showUploadedState() {
+            if (!todaysCallSheet) return;
+
+            document.getElementById('callSheetUploadState').style.display = 'none';
+            document.getElementById('callSheetProcessingState').style.display = 'none';
+            document.getElementById('callSheetUploadedState').style.display = 'block';
+            document.getElementById('callSheetStatus').textContent = 'live';
+
+            const ext = todaysCallSheet.extracted;
+
+            // Update extracted data display
+            document.getElementById('callSheetFileName').textContent = todaysCallSheet.fileName || 'call_sheet.pdf';
+            document.getElementById('callSheetFileDate').textContent = 'Uploaded ' + formatTimeAgo(todaysCallSheet.uploadedAt);
+            document.getElementById('extractedDate').textContent = formatDateDisplay(ext.date);
+            document.getElementById('extractedLocation').textContent = ext.location || '--';
+            document.getElementById('extractedHMUCall').textContent = ext.hmCall || '--';
+            document.getElementById('extractedGeneralCall').textContent = ext.generalCall || '--';
+            document.getElementById('extractedFirstShot').textContent = ext.firstShot || '--';
+            document.getElementById('extractedScenes').textContent = (ext.scenes || []).join(', ') || '--';
+            document.getElementById('extractedCast').textContent = (ext.cast || []).map(c => c.character).join(', ') || '--';
+        }
+
+        function showUploadState() {
+            document.getElementById('callSheetUploadState').style.display = 'block';
+            document.getElementById('callSheetProcessingState').style.display = 'none';
+            document.getElementById('callSheetUploadedState').style.display = 'none';
+            document.getElementById('callSheetStatus').textContent = 'upload';
+        }
+
+        function formatTimeAgo(dateStr) {
+            if (!dateStr) return 'recently';
+            const date = new Date(dateStr);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+
+            if (diffMins < 1) return 'just now';
+            if (diffMins < 60) return `${diffMins} min ago`;
+
+            const diffHours = Math.floor(diffMins / 60);
+            if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+
+            return formatDateDisplay(dateStr);
+        }
+
+        function reuploadCallSheet() {
+            todaysCallSheet = null;
+            localStorage.removeItem(`callSheet_${getTodayDateKey()}`);
+            showUploadState();
+            updateTodaysShootSection();
+        }
+
+        function viewOriginalCallSheet() {
+            alert('Original call sheet viewing would open the uploaded PDF/image');
+        }
+
+        // ============================================================================
+        // TODAY'S SHOOT SECTION
+        // ============================================================================
+        function updateTodaysShootSection() {
+            const emptyState = document.getElementById('todaysShootEmpty');
+            const populatedState = document.getElementById('todaysShootPopulated');
+
+            if (!todaysCallSheet) {
+                emptyState.style.display = 'block';
+                populatedState.style.display = 'none';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+            populatedState.style.display = 'block';
+
+            const ext = todaysCallSheet.extracted;
+
+            document.getElementById('todaysShootDate').textContent = formatDateDisplay(ext.date);
+            document.getElementById('shootDayLabel').textContent = ext.dayOfDays || 'SHOOT DAY';
+            document.getElementById('shootDayLocation').textContent = ext.location || 'Location TBD';
+            document.getElementById('shootDayScenes').textContent = (ext.scenes || []).join(', ') || '--';
+            document.getElementById('shootDayCast').textContent = (ext.cast || []).map(c => c.character).join(', ') || '--';
+            document.getElementById('shootTimeHMU').textContent = ext.hmCall || '--:--';
+            document.getElementById('shootTimeGeneral').textContent = ext.generalCall || '--:--';
+            document.getElementById('shootTimeFirst').textContent = ext.firstShot || '--:--';
+        }
+
+        // ============================================================================
+        // SCHEDULE DROPDOWN
+        // ============================================================================
+        function populateScheduleDropdown() {
+            const select = document.getElementById('callSheetScheduleSelect');
+            if (!select) return;
+
+            // Try to get shoot days from currentProject
+            const projectData = localStorage.getItem('currentProject');
+            if (!projectData) return;
+
+            try {
+                const project = JSON.parse(projectData);
+                const schedule = project.shootingSchedule || {};
+                const shootDays = schedule.shootDays || [];
+
+                let options = '<option value="">Select shoot day...</option>';
+
+                shootDays.forEach((day, index) => {
+                    const dateStr = day.date ? ` (${day.date})` : '';
+                    options += `<option value="${index}">Day ${day.number || index + 1}${dateStr} - ${day.location || 'TBD'}</option>`;
+                });
+
+                select.innerHTML = options;
+            } catch (e) {
+                console.error('Error loading schedule:', e);
+            }
+        }
+
+        function loadFromSchedule(dayIndex) {
+            if (!dayIndex && dayIndex !== 0) return;
+
+            const projectData = localStorage.getItem('currentProject');
+            if (!projectData) return;
+
+            try {
+                const project = JSON.parse(projectData);
+                const schedule = project.shootingSchedule || {};
+                const shootDays = schedule.shootDays || [];
+                const day = shootDays[dayIndex];
+
+                if (!day) return;
+
+                // Build extracted data from schedule
+                const scenes = [];
+                const sceneToShootDay = schedule.sceneToShootDay || {};
+                const projectScenes = project.scenes || [];
+
+                Object.entries(sceneToShootDay).forEach(([sceneIdx, shootDayIdx]) => {
+                    if (parseInt(shootDayIdx) === parseInt(dayIndex)) {
+                        const scene = projectScenes[parseInt(sceneIdx)];
+                        scenes.push(scene?.number || (parseInt(sceneIdx) + 1).toString());
+                    }
+                });
+
+                // Get cast from scene breakdowns
+                const cast = [];
+                const breakdowns = project.sceneBreakdowns || {};
+                const castSet = new Set();
+
+                Object.entries(sceneToShootDay).forEach(([sceneIdx, shootDayIdx]) => {
+                    if (parseInt(shootDayIdx) === parseInt(dayIndex)) {
+                        const breakdown = breakdowns[sceneIdx] || {};
+                        (breakdown.cast || []).forEach(c => castSet.add(c));
+                    }
+                });
+
+                castSet.forEach(charName => {
+                    cast.push({ character: charName, name: charName, callTime: '06:00' });
+                });
+
+                todaysCallSheet = {
+                    id: `cs-${getTodayDateKey()}`,
+                    date: getTodayDateKey(),
+                    uploadedAt: new Date().toISOString(),
+                    fileName: `Day ${day.number || dayIndex + 1} from schedule`,
+                    fromSchedule: true,
+                    extracted: {
+                        date: day.date || getTodayDateKey(),
+                        dayOfDays: `Day ${day.number || dayIndex + 1}`,
+                        location: day.location || 'TBD',
+                        generalCall: '06:00',
+                        hmCall: '05:30',
+                        firstShot: '08:00',
+                        scenes: scenes,
+                        cast: cast,
+                        notes: day.notes || ''
+                    }
+                };
+
+                localStorage.setItem(`callSheet_${getTodayDateKey()}`, JSON.stringify(todaysCallSheet));
+                showUploadedState();
+                updateTodaysShootSection();
+
+            } catch (e) {
+                console.error('Error loading from schedule:', e);
+            }
+        }
+
+        // ============================================================================
+        // UPCOMING SHOOT DAYS
+        // ============================================================================
+        function populateUpcomingShootDays() {
+            const list = document.getElementById('upcomingShootList');
+            if (!list) return;
+
+            const projectData = localStorage.getItem('currentProject');
+            if (!projectData) {
+                list.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-secondary);">No schedule loaded</div>';
+                return;
+            }
+
+            try {
+                const project = JSON.parse(projectData);
+                const schedule = project.shootingSchedule || {};
+                const shootDays = schedule.shootDays || [];
+
+                if (shootDays.length === 0) {
+                    list.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-secondary);">No shoot days scheduled</div>';
+                    return;
+                }
+
+                // Get upcoming days (next 3)
+                const upcoming = shootDays.slice(0, 3);
+
+                let html = '';
+                upcoming.forEach((day, index) => {
+                    const sceneCount = getSceneCountForDay(project, index);
+                    const castList = getCastForDay(project, index);
+
+                    html += `
+                        <div class="upcoming-shoot-item" onclick="loadFromSchedule(${index})">
+                            <span class="upcoming-shoot-date">${day.date || 'TBD'}</span>
+                            <span class="upcoming-shoot-day">Day ${day.number || index + 1}</span>
+                            <span class="upcoming-shoot-location">${day.location || 'Location TBD'}</span>
+                            <span class="upcoming-shoot-scenes">${sceneCount} scene${sceneCount !== 1 ? 's' : ''}</span>
+                        </div>
+                    `;
+                });
+
+                list.innerHTML = html;
+
+            } catch (e) {
+                console.error('Error loading upcoming days:', e);
+                list.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-secondary);">Error loading schedule</div>';
+            }
+        }
+
+        function getSceneCountForDay(project, dayIndex) {
+            const sceneToShootDay = project.shootingSchedule?.sceneToShootDay || {};
+            let count = 0;
+            Object.values(sceneToShootDay).forEach(idx => {
+                if (parseInt(idx) === dayIndex) count++;
+            });
+            return count;
+        }
+
+        function getCastForDay(project, dayIndex) {
+            const sceneToShootDay = project.shootingSchedule?.sceneToShootDay || {};
+            const breakdowns = project.sceneBreakdowns || {};
+            const castSet = new Set();
+
+            Object.entries(sceneToShootDay).forEach(([sceneIdx, shootDayIdx]) => {
+                if (parseInt(shootDayIdx) === dayIndex) {
+                    const breakdown = breakdowns[sceneIdx] || {};
+                    (breakdown.cast || []).forEach(c => castSet.add(c));
+                }
+            });
+
+            return Array.from(castSet);
+        }
+
+        // ============================================================================
+        // DAILY BREAKDOWN GENERATION
+        // ============================================================================
+        function generateDailyBreakdown() {
+            if (!todaysCallSheet) {
+                alert('Please upload a call sheet first');
+                return;
+            }
+
+            // Generate breakdown data
+            todaysDailyBreakdown = generateBreakdownFromCallSheet(todaysCallSheet);
+
+            // Save to localStorage
+            localStorage.setItem(`dailyBreakdown_${getTodayDateKey()}`, JSON.stringify(todaysDailyBreakdown));
+
+            // Open the modal
+            openDailyBreakdownModal();
+        }
+
+        function generateBreakdownFromCallSheet(callSheet) {
+            const ext = callSheet.extracted;
+            const projectData = localStorage.getItem('currentProject');
+            let project = null;
+
+            try {
+                project = projectData ? JSON.parse(projectData) : null;
+            } catch (e) {
+                console.error('Error parsing project:', e);
+            }
+
+            // Build cast breakdowns
+            const castBreakdowns = [];
+
+            (ext.cast || []).forEach(castMember => {
+                const charName = castMember.character;
+
+                // Try to get character data from project
+                let hair = 'As established';
+                let makeup = 'Natural, clean';
+                let allergies = null;
+                let continuity = [];
+
+                if (project) {
+                    // Get character states from project
+                    const charStates = project.characterStates || {};
+                    const characters = project.characters || {};
+                    const charData = characters[charName] || {};
+
+                    // Look for looks in scene breakdowns
+                    const breakdowns = project.sceneBreakdowns || {};
+                    ext.scenes.forEach(sceneNum => {
+                        // Find scene by number
+                        const sceneIndex = (project.scenes || []).findIndex(s =>
+                            (s.number || '').toString() === sceneNum.toString()
+                        );
+                        if (sceneIndex >= 0) {
+                            const state = charStates[sceneIndex]?.[charName];
+                            if (state) {
+                                if (state.enterHair) hair = state.enterHair;
+                                if (state.enterMakeup) makeup = state.enterMakeup;
+                            }
+                        }
+                    });
+
+                    // Get continuity events
+                    const events = project.continuityEvents?.[charName] || [];
+                    events.forEach(event => {
+                        if (event.active) {
+                            continuity.push(event.name || event.eventName);
+                        }
+                    });
+                }
+
+                castBreakdowns.push({
+                    character: charName,
+                    actor: castMember.name,
+                    callTime: castMember.callTime || '06:00',
+                    readyTime: calculateReadyTime(castMember.callTime),
+                    scenes: ext.scenes,
+                    hair: hair,
+                    makeup: makeup,
+                    allergies: allergies,
+                    continuity: continuity,
+                    estimatedTime: '45 mins'
+                });
+            });
+
+            // Build scene order
+            const sceneOrder = ext.scenes.map((sceneNum, index) => {
+                let heading = `Scene ${sceneNum}`;
+                let cast = [];
+
+                if (project) {
+                    const sceneIndex = (project.scenes || []).findIndex(s =>
+                        (s.number || '').toString() === sceneNum.toString()
+                    );
+                    if (sceneIndex >= 0) {
+                        const scene = project.scenes[sceneIndex];
+                        heading = `SC ${sceneNum} - ${scene.heading || 'Scene'}`;
+
+                        const breakdown = project.sceneBreakdowns?.[sceneIndex];
+                        if (breakdown) {
+                            cast = breakdown.cast || [];
+                        }
+                    }
+                }
+
+                return {
+                    order: index + 1,
+                    sceneNumber: sceneNum,
+                    heading: heading,
+                    cast: cast
+                };
+            });
+
+            return {
+                generatedAt: new Date().toISOString(),
+                date: ext.date,
+                dayOfDays: ext.dayOfDays,
+                location: ext.location,
+                times: {
+                    hmCall: ext.hmCall,
+                    generalCall: ext.generalCall,
+                    firstShot: ext.firstShot
+                },
+                castBreakdowns: castBreakdowns,
+                sceneOrder: sceneOrder
+            };
+        }
+
+        function calculateReadyTime(callTime) {
+            if (!callTime) return '--:--';
+            const [hours, mins] = callTime.split(':').map(Number);
+            const totalMins = hours * 60 + mins + 90; // Add 90 minutes
+            const readyHours = Math.floor(totalMins / 60) % 24;
+            const readyMins = totalMins % 60;
+            return `${readyHours.toString().padStart(2, '0')}:${readyMins.toString().padStart(2, '0')}`;
+        }
+
+        // ============================================================================
+        // DAILY BREAKDOWN MODAL
+        // ============================================================================
+        function openDailyBreakdownModal() {
+            // Check if we have breakdown data
+            if (!todaysDailyBreakdown) {
+                // Try to load from localStorage
+                const stored = localStorage.getItem(`dailyBreakdown_${getTodayDateKey()}`);
+                if (stored) {
+                    todaysDailyBreakdown = JSON.parse(stored);
+                } else if (todaysCallSheet) {
+                    // Generate on the fly
+                    todaysDailyBreakdown = generateBreakdownFromCallSheet(todaysCallSheet);
+                } else {
+                    alert('No breakdown data available. Please upload a call sheet first.');
+                    return;
+                }
+            }
+
+            // Populate modal
+            populateBreakdownModal(todaysDailyBreakdown);
+
+            // Show modal
+            document.getElementById('dailyBreakdownModal').classList.add('active');
+        }
+
+        function closeDailyBreakdownModal() {
+            document.getElementById('dailyBreakdownModal').classList.remove('active');
+        }
+
+        function populateBreakdownModal(breakdown) {
+            // Update subtitle
+            document.getElementById('breakdownModalSubtitle').textContent =
+                `${breakdown.dayOfDays || 'Shoot Day'} - ${formatDateDisplay(breakdown.date)}`;
+
+            // Populate cast breakdown list
+            const castList = document.getElementById('castBreakdownList');
+            let castHtml = '';
+
+            (breakdown.castBreakdowns || []).forEach(cast => {
+                castHtml += `
+                    <div class="cast-breakdown-item">
+                        <div class="cast-breakdown-header">
+                            <div>
+                                <div class="cast-breakdown-name">${escapeHtml(cast.character)}</div>
+                                <div class="cast-breakdown-actor">${escapeHtml(cast.actor || 'TBD')}</div>
+                            </div>
+                            <span class="cast-breakdown-scenes">Scenes ${(cast.scenes || []).join(', ')}</span>
+                        </div>
+                        <div class="cast-breakdown-times">
+                            <span class="cast-breakdown-time">Call: <strong>${cast.callTime || '--:--'}</strong></span>
+                            <span class="cast-breakdown-time">Ready: <strong>${cast.readyTime || '--:--'}</strong></span>
+                            <span class="cast-breakdown-time">Est. Time: <strong>${cast.estimatedTime || '45 mins'}</strong></span>
+                        </div>
+                        <div class="cast-breakdown-details">
+                            <div class="cast-breakdown-detail">
+                                <div class="cast-breakdown-detail-label">Hair</div>
+                                <div class="cast-breakdown-detail-value">${escapeHtml(cast.hair || 'As established')}</div>
+                            </div>
+                            <div class="cast-breakdown-detail">
+                                <div class="cast-breakdown-detail-label">Makeup</div>
+                                <div class="cast-breakdown-detail-value">${escapeHtml(cast.makeup || 'Natural')}</div>
+                            </div>
+                        </div>
+                        ${cast.continuity && cast.continuity.length > 0 ? `
+                            <div class="cast-breakdown-detail" style="margin-top: 8px;">
+                                <div class="cast-breakdown-detail-label">Continuity</div>
+                                <div class="cast-breakdown-detail-value">${escapeHtml(cast.continuity.join(', '))}</div>
+                            </div>
+                        ` : ''}
+                        ${cast.allergies ? `
+                            <div class="cast-breakdown-alert">
+                                Allergy Alert: ${escapeHtml(cast.allergies)}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            });
+
+            castList.innerHTML = castHtml || '<div style="text-align: center; padding: 20px; color: var(--text-secondary);">No cast data</div>';
+
+            // Populate scene order list
+            const sceneList = document.getElementById('sceneOrderList');
+            let sceneHtml = '';
+
+            (breakdown.sceneOrder || []).forEach(scene => {
+                sceneHtml += `
+                    <div class="scene-order-item">
+                        <span class="scene-order-number">${scene.order}</span>
+                        <div class="scene-order-info">
+                            <div class="scene-order-heading">${escapeHtml(scene.heading)}</div>
+                            <div class="scene-order-cast">${(scene.cast || []).join(', ') || 'Cast TBD'}</div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            sceneList.innerHTML = sceneHtml || '<div style="text-align: center; padding: 20px; color: var(--text-secondary);">No scene data</div>';
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ============================================================================
+        // EXPORT & SHARE FUNCTIONS
+        // ============================================================================
+        function downloadBreakdownPDF() {
+            // In a real app, this would use jsPDF or html2pdf
+            alert('PDF download feature - would generate a formatted PDF of the daily breakdown');
+
+            // Simulate download
+            const breakdownText = generateBreakdownText();
+            const blob = new Blob([breakdownText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `daily_breakdown_${getTodayDateKey()}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function generateBreakdownText() {
+            if (!todaysDailyBreakdown) return 'No breakdown data';
+
+            let text = '='.repeat(60) + '\n';
+            text += 'DAILY H&MU BREAKDOWN\n';
+            text += `${todaysDailyBreakdown.dayOfDays || 'Shoot Day'}\n`;
+            text += `Date: ${formatDateDisplay(todaysDailyBreakdown.date)}\n`;
+            text += `Location: ${todaysDailyBreakdown.location || 'TBD'}\n`;
+            text += '='.repeat(60) + '\n\n';
+
+            text += 'CALL TIMES\n';
+            text += '-'.repeat(30) + '\n';
+            text += `H&MU Call: ${todaysDailyBreakdown.times?.hmCall || '--:--'}\n`;
+            text += `General Call: ${todaysDailyBreakdown.times?.generalCall || '--:--'}\n`;
+            text += `First Shot: ${todaysDailyBreakdown.times?.firstShot || '--:--'}\n\n`;
+
+            text += 'CAST BREAKDOWN\n';
+            text += '-'.repeat(30) + '\n';
+            (todaysDailyBreakdown.castBreakdowns || []).forEach(cast => {
+                text += `\n${cast.character} (${cast.actor || 'TBD'})\n`;
+                text += `  Call: ${cast.callTime} | Ready: ${cast.readyTime}\n`;
+                text += `  Hair: ${cast.hair || 'As established'}\n`;
+                text += `  Makeup: ${cast.makeup || 'Natural'}\n`;
+                text += `  Scenes: ${(cast.scenes || []).join(', ')}\n`;
+            });
+
+            text += '\n\nSCENE ORDER\n';
+            text += '-'.repeat(30) + '\n';
+            (todaysDailyBreakdown.sceneOrder || []).forEach(scene => {
+                text += `${scene.order}. ${scene.heading}\n`;
+                text += `   Cast: ${(scene.cast || []).join(', ')}\n`;
+            });
+
+            text += '\n\nGenerated by Hair & Makeup Pro\n';
+
+            return text;
+        }
+
+        function copyBreakdownLink() {
+            // In a real app, this would copy a shareable link
+            const link = `${window.location.origin}/breakdown/${getTodayDateKey()}`;
+            navigator.clipboard.writeText(link).then(() => {
+                alert('Link copied to clipboard!');
+            }).catch(() => {
+                alert('Could not copy link');
+            });
+        }
+
+        function sendToTeam() {
+            alert('Send to Team feature - would open email/message composer with breakdown attached');
+        }
+
+        function printBreakdown() {
+            window.print();
+        }
+
+        function shareWithTeam() {
+            if (todaysDailyBreakdown) {
+                openDailyBreakdownModal();
+            } else if (todaysCallSheet) {
+                generateDailyBreakdown();
+            } else {
+                alert('Please upload a call sheet first to generate a breakdown to share.');
+            }
+        }
+
+        // ============================================================================
+        // LIVE CONTINUITY INTEGRATION
+        // ============================================================================
+        function openLiveContinuity() {
+            const dateParam = getTodayDateKey();
+            window.location.href = `continuity.html?date=${dateParam}`;
+        }
+
+        // ============================================================================
+        // INITIALIZE ON PAGE LOAD
+        // ============================================================================
+        // Initialize call sheet features after DOM is ready
+        setTimeout(initializeCallSheetData, 200);
+
+        // Click outside to close breakdown modal
+        document.getElementById('dailyBreakdownModal')?.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeDailyBreakdownModal();
+            }
+        });
     </script>
 </body>
 </html>
