@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Character Design | Hair & Makeup Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0d0b0a;
+            --bg-secondary: rgba(26, 22, 18, 0.85);
+            --bg-tertiary: rgba(36, 32, 25, 0.6);
+            --text-primary: #f0eeeb;
+            --text-secondary: #9a8f83;
+            --text-muted: #8a7f73;
+            --accent-gold: #c9a961;
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --success: #52c186;
+            --warning: #e8a87c;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(13, 11, 10, 0.4);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(138, 127, 115, 0.3);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(138, 127, 115, 0.5);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0d0b0a 0%, #1a1612 50%, #0d0b0a 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        .character-design-page {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           HEADER
+           ═══════════════════════════════════════════════════════════════ */
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 32px;
+            background: var(--bg-secondary);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .header-left {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .breadcrumb-nav {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+
+        .breadcrumb-nav .back-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.8em;
+            transition: color 0.2s;
+        }
+
+        .breadcrumb-nav .back-link:hover {
+            color: var(--accent-gold);
+        }
+
+        .header-title-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .page-header h1 {
+            margin: 0;
+            font-size: 1.4em;
+            color: var(--accent-gold);
+            letter-spacing: 1px;
+        }
+
+        .project-name {
+            color: var(--text-muted);
+            font-size: 0.9em;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           FILTER BAR
+           ═══════════════════════════════════════════════════════════════ */
+
+        .filter-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 32px;
+            background: rgba(255, 255, 255, 0.02);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            color: var(--text-secondary);
+            font-size: 0.85em;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .filter-btn:hover,
+        .filter-btn.active {
+            background: rgba(255, 215, 0, 0.1);
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+        }
+
+        .search-input {
+            padding: 8px 16px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            color: var(--text-primary);
+            width: 250px;
+            font-family: inherit;
+            font-size: 0.9em;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+        }
+
+        .search-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           CHARACTER GRID
+           ═══════════════════════════════════════════════════════════════ */
+
+        .character-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 24px;
+            padding: 32px;
+            flex: 1;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           CHARACTER CARD
+           ═══════════════════════════════════════════════════════════════ */
+
+        .character-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .character-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(255, 215, 0, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-photo-area {
+            height: 200px;
+            background: rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .card-headshot {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .card-photo-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .card-photo-placeholder:hover {
+            background: rgba(255, 215, 0, 0.05);
+        }
+
+        .placeholder-icon {
+            font-size: 2em;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .placeholder-text {
+            font-size: 0.85em;
+            color: var(--text-muted);
+        }
+
+        .card-info {
+            padding: 16px;
+        }
+
+        .card-info .character-name {
+            margin: 0 0 4px 0;
+            font-size: 1.1em;
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .card-info .actor-name {
+            margin: 0 0 8px 0;
+            font-size: 0.9em;
+            color: var(--accent-gold);
+        }
+
+        .card-info .actor-name.not-cast {
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        .card-info .character-meta {
+            margin: 0 0 12px 0;
+            font-size: 0.8em;
+            color: var(--text-muted);
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 4px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-gold), #f0c040);
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        .progress-label {
+            font-size: 0.7em;
+            color: var(--text-muted);
+        }
+
+        .card-actions {
+            padding: 0 16px 16px;
+        }
+
+        .btn-open-design {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background: rgba(255, 215, 0, 0.1);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 8px;
+            color: var(--accent-gold);
+            text-align: center;
+            text-decoration: none;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn-open-design:hover {
+            background: rgba(255, 215, 0, 0.2);
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           FOOTER STATS
+           ═══════════════════════════════════════════════════════════════ */
+
+        .page-footer {
+            padding: 16px 32px;
+            background: var(--bg-secondary);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 0.85em;
+            color: var(--text-muted);
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           EMPTY STATE
+           ═══════════════════════════════════════════════════════════════ */
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 40px;
+            color: var(--text-muted);
+            grid-column: 1 / -1;
+        }
+
+        .empty-state h3 {
+            margin: 0 0 12px;
+            color: var(--text-secondary);
+            font-size: 1.2em;
+        }
+
+        .empty-state p {
+            margin: 0 0 24px;
+        }
+
+        .empty-state .btn-primary {
+            display: inline-block;
+            padding: 12px 24px;
+            background: rgba(255, 215, 0, 0.15);
+            border: 1px solid var(--accent-gold);
+            border-radius: 8px;
+            color: var(--accent-gold);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .empty-state .btn-primary:hover {
+            background: rgba(255, 215, 0, 0.25);
+        }
+    </style>
+</head>
+<body>
+    <div class="character-design-page">
+
+        <!-- Header -->
+        <header class="page-header">
+            <div class="header-left">
+                <nav class="breadcrumb-nav">
+                    <a href="dashboard.html" class="back-link">← Dashboard</a>
+                </nav>
+                <div class="header-title-row">
+                    <h1>CHARACTER DESIGN</h1>
+                    <span class="project-name" id="project-name">Loading...</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Filter Bar -->
+        <div class="filter-bar">
+            <div class="filter-buttons">
+                <button class="filter-btn active" onclick="filterCharacters('all', this)">All</button>
+                <button class="filter-btn" onclick="filterCharacters('leads', this)">Leads</button>
+                <button class="filter-btn" onclick="filterCharacters('cast', this)">Cast</button>
+                <button class="filter-btn" onclick="filterCharacters('not-cast', this)">Not Cast</button>
+            </div>
+            <input type="text" class="search-input" placeholder="Search characters..." oninput="searchCharacters(this.value)">
+        </div>
+
+        <!-- Character Grid -->
+        <main class="character-grid" id="character-grid">
+            <!-- Populated by JS -->
+        </main>
+
+        <!-- Footer -->
+        <footer class="page-footer" id="page-footer">
+            Loading...
+        </footer>
+
+    </div>
+
+    <script src="js/character-design/character-design.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            loadProjectData();
+            renderCharacterDesignOverview();
+            updateFooterStats();
+        });
+    </script>
+</body>
+</html>
