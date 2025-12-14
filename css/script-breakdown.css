@@ -281,49 +281,99 @@
             line-height: 1.5;
         }
 
-        .scene-list { flex: 1; overflow-y: auto; padding: 12px; }
-        
-        /* Scene Card - Collapsed State */
+        .scene-list { flex: 1; overflow-y: auto; padding: 8px; }
+
+        /* Scene Card - Liquid Glass Design */
         .scene-item {
             background: linear-gradient(135deg, rgba(212, 175, 122, 0.04) 0%, rgba(28, 25, 22, 0.5) 50%, rgba(212, 175, 122, 0.02) 100%);
             backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             border: 1px solid var(--glass-border);
             border-radius: 10px;
-            padding: 12px;
+            padding: 14px;
             margin-bottom: 8px;
             cursor: pointer;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
+            overflow: hidden;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+        }
+
+        .scene-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(212, 175, 122, 0.3), transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .scene-item::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(212, 175, 122, 0.15) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            pointer-events: none;
         }
 
         .scene-item.int-day {
             border-left: 3px solid var(--int-day-border);
-            background: var(--int-day);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(28, 25, 22, 0.5) 50%, rgba(255, 255, 255, 0.03) 100%);
         }
         .scene-item.ext-day {
             border-left: 3px solid var(--ext-day-border);
-            background: var(--ext-day);
+            background: linear-gradient(135deg, rgba(251, 191, 36, 0.08) 0%, rgba(28, 25, 22, 0.5) 50%, rgba(251, 191, 36, 0.04) 100%);
         }
         .scene-item.int-night {
             border-left: 3px solid var(--int-night-border);
-            background: var(--int-night);
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.08) 0%, rgba(28, 25, 22, 0.5) 50%, rgba(56, 189, 248, 0.04) 100%);
         }
         .scene-item.ext-night {
             border-left: 3px solid var(--ext-night-border);
-            background: var(--ext-night);
+            background: linear-gradient(135deg, rgba(52, 211, 153, 0.08) 0%, rgba(28, 25, 22, 0.5) 50%, rgba(52, 211, 153, 0.04) 100%);
         }
-        
+
         .scene-item:hover {
             border-color: var(--accent-gold);
+            background: linear-gradient(135deg, rgba(212, 175, 122, 0.12) 0%, rgba(35, 31, 27, 0.65) 50%, rgba(212, 175, 122, 0.08) 100%);
             transform: translateX(4px);
-            box-shadow: var(--shadow-sm), 0 0 20px rgba(212, 175, 122, 0.15);
+            box-shadow:
+                var(--shadow-sm),
+                inset 0 1px 0 rgba(255, 255, 255, 0.08),
+                0 0 20px rgba(212, 175, 122, 0.15);
         }
-        
+
+        .scene-item:hover::before {
+            opacity: 1;
+        }
+
+        .scene-item:hover::after {
+            opacity: 1;
+        }
+
         .scene-item.active {
             border-color: var(--accent-gold);
             background: linear-gradient(135deg, rgba(212, 175, 122, 0.15) 0%, rgba(35, 31, 27, 0.7) 50%, rgba(212, 175, 122, 0.1) 100%);
-            box-shadow: var(--shadow-sm), 0 0 25px rgba(212, 175, 122, 0.2);
-            padding: 14px;
+            box-shadow:
+                var(--shadow-md),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1),
+                0 0 25px rgba(212, 175, 122, 0.2);
+        }
+
+        .scene-item.active::before {
+            opacity: 1;
+        }
+
+        .scene-item.active::after {
+            opacity: 0.8;
         }
         
         /* Scene Card Header - Clean Design */
