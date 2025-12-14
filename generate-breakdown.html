@@ -620,6 +620,780 @@
         }
 
         /* ═══════════════════════════════════════════════════════════════
+           BREAKDOWN CONTROLS (View Toggle & Filters)
+           ═══════════════════════════════════════════════════════════════ */
+        .breakdown-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 0;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .view-toggle {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .view-toggle label {
+            font-size: 0.85em;
+            color: var(--text-muted);
+        }
+
+        .toggle-buttons {
+            display: flex;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 6px;
+            padding: 3px;
+        }
+
+        .toggle-btn {
+            padding: 8px 16px;
+            background: transparent;
+            border: none;
+            border-radius: 4px;
+            color: var(--text-muted);
+            font-size: 0.85em;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .toggle-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .toggle-btn.active {
+            background: var(--accent-gold);
+            color: var(--bg-primary);
+            font-weight: 500;
+        }
+
+        .day-filter {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .day-filter label {
+            font-size: 0.85em;
+            color: var(--text-muted);
+        }
+
+        .day-filter select {
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 0.85em;
+            font-family: inherit;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           SHOOT DAY BADGE
+           ═══════════════════════════════════════════════════════════════ */
+        .shoot-day-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            background: linear-gradient(135deg, rgba(82, 193, 134, 0.2), rgba(82, 193, 134, 0.1));
+            border: 1px solid rgba(82, 193, 134, 0.3);
+            border-radius: 4px;
+            margin-left: auto;
+        }
+
+        .shoot-day-badge .shoot-day-number {
+            font-size: 0.75em;
+            font-weight: 600;
+            color: var(--success);
+            text-transform: uppercase;
+        }
+
+        .shoot-day-badge .shoot-day-date {
+            font-size: 0.7em;
+            color: var(--text-muted);
+        }
+
+        .shooting-order-badge {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--accent-gold);
+            color: var(--bg-primary);
+            font-size: 0.75em;
+            font-weight: 700;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           SHOOT DAY GROUP (Shooting Order View)
+           ═══════════════════════════════════════════════════════════════ */
+        .shoot-day-group {
+            margin-bottom: 32px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .shoot-day-group.unscheduled {
+            border-color: rgba(232, 168, 124, 0.3);
+        }
+
+        .shoot-day-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            background: linear-gradient(135deg, rgba(82, 193, 134, 0.1), rgba(28, 25, 22, 0.8));
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .shoot-day-group.unscheduled .shoot-day-header {
+            background: linear-gradient(135deg, rgba(232, 168, 124, 0.1), rgba(28, 25, 22, 0.8));
+        }
+
+        .shoot-day-info h2 {
+            margin: 0 0 4px 0;
+            font-size: 1.1em;
+            color: var(--accent-gold);
+        }
+
+        .shoot-day-info .shoot-day-date {
+            font-size: 0.85em;
+            color: var(--text-secondary);
+        }
+
+        .shoot-day-info .shoot-day-location {
+            font-size: 0.8em;
+            color: var(--text-muted);
+            margin-left: 12px;
+        }
+
+        .shoot-day-stats {
+            display: flex;
+            gap: 16px;
+            font-size: 0.85em;
+            color: var(--text-muted);
+        }
+
+        .shoot-day-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 0.8em;
+        }
+
+        .shoot-day-scenes {
+            padding: 16px;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           SCHEDULE TAB
+           ═══════════════════════════════════════════════════════════════ */
+        .schedule-tab-content {
+            max-width: 1200px;
+        }
+
+        .schedule-upload-section {
+            margin-bottom: 32px;
+        }
+
+        .current-schedule-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+
+        .schedule-doc-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .doc-icon {
+            font-size: 1.5em;
+        }
+
+        .doc-details {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .doc-name {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .doc-meta {
+            font-size: 0.8em;
+            color: var(--text-muted);
+        }
+
+        .schedule-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .upload-schedule-card {
+            padding: 32px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 2px dashed rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .upload-schedule-card h3 {
+            margin: 0 0 8px 0;
+            font-size: 1em;
+            color: var(--text-primary);
+        }
+
+        .upload-schedule-card > p {
+            margin: 0 0 24px 0;
+            font-size: 0.85em;
+            color: var(--text-muted);
+        }
+
+        .upload-dropzone {
+            padding: 40px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 2px dashed rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            margin-bottom: 16px;
+            transition: all 0.2s;
+        }
+
+        .upload-dropzone.dragover {
+            border-color: var(--accent-gold);
+            background: rgba(201, 169, 97, 0.1);
+        }
+
+        .dropzone-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .upload-icon {
+            font-size: 2em;
+            color: var(--text-muted);
+        }
+
+        .upload-text {
+            font-size: 0.95em;
+            color: var(--text-secondary);
+        }
+
+        .upload-formats {
+            font-size: 0.8em;
+            color: var(--text-muted);
+        }
+
+        .upload-divider {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin: 20px 0;
+            color: var(--text-muted);
+            font-size: 0.85em;
+        }
+
+        .upload-divider::before,
+        .upload-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .upload-schedule-card textarea {
+            width: 100%;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.9em;
+            resize: vertical;
+            margin-bottom: 12px;
+        }
+
+        .upload-schedule-card textarea:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+        }
+
+        /* Shoot Days Section */
+        .shoot-days-section {
+            margin-bottom: 32px;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .section-header h3 {
+            margin: 0;
+            font-size: 0.9em;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+        }
+
+        .shoot-days-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .shoot-day-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .shoot-day-card .card-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 14px 16px;
+            background: rgba(255, 255, 255, 0.02);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .day-badge {
+            padding: 4px 10px;
+            background: var(--accent-gold);
+            color: var(--bg-primary);
+            font-size: 0.75em;
+            font-weight: 700;
+            border-radius: 4px;
+        }
+
+        .day-info {
+            flex: 1;
+        }
+
+        .day-date {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .day-location {
+            font-size: 0.85em;
+            color: var(--text-muted);
+            margin-left: 8px;
+        }
+
+        .status-badge {
+            padding: 3px 8px;
+            font-size: 0.65em;
+            font-weight: 600;
+            border-radius: 10px;
+            text-transform: uppercase;
+        }
+
+        .status-badge.scheduled {
+            background: rgba(82, 193, 134, 0.2);
+            color: var(--success);
+        }
+
+        .status-badge.shooting {
+            background: rgba(232, 168, 124, 0.2);
+            color: var(--warning);
+        }
+
+        .status-badge.completed {
+            background: rgba(138, 127, 115, 0.2);
+            color: var(--text-muted);
+        }
+
+        .shoot-day-card .card-content {
+            padding: 12px 16px;
+        }
+
+        .scenes-row, .cast-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .scenes-row .label, .cast-row .label {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            min-width: 50px;
+        }
+
+        .scene-badges {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+
+        .scene-badge {
+            padding: 2px 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            font-size: 0.75em;
+            color: var(--text-secondary);
+        }
+
+        .cast-list {
+            font-size: 0.85em;
+            color: var(--text-secondary);
+        }
+
+        .shoot-day-card .card-actions {
+            display: flex;
+            gap: 8px;
+            padding: 12px 16px;
+            background: rgba(0, 0, 0, 0.2);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .btn-icon {
+            padding: 6px 12px;
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 4px;
+            color: var(--text-muted);
+            font-size: 0.8em;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .btn-icon:hover {
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+        }
+
+        .btn-icon.danger:hover {
+            border-color: #e74c3c;
+            color: #e74c3c;
+        }
+
+        /* Unscheduled Section */
+        .unscheduled-section {
+            padding: 20px;
+            background: rgba(232, 168, 124, 0.05);
+            border: 1px solid rgba(232, 168, 124, 0.2);
+            border-radius: 8px;
+        }
+
+        .unscheduled-section h3 {
+            margin: 0 0 8px 0;
+            font-size: 0.9em;
+            color: var(--warning);
+        }
+
+        .section-hint {
+            margin: 0 0 16px 0;
+            font-size: 0.85em;
+            color: var(--text-muted);
+        }
+
+        .unscheduled-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .unscheduled-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+        }
+
+        .unscheduled-item .scene-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .unscheduled-item .scene-num {
+            font-weight: 600;
+            color: var(--accent-gold);
+        }
+
+        .unscheduled-item .scene-heading {
+            font-size: 0.85em;
+            color: var(--text-secondary);
+        }
+
+        .assign-select {
+            padding: 6px 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-size: 0.8em;
+            font-family: inherit;
+        }
+
+        .all-scheduled-notice {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 16px;
+            background: rgba(82, 193, 134, 0.1);
+            border: 1px solid rgba(82, 193, 134, 0.2);
+            border-radius: 8px;
+            color: var(--success);
+            font-size: 0.9em;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           MODAL STYLES
+           ═══════════════════════════════════════════════════════════════ */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--bg-secondary);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-content.modal-large {
+            max-width: 800px;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.1em;
+            color: var(--accent-gold);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.5em;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            color: var(--text-primary);
+        }
+
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            padding: 16px 20px;
+            border-top: 1px solid var(--glass-border);
+        }
+
+        /* Modal Form Styles */
+        .modal .form-row {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .modal .form-field {
+            flex: 1;
+        }
+
+        .modal .form-field.full-width {
+            width: 100%;
+        }
+
+        .modal .form-field label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 0.85em;
+            color: var(--text-muted);
+        }
+
+        .modal .form-field input,
+        .modal .form-field textarea,
+        .modal .form-field select {
+            width: 100%;
+            padding: 10px 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 0.9em;
+            font-family: inherit;
+        }
+
+        .modal .form-field input:focus,
+        .modal .form-field textarea:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+        }
+
+        /* Scene Reorder List */
+        .scenes-section {
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .scenes-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .scenes-header h3 {
+            margin: 0;
+            font-size: 0.85em;
+            color: var(--text-muted);
+        }
+
+        .drag-hint {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        .scenes-reorder-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .scene-reorder-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 6px;
+            cursor: grab;
+        }
+
+        .scene-reorder-item:active {
+            cursor: grabbing;
+        }
+
+        .scene-reorder-item.dragging {
+            opacity: 0.5;
+        }
+
+        .drag-handle {
+            color: var(--text-muted);
+            font-size: 1.2em;
+        }
+
+        .order-number {
+            font-weight: 600;
+            color: var(--accent-gold);
+            min-width: 24px;
+        }
+
+        .scene-reorder-item .scene-info {
+            flex: 1;
+            font-size: 0.9em;
+            color: var(--text-primary);
+        }
+
+        .scene-reorder-item .scene-cast {
+            font-size: 0.8em;
+            color: var(--text-muted);
+        }
+
+        .remove-scene-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.2em;
+            cursor: pointer;
+            padding: 0 4px;
+        }
+
+        .remove-scene-btn:hover {
+            color: #e74c3c;
+        }
+
+        .add-scene-to-day select {
+            width: 100%;
+            padding: 10px 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            color: var(--text-muted);
+            font-family: inherit;
+        }
+
+        .empty-scenes-message {
+            padding: 20px;
+            text-align: center;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
            PRINT STYLES
            ═══════════════════════════════════════════════════════════════ */
         @media print {
@@ -690,6 +1464,9 @@
             <button class="tab-btn" data-tab="lookbook" onclick="switchTab('lookbook')">
                 Lookbook
             </button>
+            <button class="tab-btn" data-tab="schedule" onclick="switchTab('schedule')">
+                Schedule
+            </button>
         </nav>
 
         <!-- Tab Content -->
@@ -713,6 +1490,7 @@
         // ============================================================================
         let breakdownState = null;
         let currentTab = 'master-breakdown';
+        let currentView = 'script'; // 'script' or 'shooting'
         let characterFirstAppearances = {};
 
         // ============================================================================
@@ -737,7 +1515,12 @@
                 characterStates: {},
                 continuityEvents: {},
                 scriptTags: {},
-                lastSaved: null
+                lastSaved: null,
+                shootingSchedule: {
+                    shootDays: [],
+                    sceneToShootDay: {},
+                    uploadedDocument: null
+                }
             };
 
             // Try to load from currentProject first
@@ -754,6 +1537,10 @@
                     breakdownState.continuityEvents = project.continuityEvents || {};
                     breakdownState.scriptTags = project.scriptTags || {};
                     breakdownState.lastSaved = project.lastSaved || null;
+                    // Load shooting schedule if available
+                    if (project.shootingSchedule) {
+                        breakdownState.shootingSchedule = project.shootingSchedule;
+                    }
                     console.log('Loaded from currentProject:', breakdownState);
                 } catch (e) {
                     console.error('Failed to parse currentProject:', e);
@@ -912,6 +1699,9 @@
                 case 'lookbook':
                     container.innerHTML = renderLookbookTab();
                     break;
+                case 'schedule':
+                    container.innerHTML = renderScheduleTab();
+                    break;
             }
         }
 
@@ -923,8 +1713,50 @@
             const scenes = breakdownState?.scenes || [];
             const breakdowns = breakdownState?.sceneBreakdowns || {};
             const charStates = breakdownState?.characterStates || {};
+            const schedule = breakdownState?.shootingSchedule || {};
+            const shootDays = schedule.shootDays || [];
 
             let html = '<div class="tab-content master-breakdown">';
+
+            // View Toggle and Filter Controls
+            html += `
+                <div class="breakdown-controls">
+                    <div class="view-toggle">
+                        <label>View:</label>
+                        <div class="toggle-buttons">
+                            <button class="toggle-btn ${currentView === 'script' ? 'active' : ''}" onclick="setView('script')">Script Order</button>
+                            <button class="toggle-btn ${currentView === 'shooting' ? 'active' : ''}" onclick="setView('shooting')">Shooting Order</button>
+                        </div>
+                    </div>
+                    ${shootDays.length > 0 ? `
+                        <div class="day-filter">
+                            <label>Filter:</label>
+                            <select id="day-filter-select" onchange="filterByShootDay(this.value)">
+                                <option value="all">All Shoot Days</option>
+                                ${shootDays.map((day, i) => `<option value="${i}">Day ${day.number || i + 1}</option>`).join('')}
+                                <option value="unscheduled">Unscheduled</option>
+                            </select>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+
+            // Render based on current view
+            if (currentView === 'shooting' && shootDays.length > 0) {
+                html += renderShootingOrderView(scenes, breakdowns, charStates, shootDays);
+            } else {
+                html += renderScriptOrderView(scenes, breakdowns, charStates);
+            }
+
+            html += '</div>';
+            return html;
+        }
+
+        function renderScriptOrderView(scenes, breakdowns, charStates) {
+            const schedule = breakdownState?.shootingSchedule || {};
+            const shootDays = schedule.shootDays || [];
+            const sceneToShootDay = schedule.sceneToShootDay || {};
+            let html = '';
 
             scenes.forEach((scene, index) => {
                 const breakdown = breakdowns[index] || {};
@@ -948,6 +1780,16 @@
                 if (scene.isDream) badges.push('DREAM');
                 if (scene.isMontage) badges.push('MONTAGE');
 
+                // Shoot day badge
+                const shootDayIdx = sceneToShootDay[index];
+                const shootDay = shootDayIdx !== undefined ? shootDays[shootDayIdx] : null;
+                const shootDayBadge = shootDay ? `
+                    <div class="shoot-day-badge">
+                        <span class="shoot-day-number">Day ${shootDay.number || shootDayIdx + 1}</span>
+                        ${shootDay.date ? `<span class="shoot-day-date">${shootDay.date}</span>` : ''}
+                    </div>
+                ` : '';
+
                 html += `
                     <div class="scene-block" data-scene-index="${index}">
                         <div class="scene-block-header">
@@ -956,6 +1798,7 @@
                                 <span class="scene-day">${storyDay}${escapeHtml(dayNote)}</span>
                                 <span class="scene-location">${escapeHtml(fullLocation)} - ${escapeHtml(timeOfDay)}</span>
                                 ${badges.map(b => `<span class="scene-badge">${b}</span>`).join('')}
+                                ${shootDayBadge}
                             </div>
                             <div class="scene-synopsis">${escapeHtml(scene.synopsis || '')}</div>
                         </div>
@@ -1018,8 +1861,211 @@
                 `;
             });
 
-            html += '</div>';
             return html;
+        }
+
+        function renderShootingOrderView(scenes, breakdowns, charStates, shootDays) {
+            const schedule = breakdownState?.shootingSchedule || {};
+            const sceneToShootDay = schedule.sceneToShootDay || {};
+            let html = '';
+
+            // Group scenes by shoot day
+            shootDays.forEach((day, dayIndex) => {
+                const dayScenes = [];
+                scenes.forEach((scene, sceneIndex) => {
+                    if (parseInt(sceneToShootDay[sceneIndex]) === dayIndex) {
+                        dayScenes.push({ scene, index: sceneIndex });
+                    }
+                });
+
+                const dayCast = getUniqueCastForScenes(dayScenes.map(s => s.index), breakdowns);
+
+                html += `
+                    <div class="shoot-day-group" data-day-index="${dayIndex}">
+                        <div class="shoot-day-header">
+                            <div class="shoot-day-info">
+                                <h2>SHOOT DAY ${day.number || dayIndex + 1}</h2>
+                                <span class="shoot-day-date">${escapeHtml(day.date || 'Date TBD')}</span>
+                                ${day.location ? `<span class="shoot-day-location">${escapeHtml(day.location)}</span>` : ''}
+                            </div>
+                            <div class="shoot-day-stats">
+                                <span>${dayScenes.length} scene${dayScenes.length !== 1 ? 's' : ''}</span>
+                                <span>${dayCast.length} cast</span>
+                            </div>
+                        </div>
+                        <div class="shoot-day-scenes">
+                `;
+
+                if (dayScenes.length === 0) {
+                    html += '<div class="no-characters">No scenes scheduled for this day</div>';
+                } else {
+                    dayScenes.forEach(({ scene, index }, order) => {
+                        html += renderSceneBlock(scene, index, breakdowns, charStates, order + 1);
+                    });
+                }
+
+                html += `
+                        </div>
+                    </div>
+                `;
+            });
+
+            // Unscheduled scenes section
+            const unscheduledScenes = [];
+            scenes.forEach((scene, index) => {
+                if (sceneToShootDay[index] === undefined) {
+                    const breakdown = breakdowns[index] || {};
+                    if ((breakdown.cast || []).length > 0) {
+                        unscheduledScenes.push({ scene, index });
+                    }
+                }
+            });
+
+            if (unscheduledScenes.length > 0) {
+                html += `
+                    <div class="shoot-day-group unscheduled">
+                        <div class="shoot-day-header">
+                            <div class="shoot-day-info">
+                                <h2>UNSCHEDULED</h2>
+                            </div>
+                            <div class="shoot-day-stats">
+                                <span>${unscheduledScenes.length} scene${unscheduledScenes.length !== 1 ? 's' : ''}</span>
+                            </div>
+                        </div>
+                        <div class="shoot-day-scenes">
+                `;
+
+                unscheduledScenes.forEach(({ scene, index }) => {
+                    html += renderSceneBlock(scene, index, breakdowns, charStates);
+                });
+
+                html += `
+                        </div>
+                    </div>
+                `;
+            }
+
+            return html;
+        }
+
+        function renderSceneBlock(scene, index, breakdowns, charStates, shootingOrder = null) {
+            const breakdown = breakdowns[index] || {};
+            const cast = breakdown.cast || [];
+
+            if (cast.length === 0) return '';
+
+            const sceneNum = scene.number || index + 1;
+            const intExt = extractIntExt(scene.heading);
+            const location = extractLocation(scene.heading);
+            const fullLocation = intExt ? `${intExt}. ${location}` : location;
+            const timeOfDay = scene.storyTimeOfDay || scene.timeOfDay || '';
+            const storyDay = formatDayShort(scene.storyDay);
+            const dayNote = scene.storyDayNote ? ` (${scene.storyDayNote})` : '';
+
+            // Scene type badges
+            const badges = [];
+            if (scene.isFlashback) badges.push('FLASHBACK');
+            if (scene.isFlashForward) badges.push('FLASH FORWARD');
+            if (scene.isTimeJump) badges.push('TIME JUMP');
+            if (scene.isDream) badges.push('DREAM');
+            if (scene.isMontage) badges.push('MONTAGE');
+
+            let html = `
+                <div class="scene-block" data-scene-index="${index}">
+                    <div class="scene-block-header">
+                        <div class="scene-block-header-main">
+                            ${shootingOrder ? `<span class="shooting-order-badge">${shootingOrder}</span>` : ''}
+                            <span class="scene-number">SC ${sceneNum}</span>
+                            <span class="scene-day">${storyDay}${escapeHtml(dayNote)}</span>
+                            <span class="scene-location">${escapeHtml(fullLocation)} - ${escapeHtml(timeOfDay)}</span>
+                            ${badges.map(b => `<span class="scene-badge">${b}</span>`).join('')}
+                        </div>
+                        <div class="scene-synopsis">${escapeHtml(scene.synopsis || '')}</div>
+                    </div>
+                    <table class="scene-character-table">
+                        <thead>
+                            <tr>
+                                <th class="col-character">Character</th>
+                                <th class="col-first">1st</th>
+                                <th class="col-hair">Hair</th>
+                                <th class="col-makeup">Makeup</th>
+                                <th class="col-sfx">SFX/Prosthetics</th>
+                                <th class="col-continuity-notes">Continuity Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            cast.forEach(charName => {
+                const charState = charStates[index]?.[charName] || {};
+                const isFirst = characterFirstAppearances[charName] === index;
+                const activeEvents = getActiveEventsForCharacterInScene(charName, index);
+
+                let rowClass = 'character-row';
+                if (isFirst) rowClass += ' first-appearance';
+                if (activeEvents.length > 0) rowClass += ' has-continuity';
+
+                // Build continuity notes
+                let continuityNotes = '';
+                if (activeEvents.length > 0) {
+                    continuityNotes = activeEvents.map(e => e.name || e.eventName || 'Event').join(', ');
+                }
+                if (charState.notes) {
+                    continuityNotes = continuityNotes ? `${continuityNotes}; ${charState.notes}` : charState.notes;
+                }
+
+                // Check if same as previous scene
+                if (!charState.enterHair && !charState.enterMakeup && !continuityNotes) {
+                    const prevScene = findPreviousSceneForCharacter(charName, index);
+                    if (prevScene !== null) {
+                        continuityNotes = `Same as Sc ${prevScene + 1}`;
+                    }
+                }
+
+                html += `
+                    <tr class="${rowClass}">
+                        <td class="col-character">${escapeHtml(charName)}</td>
+                        <td class="col-first">${isFirst ? '*' : ''}</td>
+                        <td class="col-hair">${escapeHtml(charState.enterHair || '')}</td>
+                        <td class="col-makeup">${escapeHtml(charState.enterMakeup || '')}</td>
+                        <td class="col-sfx">${escapeHtml(charState.sfx || charState.changeInjuries || '')}</td>
+                        <td class="col-continuity-notes">${escapeHtml(continuityNotes)}</td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            return html;
+        }
+
+        function getUniqueCastForScenes(sceneIndices, breakdowns) {
+            const castSet = new Set();
+            sceneIndices.forEach(index => {
+                const breakdown = breakdowns[index] || {};
+                (breakdown.cast || []).forEach(char => castSet.add(char));
+            });
+            return Array.from(castSet);
+        }
+
+        function setView(view) {
+            currentView = view;
+            renderCurrentTab();
+        }
+
+        function filterByShootDay(value) {
+            // Store filter value and re-render
+            // For now, just switch to shooting view and show filtered
+            if (value === 'unscheduled') {
+                currentView = 'script';
+            } else if (value !== 'all') {
+                currentView = 'shooting';
+            }
+            renderCurrentTab();
         }
 
         // ============================================================================
@@ -1136,6 +2182,552 @@
 
             html += '</div>';
             return html;
+        }
+
+        // ============================================================================
+        // TAB 3: SCHEDULE
+        // Schedule management and shoot day assignment
+        // ============================================================================
+        function renderScheduleTab() {
+            const schedule = breakdownState?.shootingSchedule || {};
+            const shootDays = schedule.shootDays || [];
+            const sceneToShootDay = schedule.sceneToShootDay || {};
+            const scenes = breakdownState?.scenes || [];
+
+            // Find unscheduled scenes
+            const unscheduledScenes = scenes.filter((scene, index) => !sceneToShootDay[index]);
+
+            let html = '<div class="tab-content schedule-tab-content">';
+
+            // Upload Section
+            html += `
+                <div class="schedule-upload-section">
+                    ${schedule.uploadedDocument ? `
+                        <div class="current-schedule-card">
+                            <div class="schedule-doc-info">
+                                <span class="doc-icon">📄</span>
+                                <div class="doc-details">
+                                    <span class="doc-name">${escapeHtml(schedule.uploadedDocument.name)}</span>
+                                    <span class="doc-meta">Uploaded ${formatLastSaved(schedule.uploadedDocument.uploadedAt)}</span>
+                                </div>
+                            </div>
+                            <div class="schedule-actions">
+                                <button class="btn btn-small" onclick="reprocessSchedule()">Re-process</button>
+                                <button class="btn btn-small" onclick="removeScheduleDocument()">Remove</button>
+                            </div>
+                        </div>
+                    ` : `
+                        <div class="upload-schedule-card">
+                            <h3>UPLOAD SHOOTING SCHEDULE</h3>
+                            <p>Import your schedule to automatically assign scenes to shoot days</p>
+
+                            <div class="upload-dropzone" id="schedule-dropzone"
+                                 ondragover="handleScheduleDragOver(event)"
+                                 ondragleave="handleScheduleDragLeave(event)"
+                                 ondrop="handleScheduleDrop(event)">
+                                <div class="dropzone-content">
+                                    <span class="upload-icon">+</span>
+                                    <span class="upload-text">Drag & drop schedule file here</span>
+                                    <span class="upload-formats">PDF, Excel (.xlsx), or CSV</span>
+                                </div>
+                            </div>
+
+                            <input type="file" id="schedule-upload" accept=".pdf,.xlsx,.xls,.csv" onchange="handleScheduleUpload(event)" hidden>
+                            <button class="btn" onclick="document.getElementById('schedule-upload').click()">Choose File</button>
+
+                            <div class="upload-divider">or paste text</div>
+
+                            <textarea id="schedule-paste" rows="4" placeholder="Paste schedule text here (from Movie Magic, Gorilla, or similar)..."></textarea>
+                            <button class="btn btn-primary" onclick="processScheduleText()">Process Text</button>
+                        </div>
+                    `}
+                </div>
+            `;
+
+            // Shoot Days Section
+            html += `
+                <div class="shoot-days-section">
+                    <div class="section-header">
+                        <h3>SHOOT DAYS</h3>
+                        <button class="btn btn-primary btn-small" onclick="openAddShootDayModal()">+ Add Shoot Day</button>
+                    </div>
+
+                    <div class="shoot-days-list">
+            `;
+
+            if (shootDays.length === 0) {
+                html += `
+                    <div class="empty-state" style="padding: 40px;">
+                        <div class="empty-state-title">No Shoot Days Defined</div>
+                        <div class="empty-state-desc">Upload a schedule or add shoot days manually</div>
+                    </div>
+                `;
+            } else {
+                shootDays.forEach((day, dayIndex) => {
+                    const dayScenes = getScenesForShootDay(dayIndex);
+                    const dayCast = getUniqueCastForShootDay(dayScenes);
+
+                    html += `
+                        <div class="shoot-day-card" data-day-index="${dayIndex}">
+                            <div class="card-header">
+                                <span class="day-badge">DAY ${day.number || dayIndex + 1}</span>
+                                <div class="day-info">
+                                    <span class="day-date">${escapeHtml(day.date || 'Date TBD')}</span>
+                                    ${day.location ? `<span class="day-location">${escapeHtml(day.location)}</span>` : ''}
+                                </div>
+                                <span class="status-badge ${day.status || 'scheduled'}">${day.status || 'scheduled'}</span>
+                            </div>
+                            <div class="card-content">
+                                <div class="scenes-row">
+                                    <span class="label">Scenes:</span>
+                                    <div class="scene-badges">
+                                        ${dayScenes.map(s => `<span class="scene-badge">Sc ${s.number || s.index + 1}</span>`).join('') || '<span class="empty-hint">None assigned</span>'}
+                                    </div>
+                                </div>
+                                <div class="cast-row">
+                                    <span class="label">Cast:</span>
+                                    <span class="cast-list">${dayCast.join(', ') || 'None'}</span>
+                                </div>
+                            </div>
+                            <div class="card-actions">
+                                <button class="btn-icon" onclick="openEditShootDayModal(${dayIndex})">Edit</button>
+                                <button class="btn-icon" onclick="viewShootDayBreakdown(${dayIndex})">View Breakdown</button>
+                                <button class="btn-icon danger" onclick="deleteShootDay(${dayIndex})">Delete</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            html += `
+                    </div>
+                </div>
+            `;
+
+            // Unscheduled Scenes Section
+            html += `
+                <div class="unscheduled-section">
+                    <h3>UNSCHEDULED SCENES</h3>
+                    <p class="section-hint">Assign these scenes to shoot days</p>
+
+                    ${unscheduledScenes.length === 0 ? `
+                        <div class="all-scheduled-notice">
+                            All scenes have been scheduled
+                        </div>
+                    ` : `
+                        <div class="unscheduled-list">
+                            ${unscheduledScenes.map((scene, i) => {
+                                const sceneIndex = scenes.indexOf(scene);
+                                return `
+                                    <div class="unscheduled-item" data-scene-index="${sceneIndex}">
+                                        <div class="scene-info">
+                                            <span class="scene-num">Sc ${scene.number || sceneIndex + 1}</span>
+                                            <span class="scene-heading">${escapeHtml(scene.heading || '').substring(0, 50)}</span>
+                                        </div>
+                                        <select class="assign-select" onchange="assignSceneToDay(${sceneIndex}, this.value)">
+                                            <option value="">Assign to...</option>
+                                            ${shootDays.map((day, di) => `
+                                                <option value="${di}">Day ${day.number || di + 1}</option>
+                                            `).join('')}
+                                        </select>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    `}
+                </div>
+            `;
+
+            html += '</div>';
+
+            // Add modal HTML
+            html += renderScheduleModals();
+
+            return html;
+        }
+
+        function renderScheduleModals() {
+            return `
+                <!-- Add/Edit Shoot Day Modal -->
+                <div class="modal" id="shoot-day-modal">
+                    <div class="modal-content modal-large">
+                        <div class="modal-header">
+                            <h2 id="shoot-day-modal-title">Add Shoot Day</h2>
+                            <button class="modal-close" onclick="closeModal('shoot-day-modal')">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="form-row">
+                                <div class="form-field">
+                                    <label>Day Number</label>
+                                    <input type="number" id="shoot-day-number" min="1" placeholder="1">
+                                </div>
+                                <div class="form-field">
+                                    <label>Date</label>
+                                    <input type="date" id="shoot-day-date">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-field full-width">
+                                    <label>Location</label>
+                                    <input type="text" id="shoot-day-location" placeholder="Studio / Location name">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-field full-width">
+                                    <label>Notes</label>
+                                    <textarea id="shoot-day-notes" rows="3" placeholder="Call time, special requirements..."></textarea>
+                                </div>
+                            </div>
+
+                            <div class="scenes-section">
+                                <div class="scenes-header">
+                                    <h3>SCENES FOR THIS DAY</h3>
+                                    <span class="drag-hint">Drag to reorder shooting sequence</span>
+                                </div>
+                                <div class="scenes-reorder-list" id="modal-scenes-list">
+                                    <!-- Populated dynamically -->
+                                </div>
+                                <div class="add-scene-to-day">
+                                    <select id="add-scene-select" onchange="addSceneToCurrentDay(this.value)">
+                                        <option value="">+ Add scene to this day...</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn" onclick="closeModal('shoot-day-modal')">Cancel</button>
+                            <button class="btn btn-primary" onclick="saveShootDay()">Save</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ============================================================================
+        // SCHEDULE HELPER FUNCTIONS
+        // ============================================================================
+        function getScenesForShootDay(dayIndex) {
+            const schedule = breakdownState?.shootingSchedule || {};
+            const sceneToShootDay = schedule.sceneToShootDay || {};
+            const scenes = breakdownState?.scenes || [];
+
+            const result = [];
+            Object.entries(sceneToShootDay).forEach(([sceneIdx, shootDayIdx]) => {
+                if (parseInt(shootDayIdx) === dayIndex) {
+                    const scene = scenes[parseInt(sceneIdx)];
+                    if (scene) {
+                        result.push({ ...scene, index: parseInt(sceneIdx) });
+                    }
+                }
+            });
+
+            return result;
+        }
+
+        function getUniqueCastForShootDay(dayScenes) {
+            const breakdowns = breakdownState?.sceneBreakdowns || {};
+            const castSet = new Set();
+
+            dayScenes.forEach(scene => {
+                const breakdown = breakdowns[scene.index] || {};
+                (breakdown.cast || []).forEach(char => castSet.add(char));
+            });
+
+            return Array.from(castSet);
+        }
+
+        function getShootDayForScene(sceneIndex) {
+            const schedule = breakdownState?.shootingSchedule || {};
+            const sceneToShootDay = schedule.sceneToShootDay || {};
+            return sceneToShootDay[sceneIndex];
+        }
+
+        // ============================================================================
+        // SCHEDULE EVENT HANDLERS
+        // ============================================================================
+        function handleScheduleDragOver(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('dragover');
+        }
+
+        function handleScheduleDragLeave(e) {
+            e.currentTarget.classList.remove('dragover');
+        }
+
+        function handleScheduleDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('dragover');
+
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                processScheduleFile(files[0]);
+            }
+        }
+
+        function handleScheduleUpload(event) {
+            const file = event.target.files?.[0];
+            if (file) {
+                processScheduleFile(file);
+            }
+        }
+
+        function processScheduleFile(file) {
+            const validTypes = ['.pdf', '.xlsx', '.xls', '.csv'];
+            const ext = '.' + file.name.split('.').pop().toLowerCase();
+
+            if (!validTypes.includes(ext)) {
+                showToast('Please upload a PDF, Excel, or CSV file');
+                return;
+            }
+
+            // Store document info
+            breakdownState.shootingSchedule.uploadedDocument = {
+                name: file.name,
+                type: ext,
+                uploadedAt: new Date().toISOString()
+            };
+
+            // For demo purposes, show success and re-render
+            showToast(`Processing ${file.name}...`);
+
+            // Simulate AI extraction (placeholder)
+            setTimeout(() => {
+                showToast('Schedule uploaded - manually add shoot days or use text paste');
+                saveScheduleState();
+                renderCurrentTab();
+            }, 1000);
+        }
+
+        function processScheduleText() {
+            const textarea = document.getElementById('schedule-paste');
+            const text = textarea?.value?.trim();
+
+            if (!text) {
+                showToast('Please paste schedule text first');
+                return;
+            }
+
+            // Simple parsing - look for day patterns
+            const dayPatterns = text.match(/day\s*(\d+)|shoot\s*day\s*(\d+)/gi) || [];
+            const scenePatterns = text.match(/sc(?:ene)?\s*(\d+[a-z]?)/gi) || [];
+
+            if (dayPatterns.length > 0 || scenePatterns.length > 0) {
+                showToast(`Found ${dayPatterns.length} day references and ${scenePatterns.length} scene references`);
+            } else {
+                showToast('Could not extract schedule data. Please add shoot days manually.');
+            }
+
+            // Clear textarea
+            textarea.value = '';
+        }
+
+        function reprocessSchedule() {
+            showToast('Re-processing schedule...');
+            // Placeholder for re-processing logic
+        }
+
+        function removeScheduleDocument() {
+            if (!confirm('Remove uploaded schedule document?')) return;
+
+            breakdownState.shootingSchedule.uploadedDocument = null;
+            saveScheduleState();
+            renderCurrentTab();
+            showToast('Schedule document removed');
+        }
+
+        // ============================================================================
+        // SHOOT DAY CRUD OPERATIONS
+        // ============================================================================
+        let currentEditingDayIndex = null;
+
+        function openAddShootDayModal() {
+            currentEditingDayIndex = null;
+            document.getElementById('shoot-day-modal-title').textContent = 'Add Shoot Day';
+
+            // Clear form
+            document.getElementById('shoot-day-number').value = (breakdownState.shootingSchedule.shootDays?.length || 0) + 1;
+            document.getElementById('shoot-day-date').value = '';
+            document.getElementById('shoot-day-location').value = '';
+            document.getElementById('shoot-day-notes').value = '';
+
+            populateModalScenesList([]);
+            populateAddSceneDropdown();
+
+            document.getElementById('shoot-day-modal').classList.add('active');
+        }
+
+        function openEditShootDayModal(dayIndex) {
+            currentEditingDayIndex = dayIndex;
+            const day = breakdownState.shootingSchedule.shootDays[dayIndex];
+
+            document.getElementById('shoot-day-modal-title').textContent = `Edit Day ${day.number || dayIndex + 1}`;
+            document.getElementById('shoot-day-number').value = day.number || dayIndex + 1;
+            document.getElementById('shoot-day-date').value = day.date || '';
+            document.getElementById('shoot-day-location').value = day.location || '';
+            document.getElementById('shoot-day-notes').value = day.notes || '';
+
+            const dayScenes = getScenesForShootDay(dayIndex);
+            populateModalScenesList(dayScenes);
+            populateAddSceneDropdown(dayIndex);
+
+            document.getElementById('shoot-day-modal').classList.add('active');
+        }
+
+        function populateModalScenesList(scenes) {
+            const container = document.getElementById('modal-scenes-list');
+
+            if (scenes.length === 0) {
+                container.innerHTML = '<div class="empty-scenes-message">No scenes assigned to this day</div>';
+                return;
+            }
+
+            container.innerHTML = scenes.map((scene, order) => {
+                const breakdown = breakdownState?.sceneBreakdowns?.[scene.index] || {};
+                const cast = (breakdown.cast || []).slice(0, 3).join(', ');
+
+                return `
+                    <div class="scene-reorder-item" data-scene-index="${scene.index}" draggable="true">
+                        <span class="drag-handle">=</span>
+                        <span class="order-number">${order + 1}</span>
+                        <div class="scene-info">
+                            <strong>Sc ${scene.number || scene.index + 1}</strong>
+                            ${escapeHtml(scene.heading || '').substring(0, 40)}
+                        </div>
+                        <div class="scene-cast">${cast}${(breakdown.cast || []).length > 3 ? '...' : ''}</div>
+                        <button class="remove-scene-btn" onclick="removeSceneFromDay(${scene.index})">&times;</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function populateAddSceneDropdown(excludeDayIndex = null) {
+            const select = document.getElementById('add-scene-select');
+            const scenes = breakdownState?.scenes || [];
+            const sceneToShootDay = breakdownState.shootingSchedule.sceneToShootDay || {};
+
+            let options = '<option value="">+ Add scene to this day...</option>';
+
+            scenes.forEach((scene, index) => {
+                const assignedDay = sceneToShootDay[index];
+                // Show if unassigned or assigned to current day being edited
+                if (assignedDay === undefined || (excludeDayIndex !== null && parseInt(assignedDay) === excludeDayIndex)) {
+                    if (assignedDay === undefined) {
+                        options += `<option value="${index}">Sc ${scene.number || index + 1} - ${escapeHtml(scene.heading || '').substring(0, 30)}</option>`;
+                    }
+                }
+            });
+
+            select.innerHTML = options;
+        }
+
+        function addSceneToCurrentDay(sceneIndex) {
+            if (!sceneIndex) return;
+
+            const dayIndex = currentEditingDayIndex !== null ? currentEditingDayIndex : breakdownState.shootingSchedule.shootDays.length - 1;
+
+            if (dayIndex < 0) {
+                showToast('Please save the shoot day first');
+                return;
+            }
+
+            breakdownState.shootingSchedule.sceneToShootDay[sceneIndex] = dayIndex;
+
+            const dayScenes = getScenesForShootDay(dayIndex);
+            populateModalScenesList(dayScenes);
+            populateAddSceneDropdown(dayIndex);
+
+            document.getElementById('add-scene-select').value = '';
+        }
+
+        function removeSceneFromDay(sceneIndex) {
+            delete breakdownState.shootingSchedule.sceneToShootDay[sceneIndex];
+
+            const dayIndex = currentEditingDayIndex;
+            const dayScenes = getScenesForShootDay(dayIndex);
+            populateModalScenesList(dayScenes);
+            populateAddSceneDropdown(dayIndex);
+        }
+
+        function saveShootDay() {
+            const dayNumber = parseInt(document.getElementById('shoot-day-number').value) || 1;
+            const date = document.getElementById('shoot-day-date').value;
+            const location = document.getElementById('shoot-day-location').value;
+            const notes = document.getElementById('shoot-day-notes').value;
+
+            const dayData = {
+                number: dayNumber,
+                date: date,
+                location: location,
+                notes: notes,
+                status: 'scheduled'
+            };
+
+            if (currentEditingDayIndex !== null) {
+                breakdownState.shootingSchedule.shootDays[currentEditingDayIndex] = dayData;
+            } else {
+                breakdownState.shootingSchedule.shootDays.push(dayData);
+            }
+
+            saveScheduleState();
+            closeModal('shoot-day-modal');
+            renderCurrentTab();
+            showToast(currentEditingDayIndex !== null ? 'Shoot day updated' : 'Shoot day added');
+        }
+
+        function deleteShootDay(dayIndex) {
+            if (!confirm('Delete this shoot day? Scenes will become unscheduled.')) return;
+
+            // Remove scene assignments for this day
+            const sceneToShootDay = breakdownState.shootingSchedule.sceneToShootDay;
+            Object.keys(sceneToShootDay).forEach(sceneIdx => {
+                if (parseInt(sceneToShootDay[sceneIdx]) === dayIndex) {
+                    delete sceneToShootDay[sceneIdx];
+                }
+                // Adjust indices for days after deleted one
+                if (parseInt(sceneToShootDay[sceneIdx]) > dayIndex) {
+                    sceneToShootDay[sceneIdx] = parseInt(sceneToShootDay[sceneIdx]) - 1;
+                }
+            });
+
+            breakdownState.shootingSchedule.shootDays.splice(dayIndex, 1);
+            saveScheduleState();
+            renderCurrentTab();
+            showToast('Shoot day deleted');
+        }
+
+        function assignSceneToDay(sceneIndex, dayIndex) {
+            if (dayIndex === '') {
+                delete breakdownState.shootingSchedule.sceneToShootDay[sceneIndex];
+            } else {
+                breakdownState.shootingSchedule.sceneToShootDay[sceneIndex] = parseInt(dayIndex);
+            }
+            saveScheduleState();
+            renderCurrentTab();
+        }
+
+        function viewShootDayBreakdown(dayIndex) {
+            // Switch to master breakdown with filter
+            currentView = 'shooting';
+            switchTab('master-breakdown');
+            showToast(`Viewing Day ${dayIndex + 1} breakdown`);
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId)?.classList.remove('active');
+        }
+
+        function saveScheduleState() {
+            // Save to currentProject in localStorage
+            const currentProjectStr = localStorage.getItem('currentProject');
+            if (currentProjectStr) {
+                try {
+                    const project = JSON.parse(currentProjectStr);
+                    project.shootingSchedule = breakdownState.shootingSchedule;
+                    localStorage.setItem('currentProject', JSON.stringify(project));
+                } catch (e) {
+                    console.error('Failed to save schedule state:', e);
+                }
+            }
         }
 
         // ============================================================================
