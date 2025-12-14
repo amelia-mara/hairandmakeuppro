@@ -1,6 +1,7 @@
 /**
  * Live Continuity - Views Module
  * Handles rendering of Today, By Character, By Scene, and Lookbook views
+ * Synced with Master Breakdown data structure
  */
 
 import {
@@ -11,6 +12,13 @@ import {
   getShootDayForScene,
   getCastForCharacter,
   getLooksForCharacter,
+  getSceneNumber,
+  getSceneIndex,
+  getCharactersInScene,
+  getCharacterStateInScene,
+  getEventsForCharacter,
+  getActiveEventsInScene,
+  getEventStageInScene,
   saveData,
   showNotification,
   getInitials
@@ -60,6 +68,8 @@ export function renderTodayView() {
       sceneNumber: sceneNum,
       sceneHeading: sceneData.sceneHeading || '',
       characters: sceneData.characters || [],
+      timeOfDay: sceneData.timeOfDay || '',
+      isFlashback: sceneData.isFlashback || false,
       status
     };
 
@@ -90,27 +100,26 @@ export function renderTodayView() {
 
 function getSceneStatus(sceneNumber, shootDay) {
   // Check continuity data for completion status
-  const sceneRecords = getAllSceneRecords(sceneNumber);
-  if (sceneRecords.every(r => r && r.status === 'complete')) {
-    return 'completed';
-  }
+  const characters = getCharactersInScene(sceneNumber);
+  if (characters.length === 0) return 'upcoming';
 
-  // Default to upcoming (could add shooting detection)
-  return 'upcoming';
-}
+  let allComplete = true;
+  let anyComplete = false;
 
-function getAllSceneRecords(sceneNumber) {
-  const records = [];
-  for (const charName in continuityState.continuityData.characters) {
-    const char = continuityState.continuityData.characters[charName];
-    for (const lookId in char.looks) {
-      const look = char.looks[lookId];
-      if (look.scenes.includes(sceneNumber) && look.sceneRecords[sceneNumber]) {
-        records.push(look.sceneRecords[sceneNumber]);
+  characters.forEach(charName => {
+    const look = getLookForCharacterInScene(charName, sceneNumber);
+    if (look) {
+      const record = continuityState.continuityData.characters[charName]?.looks[look.lookId]?.sceneRecords[sceneNumber];
+      if (record?.status === 'complete') {
+        anyComplete = true;
+      } else {
+        allComplete = false;
       }
     }
-  }
-  return records;
+  });
+
+  if (allComplete && anyComplete) return 'completed';
+  return 'upcoming';
 }
 
 function renderSceneBlock(scene, status) {
@@ -126,8 +135,10 @@ function renderSceneBlock(scene, status) {
   const castHtml = renderSceneCast(scene.sceneNumber, status);
 
   // Check for scene flags (flashback, etc)
-  const flags = getSceneFlags(scene.sceneNumber);
-  const flagsHtml = flags ? `<span class="scene-flags">${flags}</span>` : '';
+  const flags = [];
+  if (scene.isFlashback) flags.push('FLASHBACK');
+  if (scene.timeOfDay) flags.push(scene.timeOfDay);
+  const flagsHtml = flags.length > 0 ? `<span class="scene-flags">${flags.join(' · ')}</span>` : '';
 
   return `
     <div class="scene-block ${status}" data-scene-number="${scene.sceneNumber}">
@@ -147,8 +158,7 @@ function renderSceneBlock(scene, status) {
 }
 
 function renderSceneCast(sceneNumber, status) {
-  const sceneData = continuityState.continuityData.sceneIndex[sceneNumber] || {};
-  const characters = sceneData.characters || [];
+  const characters = getCharactersInScene(sceneNumber);
 
   if (characters.length === 0) {
     return `<div class="scene-cast-summary">No cast assigned</div>`;
@@ -188,6 +198,10 @@ function renderSceneCast(sceneNumber, status) {
       ? `<div class="card-alerts">${alerts.map(a => `<span class="alert-badge">${a}</span>`).join('')}</div>`
       : '';
 
+    // Get character state info if available
+    const charState = getCharacterStateInScene(charName, sceneNumber);
+    const stateInfo = charState ? getStateDescription(charState) : '';
+
     return `
       <div class="cast-continuity-card" data-character="${charName}" data-scene="${sceneNumber}">
         <div class="card-photo-area" onclick="openContinuityCard('${charName}', '${sceneNumber}')">
@@ -199,6 +213,7 @@ function renderSceneCast(sceneNumber, status) {
         <div class="card-info">
           <span class="character-name">${charName}</span>
           <span class="look-name">Look: ${look?.lookName || 'Default'}</span>
+          ${stateInfo ? `<span class="state-info">${stateInfo}</span>` : ''}
           <span class="status ${statusClass}">${statusText}</span>
         </div>
         ${alertsHtml}
@@ -210,35 +225,30 @@ function renderSceneCast(sceneNumber, status) {
   return `<div class="scene-cast-grid">${cards}</div>`;
 }
 
-function getSceneFlags(sceneNumber) {
-  const index = continuityState.scenes.findIndex(s => (s.sceneNumber || String(continuityState.scenes.indexOf(s) + 1)) === sceneNumber);
-  if (index === -1) return '';
-
-  const scene = continuityState.scenes[index];
-  const heading = scene.sceneHeading || '';
-
-  const flags = [];
-  if (/flashback/i.test(heading)) flags.push('FLASHBACK');
-  if (/dream/i.test(heading)) flags.push('DREAM');
-  if (/montage/i.test(heading)) flags.push('MONTAGE');
-
-  return flags.join(', ');
+function getStateDescription(charState) {
+  const parts = [];
+  if (charState.entersHair) parts.push(charState.entersHair);
+  if (charState.entersMakeup) parts.push(charState.entersMakeup);
+  if (parts.length === 0 && charState.hair) parts.push(charState.hair);
+  if (parts.length === 0 && charState.makeup) parts.push(charState.makeup);
+  return parts.slice(0, 2).join(' · ');
 }
 
 function getContinuityAlerts(characterName, sceneNumber) {
   const alerts = [];
-  const events = continuityState.continuityEvents[characterName] || [];
+  const activeEvents = getActiveEventsInScene(characterName, sceneNumber);
+  const sceneIndex = getSceneIndex(sceneNumber);
 
-  events.forEach(event => {
-    const sceneIdx = parseInt(sceneNumber);
-    if (event.startScene === sceneIdx) {
-      alerts.push(`${event.description || event.type} starts`);
-    }
-
-    // Check for stage in this scene
-    const stage = event.progression?.find(p => p.sceneIndex === sceneIdx);
-    if (stage) {
-      alerts.push(`${event.type}: ${stage.stage}`);
+  activeEvents.forEach(event => {
+    // Check if event starts in this scene
+    if (event.startScene === sceneIndex) {
+      alerts.push(`${event.type || 'Event'} starts`);
+    } else {
+      // Get the stage for this scene
+      const stage = getEventStageInScene(event, sceneNumber);
+      if (stage) {
+        alerts.push(`${event.type || 'Event'}: ${stage.stage}`);
+      }
     }
   });
 
@@ -246,9 +256,7 @@ function getContinuityAlerts(characterName, sceneNumber) {
 }
 
 export function markSceneComplete(sceneNumber) {
-  // Mark all characters in this scene as having their photos captured
-  const sceneData = continuityState.continuityData.sceneIndex[sceneNumber] || {};
-  const characters = sceneData.characters || [];
+  const characters = getCharactersInScene(sceneNumber);
 
   characters.forEach(charName => {
     const look = getLookForCharacterInScene(charName, sceneNumber);
@@ -346,9 +354,10 @@ export function loadCharacterContinuity(characterName) {
           <div class="event-item">
             <span class="event-name">${event.description || event.type}</span>
             <div class="event-progression">
-              ${(event.progression || []).map(stage => `
-                <span class="event-stage" data-scene="${stage.sceneIndex}">Sc ${stage.sceneIndex}: ${stage.stage.toUpperCase()}</span>
-              `).join('')}
+              ${(event.progression || []).map(stage => {
+                const sceneNum = getSceneNumberFromIndex(stage.sceneIndex);
+                return `<span class="event-stage" data-scene="${sceneNum}">Sc ${sceneNum}: ${stage.stage.toUpperCase()}</span>`;
+              }).join('')}
             </div>
           </div>
         `).join('')}
@@ -357,6 +366,11 @@ export function loadCharacterContinuity(characterName) {
   }
 
   container.innerHTML = html;
+}
+
+function getSceneNumberFromIndex(sceneIndex) {
+  const scene = continuityState.scenes[sceneIndex];
+  return scene ? getSceneNumber(scene, sceneIndex) : String(sceneIndex + 1);
 }
 
 function renderLookSection(characterName, look) {
@@ -384,7 +398,7 @@ function renderLookSection(characterName, look) {
           <img src="${record.collage}" alt="Sc ${sceneNum}">
           <div class="thumb-info">
             <span class="scene-num">Sc ${sceneNum}</span>
-            <span class="shoot-day">Day ${shootDay || '?'}</span>
+            <span class="shoot-day">${shootDay ? `Day ${shootDay}` : ''}</span>
           </div>
           ${isMaster ? '<div class="thumb-status master">MASTER</div>' : ''}
         </div>
@@ -398,7 +412,7 @@ function renderLookSection(characterName, look) {
         <div class="scene-thumb pending" data-scene="${sceneNum}" onclick="openContinuityCard('${characterName}', '${sceneNum}')">
           <div class="pending-placeholder">
             <span>Sc ${sceneNum}</span>
-            <span class="shoot-day">Day ${shootDay || '?'}</span>
+            <span class="shoot-day">${shootDay ? `Day ${shootDay}` : ''}</span>
           </div>
           ${alertHtml}
         </div>
@@ -444,7 +458,7 @@ function renderLookSection(characterName, look) {
             }
           </div>
           <div class="reference-meta">
-            ${master ? `<span>Scene ${master.sceneNumber} · Day ${getShootDayForScene(master.sceneNumber) || '?'}</span>` : '<span>First capture will become master</span>'}
+            ${master ? `<span>Scene ${master.sceneNumber} · ${getShootDayForScene(master.sceneNumber) ? `Day ${getShootDayForScene(master.sceneNumber)}` : ''}</span>` : '<span>First capture will become master</span>'}
             ${master?.varianceFromTest ? `<span class="variance-note">${master.varianceFromTest}</span>` : ''}
           </div>
         </div>
@@ -507,7 +521,7 @@ export function loadSceneContinuity(sceneNumber) {
 
   // Update info display
   if (infoDisplay) {
-    infoDisplay.textContent = `Day ${sceneData.shootDay || '?'} · ${sceneData.characters.length} characters`;
+    infoDisplay.textContent = `${sceneData.shootDay ? `Day ${sceneData.shootDay}` : ''} · ${sceneData.characters.length} characters`;
   }
 
   const characters = sceneData.characters || [];
@@ -521,7 +535,7 @@ export function loadSceneContinuity(sceneNumber) {
         <span class="story-day">${sceneData.storyDay ? `Story Day ${sceneData.storyDay}` : ''}</span>
       </div>
       <div class="scene-shoot-info">
-        <span>Shoot Day ${shootDay || '?'}</span>
+        <span>${shootDay ? `Shoot Day ${shootDay}` : ''}</span>
         <span class="scene-status ${status}">${status.toUpperCase()}</span>
       </div>
     </div>
@@ -562,6 +576,16 @@ export function loadSceneContinuity(sceneNumber) {
       ? `<div class="card-alerts"><span class="alert">${alerts.join(', ')}</span></div>`
       : '';
 
+    // Get character state
+    const charState = getCharacterStateInScene(charName, sceneNumber);
+    const stateHtml = charState ? `
+      <div class="character-state-info">
+        ${charState.entersHair ? `<div><strong>Hair:</strong> ${charState.entersHair}</div>` : ''}
+        ${charState.entersMakeup ? `<div><strong>Makeup:</strong> ${charState.entersMakeup}</div>` : ''}
+        ${charState.changes ? `<div><strong>Changes:</strong> ${charState.changes}</div>` : ''}
+      </div>
+    ` : '';
+
     html += `
       <div class="cast-full-card" data-character="${charName}">
         <div class="card-header">
@@ -569,6 +593,7 @@ export function loadSceneContinuity(sceneNumber) {
           <span class="actor-name">${character?.actorName || castEntry?.actorName || ''}</span>
           <span class="look-name">Look: ${look?.lookName || 'Default'}</span>
         </div>
+        ${stateHtml}
         <div class="card-photos">
           <div class="reference-side">
             <div class="ref-label">REFERENCE ${referenceScene ? `(Sc ${referenceScene})` : ''}</div>
@@ -735,7 +760,10 @@ function renderLookbookPage(characterName, lookFilter = 'all') {
         <div class="event-entry">
           <span class="event-name">${event.description || event.type}</span>
           <div class="event-timeline">
-            ${(event.progression || []).map(stage => `Sc ${stage.sceneIndex}: ${stage.stage.toUpperCase()}`).join(' → ')}
+            ${(event.progression || []).map(stage => {
+              const sceneNum = getSceneNumberFromIndex(stage.sceneIndex);
+              return `Sc ${sceneNum}: ${stage.stage.toUpperCase()}`;
+            }).join(' → ')}
           </div>
         </div>
       `).join('')}

@@ -1,6 +1,7 @@
 /**
  * Live Continuity - Main Module
  * Core logic, data management, and initialization
+ * Synced with Master Breakdown data structure
  */
 
 // Import other modules
@@ -19,14 +20,24 @@ export const continuityState = {
   projectName: '',
   currentShootDay: 1,
   currentTab: 'today',
-  shootingSchedule: [], // Array of shoot days
-  scenes: [], // All scenes from breakdown
-  confirmedCharacters: [], // Character names
-  sceneBreakdowns: {}, // Scene-specific breakdown data
-  continuityEvents: {}, // Character continuity events
-  cast: {}, // Cast data including looks and products
 
-  // Continuity data
+  // Data from Master Breakdown (currentProject)
+  scenes: [], // All scenes from breakdown
+  confirmedCharacters: [], // Character names array
+  sceneBreakdowns: {}, // Scene-specific breakdown data keyed by scene index
+  characterStates: {}, // Per-scene character states
+  continuityEvents: [], // ARRAY of continuity events (not object!)
+  cast: {}, // Cast data including looks and products
+  castProfiles: {}, // Alternative cast storage
+  characterLooks: {}, // Look definitions
+
+  // Shooting schedule structure
+  shootingSchedule: {
+    shootDays: [], // Array of shoot day objects
+    sceneToShootDay: {} // Maps scene index to shoot day index
+  },
+
+  // Continuity-specific data (stored separately)
   continuityData: {
     characters: {}, // Per-character continuity records
     sceneIndex: {} // Quick scene lookup
@@ -58,21 +69,74 @@ function loadProjectData() {
     const projectStr = localStorage.getItem('currentProject');
     if (projectStr) {
       const project = JSON.parse(projectStr);
+
+      // Project name
       continuityState.projectName = project.name || project.projectName || 'Untitled Project';
+
+      // Scenes array
       continuityState.scenes = project.scenes || [];
-      continuityState.confirmedCharacters = Array.isArray(project.confirmedCharacters)
-        ? project.confirmedCharacters
-        : Array.from(project.confirmedCharacters || []);
+
+      // Characters - handle both array and Set
+      if (Array.isArray(project.confirmedCharacters)) {
+        continuityState.confirmedCharacters = project.confirmedCharacters;
+      } else if (project.confirmedCharacters) {
+        continuityState.confirmedCharacters = Array.from(project.confirmedCharacters);
+      } else {
+        continuityState.confirmedCharacters = [];
+      }
+
+      // Scene breakdowns
       continuityState.sceneBreakdowns = project.sceneBreakdowns || {};
-      continuityState.continuityEvents = project.continuityEvents || {};
+
+      // Character states per scene
+      continuityState.characterStates = project.characterStates || {};
+
+      // Continuity events - ARRAY format
+      continuityState.continuityEvents = Array.isArray(project.continuityEvents)
+        ? project.continuityEvents
+        : [];
+
+      // Cast data - try both keys
       continuityState.cast = project.cast || {};
-      continuityState.shootingSchedule = project.shootingSchedule || [];
+      continuityState.castProfiles = project.castProfiles || {};
+
+      // Character looks
+      continuityState.characterLooks = project.characterLooks || {};
+
+      // Shooting schedule - handle both old and new formats
+      if (project.shootingSchedule) {
+        if (project.shootingSchedule.shootDays) {
+          // New format with shootDays and sceneToShootDay
+          continuityState.shootingSchedule = {
+            shootDays: project.shootingSchedule.shootDays || [],
+            sceneToShootDay: project.shootingSchedule.sceneToShootDay || {}
+          };
+        } else if (Array.isArray(project.shootingSchedule)) {
+          // Old format - array of days
+          continuityState.shootingSchedule = {
+            shootDays: project.shootingSchedule,
+            sceneToShootDay: {}
+          };
+        } else {
+          continuityState.shootingSchedule = {
+            shootDays: [],
+            sceneToShootDay: {}
+          };
+        }
+      }
     }
 
-    // Load continuity-specific data
+    // Load continuity-specific data (stored separately)
     const continuityDataStr = localStorage.getItem('continuityData');
     if (continuityDataStr) {
-      continuityState.continuityData = JSON.parse(continuityDataStr);
+      const savedData = JSON.parse(continuityDataStr);
+      // Merge with existing structure
+      if (savedData.characters) {
+        continuityState.continuityData.characters = savedData.characters;
+      }
+      if (savedData.sceneIndex) {
+        continuityState.continuityData.sceneIndex = savedData.sceneIndex;
+      }
     }
   } catch (e) {
     console.error('Error loading project data:', e);
@@ -95,7 +159,7 @@ function updateProjectHeader() {
 }
 
 // ============================================
-// SYNC FROM CHARACTER DESIGN / BREAKDOWN
+// SYNC FROM MASTER BREAKDOWN
 // ============================================
 
 export function syncFromBreakdownData() {
@@ -109,8 +173,15 @@ export function syncFromBreakdownData() {
       continuityState.continuityData.characters[charName] = {
         actorName: castEntry?.actorName || '',
         looks: {},
-        continuityEvents: continuityState.continuityEvents[charName] || []
+        continuityEvents: getEventsForCharacter(charName)
       };
+    } else {
+      // Update actor name if available
+      if (castEntry?.actorName) {
+        continuityState.continuityData.characters[charName].actorName = castEntry.actorName;
+      }
+      // Update events
+      continuityState.continuityData.characters[charName].continuityEvents = getEventsForCharacter(charName);
     }
 
     // Sync each look
@@ -126,15 +197,16 @@ export function syncFromBreakdownData() {
           scenes: look.scenes || [],
           testReference: testRef ? testRef.photos : null,
           master: null,
-          products: castEntry?.lookDesigns?.[lookId]?.products || {
-            face: [],
-            eyes: [],
-            lips: [],
-            hair: [],
-            sfx: []
-          },
+          products: getProductsForLook(charName, lookId),
           sceneRecords: {}
         };
+      } else {
+        // Update scenes list
+        continuityState.continuityData.characters[charName].looks[lookId].scenes = look.scenes || [];
+        // Update products if not manually edited
+        if (!continuityState.continuityData.characters[charName].looks[lookId].productsEdited) {
+          continuityState.continuityData.characters[charName].looks[lookId].products = getProductsForLook(charName, lookId);
+        }
       }
     }
   }
@@ -148,31 +220,74 @@ function buildSceneIndex() {
   continuityState.continuityData.sceneIndex = {};
 
   continuityState.scenes.forEach((scene, index) => {
-    const sceneNum = scene.sceneNumber || String(index + 1);
+    // Scene number - use scene.number, scene.sceneNumber, or index + 1
+    const sceneNum = getSceneNumber(scene, index);
+    // Scene heading - use scene.heading or scene.sceneHeading
+    const sceneHeading = scene.heading || scene.sceneHeading || '';
+    // Get breakdown data for this scene
     const breakdown = continuityState.sceneBreakdowns[index] || {};
 
     continuityState.continuityData.sceneIndex[sceneNum] = {
       index,
-      sceneHeading: scene.sceneHeading || '',
-      location: extractLocation(scene.sceneHeading || ''),
+      sceneNumber: sceneNum,
+      sceneHeading: sceneHeading,
+      location: extractLocation(sceneHeading),
       characters: breakdown.cast || breakdown.characters || [],
-      storyDay: breakdown.storyDay || null,
-      shootDay: getShootDayForScene(sceneNum)
+      storyDay: breakdown.storyDay || scene.storyDay || null,
+      timeOfDay: scene.timeOfDay || extractTimeOfDay(sceneHeading),
+      isFlashback: scene.isFlashback || /flashback/i.test(sceneHeading),
+      shootDay: getShootDayForSceneIndex(index),
+      characterStates: continuityState.characterStates[index] || {}
     };
   });
 }
 
+// ============================================
+// HELPER FUNCTIONS - SCENE NUMBERS
+// ============================================
+
+export function getSceneNumber(scene, index) {
+  // Try various properties used across the codebase
+  if (scene.number) return String(scene.number);
+  if (scene.sceneNumber) return String(scene.sceneNumber);
+  return String(index + 1);
+}
+
+export function getSceneByNumber(sceneNum) {
+  const sceneData = continuityState.continuityData.sceneIndex[sceneNum];
+  if (sceneData) {
+    return {
+      ...sceneData,
+      scene: continuityState.scenes[sceneData.index]
+    };
+  }
+  return null;
+}
+
+export function getSceneIndex(sceneNum) {
+  const sceneData = continuityState.continuityData.sceneIndex[sceneNum];
+  return sceneData ? sceneData.index : -1;
+}
+
 function extractLocation(heading) {
+  if (!heading) return '';
   // Extract location from scene heading like "INT. OFFICE - DAY"
-  const match = heading.match(/(?:INT\.|EXT\.|INT\/EXT\.?)\s*(.+?)\s*[-–]/);
+  const match = heading.match(/(?:INT\.|EXT\.|INT\/EXT\.?)\s*(.+?)\s*[-–]/i);
   return match ? match[1].trim() : heading;
 }
 
+function extractTimeOfDay(heading) {
+  if (!heading) return '';
+  const match = heading.match(/[-–]\s*(DAY|NIGHT|MORNING|EVENING|DUSK|DAWN|CONTINUOUS|LATER)/i);
+  return match ? match[1].toUpperCase() : '';
+}
+
 // ============================================
-// HELPER FUNCTIONS
+// HELPER FUNCTIONS - CAST & CHARACTERS
 // ============================================
 
 export function getCastForCharacter(characterName) {
+  // Try cast object first
   const cast = continuityState.cast || {};
   for (const castId in cast) {
     const entry = cast[castId];
@@ -180,14 +295,85 @@ export function getCastForCharacter(characterName) {
       return entry;
     }
   }
+
+  // Try castProfiles
+  const profiles = continuityState.castProfiles || {};
+  if (profiles[characterName]) {
+    return profiles[characterName];
+  }
+
   return null;
 }
 
-export function getLooksForCharacter(characterName) {
-  // Get looks from scene breakdowns and character states
-  const looks = [];
-  const lookMap = new Map();
+export function getCharactersInScene(sceneNum) {
+  const sceneData = continuityState.continuityData.sceneIndex[sceneNum];
+  if (sceneData) {
+    return sceneData.characters || [];
+  }
 
+  // Fallback: look up from breakdown
+  const index = getSceneIndex(sceneNum);
+  if (index >= 0) {
+    const breakdown = continuityState.sceneBreakdowns[index];
+    return breakdown?.cast || breakdown?.characters || [];
+  }
+
+  return [];
+}
+
+export function getCharacterStateInScene(characterName, sceneNum) {
+  const sceneData = continuityState.continuityData.sceneIndex[sceneNum];
+  if (sceneData?.characterStates?.[characterName]) {
+    return sceneData.characterStates[characterName];
+  }
+
+  const index = getSceneIndex(sceneNum);
+  if (index >= 0 && continuityState.characterStates[index]) {
+    return continuityState.characterStates[index][characterName] || null;
+  }
+
+  return null;
+}
+
+// ============================================
+// HELPER FUNCTIONS - LOOKS
+// ============================================
+
+export function getLooksForCharacter(characterName) {
+  const lookMap = new Map();
+  const castEntry = getCastForCharacter(characterName);
+
+  // First, check if character has defined looks in lookDesigns
+  if (castEntry?.lookDesigns) {
+    Object.entries(castEntry.lookDesigns).forEach(([lookId, lookData]) => {
+      lookMap.set(lookId, {
+        id: lookId,
+        name: lookData.name || `Look ${lookId.replace('look-', '').toUpperCase()}`,
+        scenes: [],
+        products: lookData.products || {}
+      });
+    });
+  }
+
+  // Check characterLooks
+  if (continuityState.characterLooks?.[characterName]) {
+    Object.entries(continuityState.characterLooks[characterName]).forEach(([lookId, lookData]) => {
+      if (!lookMap.has(lookId)) {
+        lookMap.set(lookId, {
+          id: lookId,
+          name: lookData.name || `Look ${lookId.replace('look-', '').toUpperCase()}`,
+          scenes: lookData.scenes || [],
+          products: lookData.products || {}
+        });
+      } else {
+        // Merge scenes
+        const existing = lookMap.get(lookId);
+        existing.scenes = [...new Set([...existing.scenes, ...(lookData.scenes || [])])];
+      }
+    });
+  }
+
+  // Build scenes list from breakdowns
   continuityState.scenes.forEach((scene, index) => {
     const breakdown = continuityState.sceneBreakdowns[index];
     if (!breakdown) return;
@@ -195,17 +381,25 @@ export function getLooksForCharacter(characterName) {
     const castInScene = breakdown.cast || breakdown.characters || [];
     if (!castInScene.includes(characterName)) return;
 
-    // Check for look assignments in the breakdown
-    const lookNote = breakdown.hair?.find(h =>
-      h.toLowerCase().includes('look') ||
-      h.toLowerCase().includes(characterName.toLowerCase())
-    );
+    const sceneNum = getSceneNumber(scene, index);
 
+    // Try to determine look from scene breakdown or character states
     let lookId = 'look-a';
     let lookName = 'Default Look';
 
-    if (lookNote) {
-      const lookMatch = lookNote.match(/look\s*([a-z0-9]+)/i);
+    // Check if there's a look specified in character state
+    const charState = continuityState.characterStates[index]?.[characterName];
+    if (charState?.look) {
+      lookId = charState.look;
+      lookName = `Look ${lookId.replace('look-', '').toUpperCase()}`;
+    } else {
+      // Check hair/makeup notes for look references
+      const allNotes = [
+        ...(breakdown.hair || []),
+        ...(breakdown.makeup || [])
+      ].join(' ').toLowerCase();
+
+      const lookMatch = allNotes.match(/look\s*([a-z0-9]+)/i);
       if (lookMatch) {
         lookId = `look-${lookMatch[1].toLowerCase()}`;
         lookName = `Look ${lookMatch[1].toUpperCase()}`;
@@ -220,17 +414,20 @@ export function getLooksForCharacter(characterName) {
       });
     }
 
-    lookMap.get(lookId).scenes.push(scene.sceneNumber || String(index + 1));
+    const look = lookMap.get(lookId);
+    if (!look.scenes.includes(sceneNum)) {
+      look.scenes.push(sceneNum);
+    }
   });
 
-  // If no looks found, create a default one
+  // If no looks found, create a default one with all scenes
   if (lookMap.size === 0) {
     const allScenes = [];
     continuityState.scenes.forEach((scene, index) => {
       const breakdown = continuityState.sceneBreakdowns[index];
       const castInScene = breakdown?.cast || breakdown?.characters || [];
       if (castInScene.includes(characterName)) {
-        allScenes.push(scene.sceneNumber || String(index + 1));
+        allScenes.push(getSceneNumber(scene, index));
       }
     });
 
@@ -241,7 +438,62 @@ export function getLooksForCharacter(characterName) {
     });
   }
 
+  // Sort scenes within each look
+  for (const look of lookMap.values()) {
+    look.scenes.sort((a, b) => {
+      const numA = parseInt(a) || 0;
+      const numB = parseInt(b) || 0;
+      return numA - numB;
+    });
+  }
+
   return Array.from(lookMap.values());
+}
+
+export function getLookForCharacterInScene(characterName, sceneNumber) {
+  const character = continuityState.continuityData.characters[characterName];
+  if (!character) return null;
+
+  // Convert to string for comparison
+  const sceneNum = String(sceneNumber);
+
+  for (const lookId in character.looks) {
+    const look = character.looks[lookId];
+    if (look.scenes.map(String).includes(sceneNum)) {
+      return { lookId, ...look };
+    }
+  }
+
+  // Return first look as fallback
+  const firstLookId = Object.keys(character.looks)[0];
+  if (firstLookId) {
+    return { lookId: firstLookId, ...character.looks[firstLookId] };
+  }
+
+  return null;
+}
+
+function getProductsForLook(characterName, lookId) {
+  const castEntry = getCastForCharacter(characterName);
+  const lookDesign = castEntry?.lookDesigns?.[lookId];
+
+  if (lookDesign?.products) {
+    return {
+      face: lookDesign.products.face || [],
+      eyes: lookDesign.products.eyes || [],
+      lips: lookDesign.products.lips || [],
+      hair: lookDesign.products.hair || [],
+      sfx: lookDesign.products.sfx || []
+    };
+  }
+
+  return {
+    face: [],
+    eyes: [],
+    lips: [],
+    hair: [],
+    sfx: []
+  };
 }
 
 function loadTestReferenceFromCharacterDesign(characterName, lookId) {
@@ -256,51 +508,156 @@ function loadTestReferenceFromCharacterDesign(characterName, lookId) {
     ?.filter(el => el.type === 'image' && el.isTestReference)
     || [];
 
-  // Get products
-  const products = lookDesign.products || {};
+  // Also check for headshot as fallback
+  const headshot = castEntry.headshot;
 
   return {
-    photos: testPhotos.length > 0 ? { front: testPhotos[0]?.url } : null,
-    products: products
+    photos: testPhotos.length > 0
+      ? { front: testPhotos[0]?.url || testPhotos[0]?.src }
+      : (headshot ? { front: headshot } : null),
+    products: lookDesign.products || {}
   };
 }
 
-export function getShootDayForScene(sceneNumber) {
-  // Check shooting schedule
-  for (let i = 0; i < continuityState.shootingSchedule.length; i++) {
-    const day = continuityState.shootingSchedule[i];
-    if (day.scenes && day.scenes.includes(sceneNumber)) {
-      return i + 1;
+// ============================================
+// HELPER FUNCTIONS - CONTINUITY EVENTS
+// ============================================
+
+export function getEventsForCharacter(characterName) {
+  // continuityEvents is an ARRAY
+  return continuityState.continuityEvents.filter(
+    event => event.character === characterName
+  );
+}
+
+export function getActiveEventsInScene(characterName, sceneNum) {
+  const sceneIndex = getSceneIndex(sceneNum);
+  if (sceneIndex < 0) return [];
+
+  const events = getEventsForCharacter(characterName);
+
+  return events.filter(event => {
+    const startScene = event.startScene;
+    const endScene = event.endScene;
+    return sceneIndex >= startScene && sceneIndex <= endScene;
+  });
+}
+
+export function getEventStageInScene(event, sceneNum) {
+  const sceneIndex = getSceneIndex(sceneNum);
+  if (sceneIndex < 0 || !event.progression) return null;
+
+  // Find the stage for this scene
+  const stage = event.progression.find(p => p.sceneIndex === sceneIndex);
+  if (stage) return stage;
+
+  // Find the most recent stage before this scene
+  const sortedStages = [...event.progression].sort((a, b) => a.sceneIndex - b.sceneIndex);
+  for (let i = sortedStages.length - 1; i >= 0; i--) {
+    if (sortedStages[i].sceneIndex <= sceneIndex) {
+      return sortedStages[i];
     }
   }
+
   return null;
 }
 
-export function getScenesForShootDay(dayNumber) {
-  const schedule = continuityState.shootingSchedule[dayNumber - 1];
-  if (schedule && schedule.scenes) {
-    return schedule.scenes;
+// ============================================
+// HELPER FUNCTIONS - SHOOTING SCHEDULE
+// ============================================
+
+export function getShootDayForSceneIndex(sceneIndex) {
+  const { sceneToShootDay, shootDays } = continuityState.shootingSchedule;
+
+  // Check sceneToShootDay mapping
+  const dayIndex = sceneToShootDay[String(sceneIndex)];
+  if (dayIndex !== undefined && shootDays[dayIndex]) {
+    return dayIndex + 1; // Return 1-based day number
   }
 
-  // Fallback: return all scenes if no schedule
-  return continuityState.scenes.map((s, i) => s.sceneNumber || String(i + 1));
+  return null;
+}
+
+export function getShootDayForScene(sceneNumber) {
+  const sceneIndex = getSceneIndex(sceneNumber);
+  if (sceneIndex < 0) return null;
+  return getShootDayForSceneIndex(sceneIndex);
+}
+
+export function getScenesForShootDay(dayNumber) {
+  const { sceneToShootDay } = continuityState.shootingSchedule;
+  const dayIndex = dayNumber - 1; // Convert to 0-based
+
+  const sceneIndices = [];
+  Object.entries(sceneToShootDay).forEach(([sceneIdx, shootDayIdx]) => {
+    if (shootDayIdx === dayIndex) {
+      sceneIndices.push(parseInt(sceneIdx));
+    }
+  });
+
+  // Sort by scene index
+  sceneIndices.sort((a, b) => a - b);
+
+  // Convert to scene numbers
+  const sceneNumbers = sceneIndices.map(idx => {
+    const scene = continuityState.scenes[idx];
+    return scene ? getSceneNumber(scene, idx) : String(idx + 1);
+  });
+
+  // If no scenes found in schedule, return all scenes as fallback
+  if (sceneNumbers.length === 0 && dayNumber === 1) {
+    return continuityState.scenes.map((s, i) => getSceneNumber(s, i));
+  }
+
+  return sceneNumbers;
 }
 
 export function getShootDayInfo(dayNumber) {
-  const schedule = continuityState.shootingSchedule[dayNumber - 1];
-  if (schedule) {
+  const { shootDays } = continuityState.shootingSchedule;
+  const dayIndex = dayNumber - 1;
+
+  if (shootDays[dayIndex]) {
+    const day = shootDays[dayIndex];
     return {
-      date: schedule.date || '',
-      location: schedule.location || '',
-      scenes: schedule.scenes || []
+      number: day.number || dayNumber,
+      date: day.date || '',
+      location: day.location || '',
+      notes: day.notes || '',
+      status: day.status || 'scheduled',
+      scenes: getScenesForShootDay(dayNumber)
     };
   }
+
   return {
-    date: new Date().toLocaleDateString(),
+    number: dayNumber,
+    date: new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
     location: '',
-    scenes: []
+    notes: '',
+    status: 'scheduled',
+    scenes: getScenesForShootDay(dayNumber)
   };
 }
+
+export function getTotalShootDays() {
+  const { shootDays, sceneToShootDay } = continuityState.shootingSchedule;
+
+  // Use the number of shoot days if defined
+  if (shootDays.length > 0) {
+    return shootDays.length;
+  }
+
+  // Otherwise, find the max day index from sceneToShootDay
+  let maxDay = 0;
+  Object.values(sceneToShootDay).forEach(dayIdx => {
+    if (dayIdx > maxDay) maxDay = dayIdx;
+  });
+
+  return maxDay > 0 ? maxDay + 1 : 1;
+}
+
+// ============================================
+// UTILITY FUNCTIONS
+// ============================================
 
 export function getCurrentDate() {
   return new Date().toLocaleDateString('en-GB', {
@@ -319,24 +676,14 @@ export function getCurrentUser() {
   return localStorage.getItem('userName') || 'User';
 }
 
-export function getLookForCharacterInScene(characterName, sceneNumber) {
-  const character = continuityState.continuityData.characters[characterName];
-  if (!character) return null;
-
-  for (const lookId in character.looks) {
-    const look = character.looks[lookId];
-    if (look.scenes.includes(sceneNumber)) {
-      return { lookId, ...look };
-    }
-  }
-
-  // Return first look as fallback
-  const firstLookId = Object.keys(character.looks)[0];
-  if (firstLookId) {
-    return { lookId: firstLookId, ...character.looks[firstLookId] };
-  }
-
-  return null;
+export function getInitials(name) {
+  if (!name) return '??';
+  return name
+    .split(' ')
+    .map(word => word[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
 }
 
 // ============================================
@@ -389,7 +736,7 @@ export function goToPreviousDay() {
 }
 
 export function goToNextDay() {
-  const maxDays = Math.max(continuityState.shootingSchedule.length, 1);
+  const maxDays = getTotalShootDays();
   if (continuityState.currentShootDay < maxDays) {
     continuityState.currentShootDay++;
     updateShootDaySelector();
@@ -417,12 +764,13 @@ function populateSelectors() {
   // Populate shoot day selector
   const shootDaySelect = document.getElementById('shoot-day-select');
   if (shootDaySelect) {
-    const numDays = Math.max(continuityState.shootingSchedule.length, 10);
+    const numDays = Math.max(getTotalShootDays(), 10);
     shootDaySelect.innerHTML = '';
     for (let i = 1; i <= numDays; i++) {
       const option = document.createElement('option');
       option.value = i;
-      option.textContent = `Day ${i}`;
+      const dayInfo = getShootDayInfo(i);
+      option.textContent = `Day ${i}${dayInfo.date ? ` - ${dayInfo.date}` : ''}`;
       shootDaySelect.appendChild(option);
     }
     shootDaySelect.value = continuityState.currentShootDay;
@@ -435,7 +783,8 @@ function populateSelectors() {
     continuityState.confirmedCharacters.forEach(char => {
       const option = document.createElement('option');
       option.value = char;
-      option.textContent = char;
+      const castEntry = getCastForCharacter(char);
+      option.textContent = castEntry?.actorName ? `${char} (${castEntry.actorName})` : char;
       characterSelect.appendChild(option);
     });
   }
@@ -445,10 +794,11 @@ function populateSelectors() {
   if (sceneSelect) {
     sceneSelect.innerHTML = '<option value="">Select scene...</option>';
     continuityState.scenes.forEach((scene, index) => {
-      const sceneNum = scene.sceneNumber || String(index + 1);
+      const sceneNum = getSceneNumber(scene, index);
+      const sceneHeading = scene.heading || scene.sceneHeading || '';
       const option = document.createElement('option');
       option.value = sceneNum;
-      option.textContent = `Scene ${sceneNum} - ${scene.sceneHeading || 'Unknown'}`;
+      option.textContent = `Scene ${sceneNum} - ${sceneHeading}`;
       sceneSelect.appendChild(option);
     });
   }
@@ -522,7 +872,7 @@ function setupEventListeners() {
 }
 
 // ============================================
-// UTILITY FUNCTIONS
+// NOTIFICATION SYSTEM
 // ============================================
 
 export function showNotification(message, type = 'info') {
@@ -553,17 +903,11 @@ export function hideLoadingState() {
   }
 }
 
-export function getInitials(name) {
-  return name
-    .split(' ')
-    .map(word => word[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
-}
+// ============================================
+// IMAGE VIEWER
+// ============================================
 
 export function viewFullImage(imageType) {
-  // Implementation for viewing full-size images
   const modal = document.getElementById('image-viewer-modal');
   const viewerImage = document.getElementById('viewer-image');
 
@@ -770,6 +1114,8 @@ window.viewTestReference = (characterName, lookId) => {
 
 // View SFX details
 window.viewSFXDetails = (eventId) => {
-  // Could open a modal with SFX details
-  showNotification('SFX details viewer - coming soon', 'info');
+  const event = continuityState.continuityEvents.find(e => e.id === eventId);
+  if (event) {
+    showNotification(`${event.type}: ${event.description}`, 'info');
+  }
 };
