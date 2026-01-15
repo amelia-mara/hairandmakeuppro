@@ -371,6 +371,32 @@
             messages.push({ role: 'user', content: message });
         }
 
+        // Build script context if available
+        let scriptContext = '';
+        try {
+            // Check if we're on the script breakdown page with loaded data
+            if (window.state && window.state.scenes && window.state.scenes.length > 0) {
+                const scenes = window.state.scenes;
+                const characters = window.state.confirmedCharacters ?
+                    Array.from(window.state.confirmedCharacters) :
+                    (window.state.characters ? Array.from(window.state.characters) : []);
+
+                scriptContext = `
+
+CURRENT SCRIPT CONTEXT:
+- Total Scenes: ${scenes.length}
+- Characters: ${characters.length > 0 ? characters.join(', ') : 'Not yet confirmed'}
+
+SCENE LIST:
+${scenes.slice(0, 30).map((s, i) => `Scene ${s.number || i+1}: ${s.heading || 'Untitled'}`).join('\n')}
+${scenes.length > 30 ? `\n... and ${scenes.length - 30} more scenes` : ''}
+
+You have access to script data. Answer questions about scenes, characters, and continuity based on this information.`;
+            }
+        } catch (e) {
+            console.log('Could not load script context:', e);
+        }
+
         // System prompt for context
         const systemPrompt = `You are a helpful AI assistant for Hair & Makeup Pro, a professional tool for film and TV production hair and makeup departments.
 
@@ -381,7 +407,7 @@ You help with:
 - Production scheduling questions
 - General production assistance
 
-Be concise, professional, and helpful. When discussing script content, reference specific scenes and characters when relevant. Format responses with clear structure using markdown when helpful.`;
+Be concise, professional, and helpful. When discussing script content, reference specific scenes and characters when relevant. Format responses with clear structure using markdown when helpful.${scriptContext}`;
 
         const response = await fetch('https://api.anthropic.com/v1/messages', {
             method: 'POST',
