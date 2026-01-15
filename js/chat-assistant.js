@@ -356,14 +356,20 @@
         const apiKey = localStorage.getItem(STORAGE_KEYS.API_KEY);
         const model = localStorage.getItem(STORAGE_KEYS.MODEL) || DEFAULT_MODEL;
 
-        // Build conversation context
-        const messages = chatState.messages.slice(-10).map(m => ({
-            role: m.role,
-            content: m.content
-        }));
+        // Build conversation context from history (already includes current message)
+        // Filter out empty messages and limit to last 10
+        const messages = chatState.messages
+            .filter(m => m.content && m.content.trim())
+            .slice(-10)
+            .map(m => ({
+                role: m.role,
+                content: m.content
+            }));
 
-        // Add current message
-        messages.push({ role: 'user', content: message });
+        // Ensure we have at least the current message
+        if (messages.length === 0) {
+            messages.push({ role: 'user', content: message });
+        }
 
         // System prompt for context
         const systemPrompt = `You are a helpful AI assistant for Hair & Makeup Pro, a professional tool for film and TV production hair and makeup departments.
@@ -584,7 +590,15 @@ Be concise, professional, and helpful. When discussing script content, reference
         try {
             const saved = localStorage.getItem(STORAGE_KEYS.MESSAGES);
             if (saved) {
-                chatState.messages = JSON.parse(saved);
+                const parsed = JSON.parse(saved);
+                // Filter out any empty or invalid messages
+                chatState.messages = parsed.filter(m =>
+                    m && m.role && m.content && m.content.trim()
+                );
+                // Save cleaned version back
+                if (chatState.messages.length !== parsed.length) {
+                    saveMessages();
+                }
             }
         } catch (e) {
             console.error('Failed to load chat messages:', e);
