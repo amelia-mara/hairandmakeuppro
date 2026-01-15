@@ -476,7 +476,7 @@ async function callAIInternal(prompt, maxTokens, sceneNumber) {
     console.log(`   Model: ${state.aiProvider === 'openai' ? state.openaiModel : state.aiProvider === 'anthropic' ? state.anthropicModel : 'default'}`);
     console.log(`   Max Tokens: ${maxTokens}`);
 
-    // For deployed Vercel version - use secure serverless function
+    // For deployed Vercel version - use secure serverless function (Claude API)
     if (window.location.hostname.includes('vercel.app')) {
         try {
             const response = await fetch("/api/ai", {
@@ -489,7 +489,8 @@ async function callAIInternal(prompt, maxTokens, sceneNumber) {
                         role: "user",
                         content: prompt
                     }],
-                    maxTokens: maxTokens
+                    maxTokens: maxTokens,
+                    model: state.anthropicModel || 'claude-sonnet-4-20250514'
                 })
             });
 
@@ -515,10 +516,10 @@ async function callAIInternal(prompt, maxTokens, sceneNumber) {
 
             const data = await response.json();
 
-            // Extract text from response
-            if (data.choices && data.choices[0] && data.choices[0].message) {
+            // Extract text from Claude response format
+            if (data.content && data.content[0] && data.content[0].text) {
                 console.log(`✅ AI Call Success - ${sceneLabel}`);
-                return data.choices[0].message.content;
+                return data.content[0].text;
             }
 
             throw new Error('Invalid response format from API');
@@ -592,7 +593,7 @@ async function callAIInternal(prompt, maxTokens, sceneNumber) {
         }
     }
 
-    // Anthropic
+    // Anthropic (Claude)
     if (state.aiProvider === 'anthropic') {
         try {
             const response = await fetch("https://api.anthropic.com/v1/messages", {
@@ -600,10 +601,11 @@ async function callAIInternal(prompt, maxTokens, sceneNumber) {
                 headers: {
                     "Content-Type": "application/json",
                     "x-api-key": state.apiKey,
-                    "anthropic-version": "2023-06-01"
+                    "anthropic-version": "2023-06-01",
+                    "anthropic-dangerous-direct-browser-access": "true"
                 },
                 body: JSON.stringify({
-                    model: state.anthropicModel || "claude-3-5-sonnet-20241022",
+                    model: state.anthropicModel || "claude-sonnet-4-20250514",
                     max_tokens: maxTokens,
                     temperature: 0.3, // Lower temperature for more consistent analysis
                     messages: [{

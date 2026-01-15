@@ -64,11 +64,11 @@ export const state = {
     characterTabs: [],            // List of open character tabs
     activeTab: 'breakdown',       // Active sidebar tab ('breakdown', 'notes', 'tags')
 
-    // AI Configuration
-    aiProvider: 'openai',         // 'openai' or 'anthropic'
+    // AI Configuration (Claude is default)
+    aiProvider: 'anthropic',      // 'anthropic' or 'openai'
     apiKey: '',                   // Stored in localStorage
-    openaiModel: 'gpt-4o',       // Selected OpenAI model
-    anthropicModel: 'claude-3-5-sonnet-20241022', // Selected Anthropic model
+    openaiModel: 'gpt-4o',       // Selected OpenAI model (legacy)
+    anthropicModel: 'claude-sonnet-4-20250514', // Selected Claude model
 
     // App state
     isInitialized: false,

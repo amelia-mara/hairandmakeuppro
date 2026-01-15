@@ -420,8 +420,8 @@ class ScriptProcessor {
         return html;
     }
 
-    // AI Analysis for tagging
-    async analyzeSceneForTags(sceneText, apiKey, provider = 'openai') {
+    // AI Analysis for tagging (Claude is default)
+    async analyzeSceneForTags(sceneText, apiKey, provider = 'anthropic') {
         const prompt = `Analyze this film scene and identify production elements. Return ONLY a valid JSON array.
 
 Scene content:
@@ -447,7 +447,7 @@ Return ONLY the JSON array, no other text.`;
 
         try {
             let response;
-            
+
             if (provider === 'openai') {
                 response = await fetch('https://api.openai.com/v1/chat/completions', {
                     method: 'POST',
@@ -462,14 +462,14 @@ Return ONLY the JSON array, no other text.`;
                         max_tokens: 500
                     })
                 });
-                
+
                 if (!response.ok) {
                     throw new Error(`OpenAI API error: ${response.status}`);
                 }
-                
+
                 const data = await response.json();
                 const content = data.choices[0].message.content;
-                
+
                 // Extract JSON from response
                 const jsonMatch = content.match(/\[[\s\S]*\]/);
                 if (jsonMatch) {
@@ -478,28 +478,29 @@ Return ONLY the JSON array, no other text.`;
                     return JSON.parse(content);
                 }
             } else {
-                // Anthropic Claude
+                // Anthropic Claude (default)
                 response = await fetch('https://api.anthropic.com/v1/messages', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'x-api-key': apiKey,
-                        'anthropic-version': '2023-06-01'
+                        'anthropic-version': '2023-06-01',
+                        'anthropic-dangerous-direct-browser-access': 'true'
                     },
                     body: JSON.stringify({
-                        model: 'claude-3-5-sonnet-20241022',
+                        model: 'claude-sonnet-4-20250514',
                         max_tokens: 500,
                         messages: [{role: 'user', content: prompt}]
                     })
                 });
-                
+
                 if (!response.ok) {
-                    throw new Error(`Anthropic API error: ${response.status}`);
+                    throw new Error(`Claude API error: ${response.status}`);
                 }
-                
+
                 const data = await response.json();
                 const content = data.content[0].text;
-                
+
                 const jsonMatch = content.match(/\[[\s\S]*\]/);
                 if (jsonMatch) {
                     return JSON.parse(jsonMatch[0]);
