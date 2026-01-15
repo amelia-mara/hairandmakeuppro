@@ -64,11 +64,10 @@ export const state = {
     characterTabs: [],            // List of open character tabs
     activeTab: 'breakdown',       // Active sidebar tab ('breakdown', 'notes', 'tags')
 
-    // AI Configuration
-    aiProvider: 'openai',         // 'openai' or 'anthropic'
+    // AI Configuration (Claude only)
+    aiProvider: 'anthropic',      // Always Claude
     apiKey: '',                   // Stored in localStorage
-    openaiModel: 'gpt-4o',       // Selected OpenAI model
-    anthropicModel: 'claude-3-5-sonnet-20241022', // Selected Anthropic model
+    anthropicModel: 'claude-sonnet-4-20250514', // Selected Claude model
 
     // App state
     isInitialized: false,
@@ -138,17 +137,15 @@ async function initializeTagSystem() {
 }
 
 /**
- * Load AI settings from localStorage
+ * Load AI settings from localStorage (Claude only)
  */
 function loadAISettings() {
-    const provider = localStorage.getItem('aiProvider');
-    if (provider) state.aiProvider = provider;
+    // Always use Claude
+    state.aiProvider = 'anthropic';
 
-    const apiKey = localStorage.getItem('apiKey');
-    if (apiKey) state.apiKey = apiKey;
-
-    const openaiModel = localStorage.getItem('openaiModel');
-    if (openaiModel) state.openaiModel = openaiModel;
+    // Load Claude API key (check both keys for backward compatibility)
+    const anthropicKey = localStorage.getItem('anthropicApiKey') || localStorage.getItem('apiKey');
+    if (anthropicKey) state.apiKey = anthropicKey;
 
     const anthropicModel = localStorage.getItem('anthropicModel');
     if (anthropicModel) state.anthropicModel = anthropicModel;
