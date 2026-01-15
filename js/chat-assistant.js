@@ -350,6 +350,197 @@
     }
 
     /**
+     * Build comprehensive project context from all available data sources
+     */
+    function buildProjectContext() {
+        let context = '';
+
+        // Try to get data from window.state (script-breakdown page)
+        const state = window.state;
+
+        // Try to get data from localStorage as fallback
+        const getLocalData = (key) => {
+            try {
+                const data = localStorage.getItem(key);
+                return data ? JSON.parse(data) : null;
+            } catch (e) {
+                return null;
+            }
+        };
+
+        // === SCRIPT & SCENES ===
+        let scenes = [];
+        if (state && state.scenes && state.scenes.length > 0) {
+            scenes = state.scenes;
+        } else {
+            const savedProject = getLocalData('scriptBreakdownProject');
+            if (savedProject && savedProject.scenes) {
+                scenes = savedProject.scenes;
+            }
+        }
+
+        if (scenes.length > 0) {
+            context += `\n\n=== SCRIPT DATA ===\nTotal Scenes: ${scenes.length}\n\nSCENE LIST:\n`;
+            scenes.forEach((scene, i) => {
+                const heading = scene.heading || scene.header || 'Untitled';
+                const synopsis = scene.synopsis || '';
+                context += `Scene ${scene.number || i+1}: ${heading}`;
+                if (synopsis) context += ` - ${synopsis.substring(0, 100)}`;
+                context += '\n';
+            });
+        }
+
+        // === CHARACTERS ===
+        let characters = [];
+        if (state && state.confirmedCharacters) {
+            characters = Array.from(state.confirmedCharacters);
+        } else if (state && state.characters) {
+            characters = Array.from(state.characters);
+        } else {
+            const savedProject = getLocalData('scriptBreakdownProject');
+            if (savedProject && savedProject.confirmedCharacters) {
+                characters = savedProject.confirmedCharacters;
+            }
+        }
+
+        if (characters.length > 0) {
+            context += `\n\n=== CHARACTERS (${characters.length}) ===\n${characters.join(', ')}\n`;
+        }
+
+        // === CHARACTER PROFILES ===
+        let castProfiles = state?.castProfiles || getLocalData('scriptBreakdownProject')?.castProfiles || {};
+        if (Object.keys(castProfiles).length > 0) {
+            context += `\n\n=== CHARACTER PROFILES ===\n`;
+            Object.entries(castProfiles).forEach(([name, profile]) => {
+                context += `\n${name}:\n`;
+                if (profile.baseDescription) context += `  Description: ${profile.baseDescription}\n`;
+                if (profile.scenes && profile.scenes.length > 0) {
+                    context += `  Appears in scenes: ${profile.scenes.join(', ')}\n`;
+                }
+            });
+        }
+
+        // === SCENE BREAKDOWNS ===
+        let breakdowns = state?.sceneBreakdowns || getLocalData('scriptBreakdownProject')?.sceneBreakdowns || {};
+        if (Object.keys(breakdowns).length > 0) {
+            context += `\n\n=== SCENE BREAKDOWNS ===\n`;
+            let breakdownCount = 0;
+            Object.entries(breakdowns).forEach(([sceneIdx, breakdown]) => {
+                if (breakdownCount >= 20) return; // Limit to prevent token overflow
+                const sceneNum = scenes[sceneIdx]?.number || parseInt(sceneIdx) + 1;
+                let hasContent = false;
+                let bdText = `\nScene ${sceneNum}:\n`;
+
+                if (breakdown.cast && breakdown.cast.length > 0) {
+                    bdText += `  Cast: ${breakdown.cast.join(', ')}\n`;
+                    hasContent = true;
+                }
+                if (breakdown.hair && breakdown.hair.length > 0) {
+                    bdText += `  Hair: ${breakdown.hair.join('; ')}\n`;
+                    hasContent = true;
+                }
+                if (breakdown.makeup && breakdown.makeup.length > 0) {
+                    bdText += `  Makeup: ${breakdown.makeup.join('; ')}\n`;
+                    hasContent = true;
+                }
+                if (breakdown.sfx && breakdown.sfx.length > 0) {
+                    bdText += `  SFX: ${breakdown.sfx.join('; ')}\n`;
+                    hasContent = true;
+                }
+                if (breakdown.wardrobe && breakdown.wardrobe.length > 0) {
+                    bdText += `  Wardrobe: ${breakdown.wardrobe.join('; ')}\n`;
+                    hasContent = true;
+                }
+                if (breakdown.injuries && breakdown.injuries.length > 0) {
+                    bdText += `  Injuries: ${breakdown.injuries.join('; ')}\n`;
+                    hasContent = true;
+                }
+
+                if (hasContent) {
+                    context += bdText;
+                    breakdownCount++;
+                }
+            });
+        }
+
+        // === CONTINUITY EVENTS ===
+        let continuityEvents = state?.continuityEvents || getLocalData('scriptBreakdownProject')?.continuityEvents || {};
+        if (Array.isArray(continuityEvents) && continuityEvents.length > 0) {
+            context += `\n\n=== CONTINUITY EVENTS ===\n`;
+            continuityEvents.slice(0, 15).forEach(event => {
+                context += `\n${event.name} (${event.character}):\n`;
+                context += `  Category: ${event.category}\n`;
+                context += `  Scenes: ${event.startScene + 1} to ${event.endScene ? event.endScene + 1 : 'end'}\n`;
+                if (event.observations && event.observations.length > 0) {
+                    context += `  Observations:\n`;
+                    event.observations.slice(0, 5).forEach(obs => {
+                        context += `    Scene ${obs.scene + 1}: ${obs.description}\n`;
+                    });
+                }
+            });
+        }
+
+        // === CHARACTER LOOKS ===
+        let characterLooks = state?.characterLooks || getLocalData('scriptBreakdownProject')?.characterLooks || {};
+        if (Object.keys(characterLooks).length > 0) {
+            context += `\n\n=== CHARACTER LOOKS ===\n`;
+            Object.entries(characterLooks).forEach(([charName, looks]) => {
+                if (looks && looks.length > 0) {
+                    context += `\n${charName}:\n`;
+                    looks.slice(0, 5).forEach(look => {
+                        context += `  - ${look.name || 'Unnamed look'}`;
+                        if (look.scenes) context += ` (Scenes: ${look.scenes.join(', ')})`;
+                        context += '\n';
+                    });
+                }
+            });
+        }
+
+        // === BUDGET DATA ===
+        const budgetData = getLocalData('budgetData') || getLocalData('hmBudgetData');
+        if (budgetData) {
+            context += `\n\n=== BUDGET ===\n`;
+            if (budgetData.totalBudget) context += `Total Budget: $${budgetData.totalBudget.toLocaleString()}\n`;
+            if (budgetData.spent) context += `Spent: $${budgetData.spent.toLocaleString()}\n`;
+            if (budgetData.remaining) context += `Remaining: $${budgetData.remaining.toLocaleString()}\n`;
+            if (budgetData.categories) {
+                context += `Categories:\n`;
+                Object.entries(budgetData.categories).forEach(([cat, data]) => {
+                    if (data.budget || data.spent) {
+                        context += `  ${cat}: Budget $${data.budget || 0}, Spent $${data.spent || 0}\n`;
+                    }
+                });
+            }
+        }
+
+        // === TAGS ===
+        let scriptTags = state?.scriptTags || getLocalData('scriptBreakdownProject')?.scriptTags || {};
+        const totalTags = Object.values(scriptTags).reduce((sum, tags) => sum + (tags?.length || 0), 0);
+        if (totalTags > 0) {
+            context += `\n\n=== TAGS ===\nTotal tags across all scenes: ${totalTags}\n`;
+
+            // Summarize tags by category
+            const tagsByCategory = {};
+            Object.values(scriptTags).forEach(sceneTags => {
+                if (sceneTags) {
+                    sceneTags.forEach(tag => {
+                        const cat = tag.category || 'other';
+                        tagsByCategory[cat] = (tagsByCategory[cat] || 0) + 1;
+                    });
+                }
+            });
+            context += `By category: ${Object.entries(tagsByCategory).map(([k, v]) => `${k}: ${v}`).join(', ')}\n`;
+        }
+
+        // Add context header if we have data
+        if (context) {
+            context = `\n\n========== PROJECT DATA ==========\nYou have access to the following project information. Use this to answer questions accurately about the script, characters, continuity, breakdowns, and budget.${context}\n\n========== END PROJECT DATA ==========`;
+        }
+
+        return context;
+    }
+
+    /**
      * Call Claude API
      */
     async function callClaudeAPI(message) {
@@ -371,43 +562,34 @@
             messages.push({ role: 'user', content: message });
         }
 
-        // Build script context if available
+        // Build comprehensive project context
         let scriptContext = '';
         try {
-            // Check if we're on the script breakdown page with loaded data
-            if (window.state && window.state.scenes && window.state.scenes.length > 0) {
-                const scenes = window.state.scenes;
-                const characters = window.state.confirmedCharacters ?
-                    Array.from(window.state.confirmedCharacters) :
-                    (window.state.characters ? Array.from(window.state.characters) : []);
-
-                scriptContext = `
-
-CURRENT SCRIPT CONTEXT:
-- Total Scenes: ${scenes.length}
-- Characters: ${characters.length > 0 ? characters.join(', ') : 'Not yet confirmed'}
-
-SCENE LIST:
-${scenes.slice(0, 30).map((s, i) => `Scene ${s.number || i+1}: ${s.heading || 'Untitled'}`).join('\n')}
-${scenes.length > 30 ? `\n... and ${scenes.length - 30} more scenes` : ''}
-
-You have access to script data. Answer questions about scenes, characters, and continuity based on this information.`;
-            }
+            scriptContext = buildProjectContext();
         } catch (e) {
-            console.log('Could not load script context:', e);
+            console.log('Could not load project context:', e);
         }
 
-        // System prompt for context
-        const systemPrompt = `You are a helpful AI assistant for Hair & Makeup Pro, a professional tool for film and TV production hair and makeup departments.
+        // System prompt - Project Specialist role
+        const systemPrompt = `You are the AI Project Specialist for this film/TV production, integrated into Hair & Makeup Pro. You have comprehensive knowledge of the entire project including:
 
-You help with:
-- Script analysis and breakdown
-- Continuity tracking for hair, makeup, wardrobe, and special effects
-- Character appearance planning
-- Production scheduling questions
-- General production assistance
+- Script content and scene details
+- All characters and their profiles
+- Scene breakdowns (hair, makeup, SFX, wardrobe, injuries)
+- Continuity events and tracking
+- Character looks and transitions
+- Budget information
+- Production tags and notes
 
-Be concise, professional, and helpful. When discussing script content, reference specific scenes and characters when relevant. Format responses with clear structure using markdown when helpful.${scriptContext}`;
+Your role:
+1. Answer ANY question about the project using the data provided
+2. Help with continuity tracking and identify potential issues
+3. Assist with character appearance planning across scenes
+4. Provide scene-specific information when asked
+5. Help analyze patterns (which characters appear together, scene locations, etc.)
+6. Support budget and resource planning
+
+Be specific and reference actual scene numbers, character names, and data from the project. If you don't have data for something, say so clearly. Format responses with markdown for clarity.${scriptContext}`;
 
         const response = await fetch('https://api.anthropic.com/v1/messages', {
             method: 'POST',
@@ -419,7 +601,7 @@ Be concise, professional, and helpful. When discussing script content, reference
             },
             body: JSON.stringify({
                 model: model,
-                max_tokens: 1024,
+                max_tokens: 2048,
                 system: systemPrompt,
                 messages: messages
             })
