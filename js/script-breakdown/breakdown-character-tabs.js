@@ -20,9 +20,10 @@ import { getCharacterSceneCount } from './breakdown-character-filtering.js';
 export function renderCharacterTabs() {
     const state = getState();
 
-    const tabsContainer = document.querySelector('.center-tabs');
+    // Look for either .center-tabs (initial) or .file-dividers (after first render)
+    const tabsContainer = document.querySelector('.center-tabs') || document.querySelector('.file-dividers');
     if (!tabsContainer) {
-        console.error('.center-tabs container not found!');
+        console.error('Tabs container not found (.center-tabs or .file-dividers)!');
         return;
     }
 
