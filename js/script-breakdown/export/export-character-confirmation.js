@@ -1349,6 +1349,11 @@ window.confirmCharactersAndContinue = async function() {
 // EXPORTS
 // ============================================================================
 
+// Export functions for use by other modules
+export const selectAllConfirmCharacters = window.selectAllConfirmCharacters;
+export const deselectAllConfirmCharacters = window.deselectAllConfirmCharacters;
+export const confirmCharactersAndContinue = window.confirmCharactersAndContinue;
+
 export default {
     showCharacterConfirmationModal,
     closeCharacterConfirmModal
