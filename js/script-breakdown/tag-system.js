@@ -30,6 +30,10 @@ const categories = [
 // Current text selection
 let currentSelection = null;
 
+// Currently editing tag
+let currentEditingTag = null;
+let currentEditingSceneIndex = null;
+
 /**
  * Handle clicking on a highlighted tag
  * @param {Event} event - Click event
@@ -37,64 +41,384 @@ let currentSelection = null;
  */
 export function handleTagClick(event, tagId) {
     event.stopPropagation();
+    event.preventDefault();
 
-    // Find the tag
+    console.log('🏷️ Tag clicked:', tagId);
+
+    // Find the tag and its scene index
     let tag = null;
-    for (let sceneIndex in state.scriptTags) {
-        const found = state.scriptTags[sceneIndex].find(t => t.id.toString() === tagId || t.id === tagId);
+    let sceneIndex = null;
+    for (let idx in state.scriptTags) {
+        const found = state.scriptTags[idx].find(t => t.id.toString() === tagId || t.id === tagId);
         if (found) {
             tag = found;
+            sceneIndex = parseInt(idx);
             break;
         }
     }
 
-    if (!tag) return;
+    if (!tag) {
+        console.warn('Tag not found:', tagId);
+        return;
+    }
 
-    // Show tag info
-    showTagInfo(tag);
+    // Show edit modal
+    showTagEditModal(tag, sceneIndex);
 }
 
 /**
- * Show tag information in a tooltip
+ * Show tag edit modal
  * @param {Object} tag - Tag object
+ * @param {number} sceneIndex - Scene index
  */
-function showTagInfo(tag) {
-    const existing = document.getElementById('tagTooltip');
+function showTagEditModal(tag, sceneIndex) {
+    currentEditingTag = tag;
+    currentEditingSceneIndex = sceneIndex;
+
+    // Remove any existing modal
+    const existing = document.getElementById('tag-edit-modal');
     if (existing) existing.remove();
 
-    const tooltip = document.createElement('div');
-    tooltip.id = 'tagTooltip';
-    tooltip.className = 'tag-tooltip';
-    tooltip.innerHTML = `
-        <div class="tooltip-header">
-            <span class="tooltip-category">${tag.category.toUpperCase()}</span>
-            ${tag.character ? `<span class="tooltip-character">→ ${escapeHtml(tag.character)}</span>` : ''}
-        </div>
-        <div class="tooltip-text">${escapeHtml(tag.selectedText)}</div>
-        <div class="tooltip-context">${escapeHtml(tag.fullContext)}</div>
-        <div class="tooltip-actions">
-            <button onclick="document.getElementById('tagTooltip').remove()">Close</button>
+    // Get all characters for dropdown
+    const allCharacters = getAllCharactersInScene();
+
+    // Build character options
+    let characterOptions = `<option value="">General Note (no character)</option>`;
+    allCharacters.forEach(char => {
+        const selected = tag.character === char ? 'selected' : '';
+        characterOptions += `<option value="${escapeHtml(char)}" ${selected}>${escapeHtml(char)}</option>`;
+    });
+
+    // Build category options
+    const categoryOptions = categories.map(cat => {
+        const selected = tag.category === cat.id ? 'selected' : '';
+        return `<option value="${cat.id}" ${selected}>${cat.name}</option>`;
+    }).join('');
+
+    // Create modal
+    const modal = document.createElement('div');
+    modal.id = 'tag-edit-modal';
+    modal.className = 'tag-edit-modal';
+    modal.innerHTML = `
+        <div class="tag-edit-content">
+            <div class="tag-edit-header">
+                <h3>Edit Tag</h3>
+                <button class="tag-edit-close" onclick="closeTagEditModal()">×</button>
+            </div>
+            <div class="tag-edit-body">
+                <div class="tag-edit-field">
+                    <label>Tagged Text</label>
+                    <div class="tag-edit-text">${escapeHtml(tag.selectedText)}</div>
+                </div>
+                <div class="tag-edit-field">
+                    <label>Context</label>
+                    <div class="tag-edit-context">${escapeHtml(tag.fullContext || tag.selectedText)}</div>
+                </div>
+                <div class="tag-edit-field">
+                    <label>Category</label>
+                    <select id="tag-edit-category">
+                        ${categoryOptions}
+                    </select>
+                </div>
+                <div class="tag-edit-field">
+                    <label>Character</label>
+                    <select id="tag-edit-character">
+                        ${characterOptions}
+                    </select>
+                </div>
+                <div class="tag-edit-meta">
+                    Scene ${(tag.sceneNumber || sceneIndex + 1)} • Created ${new Date(tag.created).toLocaleDateString()}
+                </div>
+            </div>
+            <div class="tag-edit-footer">
+                <button class="tag-edit-btn delete" onclick="deleteCurrentTag()">Delete Tag</button>
+                <div class="tag-edit-footer-right">
+                    <button class="tag-edit-btn cancel" onclick="closeTagEditModal()">Cancel</button>
+                    <button class="tag-edit-btn save" onclick="saveTagEdits()">Save Changes</button>
+                </div>
+            </div>
         </div>
     `;
 
-    document.body.appendChild(tooltip);
-
-    // Position near cursor
-    const highlight = document.querySelector(`[data-tag-id="${tag.id}"]`);
-    if (highlight) {
-        const rect = highlight.getBoundingClientRect();
-        tooltip.style.position = 'fixed';
-        tooltip.style.left = rect.left + 'px';
-        tooltip.style.top = (rect.bottom + 10) + 'px';
-        tooltip.style.zIndex = '3000';
+    // Add styles if not already present
+    if (!document.getElementById('tag-edit-modal-styles')) {
+        const styles = document.createElement('style');
+        styles.id = 'tag-edit-modal-styles';
+        styles.textContent = `
+            .tag-edit-modal {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.7);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 10000;
+                backdrop-filter: blur(4px);
+            }
+            .tag-edit-content {
+                background: var(--glass-bg, rgba(28, 25, 22, 0.95));
+                border: 1px solid var(--accent-gold, #d4af7a);
+                border-radius: 12px;
+                width: 420px;
+                max-width: 90vw;
+                max-height: 90vh;
+                overflow: hidden;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            }
+            .tag-edit-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 16px 20px;
+                border-bottom: 1px solid rgba(212, 175, 122, 0.2);
+            }
+            .tag-edit-header h3 {
+                margin: 0;
+                font-size: 1em;
+                font-weight: 600;
+                color: var(--accent-gold, #d4af7a);
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            }
+            .tag-edit-close {
+                background: none;
+                border: none;
+                color: var(--text-muted, #9ca3af);
+                font-size: 1.5em;
+                cursor: pointer;
+                padding: 0;
+                line-height: 1;
+            }
+            .tag-edit-close:hover {
+                color: var(--text-light, #e4e4e7);
+            }
+            .tag-edit-body {
+                padding: 20px;
+                display: flex;
+                flex-direction: column;
+                gap: 16px;
+            }
+            .tag-edit-field {
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+            }
+            .tag-edit-field label {
+                font-size: 0.75em;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                color: var(--text-muted, #9ca3af);
+            }
+            .tag-edit-text {
+                padding: 10px 12px;
+                background: rgba(212, 175, 122, 0.1);
+                border: 1px solid rgba(212, 175, 122, 0.3);
+                border-radius: 6px;
+                font-size: 0.9em;
+                color: var(--accent-gold, #d4af7a);
+                font-weight: 500;
+            }
+            .tag-edit-context {
+                padding: 10px 12px;
+                background: rgba(0, 0, 0, 0.2);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 6px;
+                font-size: 0.85em;
+                color: var(--text-secondary, #a1a1aa);
+                max-height: 80px;
+                overflow-y: auto;
+                line-height: 1.4;
+            }
+            .tag-edit-field select {
+                padding: 10px 12px;
+                background: rgba(0, 0, 0, 0.3);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 6px;
+                color: var(--text-primary, #e4e4e7);
+                font-size: 0.9em;
+            }
+            .tag-edit-field select:focus {
+                outline: none;
+                border-color: var(--accent-gold, #d4af7a);
+            }
+            .tag-edit-meta {
+                font-size: 0.75em;
+                color: var(--text-muted, #9ca3af);
+                text-align: center;
+                padding-top: 8px;
+                border-top: 1px solid rgba(255, 255, 255, 0.05);
+            }
+            .tag-edit-footer {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 16px 20px;
+                border-top: 1px solid rgba(212, 175, 122, 0.2);
+                background: rgba(0, 0, 0, 0.2);
+            }
+            .tag-edit-footer-right {
+                display: flex;
+                gap: 8px;
+            }
+            .tag-edit-btn {
+                padding: 8px 16px;
+                border-radius: 6px;
+                font-size: 0.85em;
+                font-weight: 500;
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+            .tag-edit-btn.cancel {
+                background: transparent;
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                color: var(--text-secondary, #a1a1aa);
+            }
+            .tag-edit-btn.cancel:hover {
+                background: rgba(255, 255, 255, 0.05);
+                border-color: rgba(255, 255, 255, 0.3);
+            }
+            .tag-edit-btn.save {
+                background: linear-gradient(135deg, var(--accent-gold, #d4af7a), #b89651);
+                border: none;
+                color: #0a0908;
+            }
+            .tag-edit-btn.save:hover {
+                filter: brightness(1.1);
+            }
+            .tag-edit-btn.delete {
+                background: transparent;
+                border: 1px solid rgba(220, 38, 38, 0.5);
+                color: #ef4444;
+            }
+            .tag-edit-btn.delete:hover {
+                background: rgba(220, 38, 38, 0.1);
+                border-color: #ef4444;
+            }
+        `;
+        document.head.appendChild(styles);
     }
 
-    // Auto-close after 5 seconds
-    setTimeout(() => {
-        if (document.getElementById('tagTooltip')) {
-            document.getElementById('tagTooltip').remove();
+    document.body.appendChild(modal);
+
+    // Close on background click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeTagEditModal();
         }
-    }, 5000);
+    });
+
+    // Close on Escape
+    const escHandler = (e) => {
+        if (e.key === 'Escape') {
+            closeTagEditModal();
+            document.removeEventListener('keydown', escHandler);
+        }
+    };
+    document.addEventListener('keydown', escHandler);
+}
+
+/**
+ * Close tag edit modal
+ */
+function closeTagEditModal() {
+    const modal = document.getElementById('tag-edit-modal');
+    if (modal) modal.remove();
+    currentEditingTag = null;
+    currentEditingSceneIndex = null;
+}
+
+/**
+ * Save tag edits
+ */
+function saveTagEdits() {
+    if (!currentEditingTag || currentEditingSceneIndex === null) return;
+
+    const categoryEl = document.getElementById('tag-edit-category');
+    const characterEl = document.getElementById('tag-edit-character');
+
+    if (!categoryEl || !characterEl) return;
+
+    const newCategory = categoryEl.value;
+    const newCharacter = characterEl.value || null;
+
+    console.log('💾 Saving tag edits:', { newCategory, newCharacter });
+
+    // Update the tag
+    currentEditingTag.category = newCategory;
+    currentEditingTag.character = newCharacter;
+
+    // Save to localStorage
+    import('./export-handlers.js').then(module => module.saveProject());
+
+    // Re-apply highlights to update visuals
+    renderAllHighlights();
+
+    // Re-render breakdown panel
+    import('./breakdown-form.js').then(module => module.renderBreakdownPanel());
+
+    closeTagEditModal();
+
+    console.log('✓ Tag updated successfully');
+}
+
+/**
+ * Delete current tag
+ */
+function deleteCurrentTag() {
+    if (!currentEditingTag || currentEditingSceneIndex === null) return;
+
+    if (!confirm('Are you sure you want to delete this tag?')) return;
+
+    const tagId = currentEditingTag.id;
+    const sceneTags = state.scriptTags[currentEditingSceneIndex];
+
+    if (sceneTags) {
+        const index = sceneTags.findIndex(t => t.id === tagId);
+        if (index !== -1) {
+            sceneTags.splice(index, 1);
+            console.log('🗑️ Tag deleted:', tagId);
+        }
+    }
+
+    // Remove highlight from DOM
+    const highlight = document.querySelector(`[data-tag-id="${tagId}"]`);
+    if (highlight) {
+        // Replace the span with its text content
+        const text = document.createTextNode(highlight.textContent);
+        highlight.parentNode.replaceChild(text, highlight);
+    }
+
+    // Save to localStorage
+    import('./export-handlers.js').then(module => module.saveProject());
+
+    // Re-render breakdown panel
+    import('./breakdown-form.js').then(module => module.renderBreakdownPanel());
+
+    closeTagEditModal();
+}
+
+// Expose functions globally
+window.closeTagEditModal = closeTagEditModal;
+window.saveTagEdits = saveTagEdits;
+window.deleteCurrentTag = deleteCurrentTag;
+
+/**
+ * Show tag information in a tooltip (legacy - now redirects to edit modal)
+ * @param {Object} tag - Tag object
+ */
+function showTagInfo(tag) {
+    // Find scene index for this tag
+    let sceneIndex = null;
+    for (let idx in state.scriptTags) {
+        if (state.scriptTags[idx].find(t => t.id === tag.id)) {
+            sceneIndex = parseInt(idx);
+            break;
+        }
+    }
+    showTagEditModal(tag, sceneIndex);
 }
 
 /**
@@ -699,7 +1023,7 @@ export function applyHighlight(tag) {
     const regex = new RegExp(`(${escapedText})`, 'i');
     if (regex.test(element.textContent)) {
         // Found exact match, highlight it
-        highlightedHTML = text.replace(regex, `<span class="tag-highlight" data-tag-id="${tag.id}" data-category="${tag.category}" style="background-color: ${color}33; border-bottom: 2px solid ${color}; padding: 2px 4px; border-radius: 2px;" onclick="handleTagClick(event, '${tag.id}')" title="${tag.fullContext}">$1</span>`);
+        highlightedHTML = text.replace(regex, `<span class="tag-highlight" data-tag-id="${tag.id}" data-category="${tag.category}" style="background-color: ${color}33; border-bottom: 2px solid ${color}; padding: 2px 4px; border-radius: 2px; cursor: pointer;" onclick="handleTagClick(event, '${tag.id}')" title="${tag.fullContext}">$1</span>`);
     } else {
         // No exact match - highlight the first significant keyword found
         const keywords = selectedText.toLowerCase()
@@ -712,7 +1036,7 @@ export function applyHighlight(tag) {
             const keywordRegex = new RegExp(`\\b(${keywordEscaped}\\w*)`, 'i');
 
             if (keywordRegex.test(element.textContent)) {
-                highlightedHTML = text.replace(keywordRegex, `<span class="tag-highlight" data-tag-id="${tag.id}" data-category="${tag.category}" style="background-color: ${color}33; border-bottom: 2px solid ${color}; padding: 2px 4px; border-radius: 2px;" onclick="handleTagClick(event, '${tag.id}')" title="${escapeHtml(tag.fullContext)} - ${escapeHtml(tag.selectedText)}">$1</span>`);
+                highlightedHTML = text.replace(keywordRegex, `<span class="tag-highlight" data-tag-id="${tag.id}" data-category="${tag.category}" style="background-color: ${color}33; border-bottom: 2px solid ${color}; padding: 2px 4px; border-radius: 2px; cursor: pointer;" onclick="handleTagClick(event, '${tag.id}')" title="${escapeHtml(tag.fullContext)} - ${escapeHtml(tag.selectedText)}">$1</span>`);
                 break;
             }
         }
