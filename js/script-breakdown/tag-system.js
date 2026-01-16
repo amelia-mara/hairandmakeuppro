@@ -105,18 +105,43 @@ function getAllCharactersInScene() {
     const sceneIndex = state.currentScene;
     const characters = new Set();
 
+    // Try to ensure masterContext is loaded
+    let masterContext = window.masterContext || window.scriptMasterContext;
+
+    // If not in window, try loading from localStorage
+    if (!masterContext || !masterContext.characters) {
+        try {
+            const stored = localStorage.getItem('masterContext') || localStorage.getItem('scriptMasterContext');
+            if (stored) {
+                masterContext = JSON.parse(stored);
+                // Also set on window for future use
+                if (!window.masterContext) {
+                    window.masterContext = masterContext;
+                }
+            }
+        } catch (e) {
+            console.warn('Could not load masterContext from localStorage:', e);
+        }
+    }
+
     // From masterContext (all detected characters)
-    if (window.masterContext?.characters) {
-        Object.keys(window.masterContext.characters).forEach(char => {
+    if (masterContext?.characters) {
+        Object.keys(masterContext.characters).forEach(char => {
             characters.add(char);
         });
     }
 
-    // From confirmed characters
+    // From confirmed characters (handle both Set and Array)
     if (state.confirmedCharacters) {
-        state.confirmedCharacters.forEach(char => {
-            characters.add(char);
-        });
+        if (state.confirmedCharacters instanceof Set) {
+            state.confirmedCharacters.forEach(char => {
+                characters.add(char);
+            });
+        } else if (Array.isArray(state.confirmedCharacters)) {
+            state.confirmedCharacters.forEach(char => {
+                characters.add(char);
+            });
+        }
     }
 
     // From scene breakdown (manually added or featured characters)
@@ -126,6 +151,23 @@ function getAllCharactersInScene() {
         });
     }
 
+    // Also check all scene breakdowns for any characters
+    if (state.sceneBreakdowns) {
+        Object.values(state.sceneBreakdowns).forEach(breakdown => {
+            if (breakdown?.cast) {
+                breakdown.cast.forEach(char => characters.add(char));
+            }
+        });
+    }
+
+    // Also check castProfiles
+    if (state.castProfiles) {
+        Object.keys(state.castProfiles).forEach(char => {
+            characters.add(char);
+        });
+    }
+
+    console.log('📋 Characters found for dropdown:', Array.from(characters));
     return Array.from(characters).sort();
 }
 
@@ -135,22 +177,30 @@ function getAllCharactersInScene() {
  */
 function populateCharacterDropdown(select) {
     const allCharacters = getAllCharactersInScene();
+    console.log('🎭 Populating dropdown with characters:', allCharacters);
 
-    select.innerHTML = `
+    // Build the HTML for the dropdown
+    let optionsHTML = `
         <option value="">General Note (no character)</option>
         <option value="__ADD_NEW__" style="font-weight: bold; color: #667eea;">+ Add New Character</option>
-        ${allCharacters.length > 0 ? '<option disabled>──────────</option>' : ''}
-        ${allCharacters.map(char =>
-            `<option value="${escapeHtml(char)}">${escapeHtml(char)}</option>`
-        ).join('')}
     `;
 
-    // Add event listener for ADD_NEW option
-    select.addEventListener('change', function handleAddNew() {
+    if (allCharacters.length > 0) {
+        optionsHTML += '<option disabled>──────────</option>';
+        allCharacters.forEach(char => {
+            optionsHTML += `<option value="${escapeHtml(char)}">${escapeHtml(char)}</option>`;
+        });
+    }
+
+    select.innerHTML = optionsHTML;
+    console.log(`✓ Added ${allCharacters.length} character options to dropdown`);
+
+    // Set up change handler for ADD_NEW option (use onclick attribute to avoid duplicate listeners)
+    select.onchange = function() {
         if (this.value === '__ADD_NEW__') {
-            handleAddNewCharacter(select);
+            handleAddNewCharacter(this);
         }
-    });
+    };
 }
 
 /**
@@ -245,6 +295,8 @@ function addCharacterToSystem(characterName) {
 export function showTagPopup() {
     if (!currentSelection) return;
 
+    console.log('🏷️ Opening tag popup...');
+
     // Populate popup - use correct ID 'tag-popup' (with hyphen)
     const popup = document.getElementById('tag-popup');
     if (!popup) {
@@ -266,12 +318,17 @@ export function showTagPopup() {
 
     // Populate character dropdown with "+ Add New Character" option
     if (characterSelect) {
+        console.log('🔄 Populating character dropdown...');
         populateCharacterDropdown(characterSelect);
+        console.log('📋 Dropdown options after populate:', characterSelect.options.length);
 
         // Auto-select detected character if found
         if (currentSelection.detectedCharacter) {
             characterSelect.value = currentSelection.detectedCharacter;
+            console.log('✓ Auto-selected character:', currentSelection.detectedCharacter);
         }
+    } else {
+        console.error('❌ tag-character select element not found');
     }
 
     // Show character field for makeup/wardrobe
