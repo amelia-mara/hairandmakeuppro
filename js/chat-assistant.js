@@ -111,8 +111,8 @@
                     <span class="chat-assistant-title">Claude Assistant</span>
                 </div>
                 <div class="chat-assistant-header-actions">
-                    <button class="chat-assistant-header-btn" onclick="window.chatAssistant.clear()" title="Clear chat">🗑</button>
-                    <button class="chat-assistant-header-btn" onclick="window.chatAssistant.close()" title="Close">✕</button>
+                    <button class="chat-assistant-header-btn" title="Clear chat">🗑</button>
+                    <button class="chat-assistant-header-btn" title="Close">✕</button>
                 </div>
             </div>
             ${!chatState.hasApiKey ? `
@@ -131,13 +131,13 @@
                         I have access to your entire project data including scenes, characters, breakdowns, and continuity events. How can I help?
                     </div>
                     <div class="chat-assistant-suggestions">
-                        <button class="chat-assistant-suggestion" onclick="window.chatAssistant.sendSuggestion('Give me an overview of all characters in this project')">
+                        <button class="chat-assistant-suggestion" data-prompt="Give me an overview of all characters in this project">
                             Overview of all characters
                         </button>
-                        <button class="chat-assistant-suggestion" onclick="window.chatAssistant.sendSuggestion('What continuity events should I track across scenes?')">
+                        <button class="chat-assistant-suggestion" data-prompt="What continuity events should I track across scenes?">
                             Continuity tracking summary
                         </button>
-                        <button class="chat-assistant-suggestion" onclick="window.chatAssistant.sendSuggestion('Which scenes have the most complex hair and makeup requirements?')">
+                        <button class="chat-assistant-suggestion" data-prompt="Which scenes have the most complex hair and makeup requirements?">
                             Complex H&M scenes
                         </button>
                     </div>
@@ -177,6 +177,38 @@
                 this.style.height = Math.min(this.scrollHeight, 100) + 'px';
             });
         }
+
+        // Close button
+        const closeBtn = document.querySelector('.chat-assistant-header-btn[title="Close"]');
+        if (closeBtn) {
+            closeBtn.onclick = function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                closeChat();
+            };
+        }
+
+        // Clear button
+        const clearBtn = document.querySelector('.chat-assistant-header-btn[title="Clear chat"]');
+        if (clearBtn) {
+            clearBtn.onclick = function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                clearChat();
+            };
+        }
+
+        // Suggestion buttons
+        const suggestions = document.querySelectorAll('.chat-assistant-suggestion');
+        suggestions.forEach(btn => {
+            btn.onclick = function(e) {
+                e.preventDefault();
+                const prompt = btn.getAttribute('data-prompt');
+                if (prompt) {
+                    sendSuggestion(prompt);
+                }
+            };
+        });
 
         // Render existing messages if any
         if (chatState.messages.length > 0) {
