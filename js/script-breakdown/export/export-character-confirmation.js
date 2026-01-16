@@ -191,10 +191,6 @@ function createCharacterConfirmationModal() {
                 </div>
 
                 <div class="confirm-selection-controls">
-                    <label class="confirm-auto-select-toggle">
-                        <input type="checkbox" id="confirm-auto-select-high" checked onchange="toggleConfirmAutoSelectHigh()">
-                        <span>Auto-select high confidence</span>
-                    </label>
                     <div class="confirm-selection-buttons">
                         <button class="modal-btn small" onclick="selectAllConfirmCharacters()">Select All</button>
                         <button class="modal-btn small" onclick="deselectAllConfirmCharacters()">Deselect All</button>
@@ -620,27 +616,12 @@ function addModalStyles() {
         /* Selection Controls */
         .confirm-selection-controls {
             display: flex;
-            justify-content: space-between;
+            justify-content: flex-end;
             align-items: center;
             padding: 6px 0;
             border-bottom: 1px solid var(--glass-border);
             margin-bottom: 6px;
             flex-shrink: 0;
-        }
-
-        .confirm-auto-select-toggle {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 0.7em;
-            color: var(--text-muted);
-            cursor: pointer;
-        }
-
-        .confirm-auto-select-toggle input {
-            width: 14px;
-            height: 14px;
-            cursor: pointer;
         }
 
         .confirm-selection-buttons {
@@ -1049,7 +1030,6 @@ function renderSelectionList() {
     if (!container) return;
 
     const characters = (state.detectedCharacters || []).filter(c => !c.merged);
-    const autoSelectHigh = document.getElementById('confirm-auto-select-high')?.checked ?? true;
 
     if (characters.length === 0) {
         container.innerHTML = `
@@ -1067,13 +1047,8 @@ function renderSelectionList() {
         const originalIndex = state.detectedCharacters.indexOf(char);
         const conf = getConfidenceDisplay(char.sceneCount || 0);
 
-        // Determine if should be checked
-        let isChecked;
-        if (char.selected !== undefined) {
-            isChecked = char.selected;
-        } else {
-            isChecked = autoSelectHigh ? (char.sceneCount || 0) >= 3 : true;
-        }
+        // Use character's selected property (defaults to true from import)
+        const isChecked = char.selected !== false;
 
         return `
             <div class="confirm-selection-item">
@@ -1131,22 +1106,6 @@ function updateConfirmSelectionStats() {
         </div>
     `;
 }
-
-/**
- * Toggle auto-select high confidence
- */
-window.toggleConfirmAutoSelectHigh = function() {
-    const autoSelectHigh = document.getElementById('confirm-auto-select-high')?.checked ?? true;
-    const characters = (state.detectedCharacters || []).filter(c => !c.merged);
-
-    characters.forEach(char => {
-        if (autoSelectHigh) {
-            char.selected = (char.sceneCount || 0) >= 3;
-        }
-    });
-
-    renderSelectionList();
-};
 
 /**
  * Select all characters
