@@ -272,8 +272,8 @@ function renderSceneBreakdown(sceneIndex) {
                     </div>
                 ` : ''}
 
-                <!-- Row 1: Story Day + Time + Note -->
-                <div class="timeline-row-1">
+                <!-- Single Row: Day + Time + Type + Note -->
+                <div class="timeline-row-compact">
                     <div class="timeline-field story-day-field">
                         <label>Day</label>
                         ${renderStoryDayDropdown(sceneIndex, storyDay)}
@@ -289,6 +289,17 @@ function renderSceneBreakdown(sceneIndex) {
                             <option value="Night" ${(scene.storyTimeOfDay || timeOfDay) === 'Night' ? 'selected' : ''}>Night</option>
                         </select>
                     </div>
+                    <div class="timeline-field type-field">
+                        <label>Type</label>
+                        <select class="timeline-select" onchange="updateSceneType(${sceneIndex}, this.value)">
+                            <option value="">Normal</option>
+                            <option value="flashback" ${scene.isFlashback ? 'selected' : ''}>Flashback</option>
+                            <option value="flashforward" ${scene.isFlashForward ? 'selected' : ''}>Flash Fwd</option>
+                            <option value="timejump" ${scene.isTimeJump ? 'selected' : ''}>Time Jump</option>
+                            <option value="dream" ${scene.isDream ? 'selected' : ''}>Dream</option>
+                            <option value="montage" ${scene.isMontage ? 'selected' : ''}>Montage</option>
+                        </select>
+                    </div>
                     <div class="timeline-field note-field">
                         <label>Note</label>
                         <input type="text"
@@ -296,17 +307,6 @@ function renderSceneBreakdown(sceneIndex) {
                                value="${escapeHtml(scene.storyDayNote || '')}"
                                placeholder="e.g., 3 weeks later"
                                onchange="updateStoryDayNote(${sceneIndex}, this.value)">
-                    </div>
-                </div>
-
-                <!-- Row 2: Scene Type Flags -->
-                <div class="timeline-row-2">
-                    <div class="timeline-flags">
-                        <label><input type="checkbox" ${scene.isFlashback ? 'checked' : ''} onchange="updateSceneField(${sceneIndex}, 'isFlashback', this.checked)">Flashback</label>
-                        <label><input type="checkbox" ${scene.isFlashForward ? 'checked' : ''} onchange="updateSceneField(${sceneIndex}, 'isFlashForward', this.checked)">Flash Fwd</label>
-                        <label><input type="checkbox" ${scene.isTimeJump ? 'checked' : ''} onchange="updateSceneField(${sceneIndex}, 'isTimeJump', this.checked)">Time Jump</label>
-                        <label><input type="checkbox" ${scene.isDream ? 'checked' : ''} onchange="updateSceneField(${sceneIndex}, 'isDream', this.checked)">Dream</label>
-                        <label><input type="checkbox" ${scene.isMontage ? 'checked' : ''} onchange="updateSceneField(${sceneIndex}, 'isMontage', this.checked)">Montage</label>
                     </div>
                 </div>
             </div>
@@ -1484,6 +1484,50 @@ window.updateSceneField = function(sceneIndex, field, value) {
     if (!state.scenes[sceneIndex]) return;
     state.scenes[sceneIndex][field] = value;
     saveToLocalStorage();
+};
+
+/**
+ * Update scene type (flashback, dream, montage, etc.)
+ * Clears all type flags and sets only the selected one
+ */
+window.updateSceneType = function(sceneIndex, typeValue) {
+    if (!state.scenes[sceneIndex]) return;
+
+    const scene = state.scenes[sceneIndex];
+
+    // Clear all type flags
+    scene.isFlashback = false;
+    scene.isFlashForward = false;
+    scene.isTimeJump = false;
+    scene.isDream = false;
+    scene.isMontage = false;
+
+    // Set the selected type
+    switch(typeValue) {
+        case 'flashback':
+            scene.isFlashback = true;
+            break;
+        case 'flashforward':
+            scene.isFlashForward = true;
+            break;
+        case 'timejump':
+            scene.isTimeJump = true;
+            break;
+        case 'dream':
+            scene.isDream = true;
+            break;
+        case 'montage':
+            scene.isMontage = true;
+            break;
+        // 'normal' or empty - all flags stay false
+    }
+
+    saveToLocalStorage();
+
+    // Re-render scene list to update any badges
+    if (typeof renderSceneList === 'function') {
+        renderSceneList();
+    }
 };
 
 // ============================================================================
