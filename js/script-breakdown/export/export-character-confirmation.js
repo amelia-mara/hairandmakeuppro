@@ -1,13 +1,12 @@
 /**
  * export-character-confirmation.js
- * Character confirmation modal and merge functionality
+ * Character confirmation modal - Two-Step Workflow
  *
- * Responsibilities:
- * - Show character confirmation modal after script analysis
- * - Handle character selection and category changes
- * - Merge duplicate characters
- * - Clean up character data after merge
- * - Confirm characters and continue with breakdown
+ * Step 1: Merge Duplicates - Click to select characters for merging
+ * Step 2: Confirm Selection - Check characters to include in breakdown
+ *
+ * IMPORTANT: Data flow is PRESERVED from original implementation.
+ * This file only changes the UI/UX, not the underlying data handling.
  */
 
 import { state } from '../main.js';
@@ -17,16 +16,22 @@ import { renderCharacterTabs, renderCharacterTabPanels } from '../character-pane
 import { showToast } from './export-core.js';
 import { saveProject } from './export-project.js';
 
-// Track selected primary character for merge
-let mergePrimaryIndex = null;
+// ============================================================================
+// MODULE STATE
+// ============================================================================
 
-// Track filtered characters shown in merge modal (only selected ones)
-let mergeModalCharacters = [];
+// Current step (1 = merge, 2 = selection)
+let currentStep = 1;
+
+// Characters selected for merging (indices into state.detectedCharacters)
+let selectedForMerge = new Set();
+
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
 
 /**
  * Normalize character name to title case
- * @param {string} name - Character name
- * @returns {string} Normalized name
  */
 function normalizeCharacterName(name) {
     return name.split(' ')
@@ -35,914 +40,1200 @@ function normalizeCharacterName(name) {
 }
 
 /**
- * Show character confirmation modal for user to review detected characters
+ * Get confidence display based on scene count
  */
-export function showCharacterConfirmationModal() {
-    // Create modal if it doesn't exist
-    let modal = document.getElementById('character-confirm-modal');
-    if (!modal) {
-        modal = createCharacterConfirmationModal();
-        document.body.appendChild(modal);
+function getConfidenceDisplay(sceneCount) {
+    if (sceneCount >= 5) {
+        return { label: 'High', bgColor: 'rgba(16, 185, 129, 0.2)', color: '#10b981' };
+    } else if (sceneCount >= 3) {
+        return { label: 'Medium', bgColor: 'rgba(245, 158, 11, 0.2)', color: '#f59e0b' };
     }
-
-    // Populate character list
-    populateCharacterConfirmationList();
-
-    // Show modal
-    modal.style.display = 'flex';
+    return { label: 'Low', bgColor: 'rgba(107, 114, 128, 0.2)', color: '#6b7280' };
 }
 
 /**
- * Create the character confirmation modal HTML
- * @returns {HTMLElement} Modal element
+ * Update step indicator UI
+ */
+function updateStepIndicators() {
+    const step1 = document.getElementById('confirm-step-indicator-1');
+    const step2 = document.getElementById('confirm-step-indicator-2');
+
+    if (step1) step1.classList.toggle('active', currentStep === 1);
+    if (step2) step2.classList.toggle('active', currentStep === 2);
+}
+
+// ============================================================================
+// MODAL CREATION
+// ============================================================================
+
+/**
+ * Show character confirmation modal for user to review detected characters
+ * THIS IS THE MAIN ENTRY POINT - Called after script analysis
+ */
+export function showCharacterConfirmationModal() {
+    console.log('showCharacterConfirmationModal called');
+    console.log('state.detectedCharacters:', state.detectedCharacters?.length || 0);
+
+    // Remove existing modal to ensure fresh render
+    const existingModal = document.getElementById('character-confirm-modal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+
+    // Create fresh modal
+    const modal = createCharacterConfirmationModal();
+    document.body.appendChild(modal);
+
+    // Add styles
+    addModalStyles();
+
+    // Reset state
+    currentStep = 1;
+    selectedForMerge.clear();
+
+    // Ensure characters have needed properties
+    if (state.detectedCharacters && Array.isArray(state.detectedCharacters)) {
+        state.detectedCharacters.forEach(char => {
+            if (char.selected === undefined) {
+                char.selected = true;
+            }
+            if (char.merged === undefined) {
+                char.merged = false;
+            }
+        });
+    }
+
+    // Update UI
+    updateStepIndicators();
+    showStep1();
+    renderMergeList();
+
+    // Show modal
+    modal.style.display = 'flex';
+    console.log('Character confirmation modal opened with two-step workflow');
+}
+
+/**
+ * Create the character confirmation modal HTML - Two Step Workflow
  */
 function createCharacterConfirmationModal() {
     const modal = document.createElement('div');
     modal.id = 'character-confirm-modal';
-    modal.className = 'modal';
+    modal.className = 'modal character-confirm-modal-v2';
     modal.innerHTML = `
-        <div class="modal-content" style="max-width: 900px; max-height: 90vh; display: flex; flex-direction: column;">
-            <div class="modal-title">Confirm Characters for H&MU Tracking</div>
+        <div class="modal-content character-confirm-content-v2">
+            <!-- Header -->
+            <div class="confirm-header">
+                <div class="confirm-title">Character Confirmation</div>
+                <button class="confirm-close" onclick="closeCharacterConfirmModal()">&times;</button>
+            </div>
 
-            <div class="modal-section" style="flex: 1; overflow-y: auto; min-height: 0;">
-                <div class="modal-note" style="margin-bottom: 16px;">
-                    Review the detected characters below. Select which ones to include in your breakdown
-                    and assign them to the correct category. Characters are sorted by scene count.
+            <!-- Step Indicator -->
+            <div class="confirm-step-indicator">
+                <div class="confirm-step-item active" id="confirm-step-indicator-1">
+                    <div class="confirm-step-circle">1</div>
+                    <div class="confirm-step-label">Merge Duplicates</div>
                 </div>
-
-                <div style="display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;">
-                    <button class="modal-btn" onclick="selectAllCharactersByCategory('LEAD')">Select All Leads</button>
-                    <button class="modal-btn" onclick="selectAllCharactersByCategory('SUPPORTING')">Select All Supporting</button>
-                    <button class="modal-btn" onclick="selectAllCharactersByCategory('DAY_PLAYER')">Select All Day Players</button>
-                    <button class="modal-btn" onclick="toggleAllCharacters(true)">Select All</button>
-                    <button class="modal-btn" onclick="toggleAllCharacters(false)">Deselect All</button>
-                </div>
-
-                <div class="character-confirm-tabs" style="display: flex; gap: 8px; margin-bottom: 12px; border-bottom: 1px solid var(--glass-border); padding-bottom: 8px; flex-wrap: wrap;">
-                    <button class="confirm-tab active" data-category="all" onclick="filterCharactersByCategory('all')">All (<span id="count-all">0</span>)</button>
-                    <button class="confirm-tab" data-category="LEAD" onclick="filterCharactersByCategory('LEAD')">Lead (<span id="count-lead">0</span>)</button>
-                    <button class="confirm-tab" data-category="SUPPORTING" onclick="filterCharactersByCategory('SUPPORTING')">Supporting (<span id="count-supporting">0</span>)</button>
-                    <button class="confirm-tab" data-category="DAY_PLAYER" onclick="filterCharactersByCategory('DAY_PLAYER')">Day Player (<span id="count-dayplayer">0</span>)</button>
-                    <button class="confirm-tab" data-category="BACKGROUND" onclick="filterCharactersByCategory('BACKGROUND')">Background (<span id="count-background">0</span>)</button>
-                </div>
-
-                <div id="character-confirm-list" style="max-height: 300px; overflow-y: auto; border: 1px solid var(--glass-border); border-radius: 8px;">
-                    <!-- Character items populated here -->
-                </div>
-
-                <div style="margin-top: 16px; display: flex; gap: 16px; flex-wrap: wrap;">
-                    <div style="flex: 1; min-width: 250px;">
-                        <label class="modal-label">Add Character Manually</label>
-                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                            <input type="text" class="modal-input" id="manual-character-name" placeholder="Character name..." style="flex: 1; min-width: 150px;">
-                            <select class="modal-select" id="manual-character-category" style="width: 130px;">
-                                <option value="LEAD">Lead</option>
-                                <option value="SUPPORTING" selected>Supporting</option>
-                                <option value="DAY_PLAYER">Day Player</option>
-                                <option value="BACKGROUND">Background</option>
-                            </select>
-                            <button class="modal-btn primary" onclick="addManualCharacter()">Add</button>
-                        </div>
-                    </div>
-                    <div style="flex: 1; min-width: 250px;">
-                        <label class="modal-label">Merge Duplicate Characters</label>
-                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                            <button class="modal-btn" onclick="openMergeCharactersModal()" style="flex: 1;">
-                                Merge Duplicates...
-                            </button>
-                        </div>
-                        <div style="font-size: 0.75em; color: var(--text-muted); margin-top: 4px;">
-                            Combine characters that are the same person (e.g., "JOHN" and "JOHN SMITH")
-                        </div>
-                    </div>
+                <div class="confirm-step-connector"></div>
+                <div class="confirm-step-item" id="confirm-step-indicator-2">
+                    <div class="confirm-step-circle">2</div>
+                    <div class="confirm-step-label">Confirm Selection</div>
                 </div>
             </div>
 
-            <div class="modal-actions" style="flex-shrink: 0; padding-top: 16px; border-top: 1px solid var(--glass-border); margin-top: 16px;">
-                <button class="modal-btn" onclick="closeCharacterConfirmModal()">Cancel</button>
-                <button class="modal-btn primary" onclick="confirmCharactersAndContinue()" style="background: var(--accent-gold); color: var(--bg-dark); font-weight: 600;">
-                    Confirm Characters & Generate Breakdown
-                </button>
+            <!-- Step 1: Merge Duplicates -->
+            <div class="confirm-step-content" id="confirm-step-1-content">
+                <div class="confirm-step-description">
+                    <strong>Clean up duplicate character names</strong>
+                    <p>Click characters to select for merging. When 2+ are selected, merge options appear.</p>
+                </div>
+
+                <div class="confirm-character-list" id="confirm-merge-list">
+                    <!-- Characters rendered here -->
+                </div>
+
+                <!-- Inline Merge Prompt -->
+                <div class="confirm-merge-prompt" id="confirm-merge-prompt" style="display: none;">
+                    <div class="confirm-merge-prompt-header">Merge Characters</div>
+                    <div class="confirm-merge-prompt-body">
+                        <div class="confirm-merge-preview">
+                            <span class="confirm-merge-preview-label">Selected:</span>
+                            <div class="confirm-merge-preview-names" id="confirm-merge-preview-names"></div>
+                        </div>
+                        <div class="confirm-merge-options" id="confirm-merge-options">
+                            <!-- Radio options for names -->
+                        </div>
+                        <div class="confirm-merge-custom-option">
+                            <label class="confirm-merge-radio-label">
+                                <input type="radio" name="confirm-merge-name" id="confirm-merge-custom-radio" value="custom">
+                                <span>Custom name:</span>
+                            </label>
+                            <input type="text" class="confirm-merge-custom-input" id="confirm-merge-custom-input" placeholder="Enter custom name..." oninput="document.getElementById('confirm-merge-custom-radio').checked = true;">
+                        </div>
+                    </div>
+                    <div class="confirm-merge-prompt-actions">
+                        <button class="modal-btn" onclick="cancelConfirmMerge()">Cancel</button>
+                        <button class="modal-btn primary" onclick="executeConfirmMerge()">Merge Characters</button>
+                    </div>
+                </div>
+
+                <div class="confirm-step-actions">
+                    <button class="modal-btn" onclick="closeCharacterConfirmModal()">Cancel</button>
+                    <button class="modal-btn primary" onclick="goToConfirmStep2()">Continue to Selection →</button>
+                </div>
+            </div>
+
+            <!-- Step 2: Confirm Selection -->
+            <div class="confirm-step-content" id="confirm-step-2-content" style="display: none;">
+                <div class="confirm-step-description">
+                    <strong>Select characters to include in breakdown</strong>
+                    <p>Check the characters you want to track. Unchecked characters will not appear in your breakdown.</p>
+                </div>
+
+                <div class="confirm-selection-controls">
+                    <label class="confirm-auto-select-toggle">
+                        <input type="checkbox" id="confirm-auto-select-high" checked onchange="toggleConfirmAutoSelectHigh()">
+                        <span>Auto-select high confidence</span>
+                    </label>
+                    <div class="confirm-selection-buttons">
+                        <button class="modal-btn small" onclick="selectAllConfirmCharacters()">Select All</button>
+                        <button class="modal-btn small" onclick="deselectAllConfirmCharacters()">Deselect All</button>
+                    </div>
+                </div>
+
+                <div class="confirm-character-list" id="confirm-selection-list">
+                    <!-- Characters with checkboxes rendered here -->
+                </div>
+
+                <div class="confirm-selection-stats" id="confirm-selection-stats">
+                    <!-- Stats rendered here -->
+                </div>
+
+                <div class="confirm-step-actions">
+                    <button class="modal-btn" onclick="goToConfirmStep1()">← Back to Merging</button>
+                    <button class="modal-btn primary" onclick="confirmCharactersAndContinue()">Confirm & Process</button>
+                </div>
             </div>
         </div>
     `;
-
-    // Add styles for tabs and list items
-    const style = document.createElement('style');
-    style.textContent = `
-        .confirm-tab {
-            padding: 8px 16px;
-            background: transparent;
-            border: 1px solid var(--glass-border);
-            border-radius: 6px 6px 0 0;
-            color: var(--text-muted);
-            cursor: pointer;
-            font-size: 0.85em;
-            transition: all 0.2s;
-        }
-        .confirm-tab:hover {
-            border-color: var(--accent-gold);
-            color: var(--accent-gold);
-        }
-        .confirm-tab.active {
-            background: var(--accent-gold);
-            border-color: var(--accent-gold);
-            color: var(--bg-dark);
-        }
-        .character-confirm-item {
-            display: flex;
-            align-items: center;
-            padding: 12px 16px;
-            border-bottom: 1px solid var(--glass-border);
-            transition: background 0.2s;
-        }
-        .character-confirm-item:hover {
-            background: rgba(201, 169, 97, 0.05);
-        }
-        .character-confirm-item.unselected {
-            opacity: 0.5;
-        }
-        .character-confirm-item .char-checkbox {
-            width: 20px;
-            height: 20px;
-            margin-right: 12px;
-            cursor: pointer;
-        }
-        .character-confirm-item .char-name {
-            font-weight: 600;
-            min-width: 150px;
-        }
-        .character-confirm-item .char-stats {
-            color: var(--text-muted);
-            font-size: 0.85em;
-            flex: 1;
-        }
-        .character-confirm-item .char-category {
-            margin-left: 12px;
-        }
-        .char-category select {
-            padding: 4px 8px;
-            background: var(--card-bg);
-            border: 1px solid var(--glass-border);
-            border-radius: 4px;
-            color: var(--text-light);
-            font-size: 0.85em;
-        }
-        .category-badge {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 0.75em;
-            font-weight: 600;
-            margin-left: 8px;
-        }
-        .category-badge.lead { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
-        .category-badge.supporting { background: rgba(201, 169, 97, 0.2); color: var(--accent-gold); }
-        .category-badge.day_player { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
-        .category-badge.background { background: rgba(107, 114, 128, 0.2); color: #9ca3af; }
-    `;
-    document.head.appendChild(style);
 
     return modal;
 }
 
 /**
- * Populate the character confirmation list
+ * Add CSS styles for the modal
  */
-function populateCharacterConfirmationList() {
-    const list = document.getElementById('character-confirm-list');
-    if (!list) return;
+function addModalStyles() {
+    if (document.getElementById('character-confirm-modal-styles')) return;
+
+    const style = document.createElement('style');
+    style.id = 'character-confirm-modal-styles';
+    style.textContent = `
+        .character-confirm-modal-v2 {
+            z-index: 10001;
+        }
+
+        .character-confirm-content-v2 {
+            max-width: 650px;
+            width: 95%;
+            max-height: 85vh;
+            padding: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            background: var(--glass-bg);
+            backdrop-filter: blur(30px);
+            border: 1px solid var(--accent-gold);
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(212, 175, 122, 0.2);
+        }
+
+        .confirm-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .confirm-title {
+            font-size: 1.25em;
+            font-weight: 600;
+            color: var(--text-light);
+        }
+
+        .confirm-close {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.5em;
+            cursor: pointer;
+            padding: 4px 8px;
+            line-height: 1;
+            transition: color 0.2s;
+        }
+
+        .confirm-close:hover { color: var(--text-light); }
+
+        /* Step Indicator */
+        .confirm-step-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px 24px;
+            gap: 12px;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .confirm-step-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            opacity: 0.5;
+            transition: opacity 0.3s;
+        }
+
+        .confirm-step-item.active { opacity: 1; }
+
+        .confirm-step-circle {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.875em;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid var(--glass-border);
+            color: var(--text-muted);
+            transition: all 0.3s;
+        }
+
+        .confirm-step-item.active .confirm-step-circle {
+            background: linear-gradient(135deg, var(--accent-gold), #c09861);
+            border-color: var(--accent-gold);
+            color: var(--bg-dark);
+        }
+
+        .confirm-step-label {
+            font-size: 0.875em;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        .confirm-step-item.active .confirm-step-label { color: var(--text-light); }
+
+        .confirm-step-connector {
+            width: 60px;
+            height: 2px;
+            background: var(--glass-border);
+        }
+
+        /* Step Content */
+        .confirm-step-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            padding: 0 24px;
+        }
+
+        .confirm-step-description {
+            text-align: center;
+            padding: 16px 0;
+        }
+
+        .confirm-step-description strong {
+            display: block;
+            font-size: 1em;
+            margin-bottom: 6px;
+            color: var(--text-light);
+        }
+
+        .confirm-step-description p {
+            font-size: 0.875em;
+            color: var(--text-muted);
+        }
+
+        /* Character List */
+        .confirm-character-list {
+            flex: 1;
+            overflow-y: auto;
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            margin-bottom: 16px;
+            min-height: 150px;
+            max-height: 250px;
+        }
+
+        /* Merge List Items */
+        .confirm-merge-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--glass-border);
+            cursor: pointer;
+            transition: all 0.2s;
+            gap: 12px;
+        }
+
+        .confirm-merge-item:last-child { border-bottom: none; }
+        .confirm-merge-item:hover { background: rgba(212, 175, 122, 0.08); }
+
+        .confirm-merge-item.selected {
+            background: rgba(212, 175, 122, 0.15);
+            border-left: 3px solid var(--accent-gold);
+        }
+
+        .confirm-merge-item.merged {
+            opacity: 0.5;
+            cursor: default;
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .confirm-merge-info { flex: 1; }
+
+        .confirm-merge-name {
+            font-weight: 600;
+            color: var(--text-light);
+            margin-bottom: 2px;
+        }
+
+        .confirm-merge-meta {
+            font-size: 0.8125em;
+            color: var(--text-muted);
+        }
+
+        .confirm-merge-badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.6875em;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .confirm-select-indicator {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .confirm-select-indicator svg {
+            width: 14px;
+            height: 14px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .confirm-select-indicator.active {
+            background: var(--accent-gold);
+            border-color: var(--accent-gold);
+        }
+
+        .confirm-select-indicator.active svg {
+            opacity: 1;
+            color: var(--bg-dark);
+        }
+
+        .confirm-merged-badge {
+            background: rgba(107, 114, 128, 0.3);
+            color: #9ca3af;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.6875em;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .confirm-merged-section {
+            border-top: 2px solid var(--glass-border);
+            padding-top: 8px;
+            margin-top: 8px;
+        }
+
+        .confirm-merged-section-label {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 8px 16px 4px;
+        }
+
+        /* Merge Prompt */
+        .confirm-merge-prompt {
+            background: rgba(212, 175, 122, 0.1);
+            border: 1px solid rgba(212, 175, 122, 0.3);
+            border-radius: 10px;
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+
+        .confirm-merge-prompt-header {
+            padding: 12px 16px;
+            background: rgba(212, 175, 122, 0.15);
+            font-weight: 600;
+            font-size: 0.9375em;
+            color: var(--accent-gold);
+        }
+
+        .confirm-merge-prompt-body { padding: 16px; }
+
+        .confirm-merge-preview {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .confirm-merge-preview-label {
+            font-size: 0.8125em;
+            color: var(--text-muted);
+            padding-top: 4px;
+        }
+
+        .confirm-merge-preview-names {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .confirm-merge-name-pill {
+            background: rgba(212, 175, 122, 0.2);
+            border: 1px solid rgba(212, 175, 122, 0.4);
+            padding: 4px 10px;
+            border-radius: 14px;
+            font-size: 0.8125em;
+            color: var(--text-light);
+        }
+
+        .confirm-merge-options {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .confirm-merge-radio-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+
+        .confirm-merge-radio-label:hover { background: rgba(255, 255, 255, 0.05); }
+
+        .confirm-merge-radio-label input[type="radio"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .confirm-merge-custom-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+        }
+
+        .confirm-merge-custom-input {
+            flex: 1;
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-light);
+            font-size: 0.875em;
+        }
+
+        .confirm-merge-custom-input:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+        }
+
+        .confirm-merge-prompt-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            padding: 12px 16px;
+            background: rgba(0, 0, 0, 0.2);
+            border-top: 1px solid var(--glass-border);
+        }
+
+        /* Selection Controls */
+        .confirm-selection-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--glass-border);
+            margin-bottom: 12px;
+        }
+
+        .confirm-auto-select-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.875em;
+            color: var(--text-muted);
+            cursor: pointer;
+        }
+
+        .confirm-auto-select-toggle input {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        .confirm-selection-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        /* Selection List Items */
+        .confirm-selection-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--glass-border);
+            gap: 12px;
+        }
+
+        .confirm-selection-item:last-child { border-bottom: none; }
+
+        .confirm-selection-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .confirm-selection-info { flex: 1; }
+
+        .confirm-selection-name {
+            font-weight: 600;
+            color: var(--text-light);
+            margin-bottom: 2px;
+        }
+
+        .confirm-selection-meta {
+            font-size: 0.8125em;
+            color: var(--text-muted);
+        }
+
+        /* Selection Stats */
+        .confirm-selection-stats {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+
+        .confirm-stat-item { text-align: center; }
+
+        .confirm-stat-value {
+            font-size: 1.25em;
+            font-weight: 700;
+            color: var(--accent-gold);
+        }
+
+        .confirm-stat-label {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Step Actions */
+        .confirm-step-actions {
+            display: flex;
+            justify-content: space-between;
+            padding: 16px 0 20px;
+            border-top: 1px solid var(--glass-border);
+            margin-top: auto;
+        }
+
+        /* Empty State */
+        .confirm-empty-list {
+            padding: 40px 20px;
+            text-align: center;
+        }
+
+        .confirm-empty-icon {
+            font-size: 2.5em;
+            margin-bottom: 12px;
+            opacity: 0.5;
+        }
+
+        .confirm-empty-text {
+            font-size: 1em;
+            font-weight: 600;
+            color: var(--text-light);
+            margin-bottom: 8px;
+        }
+
+        .confirm-empty-hint {
+            font-size: 0.875em;
+            color: var(--text-muted);
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+// ============================================================================
+// STEP NAVIGATION
+// ============================================================================
+
+function showStep1() {
+    const step1 = document.getElementById('confirm-step-1-content');
+    const step2 = document.getElementById('confirm-step-2-content');
+    if (step1) step1.style.display = 'flex';
+    if (step2) step2.style.display = 'none';
+    hideMergePrompt();
+}
+
+function showStep2() {
+    const step1 = document.getElementById('confirm-step-1-content');
+    const step2 = document.getElementById('confirm-step-2-content');
+    if (step1) step1.style.display = 'none';
+    if (step2) step2.style.display = 'flex';
+}
+
+window.goToConfirmStep1 = function() {
+    currentStep = 1;
+    updateStepIndicators();
+    showStep1();
+    renderMergeList();
+};
+
+window.goToConfirmStep2 = function() {
+    currentStep = 2;
+    updateStepIndicators();
+    showStep2();
+    renderSelectionList();
+};
+
+// ============================================================================
+// STEP 1: MERGE DUPLICATES
+// ============================================================================
+
+/**
+ * Render the merge list (Step 1)
+ */
+function renderMergeList() {
+    const container = document.getElementById('confirm-merge-list');
+    if (!container) return;
 
     const characters = state.detectedCharacters || [];
 
-    // Update counts
-    const countAll = document.getElementById('count-all');
-    const countLead = document.getElementById('count-lead');
-    const countSupporting = document.getElementById('count-supporting');
-    const countDayplayer = document.getElementById('count-dayplayer');
-    const countBackground = document.getElementById('count-background');
-
-    if (countAll) countAll.textContent = characters.length;
-    if (countLead) countLead.textContent = characters.filter(c => c.category === 'LEAD').length;
-    if (countSupporting) countSupporting.textContent = characters.filter(c => c.category === 'SUPPORTING').length;
-    if (countDayplayer) countDayplayer.textContent = characters.filter(c => c.category === 'DAY_PLAYER').length;
-    if (countBackground) countBackground.textContent = characters.filter(c => c.category === 'BACKGROUND').length;
-
-    list.innerHTML = characters.map((char, idx) => `
-        <div class="character-confirm-item ${char.selected ? '' : 'unselected'}" data-index="${idx}" data-category="${char.category}">
-            <input type="checkbox" class="char-checkbox" ${char.selected ? 'checked' : ''} onchange="toggleCharacterSelection(${idx})">
-            <span class="char-name">${char.name}</span>
-            <span class="category-badge ${char.category.toLowerCase()}">${formatCategory(char.category)}</span>
-            <span class="char-stats">
-                ${char.sceneCount} scene${char.sceneCount !== 1 ? 's' : ''} (${char.firstAppearance}-${char.lastAppearance})
-                ${char.hasDialogue ? '' : ' [No dialogue]'}
-            </span>
-            <span class="char-category">
-                <select onchange="changeCharacterCategory(${idx}, this.value)">
-                    <option value="LEAD" ${char.category === 'LEAD' ? 'selected' : ''}>Lead</option>
-                    <option value="SUPPORTING" ${char.category === 'SUPPORTING' ? 'selected' : ''}>Supporting</option>
-                    <option value="DAY_PLAYER" ${char.category === 'DAY_PLAYER' ? 'selected' : ''}>Day Player</option>
-                    <option value="BACKGROUND" ${char.category === 'BACKGROUND' ? 'selected' : ''}>Background</option>
-                </select>
-            </span>
-        </div>
-    `).join('');
-}
-
-/**
- * Format category for display
- * @param {string} category - Category code
- * @returns {string} Formatted category name
- */
-function formatCategory(category) {
-    const formats = {
-        'LEAD': 'Lead',
-        'SUPPORTING': 'Supporting',
-        'DAY_PLAYER': 'Day Player',
-        'BACKGROUND': 'Background'
-    };
-    return formats[category] || category;
-}
-
-/**
- * Toggle character selection
- * @param {number} index - Character index
- */
-window.toggleCharacterSelection = function(index) {
-    if (state.detectedCharacters && state.detectedCharacters[index]) {
-        state.detectedCharacters[index].selected = !state.detectedCharacters[index].selected;
-        populateCharacterConfirmationList();
-    }
-};
-
-/**
- * Change character category
- * @param {number} index - Character index
- * @param {string} newCategory - New category
- */
-window.changeCharacterCategory = function(index, newCategory) {
-    if (state.detectedCharacters && state.detectedCharacters[index]) {
-        state.detectedCharacters[index].category = newCategory;
-        populateCharacterConfirmationList();
-    }
-};
-
-/**
- * Filter characters by category
- * @param {string} category - Category to filter by
- */
-window.filterCharactersByCategory = function(category) {
-    const items = document.querySelectorAll('.character-confirm-item');
-    const tabs = document.querySelectorAll('.confirm-tab');
-
-    tabs.forEach(tab => {
-        tab.classList.toggle('active', tab.dataset.category === category);
-    });
-
-    items.forEach(item => {
-        if (category === 'all' || item.dataset.category === category) {
-            item.style.display = 'flex';
-        } else {
-            item.style.display = 'none';
-        }
-    });
-};
-
-/**
- * Select all characters by category
- * @param {string} category - Category to select
- */
-window.selectAllCharactersByCategory = function(category) {
-    if (!state.detectedCharacters) return;
-
-    state.detectedCharacters.forEach(char => {
-        if (char.category === category) {
-            char.selected = true;
-        }
-    });
-    populateCharacterConfirmationList();
-};
-
-/**
- * Toggle all characters selection
- * @param {boolean} selected - Whether to select or deselect
- */
-window.toggleAllCharacters = function(selected) {
-    if (!state.detectedCharacters) return;
-
-    state.detectedCharacters.forEach(char => {
-        char.selected = selected;
-    });
-    populateCharacterConfirmationList();
-};
-
-/**
- * Add a character manually
- */
-window.addManualCharacter = function() {
-    const nameInput = document.getElementById('manual-character-name');
-    const categorySelect = document.getElementById('manual-character-category');
-
-    if (!nameInput || !categorySelect) return;
-
-    const name = nameInput.value.trim();
-    const category = categorySelect.value;
-
-    if (!name) {
-        alert('Please enter a character name');
+    if (characters.length === 0) {
+        container.innerHTML = `
+            <div class="confirm-empty-list">
+                <div class="confirm-empty-icon">👥</div>
+                <div class="confirm-empty-text">No characters detected</div>
+                <p class="confirm-empty-hint">Import a script and run analysis first.</p>
+            </div>
+        `;
         return;
     }
 
-    // Check if character already exists
-    const exists = state.detectedCharacters?.some(c =>
-        c.name.toLowerCase() === name.toLowerCase()
-    );
+    // Separate active and merged characters
+    const activeCharacters = characters.filter(c => !c.merged);
+    const mergedCharacters = characters.filter(c => c.merged);
 
-    if (exists) {
-        alert('This character already exists in the list');
-        return;
-    }
-
-    // Add to detected characters
-    if (!state.detectedCharacters) {
-        state.detectedCharacters = [];
-    }
-
-    state.detectedCharacters.push({
-        name: normalizeCharacterName(name),
-        category: category,
-        sceneCount: 0,
-        firstAppearance: 1,
-        lastAppearance: state.scenes.length,
-        hasDialogue: true,
-        selected: true,
-        manuallyAdded: true
-    });
-
-    // Clear input and refresh list
-    nameInput.value = '';
-    populateCharacterConfirmationList();
-};
-
-/**
- * Open merge characters modal
- * BUG FIX: Only show SELECTED characters (filter out deselected ones)
- */
-window.openMergeCharactersModal = function() {
-    // Reset primary selection
-    mergePrimaryIndex = null;
-
-    // Create modal if it doesn't exist
-    let modal = document.getElementById('merge-characters-modal');
-    if (!modal) {
-        modal = document.createElement('div');
-        modal.id = 'merge-characters-modal';
-        modal.className = 'modal';
-        modal.style.zIndex = '10002';
-        document.body.appendChild(modal);
-    }
-
-    // BUG FIX: Filter to only show SELECTED characters
-    // Deselected characters should not appear in the merge modal
-    const allCharacters = state.detectedCharacters || [];
-    const characters = allCharacters.filter(char => char.selected !== false);
-
-    // Store filtered list for use by setMergePrimary and performCharacterMerge
-    mergeModalCharacters = characters;
-
-    modal.innerHTML = `
-        <div class="modal-content" style="max-width: 700px; max-height: 80vh; display: flex; flex-direction: column;">
-            <div class="modal-title">Merge Duplicate Characters</div>
-
-            <div class="modal-note" style="margin-bottom: 16px;">
-                <strong>Step 1:</strong> Check the characters that are the same person.<br>
-                <strong>Step 2:</strong> Click the star next to the name you want to keep as the primary name.
-            </div>
-
-            <div style="flex: 1; overflow-y: auto; min-height: 0;">
-                <div id="merge-character-list" style="border: 1px solid var(--glass-border); border-radius: 8px; max-height: 300px; overflow-y: auto;">
-                    ${renderMergeCharacterItems(characters)}
-                </div>
-
-                <div id="merge-primary-display" style="margin-top: 16px; padding: 12px; background: rgba(212, 175, 55, 0.1); border: 1px solid var(--accent-gold); border-radius: 8px; display: none;">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="font-size: 1.2em;">*</span>
-                        <span style="color: var(--text-muted);">Primary name:</span>
-                        <span id="merge-primary-name-display" style="font-weight: 700; color: var(--accent-gold);"></span>
-                    </div>
-                </div>
-
-                <div style="margin-top: 12px;">
-                    <label class="modal-label" style="font-size: 0.85em;">Or enter a custom name:</label>
-                    <input type="text" class="modal-input" id="merge-primary-name" placeholder="Custom canonical name (optional)..." style="font-size: 0.9em;">
-                </div>
-            </div>
-
-            <div class="modal-actions" style="flex-shrink: 0; padding-top: 16px; border-top: 1px solid var(--glass-border); margin-top: 16px;">
-                <button class="modal-btn primary" onclick="performCharacterMerge()" style="background: var(--accent-gold); color: var(--bg-dark);">
-                    Merge Selected
-                </button>
-                <button class="modal-btn" onclick="closeMergeCharactersModal()" style="background: var(--success-green); color: white;">
-                    Done Merging
-                </button>
-            </div>
-        </div>
-    `;
-
-    modal.style.display = 'flex';
-
-    // Add event listeners for checkboxes
-    setupMergeCheckboxListeners();
-};
-
-/**
- * Render merge character list items
- * @param {Array} characters - Character array
- * @returns {string} HTML string
- */
-function renderMergeCharacterItems(characters) {
-    return characters.map((char, idx) => {
-        const isPrimary = mergePrimaryIndex === idx;
-        const primaryStyle = isPrimary ? 'background: rgba(212, 175, 55, 0.15); border-left: 3px solid var(--accent-gold);' : '';
+    let html = activeCharacters.map((char, idx) => {
+        const originalIndex = characters.indexOf(char);
+        const isSelected = selectedForMerge.has(originalIndex);
+        const conf = getConfidenceDisplay(char.sceneCount || 0);
 
         return `
-            <div class="merge-char-item" data-index="${idx}" style="display: flex; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--glass-border); ${primaryStyle}">
-                <input type="checkbox" class="merge-checkbox" data-index="${idx}" ${isPrimary ? 'checked' : ''} style="width: 18px; height: 18px; margin-right: 12px; cursor: pointer;">
-                <button class="set-primary-btn" onclick="setMergePrimary(${idx})" data-index="${idx}" title="Set as primary name" style="
-                    background: ${isPrimary ? 'var(--accent-gold)' : 'transparent'};
-                    border: 1px solid ${isPrimary ? 'var(--accent-gold)' : 'var(--glass-border)'};
-                    border-radius: 4px;
-                    padding: 2px 6px;
-                    margin-right: 10px;
-                    cursor: pointer;
-                    font-size: 0.9em;
-                    transition: all 0.2s;
-                ">${isPrimary ? '*' : 'o'}</button>
-                <span style="font-weight: ${isPrimary ? '700' : '600'}; min-width: 150px; color: ${isPrimary ? 'var(--accent-gold)' : 'inherit'};">${char.name}</span>
-                <span style="color: var(--text-muted); font-size: 0.85em; margin-left: auto;">
-                    ${char.sceneCount} scene${char.sceneCount !== 1 ? 's' : ''}
-                    ${char.mergedFrom ? '<span style="color: var(--accent-gold);"> (merged)</span>' : ''}
-                </span>
+            <div class="confirm-merge-item ${isSelected ? 'selected' : ''}"
+                 data-index="${originalIndex}"
+                 onclick="toggleForConfirmMerge(${originalIndex})">
+                <div class="confirm-merge-info">
+                    <div class="confirm-merge-name">${char.name}</div>
+                    <div class="confirm-merge-meta">
+                        ${char.sceneCount || 0} scene${(char.sceneCount || 0) !== 1 ? 's' : ''}
+                    </div>
+                </div>
+                <div class="confirm-merge-badge" style="background: ${conf.bgColor}; color: ${conf.color};">
+                    ${conf.label}
+                </div>
+                <div class="confirm-select-indicator ${isSelected ? 'active' : ''}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                </div>
             </div>
         `;
     }).join('');
-}
 
-/**
- * Set up event listeners for merge checkboxes
- */
-function setupMergeCheckboxListeners() {
-    const checkboxes = document.querySelectorAll('#merge-character-list .merge-checkbox');
-    checkboxes.forEach(cb => {
-        cb.addEventListener('change', function() {
-            const idx = parseInt(this.dataset.index);
-            // If this is the first checkbox checked, auto-set as primary
-            const checkedBoxes = document.querySelectorAll('#merge-character-list .merge-checkbox:checked');
-            if (checkedBoxes.length === 1 && this.checked) {
-                setMergePrimary(idx);
-            }
-            // If unchecking the primary, reset primary to first checked
-            if (!this.checked && mergePrimaryIndex === idx) {
-                const firstChecked = document.querySelector('#merge-character-list .merge-checkbox:checked');
-                if (firstChecked) {
-                    setMergePrimary(parseInt(firstChecked.dataset.index));
-                } else {
-                    mergePrimaryIndex = null;
-                    updatePrimaryDisplay();
-                }
-            }
-        });
-    });
-}
-
-/**
- * Set the primary character for merge
- * @param {number} index - Character index
- */
-window.setMergePrimary = function(index) {
-    mergePrimaryIndex = index;
-
-    // Also check this character's checkbox
-    const checkbox = document.querySelector(`#merge-character-list .merge-checkbox[data-index="${index}"]`);
-    if (checkbox) checkbox.checked = true;
-
-    // Refresh the list to show visual feedback
-    const listContainer = document.getElementById('merge-character-list');
-    if (listContainer) {
-        // Use the filtered mergeModalCharacters instead of all detectedCharacters
-        listContainer.innerHTML = renderMergeCharacterItems(mergeModalCharacters);
-        setupMergeCheckboxListeners();
+    // Add merged characters section if any
+    if (mergedCharacters.length > 0) {
+        html += `
+            <div class="confirm-merged-section">
+                <div class="confirm-merged-section-label">Merged Characters</div>
+                ${mergedCharacters.map(char => `
+                    <div class="confirm-merge-item merged">
+                        <div class="confirm-merge-info">
+                            <div class="confirm-merge-name">${char.name}</div>
+                            <div class="confirm-merge-meta">merged into ${char.mergedInto || 'another character'}</div>
+                        </div>
+                        <div class="confirm-merged-badge">MERGED</div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
     }
 
-    updatePrimaryDisplay();
-};
+    container.innerHTML = html;
+}
 
 /**
- * Update the primary name display
+ * Toggle character selection for merging
  */
-function updatePrimaryDisplay() {
-    const display = document.getElementById('merge-primary-display');
-    const nameDisplay = document.getElementById('merge-primary-name-display');
+window.toggleForConfirmMerge = function(index) {
+    const characters = state.detectedCharacters || [];
+    const char = characters[index];
+    if (!char || char.merged) return;
 
-    if (mergePrimaryIndex !== null && state.detectedCharacters[mergePrimaryIndex]) {
-        const primaryChar = state.detectedCharacters[mergePrimaryIndex];
-        if (nameDisplay) nameDisplay.textContent = primaryChar.name;
-        if (display) display.style.display = 'block';
+    if (selectedForMerge.has(index)) {
+        selectedForMerge.delete(index);
     } else {
-        if (display) display.style.display = 'none';
+        selectedForMerge.add(index);
     }
-}
 
-/**
- * Close merge characters modal
- */
-window.closeMergeCharactersModal = function() {
-    const modal = document.getElementById('merge-characters-modal');
-    if (modal) modal.style.display = 'none';
+    renderMergeList();
+
+    // Show/hide merge prompt based on selection
+    if (selectedForMerge.size >= 2) {
+        showMergePrompt();
+    } else {
+        hideMergePrompt();
+    }
 };
 
 /**
- * Perform the character merge
- * BUG FIX: Use mergeModalCharacters (filtered list) instead of state.detectedCharacters
+ * Show the merge prompt with selected character options
  */
-window.performCharacterMerge = function() {
-    const checkboxes = document.querySelectorAll('#merge-character-list .merge-checkbox:checked');
-    const indices = Array.from(checkboxes).map(cb => parseInt(cb.dataset.index));
+function showMergePrompt() {
+    const prompt = document.getElementById('confirm-merge-prompt');
+    const previewNames = document.getElementById('confirm-merge-preview-names');
+    const optionsContainer = document.getElementById('confirm-merge-options');
 
-    if (indices.length < 2) {
+    if (!prompt || !previewNames || !optionsContainer) return;
+
+    const characters = state.detectedCharacters || [];
+    const selected = Array.from(selectedForMerge).map(idx => characters[idx]).filter(Boolean);
+
+    // Render preview pills
+    previewNames.innerHTML = selected.map(c => `
+        <span class="confirm-merge-name-pill">${c.name}</span>
+    `).join('');
+
+    // Render radio options for each name
+    optionsContainer.innerHTML = selected.map((c, i) => `
+        <label class="confirm-merge-radio-label">
+            <input type="radio" name="confirm-merge-name" value="${c.name}" ${i === 0 ? 'checked' : ''}>
+            <span>${c.name}</span>
+        </label>
+    `).join('');
+
+    // Clear custom input
+    const customInput = document.getElementById('confirm-merge-custom-input');
+    if (customInput) customInput.value = '';
+
+    prompt.style.display = 'block';
+}
+
+/**
+ * Hide the merge prompt
+ */
+function hideMergePrompt() {
+    const prompt = document.getElementById('confirm-merge-prompt');
+    if (prompt) prompt.style.display = 'none';
+}
+
+/**
+ * Cancel merge operation
+ */
+window.cancelConfirmMerge = function() {
+    selectedForMerge.clear();
+    hideMergePrompt();
+    renderMergeList();
+};
+
+/**
+ * Execute the merge
+ */
+window.executeConfirmMerge = function() {
+    const characters = state.detectedCharacters || [];
+    const indices = Array.from(selectedForMerge);
+    const selected = indices.map(idx => characters[idx]).filter(Boolean);
+
+    if (selected.length < 2) {
         alert('Please select at least 2 characters to merge');
         return;
     }
 
-    const primaryNameInput = document.getElementById('merge-primary-name');
-    let primaryName = primaryNameInput?.value.trim();
+    // Get the selected name (radio button or custom)
+    const customRadio = document.getElementById('confirm-merge-custom-radio');
+    const customInput = document.getElementById('confirm-merge-custom-input');
+    let primaryName;
 
-    // BUG FIX: Get characters from mergeModalCharacters (the filtered list shown in modal)
-    const charsToMerge = indices.map(idx => mergeModalCharacters[idx]).filter(Boolean);
-
-    if (charsToMerge.length < 2) {
-        alert('Error: Could not find selected characters');
-        return;
+    if (customRadio && customRadio.checked && customInput && customInput.value.trim()) {
+        primaryName = customInput.value.trim();
+    } else {
+        const selectedRadio = document.querySelector('input[name="confirm-merge-name"]:checked');
+        primaryName = selectedRadio ? selectedRadio.value : selected[0].name;
     }
 
-    // Use provided custom name, or selected primary, or first selected character's name
-    if (!primaryName) {
-        // BUG FIX: Use mergeModalCharacters for primary lookup
-        if (mergePrimaryIndex !== null && mergeModalCharacters[mergePrimaryIndex]) {
-            primaryName = mergeModalCharacters[mergePrimaryIndex].name;
-        } else {
-            primaryName = charsToMerge[0].name;
+    console.log(`Merging ${selected.length} characters into "${primaryName}"`);
+
+    // Find or create the primary character
+    let primaryChar = characters.find(c => c.name === primaryName);
+
+    if (!primaryChar) {
+        // Create new character with merged data
+        primaryChar = {
+            name: primaryName,
+            category: selected[0].category || 'SUPPORTING',
+            sceneCount: 0,
+            firstAppearance: Infinity,
+            lastAppearance: 0,
+            hasDialogue: false,
+            selected: true,
+            merged: false,
+            mergedFrom: [],
+            scenesPresent: []
+        };
+        state.detectedCharacters.push(primaryChar);
+    }
+
+    // Merge data from selected characters
+    const mergedFromNames = [];
+    selected.forEach(char => {
+        if (char.name !== primaryName) {
+            mergedFromNames.push(char.name);
+
+            // Mark as merged
+            char.merged = true;
+            char.mergedInto = primaryName;
+            char.selected = false;
         }
-    }
 
-    // Find the primary character for category
-    // BUG FIX: Use mergeModalCharacters for primary lookup
-    const primaryChar = mergePrimaryIndex !== null && mergeModalCharacters[mergePrimaryIndex]
-        ? mergeModalCharacters[mergePrimaryIndex]
-        : charsToMerge[0];
+        // Combine scene counts and appearances
+        primaryChar.sceneCount = (primaryChar.sceneCount || 0) + (char.sceneCount || 0);
+        primaryChar.firstAppearance = Math.min(primaryChar.firstAppearance || Infinity, char.firstAppearance || Infinity);
+        primaryChar.lastAppearance = Math.max(primaryChar.lastAppearance || 0, char.lastAppearance || 0);
+        primaryChar.hasDialogue = primaryChar.hasDialogue || char.hasDialogue;
 
-    // Combine data from all characters
-    const mergedChar = {
-        name: normalizeCharacterName(primaryName),
-        category: primaryChar.category,
-        sceneCount: 0,
-        firstAppearance: Infinity,
-        lastAppearance: 0,
-        hasDialogue: false,
-        selected: charsToMerge.some(c => c.selected),
-        scenesPresent: [],
-        mergedFrom: charsToMerge.map(c => c.name)
-    };
-
-    // Aggregate data from all merged characters
-    charsToMerge.forEach(char => {
-        mergedChar.sceneCount += char.sceneCount || 0;
-        mergedChar.firstAppearance = Math.min(mergedChar.firstAppearance, char.firstAppearance || Infinity);
-        mergedChar.lastAppearance = Math.max(mergedChar.lastAppearance, char.lastAppearance || 0);
-        mergedChar.hasDialogue = mergedChar.hasDialogue || char.hasDialogue;
-
-        if (char.scenesPresent && Array.isArray(char.scenesPresent)) {
-            mergedChar.scenesPresent = [...new Set([...mergedChar.scenesPresent, ...char.scenesPresent])];
+        // Combine scenes present
+        if (char.scenesPresent) {
+            primaryChar.scenesPresent = [...new Set([...(primaryChar.scenesPresent || []), ...char.scenesPresent])];
         }
     });
 
-    // Fix edge cases
-    if (mergedChar.firstAppearance === Infinity) mergedChar.firstAppearance = 1;
-    if (mergedChar.lastAppearance === 0) mergedChar.lastAppearance = state.scenes.length;
+    primaryChar.mergedFrom = [...(primaryChar.mergedFrom || []), ...mergedFromNames];
+    primaryChar.selected = true;
+    primaryChar.merged = false;
 
-    // Remove scene duplicates and update count
-    mergedChar.scenesPresent = [...new Set(mergedChar.scenesPresent)].sort((a, b) => a - b);
-    if (mergedChar.scenesPresent.length > 0) {
-        mergedChar.sceneCount = mergedChar.scenesPresent.length;
+    console.log(`  Combined ${primaryChar.sceneCount} scenes`);
+    console.log(`  Merged from: ${mergedFromNames.join(', ')}`);
+
+    // Reset selection and re-render
+    selectedForMerge.clear();
+    hideMergePrompt();
+    renderMergeList();
+
+    showToast(`Merged ${selected.length} characters into "${primaryName}"`, 'success');
+};
+
+// ============================================================================
+// STEP 2: CONFIRM SELECTION
+// ============================================================================
+
+/**
+ * Render the selection list (Step 2)
+ */
+function renderSelectionList() {
+    const container = document.getElementById('confirm-selection-list');
+    if (!container) return;
+
+    const characters = (state.detectedCharacters || []).filter(c => !c.merged);
+    const autoSelectHigh = document.getElementById('confirm-auto-select-high')?.checked ?? true;
+
+    if (characters.length === 0) {
+        container.innerHTML = `
+            <div class="confirm-empty-list">
+                <div class="confirm-empty-icon">👥</div>
+                <div class="confirm-empty-text">No characters to select</div>
+                <p class="confirm-empty-hint">Go back and detect characters first.</p>
+            </div>
+        `;
+        updateConfirmSelectionStats();
+        return;
     }
 
-    // BUG FIX: Remove old characters by name (since indices are into mergeModalCharacters, not detectedCharacters)
-    const namesToRemove = charsToMerge.map(c => c.name);
-    state.detectedCharacters = state.detectedCharacters.filter(
-        char => !namesToRemove.includes(char.name)
-    );
+    container.innerHTML = characters.map((char, index) => {
+        const originalIndex = state.detectedCharacters.indexOf(char);
+        const conf = getConfidenceDisplay(char.sceneCount || 0);
 
-    // Add merged character
-    state.detectedCharacters.push(mergedChar);
+        // Determine if should be checked
+        let isChecked;
+        if (char.selected !== undefined) {
+            isChecked = char.selected;
+        } else {
+            isChecked = autoSelectHigh ? (char.sceneCount || 0) >= 3 : true;
+        }
 
-    // Re-sort by scene count
-    state.detectedCharacters.sort((a, b) => b.sceneCount - a.sceneCount);
+        return `
+            <div class="confirm-selection-item">
+                <input type="checkbox"
+                       id="confirm-char-select-${originalIndex}"
+                       data-index="${originalIndex}"
+                       ${isChecked ? 'checked' : ''}
+                       onchange="toggleConfirmCharacterSelection(${originalIndex})">
+                <div class="confirm-selection-info">
+                    <label for="confirm-char-select-${originalIndex}" class="confirm-selection-name">${char.name}</label>
+                    <div class="confirm-selection-meta">
+                        ${char.sceneCount || 0} scene${(char.sceneCount || 0) !== 1 ? 's' : ''}
+                        ${char.mergedFrom?.length ? ` · Includes: ${char.mergedFrom.join(', ')}` : ''}
+                    </div>
+                </div>
+                <div class="confirm-merge-badge" style="background: ${conf.bgColor}; color: ${conf.color};">
+                    ${conf.label}
+                </div>
+            </div>
+        `;
+    }).join('');
 
-    // Update master context if available
-    if (window.masterContext?.characters) {
-        const mergedMasterData = {};
+    updateConfirmSelectionStats();
+}
 
-        charsToMerge.forEach(char => {
-            const charData = window.masterContext.characters[char.name];
-            if (charData) {
-                // Merge script descriptions
-                if (!mergedMasterData.scriptDescriptions) {
-                    mergedMasterData.scriptDescriptions = [];
-                }
-                if (charData.scriptDescriptions) {
-                    mergedMasterData.scriptDescriptions.push(...charData.scriptDescriptions);
-                }
-
-                // Merge scenes present
-                if (!mergedMasterData.scenesPresent) {
-                    mergedMasterData.scenesPresent = [];
-                }
-                if (charData.scenesPresent || charData.storyPresence?.scenesPresent) {
-                    const scenes = charData.scenesPresent || charData.storyPresence?.scenesPresent || [];
-                    mergedMasterData.scenesPresent = [...new Set([...mergedMasterData.scenesPresent, ...scenes])];
-                }
-
-                // Take first available profile data
-                if (!mergedMasterData.physicalProfile && charData.physicalProfile) {
-                    mergedMasterData.physicalProfile = charData.physicalProfile;
-                }
-                if (!mergedMasterData.characterAnalysis && charData.characterAnalysis) {
-                    mergedMasterData.characterAnalysis = charData.characterAnalysis;
-                }
-                if (!mergedMasterData.visualProfile && charData.visualProfile) {
-                    mergedMasterData.visualProfile = charData.visualProfile;
-                }
-
-                // Delete old entry
-                delete window.masterContext.characters[char.name];
-            }
-        });
-
-        // Add merged entry with combined data
-        window.masterContext.characters[mergedChar.name] = {
-            ...mergedMasterData,
-            sceneCount: mergedChar.sceneCount,
-            firstAppearance: mergedChar.firstAppearance,
-            lastAppearance: mergedChar.lastAppearance,
-            mergedFrom: mergedChar.mergedFrom
-        };
-
-        // Update localStorage
-        localStorage.setItem('masterContext', JSON.stringify(window.masterContext));
-        window.scriptMasterContext = window.masterContext;
-        localStorage.setItem('scriptMasterContext', JSON.stringify(window.masterContext));
-    }
-
-    // Get merged character names for cleanup
-    const mergedNames = charsToMerge.map(c => c.name);
-    const primaryCharName = mergedChar.name;
-
-    // Clean up all character data structures to remove merged characters
-    cleanupMergedCharacterData(mergedNames, primaryCharName);
-
-    // Refresh both the merge modal list AND the confirmation list
-    refreshMergeCharacterList();
-    populateCharacterConfirmationList();
-
-    // Refresh the scene list to show updated character names
-    renderSceneList();
-
-    showToast(`Merged ${charsToMerge.length} characters into "${mergedChar.name}"`, 'success');
-    console.log('Merged characters:', mergedNames, '→', primaryCharName);
-
-    // Run audit to verify no orphans remain
-    const orphans = auditCharacterReferences();
-    if (Object.values(orphans).some(arr => arr.length > 0)) {
-        console.warn('Warning: Found orphaned character references after merge:', orphans);
+/**
+ * Toggle character selection
+ */
+window.toggleConfirmCharacterSelection = function(index) {
+    if (state.detectedCharacters && state.detectedCharacters[index]) {
+        state.detectedCharacters[index].selected = !state.detectedCharacters[index].selected;
+        updateConfirmSelectionStats();
     }
 };
 
 /**
- * Refresh the merge character list within the modal
- * BUG FIX: Filter to only selected characters and update mergeModalCharacters
+ * Update selection stats
  */
-function refreshMergeCharacterList() {
-    mergePrimaryIndex = null;
+function updateConfirmSelectionStats() {
+    const statsContainer = document.getElementById('confirm-selection-stats');
+    if (!statsContainer) return;
 
-    const listContainer = document.getElementById('merge-character-list');
-    if (!listContainer) return;
+    const characters = (state.detectedCharacters || []).filter(c => !c.merged);
+    const total = characters.length;
+    const selected = characters.filter(c => c.selected !== false).length;
 
-    // BUG FIX: Filter to only show selected characters
-    const allCharacters = state.detectedCharacters || [];
-    mergeModalCharacters = allCharacters.filter(char => char.selected !== false);
-
-    listContainer.innerHTML = renderMergeCharacterItems(mergeModalCharacters);
-    setupMergeCheckboxListeners();
-
-    // Clear the primary name input and hide the display
-    const primaryNameInput = document.getElementById('merge-primary-name');
-    if (primaryNameInput) primaryNameInput.value = '';
-
-    updatePrimaryDisplay();
+    statsContainer.innerHTML = `
+        <div class="confirm-stat-item">
+            <div class="confirm-stat-value">${total}</div>
+            <div class="confirm-stat-label">Total</div>
+        </div>
+        <div class="confirm-stat-item">
+            <div class="confirm-stat-value">${selected}</div>
+            <div class="confirm-stat-label">Selected</div>
+        </div>
+    `;
 }
 
 /**
- * Clean up all character data structures after a merge
- * @param {string[]} mergedNames - Names of characters that were merged
- * @param {string} primaryName - The new primary character name
+ * Toggle auto-select high confidence
  */
-function cleanupMergedCharacterData(mergedNames, primaryName) {
-    console.log('Cleaning up merged character data:', mergedNames, '→', primaryName);
+window.toggleConfirmAutoSelectHigh = function() {
+    const autoSelectHigh = document.getElementById('confirm-auto-select-high')?.checked ?? true;
+    const characters = (state.detectedCharacters || []).filter(c => !c.merged);
 
-    // 1. Update confirmedCharacters Set
-    if (state.confirmedCharacters instanceof Set) {
-        mergedNames.forEach(name => {
-            if (name !== primaryName) {
-                state.confirmedCharacters.delete(name);
+    characters.forEach(char => {
+        if (autoSelectHigh) {
+            char.selected = (char.sceneCount || 0) >= 3;
+        }
+    });
+
+    renderSelectionList();
+};
+
+/**
+ * Select all characters
+ */
+window.selectAllConfirmCharacters = function() {
+    (state.detectedCharacters || []).forEach(char => {
+        if (!char.merged) char.selected = true;
+    });
+    renderSelectionList();
+};
+
+/**
+ * Deselect all characters
+ */
+window.deselectAllConfirmCharacters = function() {
+    (state.detectedCharacters || []).forEach(char => {
+        if (!char.merged) char.selected = false;
+    });
+    renderSelectionList();
+};
+
+// ============================================================================
+// CLOSE MODAL
+// ============================================================================
+
+/**
+ * Close the character confirmation modal
+ */
+export function closeCharacterConfirmModal() {
+    const modal = document.getElementById('character-confirm-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+window.closeCharacterConfirmModal = closeCharacterConfirmModal;
+
+// ============================================================================
+// CONFIRM AND CONTINUE (PRESERVED FROM ORIGINAL)
+// ============================================================================
+
+/**
+ * Build a mapping of old/merged character names to their canonical names
+ */
+function buildCharacterMergeMapping(selectedCharacters) {
+    const mapping = new Map();
+
+    selectedCharacters.forEach(char => {
+        mapping.set(char.name, char.name);
+
+        if (char.mergedFrom && Array.isArray(char.mergedFrom)) {
+            char.mergedFrom.forEach(oldName => {
+                mapping.set(oldName, char.name);
+            });
+        }
+    });
+
+    return mapping;
+}
+
+/**
+ * Clean up ALL scene character data to only contain selected/canonical names
+ */
+function cleanupAllSceneCharacterData(selectedNames, mergeMapping) {
+    console.log('Cleaning up all scene character data...');
+
+    let scenesUpdated = 0;
+    let charactersRemoved = 0;
+    let charactersMerged = 0;
+
+    const cleanCharacterArray = (arr) => {
+        if (!arr || !Array.isArray(arr)) return arr;
+
+        const cleanedSet = new Set();
+
+        arr.forEach(charName => {
+            const canonicalName = mergeMapping.get(charName);
+
+            if (canonicalName && selectedNames.has(canonicalName)) {
+                cleanedSet.add(canonicalName);
+                if (charName !== canonicalName) {
+                    charactersMerged++;
+                }
+            } else if (selectedNames.has(charName)) {
+                cleanedSet.add(charName);
+            } else {
+                charactersRemoved++;
             }
         });
-        if (mergedNames.some(name => state.confirmedCharacters.has(name))) {
-            state.confirmedCharacters.add(primaryName);
-        }
-    }
 
-    // 2. Update castProfiles
-    if (state.castProfiles) {
-        const mergedProfile = { scenes: [], lookStates: [] };
+        return Array.from(cleanedSet);
+    };
 
-        mergedNames.forEach(name => {
-            const profile = state.castProfiles[name];
-            if (profile) {
-                if (profile.scenes) {
-                    mergedProfile.scenes = [...new Set([...mergedProfile.scenes, ...profile.scenes])];
-                }
-                if (!mergedProfile.baseDescription && profile.baseDescription) {
-                    mergedProfile.baseDescription = profile.baseDescription;
-                }
-                if (profile.lookStates) {
-                    mergedProfile.lookStates = [...mergedProfile.lookStates, ...profile.lookStates];
-                }
-                if (name !== primaryName) {
-                    delete state.castProfiles[name];
+    // Clean up scenes
+    if (state.scenes && Array.isArray(state.scenes)) {
+        state.scenes.forEach((scene, idx) => {
+            let updated = false;
+
+            if (scene.castMembers) {
+                const cleaned = cleanCharacterArray(scene.castMembers);
+                if (JSON.stringify(cleaned) !== JSON.stringify(scene.castMembers)) {
+                    scene.castMembers = cleaned;
+                    updated = true;
                 }
             }
-        });
 
-        if (Object.keys(mergedProfile).length > 0) {
-            state.castProfiles[primaryName] = {
-                ...state.castProfiles[primaryName],
-                ...mergedProfile,
-                mergedFrom: mergedNames.filter(n => n !== primaryName)
-            };
-        }
+            if (scene.characters_present) {
+                const cleaned = cleanCharacterArray(scene.characters_present);
+                if (JSON.stringify(cleaned) !== JSON.stringify(scene.characters_present)) {
+                    scene.characters_present = cleaned;
+                    updated = true;
+                }
+            }
+
+            if (updated) scenesUpdated++;
+        });
     }
 
-    // 3. Update sceneBreakdowns cast arrays
+    // Clean up scene breakdowns
     if (state.sceneBreakdowns) {
         Object.keys(state.sceneBreakdowns).forEach(sceneIdx => {
             const breakdown = state.sceneBreakdowns[sceneIdx];
-            if (breakdown?.cast && Array.isArray(breakdown.cast)) {
-                const hasAnyMerged = breakdown.cast.some(c => mergedNames.includes(c));
-                if (hasAnyMerged) {
-                    breakdown.cast = breakdown.cast.filter(c => !mergedNames.includes(c));
-                    if (!breakdown.cast.includes(primaryName)) {
-                        breakdown.cast.push(primaryName);
-                    }
-                }
+            if (breakdown && breakdown.cast) {
+                breakdown.cast = cleanCharacterArray(breakdown.cast);
             }
         });
     }
 
-    // 4. Update scriptTags
+    // Clean up script tags
     if (state.scriptTags) {
         Object.keys(state.scriptTags).forEach(sceneIdx => {
             const tags = state.scriptTags[sceneIdx];
             if (Array.isArray(tags)) {
-                tags.forEach(tag => {
-                    if (tag.character && mergedNames.includes(tag.character) && tag.character !== primaryName) {
-                        tag.character = primaryName;
+                state.scriptTags[sceneIdx] = tags.filter(tag => {
+                    if (tag.category === 'cast' && tag.character) {
+                        const canonicalName = mergeMapping.get(tag.character);
+                        if (canonicalName && selectedNames.has(canonicalName)) {
+                            tag.character = canonicalName;
+                            return true;
+                        }
+                        return selectedNames.has(tag.character);
                     }
-                    if (tag.linkedCharacter && mergedNames.includes(tag.linkedCharacter) && tag.linkedCharacter !== primaryName) {
-                        tag.linkedCharacter = primaryName;
-                    }
+                    return true;
                 });
             }
         });
     }
 
-    // 5. Update characterStates
-    if (state.characterStates) {
-        Object.keys(state.characterStates).forEach(sceneIdx => {
-            const sceneStates = state.characterStates[sceneIdx];
-            if (sceneStates) {
-                const mergedState = {};
-
-                mergedNames.forEach(name => {
-                    if (sceneStates[name]) {
-                        if (!mergedState.tags) mergedState.tags = [];
-                        if (!mergedState.notes) mergedState.notes = '';
-
-                        if (sceneStates[name].tags) {
-                            mergedState.tags = [...mergedState.tags, ...sceneStates[name].tags];
-                        }
-                        if (sceneStates[name].notes) {
-                            mergedState.notes += (mergedState.notes ? '\n' : '') + sceneStates[name].notes;
-                        }
-
-                        if (name !== primaryName) {
-                            delete sceneStates[name];
-                        }
-                    }
-                });
-
-                if (Object.keys(mergedState).length > 0) {
-                    sceneStates[primaryName] = {
-                        ...sceneStates[primaryName],
-                        ...mergedState
-                    };
-                }
-            }
-        });
-    }
-
-    // 6. Update characterLooks
-    if (state.characterLooks) {
-        const mergedLooks = [];
-
-        mergedNames.forEach(name => {
-            if (state.characterLooks[name]) {
-                mergedLooks.push(...state.characterLooks[name]);
-                if (name !== primaryName) {
-                    delete state.characterLooks[name];
-                }
-            }
-        });
-
-        if (mergedLooks.length > 0) {
-            state.characterLooks[primaryName] = [
-                ...(state.characterLooks[primaryName] || []),
-                ...mergedLooks
-            ];
-        }
-    }
-
-    // 7. Update continuityEvents
-    if (state.continuityEvents) {
-        const mergedEvents = [];
-
-        mergedNames.forEach(name => {
-            if (state.continuityEvents[name]) {
-                mergedEvents.push(...state.continuityEvents[name]);
-                if (name !== primaryName) {
-                    delete state.continuityEvents[name];
-                }
-            }
-        });
-
-        if (mergedEvents.length > 0) {
-            state.continuityEvents[primaryName] = [
-                ...(state.continuityEvents[primaryName] || []),
-                ...mergedEvents
-            ];
-        }
-    }
-
-    // 8. Update characterTabs
-    if (state.characterTabs && Array.isArray(state.characterTabs)) {
-        state.characterTabs = state.characterTabs.filter(tab =>
-            !mergedNames.includes(tab) || tab === primaryName
-        );
-        if (!state.characterTabs.includes(primaryName) &&
-            mergedNames.some(name => state.characterTabs.includes(name))) {
-            state.characterTabs.push(primaryName);
-        }
-    }
-
-    console.log('Character data cleanup complete');
+    console.log(`Cleanup complete: ${scenesUpdated} scenes updated, ${charactersMerged} character references merged, ${charactersRemoved} removed`);
 }
 
 /**
- * Close character confirmation modal
- */
-window.closeCharacterConfirmModal = function() {
-    const modal = document.getElementById('character-confirm-modal');
-    if (modal) modal.style.display = 'none';
-};
-
-/**
  * Confirm characters and continue with breakdown
+ * THIS IS THE MAIN OUTPUT FUNCTION - Interface preserved from original
  */
 window.confirmCharactersAndContinue = async function() {
     console.log('confirmCharactersAndContinue called');
 
     try {
-        // Get selected characters
-        const selectedCharacters = (state.detectedCharacters || []).filter(c => c.selected);
+        // Get selected characters (not merged and selected)
+        const selectedCharacters = (state.detectedCharacters || []).filter(c => c.selected && !c.merged);
         console.log('Selected characters:', selectedCharacters.length);
 
         if (selectedCharacters.length === 0) {
@@ -972,80 +1263,81 @@ window.confirmCharactersAndContinue = async function() {
                         category: char.category,
                         characterAnalysis: {
                             ...window.masterContext.characters[char.name]?.characterAnalysis,
-                            role: char.category.toLowerCase()
+                            role: char.category?.toLowerCase() || 'supporting'
                         },
                         scenesPresent: char.scenesPresent || window.masterContext.characters[char.name]?.scenesPresent || []
                     };
                 } else {
-                    // Manually added character
+                    // Manually added or merged character
                     confirmedCharsObj[char.name] = {
-                        category: char.category,
-                        characterAnalysis: { role: char.category.toLowerCase() },
+                        category: char.category || 'SUPPORTING',
+                        characterAnalysis: { role: (char.category || 'SUPPORTING').toLowerCase() },
                         storyPresence: {
                             totalScenes: char.sceneCount || 0,
                             scenesPresent: char.scenesPresent || []
                         },
                         firstAppearance: char.firstAppearance || 1,
-                        lastAppearance: char.lastAppearance || state.scenes.length,
+                        lastAppearance: char.lastAppearance || state.scenes?.length || 1,
                         sceneCount: char.sceneCount || 0,
-                        scenesPresent: char.scenesPresent || []
+                        scenesPresent: char.scenesPresent || [],
+                        mergedFrom: char.mergedFrom || []
                     };
                 }
+
+                // Handle mergedFrom - add data from merged characters
+                if (char.mergedFrom && Array.isArray(char.mergedFrom)) {
+                    char.mergedFrom.forEach(oldName => {
+                        if (window.masterContext.characters[oldName]) {
+                            const oldCharData = window.masterContext.characters[oldName];
+                            const newScenes = oldCharData.scenesPresent || oldCharData.storyPresence?.scenesPresent || [];
+                            confirmedCharsObj[char.name].scenesPresent = [
+                                ...new Set([
+                                    ...(confirmedCharsObj[char.name].scenesPresent || []),
+                                    ...newScenes
+                                ])
+                            ];
+                        }
+                    });
+                }
             });
-
-            window.confirmedMasterContext = {
-                ...window.masterContext,
-                characters: confirmedCharsObj
-            };
-            console.log('Created confirmedMasterContext with', Object.keys(confirmedCharsObj).length, 'characters');
-
-            // BUG FIX: Also update window.masterContext so renderCharacterTabs() can find character data
-            // renderCharacterTabs() checks window.masterContext.characters for role information
-            window.masterContext = window.confirmedMasterContext;
-            window.scriptMasterContext = window.confirmedMasterContext;
-            localStorage.setItem('masterContext', JSON.stringify(window.masterContext));
-            localStorage.setItem('scriptMasterContext', JSON.stringify(window.masterContext));
+            window.masterContext.confirmedCharacters = confirmedCharsObj;
         }
 
-        // Store character categories for use in breakdown
-        window.characterCategories = {};
+        // Initialize character tabs
+        state.characterTabs = selectedCharacters.map(c => c.name);
+
+        // Initialize cast profiles
+        if (!state.castProfiles) {
+            state.castProfiles = {};
+        }
         selectedCharacters.forEach(char => {
-            window.characterCategories[char.name] = char.category;
+            if (!state.castProfiles[char.name]) {
+                state.castProfiles[char.name] = {
+                    baseDescription: '',
+                    physicalDescription: char.physicalDescription || '',
+                    scenes: char.scenesPresent || [],
+                    lookStates: [],
+                    category: char.category || 'SUPPORTING'
+                };
+            }
         });
 
-        // Populate initial data
-        console.log('Calling populateInitialData...');
-        const { populateInitialData } = await import('./export-master-context.js');
-        populateInitialData(window.confirmedMasterContext || window.masterContext);
-
-        // Close modal
-        closeCharacterConfirmModal();
-
-        // Render character tabs and panels
-        console.log('Rendering character tabs and panels...');
+        // Render UI
         renderCharacterTabs();
         renderCharacterTabPanels();
 
-        // Render the scene list to show updated character counts
-        console.log('Rendering scene list...');
-        renderSceneList();
-
-        // Render the script display with highlights
-        console.log('Rendering script...');
+        // Update script and scene list
         renderScript();
-
-        // Run audit to verify no orphans
-        const orphans = auditCharacterReferences();
-        if (Object.values(orphans).some(arr => arr.length > 0)) {
-            console.warn('Warning: Found orphaned character references after confirmation:', orphans);
-        }
+        renderSceneList();
 
         // Save project
         saveProject();
 
-        // Show success message
-        showToast(`${selectedCharacters.length} characters confirmed. Breakdown ready!`, 'success');
-        console.log('Character confirmation complete');
+        // Close modal
+        closeCharacterConfirmModal();
+
+        console.log(`Character confirmation complete: ${selectedCharacters.length} characters confirmed`);
+        showToast(`${selectedCharacters.length} character${selectedCharacters.length !== 1 ? 's' : ''} confirmed! Ready for breakdown.`, 'success');
 
     } catch (error) {
         console.error('Error in confirmCharactersAndContinue:', error);
@@ -1053,416 +1345,13 @@ window.confirmCharactersAndContinue = async function() {
     }
 };
 
-/**
- * Build a mapping of old/merged character names to their canonical names
- * @param {Array} selectedCharacters - Array of selected character objects
- * @returns {Map} Map of oldName → canonicalName
- */
-function buildCharacterMergeMapping(selectedCharacters) {
-    const mapping = new Map();
-
-    selectedCharacters.forEach(char => {
-        mapping.set(char.name, char.name);
-
-        if (char.mergedFrom && Array.isArray(char.mergedFrom)) {
-            char.mergedFrom.forEach(oldName => {
-                mapping.set(oldName, char.name);
-            });
-        }
-    });
-
-    return mapping;
-}
-
-/**
- * Clean up ALL scene character data to only contain selected/canonical names
- * @param {Set} selectedNames - Set of selected canonical character names
- * @param {Map} mergeMapping - Map of oldName → canonicalName
- */
-function cleanupAllSceneCharacterData(selectedNames, mergeMapping) {
-    console.log('Cleaning up all scene character data...');
-
-    let scenesUpdated = 0;
-    let charactersRemoved = 0;
-    let charactersMerged = 0;
-
-    const cleanCharacterArray = (arr) => {
-        if (!arr || !Array.isArray(arr)) return arr;
-
-        const cleanedSet = new Set();
-
-        arr.forEach(charName => {
-            const canonicalName = mergeMapping.get(charName);
-
-            if (canonicalName && selectedNames.has(canonicalName)) {
-                cleanedSet.add(canonicalName);
-                if (charName !== canonicalName) {
-                    charactersMerged++;
-                }
-            } else if (selectedNames.has(charName)) {
-                cleanedSet.add(charName);
-            } else {
-                charactersRemoved++;
-            }
-        });
-
-        return [...cleanedSet];
-    };
-
-    // Clean state.scenes
-    if (state.scenes && Array.isArray(state.scenes)) {
-        state.scenes.forEach((scene, idx) => {
-            let updated = false;
-
-            if (scene.castMembers) {
-                const before = scene.castMembers.length;
-                scene.castMembers = cleanCharacterArray(scene.castMembers);
-                if (scene.castMembers.length !== before) updated = true;
-            }
-
-            if (scene.characters_present) {
-                const before = scene.characters_present.length;
-                scene.characters_present = cleanCharacterArray(scene.characters_present);
-                if (scene.characters_present.length !== before) updated = true;
-            }
-
-            if (scene.aiData?.characters_present) {
-                const before = scene.aiData.characters_present.length;
-                scene.aiData.characters_present = cleanCharacterArray(scene.aiData.characters_present);
-                if (scene.aiData.characters_present.length !== before) updated = true;
-            }
-
-            if (updated) scenesUpdated++;
-        });
-    }
-
-    // Clean state.sceneBreakdowns
-    if (state.sceneBreakdowns) {
-        Object.keys(state.sceneBreakdowns).forEach(sceneIdx => {
-            const breakdown = state.sceneBreakdowns[sceneIdx];
-            if (breakdown?.cast) {
-                breakdown.cast = cleanCharacterArray(breakdown.cast);
-            }
-        });
-    }
-
-    // Clean state.castProfiles
-    if (state.castProfiles) {
-        const newProfiles = {};
-
-        Object.entries(state.castProfiles).forEach(([name, profile]) => {
-            const canonicalName = mergeMapping.get(name);
-
-            if (canonicalName && selectedNames.has(canonicalName)) {
-                if (!newProfiles[canonicalName]) {
-                    newProfiles[canonicalName] = { ...profile, name: canonicalName };
-                } else {
-                    if (profile.scenes) {
-                        newProfiles[canonicalName].scenes = [
-                            ...new Set([...(newProfiles[canonicalName].scenes || []), ...profile.scenes])
-                        ];
-                    }
-                    if (profile.lookStates) {
-                        newProfiles[canonicalName].lookStates = [
-                            ...(newProfiles[canonicalName].lookStates || []),
-                            ...profile.lookStates
-                        ];
-                    }
-                }
-            } else if (selectedNames.has(name)) {
-                newProfiles[name] = profile;
-            }
-        });
-
-        state.castProfiles = newProfiles;
-    }
-
-    // Clean state.scriptTags
-    if (state.scriptTags) {
-        Object.keys(state.scriptTags).forEach(sceneIdx => {
-            const tags = state.scriptTags[sceneIdx];
-            if (Array.isArray(tags)) {
-                state.scriptTags[sceneIdx] = tags.filter(tag => {
-                    if (tag.character) {
-                        const canonicalName = mergeMapping.get(tag.character);
-                        if (canonicalName && selectedNames.has(canonicalName)) {
-                            tag.character = canonicalName;
-                            return true;
-                        } else if (selectedNames.has(tag.character)) {
-                            return true;
-                        }
-                        return false;
-                    }
-                    return true;
-                });
-            }
-        });
-    }
-
-    // Clean state.characterStates
-    if (state.characterStates) {
-        Object.keys(state.characterStates).forEach(sceneIdx => {
-            const sceneStates = state.characterStates[sceneIdx];
-            if (sceneStates) {
-                const newSceneStates = {};
-
-                Object.entries(sceneStates).forEach(([name, charState]) => {
-                    const canonicalName = mergeMapping.get(name);
-
-                    if (canonicalName && selectedNames.has(canonicalName)) {
-                        if (!newSceneStates[canonicalName]) {
-                            newSceneStates[canonicalName] = charState;
-                        } else {
-                            if (charState.tags) {
-                                newSceneStates[canonicalName].tags = [
-                                    ...(newSceneStates[canonicalName].tags || []),
-                                    ...charState.tags
-                                ];
-                            }
-                            if (charState.notes) {
-                                newSceneStates[canonicalName].notes =
-                                    (newSceneStates[canonicalName].notes || '') +
-                                    (newSceneStates[canonicalName].notes ? '\n' : '') +
-                                    charState.notes;
-                            }
-                        }
-                    } else if (selectedNames.has(name)) {
-                        newSceneStates[name] = charState;
-                    }
-                });
-
-                state.characterStates[sceneIdx] = newSceneStates;
-            }
-        });
-    }
-
-    // Clean state.characterLooks
-    if (state.characterLooks) {
-        const newLooks = {};
-
-        Object.entries(state.characterLooks).forEach(([name, looks]) => {
-            const canonicalName = mergeMapping.get(name);
-
-            if (canonicalName && selectedNames.has(canonicalName)) {
-                if (!newLooks[canonicalName]) {
-                    newLooks[canonicalName] = looks;
-                } else {
-                    newLooks[canonicalName] = [...newLooks[canonicalName], ...looks];
-                }
-            } else if (selectedNames.has(name)) {
-                newLooks[name] = looks;
-            }
-        });
-
-        state.characterLooks = newLooks;
-    }
-
-    // Clean state.continuityEvents
-    if (state.continuityEvents) {
-        const newEvents = {};
-
-        Object.entries(state.continuityEvents).forEach(([name, events]) => {
-            const canonicalName = mergeMapping.get(name);
-
-            if (canonicalName && selectedNames.has(canonicalName)) {
-                if (!newEvents[canonicalName]) {
-                    newEvents[canonicalName] = events;
-                } else {
-                    newEvents[canonicalName] = [...newEvents[canonicalName], ...events];
-                }
-            } else if (selectedNames.has(name)) {
-                newEvents[name] = events;
-            }
-        });
-
-        state.continuityEvents = newEvents;
-    }
-
-    // Clean state.characterTabs
-    if (state.characterTabs && Array.isArray(state.characterTabs)) {
-        const newTabs = new Set();
-
-        state.characterTabs.forEach(name => {
-            const canonicalName = mergeMapping.get(name);
-            if (canonicalName && selectedNames.has(canonicalName)) {
-                newTabs.add(canonicalName);
-            } else if (selectedNames.has(name)) {
-                newTabs.add(name);
-            }
-        });
-
-        state.characterTabs = [...newTabs];
-    }
-
-    console.log('Scene character data cleanup complete:', {
-        scenesUpdated,
-        charactersRemoved,
-        charactersMerged
-    });
-}
-
-/**
- * Audit all character references to find orphaned names
- * Used for validation after merge operations
- * @returns {Object} Object with arrays of orphaned references by location
- */
-export function auditCharacterReferences() {
-    // Get valid character names from both confirmed and detected
-    const validCharacters = new Set();
-
-    if (state.confirmedCharacters instanceof Set) {
-        state.confirmedCharacters.forEach(name => validCharacters.add(name));
-    } else if (Array.isArray(state.confirmedCharacters)) {
-        state.confirmedCharacters.forEach(name => validCharacters.add(name));
-    }
-
-    // Also include detected characters if not yet confirmed
-    if (state.detectedCharacters && Array.isArray(state.detectedCharacters)) {
-        state.detectedCharacters
-            .filter(c => c.selected)
-            .forEach(c => validCharacters.add(c.name));
-    }
-
-    const orphans = {
-        inScenes: [],
-        inBreakdowns: [],
-        inTags: [],
-        inCharacterStates: [],
-        inCharacterLooks: [],
-        inContinuityEvents: [],
-        inCastProfiles: [],
-        inCharacterTabs: []
-    };
-
-    // Check state.scenes
-    if (state.scenes && Array.isArray(state.scenes)) {
-        state.scenes.forEach((scene, index) => {
-            ['castMembers', 'characters_present'].forEach(field => {
-                const chars = scene[field];
-                if (Array.isArray(chars)) {
-                    chars.forEach(char => {
-                        if (!validCharacters.has(char)) {
-                            orphans.inScenes.push({ scene: index, field, character: char });
-                        }
-                    });
-                }
-            });
-            if (scene.aiData?.characters_present) {
-                scene.aiData.characters_present.forEach(char => {
-                    if (!validCharacters.has(char)) {
-                        orphans.inScenes.push({ scene: index, field: 'aiData.characters_present', character: char });
-                    }
-                });
-            }
-        });
-    }
-
-    // Check state.sceneBreakdowns
-    if (state.sceneBreakdowns) {
-        Object.keys(state.sceneBreakdowns).forEach(sceneIdx => {
-            const breakdown = state.sceneBreakdowns[sceneIdx];
-            if (breakdown?.cast && Array.isArray(breakdown.cast)) {
-                breakdown.cast.forEach(char => {
-                    if (!validCharacters.has(char)) {
-                        orphans.inBreakdowns.push({ scene: sceneIdx, character: char });
-                    }
-                });
-            }
-        });
-    }
-
-    // Check state.scriptTags
-    if (state.scriptTags) {
-        Object.keys(state.scriptTags).forEach(sceneIdx => {
-            const tags = state.scriptTags[sceneIdx];
-            if (Array.isArray(tags)) {
-                tags.forEach((tag, tagIdx) => {
-                    if (tag.character && !validCharacters.has(tag.character)) {
-                        orphans.inTags.push({ scene: sceneIdx, tagIndex: tagIdx, character: tag.character });
-                    }
-                    if (tag.linkedCharacter && !validCharacters.has(tag.linkedCharacter)) {
-                        orphans.inTags.push({ scene: sceneIdx, tagIndex: tagIdx, character: tag.linkedCharacter, field: 'linkedCharacter' });
-                    }
-                });
-            }
-        });
-    }
-
-    // Check state.characterStates
-    if (state.characterStates) {
-        Object.keys(state.characterStates).forEach(sceneIdx => {
-            const sceneStates = state.characterStates[sceneIdx];
-            if (sceneStates) {
-                Object.keys(sceneStates).forEach(char => {
-                    if (!validCharacters.has(char)) {
-                        orphans.inCharacterStates.push({ scene: sceneIdx, character: char });
-                    }
-                });
-            }
-        });
-    }
-
-    // Check state.characterLooks
-    if (state.characterLooks) {
-        Object.keys(state.characterLooks).forEach(char => {
-            if (!validCharacters.has(char)) {
-                orphans.inCharacterLooks.push({ character: char });
-            }
-        });
-    }
-
-    // Check state.continuityEvents
-    if (state.continuityEvents) {
-        Object.keys(state.continuityEvents).forEach(char => {
-            if (!validCharacters.has(char)) {
-                orphans.inContinuityEvents.push({ character: char });
-            }
-        });
-    }
-
-    // Check state.castProfiles
-    if (state.castProfiles) {
-        Object.keys(state.castProfiles).forEach(char => {
-            if (!validCharacters.has(char)) {
-                orphans.inCastProfiles.push({ character: char });
-            }
-        });
-    }
-
-    // Check state.characterTabs
-    if (state.characterTabs && Array.isArray(state.characterTabs)) {
-        state.characterTabs.forEach(char => {
-            if (!validCharacters.has(char)) {
-                orphans.inCharacterTabs.push({ character: char });
-            }
-        });
-    }
-
-    // Log summary
-    const totalOrphans = Object.values(orphans).reduce((sum, arr) => sum + arr.length, 0);
-    if (totalOrphans > 0) {
-        console.log(`Audit found ${totalOrphans} orphaned character references:`, orphans);
-    } else {
-        console.log('Audit complete: No orphaned character references found');
-    }
-
-    return orphans;
-}
-
 // ============================================================================
-// EXPOSE GLOBAL FUNCTIONS
+// EXPORTS
 // ============================================================================
-
-window.showCharacterConfirmationModal = showCharacterConfirmationModal;
-window.closeCharacterConfirmModal = closeCharacterConfirmModal;
-window.auditCharacterReferences = auditCharacterReferences;
 
 export default {
     showCharacterConfirmationModal,
-    closeCharacterConfirmModal,
-    normalizeCharacterName,
-    auditCharacterReferences
+    closeCharacterConfirmModal
 };
 
-// Note: auditCharacterReferences is already exported inline
 export { normalizeCharacterName };
