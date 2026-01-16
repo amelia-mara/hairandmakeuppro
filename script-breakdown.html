@@ -242,27 +242,100 @@
         </div>
     </div>
 
-    <!-- Character Review Modal -->
+    <!-- Character Review Modal - Two Step Workflow -->
     <div class="modal" id="character-review-modal" style="display: none;">
-        <div class="modal-content" style="max-width: 700px; max-height: 80vh;">
-            <div class="modal-title">Review Detected Characters</div>
+        <div class="modal-content character-review-modal-v2">
+            <!-- Header -->
+            <div class="character-review-header">
+                <div class="character-review-title">Character Confirmation</div>
+                <button class="character-review-close" onclick="closeCharacterReviewModal()">&times;</button>
+            </div>
 
-            <div class="modal-section">
-                <div class="modal-note" style="margin-bottom: 16px;">
-                    Select which characters to include in your breakdown. Characters are detected using strict screenplay formatting rules.
+            <!-- Step Indicator -->
+            <div class="step-indicator">
+                <div class="step-item active" id="step-indicator-1">
+                    <div class="step-circle">1</div>
+                    <div class="step-label">Merge Duplicates</div>
                 </div>
-
-                <div class="character-review-list" id="character-review-list" style="max-height: 400px; overflow-y: auto;">
-                    <!-- Character review items generated here -->
+                <div class="step-connector"></div>
+                <div class="step-item" id="step-indicator-2">
+                    <div class="step-circle">2</div>
+                    <div class="step-label">Confirm Selection</div>
                 </div>
             </div>
 
-            <div class="modal-actions">
-                <button class="modal-btn" onclick="closeCharacterReviewModal()">Cancel</button>
-                <button class="modal-btn" onclick="mergeSelectedCharacters()">Merge Selected</button>
-                <button class="modal-btn" onclick="selectAllCharacters()">Select All</button>
-                <button class="modal-btn" onclick="deselectAllCharacters()">Deselect All</button>
-                <button class="modal-btn primary" onclick="confirmCharacterSelection()">Confirm Selection</button>
+            <!-- Step 1: Merge Duplicates -->
+            <div class="step-content" id="step-1-content">
+                <div class="step-description">
+                    <strong>Clean up duplicate character names</strong>
+                    <p>Click characters to select for merging. When 2+ are selected, merge options appear.</p>
+                </div>
+
+                <div class="character-review-list" id="character-merge-list">
+                    <!-- Characters rendered here -->
+                </div>
+
+                <!-- Inline Merge Prompt -->
+                <div class="merge-prompt" id="merge-prompt" style="display: none;">
+                    <div class="merge-prompt-header">Merge Characters</div>
+                    <div class="merge-prompt-body">
+                        <div class="merge-preview">
+                            <span class="merge-preview-label">Selected:</span>
+                            <div class="merge-preview-names" id="merge-preview-names"></div>
+                        </div>
+                        <div class="merge-options" id="merge-options">
+                            <!-- Radio options for names -->
+                        </div>
+                        <div class="merge-custom-option">
+                            <label class="merge-radio-label">
+                                <input type="radio" name="merge-name" id="merge-custom-radio" value="custom">
+                                <span>Custom name:</span>
+                            </label>
+                            <input type="text" class="merge-custom-input" id="merge-custom-input" placeholder="Enter custom name..." oninput="document.getElementById('merge-custom-radio').checked = true;">
+                        </div>
+                    </div>
+                    <div class="merge-prompt-actions">
+                        <button class="modal-btn" onclick="cancelMerge()">Cancel</button>
+                        <button class="modal-btn primary" onclick="confirmMerge()">Merge Characters</button>
+                    </div>
+                </div>
+
+                <div class="step-actions">
+                    <button class="modal-btn" onclick="closeCharacterReviewModal()">Cancel</button>
+                    <button class="modal-btn primary" onclick="goToStep2()">Continue to Selection →</button>
+                </div>
+            </div>
+
+            <!-- Step 2: Confirm Selection -->
+            <div class="step-content" id="step-2-content" style="display: none;">
+                <div class="step-description">
+                    <strong>Select characters to include in breakdown</strong>
+                    <p>Check the characters you want to track. Unchecked characters will not appear in your breakdown.</p>
+                </div>
+
+                <div class="selection-controls">
+                    <label class="auto-select-toggle">
+                        <input type="checkbox" id="auto-select-high" checked onchange="toggleAutoSelectHigh()">
+                        <span>Auto-select high confidence</span>
+                    </label>
+                    <div class="selection-buttons">
+                        <button class="modal-btn small" onclick="selectAllCharacters()">Select All</button>
+                        <button class="modal-btn small" onclick="deselectAllCharacters()">Deselect All</button>
+                    </div>
+                </div>
+
+                <div class="character-review-list" id="character-selection-list">
+                    <!-- Characters with checkboxes rendered here -->
+                </div>
+
+                <div class="selection-stats" id="selection-stats">
+                    <!-- Stats rendered here -->
+                </div>
+
+                <div class="step-actions">
+                    <button class="modal-btn" onclick="goToStep1()">← Back to Merging</button>
+                    <button class="modal-btn primary" onclick="confirmCharacterSelection()">Confirm & Process</button>
+                </div>
             </div>
         </div>
     </div>
