@@ -236,7 +236,7 @@ function addModalStyles() {
         .character-confirm-content-v2 {
             max-width: 650px;
             width: 95%;
-            max-height: 85vh;
+            max-height: 90vh;
             padding: 0;
             overflow: hidden;
             display: flex;
@@ -252,8 +252,9 @@ function addModalStyles() {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 20px 24px;
+            padding: 16px 24px;
             border-bottom: 1px solid var(--glass-border);
+            flex-shrink: 0;
         }
 
         .confirm-title {
@@ -280,9 +281,10 @@ function addModalStyles() {
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 20px 24px;
+            padding: 14px 24px;
             gap: 12px;
             background: rgba(0, 0, 0, 0.2);
+            flex-shrink: 0;
         }
 
         .confirm-step-item {
@@ -335,13 +337,15 @@ function addModalStyles() {
             flex: 1;
             display: flex;
             flex-direction: column;
-            overflow: hidden;
+            overflow-y: auto;
             padding: 0 24px;
+            min-height: 0;
         }
 
         .confirm-step-description {
             text-align: center;
-            padding: 16px 0;
+            padding: 12px 0;
+            flex-shrink: 0;
         }
 
         .confirm-step-description strong {
@@ -358,14 +362,14 @@ function addModalStyles() {
 
         /* Character List */
         .confirm-character-list {
-            flex: 1;
             overflow-y: auto;
             border: 1px solid var(--glass-border);
             border-radius: 10px;
             background: rgba(0, 0, 0, 0.2);
-            margin-bottom: 16px;
-            min-height: 150px;
-            max-height: 250px;
+            margin-bottom: 12px;
+            min-height: 120px;
+            max-height: 180px;
+            flex-shrink: 0;
         }
 
         /* Merge List Items */
@@ -472,21 +476,22 @@ function addModalStyles() {
             background: rgba(30, 30, 35, 0.95);
             border: 2px solid var(--accent-gold);
             border-radius: 10px;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
             overflow: visible;
+            flex-shrink: 0;
         }
 
         .confirm-merge-prompt-header {
-            padding: 12px 16px;
+            padding: 10px 14px;
             background: rgba(212, 175, 122, 0.2);
             font-weight: 600;
-            font-size: 1em;
+            font-size: 0.9375em;
             color: var(--accent-gold);
             border-bottom: 1px solid rgba(212, 175, 122, 0.3);
         }
 
         .confirm-merge-prompt-body {
-            padding: 16px;
+            padding: 12px 14px;
             background: rgba(0, 0, 0, 0.3);
         }
 
@@ -669,9 +674,11 @@ function addModalStyles() {
         .confirm-step-actions {
             display: flex;
             justify-content: space-between;
-            padding: 16px 0 20px;
+            padding: 12px 0 16px;
             border-top: 1px solid var(--glass-border);
             margin-top: auto;
+            flex-shrink: 0;
+            background: var(--glass-bg);
         }
 
         /* Empty State */
