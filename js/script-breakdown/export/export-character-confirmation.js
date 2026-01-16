@@ -469,22 +469,26 @@ function addModalStyles() {
 
         /* Merge Prompt */
         .confirm-merge-prompt {
-            background: rgba(212, 175, 122, 0.1);
-            border: 1px solid rgba(212, 175, 122, 0.3);
+            background: rgba(30, 30, 35, 0.95);
+            border: 2px solid var(--accent-gold);
             border-radius: 10px;
             margin-bottom: 16px;
-            overflow: hidden;
+            overflow: visible;
         }
 
         .confirm-merge-prompt-header {
             padding: 12px 16px;
-            background: rgba(212, 175, 122, 0.15);
+            background: rgba(212, 175, 122, 0.2);
             font-weight: 600;
-            font-size: 0.9375em;
+            font-size: 1em;
             color: var(--accent-gold);
+            border-bottom: 1px solid rgba(212, 175, 122, 0.3);
         }
 
-        .confirm-merge-prompt-body { padding: 16px; }
+        .confirm-merge-prompt-body {
+            padding: 16px;
+            background: rgba(0, 0, 0, 0.3);
+        }
 
         .confirm-merge-preview {
             display: flex;
@@ -526,12 +530,15 @@ function addModalStyles() {
             align-items: center;
             gap: 10px;
             cursor: pointer;
-            padding: 8px 12px;
+            padding: 10px 14px;
             border-radius: 6px;
             transition: background 0.2s;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            color: var(--text-light);
         }
 
-        .confirm-merge-radio-label:hover { background: rgba(255, 255, 255, 0.05); }
+        .confirm-merge-radio-label:hover { background: rgba(212, 175, 122, 0.15); }
 
         .confirm-merge-radio-label input[type="radio"] {
             width: 18px;
@@ -831,14 +838,22 @@ window.toggleForConfirmMerge = function(index) {
  * Show the merge prompt with selected character options
  */
 function showMergePrompt() {
+    console.log('showMergePrompt called, selectedForMerge size:', selectedForMerge.size);
+
     const prompt = document.getElementById('confirm-merge-prompt');
     const previewNames = document.getElementById('confirm-merge-preview-names');
     const optionsContainer = document.getElementById('confirm-merge-options');
 
-    if (!prompt || !previewNames || !optionsContainer) return;
+    console.log('Elements found:', { prompt: !!prompt, previewNames: !!previewNames, optionsContainer: !!optionsContainer });
+
+    if (!prompt || !previewNames || !optionsContainer) {
+        console.error('Merge prompt elements not found!');
+        return;
+    }
 
     const characters = state.detectedCharacters || [];
     const selected = Array.from(selectedForMerge).map(idx => characters[idx]).filter(Boolean);
+    console.log('Selected characters for merge:', selected.map(c => c.name));
 
     // Render preview pills
     previewNames.innerHTML = selected.map(c => `
@@ -858,6 +873,7 @@ function showMergePrompt() {
     if (customInput) customInput.value = '';
 
     prompt.style.display = 'block';
+    console.log('Merge prompt should now be visible');
 }
 
 /**
@@ -881,9 +897,14 @@ window.cancelConfirmMerge = function() {
  * Execute the merge
  */
 window.executeConfirmMerge = function() {
+    console.log('executeConfirmMerge called');
+
     const characters = state.detectedCharacters || [];
     const indices = Array.from(selectedForMerge);
+    console.log('Indices to merge:', indices);
+
     const selected = indices.map(idx => characters[idx]).filter(Boolean);
+    console.log('Characters to merge:', selected.map(c => c.name));
 
     if (selected.length < 2) {
         alert('Please select at least 2 characters to merge');
