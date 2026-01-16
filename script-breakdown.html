@@ -345,14 +345,17 @@
         <div class="modal-content">
             <div class="modal-title">Characters Not Confirmed</div>
             <div class="modal-section">
-                <p>Please detect and review characters before running Auto Tag.</p>
+                <p>Please confirm characters before running Auto Tag.</p>
                 <p style="margin-top: 12px; color: var(--text-muted);">
-                    Click "Detect & Review Characters" to parse your script and select which characters to track.
+                    If you haven't imported a script yet, please import one first. Characters are detected automatically after import.
+                </p>
+                <p style="margin-top: 8px; color: var(--text-muted);">
+                    If you've already imported a script, click below to review and confirm your character selections.
                 </p>
             </div>
             <div class="modal-actions">
                 <button class="modal-btn" onclick="closeCharactersNotConfirmedModal()">Cancel</button>
-                <button class="modal-btn primary" onclick="closeCharactersNotConfirmedModal(); reviewCharacters();">Detect & Review Characters</button>
+                <button class="modal-btn primary" onclick="closeCharactersNotConfirmedModal(); reviewCharacters();">Review Characters</button>
             </div>
         </div>
     </div>
@@ -616,7 +619,7 @@
                     Process All Unprocessed
                 </button>
                 <button class="tools-panel-btn" onclick="reviewCharacters(); closeToolsPanel();">
-                    Detect & Review Characters
+                    Review Characters
                 </button>
             </div>
 
