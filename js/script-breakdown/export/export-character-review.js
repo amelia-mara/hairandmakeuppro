@@ -1,18 +1,32 @@
 /**
  * export-character-review.js
- * Character review modal functionality
+ * Character review modal functionality - Two Step Workflow
  *
- * Responsibilities:
- * - Open character review modal
- * - Display detected characters for review
- * - Handle character selection and confirmation
- * - Merge selected characters
+ * Step 1: Merge Duplicates - Click to select characters for merging
+ * Step 2: Confirm Selection - Check characters to include in breakdown
+ *
+ * IMPORTANT: This file only handles UI rendering and interaction.
+ * The data flow (extraction → confirmation → profile creation) is PRESERVED.
  */
 
 import { state } from '../main.js';
 import { renderCharacterTabs, renderCharacterTabPanels } from '../character-panel.js';
 import { extractCharactersFromScenes, normalizeCharacterName, initializeCharacterTabs } from './export-deep-analysis.js';
 import { saveProject } from './export-project.js';
+
+// ============================================================================
+// MODULE STATE
+// ============================================================================
+
+// Current step (1 = merge, 2 = selection)
+let currentStep = 1;
+
+// Characters selected for merging (indices into window.detectedCharacterData)
+let selectedForMerge = new Set();
+
+// ============================================================================
+// CHARACTER EXTRACTION (PRESERVED FROM ORIGINAL)
+// ============================================================================
 
 /**
  * Extract characters from scene breakdowns (fallback if screenplay parsing fails)
@@ -101,8 +115,390 @@ function extractCharactersFromBreakdowns() {
     return characters;
 }
 
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+/**
+ * Get confidence display info based on dialogue count
+ */
+function getConfidenceDisplay(dialogueCount) {
+    if (dialogueCount >= 5) {
+        return { label: 'High', bgColor: 'rgba(16, 185, 129, 0.2)', color: '#10b981' };
+    } else if (dialogueCount >= 3) {
+        return { label: 'Medium', bgColor: 'rgba(245, 158, 11, 0.2)', color: '#f59e0b' };
+    }
+    return { label: 'Low', bgColor: 'rgba(107, 114, 128, 0.2)', color: '#6b7280' };
+}
+
+/**
+ * Update step indicator UI
+ */
+function updateStepIndicators() {
+    const step1 = document.getElementById('step-indicator-1');
+    const step2 = document.getElementById('step-indicator-2');
+
+    if (step1 && step2) {
+        step1.classList.toggle('active', currentStep === 1);
+        step2.classList.toggle('active', currentStep === 2);
+    }
+}
+
+// ============================================================================
+// STEP 1: MERGE DUPLICATES
+// ============================================================================
+
+/**
+ * Render the merge list (Step 1)
+ */
+function renderMergeList() {
+    const container = document.getElementById('character-merge-list');
+    if (!container) return;
+
+    const characters = window.detectedCharacterData || [];
+
+    if (characters.length === 0) {
+        container.innerHTML = `
+            <div class="empty-character-list">
+                <div class="empty-icon">👥</div>
+                <div class="empty-text">No characters detected</div>
+                <p class="empty-hint">Import a script and run character detection first.</p>
+            </div>
+        `;
+        return;
+    }
+
+    // Separate active and merged characters
+    const activeCharacters = characters.filter(c => !c.merged);
+    const mergedCharacters = characters.filter(c => c.merged);
+
+    let html = activeCharacters.map((char, idx) => {
+        const originalIndex = characters.indexOf(char);
+        const isSelected = selectedForMerge.has(originalIndex);
+        const conf = getConfidenceDisplay(char.dialogueCount);
+
+        return `
+            <div class="character-merge-item ${isSelected ? 'selected' : ''}"
+                 data-index="${originalIndex}"
+                 onclick="toggleForMerge(${originalIndex})">
+                <div class="character-merge-info">
+                    <div class="character-merge-name">${char.primaryName}</div>
+                    <div class="character-merge-meta">
+                        ${char.dialogueCount} dialogue${char.dialogueCount !== 1 ? 's' : ''} ·
+                        ${char.sceneAppearances?.length || 0} scene${(char.sceneAppearances?.length || 0) !== 1 ? 's' : ''}
+                    </div>
+                </div>
+                <div class="character-merge-badge" style="background: ${conf.bgColor}; color: ${conf.color};">
+                    ${conf.label}
+                </div>
+                <div class="character-select-indicator ${isSelected ? 'active' : ''}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    // Add merged characters section if any
+    if (mergedCharacters.length > 0) {
+        html += `
+            <div class="merged-characters-section">
+                <div class="merged-section-label">Merged Characters</div>
+                ${mergedCharacters.map(char => `
+                    <div class="character-merge-item merged">
+                        <div class="character-merge-info">
+                            <div class="character-merge-name">${char.primaryName}</div>
+                            <div class="character-merge-meta">merged into ${char.mergedInto || 'another character'}</div>
+                        </div>
+                        <div class="merged-badge">MERGED</div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    container.innerHTML = html;
+}
+
+/**
+ * Toggle character selection for merging
+ */
+window.toggleForMerge = function(index) {
+    const characters = window.detectedCharacterData || [];
+    const char = characters[index];
+    if (!char || char.merged) return;
+
+    if (selectedForMerge.has(index)) {
+        selectedForMerge.delete(index);
+    } else {
+        selectedForMerge.add(index);
+    }
+
+    renderMergeList();
+
+    // Show/hide merge prompt based on selection
+    if (selectedForMerge.size >= 2) {
+        showMergePrompt();
+    } else {
+        hideMergePrompt();
+    }
+};
+
+/**
+ * Show the merge prompt with selected character options
+ */
+function showMergePrompt() {
+    const prompt = document.getElementById('merge-prompt');
+    const previewNames = document.getElementById('merge-preview-names');
+    const optionsContainer = document.getElementById('merge-options');
+
+    if (!prompt || !previewNames || !optionsContainer) return;
+
+    const characters = window.detectedCharacterData || [];
+    const selected = Array.from(selectedForMerge).map(idx => characters[idx]).filter(Boolean);
+
+    // Render preview pills
+    previewNames.innerHTML = selected.map(c => `
+        <span class="merge-name-pill">${c.primaryName}</span>
+    `).join('');
+
+    // Render radio options for each name
+    optionsContainer.innerHTML = selected.map((c, i) => `
+        <label class="merge-radio-label">
+            <input type="radio" name="merge-name" value="${c.primaryName}" ${i === 0 ? 'checked' : ''}>
+            <span>${c.primaryName}</span>
+        </label>
+    `).join('');
+
+    // Clear custom input
+    const customInput = document.getElementById('merge-custom-input');
+    if (customInput) customInput.value = '';
+
+    prompt.style.display = 'block';
+}
+
+/**
+ * Hide the merge prompt
+ */
+function hideMergePrompt() {
+    const prompt = document.getElementById('merge-prompt');
+    if (prompt) prompt.style.display = 'none';
+}
+
+/**
+ * Cancel merge operation
+ */
+window.cancelMerge = function() {
+    selectedForMerge.clear();
+    hideMergePrompt();
+    renderMergeList();
+};
+
+/**
+ * Confirm and execute the merge
+ */
+window.confirmMerge = function() {
+    const characters = window.detectedCharacterData || [];
+    const indices = Array.from(selectedForMerge);
+    const selected = indices.map(idx => characters[idx]).filter(Boolean);
+
+    if (selected.length < 2) {
+        alert('Please select at least 2 characters to merge');
+        return;
+    }
+
+    // Get the selected name (radio button or custom)
+    const customRadio = document.getElementById('merge-custom-radio');
+    const customInput = document.getElementById('merge-custom-input');
+    let primaryName;
+
+    if (customRadio && customRadio.checked && customInput && customInput.value.trim()) {
+        primaryName = customInput.value.trim();
+    } else {
+        const selectedRadio = document.querySelector('input[name="merge-name"]:checked');
+        primaryName = selectedRadio ? selectedRadio.value : selected[0].primaryName;
+    }
+
+    console.log(`Merging ${selected.length} characters into "${primaryName}"`);
+
+    // Create merged character
+    const merged = {
+        primaryName: primaryName,
+        aliases: [...new Set(selected.flatMap(c => c.aliases || [c.primaryName]))],
+        firstScene: Math.min(...selected.map(c => c.firstScene || 0)),
+        sceneAppearances: [...new Set(selected.flatMap(c => c.sceneAppearances || []))].sort((a, b) => a - b),
+        dialogueCount: selected.reduce((sum, c) => sum + (c.dialogueCount || 0), 0),
+        isConfirmed: false
+    };
+
+    console.log(`  Combined ${merged.dialogueCount} dialogue lines`);
+    console.log(`  Appears in ${merged.sceneAppearances.length} scenes`);
+
+    // Mark merged characters
+    indices.forEach(idx => {
+        if (characters[idx] && characters[idx].primaryName !== primaryName) {
+            characters[idx].merged = true;
+            characters[idx].mergedInto = primaryName;
+        }
+    });
+
+    // Remove old entries and add merged one
+    window.detectedCharacterData = characters.filter((c, i) => !indices.includes(i) || c.primaryName === primaryName);
+
+    // If primary name was from custom or not in original selection, add merged
+    const existingPrimary = window.detectedCharacterData.find(c => c.primaryName === primaryName);
+    if (!existingPrimary) {
+        window.detectedCharacterData.push(merged);
+    } else {
+        // Update the existing one with merged data
+        Object.assign(existingPrimary, merged);
+    }
+
+    // Re-sort by dialogue count
+    window.detectedCharacterData.sort((a, b) => b.dialogueCount - a.dialogueCount);
+
+    // Reset selection and re-render
+    selectedForMerge.clear();
+    hideMergePrompt();
+    renderMergeList();
+};
+
+// ============================================================================
+// STEP 2: CONFIRM SELECTION
+// ============================================================================
+
+/**
+ * Render the selection list (Step 2)
+ */
+function renderSelectionList() {
+    const container = document.getElementById('character-selection-list');
+    if (!container) return;
+
+    const characters = (window.detectedCharacterData || []).filter(c => !c.merged);
+    const autoSelectHigh = document.getElementById('auto-select-high')?.checked ?? true;
+
+    if (characters.length === 0) {
+        container.innerHTML = `
+            <div class="empty-character-list">
+                <div class="empty-icon">👥</div>
+                <div class="empty-text">No characters to select</div>
+                <p class="empty-hint">Go back and detect characters first.</p>
+            </div>
+        `;
+        updateSelectionStats();
+        return;
+    }
+
+    container.innerHTML = characters.map((char, index) => {
+        const conf = getConfidenceDisplay(char.dialogueCount);
+        const isChecked = autoSelectHigh ? char.dialogueCount >= 3 : false;
+
+        // Check if previously selected (stored in character object)
+        const checked = char.selected !== undefined ? char.selected : isChecked;
+
+        return `
+            <div class="character-selection-item">
+                <input type="checkbox"
+                       id="char-select-${index}"
+                       data-character="${char.primaryName}"
+                       data-index="${index}"
+                       ${checked ? 'checked' : ''}
+                       onchange="updateSelectionStats()">
+                <div class="character-selection-info">
+                    <label for="char-select-${index}" class="character-selection-name">${char.primaryName}</label>
+                    <div class="character-selection-meta">
+                        ${char.dialogueCount} dialogue${char.dialogueCount !== 1 ? 's' : ''} ·
+                        ${char.sceneAppearances?.length || 0} scene${(char.sceneAppearances?.length || 0) !== 1 ? 's' : ''}
+                    </div>
+                </div>
+                <div class="character-merge-badge" style="background: ${conf.bgColor}; color: ${conf.color};">
+                    ${conf.label}
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    updateSelectionStats();
+}
+
+/**
+ * Update selection statistics display
+ */
+window.updateSelectionStats = function() {
+    const statsContainer = document.getElementById('selection-stats');
+    if (!statsContainer) return;
+
+    const checkboxes = document.querySelectorAll('#character-selection-list input[type="checkbox"]');
+    const total = checkboxes.length;
+    const selected = Array.from(checkboxes).filter(cb => cb.checked).length;
+
+    statsContainer.innerHTML = `
+        <div class="stat-item">
+            <div class="stat-value">${total}</div>
+            <div class="stat-label">Total</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value">${selected}</div>
+            <div class="stat-label">Selected</div>
+        </div>
+    `;
+};
+
+/**
+ * Toggle auto-select high confidence characters
+ */
+window.toggleAutoSelectHigh = function() {
+    const autoSelectHigh = document.getElementById('auto-select-high')?.checked ?? true;
+    const checkboxes = document.querySelectorAll('#character-selection-list input[type="checkbox"]');
+    const characters = (window.detectedCharacterData || []).filter(c => !c.merged);
+
+    checkboxes.forEach((cb, index) => {
+        if (characters[index]) {
+            cb.checked = autoSelectHigh ? characters[index].dialogueCount >= 3 : cb.checked;
+        }
+    });
+
+    updateSelectionStats();
+};
+
+// ============================================================================
+// NAVIGATION
+// ============================================================================
+
+/**
+ * Navigate to Step 1 (Merge)
+ */
+window.goToStep1 = function() {
+    currentStep = 1;
+    updateStepIndicators();
+
+    document.getElementById('step-1-content').style.display = 'flex';
+    document.getElementById('step-2-content').style.display = 'none';
+
+    renderMergeList();
+};
+
+/**
+ * Navigate to Step 2 (Selection)
+ */
+window.goToStep2 = function() {
+    currentStep = 2;
+    updateStepIndicators();
+
+    document.getElementById('step-1-content').style.display = 'none';
+    document.getElementById('step-2-content').style.display = 'flex';
+
+    renderSelectionList();
+};
+
+// ============================================================================
+// MAIN ENTRY POINT (PRESERVED INTERFACE)
+// ============================================================================
+
 /**
  * Open character review modal to review and edit detected characters
+ * THIS IS THE MAIN ENTRY POINT - Interface is preserved from original
  */
 export function reviewCharacters() {
     if (!state.scenes || state.scenes.length === 0) {
@@ -112,7 +508,7 @@ export function reviewCharacters() {
 
     console.log('Detect & Review Characters - Starting intelligent character detection...');
 
-    // Run character detection
+    // Run character detection (PRESERVED FROM ORIGINAL)
     let detectedChars = extractCharactersFromScenes();
 
     console.log(`Screenplay parsing found ${detectedChars.length} characters`);
@@ -124,111 +520,43 @@ export function reviewCharacters() {
         console.log(`Extracted ${detectedChars.length} characters from scene breakdowns`);
     }
 
-    // Store detected characters in state
+    // Store detected characters in state (PRESERVED)
     state.detectedCharacters = detectedChars.map(c => c.primaryName);
 
-    // Store full character data globally for merge functionality
+    // Store full character data globally for merge functionality (PRESERVED)
     window.detectedCharacterData = detectedChars;
 
     console.log(`Final character count: ${detectedChars.length} unique characters`);
 
+    // Get modal elements
     const modal = document.getElementById('character-review-modal');
-    const reviewList = document.getElementById('character-review-list');
-
-    if (!modal || !reviewList) {
-        console.error('Character review modal elements not found');
+    if (!modal) {
+        console.error('Character review modal not found');
         return;
     }
 
-    if (detectedChars.length === 0) {
-        reviewList.innerHTML = `
-            <div style="padding: 24px; text-align: center; color: var(--text-muted);">
-                <p style="font-size: 1.1em; font-weight: 600; margin-bottom: 16px;">No characters detected</p>
+    // Reset state for new session
+    currentStep = 1;
+    selectedForMerge.clear();
 
-                <p style="margin-bottom: 16px;">
-                    Character detection works in two ways:
-                </p>
+    // Update step indicators
+    updateStepIndicators();
 
-                <div style="text-align: left; max-width: 500px; margin: 0 auto;">
-                    <div style="background: rgba(212, 175, 122, 0.1); padding: 12px; border-radius: 6px; margin-bottom: 12px;">
-                        <strong style="color: var(--accent-gold);">Method 1: Screenplay Parsing</strong>
-                        <div style="font-size: 0.875em; margin-top: 6px;">
-                            Requires proper screenplay formatting:
-                            <br>- Character names in ALL CAPS
-                            <br>- Character names indented/centered
-                            <br>- Dialogue following character names
-                        </div>
-                    </div>
+    // Show step 1, hide step 2
+    const step1 = document.getElementById('step-1-content');
+    const step2 = document.getElementById('step-2-content');
+    if (step1) step1.style.display = 'flex';
+    if (step2) step2.style.display = 'none';
 
-                    <div style="background: rgba(212, 175, 122, 0.1); padding: 12px; border-radius: 6px;">
-                        <strong style="color: var(--accent-gold);">Method 2: Auto-Tag Results</strong>
-                        <div style="font-size: 0.875em; margin-top: 6px;">
-                            Uses characters identified by AI during Auto-Tag
-                            <br>- Run "Auto Tag Script" first
-                            <br>- Then run "Detect & Review Characters"
-                        </div>
-                    </div>
-                </div>
+    // Hide merge prompt initially
+    hideMergePrompt();
 
-                <p style="margin-top: 20px; font-size: 0.875em; color: var(--text-muted);">
-                    <strong>Tip:</strong> If your script doesn't use standard formatting,
-                    <br>run "Auto Tag Script" first, then try character detection again.
-                </p>
-            </div>
-        `;
-    } else {
-        reviewList.innerHTML = detectedChars.map((char, index) => {
-            let confidenceLabel = '';
-            let confidenceColor = '';
-            if (char.dialogueCount >= 5) {
-                confidenceLabel = 'High confidence';
-                confidenceColor = '#10b981';
-            } else if (char.dialogueCount >= 3) {
-                confidenceLabel = 'Medium confidence';
-                confidenceColor = '#f59e0b';
-            } else {
-                confidenceLabel = 'Low confidence';
-                confidenceColor = '#6b7280';
-            }
+    // Render merge list
+    renderMergeList();
 
-            const uniqueAliases = [...new Set(char.aliases)]
-                .filter(a => a !== char.primaryName && a.toUpperCase() !== char.primaryName.toUpperCase())
-                .slice(0, 3);
-
-            const aliasesHtml = uniqueAliases.length > 0
-                ? `<div style="font-size: 0.75em; color: var(--text-muted); margin-top: 2px;">
-                       Also appears as: ${uniqueAliases.join(', ')}
-                   </div>`
-                : '';
-
-            const isChecked = char.dialogueCount >= 3 ? 'checked' : '';
-
-            return `
-                <div class="character-review-item" style="padding: 12px; border-bottom: 1px solid var(--border-light);">
-                    <div style="display: flex; align-items: flex-start; gap: 12px;">
-                        <input type="checkbox" ${isChecked} id="char-review-${index}" data-character="${char.primaryName}" data-index="${index}" style="width: 18px; height: 18px; cursor: pointer; margin-top: 2px;">
-                        <div style="flex: 1;">
-                            <label for="char-review-${index}" style="font-weight: 600; color: var(--text-primary); cursor: pointer; display: block;">
-                                ${char.primaryName}
-                            </label>
-                            ${aliasesHtml}
-                        </div>
-                        <div style="text-align: right;">
-                            <div style="font-size: 0.875em; color: var(--text-muted); padding: 4px 8px; background: var(--bg-dark); border-radius: 4px; margin-bottom: 4px;">
-                                ${char.dialogueCount} dialogue${char.dialogueCount !== 1 ? 's' : ''}
-                            </div>
-                            <div style="font-size: 0.75em; color: ${confidenceColor}; font-weight: 600;">
-                                ${confidenceLabel}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }).join('');
-    }
-
+    // Show modal
     modal.style.display = 'flex';
-    console.log('Character review modal opened with enhanced data');
+    console.log('Character review modal opened with two-step workflow');
 }
 
 /**
@@ -240,26 +568,29 @@ export function closeCharacterReviewModal() {
 }
 
 /**
- * Select all characters in review modal
+ * Select all characters in review modal (Step 2)
  */
 export function selectAllCharacters() {
-    const checkboxes = document.querySelectorAll('#character-review-list input[type="checkbox"]');
+    const checkboxes = document.querySelectorAll('#character-selection-list input[type="checkbox"]');
     checkboxes.forEach(cb => cb.checked = true);
+    updateSelectionStats();
 }
 
 /**
- * Deselect all characters in review modal
+ * Deselect all characters in review modal (Step 2)
  */
 export function deselectAllCharacters() {
-    const checkboxes = document.querySelectorAll('#character-review-list input[type="checkbox"]');
+    const checkboxes = document.querySelectorAll('#character-selection-list input[type="checkbox"]');
     checkboxes.forEach(cb => cb.checked = false);
+    updateSelectionStats();
 }
 
 /**
  * Confirm character selection and update character tabs
+ * THIS IS THE MAIN OUTPUT - Interface is preserved from original
  */
 export function confirmCharacterSelection() {
-    const checkboxes = document.querySelectorAll('#character-review-list input[type="checkbox"]');
+    const checkboxes = document.querySelectorAll('#character-selection-list input[type="checkbox"]');
     const selectedCharacters = new Set();
 
     checkboxes.forEach(cb => {
@@ -276,20 +607,20 @@ export function confirmCharacterSelection() {
 
     console.log(`User confirmed ${selectedCharacters.size} characters`);
 
-    // Store confirmed characters in state
+    // Store confirmed characters in state (PRESERVED)
     state.confirmedCharacters = selectedCharacters;
     state.characters = selectedCharacters;
 
     console.log('Confirmed characters saved to state.confirmedCharacters:', Array.from(state.confirmedCharacters));
 
-    // Re-initialize character tabs with confirmed characters
+    // Re-initialize character tabs with confirmed characters (PRESERVED)
     initializeCharacterTabs();
 
-    // Re-render character tabs and panels
+    // Re-render character tabs and panels (PRESERVED)
     renderCharacterTabs();
     renderCharacterTabPanels();
 
-    // Save project
+    // Save project (PRESERVED)
     saveProject();
 
     // Close modal
@@ -297,48 +628,6 @@ export function confirmCharacterSelection() {
 
     console.log(`Character tabs generated for ${selectedCharacters.size} characters`);
     alert(`${selectedCharacters.size} character${selectedCharacters.size !== 1 ? 's' : ''} confirmed!\n\nCharacter tabs created. You can now run "Auto Tag Script" to detect production elements.`);
-}
-
-/**
- * Merge selected characters in the review modal
- */
-export function mergeSelectedCharacters() {
-    const checkboxes = document.querySelectorAll('#character-review-list input[type="checkbox"]:checked');
-
-    if (checkboxes.length < 2) {
-        alert('Please select at least 2 characters to merge');
-        return;
-    }
-
-    const indices = Array.from(checkboxes).map(cb => parseInt(cb.dataset.index));
-    const characters = indices.map(i => window.detectedCharacterData[i]);
-
-    const names = characters.map(c => c.primaryName).join('\n');
-    const primaryName = prompt(`Select primary name for merged character:\n\n${names}\n\nEnter the name to use:`);
-
-    if (!primaryName || !primaryName.trim()) {
-        return;
-    }
-
-    const merged = {
-        primaryName: primaryName.trim(),
-        aliases: [...new Set(characters.flatMap(c => c.aliases))],
-        firstScene: Math.min(...characters.map(c => c.firstScene)),
-        sceneAppearances: [...new Set(characters.flatMap(c => c.sceneAppearances))].sort((a,b) => a-b),
-        dialogueCount: characters.reduce((sum, c) => sum + c.dialogueCount, 0),
-        isConfirmed: false
-    };
-
-    console.log(`Merging ${characters.length} characters into "${primaryName}"`);
-    console.log(`  Combined ${merged.dialogueCount} dialogue lines`);
-    console.log(`  Appears in ${merged.sceneAppearances.length} scenes`);
-
-    window.detectedCharacterData = window.detectedCharacterData.filter((c, i) => !indices.includes(i));
-    window.detectedCharacterData.push(merged);
-    window.detectedCharacterData.sort((a, b) => b.dialogueCount - a.dialogueCount);
-
-    // Refresh modal
-    reviewCharacters();
 }
 
 // ============================================================================
@@ -350,13 +639,12 @@ window.closeCharacterReviewModal = closeCharacterReviewModal;
 window.selectAllCharacters = selectAllCharacters;
 window.deselectAllCharacters = deselectAllCharacters;
 window.confirmCharacterSelection = confirmCharacterSelection;
-window.mergeSelectedCharacters = mergeSelectedCharacters;
+// Note: mergeSelectedCharacters is replaced by the new inline merge UI
 
 export default {
     reviewCharacters,
     closeCharacterReviewModal,
     selectAllCharacters,
     deselectAllCharacters,
-    confirmCharacterSelection,
-    mergeSelectedCharacters
+    confirmCharacterSelection
 };

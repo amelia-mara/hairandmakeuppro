@@ -4900,6 +4900,491 @@
             transform: translateY(-1px);
         }
 
+        .modal-btn.small {
+            padding: 6px 12px;
+            font-size: 0.8125em;
+        }
+
+        /* ============================================================================
+           CHARACTER REVIEW MODAL V2 - Two Step Workflow
+           ============================================================================ */
+
+        .character-review-modal-v2 {
+            max-width: 650px;
+            width: 95%;
+            max-height: 85vh;
+            padding: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .character-review-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .character-review-title {
+            font-size: 1.25em;
+            font-weight: 600;
+            color: var(--text-light);
+        }
+
+        .character-review-close {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.5em;
+            cursor: pointer;
+            padding: 4px 8px;
+            line-height: 1;
+            transition: color 0.2s;
+        }
+
+        .character-review-close:hover {
+            color: var(--text-light);
+        }
+
+        /* Step Indicator */
+        .step-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px 24px;
+            gap: 12px;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .step-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            opacity: 0.5;
+            transition: opacity 0.3s;
+        }
+
+        .step-item.active {
+            opacity: 1;
+        }
+
+        .step-circle {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.875em;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid var(--glass-border);
+            color: var(--text-muted);
+            transition: all 0.3s;
+        }
+
+        .step-item.active .step-circle {
+            background: linear-gradient(135deg, var(--accent-gold), #c09861);
+            border-color: var(--accent-gold);
+            color: var(--bg-dark);
+        }
+
+        .step-label {
+            font-size: 0.875em;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        .step-item.active .step-label {
+            color: var(--text-light);
+        }
+
+        .step-connector {
+            width: 60px;
+            height: 2px;
+            background: var(--glass-border);
+        }
+
+        /* Step Content */
+        .step-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            padding: 0 24px;
+        }
+
+        .step-description {
+            text-align: center;
+            padding: 16px 0;
+        }
+
+        .step-description strong {
+            display: block;
+            font-size: 1em;
+            margin-bottom: 6px;
+            color: var(--text-light);
+        }
+
+        .step-description p {
+            font-size: 0.875em;
+            color: var(--text-muted);
+        }
+
+        /* Character List (for both steps) */
+        .character-review-modal-v2 .character-review-list {
+            flex: 1;
+            overflow-y: auto;
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            margin-bottom: 16px;
+            min-height: 200px;
+            max-height: 300px;
+        }
+
+        /* Step 1: Merge List Items */
+        .character-merge-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--glass-border);
+            cursor: pointer;
+            transition: all 0.2s;
+            gap: 12px;
+        }
+
+        .character-merge-item:last-child {
+            border-bottom: none;
+        }
+
+        .character-merge-item:hover {
+            background: rgba(212, 175, 122, 0.08);
+        }
+
+        .character-merge-item.selected {
+            background: rgba(212, 175, 122, 0.15);
+            border-left: 3px solid var(--accent-gold);
+        }
+
+        .character-merge-item.merged {
+            opacity: 0.5;
+            cursor: default;
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .character-merge-info {
+            flex: 1;
+        }
+
+        .character-merge-name {
+            font-weight: 600;
+            color: var(--text-light);
+            margin-bottom: 2px;
+        }
+
+        .character-merge-meta {
+            font-size: 0.8125em;
+            color: var(--text-muted);
+        }
+
+        .character-merge-badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.6875em;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .character-select-indicator {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .character-select-indicator svg {
+            width: 14px;
+            height: 14px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .character-select-indicator.active {
+            background: var(--accent-gold);
+            border-color: var(--accent-gold);
+        }
+
+        .character-select-indicator.active svg {
+            opacity: 1;
+            color: var(--bg-dark);
+        }
+
+        .merged-badge {
+            background: rgba(107, 114, 128, 0.3);
+            color: #9ca3af;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.6875em;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .merged-characters-section {
+            border-top: 2px solid var(--glass-border);
+            padding-top: 8px;
+            margin-top: 8px;
+        }
+
+        .merged-section-label {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 8px 16px 4px;
+        }
+
+        /* Merge Prompt */
+        .merge-prompt {
+            background: rgba(212, 175, 122, 0.1);
+            border: 1px solid rgba(212, 175, 122, 0.3);
+            border-radius: 10px;
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+
+        .merge-prompt-header {
+            padding: 12px 16px;
+            background: rgba(212, 175, 122, 0.15);
+            font-weight: 600;
+            font-size: 0.9375em;
+            color: var(--accent-gold);
+        }
+
+        .merge-prompt-body {
+            padding: 16px;
+        }
+
+        .merge-preview {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .merge-preview-label {
+            font-size: 0.8125em;
+            color: var(--text-muted);
+            padding-top: 4px;
+        }
+
+        .merge-preview-names {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .merge-name-pill {
+            background: rgba(212, 175, 122, 0.2);
+            border: 1px solid rgba(212, 175, 122, 0.4);
+            padding: 4px 10px;
+            border-radius: 14px;
+            font-size: 0.8125em;
+            color: var(--text-light);
+        }
+
+        .merge-options {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .merge-radio-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+
+        .merge-radio-label:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .merge-radio-label input[type="radio"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .merge-custom-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+        }
+
+        .merge-custom-input {
+            flex: 1;
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-light);
+            font-size: 0.875em;
+        }
+
+        .merge-custom-input:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+        }
+
+        .merge-prompt-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            padding: 12px 16px;
+            background: rgba(0, 0, 0, 0.2);
+            border-top: 1px solid var(--glass-border);
+        }
+
+        /* Step 2: Selection Controls */
+        .selection-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--glass-border);
+            margin-bottom: 12px;
+        }
+
+        .auto-select-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.875em;
+            color: var(--text-muted);
+            cursor: pointer;
+        }
+
+        .auto-select-toggle input {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        .selection-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        /* Step 2: Selection List Items */
+        .character-selection-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--glass-border);
+            gap: 12px;
+        }
+
+        .character-selection-item:last-child {
+            border-bottom: none;
+        }
+
+        .character-selection-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .character-selection-info {
+            flex: 1;
+        }
+
+        .character-selection-name {
+            font-weight: 600;
+            color: var(--text-light);
+            margin-bottom: 2px;
+        }
+
+        .character-selection-meta {
+            font-size: 0.8125em;
+            color: var(--text-muted);
+        }
+
+        /* Selection Stats */
+        .selection-stats {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.25em;
+            font-weight: 700;
+            color: var(--accent-gold);
+        }
+
+        .stat-label {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Step Actions */
+        .step-actions {
+            display: flex;
+            justify-content: space-between;
+            padding: 16px 0 20px;
+            border-top: 1px solid var(--glass-border);
+            margin-top: auto;
+        }
+
+        /* Empty State */
+        .empty-character-list {
+            padding: 40px 20px;
+            text-align: center;
+        }
+
+        .empty-icon {
+            font-size: 2.5em;
+            margin-bottom: 12px;
+            opacity: 0.5;
+        }
+
+        .empty-text {
+            font-size: 1em;
+            font-weight: 600;
+            color: var(--text-light);
+            margin-bottom: 8px;
+        }
+
+        .empty-hint {
+            font-size: 0.875em;
+            color: var(--text-muted);
+        }
+
         /* Auto-Suggest Look States Modal */
         .suggest-info-box {
             padding: 12px;
