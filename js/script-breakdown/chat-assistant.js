@@ -279,27 +279,9 @@ function detectTimeOfDay(heading) {
 // ============================================================================
 
 /**
- * Send message to Anthropic API with streaming
+ * Send message to Claude API with streaming
  */
 async function sendMessageToAPI(userMessage, onChunk, onComplete, onError) {
-    // Get provider settings
-    const provider = state.aiProvider || localStorage.getItem('aiProvider') || 'anthropic';
-
-    // Get API key based on provider (matching ai-integration.js storage keys)
-    let apiKey;
-    if (provider === 'anthropic') {
-        apiKey = localStorage.getItem('anthropicApiKey') || state.apiKey;
-    } else if (provider === 'openai') {
-        apiKey = localStorage.getItem('openaiApiKey') || state.apiKey;
-    } else {
-        apiKey = state.apiKey || localStorage.getItem('apiKey');
-    }
-
-    if (!apiKey) {
-        onError(`No ${provider === 'anthropic' ? 'Anthropic' : 'OpenAI'} API key configured. Please set up AI Settings in the Tools panel.`);
-        return;
-    }
-
     // Build context
     const context = buildContextData();
 
@@ -334,13 +316,7 @@ ${userMessage}`;
     chatState.abortController = new AbortController();
 
     try {
-        if (provider === 'anthropic') {
-            await streamAnthropicResponse(apiKey, messages, onChunk, onComplete, onError);
-        } else if (provider === 'openai') {
-            await streamOpenAIResponse(apiKey, messages, onChunk, onComplete, onError);
-        } else {
-            onError(`Unknown AI provider: ${provider}`);
-        }
+        await streamAnthropicResponse(messages, onChunk, onComplete, onError);
     } catch (error) {
         if (error.name === 'AbortError') {
             console.log('Chat request aborted');
@@ -351,154 +327,39 @@ ${userMessage}`;
 }
 
 /**
- * Stream response from Anthropic API
+ * Get response from Claude API via server endpoint
  */
-async function streamAnthropicResponse(apiKey, messages, onChunk, onComplete, onError) {
-    const model = state.anthropicModel || localStorage.getItem('anthropicModel') || 'claude-3-5-sonnet-20241022';
+async function streamAnthropicResponse(messages, onChunk, onComplete, onError) {
+    const model = state.anthropicModel || localStorage.getItem('anthropicModel') || 'claude-sonnet-4-20250514';
 
     try {
-        const response = await fetch('https://api.anthropic.com/v1/messages', {
+        const response = await fetch('/api/ai', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'x-api-key': apiKey,
-                'anthropic-version': '2023-06-01',
-                'anthropic-dangerous-direct-browser-access': 'true'
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
                 model: model,
-                max_tokens: 2048,
-                temperature: 0.7,
+                maxTokens: 2048,
                 system: SYSTEM_PROMPT,
-                stream: true,
                 messages: messages
             }),
             signal: chatState.abortController.signal
         });
 
         if (!response.ok) {
-            const errorText = await response.text();
-            if (response.status === 401) {
-                throw new Error('Invalid API key. Please check your Anthropic API key in AI Settings.');
-            }
+            const errorData = await response.json().catch(() => ({}));
             if (response.status === 429) {
                 throw new Error('Rate limit exceeded. Please wait a moment and try again.');
             }
-            throw new Error(`API Error (${response.status}): ${errorText}`);
+            throw new Error(errorData.error?.message || errorData.error || `API Error: ${response.status}`);
         }
 
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let fullResponse = '';
-        let buffer = '';
+        const data = await response.json();
+        const fullResponse = data.content[0].text;
 
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split('\n');
-            buffer = lines.pop() || '';
-
-            for (const line of lines) {
-                if (line.startsWith('data: ')) {
-                    const data = line.slice(6);
-                    if (data === '[DONE]') continue;
-
-                    try {
-                        const parsed = JSON.parse(data);
-                        if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
-                            fullResponse += parsed.delta.text;
-                            onChunk(parsed.delta.text);
-                        }
-                    } catch (e) {
-                        // Ignore parse errors for incomplete chunks
-                    }
-                }
-            }
-        }
-
-        onComplete(fullResponse);
-
-    } catch (error) {
-        if (error.name !== 'AbortError') {
-            throw error;
-        }
-    }
-}
-
-/**
- * Stream response from OpenAI API
- */
-async function streamOpenAIResponse(apiKey, messages, onChunk, onComplete, onError) {
-    const model = state.openaiModel || localStorage.getItem('openaiModel') || 'gpt-4o';
-
-    // Add system message for OpenAI
-    const openAIMessages = [
-        { role: 'system', content: SYSTEM_PROMPT },
-        ...messages
-    ];
-
-    try {
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`
-            },
-            body: JSON.stringify({
-                model: model,
-                max_tokens: 2048,
-                temperature: 0.7,
-                stream: true,
-                messages: openAIMessages
-            }),
-            signal: chatState.abortController.signal
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            if (response.status === 401) {
-                throw new Error('Invalid API key. Please check your OpenAI API key in AI Settings.');
-            }
-            if (response.status === 429) {
-                throw new Error('Rate limit exceeded. Please wait a moment and try again.');
-            }
-            throw new Error(`API Error (${response.status}): ${errorText}`);
-        }
-
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let fullResponse = '';
-        let buffer = '';
-
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split('\n');
-            buffer = lines.pop() || '';
-
-            for (const line of lines) {
-                if (line.startsWith('data: ')) {
-                    const data = line.slice(6);
-                    if (data === '[DONE]') continue;
-
-                    try {
-                        const parsed = JSON.parse(data);
-                        const content = parsed.choices?.[0]?.delta?.content;
-                        if (content) {
-                            fullResponse += content;
-                            onChunk(content);
-                        }
-                    } catch (e) {
-                        // Ignore parse errors for incomplete chunks
-                    }
-                }
-            }
-        }
-
+        // Simulate streaming by chunking the response
+        onChunk(fullResponse);
         onComplete(fullResponse);
 
     } catch (error) {

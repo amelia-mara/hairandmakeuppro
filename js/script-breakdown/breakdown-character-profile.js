@@ -628,21 +628,8 @@ export async function generateVisualIdentity(characterName) {
     showToast('Generating visual identity analysis...', 'info');
 
     try {
-        // Get API settings
-        const aiProvider = state.aiProvider || localStorage.getItem('aiProvider') || 'openai';
-        const apiKey = localStorage.getItem(`${aiProvider}ApiKey`) || state.apiKey;
-
-        if (!apiKey) {
-            showToast('Please configure your AI API key in Settings', 'error');
-            return;
-        }
-
-        let response;
-        if (aiProvider === 'anthropic') {
-            response = await callAnthropicAPI(prompt, apiKey);
-        } else {
-            response = await callOpenAIAPI(prompt, apiKey, state.openaiModel || 'gpt-4o');
-        }
+        // Call Claude API via server endpoint
+        const response = await callClaudeAPI(prompt);
 
         // Parse response
         const identity = parseVisualIdentityResponse(response);
@@ -750,48 +737,20 @@ function parseVisualIdentityResponse(response) {
 }
 
 /**
- * Call OpenAI API
+ * Call Claude API via server endpoint
  */
-async function callOpenAIAPI(prompt, apiKey, model) {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+async function callClaudeAPI(prompt) {
+    const model = state.anthropicModel || localStorage.getItem('anthropicModel') || 'claude-sonnet-4-20250514';
+
+    const response = await fetch('/api/ai', {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
+            'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-            model: model || 'gpt-4o',
-            messages: [
-                { role: 'system', content: 'You are an expert Hair & Makeup Department Head for film productions. Provide detailed visual analysis for characters.' },
-                { role: 'user', content: prompt }
-            ],
-            temperature: 0.7,
-            max_tokens: 1500
-        })
-    });
-
-    if (!response.ok) {
-        throw new Error(`OpenAI API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.choices[0].message.content;
-}
-
-/**
- * Call Anthropic API
- */
-async function callAnthropicAPI(prompt, apiKey) {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': apiKey,
-            'anthropic-version': '2023-06-01'
-        },
-        body: JSON.stringify({
-            model: 'claude-3-5-sonnet-20241022',
-            max_tokens: 1500,
+            model: model,
+            maxTokens: 1500,
+            system: 'You are an expert Hair & Makeup Department Head for film productions. Provide detailed visual analysis for characters.',
             messages: [
                 { role: 'user', content: prompt }
             ]
@@ -799,7 +758,8 @@ async function callAnthropicAPI(prompt, apiKey) {
     });
 
     if (!response.ok) {
-        throw new Error(`Anthropic API error: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error?.message || errorData.error || `API error: ${response.status}`);
     }
 
     const data = await response.json();
