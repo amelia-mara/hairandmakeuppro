@@ -211,13 +211,21 @@ export function openSettingsModal() {
     const modal = document.getElementById('settings-modal');
     if (!modal) return;
 
-    // Load Anthropic settings
-    const anthropicKey = localStorage.getItem('anthropicApiKey') || localStorage.getItem('apiKey') || '';
-    const anthropicKeyInput = document.getElementById('anthropic-api-key');
-    if (anthropicKeyInput) anthropicKeyInput.value = anthropicKey;
+    // Load current settings into form
+    document.getElementById('ai-provider').value = state.aiProvider;
 
-    const anthropicModelSelect = document.getElementById('anthropic-model');
-    if (anthropicModelSelect) anthropicModelSelect.value = state.anthropicModel;
+    // Load OpenAI settings
+    const openaiKey = localStorage.getItem('openaiApiKey') || state.apiKey || '';
+    document.getElementById('openai-api-key').value = openaiKey;
+    document.getElementById('openai-model').value = state.openaiModel;
+
+    // Load Anthropic settings
+    const anthropicKey = localStorage.getItem('anthropicApiKey') || '';
+    document.getElementById('anthropic-api-key').value = anthropicKey;
+    document.getElementById('anthropic-model').value = state.anthropicModel;
+
+    // Show correct provider settings
+    toggleProviderSettings();
 
     modal.style.display = 'flex';
 }
@@ -234,23 +242,34 @@ export function closeSettingsModal() {
  * Save AI settings
  */
 export function saveSettings() {
-    // Always use Anthropic
-    state.aiProvider = 'anthropic';
-    localStorage.setItem('aiProvider', 'anthropic');
+    const provider = document.getElementById('ai-provider').value;
+
+    // Save provider selection
+    state.aiProvider = provider;
+    localStorage.setItem('aiProvider', provider);
+
+    // Save OpenAI settings
+    const openaiKey = document.getElementById('openai-api-key').value;
+    const openaiModel = document.getElementById('openai-model').value;
+    state.openaiModel = openaiModel;
+    localStorage.setItem('openaiApiKey', openaiKey);
+    localStorage.setItem('openaiModel', openaiModel);
 
     // Save Anthropic settings
-    const anthropicKeyInput = document.getElementById('anthropic-api-key');
-    const anthropicModelSelect = document.getElementById('anthropic-model');
-
-    const anthropicKey = anthropicKeyInput ? anthropicKeyInput.value : '';
-    const anthropicModel = anthropicModelSelect ? anthropicModelSelect.value : 'claude-sonnet-4-20250514';
-
+    const anthropicKey = document.getElementById('anthropic-api-key').value;
+    const anthropicModel = document.getElementById('anthropic-model').value;
     state.anthropicModel = anthropicModel;
-    state.apiKey = anthropicKey;
-
     localStorage.setItem('anthropicApiKey', anthropicKey);
     localStorage.setItem('anthropicModel', anthropicModel);
-    localStorage.setItem('apiKey', anthropicKey);
+
+    // Set active API key based on provider
+    if (provider === 'anthropic') {
+        state.apiKey = anthropicKey;
+        localStorage.setItem('apiKey', anthropicKey);
+    } else {
+        state.apiKey = openaiKey;
+        localStorage.setItem('apiKey', openaiKey);
+    }
 
     showToast('AI settings saved successfully', 'success');
     closeSettingsModal();
@@ -258,21 +277,39 @@ export function saveSettings() {
 
 /**
  * Toggle provider-specific settings visibility
- * No-op: Only Anthropic is supported
  */
 export function toggleProviderSettings() {
-    // No-op - only Anthropic/Claude is used
+    const provider = document.getElementById('ai-provider').value;
+
+    // Hide all provider settings
+    const openaiSettings = document.getElementById('openai-settings');
+    const anthropicSettings = document.getElementById('anthropic-settings');
+
+    if (openaiSettings) openaiSettings.style.display = 'none';
+    if (anthropicSettings) anthropicSettings.style.display = 'none';
+
+    // Show selected provider settings
+    if (provider === 'anthropic' && anthropicSettings) {
+        anthropicSettings.style.display = 'block';
+    } else if (openaiSettings) {
+        openaiSettings.style.display = 'block';
+    }
 }
 
 /**
  * Test API connection
  */
 export async function testAPIConnection() {
-    const anthropicKeyInput = document.getElementById('anthropic-api-key');
-    const anthropicModelSelect = document.getElementById('anthropic-model');
+    const provider = document.getElementById('ai-provider').value;
+    let apiKey, model;
 
-    const apiKey = anthropicKeyInput ? anthropicKeyInput.value : '';
-    const model = anthropicModelSelect ? anthropicModelSelect.value : 'claude-sonnet-4-20250514';
+    if (provider === 'anthropic') {
+        apiKey = document.getElementById('anthropic-api-key').value;
+        model = document.getElementById('anthropic-model').value;
+    } else {
+        apiKey = document.getElementById('openai-api-key').value;
+        model = document.getElementById('openai-model').value;
+    }
 
     if (!apiKey) {
         showToast('Please enter an API key first', 'warning');
@@ -280,19 +317,25 @@ export async function testAPIConnection() {
     }
 
     // Temporarily update state for test
+    const oldProvider = state.aiProvider;
     const oldKey = state.apiKey;
+    const oldOpenAIModel = state.openaiModel;
     const oldAnthropicModel = state.anthropicModel;
 
-    state.aiProvider = 'anthropic';
+    state.aiProvider = provider;
     state.apiKey = apiKey;
-    state.anthropicModel = model;
+    if (provider === 'openai') {
+        state.openaiModel = model;
+    } else {
+        state.anthropicModel = model;
+    }
 
     try {
         showToast('Testing connection...', 'info');
         const response = await callAI('Respond with exactly: "Connection successful"', 50);
 
         if (response && response.toLowerCase().includes('successful')) {
-            showToast('✓ Claude API connected successfully!', 'success');
+            showToast(`✓ ${provider === 'anthropic' ? 'Claude' : 'OpenAI'} API connected successfully!`, 'success');
         } else {
             showToast('API responded but format unexpected', 'warning');
         }
@@ -302,7 +345,9 @@ export async function testAPIConnection() {
     }
 
     // Restore original state
+    state.aiProvider = oldProvider;
     state.apiKey = oldKey;
+    state.openaiModel = oldOpenAIModel;
     state.anthropicModel = oldAnthropicModel;
 }
 
@@ -422,13 +467,13 @@ async function callAIWithRetry(prompt, maxTokens, sceneNumber, maxRetries = 3) {
 }
 
 /**
- * Internal AI caller with detailed logging - Claude/Anthropic only
+ * Internal AI caller with detailed logging
  */
 async function callAIInternal(prompt, maxTokens, sceneNumber) {
     const sceneLabel = sceneNumber !== null ? `Scene ${sceneNumber}` : 'Request';
     console.log(`🤖 AI Call Started - ${sceneLabel}`);
-    console.log(`   Provider: anthropic`);
-    console.log(`   Model: ${state.anthropicModel || 'claude-sonnet-4-20250514'}`);
+    console.log(`   Provider: ${state.aiProvider || 'serverless'}`);
+    console.log(`   Model: ${state.aiProvider === 'openai' ? state.openaiModel : state.aiProvider === 'anthropic' ? state.anthropicModel : 'default'}`);
     console.log(`   Max Tokens: ${maxTokens}`);
 
     // For deployed Vercel version - use secure serverless function
@@ -444,8 +489,7 @@ async function callAIInternal(prompt, maxTokens, sceneNumber) {
                         role: "user",
                         content: prompt
                     }],
-                    maxTokens: maxTokens,
-                    model: state.anthropicModel || 'claude-sonnet-4-20250514'
+                    maxTokens: maxTokens
                 })
             });
 
@@ -455,6 +499,7 @@ async function callAIInternal(prompt, maxTokens, sceneNumber) {
                 const errorText = await response.text();
                 console.error(`❌ API Error (${sceneLabel}):`, errorText);
 
+                // Check for specific error types
                 if (response.status === 429) {
                     console.error('🚫 RATE LIMIT HIT');
                     throw new Error(`Rate limit exceeded. Status: 429`);
@@ -470,10 +515,10 @@ async function callAIInternal(prompt, maxTokens, sceneNumber) {
 
             const data = await response.json();
 
-            // Extract text from Anthropic response format
-            if (data.content && data.content[0] && data.content[0].text) {
+            // Extract text from response
+            if (data.choices && data.choices[0] && data.choices[0].message) {
                 console.log(`✅ AI Call Success - ${sceneLabel}`);
-                return data.content[0].text;
+                return data.choices[0].message.content;
             }
 
             throw new Error('Invalid response format from API');
@@ -492,58 +537,118 @@ async function callAIInternal(prompt, maxTokens, sceneNumber) {
         throw error;
     }
 
-    // Anthropic Claude API
-    try {
-        const response = await fetch("https://api.anthropic.com/v1/messages", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "x-api-key": state.apiKey,
-                "anthropic-version": "2023-06-01"
-            },
-            body: JSON.stringify({
-                model: state.anthropicModel || "claude-sonnet-4-20250514",
-                max_tokens: maxTokens,
-                temperature: 0.3,
-                messages: [{
-                    role: "user",
-                    content: prompt
-                }]
-            })
-        });
+    // OpenAI
+    if (state.aiProvider === 'openai') {
+        try {
+            const response = await fetch("https://api.openai.com/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${state.apiKey}`
+                },
+                body: JSON.stringify({
+                    model: state.openaiModel,
+                    messages: [{
+                        role: "user",
+                        content: prompt
+                    }],
+                    max_tokens: maxTokens,
+                    temperature: 0.7
+                })
+            });
 
-        console.log(`📡 Response Status: ${response.status}`);
+            console.log(`📡 Response Status: ${response.status}`);
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`❌ Anthropic API Error (${sceneLabel}):`, errorText);
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error(`❌ OpenAI API Error (${sceneLabel}):`, errorText);
 
-            if (response.status === 429) {
-                console.error('🚫 RATE LIMIT HIT');
-                throw new Error(`Rate limit exceeded. Status: 429`);
+                // Check for specific error types
+                if (response.status === 429) {
+                    console.error('🚫 RATE LIMIT HIT');
+                    throw new Error(`Rate limit exceeded. Status: 429`);
+                }
+
+                if (response.status === 401) {
+                    console.error('🔑 AUTHENTICATION FAILED');
+                    throw new Error(`Invalid API key. Status: 401`);
+                }
+
+                throw new Error(`OpenAI API Error: ${response.status} - ${errorText}`);
             }
 
-            if (response.status === 401) {
-                console.error('🔑 AUTHENTICATION FAILED');
-                throw new Error(`Invalid API key. Status: 401`);
+            const data = await response.json();
+
+            if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+                throw new Error('Invalid response format from OpenAI');
             }
 
-            throw new Error(`Anthropic API Error: ${response.status} - ${errorText}`);
+            console.log(`✅ AI Call Success - ${sceneLabel}`);
+            return data.choices[0].message.content;
+
+        } catch (error) {
+            console.error(`💥 Exception in OpenAI call (${sceneLabel}):`, error);
+            throw error;
         }
-
-        const data = await response.json();
-
-        if (!data.content || !data.content[0]) {
-            throw new Error('Invalid response format from Anthropic');
-        }
-
-        console.log(`✅ AI Call Success - ${sceneLabel}`);
-        return data.content[0].text;
-
-    } catch (error) {
-        console.error(`💥 Exception in Anthropic call (${sceneLabel}):`, error);
-        throw error;
     }
+
+    // Anthropic
+    if (state.aiProvider === 'anthropic') {
+        try {
+            const response = await fetch("https://api.anthropic.com/v1/messages", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "x-api-key": state.apiKey,
+                    "anthropic-version": "2023-06-01"
+                },
+                body: JSON.stringify({
+                    model: state.anthropicModel || "claude-3-5-sonnet-20241022",
+                    max_tokens: maxTokens,
+                    temperature: 0.3, // Lower temperature for more consistent analysis
+                    messages: [{
+                        role: "user",
+                        content: prompt
+                    }]
+                })
+            });
+
+            console.log(`📡 Response Status: ${response.status}`);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error(`❌ Anthropic API Error (${sceneLabel}):`, errorText);
+
+                // Check for specific error types
+                if (response.status === 429) {
+                    console.error('🚫 RATE LIMIT HIT');
+                    throw new Error(`Rate limit exceeded. Status: 429`);
+                }
+
+                if (response.status === 401) {
+                    console.error('🔑 AUTHENTICATION FAILED');
+                    throw new Error(`Invalid API key. Status: 401`);
+                }
+
+                throw new Error(`Anthropic API Error: ${response.status} - ${errorText}`);
+            }
+
+            const data = await response.json();
+
+            if (!data.content || !data.content[0]) {
+                throw new Error('Invalid response format from Anthropic');
+            }
+
+            console.log(`✅ AI Call Success - ${sceneLabel}`);
+            return data.content[0].text;
+
+        } catch (error) {
+            console.error(`💥 Exception in Anthropic call (${sceneLabel}):`, error);
+            throw error;
+        }
+    }
+
+    throw new Error(`Unknown AI provider: ${state.aiProvider}`);
 }
 
 // ============================================================================
