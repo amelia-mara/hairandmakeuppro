@@ -81,8 +81,7 @@ import {
     closeCharacterReviewModal,
     selectAllCharacters,
     deselectAllCharacters,
-    confirmCharacterSelection,
-    mergeSelectedCharacters
+    confirmCharacterSelection
 } from './export-character-review.js';
 
 // Generation
@@ -164,7 +163,6 @@ export {
     selectAllCharacters,
     deselectAllCharacters,
     confirmCharacterSelection,
-    mergeSelectedCharacters,
 
     // Generation
     generateCharacterTimelines,
@@ -238,7 +236,6 @@ export default {
     selectAllCharacters,
     deselectAllCharacters,
     confirmCharacterSelection,
-    mergeSelectedCharacters,
 
     // Generation
     generateCharacterTimelines,
