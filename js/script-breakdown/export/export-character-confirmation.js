@@ -236,9 +236,12 @@ function addModalStyles() {
         }
 
         .character-confirm-content-v2 {
-            max-width: 600px;
-            width: 90%;
-            max-height: 85vh;
+            width: 700px;
+            min-width: 400px;
+            max-width: 90vw;
+            height: 70vh;
+            min-height: 400px;
+            max-height: 90vh;
             padding: 0;
             overflow: hidden;
             display: flex;
@@ -246,21 +249,36 @@ function addModalStyles() {
             background: var(--glass-bg);
             backdrop-filter: blur(30px);
             border: 1px solid var(--accent-gold);
-            border-radius: 16px;
+            border-radius: 12px;
             box-shadow: 0 20px 60px rgba(212, 175, 122, 0.2);
+            resize: both;
+            position: relative;
+        }
+
+        .character-confirm-content-v2::after {
+            content: '';
+            position: absolute;
+            bottom: 4px;
+            right: 4px;
+            width: 12px;
+            height: 12px;
+            border-right: 2px solid var(--accent-gold);
+            border-bottom: 2px solid var(--accent-gold);
+            opacity: 0.5;
+            pointer-events: none;
         }
 
         .confirm-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 20px 24px;
+            padding: 12px 16px;
             border-bottom: 1px solid var(--glass-border);
             flex-shrink: 0;
         }
 
         .confirm-title {
-            font-size: 1.125em;
+            font-size: 0.9375em;
             font-weight: 600;
             color: var(--text-light);
         }
@@ -269,9 +287,9 @@ function addModalStyles() {
             background: none;
             border: none;
             color: var(--text-muted);
-            font-size: 1.5em;
+            font-size: 1.25em;
             cursor: pointer;
-            padding: 4px 8px;
+            padding: 2px 6px;
             line-height: 1;
             transition: color 0.2s;
         }
@@ -283,8 +301,8 @@ function addModalStyles() {
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 16px 24px;
-            gap: 12px;
+            padding: 10px 16px;
+            gap: 10px;
             background: rgba(0, 0, 0, 0.2);
             flex-shrink: 0;
         }
@@ -292,7 +310,7 @@ function addModalStyles() {
         .confirm-step-item {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 6px;
             opacity: 0.4;
             transition: opacity 0.3s;
         }
@@ -300,14 +318,14 @@ function addModalStyles() {
         .confirm-step-item.active { opacity: 1; }
 
         .confirm-step-circle {
-            width: 28px;
-            height: 28px;
+            width: 22px;
+            height: 22px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 700;
-            font-size: 0.8125em;
+            font-size: 0.7em;
             background: rgba(255, 255, 255, 0.08);
             border: 1px solid var(--glass-border);
             color: var(--text-muted);
@@ -321,7 +339,7 @@ function addModalStyles() {
         }
 
         .confirm-step-label {
-            font-size: 0.875em;
+            font-size: 0.75em;
             font-weight: 500;
             color: var(--text-muted);
         }
@@ -329,7 +347,7 @@ function addModalStyles() {
         .confirm-step-item.active .confirm-step-label { color: var(--text-light); }
 
         .confirm-step-connector {
-            width: 50px;
+            width: 40px;
             height: 1px;
             background: var(--glass-border);
         }
@@ -340,50 +358,49 @@ function addModalStyles() {
             display: flex;
             flex-direction: column;
             overflow-y: auto;
-            padding: 0 24px;
+            padding: 0 16px;
             min-height: 0;
         }
 
         .confirm-step-description {
             text-align: center;
-            padding: 16px 0 12px;
+            padding: 8px 0 6px;
             flex-shrink: 0;
         }
 
         .confirm-step-description strong {
             display: block;
-            font-size: 1em;
-            margin-bottom: 4px;
+            font-size: 0.8125em;
+            margin-bottom: 2px;
             color: var(--text-light);
         }
 
         .confirm-step-description p {
-            font-size: 0.8125em;
+            font-size: 0.7em;
             color: var(--text-muted);
             margin: 0;
         }
 
         /* Character List */
         .confirm-character-list {
+            flex: 1;
             overflow-y: auto;
             border: 1px solid var(--glass-border);
-            border-radius: 10px;
+            border-radius: 6px;
             background: rgba(0, 0, 0, 0.2);
-            margin-bottom: 16px;
-            min-height: 150px;
-            max-height: 300px;
-            flex-shrink: 0;
+            margin-bottom: 10px;
+            min-height: 100px;
         }
 
         /* Merge List Items */
         .confirm-merge-item {
             display: flex;
             align-items: center;
-            padding: 12px 16px;
+            padding: 6px 10px;
             border-bottom: 1px solid var(--glass-border);
             cursor: pointer;
             transition: all 0.15s;
-            gap: 12px;
+            gap: 8px;
         }
 
         .confirm-merge-item:last-child { border-bottom: none; }
@@ -391,8 +408,8 @@ function addModalStyles() {
 
         .confirm-merge-item.selected {
             background: rgba(212, 175, 122, 0.12);
-            border-left: 3px solid var(--accent-gold);
-            padding-left: 13px;
+            border-left: 2px solid var(--accent-gold);
+            padding-left: 8px;
         }
 
         .confirm-merge-item.merged {
@@ -405,7 +422,7 @@ function addModalStyles() {
 
         .confirm-merge-name {
             font-weight: 600;
-            font-size: 0.9375em;
+            font-size: 0.8em;
             color: var(--text-light);
             white-space: nowrap;
             overflow: hidden;
@@ -413,24 +430,23 @@ function addModalStyles() {
         }
 
         .confirm-merge-meta {
-            font-size: 0.8125em;
+            font-size: 0.7em;
             color: var(--text-muted);
-            margin-top: 2px;
         }
 
         .confirm-merge-badge {
-            padding: 4px 10px;
-            border-radius: 4px;
-            font-size: 0.6875em;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.6em;
             font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 0.03em;
+            letter-spacing: 0.02em;
             flex-shrink: 0;
         }
 
         .confirm-select-indicator {
-            width: 22px;
-            height: 22px;
+            width: 18px;
+            height: 18px;
             border-radius: 50%;
             border: 1px solid var(--glass-border);
             display: flex;
@@ -442,8 +458,8 @@ function addModalStyles() {
         }
 
         .confirm-select-indicator svg {
-            width: 12px;
-            height: 12px;
+            width: 10px;
+            height: 10px;
             opacity: 0;
             transition: opacity 0.15s;
         }
@@ -461,125 +477,125 @@ function addModalStyles() {
         .confirm-merged-badge {
             background: rgba(107, 114, 128, 0.3);
             color: #9ca3af;
-            padding: 4px 10px;
-            border-radius: 4px;
-            font-size: 0.6875em;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.6em;
             font-weight: 600;
             text-transform: uppercase;
         }
 
         .confirm-merged-section {
             border-top: 1px solid var(--glass-border);
-            padding-top: 8px;
-            margin-top: 8px;
+            padding-top: 4px;
+            margin-top: 4px;
         }
 
         .confirm-merged-section-label {
-            font-size: 0.75em;
+            font-size: 0.65em;
             color: var(--text-muted);
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            padding: 8px 16px 4px;
+            padding: 4px 10px 2px;
         }
 
         /* Merge Prompt */
         .confirm-merge-prompt {
             background: rgba(20, 18, 16, 0.7);
             border: 1px solid var(--accent-gold);
-            border-radius: 10px;
-            margin-bottom: 16px;
+            border-radius: 6px;
+            margin-bottom: 10px;
             overflow: hidden;
             flex-shrink: 0;
         }
 
         .confirm-merge-prompt-header {
-            padding: 12px 16px;
+            padding: 8px 12px;
             background: rgba(212, 175, 122, 0.12);
             font-weight: 600;
-            font-size: 0.875em;
+            font-size: 0.75em;
             color: var(--accent-gold);
             border-bottom: 1px solid rgba(212, 175, 122, 0.2);
         }
 
         .confirm-merge-prompt-body {
-            padding: 16px;
+            padding: 10px 12px;
         }
 
         .confirm-merge-preview {
             display: flex;
             align-items: center;
-            gap: 10px;
-            margin-bottom: 14px;
+            gap: 8px;
+            margin-bottom: 8px;
             flex-wrap: wrap;
         }
 
         .confirm-merge-preview-label {
-            font-size: 0.8125em;
+            font-size: 0.7em;
             color: var(--text-muted);
         }
 
         .confirm-merge-preview-names {
             display: flex;
             flex-wrap: wrap;
-            gap: 6px;
+            gap: 4px;
         }
 
         .confirm-merge-name-pill {
             background: rgba(212, 175, 122, 0.15);
             border: 1px solid rgba(212, 175, 122, 0.3);
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 0.8125em;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.7em;
             color: var(--text-light);
         }
 
         .confirm-merge-options {
             display: flex;
             flex-direction: column;
-            gap: 6px;
-            margin-bottom: 12px;
+            gap: 4px;
+            margin-bottom: 8px;
         }
 
         .confirm-merge-radio-label {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             cursor: pointer;
-            padding: 10px 14px;
-            border-radius: 6px;
+            padding: 6px 10px;
+            border-radius: 4px;
             transition: background 0.15s;
             background: rgba(255, 255, 255, 0.03);
             border: 1px solid var(--glass-border);
             color: var(--text-light);
-            font-size: 0.875em;
+            font-size: 0.75em;
         }
 
         .confirm-merge-radio-label:hover { background: rgba(212, 175, 122, 0.1); }
 
         .confirm-merge-radio-label input[type="radio"] {
-            width: 16px;
-            height: 16px;
+            width: 14px;
+            height: 14px;
             cursor: pointer;
         }
 
         .confirm-merge-custom-option {
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 10px 14px;
+            gap: 8px;
+            padding: 6px 10px;
             background: rgba(0, 0, 0, 0.2);
-            border-radius: 6px;
-            font-size: 0.875em;
+            border-radius: 4px;
+            font-size: 0.75em;
         }
 
         .confirm-merge-custom-input {
             flex: 1;
-            padding: 8px 12px;
+            padding: 5px 8px;
             background: rgba(0, 0, 0, 0.3);
             border: 1px solid var(--glass-border);
-            border-radius: 6px;
+            border-radius: 4px;
             color: var(--text-light);
-            font-size: 0.875em;
+            font-size: 0.8em;
         }
 
         .confirm-merge-custom-input:focus {
@@ -590,15 +606,15 @@ function addModalStyles() {
         .confirm-merge-prompt-actions {
             display: flex;
             justify-content: flex-end;
-            gap: 10px;
-            padding: 12px 16px;
+            gap: 6px;
+            padding: 8px 12px;
             background: rgba(0, 0, 0, 0.15);
             border-top: 1px solid var(--glass-border);
         }
 
         .confirm-merge-prompt-actions .modal-btn {
-            padding: 8px 16px;
-            font-size: 0.8125em;
+            padding: 5px 12px;
+            font-size: 0.7em;
         }
 
         /* Selection Controls */
@@ -606,50 +622,51 @@ function addModalStyles() {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 12px 0;
+            padding: 6px 0;
             border-bottom: 1px solid var(--glass-border);
-            margin-bottom: 12px;
+            margin-bottom: 6px;
+            flex-shrink: 0;
         }
 
         .confirm-auto-select-toggle {
             display: flex;
             align-items: center;
-            gap: 8px;
-            font-size: 0.8125em;
+            gap: 6px;
+            font-size: 0.7em;
             color: var(--text-muted);
             cursor: pointer;
         }
 
         .confirm-auto-select-toggle input {
-            width: 16px;
-            height: 16px;
+            width: 14px;
+            height: 14px;
             cursor: pointer;
         }
 
         .confirm-selection-buttons {
             display: flex;
-            gap: 8px;
+            gap: 6px;
         }
 
         .confirm-selection-buttons .modal-btn {
-            padding: 6px 14px;
-            font-size: 0.8125em;
+            padding: 4px 10px;
+            font-size: 0.7em;
         }
 
         /* Selection List Items */
         .confirm-selection-item {
             display: flex;
             align-items: center;
-            padding: 12px 16px;
+            padding: 6px 10px;
             border-bottom: 1px solid var(--glass-border);
-            gap: 12px;
+            gap: 8px;
         }
 
         .confirm-selection-item:last-child { border-bottom: none; }
 
         .confirm-selection-item input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
+            width: 14px;
+            height: 14px;
             cursor: pointer;
             flex-shrink: 0;
         }
@@ -658,80 +675,79 @@ function addModalStyles() {
 
         .confirm-selection-name {
             font-weight: 600;
-            font-size: 0.9375em;
+            font-size: 0.8em;
             color: var(--text-light);
             cursor: pointer;
         }
 
         .confirm-selection-meta {
-            font-size: 0.8125em;
+            font-size: 0.7em;
             color: var(--text-muted);
-            margin-top: 2px;
         }
 
         /* Selection Stats */
         .confirm-selection-stats {
             display: flex;
             justify-content: center;
-            gap: 32px;
-            padding: 14px;
+            gap: 24px;
+            padding: 8px;
             background: rgba(0, 0, 0, 0.2);
-            border-radius: 8px;
-            margin-bottom: 16px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            flex-shrink: 0;
         }
 
         .confirm-stat-item { text-align: center; }
 
         .confirm-stat-value {
-            font-size: 1.25em;
+            font-size: 1em;
             font-weight: 700;
             color: var(--accent-gold);
         }
 
         .confirm-stat-label {
-            font-size: 0.6875em;
+            font-size: 0.6em;
             color: var(--text-muted);
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            margin-top: 2px;
         }
 
         /* Step Actions */
         .confirm-step-actions {
             display: flex;
             justify-content: space-between;
-            padding: 16px 0 20px;
+            padding: 10px 0 12px;
             border-top: 1px solid var(--glass-border);
             margin-top: auto;
             flex-shrink: 0;
         }
 
         .confirm-step-actions .modal-btn {
-            padding: 10px 20px;
-            font-size: 0.875em;
+            padding: 6px 14px;
+            font-size: 0.75em;
         }
 
         /* Empty State */
         .confirm-empty-list {
-            padding: 32px 20px;
+            padding: 24px 16px;
             text-align: center;
         }
 
         .confirm-empty-icon {
-            font-size: 2em;
-            margin-bottom: 12px;
+            font-size: 1.5em;
+            margin-bottom: 8px;
             opacity: 0.4;
         }
 
         .confirm-empty-text {
-            font-size: 1em;
+            font-size: 0.85em;
             font-weight: 600;
             color: var(--text-light);
-            margin-bottom: 6px;
+            margin-bottom: 4px;
         }
 
         .confirm-empty-hint {
-            font-size: 0.875em;
+            font-size: 0.75em;
             color: var(--text-muted);
         }
     `;
