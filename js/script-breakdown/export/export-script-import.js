@@ -307,18 +307,46 @@ export async function processScript() {
 
             // Store detected characters for confirmation step
             if (masterContext.characters) {
-                state.detectedCharacters = Object.entries(masterContext.characters).map(([name, data]) => ({
-                    name: name,
-                    category: data.category || data.characterAnalysis?.role?.toUpperCase() || 'SUPPORTING',
-                    sceneCount: data.sceneCount || data.storyPresence?.totalScenes || 0,
-                    firstAppearance: data.firstAppearance || data.storyPresence?.firstAppearance || 1,
-                    lastAppearance: data.lastAppearance || data.storyPresence?.lastAppearance || state.scenes.length,
-                    hasDialogue: data.storyPresence?.hasDialogue !== false,
-                    physicalDescription: data.scriptDescriptions?.[0]?.text || '',
-                    scenesPresent: data.scenesPresent || data.storyPresence?.scenesPresent || [],
-                    selected: true,
-                    originalData: data
-                }));
+                // Filter function to exclude scene headings and non-character entries
+                const isValidCharacter = (name) => {
+                    if (!name || typeof name !== 'string') return false;
+                    const upperName = name.toUpperCase().trim();
+
+                    // Exclude scene heading patterns
+                    if (/^(INT\.?|EXT\.?|I\/E\.?|INT\.?\/EXT\.?)\s/i.test(name)) return false;
+
+                    // Exclude if contains scene heading keywords with location patterns
+                    if (/\b(INT|EXT)\b.*\s*-\s*(DAY|NIGHT|MORNING|EVENING|DAWN|DUSK|LATER|CONTINUOUS)/i.test(name)) return false;
+
+                    // Exclude common non-character words
+                    const excludeWords = [
+                        'FADE IN', 'FADE OUT', 'CUT TO', 'DISSOLVE TO', 'THE END',
+                        'CONTINUED', 'MORE', 'CONT\'D', 'TITLE CARD', 'SUPER',
+                        'FLASHBACK', 'END FLASHBACK', 'INTERCUT', 'MONTAGE',
+                        'LATER', 'CONTINUOUS', 'SAME TIME', 'MOMENTS LATER'
+                    ];
+                    if (excludeWords.some(word => upperName === word || upperName.startsWith(word + ' '))) return false;
+
+                    // Exclude if it's just a time of day or setting
+                    if (/^(DAY|NIGHT|MORNING|EVENING|DAWN|DUSK|NOON|MIDNIGHT)$/i.test(name)) return false;
+
+                    return true;
+                };
+
+                state.detectedCharacters = Object.entries(masterContext.characters)
+                    .filter(([name]) => isValidCharacter(name))
+                    .map(([name, data]) => ({
+                        name: name,
+                        category: data.category || data.characterAnalysis?.role?.toUpperCase() || 'SUPPORTING',
+                        sceneCount: data.sceneCount || data.storyPresence?.totalScenes || 0,
+                        firstAppearance: data.firstAppearance || data.storyPresence?.firstAppearance || 1,
+                        lastAppearance: data.lastAppearance || data.storyPresence?.lastAppearance || state.scenes.length,
+                        hasDialogue: data.storyPresence?.hasDialogue !== false,
+                        physicalDescription: data.scriptDescriptions?.[0]?.text || '',
+                        scenesPresent: data.scenesPresent || data.storyPresence?.scenesPresent || [],
+                        selected: true,
+                        originalData: data
+                    }));
 
                 // Sort by scene count descending
                 state.detectedCharacters.sort((a, b) => b.sceneCount - a.sceneCount);
