@@ -484,25 +484,50 @@ ${projectContext}
         // Try to get data from window.state first (script-breakdown page)
         const state = window.state;
 
-        // Also try localStorage for when on other pages
+        // Get current project from localStorage
+        let currentProject = null;
+        try {
+            const projectStr = localStorage.getItem('currentProject');
+            if (projectStr) currentProject = JSON.parse(projectStr);
+        } catch (e) {}
+
+        // Get script breakdown project data
         let storedProject = null;
         try {
             const stored = localStorage.getItem('scriptBreakdownProject');
-            if (stored) {
-                storedProject = JSON.parse(stored);
-            }
-        } catch (e) {
-            console.warn('Could not parse stored project:', e);
+            if (stored) storedProject = JSON.parse(stored);
+        } catch (e) {}
+
+        // Get master context
+        let masterContext = null;
+        try {
+            const mc = localStorage.getItem('masterContext') || localStorage.getItem('scriptMasterContext');
+            if (mc) masterContext = JSON.parse(mc);
+        } catch (e) {}
+
+        // === PROJECT INFO ===
+        if (currentProject) {
+            context += `=== PROJECT INFO ===\n`;
+            context += `Title: ${currentProject.title || currentProject.name || 'Untitled'}\n`;
+            if (currentProject.type) context += `Type: ${currentProject.type}\n`;
+            if (currentProject.director) context += `Director: ${currentProject.director}\n`;
+            if (currentProject.producer) context += `Producer: ${currentProject.producer}\n`;
+            if (currentProject.productionCompany) context += `Production Company: ${currentProject.productionCompany}\n`;
+            if (currentProject.startDate) context += `Start Date: ${currentProject.startDate}\n`;
+            if (currentProject.endDate) context += `End Date: ${currentProject.endDate}\n`;
+            context += '\n';
         }
 
-        // Scenes data
-        const scenes = state?.scenes || storedProject?.scenes || [];
+        // === SCRIPT DATA / SCENES ===
+        const scenes = state?.scenes || storedProject?.scenes || currentProject?.scenes || [];
         if (scenes.length > 0) {
             context += `=== SCRIPT DATA ===\nTotal Scenes: ${scenes.length}\n\nSCENE LIST:\n`;
             scenes.slice(0, MAX_CONTEXT_SCENES).forEach((scene, idx) => {
                 const heading = scene.heading || scene.text || `Scene ${idx + 1}`;
-                const synopsis = scene.synopsis ? ` - ${scene.synopsis.substring(0, 100)}...` : '';
-                context += `Scene ${idx + 1}: ${heading}${synopsis}\n`;
+                const synopsis = scene.synopsis ? ` - ${scene.synopsis.substring(0, 100)}` : '';
+                const timeOfDay = scene.timeOfDay ? ` [${scene.timeOfDay}]` : '';
+                const location = scene.location ? ` @ ${scene.location}` : '';
+                context += `Scene ${idx + 1}: ${heading}${timeOfDay}${location}${synopsis}\n`;
             });
             if (scenes.length > MAX_CONTEXT_SCENES) {
                 context += `... and ${scenes.length - MAX_CONTEXT_SCENES} more scenes\n`;
@@ -510,8 +535,10 @@ ${projectContext}
             context += '\n';
         }
 
-        // Characters
-        const characters = state?.confirmedCharacters || state?.characters || storedProject?.confirmedCharacters || storedProject?.characters;
+        // === CHARACTERS ===
+        const characters = state?.confirmedCharacters || state?.characters ||
+                          storedProject?.confirmedCharacters || storedProject?.characters ||
+                          currentProject?.characters;
         if (characters) {
             const charArray = characters instanceof Set ? Array.from(characters) :
                               Array.isArray(characters) ? characters : Object.keys(characters);
@@ -520,51 +547,40 @@ ${projectContext}
             }
         }
 
-        // Cast profiles
-        const castProfiles = state?.castProfiles || storedProject?.castProfiles;
+        // === CHARACTER PROFILES ===
+        const castProfiles = state?.castProfiles || storedProject?.castProfiles || currentProject?.castProfiles;
         if (castProfiles && Object.keys(castProfiles).length > 0) {
             context += `=== CHARACTER PROFILES ===\n`;
             Object.entries(castProfiles).slice(0, 15).forEach(([name, profile]) => {
                 context += `${name}:\n`;
-                if (profile.baseDescription) {
-                    context += `  Description: ${profile.baseDescription.substring(0, 150)}\n`;
-                }
+                if (profile.baseDescription) context += `  Description: ${profile.baseDescription.substring(0, 200)}\n`;
+                if (profile.actor) context += `  Actor: ${profile.actor}\n`;
                 if (profile.scenes && profile.scenes.length > 0) {
-                    context += `  Appears in scenes: ${profile.scenes.slice(0, 10).join(', ')}${profile.scenes.length > 10 ? '...' : ''}\n`;
+                    context += `  Appears in scenes: ${profile.scenes.slice(0, 15).join(', ')}${profile.scenes.length > 15 ? '...' : ''}\n`;
                 }
+                if (profile.notes) context += `  Notes: ${profile.notes.substring(0, 100)}\n`;
             });
             context += '\n';
         }
 
-        // Scene breakdowns
-        const breakdowns = state?.sceneBreakdowns || storedProject?.sceneBreakdowns;
+        // === SCENE BREAKDOWNS ===
+        const breakdowns = state?.sceneBreakdowns || storedProject?.sceneBreakdowns || currentProject?.sceneBreakdowns;
         if (breakdowns && Object.keys(breakdowns).length > 0) {
-            context += `=== SCENE BREAKDOWNS ===\n`;
+            context += `=== SCENE BREAKDOWNS (${Object.keys(breakdowns).length} scenes) ===\n`;
             const breakdownKeys = Object.keys(breakdowns).slice(0, MAX_CONTEXT_BREAKDOWNS);
             breakdownKeys.forEach(sceneIdx => {
                 const bd = breakdowns[sceneIdx];
                 if (!bd) return;
 
                 context += `Scene ${parseInt(sceneIdx) + 1}:\n`;
-
-                if (bd.cast && bd.cast.length > 0) {
-                    context += `  Cast: ${bd.cast.join(', ')}\n`;
-                }
-                if (bd.hair && bd.hair.length > 0) {
-                    context += `  Hair: ${bd.hair.map(h => h.description || h).join('; ')}\n`;
-                }
-                if (bd.makeup && bd.makeup.length > 0) {
-                    context += `  Makeup: ${bd.makeup.map(m => m.description || m).join('; ')}\n`;
-                }
-                if (bd.sfx && bd.sfx.length > 0) {
-                    context += `  SFX: ${bd.sfx.map(s => s.description || s).join('; ')}\n`;
-                }
-                if (bd.wardrobe && bd.wardrobe.length > 0) {
-                    context += `  Wardrobe: ${bd.wardrobe.map(w => w.description || w).join('; ')}\n`;
-                }
-                if (bd.injuries && bd.injuries.length > 0) {
-                    context += `  Injuries: ${bd.injuries.map(i => i.description || i).join('; ')}\n`;
-                }
+                if (bd.cast && bd.cast.length > 0) context += `  Cast: ${bd.cast.join(', ')}\n`;
+                if (bd.hair && bd.hair.length > 0) context += `  Hair: ${bd.hair.map(h => typeof h === 'string' ? h : h.description || JSON.stringify(h)).join('; ')}\n`;
+                if (bd.makeup && bd.makeup.length > 0) context += `  Makeup: ${bd.makeup.map(m => typeof m === 'string' ? m : m.description || JSON.stringify(m)).join('; ')}\n`;
+                if (bd.sfx && bd.sfx.length > 0) context += `  SFX: ${bd.sfx.map(s => typeof s === 'string' ? s : s.description || JSON.stringify(s)).join('; ')}\n`;
+                if (bd.wardrobe && bd.wardrobe.length > 0) context += `  Wardrobe: ${bd.wardrobe.map(w => typeof w === 'string' ? w : w.description || JSON.stringify(w)).join('; ')}\n`;
+                if (bd.injuries && bd.injuries.length > 0) context += `  Injuries: ${bd.injuries.map(i => typeof i === 'string' ? i : i.description || JSON.stringify(i)).join('; ')}\n`;
+                if (bd.props && bd.props.length > 0) context += `  Props: ${bd.props.map(p => typeof p === 'string' ? p : p.description || JSON.stringify(p)).join('; ')}\n`;
+                if (bd.notes) context += `  Notes: ${bd.notes}\n`;
             });
             if (Object.keys(breakdowns).length > MAX_CONTEXT_BREAKDOWNS) {
                 context += `... and ${Object.keys(breakdowns).length - MAX_CONTEXT_BREAKDOWNS} more scene breakdowns\n`;
@@ -572,25 +588,27 @@ ${projectContext}
             context += '\n';
         }
 
-        // Continuity events
-        const continuityEvents = state?.continuityEvents || storedProject?.continuityEvents;
+        // === CONTINUITY EVENTS ===
+        const continuityEvents = state?.continuityEvents || storedProject?.continuityEvents || currentProject?.continuityEvents;
         if (continuityEvents) {
             const allEvents = Array.isArray(continuityEvents) ? continuityEvents :
-                Object.values(continuityEvents).flat();
+                Object.values(continuityEvents).flat().filter(Boolean);
 
             if (allEvents.length > 0) {
                 context += `=== CONTINUITY EVENTS (${allEvents.length}) ===\n`;
-                allEvents.slice(0, 15).forEach(event => {
+                allEvents.slice(0, 20).forEach(event => {
                     if (!event) return;
                     context += `${event.name || 'Unnamed'} (${event.character || 'Unknown'}):\n`;
                     context += `  Category: ${event.category || 'general'}\n`;
                     if (event.startScene !== undefined && event.endScene !== undefined) {
                         context += `  Scenes: ${event.startScene} to ${event.endScene}\n`;
                     }
+                    if (event.description) context += `  Description: ${event.description}\n`;
                     if (event.observations && Object.keys(event.observations).length > 0) {
                         context += `  Observations:\n`;
                         Object.entries(event.observations).slice(0, 5).forEach(([scene, obs]) => {
-                            context += `    Scene ${scene}: ${obs.substring(0, 80)}...\n`;
+                            const obsText = typeof obs === 'string' ? obs : JSON.stringify(obs);
+                            context += `    Scene ${scene}: ${obsText.substring(0, 100)}\n`;
                         });
                     }
                 });
@@ -598,24 +616,25 @@ ${projectContext}
             }
         }
 
-        // Character looks
-        const characterLooks = state?.characterLooks || storedProject?.characterLooks;
+        // === CHARACTER LOOKS ===
+        const characterLooks = state?.characterLooks || storedProject?.characterLooks || currentProject?.characterLooks;
         if (characterLooks && Object.keys(characterLooks).length > 0) {
             context += `=== CHARACTER LOOKS ===\n`;
-            Object.entries(characterLooks).slice(0, 10).forEach(([char, looks]) => {
+            Object.entries(characterLooks).slice(0, 12).forEach(([char, looks]) => {
                 context += `${char}:\n`;
                 if (Array.isArray(looks)) {
                     looks.slice(0, 5).forEach(look => {
-                        const scenes = look.scenes ? ` (Scenes: ${look.scenes.slice(0, 5).join(', ')})` : '';
+                        const scenes = look.scenes ? ` (Scenes: ${look.scenes.slice(0, 8).join(', ')})` : '';
                         context += `  - ${look.name || 'Unnamed look'}${scenes}\n`;
+                        if (look.description) context += `    ${look.description.substring(0, 80)}\n`;
                     });
                 }
             });
             context += '\n';
         }
 
-        // Tags
-        const scriptTags = state?.scriptTags || storedProject?.scriptTags;
+        // === TAGS ===
+        const scriptTags = state?.scriptTags || storedProject?.scriptTags || currentProject?.scriptTags;
         if (scriptTags && Object.keys(scriptTags).length > 0) {
             const allTags = Object.values(scriptTags).flat();
             const tagCounts = {};
@@ -631,23 +650,156 @@ ${projectContext}
             }
         }
 
-        // Budget data
+        // === SHOOTING SCHEDULE ===
+        const schedule = currentProject?.shootingSchedule;
+        if (schedule) {
+            context += `=== SHOOTING SCHEDULE ===\n`;
+            if (schedule.shootDays && schedule.shootDays.length > 0) {
+                context += `Total Shoot Days: ${schedule.shootDays.length}\n`;
+                schedule.shootDays.slice(0, 15).forEach((day, idx) => {
+                    context += `Day ${idx + 1}: ${day.date || 'TBD'}`;
+                    if (day.scenes && day.scenes.length > 0) context += ` - Scenes: ${day.scenes.join(', ')}`;
+                    if (day.location) context += ` @ ${day.location}`;
+                    context += '\n';
+                });
+            }
+            if (schedule.sceneToShootDay) {
+                const sceneCount = Object.keys(schedule.sceneToShootDay).length;
+                context += `Scenes scheduled: ${sceneCount}\n`;
+            }
+            context += '\n';
+        }
+
+        // === CALL SHEETS ===
+        try {
+            // Try to find recent call sheets
+            const today = new Date();
+            const callSheets = [];
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(today);
+                date.setDate(date.getDate() - i);
+                const dateKey = date.toISOString().split('T')[0];
+                const csData = localStorage.getItem(`callSheet_${dateKey}`);
+                if (csData) {
+                    const cs = JSON.parse(csData);
+                    callSheets.push({ date: dateKey, ...cs });
+                }
+            }
+            if (callSheets.length > 0) {
+                context += `=== CALL SHEETS (Recent) ===\n`;
+                callSheets.forEach(cs => {
+                    context += `Date: ${cs.date}\n`;
+                    if (cs.fileName) context += `  File: ${cs.fileName}\n`;
+                    if (cs.scenes) context += `  Scenes: ${cs.scenes.join(', ')}\n`;
+                    if (cs.callTime) context += `  Call Time: ${cs.callTime}\n`;
+                    if (cs.location) context += `  Location: ${cs.location}\n`;
+                });
+                context += '\n';
+            }
+        } catch (e) {}
+
+        // === BUDGET ===
         let budgetData = null;
         try {
-            budgetData = JSON.parse(localStorage.getItem('budgetData') || localStorage.getItem('hmBudgetData') || 'null');
+            // Try hmBudgetPro first (main budget system)
+            const budgetPro = localStorage.getItem('hmBudgetPro');
+            if (budgetPro) {
+                budgetData = JSON.parse(budgetPro);
+            } else {
+                // Fallback to other budget keys
+                budgetData = JSON.parse(localStorage.getItem('budgetData') || localStorage.getItem('hmBudgetData') || 'null');
+            }
         } catch (e) {}
 
         if (budgetData) {
             context += `=== BUDGET ===\n`;
-            if (budgetData.totalBudget) context += `Total Budget: $${budgetData.totalBudget.toLocaleString()}\n`;
-            if (budgetData.spent) context += `Spent: $${budgetData.spent.toLocaleString()}\n`;
-            if (budgetData.remaining) context += `Remaining: $${budgetData.remaining.toLocaleString()}\n`;
+            if (budgetData.projectName) context += `Project: ${budgetData.projectName}\n`;
+            if (budgetData.totalBudget) context += `Total Budget: $${Number(budgetData.totalBudget).toLocaleString()}\n`;
+            if (budgetData.spent !== undefined) context += `Spent: $${Number(budgetData.spent).toLocaleString()}\n`;
+            if (budgetData.remaining !== undefined) context += `Remaining: $${Number(budgetData.remaining).toLocaleString()}\n`;
+
+            // Budget categories/departments
+            if (budgetData.departments && budgetData.departments.length > 0) {
+                context += `Departments:\n`;
+                budgetData.departments.slice(0, 10).forEach(dept => {
+                    context += `  - ${dept.name}: $${Number(dept.budget || 0).toLocaleString()}`;
+                    if (dept.spent) context += ` (spent: $${Number(dept.spent).toLocaleString()})`;
+                    context += '\n';
+                });
+            }
+            if (budgetData.categories && Object.keys(budgetData.categories).length > 0) {
+                context += `Categories:\n`;
+                Object.entries(budgetData.categories).slice(0, 10).forEach(([cat, data]) => {
+                    const amount = typeof data === 'number' ? data : data.budget || data.amount || 0;
+                    context += `  - ${cat}: $${Number(amount).toLocaleString()}\n`;
+                });
+            }
+            context += '\n';
+        }
+
+        // === TIMESHEET DATA ===
+        try {
+            const timesheetStr = localStorage.getItem('proTimesheetSystem');
+            if (timesheetStr) {
+                const timesheet = JSON.parse(timesheetStr);
+                context += `=== TIMESHEET / CREW ===\n`;
+                if (timesheet.crew && timesheet.crew.length > 0) {
+                    context += `Crew Members: ${timesheet.crew.length}\n`;
+                    timesheet.crew.slice(0, 10).forEach(member => {
+                        context += `  - ${member.name}`;
+                        if (member.position) context += ` (${member.position})`;
+                        if (member.department) context += ` - ${member.department}`;
+                        context += '\n';
+                    });
+                }
+                if (timesheet.days && timesheet.days.length > 0) {
+                    context += `Shoot Days Tracked: ${timesheet.days.length}\n`;
+                }
+                if (timesheet.rates) {
+                    context += `Base Rate Info: ${timesheet.rates.baseHours || 10}hr day\n`;
+                }
+                context += '\n';
+            }
+        } catch (e) {}
+
+        // === MASTER CONTEXT (Narrative Analysis) ===
+        if (masterContext) {
+            context += `=== NARRATIVE ANALYSIS ===\n`;
+            if (masterContext.title) context += `Script Title: ${masterContext.title}\n`;
+            if (masterContext.genre) context += `Genre: ${masterContext.genre}\n`;
+            if (masterContext.themes && masterContext.themes.length > 0) {
+                context += `Themes: ${masterContext.themes.slice(0, 5).join(', ')}\n`;
+            }
+            if (masterContext.plotSummary) {
+                context += `Plot Summary: ${masterContext.plotSummary.substring(0, 300)}...\n`;
+            }
+            if (masterContext.characterArcs) {
+                context += `Character Arcs:\n`;
+                Object.entries(masterContext.characterArcs).slice(0, 5).forEach(([char, arc]) => {
+                    const arcText = typeof arc === 'string' ? arc : arc.summary || JSON.stringify(arc);
+                    context += `  ${char}: ${arcText.substring(0, 100)}\n`;
+                });
+            }
+            context += '\n';
+        }
+
+        // === SCENE TIMELINE ===
+        const sceneTimeline = state?.sceneTimeline || storedProject?.sceneTimeline;
+        if (sceneTimeline && Object.keys(sceneTimeline).length > 0) {
+            context += `=== SCENE TIMELINE ===\n`;
+            Object.entries(sceneTimeline).slice(0, 20).forEach(([sceneIdx, timeline]) => {
+                context += `Scene ${parseInt(sceneIdx) + 1}: `;
+                if (timeline.day) context += `Day ${timeline.day}`;
+                if (timeline.time) context += ` - ${timeline.time}`;
+                if (timeline.label) context += ` (${timeline.label})`;
+                context += '\n';
+            });
             context += '\n';
         }
 
         // If no data found
         if (!context.trim()) {
-            context = 'No project data currently loaded. The user may need to import a script or load a project first.';
+            context = 'No project data currently loaded. Please load a project from the dashboard or import a script first.';
         }
 
         return context;
