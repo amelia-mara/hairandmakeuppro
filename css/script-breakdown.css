@@ -11107,17 +11107,17 @@
 
 .timeline-section {
     background: rgba(255, 255, 255, 0.02);
-    border-radius: 8px;
-    padding: 10px 12px;
+    border-radius: 6px;
+    padding: 8px 10px;
 }
 
 .timeline-section .section-title {
-    font-size: 0.7em;
+    font-size: 0.6em;
     text-transform: uppercase;
     letter-spacing: 1px;
     color: var(--accent-gold, #d4af7a);
-    margin: 0 0 8px 0;
-    padding-bottom: 6px;
+    margin: 0 0 6px 0;
+    padding-bottom: 4px;
     border-bottom: 1px solid rgba(212, 175, 122, 0.2);
 }
 
@@ -11134,11 +11134,11 @@
     text-overflow: ellipsis;
 }
 
-/* Row 1: Dropdowns and Note Input */
-.timeline-row-1 {
+/* Compact Single Row: Day + Time + Type + Note */
+.timeline-row-compact {
     display: flex;
-    gap: 8px;
-    margin-bottom: 8px;
+    gap: 6px;
+    align-items: flex-end;
 }
 
 .timeline-field {
@@ -11148,30 +11148,34 @@
 }
 
 .timeline-field label {
-    font-size: 0.6em;
+    font-size: 0.55em;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     color: var(--text-muted, #9ca3af);
 }
 
 .timeline-field.story-day-field {
-    flex: 0 0 85px;
+    flex: 0 0 65px;
 }
 
 .timeline-field.time-field {
-    flex: 0 0 70px;
+    flex: 0 0 60px;
+}
+
+.timeline-field.type-field {
+    flex: 0 0 75px;
 }
 
 .timeline-field.note-field {
     flex: 1;
-    min-width: 80px;
+    min-width: 60px;
 }
 
 .timeline-select,
 .timeline-input,
 .timeline-section .story-day-select {
-    padding: 5px 8px;
-    font-size: 0.8em;
+    padding: 4px 6px;
+    font-size: 0.75em;
     background: rgba(0, 0, 0, 0.3);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 4px;
@@ -11186,119 +11190,20 @@
     border-color: var(--accent-gold, #d4af7a);
 }
 
-/* Row 2: Buttons and Checkboxes */
-.timeline-row-2 {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
-.timeline-buttons {
-    display: flex;
-    gap: 4px;
-    align-items: center;
-}
-
-.timeline-btn {
-    padding: 4px 8px;
-    font-size: 0.75em;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 4px;
-    color: var(--text-secondary, #a1a1aa);
-    cursor: pointer;
-    transition: all 0.2s;
-    min-width: 24px;
-}
-
-.timeline-btn:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.1);
-    color: var(--text-primary, #e4e4e7);
-}
-
-.timeline-btn:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-}
-
-.timeline-btn.confirm {
-    background: rgba(212, 175, 122, 0.1);
-    border-color: rgba(212, 175, 122, 0.3);
-    color: var(--accent-gold, #d4af7a);
-}
-
-.timeline-btn.confirm:hover {
-    background: rgba(212, 175, 122, 0.2);
-}
-
-.timeline-confirmed {
-    padding: 4px 8px;
-    font-size: 0.75em;
-    background: rgba(16, 185, 129, 0.15);
-    border: 1px solid rgba(16, 185, 129, 0.3);
-    color: #6ee7b7;
-    border-radius: 4px;
-}
-
-/* Scene Type Flags - Inline Compact */
-.timeline-flags {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-}
-
-.timeline-flags label {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    font-size: 0.65em;
-    color: var(--text-muted, #9ca3af);
-    cursor: pointer;
-    white-space: nowrap;
-    padding: 2px 4px;
-    border-radius: 3px;
-    transition: all 0.2s;
-}
-
-.timeline-flags label:hover {
-    color: var(--text-secondary, #a1a1aa);
-    background: rgba(255, 255, 255, 0.05);
-}
-
-.timeline-flags input[type="checkbox"] {
-    width: 11px;
-    height: 11px;
-    margin: 0;
-    cursor: pointer;
-    accent-color: var(--accent-gold, #d4af7a);
-}
-
-.timeline-flags label:has(input:checked) {
-    color: var(--accent-gold, #d4af7a);
-    background: rgba(212, 175, 122, 0.1);
-}
-
 /* Responsive adjustments */
-@media (max-width: 400px) {
-    .timeline-row-1 {
+@media (max-width: 500px) {
+    .timeline-row-compact {
         flex-wrap: wrap;
     }
 
     .timeline-field.story-day-field,
-    .timeline-field.time-field {
-        flex: 1 1 45%;
+    .timeline-field.time-field,
+    .timeline-field.type-field {
+        flex: 1 1 30%;
     }
 
     .timeline-field.note-field {
         flex: 1 1 100%;
-    }
-
-    .timeline-row-2 {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 6px;
     }
 }
 
