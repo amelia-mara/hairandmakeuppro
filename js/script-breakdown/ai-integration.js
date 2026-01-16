@@ -3,8 +3,8 @@
  * AI integration for auto-generating breakdowns, synopses, and detecting elements
  *
  * Provides:
- * - Universal AI API caller (OpenAI, Anthropic, serverless)
- * - Settings management (API keys, provider selection)
+ * - Claude API caller via serverless endpoint
+ * - Settings management (API keys)
  * - Scene synopsis generation
  * - Element detection (cast, hair, makeup, SFX)
  * - Character introduction detection
@@ -149,31 +149,10 @@ function resetAPIUsage() {
 window.resetAPIUsage = resetAPIUsage;
 
 /**
- * Show API limit help based on current provider
+ * Show API limit help for Claude/Anthropic
  */
 function showAPILimitHelp() {
-    const provider = state.aiProvider || localStorage.getItem('aiProvider') || 'openai';
-
-    let helpText = '';
-    if (provider === 'openai') {
-        helpText = `Check your OpenAI usage and rate limits:
-
-1. Go to: https://platform.openai.com/usage
-2. Click "Rate limits" tab to see your current tier
-3. Check requests per minute (RPM) and tokens per minute (TPM)
-
-FREE TIER LIMITS:
-- Very limited (3 requests/minute for GPT-4)
-- Upgrade to at least Tier 1 ($5+ usage) for better limits
-
-COMMON RATE LIMITS BY TIER:
-- Tier 1: 500 RPM, 30K TPM (GPT-4)
-- Tier 2: 5,000 RPM, 450K TPM (GPT-4)
-- Tier 3: 10,000 RPM, 10M TPM (GPT-4)
-
-TIP: If you're hitting rate limits, the app will automatically retry with exponential backoff.`;
-    } else if (provider === 'anthropic') {
-        helpText = `Check your Anthropic (Claude) usage and rate limits:
+    const helpText = `Check your Anthropic (Claude) usage and rate limits:
 
 1. Go to: https://console.anthropic.com/settings/limits
 2. View your rate limits for your current tier
@@ -185,7 +164,6 @@ RATE LIMITS DEPEND ON TIER:
 - Scale tier: Custom limits
 
 TIP: Anthropic has generous rate limits on paid tiers. The app will automatically retry with exponential backoff if you hit limits.`;
-    }
 
     alert(helpText);
 }
@@ -345,8 +323,8 @@ function showToast(message, type = 'info') {
 // ============================================================================
 
 /**
- * Universal AI caller with comprehensive error logging and retry logic
- * Supports: Serverless API, OpenAI, Anthropic
+ * Claude AI caller with comprehensive error logging and retry logic
+ * Uses serverless /api/ai endpoint
  */
 export async function callAI(prompt, maxTokens = 500, sceneNumber = null) {
     return await callAIWithRetry(prompt, maxTokens, sceneNumber, 3);
