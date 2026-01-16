@@ -3,7 +3,7 @@ export default async function handler(req, res) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
     try {
-        const { messages, maxTokens = 500, model = 'claude-sonnet-4-20250514' } = req.body || {};
+        const { messages, system, maxTokens = 500, model = 'claude-sonnet-4-20250514' } = req.body || {};
         if (!messages) {
             return res.status(400).json({ error: 'Missing messages array' });
         }
@@ -11,6 +11,19 @@ export default async function handler(req, res) {
         if (!apiKey) {
             return res.status(500).json({ error: 'Anthropic API key not configured' });
         }
+
+        const requestBody = {
+            model,
+            max_tokens: maxTokens,
+            temperature: 0.3,
+            messages
+        };
+
+        // Add system prompt if provided
+        if (system) {
+            requestBody.system = system;
+        }
+
         const response = await fetch("https://api.anthropic.com/v1/messages", {
             method: "POST",
             headers: {
@@ -18,7 +31,7 @@ export default async function handler(req, res) {
                 "anthropic-version": "2023-06-01",
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({ model, max_tokens: maxTokens, temperature: 0.3, messages })
+            body: JSON.stringify(requestBody)
         });
         const data = await response.json();
         if (!response.ok) return res.status(response.status).json(data);

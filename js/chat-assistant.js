@@ -39,11 +39,12 @@
     }
 
     /**
-     * Check if API key is configured
+     * Check API availability (server-side key via Vercel)
      */
     function checkApiKey() {
-        const apiKey = localStorage.getItem('anthropicApiKey') || localStorage.getItem('apiKey');
-        chatState.hasApiKey = !!apiKey;
+        // Server-side API key is used via /api/ai.js endpoint
+        // No client-side key needed when deployed to Vercel
+        chatState.hasApiKey = true;
     }
 
     /**
@@ -115,12 +116,6 @@
                     <button class="chat-assistant-header-btn" title="Close">✕</button>
                 </div>
             </div>
-            ${!chatState.hasApiKey ? `
-                <div class="chat-assistant-warning">
-                    <span>⚠</span>
-                    <span>API key not configured. <a href="#" onclick="openSettingsModal && openSettingsModal(); return false;">Open Settings</a></span>
-                </div>
-            ` : ''}
             ${hasMessages ? `
                 <div class="chat-assistant-messages" id="chat-assistant-messages"></div>
             ` : `
@@ -432,15 +427,10 @@
     }
 
     /**
-     * Call Claude API with project context
+     * Call Claude API with project context (via server-side endpoint)
      */
     async function callClaudeAPI(userMessage) {
-        const apiKey = localStorage.getItem('anthropicApiKey') || localStorage.getItem('apiKey');
         const model = localStorage.getItem('anthropicModel') || 'claude-sonnet-4-20250514';
-
-        if (!apiKey) {
-            throw new Error('API key not configured');
-        }
 
         // Build project context
         const projectContext = buildProjectContext();
@@ -482,17 +472,15 @@ ${projectContext}
             { role: 'user', content: userMessage }
         ];
 
-        const response = await fetch('https://api.anthropic.com/v1/messages', {
+        // Use server-side API endpoint (uses Vercel env var for API key)
+        const response = await fetch('/api/ai', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'x-api-key': apiKey,
-                'anthropic-version': '2023-06-01',
-                'anthropic-dangerous-direct-browser-access': 'true'
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
                 model: model,
-                max_tokens: 2048,
+                maxTokens: 2048,
                 system: systemPrompt,
                 messages: messages
             })
@@ -500,7 +488,7 @@ ${projectContext}
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.error?.message || `API error: ${response.status}`);
+            throw new Error(errorData.error?.message || errorData.error || `API error: ${response.status}`);
         }
 
         const data = await response.json();
