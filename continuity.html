@@ -611,123 +611,118 @@
         }
 
         /* ============================================================================
-           PHOTO LIGHTBOX / MODAL
+           EXPANDED TIMELINE PREVIEW (in-panel)
            ============================================================================ */
 
-        .photo-lightbox {
+        .timeline-preview {
             display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.92);
-            z-index: 10000;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            margin-top: 12px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .timeline-preview.active {
+            display: block;
+        }
+
+        .timeline-preview-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .timeline-preview-title {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--accent-gold);
+        }
+
+        .timeline-preview-close {
+            width: 24px;
+            height: 24px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 4px;
+            color: var(--text-muted);
+            font-size: 1rem;
+            cursor: pointer;
+            display: flex;
             align-items: center;
             justify-content: center;
-            padding: 40px;
-            cursor: zoom-out;
+            transition: all 0.2s ease;
         }
 
-        .photo-lightbox.active {
-            display: flex;
-        }
-
-        .lightbox-content {
-            position: relative;
-            max-width: 90vw;
-            max-height: 90vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 16px;
-        }
-
-        .lightbox-image {
-            max-width: 100%;
-            max-height: 80vh;
-            object-fit: contain;
-            border-radius: 8px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-            cursor: default;
-        }
-
-        .lightbox-caption {
+        .timeline-preview-close:hover {
+            background: rgba(255, 255, 255, 0.2);
             color: var(--text-light);
-            font-size: 0.875rem;
-            text-align: center;
-            background: rgba(0, 0, 0, 0.6);
-            padding: 8px 16px;
-            border-radius: 6px;
         }
 
-        .lightbox-caption-scene {
+        .timeline-preview-image {
+            width: 100%;
+            aspect-ratio: 3/4;
+            object-fit: cover;
+            border-radius: 6px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .timeline-preview-caption {
+            margin-top: 8px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        .timeline-preview-scene {
             color: var(--accent-gold);
             font-weight: 600;
         }
 
-        .lightbox-close {
-            position: absolute;
-            top: -30px;
-            right: -30px;
-            width: 40px;
-            height: 40px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 50%;
-            color: white;
-            font-size: 1.5rem;
-            cursor: pointer;
+        .timeline-preview-nav {
             display: flex;
-            align-items: center;
             justify-content: center;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .timeline-preview-nav-btn {
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            border-radius: 4px;
+            color: var(--text-muted);
+            font-size: 0.7rem;
+            cursor: pointer;
             transition: all 0.2s ease;
         }
 
-        .lightbox-close:hover {
-            background: rgba(255, 255, 255, 0.2);
-            transform: scale(1.1);
-        }
-
-        .lightbox-nav {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 50px;
-            height: 50px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 50%;
-            color: white;
-            font-size: 1.5rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s ease;
-        }
-
-        .lightbox-nav:hover {
-            background: rgba(212, 175, 122, 0.3);
+        .timeline-preview-nav-btn:hover:not(.disabled) {
+            background: rgba(212, 175, 122, 0.15);
             border-color: var(--accent-gold);
+            color: var(--accent-gold);
         }
 
-        .lightbox-nav.prev {
-            left: -70px;
-        }
-
-        .lightbox-nav.next {
-            right: -70px;
-        }
-
-        .lightbox-nav.disabled {
-            opacity: 0.3;
+        .timeline-preview-nav-btn.disabled {
+            opacity: 0.4;
             cursor: not-allowed;
         }
 
-        .lightbox-nav.disabled:hover {
-            background: rgba(255, 255, 255, 0.1);
-            border-color: rgba(255, 255, 255, 0.2);
+        .timeline-preview-goto {
+            padding: 6px 12px;
+            background: rgba(212, 175, 122, 0.15);
+            border: 1px solid rgba(212, 175, 122, 0.3);
+            border-radius: 4px;
+            color: var(--accent-gold);
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .timeline-preview-goto:hover {
+            background: rgba(212, 175, 122, 0.25);
+            border-color: var(--accent-gold);
         }
 
         /* ============================================================================
@@ -3543,16 +3538,30 @@
                                 ${lookTimelineData.map(item => `
                                     <div class="look-timeline-item ${item.sceneIndex === selectedSceneIndex ? 'current' : ''}"
                                          title="${escapeHtml(item.heading)}">
-                                        <div class="look-timeline-thumb" onclick="${item.thumbnail ? `openTimelineLightbox(${item.sceneIndex}, event)` : `selectScene(${item.sceneIndex})`}">
+                                        <div class="look-timeline-thumb" onclick="${item.thumbnail ? `openTimelinePreview(${item.sceneIndex})` : `selectScene(${item.sceneIndex})`}">
                                             ${item.thumbnail ?
                                                 `<img src="${item.thumbnail}" alt="Scene ${item.sceneNumber}" style="cursor: zoom-in;">` :
-                                                `<span class="look-timeline-thumb-placeholder" onclick="selectScene(${item.sceneIndex})">📷</span>`
+                                                `<span class="look-timeline-thumb-placeholder">📷</span>`
                                             }
                                             <span class="look-timeline-status ${item.status}"></span>
                                         </div>
                                         <span class="look-timeline-label" onclick="selectScene(${item.sceneIndex})" style="cursor: pointer;">Sc ${item.sceneNumber}</span>
                                     </div>
                                 `).join('')}
+                            </div>
+                            <!-- Expanded Preview Area -->
+                            <div class="timeline-preview" id="timeline-preview">
+                                <div class="timeline-preview-header">
+                                    <span class="timeline-preview-title" id="preview-title">Scene Preview</span>
+                                    <button class="timeline-preview-close" onclick="closeTimelinePreview()">×</button>
+                                </div>
+                                <img class="timeline-preview-image" id="preview-image" src="" alt="Preview">
+                                <div class="timeline-preview-caption" id="preview-caption"></div>
+                                <div class="timeline-preview-nav">
+                                    <button class="timeline-preview-nav-btn" id="preview-prev" onclick="previewPrev()">← Prev</button>
+                                    <button class="timeline-preview-goto" id="preview-goto" onclick="previewGoToScene()">Go to Scene</button>
+                                    <button class="timeline-preview-nav-btn" id="preview-next" onclick="previewNext()">Next →</button>
+                                </div>
                             </div>
                         ` : `
                             <div class="look-timeline-empty">
@@ -4324,141 +4333,111 @@
         }
 
         // ============================================================================
-        // PHOTO LIGHTBOX
+        // TIMELINE PREVIEW (in-panel expanded view)
         // ============================================================================
 
-        let lightboxData = null; // { images: [], currentIndex: 0 }
+        let previewData = null; // { images: [], currentIndex: 0 }
 
-        function openLightbox(imageSrc, caption, timelineData, currentIndex) {
-            const lightbox = document.getElementById('photo-lightbox');
-            const image = document.getElementById('lightbox-image');
-            const captionEl = document.getElementById('lightbox-caption');
+        // Open timeline preview in the reference panel
+        function openTimelinePreview(sceneIndex) {
+            // Get all timeline images for this character
+            const timelineData = getLookTimelineData(selectedCharacter);
+            if (!timelineData || timelineData.length === 0) return;
 
-            if (!lightbox || !image) return;
+            // Build images array (only items with thumbnails)
+            const images = timelineData
+                .filter(item => item.thumbnail)
+                .map(item => ({
+                    src: item.thumbnail,
+                    sceneIndex: item.sceneIndex,
+                    sceneNumber: item.sceneNumber,
+                    heading: item.heading
+                }));
 
-            // Store timeline data for navigation
-            lightboxData = {
-                images: timelineData || [{ src: imageSrc, caption: caption }],
-                currentIndex: currentIndex || 0
+            if (images.length === 0) return;
+
+            // Find index of clicked scene
+            const currentIndex = images.findIndex(img => img.sceneIndex === sceneIndex);
+            if (currentIndex === -1) return;
+
+            // Store preview data
+            previewData = {
+                images: images,
+                currentIndex: currentIndex
             };
 
-            // Set image and caption
-            updateLightboxImage();
-
-            // Show lightbox
-            lightbox.classList.add('active');
-            document.body.style.overflow = 'hidden';
-
-            // Add escape key listener
-            document.addEventListener('keydown', handleLightboxKeydown);
-        }
-
-        function closeLightbox() {
-            const lightbox = document.getElementById('photo-lightbox');
-            if (lightbox) {
-                lightbox.classList.remove('active');
-                document.body.style.overflow = '';
-                document.removeEventListener('keydown', handleLightboxKeydown);
-                lightboxData = null;
+            // Show preview
+            updateTimelinePreview();
+            const preview = document.getElementById('timeline-preview');
+            if (preview) {
+                preview.classList.add('active');
             }
         }
 
-        function updateLightboxImage() {
-            if (!lightboxData) return;
+        // Close timeline preview
+        function closeTimelinePreview() {
+            const preview = document.getElementById('timeline-preview');
+            if (preview) {
+                preview.classList.remove('active');
+            }
+            previewData = null;
+        }
 
-            const image = document.getElementById('lightbox-image');
-            const captionEl = document.getElementById('lightbox-caption');
-            const prevBtn = document.getElementById('lightbox-prev');
-            const nextBtn = document.getElementById('lightbox-next');
+        // Update preview display
+        function updateTimelinePreview() {
+            if (!previewData) return;
 
-            const currentItem = lightboxData.images[lightboxData.currentIndex];
+            const image = document.getElementById('preview-image');
+            const title = document.getElementById('preview-title');
+            const caption = document.getElementById('preview-caption');
+            const prevBtn = document.getElementById('preview-prev');
+            const nextBtn = document.getElementById('preview-next');
+
+            const currentItem = previewData.images[previewData.currentIndex];
 
             if (image && currentItem) {
                 image.src = currentItem.src;
             }
 
-            if (captionEl && currentItem) {
-                captionEl.innerHTML = currentItem.caption || '';
+            if (title && currentItem) {
+                title.textContent = `Scene ${currentItem.sceneNumber}`;
+            }
+
+            if (caption && currentItem) {
+                caption.textContent = currentItem.heading;
             }
 
             // Update nav button states
             if (prevBtn) {
-                prevBtn.classList.toggle('disabled', lightboxData.currentIndex === 0);
+                prevBtn.classList.toggle('disabled', previewData.currentIndex === 0);
             }
             if (nextBtn) {
-                nextBtn.classList.toggle('disabled', lightboxData.currentIndex >= lightboxData.images.length - 1);
+                nextBtn.classList.toggle('disabled', previewData.currentIndex >= previewData.images.length - 1);
             }
         }
 
-        function lightboxPrev() {
-            if (!lightboxData || lightboxData.currentIndex <= 0) return;
-            lightboxData.currentIndex--;
-            updateLightboxImage();
+        // Navigate to previous image in preview
+        function previewPrev() {
+            if (!previewData || previewData.currentIndex <= 0) return;
+            previewData.currentIndex--;
+            updateTimelinePreview();
         }
 
-        function lightboxNext() {
-            if (!lightboxData || lightboxData.currentIndex >= lightboxData.images.length - 1) return;
-            lightboxData.currentIndex++;
-            updateLightboxImage();
+        // Navigate to next image in preview
+        function previewNext() {
+            if (!previewData || previewData.currentIndex >= previewData.images.length - 1) return;
+            previewData.currentIndex++;
+            updateTimelinePreview();
         }
 
-        function handleLightboxKeydown(e) {
-            if (e.key === 'Escape') {
-                closeLightbox();
-            } else if (e.key === 'ArrowLeft') {
-                lightboxPrev();
-            } else if (e.key === 'ArrowRight') {
-                lightboxNext();
+        // Go to the scene shown in preview
+        function previewGoToScene() {
+            if (!previewData) return;
+            const currentItem = previewData.images[previewData.currentIndex];
+            if (currentItem) {
+                selectScene(currentItem.sceneIndex);
             }
-        }
-
-        function handleLightboxClick(e) {
-            // Close if clicking on background (not on content)
-            if (e.target.id === 'photo-lightbox') {
-                closeLightbox();
-            }
-        }
-
-        // Open lightbox from look timeline
-        function openTimelineLightbox(sceneIndex, e) {
-            // Stop propagation so it doesn't also select the scene
-            if (e) e.stopPropagation();
-
-            // Get all timeline images for this character
-            const timelineData = getLookTimelineData(selectedCharacter);
-            if (!timelineData || timelineData.length === 0) return;
-
-            // Find current index in timeline
-            const currentIndex = timelineData.findIndex(item => item.sceneIndex === sceneIndex);
-            if (currentIndex === -1) return;
-
-            // Build images array with captions
-            const images = timelineData
-                .filter(item => item.thumbnail)
-                .map(item => ({
-                    src: item.thumbnail,
-                    caption: `<span class="lightbox-caption-scene">Scene ${item.sceneNumber}</span> — ${escapeHtml(item.heading)}`,
-                    sceneIndex: item.sceneIndex
-                }));
-
-            if (images.length === 0) return;
-
-            // Find adjusted index (accounting for items without thumbnails)
-            const adjustedIndex = images.findIndex(img => img.sceneIndex === sceneIndex);
-
-            openLightbox(images[adjustedIndex >= 0 ? adjustedIndex : 0].src, images[adjustedIndex >= 0 ? adjustedIndex : 0].caption, images, adjustedIndex >= 0 ? adjustedIndex : 0);
         }
     </script>
-
-    <!-- Photo Lightbox Modal -->
-    <div class="photo-lightbox" id="photo-lightbox" onclick="handleLightboxClick(event)">
-        <div class="lightbox-content" onclick="event.stopPropagation()">
-            <button class="lightbox-close" onclick="closeLightbox()">×</button>
-            <button class="lightbox-nav prev" id="lightbox-prev" onclick="lightboxPrev()">←</button>
-            <img class="lightbox-image" id="lightbox-image" src="" alt="Photo">
-            <button class="lightbox-nav next" id="lightbox-next" onclick="lightboxNext()">→</button>
-            <div class="lightbox-caption" id="lightbox-caption"></div>
-        </div>
-    </div>
 </body>
 </html>
