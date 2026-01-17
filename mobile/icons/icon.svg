@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background -->
+  <rect width="512" height="512" rx="96" fill="#C9A961"/>
+
+  <!-- Outer Ring -->
+  <circle cx="256" cy="256" r="180" fill="none" stroke="white" stroke-width="12"/>
+
+  <!-- Camera Body -->
+  <rect x="156" y="176" width="200" height="160" rx="16" fill="none" stroke="white" stroke-width="12"/>
+
+  <!-- Camera Lens -->
+  <circle cx="256" cy="256" r="56" fill="white"/>
+  <circle cx="256" cy="256" r="32" fill="#C9A961"/>
+
+  <!-- Flash -->
+  <rect x="320" y="192" width="24" height="16" rx="4" fill="white"/>
+</svg>
