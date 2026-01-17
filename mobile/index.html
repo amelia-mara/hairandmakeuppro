@@ -621,6 +621,20 @@
                     </div>
                 </div>
 
+                <!-- Reference Photo Section -->
+                <div class="reference-section" id="reference-section" style="display: none;">
+                    <h3 class="section-label">Previous Scene Reference</h3>
+                    <div class="reference-card" id="reference-card">
+                        <div class="reference-photo">
+                            <img id="reference-photo-img" src="" alt="Reference photo">
+                        </div>
+                        <div class="reference-info">
+                            <p class="reference-scene" id="reference-scene">Scene 1</p>
+                            <p class="reference-hint">Tap to view full size</p>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="notes-section">
                     <h3 class="section-label">Scene Notes</h3>
                     <textarea class="notes-textarea" id="scene-notes" placeholder="Add any continuity notes for this scene..."></textarea>
@@ -635,6 +649,24 @@
                     </button>
                 </div>
             </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- FULL-SCREEN PHOTO VIEWER -->
+        <!-- ============================================ -->
+        <div class="photo-viewer" id="photo-viewer">
+            <div class="photo-viewer-header">
+                <button class="photo-viewer-close" id="photo-viewer-close">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                </button>
+                <span class="photo-viewer-title" id="photo-viewer-title">Reference Photo</span>
+            </div>
+            <div class="photo-viewer-content">
+                <img id="photo-viewer-img" src="" alt="Full size photo">
+            </div>
+            <div class="photo-viewer-caption" id="photo-viewer-caption"></div>
         </div>
 
         <!-- ============================================ -->
