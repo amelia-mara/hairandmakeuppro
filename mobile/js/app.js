@@ -2,6 +2,7 @@
  * Hair & Makeup Pro - Mobile PWA
  * Stage 1: Core Structure - Screen Navigation & Routing
  * Stage 2: Script Upload & Analysis
+ * Stage 4: Photo Capture System
  */
 
 // ============================================
@@ -31,6 +32,11 @@ const App = {
     characters: [],
     duplicates: [],
 
+    // Photo capture state (Stage 4)
+    currentSceneIndex: null,
+    currentCharacterName: null,
+    currentCaptureAngle: null,
+
     // LocalStorage keys
     STORAGE_KEYS: {
         PROJECT: 'hmp_project',
@@ -39,7 +45,10 @@ const App = {
     },
 
     // Initialize the app
-    init() {
+    async init() {
+        // Initialize PhotoStorage (IndexedDB)
+        await PhotoStorage.init();
+
         this.bindNavigationEvents();
         this.bindSearchToggle();
         this.bindFilterPills();
@@ -49,6 +58,7 @@ const App = {
         this.bindTimesheetCalculation();
         this.bindCharacterConfirmation();
         this.bindSceneSearch();
+        this.bindPhotoCapture();
 
         // Check for existing project and route accordingly
         this.checkInitialRoute();
@@ -149,6 +159,9 @@ const App = {
             case 'screen-settings':
                 this.updateSettings();
                 this.screenHistory = ['screen-home'];
+                break;
+            case 'screen-photo-capture':
+                this.initPhotoCapture();
                 break;
         }
     },
@@ -893,7 +906,7 @@ const App = {
     /**
      * Render the scene list
      */
-    renderSceneList() {
+    async renderSceneList() {
         const container = document.getElementById('scene-list');
         const countEl = document.getElementById('filtered-count');
 
@@ -915,6 +928,9 @@ const App = {
             if (countEl) countEl.textContent = '0';
             return;
         }
+
+        // Update scene statuses from photo database
+        await this.updateSceneStatuses();
 
         container.innerHTML = this.scenes.map(scene => this.renderSceneCard(scene)).join('');
         if (countEl) countEl.textContent = this.scenes.length;
@@ -1166,14 +1182,30 @@ const App = {
     /**
      * Update settings screen with current data
      */
-    updateSettings() {
+    async updateSettings() {
         const projectNameEl = document.getElementById('settings-project-name');
         const sceneCountEl = document.getElementById('settings-scene-count');
         const characterCountEl = document.getElementById('settings-character-count');
+        const photoCountEl = document.getElementById('photo-count');
+        const storageUsedEl = document.getElementById('storage-used');
+        const storageFillEl = document.getElementById('storage-fill');
 
         if (projectNameEl) projectNameEl.textContent = this.project.name;
         if (sceneCountEl) sceneCountEl.textContent = this.scenes.length;
         if (characterCountEl) characterCountEl.textContent = this.characters.length;
+
+        // Update photo storage stats
+        try {
+            const photoCount = await PhotoStorage.getPhotoCount();
+            if (photoCountEl) photoCountEl.textContent = photoCount;
+            if (storageUsedEl) storageUsedEl.textContent = photoCount;
+
+            // Update storage bar (100 photos = 100% for free tier)
+            const percentage = Math.min((photoCount / 100) * 100, 100);
+            if (storageFillEl) storageFillEl.style.width = `${percentage}%`;
+        } catch (error) {
+            console.error('Error getting photo stats:', error);
+        }
     },
 
     // ============================================
@@ -1283,13 +1315,327 @@ const App = {
     },
 
     // ============================================
+    // PHOTO CAPTURE (Stage 4)
+    // ============================================
+
+    /**
+     * Bind photo capture events
+     */
+    bindPhotoCapture() {
+        // Camera input change handler
+        const cameraInput = document.getElementById('camera-input');
+        if (cameraInput) {
+            cameraInput.addEventListener('change', (e) => this.handleCameraCapture(e));
+        }
+
+        // Mark complete button
+        const markCompleteBtn = document.getElementById('btn-mark-complete');
+        if (markCompleteBtn) {
+            markCompleteBtn.addEventListener('click', () => this.markSceneComplete());
+        }
+    },
+
+    /**
+     * Initialize photo capture screen
+     */
+    async initPhotoCapture() {
+        const scene = this.scenes[this.currentSceneIndex];
+        const character = this.characters.find(c => c.name === this.currentCharacterName);
+
+        if (!scene || !character) {
+            console.error('Missing scene or character for photo capture');
+            return;
+        }
+
+        // Update context banner
+        const captureCharacter = document.querySelector('.capture-character');
+        const captureScene = document.querySelector('.capture-scene');
+        const captureLook = document.querySelector('.capture-look');
+
+        if (captureCharacter) captureCharacter.textContent = character.name;
+        if (captureScene) captureScene.textContent = `Scene ${scene.number}`;
+        if (captureLook) captureLook.textContent = 'Default Look';
+
+        // Load existing photos and render grid
+        await this.renderPhotoGrid();
+
+        // Bind photo slot clicks
+        this.bindPhotoSlots();
+    },
+
+    /**
+     * Bind photo slot click events
+     */
+    bindPhotoSlots() {
+        const photoSlots = document.querySelectorAll('.photo-slot');
+        photoSlots.forEach(slot => {
+            slot.addEventListener('click', (e) => {
+                // Don't trigger if clicking delete button
+                if (e.target.closest('.photo-delete')) return;
+
+                const angle = slot.dataset.angle;
+                this.capturePhoto(angle);
+            });
+        });
+    },
+
+    /**
+     * Render the photo grid with existing photos
+     */
+    async renderPhotoGrid() {
+        const angles = ['front', 'left', 'right', 'back'];
+
+        for (const angle of angles) {
+            const slot = document.querySelector(`.photo-slot[data-angle="${angle}"]`);
+            if (!slot) continue;
+
+            // Get existing photo
+            const photo = await PhotoStorage.getPhoto(
+                this.currentSceneIndex,
+                this.currentCharacterName,
+                angle
+            );
+
+            if (photo) {
+                this.showPhotoInSlot(slot, photo);
+            } else {
+                this.showEmptySlot(slot, angle);
+            }
+        }
+    },
+
+    /**
+     * Show a captured photo in a slot
+     */
+    showPhotoInSlot(slot, photo) {
+        slot.classList.add('has-photo');
+        slot.innerHTML = `
+            <img src="${photo.data}" alt="${photo.angle} view">
+            <button class="photo-delete" data-angle="${photo.angle}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+            </button>
+        `;
+
+        // Bind delete button
+        const deleteBtn = slot.querySelector('.photo-delete');
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.deletePhoto(photo.angle);
+            });
+        }
+    },
+
+    /**
+     * Show empty slot placeholder
+     */
+    showEmptySlot(slot, angle) {
+        slot.classList.remove('has-photo');
+        slot.innerHTML = `
+            <div class="photo-placeholder">
+                <div class="photo-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+                        <circle cx="12" cy="13" r="4"/>
+                    </svg>
+                </div>
+                <p class="photo-label">${angle.toUpperCase()}</p>
+                <p class="photo-hint">Tap to capture</p>
+            </div>
+        `;
+    },
+
+    /**
+     * Capture a photo for the specified angle
+     */
+    capturePhoto(angle) {
+        this.currentCaptureAngle = angle;
+
+        const cameraInput = document.getElementById('camera-input');
+        if (cameraInput) {
+            // Reset input to allow capturing same image again
+            cameraInput.value = '';
+            cameraInput.click();
+        }
+    },
+
+    /**
+     * Handle camera capture result
+     */
+    async handleCameraCapture(event) {
+        const file = event.target.files[0];
+        if (!file || !this.currentCaptureAngle) return;
+
+        try {
+            // Convert to base64
+            const base64Data = await this.fileToBase64(file);
+
+            // Compress if needed
+            const compressedData = await this.compressImage(base64Data);
+
+            // Save to IndexedDB
+            await PhotoStorage.savePhoto({
+                sceneIndex: this.currentSceneIndex,
+                characterName: this.currentCharacterName,
+                angle: this.currentCaptureAngle,
+                data: compressedData
+            });
+
+            // Update the photo grid
+            await this.renderPhotoGrid();
+            this.bindPhotoSlots();
+
+            // Update scene status
+            await this.updateSceneStatuses();
+
+            console.log(`Photo captured for ${this.currentCharacterName} - ${this.currentCaptureAngle}`);
+        } catch (error) {
+            console.error('Error capturing photo:', error);
+            alert('Failed to save photo. Please try again.');
+        }
+    },
+
+    /**
+     * Convert file to base64
+     */
+    fileToBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    },
+
+    /**
+     * Compress image to reduce storage
+     */
+    compressImage(base64Data, maxWidth = 800, quality = 0.7) {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+
+                // Scale down if too large
+                if (width > maxWidth) {
+                    height = Math.round((height * maxWidth) / width);
+                    width = maxWidth;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // Convert to compressed JPEG
+                const compressed = canvas.toDataURL('image/jpeg', quality);
+                resolve(compressed);
+            };
+            img.src = base64Data;
+        });
+    },
+
+    /**
+     * Delete a photo
+     */
+    async deletePhoto(angle) {
+        const confirmed = confirm(`Delete ${angle} photo?`);
+        if (!confirmed) return;
+
+        try {
+            await PhotoStorage.deletePhoto(
+                this.currentSceneIndex,
+                this.currentCharacterName,
+                angle
+            );
+
+            // Update the photo grid
+            await this.renderPhotoGrid();
+            this.bindPhotoSlots();
+
+            // Update scene status
+            await this.updateSceneStatuses();
+
+            console.log(`Photo deleted: ${angle}`);
+        } catch (error) {
+            console.error('Error deleting photo:', error);
+            alert('Failed to delete photo.');
+        }
+    },
+
+    /**
+     * Mark scene as complete
+     */
+    async markSceneComplete() {
+        // Check if all 4 photos are captured
+        const status = await PhotoStorage.getCompletionStatus(
+            this.currentSceneIndex,
+            this.currentCharacterName
+        );
+
+        if (!status.isComplete) {
+            const missing = status.missing.map(a => a.toUpperCase()).join(', ');
+            alert(`Please capture all 4 angles first.\nMissing: ${missing}`);
+            return;
+        }
+
+        // Update scene status
+        await this.updateSceneStatuses();
+
+        // Save notes if any
+        const notesTextarea = document.getElementById('scene-notes');
+        if (notesTextarea && notesTextarea.value.trim()) {
+            this.saveSceneNotes(this.currentSceneIndex, this.currentCharacterName, notesTextarea.value);
+        }
+
+        // Navigate back to scene list
+        this.navigateTo('screen-scene-list');
+    },
+
+    /**
+     * Save scene notes to localStorage
+     */
+    saveSceneNotes(sceneIndex, characterName, notes) {
+        const key = `hmp_notes_${sceneIndex}_${characterName}`;
+        localStorage.setItem(key, notes);
+    },
+
+    /**
+     * Load scene notes from localStorage
+     */
+    loadSceneNotes(sceneIndex, characterName) {
+        const key = `hmp_notes_${sceneIndex}_${characterName}`;
+        return localStorage.getItem(key) || '';
+    },
+
+    /**
+     * Update scene statuses based on photos
+     */
+    async updateSceneStatuses() {
+        const statuses = await PhotoStorage.getAllSceneStatuses(this.scenes);
+
+        // Update scenes array
+        this.scenes.forEach(scene => {
+            scene.status = statuses[scene.index] || 'pending';
+        });
+
+        // Save updated scenes
+        this.saveToStorage();
+    },
+
+    // ============================================
     // ROUTING
     // ============================================
 
     /**
      * Check initial route based on app state
      */
-    checkInitialRoute() {
+    async checkInitialRoute() {
         // Check if we have existing data
         const hasExistingProject = this.loadFromStorage();
 
