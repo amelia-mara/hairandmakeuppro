@@ -1,0 +1,1324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="theme-color" content="#C9A961">
+    <meta name="description" content="Hair & Makeup Pro - Professional continuity tracking for film and TV">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="H&M Pro">
+
+    <title>Hair & Makeup Pro</title>
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+
+    <!-- App Icons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="icons/icon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152x152.png">
+    <link rel="apple-touch-icon" sizes="144x144" href="icons/icon-144x144.png">
+    <link rel="apple-touch-icon" sizes="120x120" href="icons/icon-120x120.png">
+
+    <!-- Splash Screens for iOS -->
+    <link rel="apple-touch-startup-image" href="splash/splash-640x1136.png" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2)">
+    <link rel="apple-touch-startup-image" href="splash/splash-750x1334.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)">
+    <link rel="apple-touch-startup-image" href="splash/splash-1242x2208.png" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3)">
+    <link rel="apple-touch-startup-image" href="splash/splash-1125x2436.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)">
+    <link rel="apple-touch-startup-image" href="splash/splash-1170x2532.png" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- App CSS -->
+    <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+    <div id="app">
+        <!-- ============================================ -->
+        <!-- SCREEN 1: HOME -->
+        <!-- ============================================ -->
+        <div class="screen active" id="screen-home">
+            <div class="screen-content centered">
+                <div class="home-logo">
+                    <div class="logo-icon">
+                        <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="24" cy="24" r="22" stroke="currentColor" stroke-width="2"/>
+                            <path d="M16 18C16 16.8954 16.8954 16 18 16H30C31.1046 16 32 16.8954 32 18V30C32 31.1046 31.1046 32 30 32H18C16.8954 32 16 31.1046 16 30V18Z" stroke="currentColor" stroke-width="2"/>
+                            <circle cx="24" cy="24" r="4" fill="currentColor"/>
+                        </svg>
+                    </div>
+                    <h1 class="logo-text">Hair & Makeup Pro</h1>
+                    <p class="logo-tagline">Professional Continuity Tracking</p>
+                </div>
+
+                <div class="home-actions">
+                    <button class="btn btn-primary btn-large" data-navigate="screen-upload">
+                        <span class="btn-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 5v14M5 12h14"/>
+                            </svg>
+                        </span>
+                        <span class="btn-text">Start New Project</span>
+                    </button>
+
+                    <button class="btn btn-secondary btn-large" data-navigate="screen-sync-login">
+                        <span class="btn-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                            </svg>
+                        </span>
+                        <span class="btn-text">Sync from Desktop</span>
+                    </button>
+                </div>
+
+                <div class="info-banner">
+                    <div class="info-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M12 16v-4M12 8h.01"/>
+                        </svg>
+                    </div>
+                    <p><strong>Standalone Mode</strong> - Works 100% offline. Upload your script and start tracking continuity. Sync with desktop later for AI-powered features.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- SCREEN 2: UPLOAD SCRIPT -->
+        <!-- ============================================ -->
+        <div class="screen" id="screen-upload">
+            <div class="top-bar">
+                <button class="top-bar-btn back-btn" data-navigate="screen-home">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M15 18l-6-6 6-6"/>
+                    </svg>
+                </button>
+                <h1 class="top-bar-title">New Project</h1>
+                <div class="top-bar-btn placeholder"></div>
+            </div>
+
+            <div class="screen-content padded">
+                <div class="form-group">
+                    <label class="form-label">Project Name</label>
+                    <input type="text" class="form-input" id="project-name" placeholder="Untitled Project">
+                </div>
+
+                <div class="upload-card" id="upload-card">
+                    <div class="upload-icon">
+                        <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M8 32V36C8 38.2091 9.79086 40 12 40H36C38.2091 40 40 38.2091 40 36V32"/>
+                            <path d="M24 8V28M24 8L16 16M24 8L32 16"/>
+                        </svg>
+                    </div>
+                    <p class="upload-text">Tap to upload your script</p>
+                    <p class="upload-hint">PDF format recommended</p>
+                    <input type="file" id="script-file-input" accept=".pdf,.txt,.fdx" hidden>
+                </div>
+
+                <div class="file-preview hidden" id="file-preview">
+                    <div class="file-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                            <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>
+                        </svg>
+                    </div>
+                    <div class="file-info">
+                        <p class="file-name" id="file-name">script.pdf</p>
+                        <p class="file-size" id="file-size">2.4 MB</p>
+                    </div>
+                    <button class="file-remove" id="file-remove">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 6L6 18M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="info-banner small">
+                    <div class="info-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <p>Quick setup - we'll automatically detect scenes and characters from your script.</p>
+                </div>
+
+                <div class="screen-actions">
+                    <button class="btn btn-primary btn-full" id="btn-continue-upload" disabled data-navigate="screen-analyzing">
+                        Continue
+                    </button>
+                    <button class="btn btn-text" id="btn-use-demo">
+                        Use Demo Script
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- SCREEN 3: ANALYZING -->
+        <!-- ============================================ -->
+        <div class="screen" id="screen-analyzing">
+            <div class="screen-content centered">
+                <div class="analyzing-animation">
+                    <div class="spinner"></div>
+                </div>
+
+                <div class="analyzing-progress">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="analysis-progress"></div>
+                    </div>
+                    <p class="progress-text" id="analysis-status">Processing Script...</p>
+                </div>
+
+                <div class="analyzing-details">
+                    <p class="analyzing-subtitle">Detecting scenes and characters</p>
+                    <ul class="analyzing-steps">
+                        <li class="step active" id="step-scenes">
+                            <span class="step-icon"></span>
+                            <span class="step-text">Scanning for scene headings</span>
+                        </li>
+                        <li class="step" id="step-characters">
+                            <span class="step-icon"></span>
+                            <span class="step-text">Extracting character names</span>
+                        </li>
+                        <li class="step" id="step-duplicates">
+                            <span class="step-icon"></span>
+                            <span class="step-text">Checking for duplicates</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="info-banner small">
+                    <div class="info-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <p>Pattern recognition is fast and works offline. For AI-powered breakdown, sync with desktop.</p>
+                </div>
+
+                <button class="btn btn-text" id="btn-skip-analysis" data-action="show-confirmation">
+                    Skip to Results
+                </button>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- SCREEN 4: CHARACTER CONFIRMATION MODAL -->
+        <!-- ============================================ -->
+        <div class="modal" id="modal-character-confirmation">
+            <div class="modal-overlay" data-action="close-modal"></div>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title">Analysis Complete</h2>
+                    <div class="modal-stats">
+                        <span class="stat"><strong id="stat-scenes">42</strong> scenes</span>
+                        <span class="stat-divider">|</span>
+                        <span class="stat"><strong id="stat-characters">8</strong> characters</span>
+                    </div>
+                </div>
+
+                <div class="modal-body">
+                    <div class="info-banner warning" id="duplicate-warning">
+                        <div class="info-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                            </svg>
+                        </div>
+                        <p><strong>Possible Duplicates Found</strong> - Review and merge similar character names below.</p>
+                    </div>
+
+                    <div class="duplicate-cards" id="duplicate-cards">
+                        <!-- Duplicate cards will be inserted here -->
+                        <div class="duplicate-card">
+                            <div class="duplicate-names">
+                                <span class="dup-name">SARAH</span>
+                                <span class="dup-separator">+</span>
+                                <span class="dup-name">Sarah Chen</span>
+                            </div>
+                            <div class="duplicate-info">
+                                <span>12 scenes combined</span>
+                            </div>
+                            <button class="btn btn-small btn-gold">Merge as "SARAH CHEN"</button>
+                        </div>
+                    </div>
+
+                    <h3 class="section-title">Confirm Characters to Track</h3>
+                    <div class="character-list" id="character-list">
+                        <!-- Character checkboxes will be inserted here -->
+                        <label class="character-checkbox">
+                            <input type="checkbox" checked>
+                            <span class="checkbox-custom"></span>
+                            <span class="character-name">SARAH CHEN</span>
+                            <span class="scene-count">12 scenes</span>
+                        </label>
+                        <label class="character-checkbox">
+                            <input type="checkbox" checked>
+                            <span class="checkbox-custom"></span>
+                            <span class="character-name">MIKE</span>
+                            <span class="scene-count">8 scenes</span>
+                        </label>
+                        <label class="character-checkbox">
+                            <input type="checkbox" checked>
+                            <span class="checkbox-custom"></span>
+                            <span class="character-name">DR. WILSON</span>
+                            <span class="scene-count">6 scenes</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-navigate="screen-scene-breakdown-preview">
+                        Review Scenes First
+                    </button>
+                    <button class="btn btn-primary" data-navigate="screen-scene-list" data-action="confirm-characters">
+                        Confirm & Start Tracking
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- SCREEN 5: SCENE LIST -->
+        <!-- ============================================ -->
+        <div class="screen has-bottom-nav" id="screen-scene-list">
+            <div class="top-bar">
+                <h1 class="top-bar-title">Scene List</h1>
+                <button class="top-bar-btn" id="btn-toggle-search">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/>
+                        <path d="M21 21l-4.35-4.35"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="search-bar hidden" id="search-bar">
+                <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"/>
+                    <path d="M21 21l-4.35-4.35"/>
+                </svg>
+                <input type="text" class="search-input" id="scene-search" placeholder="Search scenes...">
+                <button class="search-clear" id="search-clear">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="filter-pills">
+                <button class="pill active" data-filter="all">All</button>
+                <button class="pill" data-filter="complete">Complete</button>
+                <button class="pill" data-filter="incomplete">Incomplete</button>
+            </div>
+
+            <div class="scene-count">
+                <span id="filtered-count">42</span> scenes
+            </div>
+
+            <div class="screen-content scrollable">
+                <div class="scene-list" id="scene-list">
+                    <!-- Scene cards will be inserted here -->
+                    <div class="scene-card" data-scene="1" data-navigate="screen-scene-detail">
+                        <div class="scene-number">1</div>
+                        <div class="scene-info">
+                            <p class="scene-heading">INT. SARAH'S APARTMENT - MORNING</p>
+                            <div class="scene-meta">
+                                <span class="scene-type int">INT</span>
+                                <span class="scene-time">DAY</span>
+                            </div>
+                        </div>
+                        <div class="scene-status pending">
+                            <span class="status-icon"></span>
+                        </div>
+                    </div>
+
+                    <div class="scene-card" data-scene="2" data-navigate="screen-scene-detail">
+                        <div class="scene-number">2</div>
+                        <div class="scene-info">
+                            <p class="scene-heading">EXT. CITY STREET - DAY</p>
+                            <div class="scene-meta">
+                                <span class="scene-type ext">EXT</span>
+                                <span class="scene-time">DAY</span>
+                            </div>
+                        </div>
+                        <div class="scene-status partial">
+                            <span class="status-icon"></span>
+                        </div>
+                    </div>
+
+                    <div class="scene-card" data-scene="3" data-navigate="screen-scene-detail">
+                        <div class="scene-number">3</div>
+                        <div class="scene-info">
+                            <p class="scene-heading">INT. COFFEE SHOP - DAY</p>
+                            <div class="scene-meta">
+                                <span class="scene-type int">INT</span>
+                                <span class="scene-time">DAY</span>
+                            </div>
+                        </div>
+                        <div class="scene-status complete">
+                            <span class="status-icon"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Navigation -->
+            <nav class="bottom-nav">
+                <button class="nav-item active" data-tab="scenes">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="7" height="7"/>
+                            <rect x="14" y="3" width="7" height="7"/>
+                            <rect x="14" y="14" width="7" height="7"/>
+                            <rect x="3" y="14" width="7" height="7"/>
+                        </svg>
+                    </span>
+                    <span class="nav-label">Scenes</span>
+                </button>
+                <button class="nav-item" data-tab="lookbooks" data-navigate="screen-lookbooks">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                        </svg>
+                    </span>
+                    <span class="nav-label">Lookbooks</span>
+                </button>
+                <button class="nav-item" data-tab="timesheet" data-navigate="screen-timesheet">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M12 6v6l4 2"/>
+                        </svg>
+                    </span>
+                    <span class="nav-label">Timesheet</span>
+                </button>
+                <button class="nav-item" data-tab="settings" data-navigate="screen-settings">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3"/>
+                            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
+                        </svg>
+                    </span>
+                    <span class="nav-label">Settings</span>
+                </button>
+            </nav>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- SCREEN 6: SCENE DETAIL -->
+        <!-- ============================================ -->
+        <div class="screen" id="screen-scene-detail">
+            <div class="top-bar">
+                <button class="top-bar-btn back-btn" data-navigate="screen-scene-list">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M15 18l-6-6 6-6"/>
+                    </svg>
+                </button>
+                <h1 class="top-bar-title">Scene <span id="detail-scene-number">1</span></h1>
+                <button class="top-bar-btn" id="btn-scene-reference">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="scene-header-banner">
+                <p class="scene-heading-large" id="detail-scene-heading">INT. SARAH'S APARTMENT - MORNING</p>
+            </div>
+
+            <div class="character-tabs" id="character-tabs">
+                <button class="character-tab active" data-character="SARAH CHEN" data-navigate="screen-character-profile">SARAH CHEN</button>
+                <button class="character-tab" data-character="MIKE" data-navigate="screen-character-profile">MIKE</button>
+                <button class="character-tab" data-character="DR. WILSON" data-navigate="screen-character-profile">DR. WILSON</button>
+            </div>
+
+            <div class="screen-content padded centered">
+                <div class="empty-state">
+                    <div class="empty-icon">
+                        <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="24" cy="20" r="8"/>
+                            <path d="M12 40c0-6.627 5.373-12 12-12s12 5.373 12 12"/>
+                        </svg>
+                    </div>
+                    <h3 class="empty-title">No Character Selected</h3>
+                    <p class="empty-text">Select a character from the tabs above to view their profile and capture photos.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- SCREEN 7: CHARACTER PROFILE -->
+        <!-- ============================================ -->
+        <div class="screen" id="screen-character-profile">
+            <div class="top-bar">
+                <button class="top-bar-btn back-btn" data-navigate="screen-scene-detail">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M15 18l-6-6 6-6"/>
+                    </svg>
+                </button>
+                <h1 class="top-bar-title" id="profile-character-name">SARAH CHEN</h1>
+                <button class="top-bar-btn" id="btn-character-search">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/>
+                        <path d="M21 21l-4.35-4.35"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="screen-content scrollable">
+                <div class="profile-header">
+                    <div class="profile-avatar">
+                        <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="24" cy="18" r="8"/>
+                            <path d="M10 42c0-7.732 6.268-14 14-14s14 6.268 14 14"/>
+                        </svg>
+                    </div>
+                    <h2 class="profile-name">SARAH CHEN</h2>
+                    <p class="profile-context">Scene 1 | INT. SARAH'S APARTMENT</p>
+                </div>
+
+                <div class="profile-section">
+                    <h3 class="section-label">Current Look</h3>
+                    <div class="look-card">
+                        <h4 class="look-name">Day 1 - Professional</h4>
+                        <p class="look-description">Clean, polished professional look for corporate setting. Natural makeup with subtle contouring, well-groomed hair in a neat low bun. Emphasis on a put-together, confident appearance.</p>
+                        <div class="look-tags">
+                            <span class="tag">Day 1 Look</span>
+                            <span class="tag">Scenes 1-8</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="profile-section">
+                    <h3 class="section-label">Quick Reference</h3>
+                    <div class="reference-grid">
+                        <div class="reference-card" data-action="open-reference" data-type="master">
+                            <div class="reference-placeholder">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                                    <path d="M21 15l-5-5L5 21"/>
+                                </svg>
+                            </div>
+                            <p class="reference-label">Master Reference</p>
+                        </div>
+                        <div class="reference-card" data-action="open-reference" data-type="previous">
+                            <div class="reference-placeholder">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                                    <path d="M21 15l-5-5L5 21"/>
+                                </svg>
+                            </div>
+                            <p class="reference-label">Previous Scene</p>
+                            <p class="reference-meta">Scene 1 | 2 days ago</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="profile-section products-section">
+                    <h3 class="section-label">Products & Application</h3>
+                    <div class="products-list">
+                        <div class="product-item">
+                            <span class="product-label">Base:</span>
+                            <span class="product-value">MAC Face & Body (C3)</span>
+                        </div>
+                        <div class="product-item">
+                            <span class="product-label">Powder:</span>
+                            <span class="product-value">RCMA No Color</span>
+                        </div>
+                        <div class="product-item">
+                            <span class="product-label">Eyes:</span>
+                            <span class="product-value">Minimal mascara</span>
+                        </div>
+                        <div class="product-item">
+                            <span class="product-label">Lips:</span>
+                            <span class="product-value">Bare with balm</span>
+                        </div>
+                        <div class="product-item">
+                            <span class="product-label">Hair:</span>
+                            <span class="product-value">Neat low bun</span>
+                        </div>
+                        <div class="product-item">
+                            <span class="product-label">Time:</span>
+                            <span class="product-value">~30 minutes</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="screen-actions sticky">
+                    <button class="btn btn-primary btn-full" data-navigate="screen-photo-capture">
+                        Start Photo Capture
+                    </button>
+                    <button class="btn btn-secondary btn-full" data-navigate="screen-scene-detail">
+                        Back to Scene
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- SCREEN 8: PHOTO CAPTURE -->
+        <!-- ============================================ -->
+        <div class="screen" id="screen-photo-capture">
+            <div class="top-bar">
+                <button class="top-bar-btn back-btn" data-navigate="screen-character-profile">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M15 18l-6-6 6-6"/>
+                    </svg>
+                </button>
+                <h1 class="top-bar-title">Capture Photos</h1>
+                <button class="top-bar-btn" id="btn-capture-menu">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="1"/>
+                        <circle cx="12" cy="5" r="1"/>
+                        <circle cx="12" cy="19" r="1"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="capture-context">
+                <p class="capture-character">SARAH CHEN</p>
+                <p class="capture-scene">Scene 1</p>
+                <p class="capture-look">Day 1 - Professional</p>
+            </div>
+
+            <div class="screen-content scrollable padded">
+                <h3 class="section-label">Essential Photos</h3>
+                <div class="photo-grid">
+                    <div class="photo-slot" data-angle="front">
+                        <div class="photo-placeholder">
+                            <div class="photo-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+                                    <circle cx="12" cy="13" r="4"/>
+                                </svg>
+                            </div>
+                            <p class="photo-label">FRONT</p>
+                            <p class="photo-hint">Tap to capture</p>
+                        </div>
+                    </div>
+                    <div class="photo-slot" data-angle="left">
+                        <div class="photo-placeholder">
+                            <div class="photo-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+                                    <circle cx="12" cy="13" r="4"/>
+                                </svg>
+                            </div>
+                            <p class="photo-label">LEFT</p>
+                            <p class="photo-hint">Tap to capture</p>
+                        </div>
+                    </div>
+                    <div class="photo-slot" data-angle="right">
+                        <div class="photo-placeholder">
+                            <div class="photo-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+                                    <circle cx="12" cy="13" r="4"/>
+                                </svg>
+                            </div>
+                            <p class="photo-label">RIGHT</p>
+                            <p class="photo-hint">Tap to capture</p>
+                        </div>
+                    </div>
+                    <div class="photo-slot" data-angle="back">
+                        <div class="photo-placeholder">
+                            <div class="photo-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+                                    <circle cx="12" cy="13" r="4"/>
+                                </svg>
+                            </div>
+                            <p class="photo-label">BACK</p>
+                            <p class="photo-hint">Tap to capture</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reference Photo Section -->
+                <div class="reference-section" id="reference-section" style="display: none;">
+                    <h3 class="section-label">Previous Scene Reference</h3>
+                    <div class="reference-card" id="reference-card">
+                        <div class="reference-photo">
+                            <img id="reference-photo-img" src="" alt="Reference photo">
+                        </div>
+                        <div class="reference-info">
+                            <p class="reference-scene" id="reference-scene">Scene 1</p>
+                            <p class="reference-hint">Tap to view full size</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="notes-section">
+                    <h3 class="section-label">Scene Notes</h3>
+                    <textarea class="notes-textarea" id="scene-notes" placeholder="Add any continuity notes for this scene..."></textarea>
+                </div>
+
+                <div class="screen-actions">
+                    <button class="btn btn-primary btn-full" id="btn-mark-complete">
+                        Mark Scene Complete
+                    </button>
+                    <button class="btn btn-secondary btn-full" data-navigate="screen-character-profile">
+                        View Character Profile
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- FULL-SCREEN PHOTO VIEWER -->
+        <!-- ============================================ -->
+        <div class="photo-viewer" id="photo-viewer">
+            <div class="photo-viewer-header">
+                <button class="photo-viewer-close" id="photo-viewer-close">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                </button>
+                <span class="photo-viewer-title" id="photo-viewer-title">Reference Photo</span>
+            </div>
+            <div class="photo-viewer-content">
+                <img id="photo-viewer-img" src="" alt="Full size photo">
+            </div>
+            <div class="photo-viewer-caption" id="photo-viewer-caption"></div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- SCREEN 9: LOOKBOOKS -->
+        <!-- ============================================ -->
+        <div class="screen has-bottom-nav" id="screen-lookbooks">
+            <div class="top-bar">
+                <h1 class="top-bar-title">Lookbooks</h1>
+                <button class="top-bar-btn" id="btn-lookbook-search">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/>
+                        <path d="M21 21l-4.35-4.35"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="search-bar hidden" id="lookbook-search-bar">
+                <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"/>
+                    <path d="M21 21l-4.35-4.35"/>
+                </svg>
+                <input type="text" class="search-input" id="lookbook-search" placeholder="Search characters...">
+                <button class="search-clear" id="lookbook-search-clear">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="screen-content scrollable">
+                <div class="character-count">Characters (<span id="character-count">3</span>)</div>
+
+                <div class="lookbook-list" id="lookbook-list">
+                    <!-- Character lookbook sections -->
+                    <div class="lookbook-character">
+                        <h3 class="lookbook-character-name">SARAH CHEN</h3>
+                        <div class="lookbook-looks">
+                            <div class="lookbook-card">
+                                <div class="lookbook-thumbnail">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                        <circle cx="8.5" cy="8.5" r="1.5"/>
+                                        <path d="M21 15l-5-5L5 21"/>
+                                    </svg>
+                                </div>
+                                <div class="lookbook-info">
+                                    <h4 class="lookbook-look-name">Day 1 - Professional</h4>
+                                    <p class="lookbook-description">Clean, polished professional look for corporate setting. Natural makeup with subtle contouring.</p>
+                                    <span class="tag">Scenes 1-8</span>
+                                    <p class="lookbook-products">MAC Face & Body, RCMA No Color, Minimal mascara</p>
+                                </div>
+                            </div>
+                            <div class="lookbook-card">
+                                <div class="lookbook-thumbnail">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                        <circle cx="8.5" cy="8.5" r="1.5"/>
+                                        <path d="M21 15l-5-5L5 21"/>
+                                    </svg>
+                                </div>
+                                <div class="lookbook-info">
+                                    <h4 class="lookbook-look-name">Day 2 - Casual Weekend</h4>
+                                    <p class="lookbook-description">Relaxed, natural look for weekend scenes. Minimal makeup, hair down and loose.</p>
+                                    <span class="tag">Scenes 9-15</span>
+                                    <p class="lookbook-products">Light foundation, Lip balm, Hair loose</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="lookbook-character">
+                        <h3 class="lookbook-character-name">MIKE</h3>
+                        <div class="lookbook-looks">
+                            <div class="lookbook-card">
+                                <div class="lookbook-thumbnail">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                        <circle cx="8.5" cy="8.5" r="1.5"/>
+                                        <path d="M21 15l-5-5L5 21"/>
+                                    </svg>
+                                </div>
+                                <div class="lookbook-info">
+                                    <h4 class="lookbook-look-name">Standard Look</h4>
+                                    <p class="lookbook-description">Basic grooming. Clean shaven, neat hair, minimal products.</p>
+                                    <span class="tag">All Scenes</span>
+                                    <p class="lookbook-products">Translucent powder, Hair gel</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Navigation -->
+            <nav class="bottom-nav">
+                <button class="nav-item" data-tab="scenes" data-navigate="screen-scene-list">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="7" height="7"/>
+                            <rect x="14" y="3" width="7" height="7"/>
+                            <rect x="14" y="14" width="7" height="7"/>
+                            <rect x="3" y="14" width="7" height="7"/>
+                        </svg>
+                    </span>
+                    <span class="nav-label">Scenes</span>
+                </button>
+                <button class="nav-item active" data-tab="lookbooks">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                        </svg>
+                    </span>
+                    <span class="nav-label">Lookbooks</span>
+                </button>
+                <button class="nav-item" data-tab="timesheet" data-navigate="screen-timesheet">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M12 6v6l4 2"/>
+                        </svg>
+                    </span>
+                    <span class="nav-label">Timesheet</span>
+                </button>
+                <button class="nav-item" data-tab="settings" data-navigate="screen-settings">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3"/>
+                            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
+                        </svg>
+                    </span>
+                    <span class="nav-label">Settings</span>
+                </button>
+            </nav>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- SCREEN 10: TIMESHEET LIST -->
+        <!-- ============================================ -->
+        <div class="screen has-bottom-nav" id="screen-timesheet">
+            <div class="top-bar">
+                <h1 class="top-bar-title">Timesheet</h1>
+                <button class="top-bar-btn" data-navigate="screen-timesheet-form">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 5v14M5 12h14"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="screen-content scrollable">
+                <div class="timesheet-summary">
+                    <p class="summary-label">This Week</p>
+                    <p class="summary-hours"><span id="weekly-hours">32.5</span></p>
+                    <p class="summary-subtext">Total Hours</p>
+                </div>
+
+                <div class="filter-pills">
+                    <button class="pill active" data-filter="this-week">This Week</button>
+                    <button class="pill" data-filter="last-week">Last Week</button>
+                    <button class="pill" data-filter="this-month">This Month</button>
+                </div>
+
+                <h3 class="section-label">Daily Entries</h3>
+                <div class="timesheet-list" id="timesheet-list">
+                    <div class="timesheet-entry">
+                        <div class="entry-date">
+                            <p class="entry-day">Friday</p>
+                            <p class="entry-full-date">Jan 17, 2026</p>
+                            <span class="entry-shoot-day">Day 4</span>
+                        </div>
+                        <div class="entry-times">
+                            <p class="entry-range">06:00 - 18:00</p>
+                            <p class="entry-hours">11.5 hours</p>
+                        </div>
+                        <div class="entry-status pending">Pending</div>
+                    </div>
+                    <div class="timesheet-entry">
+                        <div class="entry-date">
+                            <p class="entry-day">Thursday</p>
+                            <p class="entry-full-date">Jan 16, 2026</p>
+                            <span class="entry-shoot-day">Day 3</span>
+                        </div>
+                        <div class="entry-times">
+                            <p class="entry-range">07:00 - 19:30</p>
+                            <p class="entry-hours">12 hours</p>
+                        </div>
+                        <div class="entry-status approved">Approved</div>
+                    </div>
+                    <div class="timesheet-entry">
+                        <div class="entry-date">
+                            <p class="entry-day">Wednesday</p>
+                            <p class="entry-full-date">Jan 15, 2026</p>
+                            <span class="entry-shoot-day">Day 2</span>
+                        </div>
+                        <div class="entry-times">
+                            <p class="entry-range">06:30 - 15:30</p>
+                            <p class="entry-hours">9 hours</p>
+                        </div>
+                        <div class="entry-status approved">Approved</div>
+                    </div>
+                </div>
+
+                <button class="btn btn-secondary btn-full" data-navigate="screen-timesheet-form">
+                    <span class="btn-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 5v14M5 12h14"/>
+                        </svg>
+                    </span>
+                    Add New Entry
+                </button>
+            </div>
+
+            <!-- Bottom Navigation -->
+            <nav class="bottom-nav">
+                <button class="nav-item" data-tab="scenes" data-navigate="screen-scene-list">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="7" height="7"/>
+                            <rect x="14" y="3" width="7" height="7"/>
+                            <rect x="14" y="14" width="7" height="7"/>
+                            <rect x="3" y="14" width="7" height="7"/>
+                        </svg>
+                    </span>
+                    <span class="nav-label">Scenes</span>
+                </button>
+                <button class="nav-item" data-tab="lookbooks" data-navigate="screen-lookbooks">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                        </svg>
+                    </span>
+                    <span class="nav-label">Lookbooks</span>
+                </button>
+                <button class="nav-item active" data-tab="timesheet">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M12 6v6l4 2"/>
+                        </svg>
+                    </span>
+                    <span class="nav-label">Timesheet</span>
+                </button>
+                <button class="nav-item" data-tab="settings" data-navigate="screen-settings">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3"/>
+                            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
+                        </svg>
+                    </span>
+                    <span class="nav-label">Settings</span>
+                </button>
+            </nav>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- SCREEN 11: TIMESHEET FORM -->
+        <!-- ============================================ -->
+        <div class="screen" id="screen-timesheet-form">
+            <div class="top-bar">
+                <button class="top-bar-btn back-btn" data-navigate="screen-timesheet">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M15 18l-6-6 6-6"/>
+                    </svg>
+                </button>
+                <h1 class="top-bar-title">Add Timesheet Entry</h1>
+                <div class="top-bar-btn placeholder"></div>
+            </div>
+
+            <div class="screen-content scrollable padded">
+                <div class="info-banner small">
+                    <div class="info-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M12 6v6l4 2"/>
+                        </svg>
+                    </div>
+                    <p>Track your hours for each shooting day.</p>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Date</label>
+                    <input type="date" class="form-input" id="entry-date" value="2026-01-17">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Shoot Day</label>
+                    <input type="text" class="form-input" id="entry-shoot-day" placeholder="Day 4">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Call Time</label>
+                        <input type="time" class="form-input" id="entry-call-time" value="06:00">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Wrap Time</label>
+                        <input type="time" class="form-input" id="entry-wrap-time" value="18:00">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Meal Break (minutes)</label>
+                    <input type="number" class="form-input" id="entry-meal-break" value="30" min="0" max="120">
+                </div>
+
+                <div class="calculated-hours">
+                    <p class="calc-label">Total Hours</p>
+                    <p class="calc-value" id="calculated-total">11.5</p>
+                    <p class="calc-breakdown" id="calc-breakdown">12:00 worked - 0:30 break</p>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Notes (Optional)</label>
+                    <textarea class="form-textarea" id="entry-notes" placeholder="Any additional notes about the day..."></textarea>
+                </div>
+
+                <div class="screen-actions">
+                    <button class="btn btn-secondary" data-navigate="screen-timesheet">Cancel</button>
+                    <button class="btn btn-primary" id="btn-save-entry">Save Entry</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- SCREEN 12: SETTINGS -->
+        <!-- ============================================ -->
+        <div class="screen has-bottom-nav" id="screen-settings">
+            <div class="top-bar">
+                <h1 class="top-bar-title">Settings</h1>
+                <div class="top-bar-btn placeholder"></div>
+            </div>
+
+            <div class="screen-content scrollable">
+                <div class="settings-section">
+                    <h3 class="settings-section-title">Account</h3>
+                    <div class="settings-card account-card">
+                        <div class="account-avatar">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="8" r="4"/>
+                                <path d="M5 20c0-4.418 3.134-8 7-8s7 3.582 7 8"/>
+                            </svg>
+                        </div>
+                        <div class="account-info">
+                            <p class="account-mode">Standalone Mode</p>
+                            <p class="account-hint">Sign in to sync with desktop</p>
+                        </div>
+                    </div>
+                    <button class="btn btn-secondary btn-full">Sign In to Sync</button>
+                </div>
+
+                <div class="settings-section">
+                    <h3 class="settings-section-title">Project</h3>
+                    <div class="settings-card">
+                        <div class="project-info">
+                            <p class="project-name" id="settings-project-name">Untitled Project</p>
+                            <p class="project-meta"><span id="settings-scene-count">42</span> scenes | <span id="settings-character-count">8</span> characters</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h3 class="settings-section-title">Storage</h3>
+                    <div class="settings-card">
+                        <div class="storage-info">
+                            <p class="storage-label">Photos stored: <span id="photo-count">24</span></p>
+                            <div class="storage-bar">
+                                <div class="storage-fill" id="storage-fill" style="width: 24%"></div>
+                            </div>
+                            <p class="storage-limit"><span id="storage-used">24</span> of 100 photos (Free tier)</p>
+                        </div>
+                    </div>
+                    <div class="settings-toggle disabled">
+                        <div class="toggle-info">
+                            <p class="toggle-label">Cloud Backup</p>
+                            <p class="toggle-hint">Requires account</p>
+                        </div>
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="toggle-cloud-backup" disabled>
+                            <label for="toggle-cloud-backup"></label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h3 class="settings-section-title">Preferences</h3>
+                    <div class="settings-toggle">
+                        <div class="toggle-info">
+                            <p class="toggle-label">Photo Quality</p>
+                            <p class="toggle-hint">High quality uses more storage</p>
+                        </div>
+                        <select class="form-select" id="photo-quality">
+                            <option value="high">High</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="low">Low</option>
+                        </select>
+                    </div>
+                    <div class="settings-toggle">
+                        <div class="toggle-info">
+                            <p class="toggle-label">Auto-Save Notes</p>
+                            <p class="toggle-hint">Save notes automatically</p>
+                        </div>
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="toggle-autosave" checked>
+                            <label for="toggle-autosave"></label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-section" id="install-section" style="display: none;">
+                    <h3 class="settings-section-title">App</h3>
+                    <div class="settings-card">
+                        <div class="install-info">
+                            <p class="install-title">Install Hair & Makeup Pro</p>
+                            <p class="install-hint">Add to your home screen for quick access and offline use</p>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary btn-full" id="btn-install-app">
+                        <span class="btn-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                            </svg>
+                        </span>
+                        Install App
+                    </button>
+                </div>
+
+                <div class="settings-section">
+                    <h3 class="settings-section-title">Data Management</h3>
+                    <button class="btn btn-secondary btn-full" id="btn-new-project">
+                        <span class="btn-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 5v14M5 12h14"/>
+                            </svg>
+                        </span>
+                        Start New Project
+                    </button>
+                    <button class="btn btn-secondary btn-full" id="btn-clear-photos">
+                        <span class="btn-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                <circle cx="8.5" cy="8.5" r="1.5"/>
+                                <path d="M21 15l-5-5L5 21"/>
+                            </svg>
+                        </span>
+                        Clear All Photos
+                    </button>
+                    <button class="btn btn-secondary btn-full" id="btn-clear-timesheets">
+                        <span class="btn-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <path d="M12 6v6l4 2"/>
+                            </svg>
+                        </span>
+                        Clear Timesheet Entries
+                    </button>
+                    <button class="btn btn-danger btn-full" id="btn-delete-data">
+                        <span class="btn-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                            </svg>
+                        </span>
+                        Delete All Data
+                    </button>
+                </div>
+
+                <div class="app-footer">
+                    <p class="app-version">Hair & Makeup Pro v1.0.0</p>
+                    <p class="app-copyright">2026 Film Tools Inc.</p>
+                </div>
+            </div>
+
+            <!-- Bottom Navigation -->
+            <nav class="bottom-nav">
+                <button class="nav-item" data-tab="scenes" data-navigate="screen-scene-list">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="7" height="7"/>
+                            <rect x="14" y="3" width="7" height="7"/>
+                            <rect x="14" y="14" width="7" height="7"/>
+                            <rect x="3" y="14" width="7" height="7"/>
+                        </svg>
+                    </span>
+                    <span class="nav-label">Scenes</span>
+                </button>
+                <button class="nav-item" data-tab="lookbooks" data-navigate="screen-lookbooks">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                        </svg>
+                    </span>
+                    <span class="nav-label">Lookbooks</span>
+                </button>
+                <button class="nav-item" data-tab="timesheet" data-navigate="screen-timesheet">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M12 6v6l4 2"/>
+                        </svg>
+                    </span>
+                    <span class="nav-label">Timesheet</span>
+                </button>
+                <button class="nav-item active" data-tab="settings">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3"/>
+                            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
+                        </svg>
+                    </span>
+                    <span class="nav-label">Settings</span>
+                </button>
+            </nav>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- ADDITIONAL: SYNC LOGIN SCREEN -->
+        <!-- ============================================ -->
+        <div class="screen" id="screen-sync-login">
+            <div class="top-bar">
+                <button class="top-bar-btn back-btn" data-navigate="screen-home">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M15 18l-6-6 6-6"/>
+                    </svg>
+                </button>
+                <h1 class="top-bar-title">Sync from Desktop</h1>
+                <div class="top-bar-btn placeholder"></div>
+            </div>
+
+            <div class="screen-content centered padded">
+                <div class="sync-icon">
+                    <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M8 8v10h.582m0 0a14 14 0 0126.836 0M8.582 18H18m22 22v-10h-.582m0 0a14 14 0 01-26.836 0M39.418 30H30"/>
+                    </svg>
+                </div>
+
+                <h2 class="sync-title">Enter Sync Code</h2>
+                <p class="sync-description">Open Hair & Makeup Pro on your desktop and generate a sync code to connect your devices.</p>
+
+                <div class="sync-code-input">
+                    <input type="text" class="code-input" id="sync-code-1" maxlength="4" placeholder="XXXX">
+                    <span class="code-separator">-</span>
+                    <input type="text" class="code-input" id="sync-code-2" maxlength="4" placeholder="XXXX">
+                </div>
+
+                <button class="btn btn-primary btn-full" id="btn-connect-sync" disabled>
+                    Connect
+                </button>
+
+                <div class="info-banner small">
+                    <div class="info-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <p>Your desktop project will sync to this device. Photos captured here will upload to the cloud.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PDF.js for PDF text extraction -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        // Set PDF.js worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+
+    <!-- Script Processor Module -->
+    <script src="js/script-processor.js"></script>
+
+    <!-- Photo Storage Module (IndexedDB) -->
+    <script src="js/photo-storage.js"></script>
+
+    <!-- App JavaScript -->
+    <script src="js/app.js"></script>
+
+    <!-- Hidden camera input for photo capture -->
+    <input type="file" id="camera-input" accept="image/*" capture="environment" hidden>
+
+    <!-- Service Worker Registration -->
+    <script>
+        // Register service worker for PWA functionality
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/mobile/sw.js')
+                    .then((registration) => {
+                        console.log('Service Worker registered:', registration.scope);
+
+                        // Check for updates periodically
+                        setInterval(() => {
+                            registration.update();
+                        }, 60 * 60 * 1000); // Check every hour
+
+                        // Handle updates
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    // New version available
+                                    if (confirm('A new version of Hair & Makeup Pro is available. Reload to update?')) {
+                                        newWorker.postMessage({ type: 'SKIP_WAITING' });
+                                        window.location.reload();
+                                    }
+                                }
+                            });
+                        });
+                    })
+                    .catch((error) => {
+                        console.error('Service Worker registration failed:', error);
+                    });
+            });
+
+            // Handle controller change (new SW activated)
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                console.log('Service Worker controller changed');
+            });
+        }
+
+        // Handle PWA install prompt
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            // Prevent the mini-infobar from appearing
+            e.preventDefault();
+            deferredPrompt = e;
+
+            // Show custom install button (could be added to settings)
+            console.log('PWA install prompt available');
+        });
+
+        // Track successful PWA installation
+        window.addEventListener('appinstalled', () => {
+            console.log('PWA was installed');
+            deferredPrompt = null;
+        });
+    </script>
+</body>
+</html>
