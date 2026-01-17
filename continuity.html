@@ -176,7 +176,7 @@
             margin-left: auto;
         }
 
-        /* Scene Synopsis in scene list */
+        /* Scene Synopsis in scene list - only visible when scene is expanded */
         .scene-synopsis {
             font-size: 0.7rem;
             color: var(--text-muted);
@@ -184,14 +184,16 @@
             margin-top: 6px;
             padding-top: 6px;
             border-top: 1px solid rgba(255, 255, 255, 0.05);
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
+            display: none; /* Hidden by default */
+            -webkit-line-clamp: 3;
             -webkit-box-orient: vertical;
             overflow: hidden;
             text-overflow: ellipsis;
         }
 
+        /* Only show synopsis when scene is active/expanded */
         .scene-item.active .scene-synopsis {
+            display: -webkit-box;
             color: rgba(255, 255, 255, 0.7);
             border-top-color: rgba(217, 164, 65, 0.2);
         }
@@ -200,16 +202,20 @@
            CENTER PANEL - Character Tabs (File Divider Style)
            ============================================================================ */
 
-        /* Character tabs - clean pill style */
+        /* File divider container - physical tab aesthetic */
         .character-tabs-container {
             display: flex;
-            align-items: center;
-            gap: 6px;
-            padding: 8px 16px;
-            background: rgba(18, 18, 18, 0.95);
-            border-bottom: 1px solid var(--glass-border);
+            align-items: flex-end;
+            gap: 2px;
+            padding: 0 16px;
+            background: linear-gradient(to bottom,
+                rgba(20, 20, 20, 0) 0%,
+                rgba(20, 20, 20, 0.5) 100%);
+            border-bottom: 2px solid var(--accent-gold);
             overflow-x: auto;
+            overflow-y: visible;
             scrollbar-width: thin;
+            min-height: 44px;
             flex-shrink: 0;
         }
 
@@ -218,7 +224,7 @@
         }
 
         .character-tabs-container::-webkit-scrollbar-track {
-            background: transparent;
+            background: rgba(0, 0, 0, 0.2);
         }
 
         .character-tabs-container::-webkit-scrollbar-thumb {
@@ -226,34 +232,73 @@
             border-radius: 2px;
         }
 
-        /* Character tab - simple pill style */
+        /* Individual file tab */
         .file-tab {
-            padding: 6px 14px;
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid var(--glass-border);
-            border-radius: 6px;
+            position: relative;
+            min-width: 90px;
+            max-width: 130px;
+            height: 34px;
             cursor: pointer;
-            transition: all 0.15s ease;
+            transition: all 0.2s ease;
             flex-shrink: 0;
         }
 
-        .file-tab:hover {
-            background: rgba(212, 175, 122, 0.1);
-            border-color: rgba(212, 175, 122, 0.4);
+        .file-tab-content {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 100%;
+            background: linear-gradient(to bottom,
+                rgba(40, 40, 40, 0.6) 0%,
+                rgba(30, 30, 30, 0.9) 100%);
+            border: 1px solid rgba(217, 164, 65, 0.3);
+            border-bottom: none;
+            border-radius: 8px 8px 0 0;
+            clip-path: polygon(
+                8% 0%,
+                92% 0%,
+                100% 25%,
+                100% 100%,
+                0% 100%,
+                0% 25%
+            );
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
         }
 
-        .file-tab.active {
-            background: rgba(212, 175, 122, 0.15);
+        .file-tab:hover .file-tab-content {
+            background: linear-gradient(to bottom,
+                rgba(50, 50, 50, 0.8) 0%,
+                rgba(40, 40, 40, 0.95) 100%);
+            border-color: rgba(217, 164, 65, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .file-tab.active .file-tab-content {
+            background: linear-gradient(to bottom,
+                rgba(217, 164, 65, 0.15) 0%,
+                rgba(217, 164, 65, 0.05) 100%);
             border-color: var(--accent-gold);
+            height: 40px;
+            box-shadow:
+                0 -2px 8px rgba(217, 164, 65, 0.2),
+                inset 0 1px 0 rgba(217, 164, 65, 0.3);
         }
 
         .file-tab-label {
-            font-size: 0.7rem;
-            font-weight: 600;
+            font-size: 0.75rem;
+            font-weight: 500;
             color: var(--text-muted);
-            white-space: nowrap;
             text-transform: uppercase;
             letter-spacing: 0.03em;
+            padding: 0 10px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 110px;
         }
 
         .file-tab:hover .file-tab-label {
@@ -262,6 +307,7 @@
 
         .file-tab.active .file-tab-label {
             color: var(--accent-gold);
+            font-weight: 600;
         }
 
         /* Character Info Card */
@@ -2527,14 +2573,16 @@
                 return;
             }
 
-            // Render character tabs (pill style)
+            // Render character tabs (file divider style matching script-breakdown)
             tabsContainer.innerHTML = characters.map((char, index) => {
                 const isActive = selectedCharacter === char || (selectedCharacter === null && index === 0);
                 return `
                     <div class="file-tab ${isActive ? 'active' : ''}"
                          data-character="${escapeHtml(char)}"
                          onclick="selectCharacter('${escapeHtml(char)}')">
-                        <span class="file-tab-label">${escapeHtml(char)}</span>
+                        <div class="file-tab-content">
+                            <span class="file-tab-label">${escapeHtml(char)}</span>
+                        </div>
                     </div>
                 `;
             }).join('');
