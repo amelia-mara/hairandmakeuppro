@@ -725,20 +725,57 @@
         // ============================================================================
 
         function loadScenes() {
-            // Load scenes from localStorage key: 'scenes'
-            const savedScenes = localStorage.getItem('scenes');
+            // Try multiple localStorage keys in order of priority:
+            // 1. currentProject (main project storage)
+            // 2. checksHappyScenes (legacy/backup)
+            // 3. scenes (fallback)
 
-            if (savedScenes) {
+            let loadedScenes = null;
+
+            // Try currentProject first (primary storage)
+            const currentProject = localStorage.getItem('currentProject');
+            if (currentProject) {
                 try {
-                    scenes = JSON.parse(savedScenes);
-                    console.log(`Loaded ${scenes.length} scenes from localStorage`);
+                    const project = JSON.parse(currentProject);
+                    if (project.scenes && project.scenes.length > 0) {
+                        loadedScenes = project.scenes;
+                        console.log(`Loaded ${loadedScenes.length} scenes from currentProject`);
+                    }
                 } catch (e) {
-                    console.error('Error parsing scenes:', e);
-                    scenes = [];
+                    console.error('Error parsing currentProject:', e);
                 }
-            } else {
-                console.log('No scenes found in localStorage');
-                scenes = [];
+            }
+
+            // Fallback to checksHappyScenes
+            if (!loadedScenes) {
+                const checksHappyScenes = localStorage.getItem('checksHappyScenes');
+                if (checksHappyScenes) {
+                    try {
+                        loadedScenes = JSON.parse(checksHappyScenes);
+                        console.log(`Loaded ${loadedScenes.length} scenes from checksHappyScenes`);
+                    } catch (e) {
+                        console.error('Error parsing checksHappyScenes:', e);
+                    }
+                }
+            }
+
+            // Final fallback to 'scenes' key
+            if (!loadedScenes) {
+                const savedScenes = localStorage.getItem('scenes');
+                if (savedScenes) {
+                    try {
+                        loadedScenes = JSON.parse(savedScenes);
+                        console.log(`Loaded ${loadedScenes.length} scenes from scenes key`);
+                    } catch (e) {
+                        console.error('Error parsing scenes:', e);
+                    }
+                }
+            }
+
+            scenes = loadedScenes || [];
+
+            if (scenes.length === 0) {
+                console.log('No scenes found in any localStorage key');
             }
 
             renderSceneList();
@@ -746,13 +783,29 @@
         }
 
         function loadBreakdownData() {
-            // Load scene breakdowns from localStorage
-            const breakdownsData = localStorage.getItem('sceneBreakdowns');
+            // Load scene breakdowns from currentProject (primary) or sceneBreakdowns (fallback)
 
+            // Try currentProject first
+            const currentProject = localStorage.getItem('currentProject');
+            if (currentProject) {
+                try {
+                    const project = JSON.parse(currentProject);
+                    if (project.sceneBreakdowns) {
+                        sceneBreakdowns = project.sceneBreakdowns;
+                        console.log('Loaded scene breakdowns from currentProject');
+                        return;
+                    }
+                } catch (e) {
+                    console.error('Error parsing currentProject for breakdowns:', e);
+                }
+            }
+
+            // Fallback to separate sceneBreakdowns key
+            const breakdownsData = localStorage.getItem('sceneBreakdowns');
             if (breakdownsData) {
                 try {
                     sceneBreakdowns = JSON.parse(breakdownsData);
-                    console.log('Loaded scene breakdowns from localStorage');
+                    console.log('Loaded scene breakdowns from sceneBreakdowns key');
                 } catch (e) {
                     console.error('Error parsing breakdowns:', e);
                     sceneBreakdowns = {};
@@ -761,16 +814,56 @@
         }
 
         function loadCastProfiles() {
-            // Load cast profiles from localStorage
-            const profilesData = localStorage.getItem('castProfiles');
+            // Load cast profiles from currentProject (primary) or castProfiles (fallback)
 
+            // Try currentProject first
+            const currentProject = localStorage.getItem('currentProject');
+            if (currentProject) {
+                try {
+                    const project = JSON.parse(currentProject);
+                    if (project.castProfiles) {
+                        castProfiles = project.castProfiles;
+                        console.log('Loaded cast profiles from currentProject');
+                        return;
+                    }
+                } catch (e) {
+                    console.error('Error parsing currentProject for profiles:', e);
+                }
+            }
+
+            // Fallback to separate castProfiles key
+            const profilesData = localStorage.getItem('castProfiles');
             if (profilesData) {
                 try {
                     castProfiles = JSON.parse(profilesData);
-                    console.log('Loaded cast profiles from localStorage');
+                    console.log('Loaded cast profiles from castProfiles key');
                 } catch (e) {
                     console.error('Error parsing cast profiles:', e);
                     castProfiles = {};
+                }
+            }
+
+            // Also try masterContext for character data
+            if (Object.keys(castProfiles).length === 0) {
+                const masterContext = localStorage.getItem('masterContext') || localStorage.getItem('scriptMasterContext');
+                if (masterContext) {
+                    try {
+                        const context = JSON.parse(masterContext);
+                        if (context.characters) {
+                            // Convert masterContext characters to castProfiles format
+                            Object.entries(context.characters).forEach(([name, data]) => {
+                                castProfiles[name] = {
+                                    name: name,
+                                    baseDescription: data.physicalDescription || data.description || '',
+                                    masterImage: data.masterImage || null,
+                                    scenes: data.scenes || []
+                                };
+                            });
+                            console.log('Loaded cast profiles from masterContext');
+                        }
+                    } catch (e) {
+                        console.error('Error parsing masterContext:', e);
+                    }
                 }
             }
         }
@@ -1000,32 +1093,61 @@
 
         function getSceneCharacters(scene) {
             const sceneIndex = scenes.indexOf(scene);
+            let characters = [];
 
-            // Try to get characters from sceneBreakdowns[sceneIndex].characterDetails
+            // Try to get characters from sceneBreakdowns[sceneIndex]
             if (sceneBreakdowns[sceneIndex]) {
                 const breakdown = sceneBreakdowns[sceneIndex];
 
-                // Check characterDetails first (Stage 3 requirement)
-                if (breakdown.characterDetails && Array.isArray(breakdown.characterDetails)) {
-                    return breakdown.characterDetails.map(cd =>
+                // Check cast first (most common structure from script-breakdown)
+                if (breakdown.cast && Array.isArray(breakdown.cast)) {
+                    characters = breakdown.cast.map(c =>
+                        typeof c === 'string' ? c : (c.name || c.character || c)
+                    ).filter(Boolean);
+                }
+
+                // Also check characterDetails
+                if (characters.length === 0 && breakdown.characterDetails && Array.isArray(breakdown.characterDetails)) {
+                    characters = breakdown.characterDetails.map(cd =>
                         typeof cd === 'string' ? cd : (cd.name || cd.character)
                     ).filter(Boolean);
                 }
+            }
 
-                // Fallback to cast
-                if (breakdown.cast && Array.isArray(breakdown.cast)) {
-                    return breakdown.cast.map(c =>
-                        typeof c === 'string' ? c : (c.name || c.character)
-                    ).filter(Boolean);
+            // Fallback: Try scene.characters
+            if (characters.length === 0 && scene && scene.characters && Array.isArray(scene.characters)) {
+                characters = scene.characters;
+            }
+
+            // Fallback: Try to extract from scene.cast if it exists
+            if (characters.length === 0 && scene && scene.cast && Array.isArray(scene.cast)) {
+                characters = scene.cast.map(c =>
+                    typeof c === 'string' ? c : (c.name || c.character || c)
+                ).filter(Boolean);
+            }
+
+            // Fallback: Try masterContext for this scene
+            if (characters.length === 0) {
+                const masterContext = localStorage.getItem('masterContext') || localStorage.getItem('scriptMasterContext');
+                if (masterContext) {
+                    try {
+                        const context = JSON.parse(masterContext);
+                        if (context.characters) {
+                            // Find characters that appear in this scene
+                            Object.entries(context.characters).forEach(([name, data]) => {
+                                if (data.scenes && data.scenes.includes(sceneIndex)) {
+                                    characters.push(name);
+                                }
+                            });
+                        }
+                    } catch (e) {
+                        console.error('Error parsing masterContext for characters:', e);
+                    }
                 }
             }
 
-            // Try scene.characters
-            if (scene.characters && Array.isArray(scene.characters)) {
-                return scene.characters;
-            }
-
-            return [];
+            console.log(`Scene ${sceneIndex} characters:`, characters);
+            return characters;
         }
 
         function getCharacterDetails(sceneIndex, characterName) {
@@ -1515,27 +1637,43 @@
         // ============================================================================
 
         function syncWithBreakdown() {
-            // Try to load scenes from breakdown data
-            const breakdownData = localStorage.getItem('breakdownData');
+            // Reload all data from localStorage
+            console.log('Syncing with breakdown data...');
 
-            if (breakdownData) {
-                try {
-                    const breakdown = JSON.parse(breakdownData);
-                    if (breakdown.scenes && breakdown.scenes.length > 0) {
-                        localStorage.setItem('scenes', JSON.stringify(breakdown.scenes));
-                        loadScenes();
-                        loadBreakdownData();
-                        loadCastProfiles();
-                        console.log('Synced scenes from breakdown data');
-                        return;
-                    }
-                } catch (e) {
-                    console.error('Error syncing:', e);
-                }
+            // Force reload all data
+            loadScenes();
+            loadBreakdownData();
+            loadCastProfiles();
+
+            // Check if we got any scenes
+            if (scenes.length > 0) {
+                console.log(`Synced successfully: ${scenes.length} scenes loaded`);
+                alert(`Synced ${scenes.length} scenes from breakdown data.`);
+
+                // Reset selection
+                selectedSceneIndex = null;
+                selectedCharacter = null;
+
+                // Re-render
+                renderSceneList();
+                document.getElementById('character-tabs').innerHTML = '';
+                document.getElementById('character-info-card-container').innerHTML = '';
+                document.getElementById('center-content').innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-title">Select a Scene</div>
+                        <div class="empty-desc">Choose a scene from the list to manage continuity photos</div>
+                    </div>
+                `;
+                document.getElementById('reference-content').innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-title">Reference Materials</div>
+                        <div class="empty-desc">Master images and previous scene photos will appear here</div>
+                    </div>
+                `;
+            } else {
+                console.log('No breakdown data found to sync');
+                alert('No breakdown data found. Please import a screenplay in Script Breakdown first.');
             }
-
-            console.log('No breakdown data found to sync');
-            alert('No breakdown data found. Please import a screenplay in Script Breakdown first.');
         }
 
         // ============================================================================
