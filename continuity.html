@@ -537,6 +537,7 @@
         }
 
         .look-timeline-thumb {
+            position: relative;
             width: 56px;
             height: 70px;
             border-radius: 6px;
@@ -597,10 +598,6 @@
             position: absolute;
             top: 4px;
             right: 4px;
-        }
-
-        .look-timeline-thumb {
-            position: relative;
         }
 
         .look-timeline-status.pending {
@@ -1073,7 +1070,7 @@
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.3s ease, border-color 0.2s ease;
             position: relative;
             overflow: hidden;
         }
@@ -1533,6 +1530,7 @@
             justify-content: center;
             padding: var(--spacing-xl) var(--spacing-lg);
             text-align: center;
+            animation: fadeIn 0.3s ease;
         }
 
         .empty-state .empty-title {
@@ -1647,21 +1645,6 @@
         /* Scene item selection transition */
         .scene-item {
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        /* Character tab selection transition */
-        .character-tab {
-            transition: all 0.3s ease;
-        }
-
-        /* Photo slot hover and upload states */
-        .photo-slot {
-            transition: all 0.3s ease, border-color 0.2s ease;
-        }
-
-        /* Empty state improved styling */
-        .empty-state {
-            animation: fadeIn 0.3s ease;
         }
 
         @keyframes fadeIn {
@@ -1944,6 +1927,16 @@
         .workspace-content::-webkit-scrollbar-thumb:hover {
             background: rgba(255, 255, 255, 0.2);
         }
+
+        /* Utility classes */
+        .info-card-container { padding: 0 20px; }
+        .muted-message { padding: 8px; color: var(--text-muted); font-size: 0.875em; }
+        .muted-message-center { color: var(--text-muted); font-size: 0.875em; text-align: center; padding: 16px; }
+        .muted-italic { color: var(--text-muted); font-style: italic; }
+        .nav-placeholder { text-align: center; color: var(--text-muted); font-size: 0.8rem; }
+        .mt-16 { margin-top: 16px; }
+        .btn-gold-outline { background: rgba(212, 175, 122, 0.2); border-color: var(--accent-gold); color: var(--accent-gold); }
+        .clickable { cursor: pointer; }
     </style>
 </head>
 <body>
@@ -2001,7 +1994,7 @@
                 </div>
 
                 <!-- Character Info Card Container -->
-                <div id="character-info-card-container" style="padding: 0 20px;">
+                <div id="character-info-card-container" class="info-card-container">
                     <!-- Character info card rendered here -->
                 </div>
 
@@ -2565,9 +2558,7 @@
 
             if (characters.length === 0) {
                 tabsContainer.innerHTML = `
-                    <div style="padding: 8px; color: var(--text-muted); font-size: 0.875em;">
-                        No characters in this scene
-                    </div>
+                    <div class="muted-message">No characters in this scene</div>
                 `;
                 infoContainer.innerHTML = '';
                 return;
@@ -2740,7 +2731,7 @@
                                 ${baseDescription ? `
                                     <div class="character-profile-description">${escapeHtml(baseDescription)}</div>
                                 ` : `
-                                    <div class="character-profile-description" style="color: var(--text-muted); font-style: italic;">
+                                    <div class="character-profile-description muted-italic">
                                         No base description available
                                     </div>
                                 `}
@@ -2889,7 +2880,7 @@
                         </div>
 
                         <!-- Side by Side View -->
-                        <div class="comparison-grid" id="comparison-side" style="margin-top: 16px;">
+                        <div class="comparison-grid mt-16" id="comparison-side">
                             <div class="comparison-panel">
                                 <div class="comparison-panel-header">
                                     <span class="comparison-panel-label">Previous</span>
@@ -2923,7 +2914,7 @@
                         </div>
 
                         <!-- Overlay View (hidden by default) -->
-                        <div class="comparison-overlay" id="comparison-overlay" style="margin-top: 16px;">
+                        <div class="comparison-overlay mt-16" id="comparison-overlay">
                             <div class="comparison-overlay-container" id="overlay-container">
                                 ${prevSceneComparison.photos.front ?
                                     `<img class="comparison-overlay-image previous" src="${prevSceneComparison.photos.front}" alt="Previous">` :
@@ -3037,8 +3028,7 @@
                             <button class="photo-delete-btn" onclick="event.stopPropagation(); deletePhoto('${angle}')">
                                 Delete
                             </button>
-                            <button class="toolbar-btn" style="background: rgba(212, 175, 122, 0.2); border-color: var(--accent-gold); color: var(--accent-gold);"
-                                    onclick="event.stopPropagation(); uploadPhoto('${angle}')">
+                            <button class="toolbar-btn btn-gold-outline" onclick="event.stopPropagation(); uploadPhoto('${angle}')">
                                 Replace
                             </button>
                         </div>
@@ -3265,18 +3255,6 @@
             }
         }
 
-        // Add CSS animation for spinner
-        if (!document.getElementById('save-indicator-styles')) {
-            const style = document.createElement('style');
-            style.id = 'save-indicator-styles';
-            style.textContent = `
-                @keyframes spin {
-                    to { transform: rotate(360deg); }
-                }
-            `;
-            document.head.appendChild(style);
-        }
-
         // Debounced notes save handler - called on input
         function handleNotesInput(textarea) {
             // Show saving indicator
@@ -3493,7 +3471,7 @@
                                             }
                                             <span class="look-timeline-status ${item.status}"></span>
                                         </div>
-                                        <span class="look-timeline-label" onclick="selectScene(${item.sceneIndex})" style="cursor: pointer;">Sc ${item.sceneNumber}</span>
+                                        <span class="look-timeline-label clickable" onclick="selectScene(${item.sceneIndex})">Sc ${item.sceneNumber}</span>
                                     </div>
                                 `).join('')}
                             </div>
@@ -3558,9 +3536,7 @@
                                 `).join('')}
                             </div>
                         ` : `
-                            <div style="color: var(--text-muted); font-size: 0.875em; text-align: center; padding: 16px;">
-                                No previous photos available
-                            </div>
+                            <div class="muted-message-center">No previous photos available</div>
                         `}
                     </div>
                 </div>
@@ -3575,9 +3551,7 @@
                         ${designNotes ? `
                             <div class="design-notes-text">${escapeHtml(designNotes)}</div>
                         ` : `
-                            <div style="color: var(--text-muted); font-size: 0.875em; text-align: center; padding: 16px;">
-                                No design notes available
-                            </div>
+                            <div class="muted-message-center">No design notes available</div>
                         `}
                     </div>
                 </div>
@@ -3866,11 +3840,7 @@
             const navContainer = document.getElementById('scene-navigation');
 
             if (selectedSceneIndex === null) {
-                navContainer.innerHTML = `
-                    <div style="text-align: center; color: var(--text-muted); font-size: 0.8rem;">
-                        Select a scene to begin
-                    </div>
-                `;
+                navContainer.innerHTML = `<div class="nav-placeholder">Select a scene to begin</div>`;
                 return;
             }
 
