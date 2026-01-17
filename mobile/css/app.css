@@ -2288,6 +2288,24 @@ strong {
     cursor: not-allowed;
 }
 
+/* Install App Section */
+.install-info {
+    text-align: center;
+    padding: var(--spacing-sm) 0;
+}
+
+.install-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.install-hint {
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+}
+
 /* Data Management Buttons */
 .settings-section .btn {
     margin-bottom: var(--spacing-sm);

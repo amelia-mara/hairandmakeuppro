@@ -2164,6 +2164,12 @@ const App = {
         if (deleteDataBtn) {
             deleteDataBtn.addEventListener('click', () => this.deleteAllData());
         }
+
+        // Install app button
+        const installBtn = document.getElementById('btn-install-app');
+        if (installBtn) {
+            installBtn.addEventListener('click', () => this.installApp());
+        }
     },
 
     /**
@@ -2181,6 +2187,9 @@ const App = {
 
         // Update storage stats
         this.updateStorageStats();
+
+        // Check if PWA install is available
+        this.checkInstallAvailability();
     },
 
     /**
@@ -2350,6 +2359,57 @@ const App = {
         } catch (error) {
             console.error('Error deleting all data:', error);
             this.showToast('Error deleting data');
+        }
+    },
+
+    /**
+     * Install the PWA
+     */
+    async installApp() {
+        if (!window.deferredPrompt) {
+            this.showToast('App already installed or not available');
+            return;
+        }
+
+        try {
+            // Show the install prompt
+            window.deferredPrompt.prompt();
+
+            // Wait for the user's response
+            const { outcome } = await window.deferredPrompt.userChoice;
+
+            if (outcome === 'accepted') {
+                this.showToast('App installed successfully!');
+                // Hide the install section
+                const installSection = document.getElementById('install-section');
+                if (installSection) {
+                    installSection.style.display = 'none';
+                }
+            }
+
+            // Clear the deferred prompt
+            window.deferredPrompt = null;
+        } catch (error) {
+            console.error('Error installing app:', error);
+            this.showToast('Installation failed');
+        }
+    },
+
+    /**
+     * Check if PWA install is available
+     */
+    checkInstallAvailability() {
+        const installSection = document.getElementById('install-section');
+        if (installSection) {
+            // Show install section if prompt is available and app is not installed
+            const isInstalled = window.matchMedia('(display-mode: standalone)').matches ||
+                               window.navigator.standalone === true;
+
+            if (window.deferredPrompt && !isInstalled) {
+                installSection.style.display = 'block';
+            } else {
+                installSection.style.display = 'none';
+            }
         }
     },
 
