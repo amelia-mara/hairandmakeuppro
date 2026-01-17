@@ -113,51 +113,115 @@
         }
 
         /* ============================================================================
-           CENTER PANEL - Character Tabs & Content
+           CENTER PANEL - Character Tabs (File Divider Style)
            ============================================================================ */
 
-        /* Character tabs styled to match file dividers */
+        /* File divider container - physical tab aesthetic */
         .character-tabs-container {
-            background:
-                linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 0%, transparent 100%),
-                linear-gradient(135deg, rgba(212, 175, 122, 0.08) 0%, rgba(18, 16, 14, 0.85) 50%, rgba(212, 175, 122, 0.05) 100%);
-            backdrop-filter: blur(24px) saturate(180%);
-            border-bottom: 1px solid var(--glass-border);
-            padding: 8px 12px;
+            display: flex;
+            align-items: flex-end;
+            gap: 2px;
+            padding: 0 20px;
+            background: linear-gradient(to bottom,
+                rgba(20, 20, 20, 0) 0%,
+                rgba(20, 20, 20, 0.5) 100%);
+            border-bottom: 2px solid var(--accent-gold);
+            overflow-x: auto;
+            overflow-y: visible;
+            scrollbar-width: thin;
+            min-height: 48px;
             flex-shrink: 0;
         }
 
-        .character-tabs {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: flex-start;
-            gap: 4px;
-            row-gap: 6px;
+        .character-tabs-container::-webkit-scrollbar {
+            height: 6px;
         }
 
-        .character-tab {
-            padding: 6px 12px;
-            background: rgba(28, 25, 22, 0.3);
-            border: 1px solid var(--glass-border);
-            border-radius: 6px;
-            color: var(--text-muted);
-            font-size: 0.75em;
-            font-weight: 600;
+        .character-tabs-container::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .character-tabs-container::-webkit-scrollbar-thumb {
+            background: rgba(217, 164, 65, 0.3);
+            border-radius: 3px;
+        }
+
+        .character-tabs-container::-webkit-scrollbar-thumb:hover {
+            background: rgba(217, 164, 65, 0.5);
+        }
+
+        /* Individual file tab */
+        .file-tab {
+            position: relative;
+            min-width: 100px;
+            max-width: 140px;
+            height: 36px;
             cursor: pointer;
             transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .file-tab-content {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 100%;
+            background: linear-gradient(to bottom,
+                rgba(40, 40, 40, 0.6) 0%,
+                rgba(30, 30, 30, 0.9) 100%);
+            border: 1px solid rgba(217, 164, 65, 0.3);
+            border-bottom: none;
+            border-radius: 8px 8px 0 0;
+            clip-path: polygon(
+                10% 0%,
+                90% 0%,
+                100% 20%,
+                100% 100%,
+                0% 100%,
+                0% 20%
+            );
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .file-tab:hover .file-tab-content {
+            background: linear-gradient(to bottom,
+                rgba(50, 50, 50, 0.8) 0%,
+                rgba(40, 40, 40, 0.95) 100%);
+            border-color: rgba(217, 164, 65, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .file-tab.active .file-tab-content {
+            background: linear-gradient(to bottom,
+                rgba(217, 164, 65, 0.15) 0%,
+                rgba(217, 164, 65, 0.05) 100%);
+            border-color: var(--accent-gold);
+            height: 42px;
+            box-shadow:
+                0 -2px 8px rgba(217, 164, 65, 0.2),
+                inset 0 1px 0 rgba(217, 164, 65, 0.3);
+        }
+
+        .file-tab-label {
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 0 12px;
             white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 120px;
         }
 
-        .character-tab:hover {
-            background: rgba(28, 25, 22, 0.5);
-            color: var(--text-light);
-        }
-
-        .character-tab.active {
-            background: linear-gradient(135deg, rgba(212, 175, 122, 0.15), rgba(212, 175, 122, 0.08));
-            border-bottom-color: transparent;
+        .file-tab.active .file-tab-label {
             color: var(--accent-gold);
-            box-shadow: 0 -2px 8px rgba(212, 175, 122, 0.2);
+            font-weight: 600;
         }
 
         /* Character Info Card */
@@ -862,14 +926,14 @@
 
             <!-- Center Panel - Photo Grid & Notes -->
             <div class="center-panel">
-                <!-- Character Tabs Container -->
-                <div class="character-tabs-container" id="character-tabs-container">
-                    <div class="character-tabs" id="character-tabs">
-                        <!-- Character tabs generated dynamically -->
-                    </div>
-                    <div id="character-info-card-container">
-                        <!-- Character info card rendered here -->
-                    </div>
+                <!-- Character File Tabs (physical tab aesthetic) -->
+                <div class="character-tabs-container" id="character-tabs">
+                    <!-- File tabs generated dynamically -->
+                </div>
+
+                <!-- Character Info Card Container -->
+                <div id="character-info-card-container" style="padding: 0 20px;">
+                    <!-- Character info card rendered here -->
                 </div>
 
                 <!-- Center Content -->
@@ -1322,12 +1386,17 @@
                 return;
             }
 
-            // Render character tabs
+            // Render character tabs (file divider style)
             tabsContainer.innerHTML = characters.map((char, index) => {
                 const isActive = selectedCharacter === char || (selectedCharacter === null && index === 0);
                 return `
-                    <div class="character-tab ${isActive ? 'active' : ''}"
-                         onclick="selectCharacter('${escapeHtml(char)}')">${escapeHtml(char)}</div>
+                    <div class="file-tab ${isActive ? 'active' : ''}"
+                         data-character="${escapeHtml(char)}"
+                         onclick="selectCharacter('${escapeHtml(char)}')">
+                        <div class="file-tab-content">
+                            <span class="file-tab-label">${escapeHtml(char)}</span>
+                        </div>
+                    </div>
                 `;
             }).join('');
 
@@ -1465,10 +1534,10 @@
 
             selectedCharacter = characterName;
 
-            // Update tab visual state
-            document.querySelectorAll('.character-tab').forEach(tab => {
+            // Update tab visual state (file-tab style)
+            document.querySelectorAll('.file-tab').forEach(tab => {
                 tab.classList.remove('active');
-                if (tab.textContent === characterName) {
+                if (tab.dataset.character === characterName) {
                     tab.classList.add('active');
                 }
             });
