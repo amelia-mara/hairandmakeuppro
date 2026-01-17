@@ -65,6 +65,7 @@ const App = {
         this.bindCharacterConfirmation();
         this.bindSceneSearch();
         this.bindPhotoCapture();
+        this.bindSettingsEvents();
 
         // Check for existing project and route accordingly
         this.checkInitialRoute();
@@ -2129,6 +2130,226 @@ const App = {
         const viewer = document.getElementById('photo-viewer');
         if (viewer) {
             viewer.classList.remove('active');
+        }
+    },
+
+    // ============================================
+    // SETTINGS & DATA MANAGEMENT
+    // ============================================
+
+    /**
+     * Bind settings event handlers
+     */
+    bindSettingsEvents() {
+        // New project button
+        const newProjectBtn = document.getElementById('btn-new-project');
+        if (newProjectBtn) {
+            newProjectBtn.addEventListener('click', () => this.startNewProject());
+        }
+
+        // Clear photos button
+        const clearPhotosBtn = document.getElementById('btn-clear-photos');
+        if (clearPhotosBtn) {
+            clearPhotosBtn.addEventListener('click', () => this.clearAllPhotos());
+        }
+
+        // Clear timesheets button
+        const clearTimesheetsBtn = document.getElementById('btn-clear-timesheets');
+        if (clearTimesheetsBtn) {
+            clearTimesheetsBtn.addEventListener('click', () => this.clearTimesheets());
+        }
+
+        // Delete all data button
+        const deleteDataBtn = document.getElementById('btn-delete-data');
+        if (deleteDataBtn) {
+            deleteDataBtn.addEventListener('click', () => this.deleteAllData());
+        }
+    },
+
+    /**
+     * Update settings screen with current data
+     */
+    updateSettings() {
+        // Update project info
+        const projectName = document.getElementById('settings-project-name');
+        const sceneCount = document.getElementById('settings-scene-count');
+        const characterCount = document.getElementById('settings-character-count');
+
+        if (projectName) projectName.textContent = this.project.name || 'No Project';
+        if (sceneCount) sceneCount.textContent = this.scenes.length;
+        if (characterCount) characterCount.textContent = this.characters.length;
+
+        // Update storage stats
+        this.updateStorageStats();
+    },
+
+    /**
+     * Update storage statistics display
+     */
+    async updateStorageStats() {
+        try {
+            const stats = await PhotoStorage.getStorageStats();
+            const photoCount = document.getElementById('photo-count');
+            const storageUsed = document.getElementById('storage-used');
+            const storageFill = document.getElementById('storage-fill');
+
+            if (photoCount) photoCount.textContent = stats.count;
+            if (storageUsed) storageUsed.textContent = stats.count;
+
+            // Calculate fill percentage (100 photos = 100%)
+            const fillPercent = Math.min((stats.count / 100) * 100, 100);
+            if (storageFill) storageFill.style.width = `${fillPercent}%`;
+        } catch (error) {
+            console.error('Error updating storage stats:', error);
+        }
+    },
+
+    /**
+     * Start a new project (clears script data but keeps photos)
+     */
+    async startNewProject() {
+        const confirmed = confirm(
+            'Start a new project?\n\n' +
+            'This will clear your current script, scenes, and characters.\n' +
+            'Photos and timesheets will be preserved.\n\n' +
+            'Are you sure?'
+        );
+
+        if (!confirmed) return;
+
+        // Clear project data
+        this.project = { name: 'Untitled Project', file: null, isDemo: false };
+        this.scenes = [];
+        this.characters = [];
+        this.duplicates = [];
+
+        // Clear localStorage
+        localStorage.removeItem(this.STORAGE_KEYS.PROJECT);
+        localStorage.removeItem(this.STORAGE_KEYS.SCENES);
+        localStorage.removeItem(this.STORAGE_KEYS.CHARACTERS);
+
+        // Clear notes
+        const noteKeys = Object.keys(localStorage).filter(k => k.startsWith('hmp_notes_'));
+        noteKeys.forEach(key => localStorage.removeItem(key));
+
+        this.showToast('Project cleared. Ready for new script.');
+
+        // Navigate to home
+        this.navigateTo('screen-home');
+    },
+
+    /**
+     * Clear all photos from IndexedDB
+     */
+    async clearAllPhotos() {
+        const stats = await PhotoStorage.getStorageStats();
+
+        if (stats.count === 0) {
+            this.showToast('No photos to clear');
+            return;
+        }
+
+        const confirmed = confirm(
+            `Clear all ${stats.count} photos?\n\n` +
+            'This action cannot be undone.\n\n' +
+            'Are you sure?'
+        );
+
+        if (!confirmed) return;
+
+        try {
+            await PhotoStorage.clearAllPhotos();
+
+            // Update scene statuses
+            await this.updateSceneStatuses();
+
+            // Update settings display
+            this.updateStorageStats();
+
+            this.showToast(`${stats.count} photos cleared`);
+        } catch (error) {
+            console.error('Error clearing photos:', error);
+            this.showToast('Error clearing photos');
+        }
+    },
+
+    /**
+     * Clear all timesheet entries
+     */
+    clearTimesheets() {
+        if (this.timesheetEntries.length === 0) {
+            this.showToast('No timesheet entries to clear');
+            return;
+        }
+
+        const count = this.timesheetEntries.length;
+        const confirmed = confirm(
+            `Clear all ${count} timesheet entries?\n\n` +
+            'This action cannot be undone.\n\n' +
+            'Are you sure?'
+        );
+
+        if (!confirmed) return;
+
+        this.timesheetEntries = [];
+        this.saveTimesheets();
+
+        this.showToast(`${count} timesheet entries cleared`);
+    },
+
+    /**
+     * Delete all app data (full reset)
+     */
+    async deleteAllData() {
+        const confirmed = confirm(
+            '⚠️ DELETE ALL DATA ⚠️\n\n' +
+            'This will permanently delete:\n' +
+            '• All scenes and characters\n' +
+            '• All photos\n' +
+            '• All timesheet entries\n' +
+            '• All notes and settings\n\n' +
+            'This action CANNOT be undone!\n\n' +
+            'Are you absolutely sure?'
+        );
+
+        if (!confirmed) return;
+
+        // Double confirm for safety
+        const doubleConfirm = confirm(
+            'FINAL WARNING\n\n' +
+            'Click OK to permanently delete everything.'
+        );
+
+        if (!doubleConfirm) return;
+
+        try {
+            // Clear IndexedDB photos
+            await PhotoStorage.clearAllPhotos();
+
+            // Clear all localStorage
+            localStorage.removeItem(this.STORAGE_KEYS.PROJECT);
+            localStorage.removeItem(this.STORAGE_KEYS.SCENES);
+            localStorage.removeItem(this.STORAGE_KEYS.CHARACTERS);
+            localStorage.removeItem(this.STORAGE_KEYS.TIMESHEETS);
+
+            // Clear notes
+            const noteKeys = Object.keys(localStorage).filter(k => k.startsWith('hmp_notes_'));
+            noteKeys.forEach(key => localStorage.removeItem(key));
+
+            // Reset app state
+            this.project = { name: 'Untitled Project', file: null, isDemo: false };
+            this.scenes = [];
+            this.characters = [];
+            this.duplicates = [];
+            this.timesheetEntries = [];
+
+            this.showToast('All data deleted');
+
+            // Navigate to home
+            this.navigateTo('screen-home');
+        } catch (error) {
+            console.error('Error deleting all data:', error);
+            this.showToast('Error deleting data');
         }
     },
 
