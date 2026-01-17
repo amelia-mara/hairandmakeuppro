@@ -378,6 +378,155 @@
             border-color: var(--accent-gold);
         }
 
+        /* ============================================================================
+           LOOK PROGRESSION TIMELINE
+           ============================================================================ */
+
+        .look-timeline-section {
+            padding: 16px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .look-timeline-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .look-timeline-title {
+            font-size: 0.6875em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+        }
+
+        .look-timeline-count {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.05);
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+
+        .look-timeline {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 8px;
+            scrollbar-width: thin;
+        }
+
+        .look-timeline::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .look-timeline::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 3px;
+        }
+
+        .look-timeline::-webkit-scrollbar-thumb {
+            background: rgba(217, 164, 65, 0.3);
+            border-radius: 3px;
+        }
+
+        .look-timeline::-webkit-scrollbar-thumb:hover {
+            background: rgba(217, 164, 65, 0.5);
+        }
+
+        .look-timeline-item {
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .look-timeline-item:hover {
+            transform: translateY(-2px);
+        }
+
+        .look-timeline-thumb {
+            width: 56px;
+            height: 70px;
+            border-radius: 6px;
+            overflow: hidden;
+            background: rgba(28, 25, 22, 0.5);
+            border: 2px solid transparent;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .look-timeline-item:hover .look-timeline-thumb {
+            border-color: rgba(217, 164, 65, 0.5);
+        }
+
+        .look-timeline-item.current .look-timeline-thumb {
+            border-color: var(--accent-gold);
+            box-shadow: 0 0 12px rgba(217, 164, 65, 0.3);
+        }
+
+        .look-timeline-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .look-timeline-thumb-placeholder {
+            font-size: 1.25rem;
+            opacity: 0.3;
+        }
+
+        .look-timeline-label {
+            font-size: 0.6rem;
+            color: var(--text-muted);
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .look-timeline-item.current .look-timeline-label {
+            color: var(--accent-gold);
+            font-weight: 600;
+        }
+
+        .look-timeline-status {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            position: absolute;
+            top: 4px;
+            right: 4px;
+        }
+
+        .look-timeline-thumb {
+            position: relative;
+        }
+
+        .look-timeline-status.pending {
+            background: #666;
+        }
+
+        .look-timeline-status.partial {
+            background: var(--warning);
+        }
+
+        .look-timeline-status.complete {
+            background: var(--success);
+        }
+
+        .look-timeline-empty {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-align: center;
+            padding: 16px;
+        }
+
         /* Center content area */
         .center-content {
             flex: 1;
@@ -2663,7 +2812,42 @@
                 designNotes = characterProfile.baseDescription || characterProfile.description || '';
             }
 
+            // Get look timeline data for selected character
+            const lookTimelineData = getLookTimelineData(selectedCharacter);
+
             refContainer.innerHTML = `
+                <!-- Look Progression Timeline -->
+                ${selectedCharacter ? `
+                    <div class="look-timeline-section">
+                        <div class="look-timeline-header">
+                            <span class="look-timeline-title">Look Progression</span>
+                            <span class="look-timeline-count">${lookTimelineData.length} scenes</span>
+                        </div>
+                        ${lookTimelineData.length > 0 ? `
+                            <div class="look-timeline" id="look-timeline">
+                                ${lookTimelineData.map(item => `
+                                    <div class="look-timeline-item ${item.sceneIndex === selectedSceneIndex ? 'current' : ''}"
+                                         onclick="selectScene(${item.sceneIndex})"
+                                         title="${escapeHtml(item.heading)}">
+                                        <div class="look-timeline-thumb">
+                                            ${item.thumbnail ?
+                                                `<img src="${item.thumbnail}" alt="Scene ${item.sceneNumber}">` :
+                                                `<span class="look-timeline-thumb-placeholder">📷</span>`
+                                            }
+                                            <span class="look-timeline-status ${item.status}"></span>
+                                        </div>
+                                        <span class="look-timeline-label">Sc ${item.sceneNumber}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : `
+                            <div class="look-timeline-empty">
+                                No scenes with this character
+                            </div>
+                        `}
+                    </div>
+                ` : ''}
+
                 <!-- Master Reference Section -->
                 <div class="reference-section" id="master-ref-section">
                     <div class="reference-header" onclick="toggleReferenceSection('master-ref-section')">
@@ -2730,6 +2914,28 @@
 
             // STEP 3: Apply saved or default section states
             applySectionStates();
+
+            // Scroll current scene into view in the look timeline
+            scrollTimelineToCurrentScene();
+        }
+
+        // Scroll the look timeline to show the current scene
+        function scrollTimelineToCurrentScene() {
+            const timeline = document.getElementById('look-timeline');
+            if (!timeline) return;
+
+            const currentItem = timeline.querySelector('.look-timeline-item.current');
+            if (currentItem) {
+                // Calculate scroll position to center the current item
+                const timelineRect = timeline.getBoundingClientRect();
+                const itemRect = currentItem.getBoundingClientRect();
+                const scrollLeft = currentItem.offsetLeft - (timelineRect.width / 2) + (itemRect.width / 2);
+
+                timeline.scrollTo({
+                    left: scrollLeft,
+                    behavior: 'smooth'
+                });
+            }
         }
 
         function getPreviousSceneData(currentSceneIndex, characterName) {
@@ -3105,6 +3311,71 @@
             }
 
             return null;
+        }
+
+        // Get thumbnail for a specific character in a scene
+        function getCharacterThumbnail(sceneIndex, characterName) {
+            const sceneData = continuityPhotos[sceneIndex];
+            if (!sceneData) return null;
+
+            const charData = sceneData[characterName];
+            if (!charData || !charData.photos) return null;
+
+            // Return first available photo
+            const angles = ['front', 'left', 'right', 'back'];
+            for (const angle of angles) {
+                if (charData.photos[angle]) {
+                    return charData.photos[angle];
+                }
+            }
+
+            return null;
+        }
+
+        // Get look timeline data for a character (all scenes they appear in)
+        function getLookTimelineData(characterName) {
+            if (!characterName) return [];
+
+            const timelineData = [];
+
+            for (let i = 0; i < scenes.length; i++) {
+                const scene = scenes[i];
+                const characters = getSceneCharacters(scene);
+
+                // Check if this character appears in this scene
+                if (characters.includes(characterName)) {
+                    const sceneNumber = scene.number || scene.sceneNumber || (i + 1);
+                    const heading = scene.heading || scene.slugline || 'Untitled Scene';
+                    const thumbnail = getCharacterThumbnail(i, characterName);
+                    const status = getCharacterSceneStatus(i, characterName);
+
+                    timelineData.push({
+                        sceneIndex: i,
+                        sceneNumber: sceneNumber,
+                        heading: heading,
+                        thumbnail: thumbnail,
+                        status: status
+                    });
+                }
+            }
+
+            return timelineData;
+        }
+
+        // Get status for a specific character in a specific scene
+        function getCharacterSceneStatus(sceneIndex, characterName) {
+            const sceneData = continuityPhotos[sceneIndex];
+            if (!sceneData) return 'pending';
+
+            const charData = sceneData[characterName];
+            if (!charData || !charData.photos) return 'pending';
+
+            const angles = ['front', 'left', 'right', 'back'];
+            const filledAngles = angles.filter(angle => charData.photos[angle]).length;
+
+            if (filledAngles === 4) return 'complete';
+            if (filledAngles > 0) return 'partial';
+            return 'pending';
         }
 
         // Navigate to previous scene
