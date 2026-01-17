@@ -13,7 +13,7 @@
 
     <style>
         /* ============================================================================
-           CONTINUITY TRACKER - OPTIMIZED LAYOUT (STEP 1)
+           CONTINUITY TRACKER - OPTIMIZED LAYOUT (STEP 1 + STEP 2)
            ============================================================================ */
 
         /* Spacing system */
@@ -37,6 +37,17 @@
             padding: var(--spacing-lg);
             height: calc(100vh - 56px);
             overflow: hidden;
+        }
+
+        /* ============================================================================
+           STEP 2 - STICKY POSITIONING & SCROLL BEHAVIOR
+           ============================================================================ */
+
+        /* Smooth scrolling for all scrollable areas */
+        .scene-list,
+        .center-content,
+        .workspace-content {
+            scroll-behavior: smooth;
         }
 
         /* LEFT SIDEBAR - Scene List (300px fixed) */
@@ -252,11 +263,16 @@
             overflow: hidden;
         }
 
-        /* Character tabs: min-width 120px, padding 12px 20px */
+        /* Character tabs: min-width 120px, padding 12px 20px - STICKY */
         .character-tabs-container {
+            position: sticky;
+            top: 0;
+            z-index: 10;
             padding: var(--spacing-md) var(--spacing-lg);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            background: rgba(201, 169, 97, 0.03);
+            border-bottom: 1px solid rgba(201, 169, 97, 0.15);
+            background: rgba(10, 10, 10, 0.98);
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
             flex-shrink: 0;
         }
 
@@ -745,6 +761,76 @@
             margin-top: var(--spacing-xs);
         }
 
+        /* ============================================================================
+           SCROLL SHADOWS - Visual feedback for scrollable content
+           ============================================================================ */
+
+        /* Scene list scroll shadows using pseudo-elements */
+        .scene-list {
+            position: relative;
+        }
+
+        /* Top scroll shadow - shown when scrolled down */
+        .scene-list::before {
+            content: '';
+            position: sticky;
+            top: 0;
+            display: block;
+            height: 20px;
+            margin-bottom: -20px;
+            background: linear-gradient(to bottom,
+                rgba(18, 16, 14, 0.95) 0%,
+                transparent 100%
+            );
+            pointer-events: none;
+            z-index: 5;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        /* Bottom scroll shadow - shown when more content below */
+        .scene-list::after {
+            content: '';
+            position: sticky;
+            bottom: 0;
+            display: block;
+            height: 20px;
+            margin-top: -20px;
+            background: linear-gradient(to top,
+                rgba(18, 16, 14, 0.95) 0%,
+                transparent 100%
+            );
+            pointer-events: none;
+            z-index: 5;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        /* Show shadows based on scroll state */
+        .scene-list.scrolled-top::before {
+            opacity: 1;
+        }
+
+        .scene-list.scrolled-bottom::after {
+            opacity: 1;
+        }
+
+        /* Center content scroll shadow (under sticky tabs) */
+        .center-content::before {
+            content: '';
+            position: sticky;
+            top: 0;
+            display: block;
+            height: 16px;
+            margin-top: -16px;
+            background: linear-gradient(to bottom,
+                rgba(10, 10, 10, 0.9) 0%,
+                transparent 100%
+            );
+            pointer-events: none;
+            z-index: 5;
+        }
+
         /* Scrollbar styling */
         .scene-list::-webkit-scrollbar,
         .center-content::-webkit-scrollbar,
@@ -868,6 +954,7 @@
             loadCastProfiles();
             loadContinuityData();
             setupSearchHandler();
+            setupScrollShadows();
             console.log('Continuity Tracker initialized');
         });
 
@@ -1201,6 +1288,13 @@
 
             // Update reference panel
             renderReferencePanel(scene);
+
+            // STEP 2: Scroll behavior
+            // Scroll center content to top when selecting new scene
+            scrollToTop();
+
+            // Scroll the selected scene into view in the scene list
+            scrollSceneIntoView(sceneIndex);
         }
 
         // ============================================================================
@@ -1362,6 +1456,9 @@
         }
 
         function selectCharacter(characterName) {
+            // STEP 2: Save scroll position before switching characters
+            saveScrollPosition();
+
             selectedCharacter = characterName;
 
             // Update tab visual state
@@ -1381,6 +1478,12 @@
                 renderCenterContent(scene);
                 renderReferencePanel(scene);
             }
+
+            // STEP 2: Restore scroll position after re-rendering
+            // Use requestAnimationFrame to ensure DOM has updated
+            requestAnimationFrame(() => {
+                restoreScrollPosition();
+            });
 
             console.log('Selected character:', characterName);
         }
@@ -1824,6 +1927,77 @@
             } else {
                 console.log('No breakdown data found to sync');
                 alert('No breakdown data found. Please import a screenplay in Script Breakdown first.');
+            }
+        }
+
+        // ============================================================================
+        // SCROLL BEHAVIOR (STEP 2)
+        // ============================================================================
+
+        // Scroll center content to top smoothly
+        function scrollToTop() {
+            const centerContent = document.querySelector('.center-content');
+            if (centerContent) {
+                centerContent.scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
+                });
+            }
+        }
+
+        // Scroll selected scene into view
+        function scrollSceneIntoView(sceneIndex) {
+            const sceneItem = document.querySelector(`[data-scene-index="${sceneIndex}"]`);
+            if (sceneItem) {
+                sceneItem.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center'
+                });
+            }
+        }
+
+        // Preserve and restore scroll position
+        let savedScrollPosition = 0;
+
+        function saveScrollPosition() {
+            const centerContent = document.querySelector('.center-content');
+            if (centerContent) {
+                savedScrollPosition = centerContent.scrollTop;
+            }
+        }
+
+        function restoreScrollPosition() {
+            const centerContent = document.querySelector('.center-content');
+            if (centerContent) {
+                centerContent.scrollTop = savedScrollPosition;
+            }
+        }
+
+        // Setup scroll shadow observers
+        function setupScrollShadows() {
+            const sceneList = document.querySelector('.scene-list');
+            if (sceneList) {
+                sceneList.addEventListener('scroll', updateSceneListShadows);
+                // Initial check
+                updateSceneListShadows();
+            }
+        }
+
+        function updateSceneListShadows() {
+            const sceneList = document.querySelector('.scene-list');
+            if (!sceneList) return;
+
+            const scrollTop = sceneList.scrollTop;
+            const scrollHeight = sceneList.scrollHeight;
+            const clientHeight = sceneList.clientHeight;
+
+            // Check if we need scroll shadows (content is scrollable)
+            const isScrollable = scrollHeight > clientHeight;
+
+            // For now, we'll use CSS pseudo-elements with a data attribute
+            if (isScrollable) {
+                sceneList.classList.toggle('scrolled-top', scrollTop > 10);
+                sceneList.classList.toggle('scrolled-bottom', scrollTop < scrollHeight - clientHeight - 10);
             }
         }
 
