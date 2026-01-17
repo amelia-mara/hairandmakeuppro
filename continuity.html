@@ -527,6 +527,308 @@
             padding: 16px;
         }
 
+        /* ============================================================================
+           COMPARISON VIEW
+           ============================================================================ */
+
+        .comparison-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            margin: 0 20px 16px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .comparison-toggle:hover {
+            border-color: var(--accent-gold);
+            background: rgba(212, 175, 122, 0.08);
+        }
+
+        .comparison-toggle.active {
+            background: rgba(212, 175, 122, 0.15);
+            border-color: var(--accent-gold);
+        }
+
+        .comparison-toggle-icon {
+            font-size: 1rem;
+        }
+
+        .comparison-toggle-label {
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--text-light);
+        }
+
+        .comparison-toggle.active .comparison-toggle-label {
+            color: var(--accent-gold);
+        }
+
+        .comparison-toggle-hint {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            margin-left: auto;
+        }
+
+        /* Comparison View Container */
+        .comparison-view {
+            display: none;
+            padding: 16px 20px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            margin: 0 20px 16px;
+        }
+
+        .comparison-view.active {
+            display: block;
+        }
+
+        .comparison-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .comparison-title {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+        }
+
+        .comparison-mode-toggle {
+            display: flex;
+            gap: 4px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 6px;
+            padding: 2px;
+        }
+
+        .comparison-mode-btn {
+            padding: 4px 10px;
+            font-size: 0.65rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            background: transparent;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .comparison-mode-btn.active {
+            background: rgba(212, 175, 122, 0.2);
+            color: var(--accent-gold);
+        }
+
+        .comparison-mode-btn:hover:not(.active) {
+            color: var(--text-light);
+        }
+
+        /* Side by Side Layout */
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .comparison-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .comparison-panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .comparison-panel-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+        }
+
+        .comparison-panel-scene {
+            font-size: 0.65rem;
+            color: var(--accent-gold);
+        }
+
+        .comparison-image {
+            aspect-ratio: 3/4;
+            background: rgba(28, 25, 22, 0.5);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .comparison-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .comparison-image-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-muted);
+        }
+
+        .comparison-image-placeholder-icon {
+            font-size: 2rem;
+            opacity: 0.3;
+        }
+
+        .comparison-image-placeholder-text {
+            font-size: 0.7rem;
+        }
+
+        .comparison-angle-selector {
+            display: flex;
+            gap: 4px;
+            justify-content: center;
+        }
+
+        .comparison-angle-btn {
+            padding: 4px 10px;
+            font-size: 0.65rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid transparent;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .comparison-angle-btn.active {
+            background: rgba(212, 175, 122, 0.15);
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+        }
+
+        .comparison-angle-btn:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-light);
+        }
+
+        /* Overlay Mode */
+        .comparison-overlay {
+            display: none;
+            position: relative;
+        }
+
+        .comparison-overlay.active {
+            display: block;
+        }
+
+        .comparison-overlay-container {
+            position: relative;
+            aspect-ratio: 3/4;
+            background: rgba(28, 25, 22, 0.5);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .comparison-overlay-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .comparison-overlay-image.previous {
+            z-index: 1;
+        }
+
+        .comparison-overlay-image.current {
+            z-index: 2;
+            clip-path: inset(0 50% 0 0);
+        }
+
+        .comparison-slider {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 50%;
+            width: 4px;
+            background: var(--accent-gold);
+            z-index: 10;
+            cursor: ew-resize;
+            transform: translateX(-50%);
+        }
+
+        .comparison-slider::after {
+            content: '⬅➡';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--accent-gold);
+            color: var(--bg-dark);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.6rem;
+            white-space: nowrap;
+        }
+
+        .comparison-notes-section {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid var(--glass-border);
+        }
+
+        .comparison-notes-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .comparison-notes-input {
+            width: 100%;
+            min-height: 60px;
+            padding: 10px 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-light);
+            font-size: 0.8rem;
+            font-family: inherit;
+            resize: vertical;
+            transition: all 0.2s ease;
+        }
+
+        .comparison-notes-input:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+            background: rgba(0, 0, 0, 0.4);
+        }
+
+        .comparison-notes-input::placeholder {
+            color: var(--text-muted);
+            opacity: 0.5;
+        }
+
         /* Center content area */
         .center-content {
             flex: 1;
@@ -2280,6 +2582,10 @@
             const structuredNotes = charData.structuredNotes || {};
             const legacyNotes = charData.notes || '';
 
+            // Get previous scene photos for comparison
+            const prevSceneComparison = getComparisonData(sceneIndex, characterKey);
+            const comparisonActive = isComparisonActive();
+
             contentContainer.innerHTML = `
                 <!-- Essential Photos Section -->
                 <div class="section-label">ESSENTIAL PHOTOS</div>
@@ -2289,6 +2595,92 @@
                     ${renderPhotoSlot('right', 'RIGHT', charData.photos.right)}
                     ${renderPhotoSlot('back', 'BACK', charData.photos.back)}
                 </div>
+
+                <!-- Comparison View Toggle -->
+                ${prevSceneComparison.hasPrevious ? `
+                    <div class="comparison-toggle ${comparisonActive ? 'active' : ''}" onclick="toggleComparisonView()">
+                        <span class="comparison-toggle-icon">⇆</span>
+                        <span class="comparison-toggle-label">Compare with Previous Scene</span>
+                        <span class="comparison-toggle-hint">Scene ${prevSceneComparison.prevSceneNumber}</span>
+                    </div>
+
+                    <!-- Comparison View -->
+                    <div class="comparison-view ${comparisonActive ? 'active' : ''}" id="comparison-view">
+                        <div class="comparison-header">
+                            <span class="comparison-title">Side-by-Side Comparison</span>
+                            <div class="comparison-mode-toggle">
+                                <button class="comparison-mode-btn active" onclick="setComparisonMode('side')" data-mode="side">Side by Side</button>
+                                <button class="comparison-mode-btn" onclick="setComparisonMode('overlay')" data-mode="overlay">Overlay</button>
+                            </div>
+                        </div>
+
+                        <!-- Angle Selector -->
+                        <div class="comparison-angle-selector">
+                            <button class="comparison-angle-btn active" onclick="setComparisonAngle('front')" data-angle="front">Front</button>
+                            <button class="comparison-angle-btn" onclick="setComparisonAngle('left')" data-angle="left">Left</button>
+                            <button class="comparison-angle-btn" onclick="setComparisonAngle('right')" data-angle="right">Right</button>
+                            <button class="comparison-angle-btn" onclick="setComparisonAngle('back')" data-angle="back">Back</button>
+                        </div>
+
+                        <!-- Side by Side View -->
+                        <div class="comparison-grid" id="comparison-side" style="margin-top: 16px;">
+                            <div class="comparison-panel">
+                                <div class="comparison-panel-header">
+                                    <span class="comparison-panel-label">Previous</span>
+                                    <span class="comparison-panel-scene">Scene ${prevSceneComparison.prevSceneNumber}</span>
+                                </div>
+                                <div class="comparison-image" id="comparison-prev-image">
+                                    ${prevSceneComparison.photos.front ?
+                                        `<img src="${prevSceneComparison.photos.front}" alt="Previous scene">` :
+                                        `<div class="comparison-image-placeholder">
+                                            <span class="comparison-image-placeholder-icon">📷</span>
+                                            <span class="comparison-image-placeholder-text">No photo</span>
+                                        </div>`
+                                    }
+                                </div>
+                            </div>
+                            <div class="comparison-panel">
+                                <div class="comparison-panel-header">
+                                    <span class="comparison-panel-label">Current</span>
+                                    <span class="comparison-panel-scene">Scene ${sceneIndex + 1}</span>
+                                </div>
+                                <div class="comparison-image" id="comparison-curr-image">
+                                    ${charData.photos.front ?
+                                        `<img src="${charData.photos.front}" alt="Current scene">` :
+                                        `<div class="comparison-image-placeholder">
+                                            <span class="comparison-image-placeholder-icon">📷</span>
+                                            <span class="comparison-image-placeholder-text">No photo</span>
+                                        </div>`
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Overlay View (hidden by default) -->
+                        <div class="comparison-overlay" id="comparison-overlay" style="margin-top: 16px;">
+                            <div class="comparison-overlay-container" id="overlay-container">
+                                ${prevSceneComparison.photos.front ?
+                                    `<img class="comparison-overlay-image previous" src="${prevSceneComparison.photos.front}" alt="Previous">` :
+                                    ''
+                                }
+                                ${charData.photos.front ?
+                                    `<img class="comparison-overlay-image current" id="overlay-current" src="${charData.photos.front}" alt="Current">` :
+                                    ''
+                                }
+                                <div class="comparison-slider" id="comparison-slider"></div>
+                            </div>
+                        </div>
+
+                        <!-- Comparison Notes -->
+                        <div class="comparison-notes-section">
+                            <div class="comparison-notes-label">Differences Noted</div>
+                            <textarea class="comparison-notes-input"
+                                      placeholder="Note any differences between scenes..."
+                                      oninput="handleStructuredNoteInput('comparisonNotes', this.value)"
+                                      onblur="saveStructuredNote('comparisonNotes', this.value)">${escapeHtml(structuredNotes.comparisonNotes || '')}</textarea>
+                        </div>
+                    </div>
+                ` : ''}
 
                 <!-- Structured Notes Section -->
                 <div class="scene-notes-section">
@@ -3376,6 +3768,195 @@
             if (filledAngles === 4) return 'complete';
             if (filledAngles > 0) return 'partial';
             return 'pending';
+        }
+
+        // ============================================================================
+        // COMPARISON VIEW FUNCTIONS
+        // ============================================================================
+
+        let comparisonAngle = 'front';
+        let comparisonMode = 'side';
+
+        // Get comparison data (previous scene photos for this character)
+        function getComparisonData(currentSceneIndex, characterKey) {
+            const result = {
+                hasPrevious: false,
+                prevSceneIndex: null,
+                prevSceneNumber: null,
+                photos: {}
+            };
+
+            // Look for the most recent scene with photos for this character
+            for (let i = currentSceneIndex - 1; i >= 0; i--) {
+                const sceneData = continuityPhotos[i];
+                if (!sceneData || !sceneData[characterKey]) continue;
+
+                const charData = sceneData[characterKey];
+                if (!charData.photos) continue;
+
+                // Check if this scene has any photos
+                const hasPhotos = ['front', 'left', 'right', 'back'].some(angle => charData.photos[angle]);
+
+                if (hasPhotos) {
+                    result.hasPrevious = true;
+                    result.prevSceneIndex = i;
+                    result.prevSceneNumber = scenes[i].number || scenes[i].sceneNumber || (i + 1);
+                    result.photos = charData.photos;
+                    break;
+                }
+            }
+
+            return result;
+        }
+
+        // Check if comparison view is active
+        function isComparisonActive() {
+            return localStorage.getItem('continuityComparisonActive') === 'true';
+        }
+
+        // Toggle comparison view
+        function toggleComparisonView() {
+            const isActive = isComparisonActive();
+            localStorage.setItem('continuityComparisonActive', isActive ? 'false' : 'true');
+
+            const toggle = document.querySelector('.comparison-toggle');
+            const view = document.getElementById('comparison-view');
+
+            if (toggle) toggle.classList.toggle('active', !isActive);
+            if (view) view.classList.toggle('active', !isActive);
+
+            if (!isActive) {
+                // Set up slider when opening
+                setupComparisonSlider();
+            }
+        }
+
+        // Set comparison mode (side-by-side or overlay)
+        function setComparisonMode(mode) {
+            comparisonMode = mode;
+
+            // Update button states
+            document.querySelectorAll('.comparison-mode-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.mode === mode);
+            });
+
+            // Show/hide views
+            const sideView = document.getElementById('comparison-side');
+            const overlayView = document.getElementById('comparison-overlay');
+
+            if (sideView) sideView.style.display = mode === 'side' ? 'grid' : 'none';
+            if (overlayView) {
+                overlayView.classList.toggle('active', mode === 'overlay');
+                if (mode === 'overlay') {
+                    setupComparisonSlider();
+                }
+            }
+        }
+
+        // Set comparison angle
+        function setComparisonAngle(angle) {
+            comparisonAngle = angle;
+
+            // Update button states
+            document.querySelectorAll('.comparison-angle-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.angle === angle);
+            });
+
+            // Get current data
+            if (selectedSceneIndex === null) return;
+
+            const characterKey = selectedCharacter || 'general';
+            const sceneData = continuityPhotos[selectedSceneIndex] || {};
+            const charData = sceneData[characterKey] || { photos: {} };
+            const prevData = getComparisonData(selectedSceneIndex, characterKey);
+
+            // Update side-by-side images
+            const prevImageContainer = document.getElementById('comparison-prev-image');
+            const currImageContainer = document.getElementById('comparison-curr-image');
+
+            if (prevImageContainer) {
+                prevImageContainer.innerHTML = prevData.photos[angle] ?
+                    `<img src="${prevData.photos[angle]}" alt="Previous scene">` :
+                    `<div class="comparison-image-placeholder">
+                        <span class="comparison-image-placeholder-icon">📷</span>
+                        <span class="comparison-image-placeholder-text">No photo</span>
+                    </div>`;
+            }
+
+            if (currImageContainer) {
+                currImageContainer.innerHTML = charData.photos[angle] ?
+                    `<img src="${charData.photos[angle]}" alt="Current scene">` :
+                    `<div class="comparison-image-placeholder">
+                        <span class="comparison-image-placeholder-icon">📷</span>
+                        <span class="comparison-image-placeholder-text">No photo</span>
+                    </div>`;
+            }
+
+            // Update overlay images
+            const overlayContainer = document.getElementById('overlay-container');
+            if (overlayContainer) {
+                const prevImg = overlayContainer.querySelector('.comparison-overlay-image.previous');
+                const currImg = overlayContainer.querySelector('.comparison-overlay-image.current');
+
+                if (prevImg && prevData.photos[angle]) {
+                    prevImg.src = prevData.photos[angle];
+                }
+                if (currImg && charData.photos[angle]) {
+                    currImg.src = charData.photos[angle];
+                }
+            }
+        }
+
+        // Set up the comparison slider for overlay mode
+        function setupComparisonSlider() {
+            const slider = document.getElementById('comparison-slider');
+            const container = document.getElementById('overlay-container');
+            const currentImg = document.getElementById('overlay-current');
+
+            if (!slider || !container || !currentImg) return;
+
+            let isDragging = false;
+
+            const updateSlider = (clientX) => {
+                const rect = container.getBoundingClientRect();
+                let x = clientX - rect.left;
+                x = Math.max(0, Math.min(x, rect.width));
+
+                const percentage = (x / rect.width) * 100;
+                slider.style.left = percentage + '%';
+                currentImg.style.clipPath = `inset(0 ${100 - percentage}% 0 0)`;
+            };
+
+            slider.onmousedown = (e) => {
+                isDragging = true;
+                e.preventDefault();
+            };
+
+            document.addEventListener('mousemove', (e) => {
+                if (isDragging) {
+                    updateSlider(e.clientX);
+                }
+            });
+
+            document.addEventListener('mouseup', () => {
+                isDragging = false;
+            });
+
+            // Touch support
+            slider.ontouchstart = (e) => {
+                isDragging = true;
+                e.preventDefault();
+            };
+
+            document.addEventListener('touchmove', (e) => {
+                if (isDragging && e.touches.length > 0) {
+                    updateSlider(e.touches[0].clientX);
+                }
+            });
+
+            document.addEventListener('touchend', () => {
+                isDragging = false;
+            });
         }
 
         // Navigate to previous scene
