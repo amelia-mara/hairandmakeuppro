@@ -37,11 +37,16 @@ const App = {
     currentCharacterName: null,
     currentCaptureAngle: null,
 
+    // Timesheet entries
+    timesheetEntries: [],
+    timesheetFilter: 'this-week',
+
     // LocalStorage keys
     STORAGE_KEYS: {
         PROJECT: 'hmp_project',
         SCENES: 'hmp_scenes',
-        CHARACTERS: 'hmp_characters'
+        CHARACTERS: 'hmp_characters',
+        TIMESHEETS: 'hmp_timesheets'
     },
 
     // Initialize the app
@@ -56,6 +61,7 @@ const App = {
         this.bindSyncCodeInputs();
         this.bindModalEvents();
         this.bindTimesheetCalculation();
+        this.bindTimesheetEvents();
         this.bindCharacterConfirmation();
         this.bindSceneSearch();
         this.bindPhotoCapture();
@@ -156,6 +162,12 @@ const App = {
                 this.screenHistory = ['screen-home'];
                 break;
             case 'screen-timesheet':
+                this.renderTimesheet();
+                this.screenHistory = ['screen-home'];
+                break;
+            case 'screen-timesheet-form':
+                this.initTimesheetForm();
+                break;
             case 'screen-settings':
                 this.updateSettings();
                 this.screenHistory = ['screen-home'];
@@ -1370,6 +1382,273 @@ const App = {
 
         // Calculate initial value
         calculateTotal();
+    },
+
+    /**
+     * Bind timesheet event handlers
+     */
+    bindTimesheetEvents() {
+        // Save entry button
+        const saveBtn = document.getElementById('btn-save-entry');
+        if (saveBtn) {
+            saveBtn.addEventListener('click', () => this.saveTimesheetEntry());
+        }
+
+        // Load saved timesheets
+        this.loadTimesheets();
+    },
+
+    /**
+     * Initialize timesheet form (when navigating to form)
+     */
+    initTimesheetForm() {
+        const dateInput = document.getElementById('entry-date');
+        const shootDayInput = document.getElementById('entry-shoot-day');
+        const callTimeInput = document.getElementById('entry-call-time');
+        const wrapTimeInput = document.getElementById('entry-wrap-time');
+        const mealBreakInput = document.getElementById('entry-meal-break');
+        const notesInput = document.getElementById('entry-notes');
+
+        // Set today's date
+        if (dateInput) {
+            const today = new Date().toISOString().split('T')[0];
+            dateInput.value = today;
+        }
+
+        // Calculate shoot day based on existing entries
+        if (shootDayInput) {
+            const nextDay = this.timesheetEntries.length + 1;
+            shootDayInput.value = `Day ${nextDay}`;
+        }
+
+        // Reset other fields
+        if (callTimeInput) callTimeInput.value = '06:00';
+        if (wrapTimeInput) wrapTimeInput.value = '18:00';
+        if (mealBreakInput) mealBreakInput.value = '30';
+        if (notesInput) notesInput.value = '';
+
+        // Recalculate
+        this.bindTimesheetCalculation();
+    },
+
+    /**
+     * Save a timesheet entry
+     */
+    saveTimesheetEntry() {
+        const dateInput = document.getElementById('entry-date');
+        const shootDayInput = document.getElementById('entry-shoot-day');
+        const callTimeInput = document.getElementById('entry-call-time');
+        const wrapTimeInput = document.getElementById('entry-wrap-time');
+        const mealBreakInput = document.getElementById('entry-meal-break');
+        const notesInput = document.getElementById('entry-notes');
+        const totalEl = document.getElementById('calculated-total');
+
+        // Validate required fields
+        if (!dateInput?.value || !callTimeInput?.value || !wrapTimeInput?.value) {
+            this.showToast('Please fill in all required fields', 2500);
+            return;
+        }
+
+        const entry = {
+            id: Date.now(),
+            date: dateInput.value,
+            shootDay: shootDayInput?.value || '',
+            callTime: callTimeInput.value,
+            wrapTime: wrapTimeInput.value,
+            mealBreak: parseInt(mealBreakInput?.value) || 0,
+            totalHours: parseFloat(totalEl?.textContent) || 0,
+            notes: notesInput?.value || '',
+            status: 'pending'
+        };
+
+        // Check for duplicate date
+        const existingIndex = this.timesheetEntries.findIndex(e => e.date === entry.date);
+        if (existingIndex >= 0) {
+            // Update existing entry
+            this.timesheetEntries[existingIndex] = entry;
+            this.showToast('Entry updated');
+        } else {
+            // Add new entry
+            this.timesheetEntries.push(entry);
+            this.showToast('Entry saved');
+        }
+
+        // Sort by date (newest first)
+        this.timesheetEntries.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        // Save to localStorage
+        this.saveTimesheets();
+
+        // Navigate back to timesheet list
+        this.navigateTo('screen-timesheet');
+    },
+
+    /**
+     * Save timesheets to localStorage
+     */
+    saveTimesheets() {
+        localStorage.setItem(this.STORAGE_KEYS.TIMESHEETS, JSON.stringify(this.timesheetEntries));
+    },
+
+    /**
+     * Load timesheets from localStorage
+     */
+    loadTimesheets() {
+        const saved = localStorage.getItem(this.STORAGE_KEYS.TIMESHEETS);
+        if (saved) {
+            try {
+                this.timesheetEntries = JSON.parse(saved);
+            } catch (e) {
+                console.error('Error loading timesheets:', e);
+                this.timesheetEntries = [];
+            }
+        }
+    },
+
+    /**
+     * Render the timesheet list
+     */
+    renderTimesheet() {
+        const container = document.getElementById('timesheet-list');
+        const weeklyHoursEl = document.getElementById('weekly-hours');
+
+        if (!container) return;
+
+        // Get filtered entries
+        const filteredEntries = this.getFilteredTimesheets();
+
+        // Calculate total hours for display
+        const totalHours = filteredEntries.reduce((sum, e) => sum + e.totalHours, 0);
+        if (weeklyHoursEl) {
+            weeklyHoursEl.textContent = totalHours.toFixed(1);
+        }
+
+        if (filteredEntries.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state" style="padding: 40px 20px;">
+                    <div class="empty-icon">
+                        <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="24" cy="24" r="20"/>
+                            <path d="M24 14v12l8 4"/>
+                        </svg>
+                    </div>
+                    <h3 class="empty-title">No Entries Yet</h3>
+                    <p class="empty-text">Add your first timesheet entry to track your hours.</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = filteredEntries.map(entry => {
+            const date = new Date(entry.date + 'T00:00:00');
+            const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
+            const fullDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+            return `
+                <div class="timesheet-entry" data-entry-id="${entry.id}">
+                    <div class="entry-date">
+                        <p class="entry-day">${dayName}</p>
+                        <p class="entry-full-date">${fullDate}</p>
+                        ${entry.shootDay ? `<span class="entry-shoot-day">${entry.shootDay}</span>` : ''}
+                    </div>
+                    <div class="entry-times">
+                        <p class="entry-range">${entry.callTime} - ${entry.wrapTime}</p>
+                        <p class="entry-hours">${entry.totalHours.toFixed(1)} hours</p>
+                    </div>
+                    <div class="entry-status ${entry.status}">${entry.status.charAt(0).toUpperCase() + entry.status.slice(1)}</div>
+                </div>
+            `;
+        }).join('');
+
+        // Bind entry clicks for editing
+        container.querySelectorAll('.timesheet-entry').forEach(entryEl => {
+            entryEl.addEventListener('click', () => {
+                const entryId = parseInt(entryEl.dataset.entryId);
+                this.editTimesheetEntry(entryId);
+            });
+        });
+
+        // Bind filter pills
+        this.bindTimesheetFilters();
+    },
+
+    /**
+     * Get filtered timesheet entries
+     */
+    getFilteredTimesheets() {
+        const now = new Date();
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - now.getDay());
+        startOfWeek.setHours(0, 0, 0, 0);
+
+        const startOfLastWeek = new Date(startOfWeek);
+        startOfLastWeek.setDate(startOfLastWeek.getDate() - 7);
+
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+        return this.timesheetEntries.filter(entry => {
+            const entryDate = new Date(entry.date + 'T00:00:00');
+
+            switch (this.timesheetFilter) {
+                case 'this-week':
+                    return entryDate >= startOfWeek;
+                case 'last-week':
+                    return entryDate >= startOfLastWeek && entryDate < startOfWeek;
+                case 'this-month':
+                    return entryDate >= startOfMonth;
+                default:
+                    return true;
+            }
+        });
+    },
+
+    /**
+     * Bind timesheet filter pills
+     */
+    bindTimesheetFilters() {
+        const filterPills = document.querySelectorAll('#screen-timesheet .filter-pills .pill');
+        filterPills.forEach(pill => {
+            pill.addEventListener('click', () => {
+                // Update active state
+                filterPills.forEach(p => p.classList.remove('active'));
+                pill.classList.add('active');
+
+                // Update filter and re-render
+                this.timesheetFilter = pill.dataset.filter;
+                this.renderTimesheet();
+            });
+        });
+    },
+
+    /**
+     * Edit an existing timesheet entry
+     */
+    editTimesheetEntry(entryId) {
+        const entry = this.timesheetEntries.find(e => e.id === entryId);
+        if (!entry) return;
+
+        // Navigate to form
+        this.navigateTo('screen-timesheet-form');
+
+        // Populate form with entry data (after navigation)
+        setTimeout(() => {
+            const dateInput = document.getElementById('entry-date');
+            const shootDayInput = document.getElementById('entry-shoot-day');
+            const callTimeInput = document.getElementById('entry-call-time');
+            const wrapTimeInput = document.getElementById('entry-wrap-time');
+            const mealBreakInput = document.getElementById('entry-meal-break');
+            const notesInput = document.getElementById('entry-notes');
+
+            if (dateInput) dateInput.value = entry.date;
+            if (shootDayInput) shootDayInput.value = entry.shootDay;
+            if (callTimeInput) callTimeInput.value = entry.callTime;
+            if (wrapTimeInput) wrapTimeInput.value = entry.wrapTime;
+            if (mealBreakInput) mealBreakInput.value = entry.mealBreak;
+            if (notesInput) notesInput.value = entry.notes;
+
+            // Recalculate
+            this.bindTimesheetCalculation();
+        }, 50);
     },
 
     // ============================================
