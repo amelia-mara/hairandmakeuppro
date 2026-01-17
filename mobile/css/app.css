@@ -1577,6 +1577,21 @@ strong {
     background-color: var(--status-danger);
 }
 
+/* Highlight missing photo slots */
+.photo-slot.highlight-missing {
+    animation: pulse-missing 0.5s ease-in-out 2;
+}
+
+@keyframes pulse-missing {
+    0%, 100% {
+        border-color: var(--border-light);
+    }
+    50% {
+        border-color: var(--status-danger);
+        box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.2);
+    }
+}
+
 .photo-delete svg {
     width: 18px;
     height: 18px;
@@ -1608,6 +1623,42 @@ strong {
 
 .notes-textarea::placeholder {
     color: var(--text-tertiary);
+}
+
+/* ============================================
+   TOAST NOTIFICATIONS
+   ============================================ */
+.toast-notification {
+    position: fixed;
+    bottom: calc(var(--nav-height) + 24px);
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    padding: var(--spacing-sm) var(--spacing-lg);
+    background-color: var(--text-primary);
+    color: var(--bg-primary);
+    font-size: 0.875rem;
+    font-weight: 500;
+    border-radius: var(--radius-full);
+    box-shadow: var(--shadow-lg);
+    opacity: 0;
+    transition: opacity var(--transition-fast), transform var(--transition-fast);
+    z-index: 1000;
+    pointer-events: none;
+}
+
+.toast-notification.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* Success toast variant */
+.toast-notification.success {
+    background-color: var(--status-success);
+}
+
+/* Error toast variant */
+.toast-notification.error {
+    background-color: var(--status-danger);
 }
 
 /* ============================================

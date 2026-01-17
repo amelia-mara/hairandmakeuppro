@@ -1361,6 +1361,19 @@ const App = {
 
         // Bind photo slot clicks
         this.bindPhotoSlots();
+
+        // Load existing notes
+        const notesTextarea = document.getElementById('scene-notes');
+        if (notesTextarea) {
+            const existingNotes = this.loadSceneNotes(this.currentSceneIndex, this.currentCharacterName);
+            notesTextarea.value = existingNotes;
+
+            // Auto-save notes on blur
+            notesTextarea.addEventListener('blur', () => {
+                this.saveSceneNotes(this.currentSceneIndex, this.currentCharacterName, notesTextarea.value);
+                this.showToast('Notes saved');
+            });
+        }
     },
 
     /**
@@ -1580,21 +1593,40 @@ const App = {
 
         if (!status.isComplete) {
             const missing = status.missing.map(a => a.toUpperCase()).join(', ');
-            alert(`Please capture all 4 angles first.\nMissing: ${missing}`);
+            const captured = status.captured;
+
+            // Show which angles are complete and which are missing
+            this.showToast(`Missing ${4 - captured} photo(s): ${missing}`, 3000);
+
+            // Highlight the missing slots briefly
+            missing.split(', ').forEach(angle => {
+                const slot = document.querySelector(`.photo-slot[data-angle="${angle.toLowerCase()}"]`);
+                if (slot) {
+                    slot.classList.add('highlight-missing');
+                    setTimeout(() => slot.classList.remove('highlight-missing'), 2000);
+                }
+            });
             return;
         }
 
         // Update scene status
         await this.updateSceneStatuses();
 
-        // Save notes if any
+        // Save notes (auto-save should have already saved, but ensure final save)
         const notesTextarea = document.getElementById('scene-notes');
-        if (notesTextarea && notesTextarea.value.trim()) {
+        if (notesTextarea) {
             this.saveSceneNotes(this.currentSceneIndex, this.currentCharacterName, notesTextarea.value);
         }
 
-        // Navigate back to scene list
-        this.navigateTo('screen-scene-list');
+        // Show success feedback
+        const character = this.characters.find(c => c.name === this.currentCharacterName);
+        const scene = this.scenes[this.currentSceneIndex];
+        this.showToast(`✓ ${character?.name || 'Character'} complete for Scene ${scene?.number || ''}`, 2500);
+
+        // Navigate back to scene list after brief delay
+        setTimeout(() => {
+            this.navigateTo('screen-scene-list');
+        }, 500);
     },
 
     /**
@@ -1626,6 +1658,40 @@ const App = {
 
         // Save updated scenes
         this.saveToStorage();
+    },
+
+    // ============================================
+    // UI UTILITIES
+    // ============================================
+
+    /**
+     * Show a toast notification
+     * @param {string} message - Message to display
+     * @param {number} duration - Duration in ms (default 2000)
+     */
+    showToast(message, duration = 2000) {
+        // Remove existing toast if any
+        const existingToast = document.querySelector('.toast-notification');
+        if (existingToast) {
+            existingToast.remove();
+        }
+
+        // Create toast element
+        const toast = document.createElement('div');
+        toast.className = 'toast-notification';
+        toast.textContent = message;
+        document.body.appendChild(toast);
+
+        // Animate in
+        requestAnimationFrame(() => {
+            toast.classList.add('show');
+        });
+
+        // Remove after duration
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        }, duration);
     },
 
     // ============================================
