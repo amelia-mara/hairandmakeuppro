@@ -70,6 +70,69 @@
             font-weight: 600;
         }
 
+        /* Sort Order Toggle */
+        .sort-toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: var(--spacing-sm);
+            padding-top: var(--spacing-sm);
+            border-top: 1px solid var(--glass-border);
+        }
+
+        .sort-toggle-label {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .sort-toggle-btn {
+            flex: 1;
+            padding: 6px 10px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+
+        .sort-toggle-btn:hover {
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+        }
+
+        .sort-toggle-btn.active {
+            background: rgba(212, 175, 122, 0.15);
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+        }
+
+        .sort-toggle-btn.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .sort-toggle-btn.disabled:hover {
+            border-color: var(--glass-border);
+            color: var(--text-muted);
+        }
+
+        /* Shooting day badge in scene item */
+        .shooting-day-badge {
+            font-size: 0.6rem;
+            font-weight: 600;
+            color: var(--accent-gold);
+            background: rgba(212, 175, 122, 0.15);
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: auto;
+        }
+
         /* Status indicator in scene cards */
         .status-indicator {
             width: 24px;
@@ -110,6 +173,26 @@
 
         .scene-info-line .status-indicator {
             margin-left: auto;
+        }
+
+        /* Scene Synopsis in scene list */
+        .scene-synopsis {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+            margin-top: 6px;
+            padding-top: 6px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .scene-item.active .scene-synopsis {
+            color: rgba(255, 255, 255, 0.7);
+            border-top-color: rgba(217, 164, 65, 0.2);
         }
 
         /* ============================================================================
@@ -1829,6 +1912,13 @@
                         <div class="filter-pill" data-filter="complete" onclick="filterScenes('complete', this)">Complete</div>
                         <div class="filter-pill" data-filter="incomplete" onclick="filterScenes('incomplete', this)">Incomplete</div>
                     </div>
+
+                    <!-- Sort Order Toggle -->
+                    <div class="sort-toggle-container" id="sort-toggle-container">
+                        <span class="sort-toggle-label">Order:</span>
+                        <button class="sort-toggle-btn active" data-sort="script" onclick="setSortOrder('script')">Script</button>
+                        <button class="sort-toggle-btn" data-sort="shooting" onclick="setSortOrder('shooting')" id="shooting-sort-btn">Shooting</button>
+                    </div>
                 </div>
                 <div class="scene-list" id="scene-list">
                     <!-- Scene items rendered here -->
@@ -1889,6 +1979,8 @@
         let selectedSceneIndex = null;
         let selectedCharacter = null;
         let currentFilter = 'all';
+        let currentSortOrder = 'script'; // 'script' or 'shooting'
+        let shootingSchedule = null; // { shootDays: [], sceneToShootDay: {} }
         let continuityPhotos = {};
 
         // ============================================================================
@@ -1900,10 +1992,12 @@
             loadBreakdownData();
             loadCastProfiles();
             loadContinuityData();
+            loadShootingSchedule();
             setupSearchHandler();
             setupScrollShadows();
             setupKeyboardNavigation();
             renderSceneNavigation(); // Initialize scene navigation bar
+            updateShootingOrderButton(); // Enable/disable shooting order based on schedule
             console.log('Continuity Tracker initialized');
         });
 
@@ -2074,6 +2168,80 @@
             localStorage.setItem('continuityPhotos', JSON.stringify(continuityPhotos));
         }
 
+        // Load shooting schedule from currentProject
+        function loadShootingSchedule() {
+            const projectData = localStorage.getItem('currentProject');
+            if (projectData) {
+                try {
+                    const project = JSON.parse(projectData);
+                    if (project.shootingSchedule) {
+                        shootingSchedule = project.shootingSchedule;
+                        console.log('Loaded shooting schedule:', shootingSchedule);
+                    }
+                } catch (e) {
+                    console.error('Error parsing shooting schedule:', e);
+                }
+            }
+        }
+
+        // Update shooting order button state based on schedule availability
+        function updateShootingOrderButton() {
+            const btn = document.getElementById('shooting-sort-btn');
+            if (!btn) return;
+
+            const hasSchedule = shootingSchedule &&
+                                shootingSchedule.sceneToShootDay &&
+                                Object.keys(shootingSchedule.sceneToShootDay).length > 0;
+
+            if (hasSchedule) {
+                btn.classList.remove('disabled');
+                btn.title = 'Sort by shooting order';
+            } else {
+                btn.classList.add('disabled');
+                btn.title = 'No shooting schedule available - upload in Script Breakdown';
+            }
+        }
+
+        // Set sort order (script or shooting)
+        function setSortOrder(order) {
+            // Check if shooting order is available
+            if (order === 'shooting') {
+                const hasSchedule = shootingSchedule &&
+                                    shootingSchedule.sceneToShootDay &&
+                                    Object.keys(shootingSchedule.sceneToShootDay).length > 0;
+
+                if (!hasSchedule) {
+                    alert('No shooting schedule available.\n\nUpload a shooting schedule in the Script Breakdown page to enable shooting order.');
+                    return;
+                }
+            }
+
+            currentSortOrder = order;
+
+            // Update button states
+            document.querySelectorAll('.sort-toggle-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.sort === order);
+            });
+
+            // Re-render scene list
+            renderSceneList();
+        }
+
+        // Get shooting day for a scene
+        function getShootingDay(sceneIndex) {
+            if (!shootingSchedule || !shootingSchedule.sceneToShootDay) return null;
+            const dayIndex = shootingSchedule.sceneToShootDay[sceneIndex];
+            if (dayIndex === undefined) return null;
+
+            const day = shootingSchedule.shootDays?.[dayIndex];
+            return day ? {
+                dayIndex: dayIndex,
+                dayNumber: day.dayNumber || (dayIndex + 1),
+                date: day.date,
+                label: `Day ${day.dayNumber || (dayIndex + 1)}`
+            } : null;
+        }
+
         // ============================================================================
         // SCENE LIST RENDERING
         // ============================================================================
@@ -2145,6 +2313,15 @@
                 // Story day (if available)
                 const storyDay = scene.storyDay || scene.story_day || '1';
 
+                // Get synopsis from scene or sceneBreakdowns
+                let synopsis = scene.synopsis || '';
+                if (!synopsis && sceneBreakdowns[sceneIndex]) {
+                    synopsis = sceneBreakdowns[sceneIndex].synopsis || '';
+                }
+
+                // Get shooting day if available
+                const shootingDay = getShootingDay(sceneIndex);
+
                 return `
                     <div class="scene-item ${colorClass} ${isActive ? 'active' : ''}"
                          data-scene-index="${sceneIndex}"
@@ -2157,29 +2334,55 @@
                         </div>
                         <div class="scene-info-line">
                             Day ${storyDay} · ${timeBadge || 'Day'} · ${locationType || 'INT'}
+                            ${shootingDay ? `<span class="shooting-day-badge">${shootingDay.label}</span>` : ''}
                             <div class="status-indicator ${status}" title="${status}">
                                 ${statusIcon}
                             </div>
                         </div>
+                        ${synopsis ? `<div class="scene-synopsis">${escapeHtml(synopsis)}</div>` : ''}
                     </div>
                 `;
             }).join('');
         }
 
         function getFilteredScenes() {
-            if (currentFilter === 'all') {
-                return scenes;
+            // Start with all scenes
+            let result = scenes.slice(); // Create copy to avoid mutating original
+
+            // Apply status filter
+            if (currentFilter !== 'all') {
+                result = result.filter((scene, index) => {
+                    const originalIndex = scenes.indexOf(scene);
+                    const status = getSceneStatus(originalIndex);
+                    if (currentFilter === 'complete') {
+                        return status === 'complete';
+                    } else if (currentFilter === 'incomplete') {
+                        return status === 'pending' || status === 'partial';
+                    }
+                    return true;
+                });
             }
 
-            return scenes.filter((scene, index) => {
-                const status = getSceneStatus(index);
-                if (currentFilter === 'complete') {
-                    return status === 'complete';
-                } else if (currentFilter === 'incomplete') {
-                    return status === 'pending' || status === 'partial';
-                }
-                return true;
-            });
+            // Apply shooting order sort if selected
+            if (currentSortOrder === 'shooting' && shootingSchedule && shootingSchedule.sceneToShootDay) {
+                result.sort((a, b) => {
+                    const indexA = scenes.indexOf(a);
+                    const indexB = scenes.indexOf(b);
+                    const dayA = shootingSchedule.sceneToShootDay[indexA];
+                    const dayB = shootingSchedule.sceneToShootDay[indexB];
+
+                    // Scenes without a shooting day go to the end
+                    if (dayA === undefined && dayB === undefined) return indexA - indexB;
+                    if (dayA === undefined) return 1;
+                    if (dayB === undefined) return -1;
+
+                    // Sort by shooting day, then by original script order within same day
+                    if (dayA !== dayB) return dayA - dayB;
+                    return indexA - indexB;
+                });
+            }
+
+            return result;
         }
 
         function getSceneStatus(sceneIndex) {
