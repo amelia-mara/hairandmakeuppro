@@ -517,6 +517,15 @@
             object-fit: cover;
         }
 
+        .look-timeline-thumb.has-image {
+            cursor: zoom-in;
+        }
+
+        .look-timeline-thumb.has-image:hover {
+            border-color: var(--accent-gold);
+            transform: scale(1.05);
+        }
+
         .look-timeline-thumb-placeholder {
             font-size: 1.25rem;
             opacity: 0.3;
@@ -3428,9 +3437,9 @@
                                 ${lookTimelineData.map(item => `
                                     <div class="look-timeline-item ${item.sceneIndex === selectedSceneIndex ? 'current' : ''}"
                                          title="${escapeHtml(item.heading)}">
-                                        <div class="look-timeline-thumb" onclick="${item.thumbnail ? `openTimelinePreview(${item.sceneIndex})` : `selectScene(${item.sceneIndex})`}">
+                                        <div class="look-timeline-thumb ${item.thumbnail ? 'has-image' : ''}" ${item.thumbnail ? `onclick="openTimelinePreview(${item.sceneIndex}, event)"` : ''}>
                                             ${item.thumbnail ?
-                                                `<img src="${item.thumbnail}" alt="Scene ${item.sceneNumber}" style="cursor: zoom-in;">` :
+                                                `<img src="${item.thumbnail}" alt="Scene ${item.sceneNumber}">` :
                                                 `<span class="look-timeline-thumb-placeholder">📷</span>`
                                             }
                                             <span class="look-timeline-status ${item.status}"></span>
@@ -4186,7 +4195,13 @@
         let previewData = null; // { images: [], currentIndex: 0 }
 
         // Open timeline preview in the reference panel
-        function openTimelinePreview(sceneIndex) {
+        function openTimelinePreview(sceneIndex, event) {
+            // Stop event from bubbling up
+            if (event) {
+                event.stopPropagation();
+                event.preventDefault();
+            }
+
             // Get all timeline images for this character
             const timelineData = getLookTimelineData(selectedCharacter);
             if (!timelineData || timelineData.length === 0) return;
