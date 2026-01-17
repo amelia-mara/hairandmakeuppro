@@ -1098,7 +1098,7 @@ const App = {
     /**
      * Render lookbooks screen
      */
-    renderLookbooks() {
+    async renderLookbooks() {
         const container = document.getElementById('lookbook-list');
         const countEl = document.getElementById('character-count');
 
@@ -1120,30 +1120,88 @@ const App = {
             return;
         }
 
-        container.innerHTML = this.characters.map(char => `
-            <div class="lookbook-character" data-character="${char.name}">
-                <h3 class="lookbook-character-name">${char.name}</h3>
-                <div class="lookbook-looks">
-                    <div class="lookbook-card">
-                        <div class="lookbook-thumbnail">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                                <circle cx="8.5" cy="8.5" r="1.5"/>
-                                <path d="M21 15l-5-5L5 21"/>
-                            </svg>
-                        </div>
-                        <div class="lookbook-info">
-                            <h4 class="lookbook-look-name">Default Look</h4>
-                            <p class="lookbook-description">Character appearance for all scenes. Add specific looks in later stages.</p>
-                            <span class="tag">Scenes ${this.formatSceneRange(char.sceneIndices)}</span>
-                            <p class="lookbook-products">${char.sceneCount} scene${char.sceneCount !== 1 ? 's' : ''}</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `).join('');
+        // Build lookbook content for each character
+        const lookbookHTML = [];
 
+        for (const char of this.characters) {
+            // Get all photos for this character
+            const photos = await PhotoStorage.getPhotosForCharacter(char.name);
+
+            // Group photos by scene
+            const photosByScene = {};
+            photos.forEach(photo => {
+                if (!photosByScene[photo.sceneIndex]) {
+                    photosByScene[photo.sceneIndex] = [];
+                }
+                photosByScene[photo.sceneIndex].push(photo);
+            });
+
+            const sceneCount = Object.keys(photosByScene).length;
+            const photoCount = photos.length;
+
+            lookbookHTML.push(`
+                <div class="lookbook-character" data-character="${char.name}">
+                    <div class="lookbook-character-header">
+                        <h3 class="lookbook-character-name">${char.name}</h3>
+                        <span class="lookbook-photo-count">${photoCount} photo${photoCount !== 1 ? 's' : ''}</span>
+                    </div>
+                    ${photoCount > 0 ? `
+                        <div class="lookbook-photo-grid" data-character="${char.name}">
+                            ${photos.map(photo => {
+                                const scene = this.scenes.find(s => s.index === photo.sceneIndex);
+                                return `
+                                    <div class="lookbook-photo" data-photo-id="${photo.id}">
+                                        <img src="${photo.data}" alt="${photo.angle} view">
+                                        <div class="lookbook-photo-overlay">
+                                            <span class="lookbook-photo-scene">Sc ${scene?.number || photo.sceneIndex + 1}</span>
+                                            <span class="lookbook-photo-angle">${photo.angle.toUpperCase()}</span>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                        <p class="lookbook-scenes-info">${sceneCount} scene${sceneCount !== 1 ? 's' : ''} captured</p>
+                    ` : `
+                        <div class="lookbook-empty">
+                            <p>No photos captured yet</p>
+                            <span class="tag">Scenes ${this.formatSceneRange(char.sceneIndices)}</span>
+                        </div>
+                    `}
+                </div>
+            `);
+        }
+
+        container.innerHTML = lookbookHTML.join('');
         if (countEl) countEl.textContent = this.characters.length;
+
+        // Bind photo click events for full-screen viewing
+        this.bindLookbookPhotos();
+    },
+
+    /**
+     * Bind lookbook photo click events
+     */
+    bindLookbookPhotos() {
+        const photos = document.querySelectorAll('.lookbook-photo');
+        photos.forEach(photoEl => {
+            photoEl.addEventListener('click', async () => {
+                const photoId = parseInt(photoEl.dataset.photoId);
+                const characterName = photoEl.closest('.lookbook-photo-grid')?.dataset.character;
+
+                // Get photo data
+                const allPhotos = await PhotoStorage.getPhotosForCharacter(characterName);
+                const photo = allPhotos.find(p => p.id === photoId);
+
+                if (photo) {
+                    const scene = this.scenes.find(s => s.index === photo.sceneIndex);
+                    this.openPhotoViewer(
+                        photo.data,
+                        `${characterName} - Scene ${scene?.number || photo.sceneIndex + 1}`,
+                        `${photo.angle.toUpperCase()} view`
+                    );
+                }
+            });
+        });
     },
 
     /**
