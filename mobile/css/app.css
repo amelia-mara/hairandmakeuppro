@@ -2288,6 +2288,19 @@ strong {
     cursor: not-allowed;
 }
 
+/* Data Management Buttons */
+.settings-section .btn {
+    margin-bottom: var(--spacing-sm);
+}
+
+.settings-section .btn:last-child {
+    margin-bottom: 0;
+}
+
+.settings-section .btn-danger {
+    margin-top: var(--spacing-md);
+}
+
 /* App Footer */
 .app-footer {
     padding: var(--spacing-xl);
