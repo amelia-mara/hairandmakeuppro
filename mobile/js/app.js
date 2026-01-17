@@ -1362,6 +1362,9 @@ const App = {
         // Bind photo slot clicks
         this.bindPhotoSlots();
 
+        // Load reference photo from previous scenes
+        await this.loadReferencePhoto();
+
         // Load existing notes
         const notesTextarea = document.getElementById('scene-notes');
         if (notesTextarea) {
@@ -1373,6 +1376,51 @@ const App = {
                 this.saveSceneNotes(this.currentSceneIndex, this.currentCharacterName, notesTextarea.value);
                 this.showToast('Notes saved');
             });
+        }
+    },
+
+    /**
+     * Load reference photo from previous scenes
+     */
+    async loadReferencePhoto() {
+        const referenceSection = document.getElementById('reference-section');
+        const referenceCard = document.getElementById('reference-card');
+        const referenceImg = document.getElementById('reference-photo-img');
+        const referenceScene = document.getElementById('reference-scene');
+
+        if (!referenceSection || !referenceImg) return;
+
+        // Get the most recent photo for this character from earlier scenes
+        const referencePhoto = await PhotoStorage.getMostRecentPhoto(
+            this.currentCharacterName,
+            this.currentSceneIndex
+        );
+
+        if (referencePhoto) {
+            // Show the reference section
+            referenceSection.style.display = 'block';
+            referenceImg.src = referencePhoto.data;
+
+            // Find the scene number for display
+            const refScene = this.scenes.find(s => s.index === referencePhoto.sceneIndex);
+            if (referenceScene) {
+                referenceScene.textContent = `Scene ${refScene?.number || referencePhoto.sceneIndex + 1} - ${referencePhoto.angle.toUpperCase()}`;
+            }
+
+            // Bind click to open full viewer
+            if (referenceCard) {
+                referenceCard.onclick = () => {
+                    const refScene = this.scenes.find(s => s.index === referencePhoto.sceneIndex);
+                    this.openPhotoViewer(
+                        referencePhoto.data,
+                        `${this.currentCharacterName} - Scene ${refScene?.number || ''}`,
+                        `${referencePhoto.angle.toUpperCase()} view from previous scene`
+                    );
+                };
+            }
+        } else {
+            // Hide the reference section if no previous photos
+            referenceSection.style.display = 'none';
         }
     },
 
@@ -1692,6 +1740,59 @@ const App = {
             toast.classList.remove('show');
             setTimeout(() => toast.remove(), 300);
         }, duration);
+    },
+
+    /**
+     * Open the full-screen photo viewer
+     * @param {string} imageSrc - Image source (base64 or URL)
+     * @param {string} title - Title for the viewer
+     * @param {string} caption - Caption text
+     */
+    openPhotoViewer(imageSrc, title = 'Photo', caption = '') {
+        const viewer = document.getElementById('photo-viewer');
+        const viewerImg = document.getElementById('photo-viewer-img');
+        const viewerTitle = document.getElementById('photo-viewer-title');
+        const viewerCaption = document.getElementById('photo-viewer-caption');
+        const closeBtn = document.getElementById('photo-viewer-close');
+
+        if (!viewer || !viewerImg) return;
+
+        viewerImg.src = imageSrc;
+        if (viewerTitle) viewerTitle.textContent = title;
+        if (viewerCaption) viewerCaption.textContent = caption;
+
+        viewer.classList.add('active');
+
+        // Bind close button
+        if (closeBtn) {
+            closeBtn.onclick = () => this.closePhotoViewer();
+        }
+
+        // Close on background click
+        viewer.onclick = (e) => {
+            if (e.target === viewer || e.target.classList.contains('photo-viewer-content')) {
+                this.closePhotoViewer();
+            }
+        };
+
+        // Close on escape key
+        const escHandler = (e) => {
+            if (e.key === 'Escape') {
+                this.closePhotoViewer();
+                document.removeEventListener('keydown', escHandler);
+            }
+        };
+        document.addEventListener('keydown', escHandler);
+    },
+
+    /**
+     * Close the photo viewer
+     */
+    closePhotoViewer() {
+        const viewer = document.getElementById('photo-viewer');
+        if (viewer) {
+            viewer.classList.remove('active');
+        }
     },
 
     // ============================================
