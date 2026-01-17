@@ -165,15 +165,19 @@
         }
 
         /* Character tabs in center panel */
-        .character-tabs {
-            display: flex;
-            gap: 8px;
+        .character-tabs-container {
             padding: 16px 24px;
             border-bottom: 1px solid var(--glass-border);
-            overflow-x: auto;
             background:
                 linear-gradient(135deg, rgba(212, 175, 122, 0.05) 0%, rgba(28, 25, 22, 0.6) 50%, rgba(212, 175, 122, 0.03) 100%);
             backdrop-filter: blur(12px);
+        }
+
+        .character-tabs {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 4px;
         }
 
         .character-tab {
@@ -196,17 +200,60 @@
         }
 
         .character-tab.active {
-            background: linear-gradient(135deg, rgba(212, 175, 122, 0.15) 0%, rgba(35, 31, 27, 0.7) 50%, rgba(212, 175, 122, 0.1) 100%);
+            background: linear-gradient(135deg, rgba(212, 175, 122, 0.9) 0%, rgba(201, 169, 97, 0.9) 50%, rgba(184, 150, 81, 0.9) 100%);
             border-color: var(--accent-gold);
+            color: #0a0908;
+            font-weight: 600;
+        }
+
+        /* Character Info Card */
+        .character-info-card {
+            margin-top: 16px;
+            padding: 16px;
+            background: linear-gradient(135deg, rgba(212, 175, 122, 0.15) 0%, rgba(35, 31, 27, 0.7) 50%, rgba(212, 175, 122, 0.1) 100%);
+            border: 1px solid rgba(212, 175, 122, 0.3);
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        }
+
+        .character-info-name {
+            font-size: 1.125em;
+            font-weight: 600;
             color: var(--accent-gold);
+            margin-bottom: 8px;
+        }
+
+        .character-info-context {
+            font-size: 0.8125em;
+            color: var(--text-light);
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+
+        .character-info-look {
+            font-size: 0.8125em;
+            color: var(--text-muted);
+            font-style: italic;
+            line-height: 1.5;
+            padding-top: 8px;
+            border-top: 1px solid var(--glass-border);
         }
 
         /* Photo upload grid */
+        .section-label {
+            font-size: 0.75em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            padding: 16px 24px 8px;
+        }
+
         .photo-upload-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 16px;
-            padding: 24px;
+            padding: 8px 24px 24px;
         }
 
         .photo-slot {
@@ -234,6 +281,23 @@
 
         .photo-slot.has-image {
             border-style: solid;
+            border-color: var(--glass-border);
+        }
+
+        .photo-slot.has-image:hover {
+            border-color: var(--accent-gold);
+        }
+
+        .photo-slot-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .photo-slot-icon {
+            font-size: 2.5em;
+            opacity: 0.3;
         }
 
         .photo-slot-label {
@@ -242,12 +306,12 @@
             text-transform: uppercase;
             letter-spacing: 0.05em;
             color: var(--text-muted);
-            margin-top: 8px;
         }
 
-        .photo-slot-icon {
-            font-size: 2em;
-            opacity: 0.3;
+        .photo-slot-hint {
+            font-size: 0.65em;
+            color: var(--text-muted);
+            opacity: 0.7;
         }
 
         .photo-slot img {
@@ -259,7 +323,54 @@
             left: 0;
         }
 
-        /* Notes textarea */
+        .photo-slot-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .photo-slot:hover .photo-slot-overlay {
+            opacity: 1;
+        }
+
+        .photo-overlay-label {
+            font-size: 0.75em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-light);
+            background: rgba(0, 0, 0, 0.5);
+            padding: 4px 12px;
+            border-radius: 4px;
+        }
+
+        .photo-delete-btn {
+            padding: 8px 16px;
+            background: rgba(255, 107, 107, 0.2);
+            border: 1px solid var(--error);
+            border-radius: 6px;
+            color: var(--error);
+            cursor: pointer;
+            font-size: 0.75em;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .photo-delete-btn:hover {
+            background: rgba(255, 107, 107, 0.4);
+        }
+
+        /* Notes section */
         .scene-notes-section {
             padding: 24px;
             border-top: 1px solid var(--glass-border);
@@ -269,9 +380,9 @@
             font-size: 0.75em;
             font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.1em;
             color: var(--text-muted);
-            margin-bottom: 8px;
+            margin-bottom: 12px;
         }
 
         .notes-textarea {
@@ -299,10 +410,59 @@
             color: var(--text-muted);
         }
 
+        /* Mark Complete button */
+        .complete-section {
+            padding: 0 24px 24px;
+        }
+
+        .mark-complete-btn {
+            width: 100%;
+            padding: 14px 24px;
+            background: linear-gradient(135deg, rgba(212, 175, 122, 0.9) 0%, rgba(201, 169, 97, 0.9) 50%, rgba(184, 150, 81, 0.9) 100%);
+            border: 1px solid var(--accent-gold);
+            border-radius: 10px;
+            color: #0a0908;
+            cursor: pointer;
+            font-size: 0.9375em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .mark-complete-btn:hover {
+            background: linear-gradient(135deg, #e0c08f 0%, var(--accent-gold) 50%, #c9a564 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(212, 175, 122, 0.4);
+        }
+
+        .mark-complete-btn.completed {
+            background: linear-gradient(135deg, rgba(82, 193, 134, 0.9) 0%, rgba(72, 173, 124, 0.9) 100%);
+            border-color: var(--success);
+        }
+
+        .mark-complete-btn.completed:hover {
+            background: linear-gradient(135deg, rgba(92, 203, 144, 0.9) 0%, rgba(82, 183, 134, 0.9) 100%);
+        }
+
         /* Reference panel (right sidebar) */
         .reference-section {
-            padding: 16px;
             border-bottom: 1px solid var(--glass-border);
+        }
+
+        .reference-header {
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .reference-header:hover {
+            background: rgba(212, 175, 122, 0.05);
         }
 
         .reference-title {
@@ -311,7 +471,28 @@
             text-transform: uppercase;
             letter-spacing: 0.05em;
             color: var(--text-muted);
-            margin-bottom: 12px;
+        }
+
+        .reference-toggle {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            transition: transform 0.3s ease;
+        }
+
+        .reference-section.collapsed .reference-toggle {
+            transform: rotate(-90deg);
+        }
+
+        .reference-content {
+            padding: 0 16px 16px;
+            overflow: hidden;
+            transition: max-height 0.3s ease, opacity 0.3s ease;
+        }
+
+        .reference-section.collapsed .reference-content {
+            max-height: 0;
+            padding: 0 16px;
+            opacity: 0;
         }
 
         .reference-image {
@@ -325,7 +506,6 @@
             justify-content: center;
             color: var(--text-muted);
             font-size: 0.8125em;
-            margin-bottom: 8px;
             overflow: hidden;
         }
 
@@ -333,6 +513,13 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
+        }
+
+        .reference-caption {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            text-align: center;
+            margin-top: 8px;
         }
 
         .prev-scene-photos {
@@ -349,6 +536,7 @@
             overflow: hidden;
             cursor: pointer;
             transition: all 0.3s ease;
+            position: relative;
         }
 
         .prev-photo-thumb:hover {
@@ -360,6 +548,30 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
+        }
+
+        .prev-photo-label {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 4px;
+            background: rgba(0, 0, 0, 0.7);
+            font-size: 0.65em;
+            color: var(--text-light);
+            text-align: center;
+        }
+
+        .prev-scene-info {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+
+        .design-notes-text {
+            font-size: 0.8125em;
+            color: var(--text-light);
+            line-height: 1.6;
         }
 
         /* Center panel content area */
@@ -390,9 +602,22 @@
             color: var(--text-muted);
         }
 
-        /* Right sidebar width adjustment for continuity */
+        /* Right sidebar adjustments */
         .right-sidebar {
             width: 360px;
+        }
+
+        .workspace-content {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        /* Timestamp display */
+        .completion-timestamp {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            text-align: center;
+            margin-top: 8px;
         }
     </style>
 </head>
@@ -433,11 +658,13 @@
 
             <!-- Center Panel - Photo Grid & Notes -->
             <div class="center-panel">
-                <!-- Character Tabs -->
-                <div class="character-tabs" id="character-tabs">
-                    <!-- Character tabs generated dynamically -->
-                    <div class="empty-state" style="padding: 12px;">
-                        <span class="empty-desc">Select a scene to view characters</span>
+                <!-- Character Tabs Container -->
+                <div class="character-tabs-container" id="character-tabs-container">
+                    <div class="character-tabs" id="character-tabs">
+                        <!-- Character tabs generated dynamically -->
+                    </div>
+                    <div id="character-info-card-container">
+                        <!-- Character info card rendered here -->
                     </div>
                 </div>
 
@@ -473,6 +700,8 @@
 
         // Application state
         let scenes = [];
+        let sceneBreakdowns = {};
+        let castProfiles = {};
         let selectedSceneIndex = null;
         let selectedCharacter = null;
         let currentFilter = 'all';
@@ -484,6 +713,8 @@
 
         document.addEventListener('DOMContentLoaded', function() {
             loadScenes();
+            loadBreakdownData();
+            loadCastProfiles();
             loadContinuityData();
             setupSearchHandler();
             console.log('Continuity Tracker initialized');
@@ -512,6 +743,36 @@
 
             renderSceneList();
             updateSceneCount();
+        }
+
+        function loadBreakdownData() {
+            // Load scene breakdowns from localStorage
+            const breakdownsData = localStorage.getItem('sceneBreakdowns');
+
+            if (breakdownsData) {
+                try {
+                    sceneBreakdowns = JSON.parse(breakdownsData);
+                    console.log('Loaded scene breakdowns from localStorage');
+                } catch (e) {
+                    console.error('Error parsing breakdowns:', e);
+                    sceneBreakdowns = {};
+                }
+            }
+        }
+
+        function loadCastProfiles() {
+            // Load cast profiles from localStorage
+            const profilesData = localStorage.getItem('castProfiles');
+
+            if (profilesData) {
+                try {
+                    castProfiles = JSON.parse(profilesData);
+                    console.log('Loaded cast profiles from localStorage');
+                } catch (e) {
+                    console.error('Error parsing cast profiles:', e);
+                    castProfiles = {};
+                }
+            }
         }
 
         function loadContinuityData() {
@@ -566,7 +827,7 @@
 
             listContainer.innerHTML = filteredScenes.map((scene, index) => {
                 const sceneIndex = scenes.indexOf(scene);
-                const sceneNumber = scene.number || scene.sceneNumber || (index + 1);
+                const sceneNumber = scene.number || scene.sceneNumber || (sceneIndex + 1);
                 const sceneHeading = scene.heading || scene.slugline || 'Untitled Scene';
                 const status = getSceneStatus(sceneIndex);
                 const statusIcon = getStatusIcon(status);
@@ -605,25 +866,44 @@
         }
 
         function getSceneStatus(sceneIndex) {
-            // Check continuity data for this scene
+            // Get all characters in this scene
+            const characters = getSceneCharacters(scenes[sceneIndex]);
+
+            if (characters.length === 0) {
+                // No characters - check general photos
+                const sceneData = continuityPhotos[sceneIndex];
+                if (!sceneData) return 'pending';
+
+                const generalData = sceneData['general'];
+                if (!generalData || !generalData.photos) return 'pending';
+
+                const angles = ['front', 'left', 'right', 'back'];
+                const filledAngles = angles.filter(angle => generalData.photos[angle]).length;
+
+                if (filledAngles === 4) return 'complete';
+                if (filledAngles > 0) return 'partial';
+                return 'pending';
+            }
+
+            // Check if ALL characters have ALL 4 photos
+            let totalExpected = characters.length * 4;
+            let totalFilled = 0;
+
             const sceneData = continuityPhotos[sceneIndex];
+            if (!sceneData) return 'pending';
 
-            if (!sceneData) {
-                return 'pending'; // Default status for all scenes
-            }
+            characters.forEach(character => {
+                const charData = sceneData[character];
+                if (charData && charData.photos) {
+                    const angles = ['front', 'left', 'right', 'back'];
+                    angles.forEach(angle => {
+                        if (charData.photos[angle]) totalFilled++;
+                    });
+                }
+            });
 
-            // Check if all 4 photo angles have images
-            const angles = ['front', 'left', 'right', 'back'];
-            const filledAngles = angles.filter(angle =>
-                sceneData.photos && sceneData.photos[angle]
-            ).length;
-
-            if (filledAngles === 4) {
-                return 'complete';
-            } else if (filledAngles > 0) {
-                return 'partial';
-            }
-
+            if (totalFilled === totalExpected) return 'complete';
+            if (totalFilled > 0) return 'partial';
             return 'pending';
         }
 
@@ -680,29 +960,32 @@
         }
 
         // ============================================================================
-        // CHARACTER TABS
+        // CHARACTER TABS (Stage 3)
         // ============================================================================
 
         function renderCharacterTabs(scene) {
             const tabsContainer = document.getElementById('character-tabs');
+            const infoContainer = document.getElementById('character-info-card-container');
 
-            // Get characters from scene or breakdown data
+            // Get characters from sceneBreakdowns[sceneIndex].characterDetails or fallback
             let characters = getSceneCharacters(scene);
 
             if (characters.length === 0) {
                 tabsContainer.innerHTML = `
-                    <div class="empty-state" style="padding: 12px;">
-                        <span class="empty-desc">No characters in this scene</span>
+                    <div style="padding: 8px; color: var(--text-muted); font-size: 0.875em;">
+                        No characters in this scene
                     </div>
                 `;
+                infoContainer.innerHTML = '';
                 return;
             }
 
+            // Render character tabs
             tabsContainer.innerHTML = characters.map((char, index) => {
                 const isActive = selectedCharacter === char || (selectedCharacter === null && index === 0);
                 return `
                     <div class="character-tab ${isActive ? 'active' : ''}"
-                         onclick="selectCharacter('${char}')">${char}</div>
+                         onclick="selectCharacter('${escapeHtml(char)}')">${escapeHtml(char)}</div>
                 `;
             }).join('');
 
@@ -710,31 +993,99 @@
             if (selectedCharacter === null && characters.length > 0) {
                 selectedCharacter = characters[0];
             }
+
+            // Render character info card
+            renderCharacterInfoCard();
         }
 
         function getSceneCharacters(scene) {
-            // Try to get characters from various possible data structures
+            const sceneIndex = scenes.indexOf(scene);
+
+            // Try to get characters from sceneBreakdowns[sceneIndex].characterDetails
+            if (sceneBreakdowns[sceneIndex]) {
+                const breakdown = sceneBreakdowns[sceneIndex];
+
+                // Check characterDetails first (Stage 3 requirement)
+                if (breakdown.characterDetails && Array.isArray(breakdown.characterDetails)) {
+                    return breakdown.characterDetails.map(cd =>
+                        typeof cd === 'string' ? cd : (cd.name || cd.character)
+                    ).filter(Boolean);
+                }
+
+                // Fallback to cast
+                if (breakdown.cast && Array.isArray(breakdown.cast)) {
+                    return breakdown.cast.map(c =>
+                        typeof c === 'string' ? c : (c.name || c.character)
+                    ).filter(Boolean);
+                }
+            }
+
+            // Try scene.characters
             if (scene.characters && Array.isArray(scene.characters)) {
                 return scene.characters;
             }
 
-            // Try to get from sceneBreakdowns
-            const sceneIndex = scenes.indexOf(scene);
-            const breakdownsData = localStorage.getItem('sceneBreakdowns');
+            return [];
+        }
 
-            if (breakdownsData) {
-                try {
-                    const breakdowns = JSON.parse(breakdownsData);
-                    const breakdown = breakdowns[sceneIndex];
-                    if (breakdown && breakdown.cast) {
-                        return breakdown.cast.map(c => typeof c === 'string' ? c : c.name);
+        function getCharacterDetails(sceneIndex, characterName) {
+            // Get character details from sceneBreakdowns
+            if (sceneBreakdowns[sceneIndex]) {
+                const breakdown = sceneBreakdowns[sceneIndex];
+
+                // Check characterDetails
+                if (breakdown.characterDetails && Array.isArray(breakdown.characterDetails)) {
+                    const charDetail = breakdown.characterDetails.find(cd => {
+                        const name = typeof cd === 'string' ? cd : (cd.name || cd.character);
+                        return name === characterName;
+                    });
+                    if (charDetail && typeof charDetail === 'object') {
+                        return charDetail;
                     }
-                } catch (e) {
-                    console.error('Error parsing breakdowns:', e);
                 }
             }
 
-            return [];
+            return null;
+        }
+
+        function renderCharacterInfoCard() {
+            const infoContainer = document.getElementById('character-info-card-container');
+
+            if (!selectedCharacter || selectedSceneIndex === null) {
+                infoContainer.innerHTML = '';
+                return;
+            }
+
+            const scene = scenes[selectedSceneIndex];
+            const sceneHeading = scene.heading || scene.slugline || 'Untitled Scene';
+            const charDetails = getCharacterDetails(selectedSceneIndex, selectedCharacter);
+
+            // Get look description from various sources
+            let lookDescription = '';
+            let sceneContext = sceneHeading;
+
+            if (charDetails) {
+                lookDescription = charDetails.lookDescription || charDetails.look || charDetails.description || '';
+                sceneContext = charDetails.context || charDetails.sceneContext || sceneHeading;
+            }
+
+            // Also try castProfiles for look info
+            if (!lookDescription && castProfiles[selectedCharacter]) {
+                const profile = castProfiles[selectedCharacter];
+                lookDescription = profile.baseDescription || profile.description || '';
+            }
+
+            infoContainer.innerHTML = `
+                <div class="character-info-card">
+                    <div class="character-info-name">${escapeHtml(selectedCharacter)}</div>
+                    <div class="character-info-context">${escapeHtml(sceneContext)}</div>
+                    ${lookDescription ? `
+                        <div class="character-info-look">${escapeHtml(lookDescription)}</div>
+                    ` : ''}
+                </div>
+            `;
+
+            console.log('Selected character:', selectedCharacter, charDetails);
         }
 
         function selectCharacter(characterName) {
@@ -748,172 +1099,100 @@
                 }
             });
 
+            // Re-render character info card
+            renderCharacterInfoCard();
+
             // Re-render content for selected character
             if (selectedSceneIndex !== null) {
                 const scene = scenes[selectedSceneIndex];
                 renderCenterContent(scene);
                 renderReferencePanel(scene);
             }
+
+            console.log('Selected character:', characterName);
         }
 
         // ============================================================================
-        // CENTER CONTENT (Photo Grid & Notes)
+        // CENTER CONTENT (Stage 4 & 5 - Photo Grid & Notes)
         // ============================================================================
 
         function renderCenterContent(scene) {
             const contentContainer = document.getElementById('center-content');
             const sceneIndex = scenes.indexOf(scene);
-            const sceneNumber = scene.number || scene.sceneNumber || (sceneIndex + 1);
-            const sceneHeading = scene.heading || scene.slugline || 'Untitled Scene';
 
             // Get continuity data for this scene/character
-            const key = `${sceneIndex}_${selectedCharacter || 'general'}`;
-            const data = continuityPhotos[key] || { photos: {}, notes: '' };
+            // Data structure: continuityPhotos[sceneIndex][characterName] = { photos: {}, notes: '', completed: bool, timestamp: '' }
+            const characterKey = selectedCharacter || 'general';
+            const sceneData = continuityPhotos[sceneIndex] || {};
+            const charData = sceneData[characterKey] || { photos: {}, notes: '', completed: false, timestamp: null };
 
             contentContainer.innerHTML = `
-                <!-- Scene Header -->
-                <div style="padding: 16px 24px; border-bottom: 1px solid var(--glass-border);">
-                    <div style="font-size: 1em; font-weight: 600; margin-bottom: 4px;">
-                        Scene ${sceneNumber}${selectedCharacter ? ` - ${selectedCharacter}` : ''}
-                    </div>
-                    <div style="font-size: 0.875em; color: var(--text-muted);">${sceneHeading}</div>
-                </div>
-
-                <!-- Photo Upload Grid (4 essential angles) -->
+                <!-- Essential Photos Section -->
+                <div class="section-label">ESSENTIAL PHOTOS</div>
                 <div class="photo-upload-grid">
-                    <div class="photo-slot ${data.photos.front ? 'has-image' : ''}"
-                         onclick="uploadPhoto('front')" data-angle="front">
-                        ${data.photos.front ?
-                            `<img src="${data.photos.front}" alt="Front view">` :
-                            `<span class="photo-slot-icon">📷</span>`
-                        }
-                        <span class="photo-slot-label" style="position: ${data.photos.front ? 'absolute' : 'static'}; bottom: 8px; background: rgba(0,0,0,0.7); padding: 4px 8px; border-radius: 4px;">Front</span>
-                    </div>
-
-                    <div class="photo-slot ${data.photos.left ? 'has-image' : ''}"
-                         onclick="uploadPhoto('left')" data-angle="left">
-                        ${data.photos.left ?
-                            `<img src="${data.photos.left}" alt="Left view">` :
-                            `<span class="photo-slot-icon">📷</span>`
-                        }
-                        <span class="photo-slot-label" style="position: ${data.photos.left ? 'absolute' : 'static'}; bottom: 8px; background: rgba(0,0,0,0.7); padding: 4px 8px; border-radius: 4px;">Left</span>
-                    </div>
-
-                    <div class="photo-slot ${data.photos.right ? 'has-image' : ''}"
-                         onclick="uploadPhoto('right')" data-angle="right">
-                        ${data.photos.right ?
-                            `<img src="${data.photos.right}" alt="Right view">` :
-                            `<span class="photo-slot-icon">📷</span>`
-                        }
-                        <span class="photo-slot-label" style="position: ${data.photos.right ? 'absolute' : 'static'}; bottom: 8px; background: rgba(0,0,0,0.7); padding: 4px 8px; border-radius: 4px;">Right</span>
-                    </div>
-
-                    <div class="photo-slot ${data.photos.back ? 'has-image' : ''}"
-                         onclick="uploadPhoto('back')" data-angle="back">
-                        ${data.photos.back ?
-                            `<img src="${data.photos.back}" alt="Back view">` :
-                            `<span class="photo-slot-icon">📷</span>`
-                        }
-                        <span class="photo-slot-label" style="position: ${data.photos.back ? 'absolute' : 'static'}; bottom: 8px; background: rgba(0,0,0,0.7); padding: 4px 8px; border-radius: 4px;">Back</span>
-                    </div>
+                    ${renderPhotoSlot('front', 'FRONT', charData.photos.front)}
+                    ${renderPhotoSlot('left', 'LEFT', charData.photos.left)}
+                    ${renderPhotoSlot('right', 'RIGHT', charData.photos.right)}
+                    ${renderPhotoSlot('back', 'BACK', charData.photos.back)}
                 </div>
 
-                <!-- Scene Notes -->
+                <!-- Scene Notes Section -->
                 <div class="scene-notes-section">
-                    <div class="notes-label">Scene Notes</div>
+                    <div class="notes-label">SCENE NOTES</div>
                     <textarea class="notes-textarea"
                               id="scene-notes"
-                              placeholder="Add continuity notes for this scene..."
-                              onchange="saveNotes(this.value)">${data.notes || ''}</textarea>
+                              placeholder="Add continuity notes for this scene and character..."
+                              onblur="saveNotes(this.value)">${escapeHtml(charData.notes || '')}</textarea>
+                </div>
+
+                <!-- Mark Complete Section -->
+                <div class="complete-section">
+                    <button class="mark-complete-btn ${charData.completed ? 'completed' : ''}"
+                            onclick="toggleComplete()">
+                        <span>${charData.completed ? '✓' : '○'}</span>
+                        <span>${charData.completed ? 'Marked Complete' : 'Mark Scene Complete'}</span>
+                    </button>
+                    ${charData.timestamp ? `
+                        <div class="completion-timestamp">
+                            Completed: ${new Date(charData.timestamp).toLocaleString()}
+                        </div>
+                    ` : ''}
                 </div>
             `;
         }
 
-        // ============================================================================
-        // REFERENCE PANEL (Right Sidebar)
-        // ============================================================================
-
-        function renderReferencePanel(scene) {
-            const refContainer = document.getElementById('reference-content');
-            const sceneIndex = scenes.indexOf(scene);
-
-            // Get master image from cast profiles if available
-            let masterImage = null;
-            if (selectedCharacter) {
-                const profilesData = localStorage.getItem('castProfiles');
-                if (profilesData) {
-                    try {
-                        const profiles = JSON.parse(profilesData);
-                        const profile = profiles[selectedCharacter];
-                        if (profile && profile.masterImage) {
-                            masterImage = profile.masterImage;
-                        }
-                    } catch (e) {
-                        console.error('Error loading profiles:', e);
-                    }
-                }
+        function renderPhotoSlot(angle, label, imageSrc) {
+            if (imageSrc) {
+                return `
+                    <div class="photo-slot has-image" data-angle="${angle}">
+                        <img src="${imageSrc}" alt="${label} view">
+                        <div class="photo-slot-overlay">
+                            <div class="photo-overlay-label">${label}</div>
+                            <button class="photo-delete-btn" onclick="event.stopPropagation(); deletePhoto('${angle}')">
+                                Delete
+                            </button>
+                            <button class="toolbar-btn" style="background: rgba(212, 175, 122, 0.2); border-color: var(--accent-gold); color: var(--accent-gold);"
+                                    onclick="event.stopPropagation(); uploadPhoto('${angle}')">
+                                Replace
+                            </button>
+                        </div>
+                    </div>
+                `;
             }
 
-            // Get previous scene photos
-            const prevScenePhotos = getPreviousScenePhotos(sceneIndex);
-
-            refContainer.innerHTML = `
-                <!-- Master Image -->
-                <div class="reference-section">
-                    <div class="reference-title">Master Reference</div>
-                    <div class="reference-image">
-                        ${masterImage ?
-                            `<img src="${masterImage}" alt="Master reference">` :
-                            `<span>No master image</span>`
-                        }
+            return `
+                <div class="photo-slot" onclick="uploadPhoto('${angle}')" data-angle="${angle}">
+                    <div class="photo-slot-content">
+                        <span class="photo-slot-icon">📷</span>
+                        <span class="photo-slot-label">${label}</span>
+                        <span class="photo-slot-hint">Tap to capture</span>
                     </div>
                 </div>
-
-                <!-- Previous Scene Photos -->
-                <div class="reference-section">
-                    <div class="reference-title">Previous Scene Photos</div>
-                    ${prevScenePhotos.length > 0 ? `
-                        <div class="prev-scene-photos">
-                            ${prevScenePhotos.map(photo => `
-                                <div class="prev-photo-thumb" onclick="viewPhoto('${photo.src}')">
-                                    <img src="${photo.src}" alt="${photo.label}">
-                                </div>
-                            `).join('')}
-                        </div>
-                    ` : `
-                        <div style="color: var(--text-muted); font-size: 0.875em; text-align: center; padding: 16px;">
-                            No previous photos available
-                        </div>
-                    `}
-                </div>
             `;
         }
 
-        function getPreviousScenePhotos(currentSceneIndex) {
-            const photos = [];
-
-            // Look for photos from previous scenes for the selected character
-            for (let i = currentSceneIndex - 1; i >= 0 && photos.length < 4; i--) {
-                const key = `${i}_${selectedCharacter || 'general'}`;
-                const data = continuityPhotos[key];
-
-                if (data && data.photos) {
-                    Object.entries(data.photos).forEach(([angle, src]) => {
-                        if (src && photos.length < 4) {
-                            photos.push({
-                                src: src,
-                                label: `Scene ${i + 1} - ${angle}`
-                            });
-                        }
-                    });
-                }
-            }
-
-            return photos;
-        }
-
         // ============================================================================
-        // PHOTO UPLOAD
+        // PHOTO UPLOAD (Stage 4)
         // ============================================================================
 
         function uploadPhoto(angle) {
@@ -938,13 +1217,23 @@
         function savePhoto(angle, dataUrl) {
             if (selectedSceneIndex === null) return;
 
-            const key = `${selectedSceneIndex}_${selectedCharacter || 'general'}`;
+            const characterKey = selectedCharacter || 'general';
 
-            if (!continuityPhotos[key]) {
-                continuityPhotos[key] = { photos: {}, notes: '' };
+            // Initialize data structure if needed
+            if (!continuityPhotos[selectedSceneIndex]) {
+                continuityPhotos[selectedSceneIndex] = {};
+            }
+            if (!continuityPhotos[selectedSceneIndex][characterKey]) {
+                continuityPhotos[selectedSceneIndex][characterKey] = {
+                    photos: {},
+                    notes: '',
+                    completed: false,
+                    timestamp: null
+                };
             }
 
-            continuityPhotos[key].photos[angle] = dataUrl;
+            // Save photo
+            continuityPhotos[selectedSceneIndex][characterKey].photos[angle] = dataUrl;
             saveContinuityData();
 
             // Re-render content
@@ -955,23 +1244,244 @@
             console.log(`Photo saved for ${angle} angle`);
         }
 
+        function deletePhoto(angle) {
+            if (selectedSceneIndex === null) return;
+
+            const characterKey = selectedCharacter || 'general';
+
+            if (continuityPhotos[selectedSceneIndex] &&
+                continuityPhotos[selectedSceneIndex][characterKey] &&
+                continuityPhotos[selectedSceneIndex][characterKey].photos) {
+
+                delete continuityPhotos[selectedSceneIndex][characterKey].photos[angle];
+                saveContinuityData();
+
+                // Re-render content
+                const scene = scenes[selectedSceneIndex];
+                renderCenterContent(scene);
+                renderSceneList(); // Update status indicators
+
+                console.log(`Photo deleted for ${angle} angle`);
+            }
+        }
+
+        // ============================================================================
+        // NOTES & COMPLETION (Stage 5)
+        // ============================================================================
+
         function saveNotes(notes) {
             if (selectedSceneIndex === null) return;
 
-            const key = `${selectedSceneIndex}_${selectedCharacter || 'general'}`;
+            const characterKey = selectedCharacter || 'general';
 
-            if (!continuityPhotos[key]) {
-                continuityPhotos[key] = { photos: {}, notes: '' };
+            // Initialize data structure if needed
+            if (!continuityPhotos[selectedSceneIndex]) {
+                continuityPhotos[selectedSceneIndex] = {};
+            }
+            if (!continuityPhotos[selectedSceneIndex][characterKey]) {
+                continuityPhotos[selectedSceneIndex][characterKey] = {
+                    photos: {},
+                    notes: '',
+                    completed: false,
+                    timestamp: null
+                };
             }
 
-            continuityPhotos[key].notes = notes;
+            continuityPhotos[selectedSceneIndex][characterKey].notes = notes;
             saveContinuityData();
 
-            console.log('Notes saved');
+            console.log('Notes auto-saved');
+        }
+
+        function toggleComplete() {
+            if (selectedSceneIndex === null) return;
+
+            const characterKey = selectedCharacter || 'general';
+
+            // Initialize data structure if needed
+            if (!continuityPhotos[selectedSceneIndex]) {
+                continuityPhotos[selectedSceneIndex] = {};
+            }
+            if (!continuityPhotos[selectedSceneIndex][characterKey]) {
+                continuityPhotos[selectedSceneIndex][characterKey] = {
+                    photos: {},
+                    notes: '',
+                    completed: false,
+                    timestamp: null
+                };
+            }
+
+            // Toggle completion
+            const charData = continuityPhotos[selectedSceneIndex][characterKey];
+            charData.completed = !charData.completed;
+            charData.timestamp = charData.completed ? new Date().toISOString() : null;
+
+            saveContinuityData();
+
+            // Re-render content
+            const scene = scenes[selectedSceneIndex];
+            renderCenterContent(scene);
+            renderSceneList(); // Update status indicators
+
+            console.log(`Scene marked as ${charData.completed ? 'complete' : 'incomplete'}`);
+        }
+
+        // ============================================================================
+        // REFERENCE PANEL (Stage 6)
+        // ============================================================================
+
+        function renderReferencePanel(scene) {
+            const refContainer = document.getElementById('reference-content');
+            const sceneIndex = scenes.indexOf(scene);
+
+            if (!selectedCharacter && getSceneCharacters(scene).length === 0) {
+                refContainer.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-title">Reference Materials</div>
+                        <div class="empty-desc">Select a character to view reference materials</div>
+                    </div>
+                `;
+                return;
+            }
+
+            // Get master image from castProfiles
+            let masterImage = null;
+            let characterProfile = null;
+
+            if (selectedCharacter && castProfiles[selectedCharacter]) {
+                characterProfile = castProfiles[selectedCharacter];
+                masterImage = characterProfile.masterImage || characterProfile.image || null;
+            }
+
+            // Get previous scene data
+            const prevSceneData = getPreviousSceneData(sceneIndex, selectedCharacter);
+
+            // Get design notes from sceneBreakdowns
+            const charDetails = getCharacterDetails(sceneIndex, selectedCharacter);
+            let designNotes = '';
+            if (charDetails) {
+                designNotes = charDetails.lookDescription || charDetails.look || charDetails.notes || '';
+            }
+            if (!designNotes && characterProfile) {
+                designNotes = characterProfile.baseDescription || characterProfile.description || '';
+            }
+
+            refContainer.innerHTML = `
+                <!-- Master Reference Section -->
+                <div class="reference-section" id="master-ref-section">
+                    <div class="reference-header" onclick="toggleReferenceSection('master-ref-section')">
+                        <div class="reference-title">Master Reference</div>
+                        <span class="reference-toggle">▼</span>
+                    </div>
+                    <div class="reference-content">
+                        <div class="reference-image">
+                            ${masterImage ?
+                                `<img src="${masterImage}" alt="Master reference for ${escapeHtml(selectedCharacter || 'character')}">` :
+                                `<span>No master image</span>`
+                            }
+                        </div>
+                        ${selectedCharacter ? `
+                            <div class="reference-caption">${escapeHtml(selectedCharacter)}</div>
+                        ` : ''}
+                    </div>
+                </div>
+
+                <!-- Previous Scene Section -->
+                <div class="reference-section" id="prev-scene-section">
+                    <div class="reference-header" onclick="toggleReferenceSection('prev-scene-section')">
+                        <div class="reference-title">Previous Scene</div>
+                        <span class="reference-toggle">▼</span>
+                    </div>
+                    <div class="reference-content">
+                        ${prevSceneData.photos.length > 0 ? `
+                            <div class="prev-scene-info">
+                                Scene ${prevSceneData.sceneNumber} • ${prevSceneData.date || 'No date'}
+                            </div>
+                            <div class="prev-scene-photos">
+                                ${prevSceneData.photos.map(photo => `
+                                    <div class="prev-photo-thumb" onclick="viewPhoto('${photo.src}')">
+                                        <img src="${photo.src}" alt="${photo.label}">
+                                        <div class="prev-photo-label">${photo.label}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : `
+                            <div style="color: var(--text-muted); font-size: 0.875em; text-align: center; padding: 16px;">
+                                No previous photos available
+                            </div>
+                        `}
+                    </div>
+                </div>
+
+                <!-- Design Notes Section (collapsed by default) -->
+                <div class="reference-section collapsed" id="design-notes-section">
+                    <div class="reference-header" onclick="toggleReferenceSection('design-notes-section')">
+                        <div class="reference-title">Design Notes</div>
+                        <span class="reference-toggle">▼</span>
+                    </div>
+                    <div class="reference-content">
+                        ${designNotes ? `
+                            <div class="design-notes-text">${escapeHtml(designNotes)}</div>
+                        ` : `
+                            <div style="color: var(--text-muted); font-size: 0.875em; text-align: center; padding: 16px;">
+                                No design notes available
+                            </div>
+                        `}
+                    </div>
+                </div>
+            `;
+        }
+
+        function getPreviousSceneData(currentSceneIndex, characterName) {
+            const result = {
+                sceneNumber: null,
+                date: null,
+                photos: []
+            };
+
+            const characterKey = characterName || 'general';
+
+            // Look for photos from previous scenes for this character
+            for (let i = currentSceneIndex - 1; i >= 0; i--) {
+                const sceneData = continuityPhotos[i];
+                if (!sceneData || !sceneData[characterKey]) continue;
+
+                const charData = sceneData[characterKey];
+                if (!charData.photos) continue;
+
+                // Check if this scene has any photos
+                const angles = ['front', 'left', 'right', 'back'];
+                const photos = [];
+
+                angles.forEach(angle => {
+                    if (charData.photos[angle]) {
+                        photos.push({
+                            src: charData.photos[angle],
+                            label: angle.charAt(0).toUpperCase() + angle.slice(1)
+                        });
+                    }
+                });
+
+                if (photos.length > 0) {
+                    result.sceneNumber = scenes[i].number || scenes[i].sceneNumber || (i + 1);
+                    result.date = charData.timestamp ? new Date(charData.timestamp).toLocaleDateString() : null;
+                    result.photos = photos.slice(0, 4); // Max 4 photos
+                    break;
+                }
+            }
+
+            return result;
+        }
+
+        function toggleReferenceSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            if (section) {
+                section.classList.toggle('collapsed');
+            }
         }
 
         function viewPhoto(src) {
-            // Simple photo viewer - could be enhanced with a modal
+            // Open photo in lightbox or new window
             window.open(src, '_blank');
         }
 
@@ -1014,6 +1524,8 @@
                     if (breakdown.scenes && breakdown.scenes.length > 0) {
                         localStorage.setItem('scenes', JSON.stringify(breakdown.scenes));
                         loadScenes();
+                        loadBreakdownData();
+                        loadCastProfiles();
                         console.log('Synced scenes from breakdown data');
                         return;
                     }
@@ -1024,6 +1536,17 @@
 
             console.log('No breakdown data found to sync');
             alert('No breakdown data found. Please import a screenplay in Script Breakdown first.');
+        }
+
+        // ============================================================================
+        // UTILITY FUNCTIONS
+        // ============================================================================
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
     </script>
 </body>
