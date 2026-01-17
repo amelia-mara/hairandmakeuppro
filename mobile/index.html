@@ -1156,6 +1156,16 @@
         </div>
     </div>
 
+    <!-- PDF.js for PDF text extraction -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        // Set PDF.js worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+
+    <!-- Script Processor Module -->
+    <script src="js/script-processor.js"></script>
+
     <!-- App JavaScript -->
     <script src="js/app.js"></script>
 </body>
