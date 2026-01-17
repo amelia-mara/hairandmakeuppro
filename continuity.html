@@ -430,6 +430,151 @@
             opacity: 0.6;
         }
 
+        /* ============================================================================
+           STRUCTURED NOTES SECTION
+           ============================================================================ */
+
+        .structured-notes {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-md);
+        }
+
+        .note-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .note-field-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .note-field-icon {
+            font-size: 1rem;
+            opacity: 0.7;
+        }
+
+        .note-field-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+        }
+
+        .note-field-input {
+            width: 100%;
+            padding: 10px 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-light);
+            font-size: 0.8125rem;
+            font-family: inherit;
+            transition: all 0.2s ease;
+        }
+
+        .note-field-input:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+            background: rgba(0, 0, 0, 0.4);
+        }
+
+        .note-field-input::placeholder {
+            color: var(--text-muted);
+            opacity: 0.5;
+        }
+
+        .note-field-textarea {
+            width: 100%;
+            min-height: 60px;
+            padding: 10px 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-light);
+            font-size: 0.8125rem;
+            font-family: inherit;
+            resize: vertical;
+            transition: all 0.2s ease;
+        }
+
+        .note-field-textarea:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+            background: rgba(0, 0, 0, 0.4);
+        }
+
+        .note-field-textarea::placeholder {
+            color: var(--text-muted);
+            opacity: 0.5;
+        }
+
+        /* Application time field - inline layout */
+        .note-field.inline {
+            flex-direction: row;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .note-field.inline .note-field-header {
+            flex-shrink: 0;
+        }
+
+        .note-field.inline .note-field-input {
+            max-width: 120px;
+            text-align: center;
+        }
+
+        .time-suffix {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        /* Products tags display */
+        .products-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .products-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .product-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            background: rgba(212, 175, 122, 0.1);
+            border: 1px solid rgba(212, 175, 122, 0.3);
+            border-radius: 14px;
+            font-size: 0.75rem;
+            color: var(--accent-gold);
+        }
+
+        .product-tag-remove {
+            cursor: pointer;
+            opacity: 0.6;
+            transition: opacity 0.2s ease;
+            font-size: 0.7rem;
+        }
+
+        .product-tag-remove:hover {
+            opacity: 1;
+        }
+
+        .add-product-input {
+            flex: 1;
+            min-width: 150px;
+        }
+
         /* Mark Complete button */
         .complete-section {
             margin-top: var(--spacing-lg);
@@ -1777,6 +1922,10 @@
             const sceneData = continuityPhotos[sceneIndex] || {};
             const charData = sceneData[characterKey] || { photos: {}, notes: '', completed: false, timestamp: null };
 
+            // Get structured notes data (with backwards compatibility for old 'notes' field)
+            const structuredNotes = charData.structuredNotes || {};
+            const legacyNotes = charData.notes || '';
+
             contentContainer.innerHTML = `
                 <!-- Essential Photos Section -->
                 <div class="section-label">ESSENTIAL PHOTOS</div>
@@ -1787,14 +1936,67 @@
                     ${renderPhotoSlot('back', 'BACK', charData.photos.back)}
                 </div>
 
-                <!-- Scene Notes Section -->
+                <!-- Structured Notes Section -->
                 <div class="scene-notes-section">
                     <div class="notes-label">SCENE NOTES</div>
-                    <textarea class="notes-textarea"
-                              id="scene-notes"
-                              placeholder="Add continuity notes for this scene and character..."
-                              oninput="handleNotesInput(this)"
-                              onblur="saveNotes(this.value)">${escapeHtml(charData.notes || '')}</textarea>
+                    <div class="structured-notes">
+                        <!-- Products Used -->
+                        <div class="note-field">
+                            <div class="note-field-header">
+                                <span class="note-field-icon">💄</span>
+                                <span class="note-field-label">Products Used</span>
+                            </div>
+                            <input type="text"
+                                   class="note-field-input"
+                                   id="note-products"
+                                   placeholder="e.g., MAC Ruby Woo, NARS Orgasm blush..."
+                                   value="${escapeHtml(structuredNotes.products || '')}"
+                                   oninput="handleStructuredNoteInput('products', this.value)"
+                                   onblur="saveStructuredNote('products', this.value)">
+                        </div>
+
+                        <!-- Changes Made -->
+                        <div class="note-field">
+                            <div class="note-field-header">
+                                <span class="note-field-icon">✏️</span>
+                                <span class="note-field-label">Changes from Master</span>
+                            </div>
+                            <textarea class="note-field-textarea"
+                                      id="note-changes"
+                                      placeholder="What's different from the master look for this scene..."
+                                      oninput="handleStructuredNoteInput('changes', this.value)"
+                                      onblur="saveStructuredNote('changes', this.value)">${escapeHtml(structuredNotes.changes || '')}</textarea>
+                        </div>
+
+                        <!-- Continuity Notes -->
+                        <div class="note-field">
+                            <div class="note-field-header">
+                                <span class="note-field-icon">👁️</span>
+                                <span class="note-field-label">Continuity Notes</span>
+                            </div>
+                            <textarea class="note-field-textarea"
+                                      id="note-continuity"
+                                      placeholder="What to watch for in matching scenes..."
+                                      oninput="handleStructuredNoteInput('continuity', this.value)"
+                                      onblur="saveStructuredNote('continuity', this.value)">${escapeHtml(structuredNotes.continuity || legacyNotes)}</textarea>
+                        </div>
+
+                        <!-- Application Time -->
+                        <div class="note-field inline">
+                            <div class="note-field-header">
+                                <span class="note-field-icon">⏱️</span>
+                                <span class="note-field-label">Application Time</span>
+                            </div>
+                            <input type="text"
+                                   class="note-field-input"
+                                   id="note-time"
+                                   placeholder="e.g., 45"
+                                   value="${escapeHtml(structuredNotes.applicationTime || '')}"
+                                   oninput="handleStructuredNoteInput('applicationTime', this.value)"
+                                   onblur="saveStructuredNote('applicationTime', this.value)">
+                            <span class="time-suffix">minutes</span>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Mark Complete Section -->
@@ -1993,8 +2195,9 @@
         // STEP 4: NOTES AUTO-SAVE WITH DEBOUNCE & STATUS INDICATOR
         // ============================================================================
 
-        // Debounce timer for notes auto-save
+        // Debounce timers for notes auto-save
         let notesDebounceTimer = null;
+        let structuredNotesDebounceTimers = {};
         const NOTES_DEBOUNCE_DELAY = 2000; // 2 seconds
 
         // Show save indicator
@@ -2115,6 +2318,70 @@
 
             saveNotesImmediate(notes);
             showSaveIndicator('saved');
+        }
+
+        // ============================================================================
+        // STRUCTURED NOTES AUTO-SAVE
+        // ============================================================================
+
+        // Debounced structured note input handler
+        function handleStructuredNoteInput(field, value) {
+            // Show saving indicator
+            showSaveIndicator('saving');
+
+            // Clear existing timer for this field
+            if (structuredNotesDebounceTimers[field]) {
+                clearTimeout(structuredNotesDebounceTimers[field]);
+            }
+
+            // Set new debounced save timer
+            structuredNotesDebounceTimers[field] = setTimeout(() => {
+                saveStructuredNoteImmediate(field, value);
+                showSaveIndicator('saved');
+                delete structuredNotesDebounceTimers[field];
+            }, NOTES_DEBOUNCE_DELAY);
+        }
+
+        // Immediate structured note save (on blur)
+        function saveStructuredNote(field, value) {
+            // Clear any pending debounce for this field
+            if (structuredNotesDebounceTimers[field]) {
+                clearTimeout(structuredNotesDebounceTimers[field]);
+                delete structuredNotesDebounceTimers[field];
+            }
+
+            saveStructuredNoteImmediate(field, value);
+            showSaveIndicator('saved');
+        }
+
+        // Core structured note save function
+        function saveStructuredNoteImmediate(field, value) {
+            if (selectedSceneIndex === null) return;
+
+            const characterKey = selectedCharacter || 'general';
+
+            // Initialize data structure if needed
+            if (!continuityPhotos[selectedSceneIndex]) {
+                continuityPhotos[selectedSceneIndex] = {};
+            }
+            if (!continuityPhotos[selectedSceneIndex][characterKey]) {
+                continuityPhotos[selectedSceneIndex][characterKey] = {
+                    photos: {},
+                    notes: '',
+                    structuredNotes: {},
+                    completed: false,
+                    timestamp: null
+                };
+            }
+            if (!continuityPhotos[selectedSceneIndex][characterKey].structuredNotes) {
+                continuityPhotos[selectedSceneIndex][characterKey].structuredNotes = {};
+            }
+
+            // Save the structured note field
+            continuityPhotos[selectedSceneIndex][characterKey].structuredNotes[field] = value;
+            saveContinuityData();
+
+            console.log(`Structured note saved: ${field}`);
         }
 
         function toggleComplete() {
