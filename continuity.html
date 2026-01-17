@@ -227,11 +227,27 @@
         /* Character Info Card */
         .character-info-card {
             margin: var(--spacing-md) 0 var(--spacing-lg) 0;
-            padding: 16px;
             background: linear-gradient(135deg, rgba(212, 175, 122, 0.08) 0%, rgba(28, 25, 22, 0.6) 100%);
             border: 1px solid var(--glass-border);
             border-left: 3px solid var(--accent-gold);
             border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .character-info-header {
+            padding: 16px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .character-info-header:hover {
+            background: rgba(212, 175, 122, 0.05);
+        }
+
+        .character-info-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
 
         .character-info-name {
@@ -241,10 +257,19 @@
             margin-bottom: 4px;
         }
 
+        .character-info-toggle {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            transition: transform 0.3s ease;
+        }
+
+        .character-info-card.expanded .character-info-toggle {
+            transform: rotate(180deg);
+        }
+
         .character-info-context {
             font-size: 0.8125em;
             color: var(--text-muted);
-            margin-bottom: 8px;
         }
 
         .character-info-look {
@@ -253,6 +278,104 @@
             line-height: 1.6;
             padding-top: var(--spacing-sm);
             border-top: 1px solid var(--glass-border);
+        }
+
+        /* Expandable Profile Section */
+        .character-profile-section {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease, padding 0.3s ease;
+            background: rgba(0, 0, 0, 0.2);
+            border-top: 1px solid transparent;
+        }
+
+        .character-info-card.expanded .character-profile-section {
+            max-height: 400px;
+            border-top-color: var(--glass-border);
+        }
+
+        .character-profile-content {
+            padding: 16px;
+            display: flex;
+            gap: 16px;
+        }
+
+        .character-profile-image {
+            width: 80px;
+            height: 100px;
+            flex-shrink: 0;
+            background: rgba(28, 25, 22, 0.5);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .character-profile-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .character-profile-image-placeholder {
+            font-size: 2rem;
+            opacity: 0.3;
+        }
+
+        .character-profile-details {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .character-profile-description {
+            font-size: 0.8rem;
+            color: var(--text-light);
+            line-height: 1.5;
+        }
+
+        .character-profile-stats {
+            display: flex;
+            gap: 16px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .profile-stat {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .profile-stat-value {
+            color: var(--accent-gold);
+            font-weight: 600;
+        }
+
+        .character-profile-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: rgba(212, 175, 122, 0.1);
+            border: 1px solid rgba(212, 175, 122, 0.3);
+            border-radius: 6px;
+            color: var(--accent-gold);
+            font-size: 0.75rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            align-self: flex-start;
+            margin-top: auto;
+        }
+
+        .character-profile-link:hover {
+            background: rgba(212, 175, 122, 0.2);
+            border-color: var(--accent-gold);
         }
 
         /* Center content area */
@@ -1856,23 +1979,105 @@
                 sceneContext = charDetails.context || charDetails.sceneContext || sceneHeading;
             }
 
+            // Get profile data for character
+            const profile = castProfiles[selectedCharacter] || {};
+            const masterImage = profile.masterImage || profile.image || null;
+            const baseDescription = profile.baseDescription || profile.description || '';
+
+            // Count total scenes this character appears in
+            const characterSceneCount = getCharacterSceneCount(selectedCharacter);
+
+            // Check if expanded (persisted in localStorage)
+            const isExpanded = getCharacterProfileExpanded();
+
             // Also try castProfiles for look info
-            if (!lookDescription && castProfiles[selectedCharacter]) {
-                const profile = castProfiles[selectedCharacter];
-                lookDescription = profile.baseDescription || profile.description || '';
+            if (!lookDescription && baseDescription) {
+                lookDescription = baseDescription;
             }
 
             infoContainer.innerHTML = `
-                <div class="character-info-card">
-                    <div class="character-info-name">${escapeHtml(selectedCharacter)}</div>
-                    <div class="character-info-context">${escapeHtml(sceneContext)}</div>
-                    ${lookDescription ? `
-                        <div class="character-info-look">${escapeHtml(lookDescription)}</div>
-                    ` : ''}
+                <div class="character-info-card ${isExpanded ? 'expanded' : ''}" id="character-info-card">
+                    <div class="character-info-header" onclick="toggleCharacterProfile()">
+                        <div class="character-info-top">
+                            <div>
+                                <div class="character-info-name">${escapeHtml(selectedCharacter)}</div>
+                                <div class="character-info-context">${escapeHtml(sceneContext)}</div>
+                            </div>
+                            <span class="character-info-toggle">▼</span>
+                        </div>
+                        ${lookDescription ? `
+                            <div class="character-info-look">${escapeHtml(lookDescription)}</div>
+                        ` : ''}
+                    </div>
+
+                    <!-- Expandable Profile Section -->
+                    <div class="character-profile-section">
+                        <div class="character-profile-content">
+                            <div class="character-profile-image">
+                                ${masterImage ?
+                                    `<img src="${masterImage}" alt="${escapeHtml(selectedCharacter)}">` :
+                                    `<span class="character-profile-image-placeholder">👤</span>`
+                                }
+                            </div>
+                            <div class="character-profile-details">
+                                ${baseDescription ? `
+                                    <div class="character-profile-description">${escapeHtml(baseDescription)}</div>
+                                ` : `
+                                    <div class="character-profile-description" style="color: var(--text-muted); font-style: italic;">
+                                        No base description available
+                                    </div>
+                                `}
+                                <div class="character-profile-stats">
+                                    <div class="profile-stat">
+                                        <span>Appears in</span>
+                                        <span class="profile-stat-value">${characterSceneCount}</span>
+                                        <span>scenes</span>
+                                    </div>
+                                </div>
+                                <a href="cast-profile.html?character=${encodeURIComponent(selectedCharacter)}"
+                                   class="character-profile-link">
+                                    View Full Profile →
+                                </a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             `;
 
             console.log('Selected character:', selectedCharacter, charDetails);
+        }
+
+        // Get count of scenes a character appears in
+        function getCharacterSceneCount(characterName) {
+            let count = 0;
+
+            for (let i = 0; i < scenes.length; i++) {
+                const characters = getSceneCharacters(scenes[i]);
+                if (characters.includes(characterName)) {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        // Toggle character profile expanded state
+        function toggleCharacterProfile() {
+            const card = document.getElementById('character-info-card');
+            if (card) {
+                card.classList.toggle('expanded');
+                // Save state to localStorage
+                saveCharacterProfileExpanded(card.classList.contains('expanded'));
+            }
+        }
+
+        // Save/load character profile expanded state
+        function saveCharacterProfileExpanded(isExpanded) {
+            localStorage.setItem('continuityCharacterProfileExpanded', isExpanded ? 'true' : 'false');
+        }
+
+        function getCharacterProfileExpanded() {
+            return localStorage.getItem('continuityCharacterProfileExpanded') === 'true';
         }
 
         function selectCharacter(characterName) {
