@@ -10,20 +10,21 @@ class ScriptProcessor {
             TRANSITION: 'transition'
         };
         
+        // Time of day options for scene headings
+        this.timeOfDay = ['MOMENTS LATER', 'SECONDS LATER', 'CONTINUOUS', 'CONT\'D', 'MORNING', 'AFTERNOON', 'EVENING', 'NIGHT', 'DAWN', 'DUSK', 'LATER', 'SAME', 'DAY'];
+
         // More comprehensive scene heading patterns
+        // Handles: "1   EXT. FERRY - DAY   1", "2   INT. COLSTON BASSETT HALL. KITCHEN. DAY.   2", "4A   EXT. FARMHOUSE - DRIVEWAY - MOMENTS LATER   4A"
         this.scenePatterns = [
-            // Standard format: INT. LOCATION - TIME
-            /^(?:\d+[\.\s]+)?(?:INT\.?|EXT\.?|INT\.?\/EXT\.?|I\/E\.?)\s+.+(?:\s*[-–]\s*.+)?$/i,
-            // With scene numbers: 1. INT. LOCATION
-            /^\d+[\.\s]+(?:INT\.?|EXT\.?)\s+.+/i,
+            // Primary pattern: handles numbered scenes with optional suffix (4A), flexible locations with periods or dashes, time of day
+            new RegExp(
+                `^\\s*(\\d+[A-Z]?)?\\s*(INT\\.?|EXT\\.?|INT\\.?\\/EXT\\.?|I\\/E\\.?)\\s+(.+?)\\s*[-.]?\\s*(${this.timeOfDay.join('|')})\\.?\\s*\\d*[A-Z]?\\s*\\*?\\s*$`,
+                'i'
+            ),
+            // Fallback: INT/EXT with any content (less strict)
+            /^(?:\d+[A-Z]?\s+)?(?:INT\.?|EXT\.?|INT\.?\/EXT\.?|I\/E\.?)\s+.+$/i,
             // INTERIOR/EXTERIOR spelled out
-            /^(?:INTERIOR|EXTERIOR)\s+.+/i,
-            // More flexible - just INT/EXT at start
-            /^(?:INT|EXT)[\.\s]+\w+/i,
-            // With parenthetical additions
-            /^(?:INT\.?|EXT\.?).*?\([^)]+\)/i,
-            // Continuous scenes
-            /^(?:INT\.?|EXT\.?).*?(?:CONTINUOUS|CONT'D|SAME|LATER|MOMENTS LATER)/i
+            /^(?:INTERIOR|EXTERIOR)\s+.+/i
         ];
     }
 
