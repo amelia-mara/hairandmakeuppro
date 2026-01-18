@@ -3,7 +3,7 @@ import type { Character } from '@/types';
 
 interface CharacterAvatarProps {
   character: Character;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
 }
 
@@ -19,6 +19,7 @@ export function CharacterAvatar({
       className={clsx(
         'rounded-full flex items-center justify-center font-bold text-white flex-shrink-0',
         {
+          'w-5 h-5 text-[8px]': size === 'xs',
           'w-8 h-8 text-xs': size === 'sm',
           'w-10 h-10 text-sm': size === 'md',
           'w-14 h-14 text-lg': size === 'lg',

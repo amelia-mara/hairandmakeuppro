@@ -32,7 +32,7 @@ export function LookCard({ look, character: _character, progress }: LookCardProp
     if (!currentProject) return;
     const scene = currentProject.scenes.find(s => s.sceneNumber === sceneNum);
     if (scene) {
-      setActiveTab('scenes');
+      setActiveTab('breakdown');
       setCurrentScene(scene.id);
     }
   };
@@ -197,13 +197,6 @@ export function LookCard({ look, character: _character, progress }: LookCardProp
         }`}
       >
         <div className="px-3 pb-3 space-y-3 border-t border-border/50 pt-3">
-          {/* Look description */}
-          {look.notes && (
-            <p className="text-[13px] text-text-secondary leading-snug">
-              {look.notes}
-            </p>
-          )}
-
           {/* Makeup & Hair side-by-side grid */}
           {(makeupSummary.length > 0 || hairSummary.length > 0) && (
             <div className="grid grid-cols-2 gap-2">
