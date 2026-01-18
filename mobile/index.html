@@ -1036,6 +1036,33 @@
                         </span>
                         Save Entry
                     </button>
+
+                    <!-- Day Earnings Card (shown when rate card is set) -->
+                    <div class="timesheet-earnings" id="day-earnings" style="display: none;">
+                        <h4 class="earnings-title">Today's Earnings</h4>
+                        <div class="earnings-grid">
+                            <div class="earnings-item">
+                                <div class="earnings-item-label">Base Pay</div>
+                                <div class="earnings-item-value" id="day-base-pay">£0.00</div>
+                            </div>
+                            <div class="earnings-item">
+                                <div class="earnings-item-label">Overtime</div>
+                                <div class="earnings-item-value" id="day-ot-pay">£0.00</div>
+                            </div>
+                            <div class="earnings-item">
+                                <div class="earnings-item-label">6th Day Bonus</div>
+                                <div class="earnings-item-value" id="day-sixth-pay">£0.00</div>
+                            </div>
+                            <div class="earnings-item">
+                                <div class="earnings-item-label">Kit Rental</div>
+                                <div class="earnings-item-value" id="day-kit-pay">£0.00</div>
+                            </div>
+                        </div>
+                        <div class="earnings-total">
+                            <div class="earnings-total-label">Day Total</div>
+                            <div class="earnings-total-value" id="day-total-pay">£0.00</div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Week View -->
@@ -1048,6 +1075,7 @@
                         <span class="week-total-label">Week Total:</span>
                         <span class="week-total-hours" id="week-total-hours">0.0</span>
                         <span class="week-total-suffix">hours</span>
+                        <span class="week-total-earnings" id="week-total-earnings" style="display: none;"> · <span id="week-earnings-value">£0.00</span></span>
                     </div>
                 </div>
             </div>
@@ -1221,6 +1249,58 @@
                         <div class="toggle-switch">
                             <input type="checkbox" id="toggle-autosave" checked>
                             <label for="toggle-autosave"></label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rate Card Section -->
+                <div class="settings-section">
+                    <h3 class="settings-section-title">Rate Card</h3>
+                    <div class="settings-card">
+                        <div class="form-group">
+                            <label class="form-label">Daily Rate (£)</label>
+                            <input type="number" class="form-input" id="rate-daily-rate" placeholder="0.00" min="0" step="0.01">
+                            <p class="form-hint">Your agreed daily rate before overtime</p>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Base Day Hours</label>
+                            <select class="form-select" id="rate-base-day">
+                                <option value="10">10+1 (10 hours + 1hr unpaid lunch)</option>
+                                <option value="11" selected>11+1 (11 hours + 1hr unpaid lunch)</option>
+                                <option value="12">12+1 (12 hours + 1hr unpaid lunch)</option>
+                            </select>
+                            <p class="form-hint">Standard working hours before overtime kicks in</p>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Kit / Box Rental (£/day)</label>
+                            <input type="number" class="form-input" id="rate-kit-rental" placeholder="0.00" min="0" step="0.01">
+                            <p class="form-hint">Daily kit rental added to each working day</p>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Overtime Rate</label>
+                            <div class="form-static">x1.5 (fixed)</div>
+                            <p class="form-hint">Overtime is paid at 1.5x your hourly rate</p>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">6th Day Rate</label>
+                            <div class="form-static">x1.5 (applied to whole day)</div>
+                            <p class="form-hint">When working a 6th day, entire day is paid at 1.5x</p>
+                        </div>
+                    </div>
+                    <!-- Rate Summary -->
+                    <div class="settings-card rate-summary" id="rate-summary" style="display: none;">
+                        <h4 class="rate-summary-title">Rate Summary</h4>
+                        <div class="rate-summary-row">
+                            <span class="rate-label">Hourly Rate</span>
+                            <span class="rate-value" id="rate-hourly">£0.00/hr</span>
+                        </div>
+                        <div class="rate-summary-row">
+                            <span class="rate-label">OT Hourly Rate</span>
+                            <span class="rate-value" id="rate-ot-hourly">£0.00/hr</span>
+                        </div>
+                        <div class="rate-summary-row">
+                            <span class="rate-label">Max Day (no OT)</span>
+                            <span class="rate-value" id="rate-max-day">£0.00</span>
                         </div>
                     </div>
                 </div>
