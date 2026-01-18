@@ -25,8 +25,11 @@ export function CalculationCard({ calculation, rateCard }: CalculationCardProps)
       <div className="text-center mb-4">
         <div className="text-white/80 text-xs uppercase tracking-wide">Total Hours</div>
         <div className="text-4xl font-bold">{calculation.totalHours.toFixed(1)}</div>
-        <div className="text-white/70 text-xs mt-1">
-          Pre-call: {calculation.preCallHours.toFixed(1)} | Base: {calculation.baseHours.toFixed(1)} | OT: {calculation.otHours.toFixed(1)}
+        <div className="text-white/70 text-xs mt-1 flex flex-wrap justify-center gap-x-2">
+          {calculation.preCallHours > 0 && <span>Pre: {calculation.preCallHours.toFixed(1)}</span>}
+          <span>Base: {calculation.baseHours.toFixed(1)}</span>
+          {calculation.otHours > 0 && <span>OT: {calculation.otHours.toFixed(1)}</span>}
+          {calculation.lateNightHours > 0 && <span>Late: {calculation.lateNightHours.toFixed(1)}</span>}
         </div>
       </div>
 
@@ -34,6 +37,13 @@ export function CalculationCard({ calculation, rateCard }: CalculationCardProps)
       {rateConfigured && (
         <>
           <div className="border-t border-white/20 pt-4 space-y-2">
+            {calculation.preCallEarnings > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-white/80">Pre-Call ({rateCard.preCallMultiplier}x)</span>
+                <span>£{calculation.preCallEarnings.toFixed(2)}</span>
+              </div>
+            )}
+
             <div className="flex justify-between text-sm">
               <span className="text-white/80">Base Earnings</span>
               <span>£{calculation.dailyEarnings.toFixed(2)}</span>
@@ -43,6 +53,13 @@ export function CalculationCard({ calculation, rateCard }: CalculationCardProps)
               <div className="flex justify-between text-sm">
                 <span className="text-white/80">OT ({rateCard.otMultiplier}x)</span>
                 <span>£{calculation.otEarnings.toFixed(2)}</span>
+              </div>
+            )}
+
+            {calculation.lateNightEarnings > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-white/80">Late Night ({rateCard.lateNightMultiplier}x)</span>
+                <span>£{calculation.lateNightEarnings.toFixed(2)}</span>
               </div>
             )}
 

@@ -319,11 +319,18 @@ function TodaySceneCard({
           </div>
         </div>
 
-        {/* Location */}
+        {/* Location & Synopsis */}
         {scene && (
-          <p className="text-sm text-text-secondary mb-3 line-clamp-1">
-            {scene.slugline.replace(/^(INT|EXT)\.\s*/, '').replace(/\s*-\s*(DAY|NIGHT|MORNING|EVENING|CONTINUOUS)$/i, '')}
-          </p>
+          <div className="mb-3">
+            <p className="text-sm text-text-secondary line-clamp-1">
+              {scene.slugline.replace(/^(INT|EXT)\.\s*/, '').replace(/\s*-\s*(DAY|NIGHT|MORNING|EVENING|CONTINUOUS)$/i, '')}
+            </p>
+            {scene.synopsis && (
+              <p className="text-[13px] text-[#666] italic line-clamp-1 mt-1">
+                {scene.synopsis}
+              </p>
+            )}
+          </div>
         )}
 
         {/* Characters with looks */}

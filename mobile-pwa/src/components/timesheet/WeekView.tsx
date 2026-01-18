@@ -72,7 +72,7 @@ export function WeekView({ weekStartDate, onNavigate, onDaySelect, selectedDate 
       {/* Day cards */}
       <div className="space-y-2">
         {weekDays.map(({ date, dayLabel, dayNumber, entry, calc }) => {
-          const hasEntry = entry && entry.unitCall && entry.wrap;
+          const hasEntry = entry && entry.unitCall && entry.wrapOut;
           const isSelected = date === selectedDate;
           const isWeekend = dayLabel === 'S';
 

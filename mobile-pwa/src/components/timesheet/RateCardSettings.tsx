@@ -48,26 +48,50 @@ export function RateCardSettings() {
         </p>
       </div>
 
-      {/* OT Rate - Read only */}
+      {/* Lunch Duration */}
       <div>
-        <label className="field-label block mb-2">OVERTIME RATE</label>
-        <div className="input-field bg-gray-100 text-text-muted">
-          x{rateCard.otMultiplier} (fixed)
-        </div>
+        <label className="field-label block mb-2">DEFAULT LUNCH</label>
+        <select
+          value={rateCard.lunchDuration}
+          onChange={(e) =>
+            updateRateCard({ lunchDuration: parseInt(e.target.value, 10) })
+          }
+          className="input-field w-full"
+        >
+          <option value={30}>30 minutes</option>
+          <option value={45}>45 minutes</option>
+          <option value={60}>1 hour</option>
+        </select>
         <p className="text-xs text-text-muted mt-1">
-          Overtime is paid at 1.5x your hourly rate
+          Scheduled lunch break (unpaid)
         </p>
       </div>
 
-      {/* 6th Day Rate - Read only */}
-      <div>
-        <label className="field-label block mb-2">6TH DAY RATE</label>
-        <div className="input-field bg-gray-100 text-text-muted">
-          x{rateCard.sixthDayMultiplier} (applied to whole day)
+      {/* Rate Multipliers */}
+      <div className="bg-gray-50 rounded-card p-4 space-y-3">
+        <h4 className="field-label">RATE MULTIPLIERS</h4>
+
+        <div className="flex justify-between items-center text-sm">
+          <span className="text-text-muted">Pre-Call</span>
+          <span className="font-medium text-gold">x{rateCard.preCallMultiplier}</span>
         </div>
-        <p className="text-xs text-text-muted mt-1">
-          When working a 6th day, entire day is paid at 1.5x
-        </p>
+        <p className="text-[11px] text-text-light -mt-2">Hours before unit call</p>
+
+        <div className="flex justify-between items-center text-sm">
+          <span className="text-text-muted">Overtime (after base hours)</span>
+          <span className="font-medium text-gold">x{rateCard.otMultiplier}</span>
+        </div>
+
+        <div className="flex justify-between items-center text-sm">
+          <span className="text-text-muted">Late Night (after 23:00)</span>
+          <span className="font-medium text-gold">x{rateCard.lateNightMultiplier}</span>
+        </div>
+
+        <div className="flex justify-between items-center text-sm">
+          <span className="text-text-muted">6th Day</span>
+          <span className="font-medium text-gold">x{rateCard.sixthDayMultiplier}</span>
+        </div>
+        <p className="text-[11px] text-text-light -mt-2">Applied to entire day's earnings</p>
       </div>
 
       {/* Kit Rental */}
@@ -105,15 +129,21 @@ export function RateCardSettings() {
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-text-muted">OT Hourly Rate</span>
+              <span className="text-text-muted">Pre-Call Rate</span>
+              <span className="text-text-primary font-medium">
+                £{((rateCard.dailyRate / rateCard.baseDayHours) * rateCard.preCallMultiplier).toFixed(2)}/hr
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-text-muted">OT Rate</span>
               <span className="text-text-primary font-medium">
                 £{((rateCard.dailyRate / rateCard.baseDayHours) * rateCard.otMultiplier).toFixed(2)}/hr
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-text-muted">Max Day (no OT)</span>
+              <span className="text-text-muted">Late Night Rate</span>
               <span className="text-text-primary font-medium">
-                £{(rateCard.dailyRate + rateCard.kitRental).toFixed(2)}
+                £{((rateCard.dailyRate / rateCard.baseDayHours) * rateCard.lateNightMultiplier).toFixed(2)}/hr
               </span>
             </div>
           </div>
