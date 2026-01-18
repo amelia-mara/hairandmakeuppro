@@ -1,4 +1,5 @@
 import type { MakeupDetails } from '@/types';
+import { createEmptyMakeupDetails } from '@/types';
 
 interface MakeupFormProps {
   makeup?: MakeupDetails;
@@ -6,12 +7,17 @@ interface MakeupFormProps {
   readOnly?: boolean;
 }
 
-export function MakeupForm({ makeup, onChange, readOnly }: MakeupFormProps) {
-  // These are reserved for editable mode (future implementation)
-  void onChange;
-  void readOnly;
+export function MakeupForm({ makeup, onChange, readOnly = false }: MakeupFormProps) {
+  // Use empty makeup if none provided
+  const currentMakeup = makeup || createEmptyMakeupDetails();
 
-  if (!makeup) {
+  const handleFieldChange = (field: keyof MakeupDetails, value: string) => {
+    if (onChange && !readOnly) {
+      onChange({ ...currentMakeup, [field]: value });
+    }
+  };
+
+  if (!makeup && readOnly) {
     return (
       <div className="text-center py-4">
         <p className="text-sm text-text-muted">No makeup details available for this look.</p>
@@ -26,17 +32,77 @@ export function MakeupForm({ makeup, onChange, readOnly }: MakeupFormProps) {
         <h4 className="field-label text-gold mb-3">BASE</h4>
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
-            <ReadOnlyField label="Foundation" value={makeup.foundation} />
-            <ReadOnlyField label="Coverage" value={makeup.coverage} />
+            <FormField
+              label="Foundation"
+              value={currentMakeup.foundation}
+              onChange={(v) => handleFieldChange('foundation', v)}
+              readOnly={readOnly}
+              placeholder="e.g., MAC Studio Fix NC25"
+            />
+            <FormField
+              label="Coverage"
+              value={currentMakeup.coverage}
+              onChange={(v) => handleFieldChange('coverage', v)}
+              readOnly={readOnly}
+              placeholder="e.g., Medium"
+            />
           </div>
-          <ReadOnlyField label="Concealer" value={makeup.concealer} />
-          <ReadOnlyField label="Concealer Placement" value={makeup.concealerPlacement} />
-          <ReadOnlyField label="Contour" value={makeup.contour} />
-          <ReadOnlyField label="Contour Placement" value={makeup.contourPlacement} />
-          <ReadOnlyField label="Highlight" value={makeup.highlight} />
-          <ReadOnlyField label="Highlight Placement" value={makeup.highlightPlacement} />
-          <ReadOnlyField label="Blush" value={makeup.blush} />
-          <ReadOnlyField label="Blush Placement" value={makeup.blushPlacement} />
+          <FormField
+            label="Concealer"
+            value={currentMakeup.concealer}
+            onChange={(v) => handleFieldChange('concealer', v)}
+            readOnly={readOnly}
+            placeholder="e.g., NARS Radiant Creamy"
+          />
+          <FormField
+            label="Concealer Placement"
+            value={currentMakeup.concealerPlacement}
+            onChange={(v) => handleFieldChange('concealerPlacement', v)}
+            readOnly={readOnly}
+            placeholder="e.g., Under eyes, bridge of nose"
+          />
+          <FormField
+            label="Contour"
+            value={currentMakeup.contour}
+            onChange={(v) => handleFieldChange('contour', v)}
+            readOnly={readOnly}
+            placeholder="e.g., Charlotte Tilbury Sculpt"
+          />
+          <FormField
+            label="Contour Placement"
+            value={currentMakeup.contourPlacement}
+            onChange={(v) => handleFieldChange('contourPlacement', v)}
+            readOnly={readOnly}
+            placeholder="e.g., Hollows of cheeks, jawline"
+          />
+          <FormField
+            label="Highlight"
+            value={currentMakeup.highlight}
+            onChange={(v) => handleFieldChange('highlight', v)}
+            readOnly={readOnly}
+            placeholder="e.g., Becca Champagne Pop"
+          />
+          <FormField
+            label="Highlight Placement"
+            value={currentMakeup.highlightPlacement}
+            onChange={(v) => handleFieldChange('highlightPlacement', v)}
+            readOnly={readOnly}
+            placeholder="e.g., Cheekbones, brow bone"
+          />
+          <FormField
+            label="Blush"
+            value={currentMakeup.blush}
+            onChange={(v) => handleFieldChange('blush', v)}
+            readOnly={readOnly}
+            placeholder="e.g., NARS Orgasm"
+          />
+          <FormField
+            label="Blush Placement"
+            value={currentMakeup.blushPlacement}
+            onChange={(v) => handleFieldChange('blushPlacement', v)}
+            readOnly={readOnly}
+            placeholder="e.g., Apples of cheeks"
+          />
         </div>
       </section>
 
@@ -45,17 +111,65 @@ export function MakeupForm({ makeup, onChange, readOnly }: MakeupFormProps) {
         <h4 className="field-label text-gold mb-3">EYES</h4>
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
-            <ReadOnlyField label="Brow Product" value={makeup.browProduct} />
-            <ReadOnlyField label="Brow Shape" value={makeup.browShape} />
+            <FormField
+              label="Brow Product"
+              value={currentMakeup.browProduct}
+              onChange={(v) => handleFieldChange('browProduct', v)}
+              readOnly={readOnly}
+              placeholder="e.g., ABH Dipbrow Taupe"
+            />
+            <FormField
+              label="Brow Shape"
+              value={currentMakeup.browShape}
+              onChange={(v) => handleFieldChange('browShape', v)}
+              readOnly={readOnly}
+              placeholder="e.g., Natural arch"
+            />
           </div>
-          <ReadOnlyField label="Eye Primer" value={makeup.eyePrimer} />
+          <FormField
+            label="Eye Primer"
+            value={currentMakeup.eyePrimer}
+            onChange={(v) => handleFieldChange('eyePrimer', v)}
+            readOnly={readOnly}
+            placeholder="e.g., Urban Decay Primer Potion"
+          />
           <div className="grid grid-cols-3 gap-3">
-            <ReadOnlyField label="Lid Colour" value={makeup.lidColour} />
-            <ReadOnlyField label="Crease" value={makeup.creaseColour} />
-            <ReadOnlyField label="Outer V" value={makeup.outerV} />
+            <FormField
+              label="Lid Colour"
+              value={currentMakeup.lidColour}
+              onChange={(v) => handleFieldChange('lidColour', v)}
+              readOnly={readOnly}
+              placeholder="e.g., Champagne"
+            />
+            <FormField
+              label="Crease"
+              value={currentMakeup.creaseColour}
+              onChange={(v) => handleFieldChange('creaseColour', v)}
+              readOnly={readOnly}
+              placeholder="e.g., Warm brown"
+            />
+            <FormField
+              label="Outer V"
+              value={currentMakeup.outerV}
+              onChange={(v) => handleFieldChange('outerV', v)}
+              readOnly={readOnly}
+              placeholder="e.g., Deep brown"
+            />
           </div>
-          <ReadOnlyField label="Liner Style" value={makeup.liner} />
-          <ReadOnlyField label="Lashes" value={makeup.lashes} />
+          <FormField
+            label="Liner Style"
+            value={currentMakeup.liner}
+            onChange={(v) => handleFieldChange('liner', v)}
+            readOnly={readOnly}
+            placeholder="e.g., Thin black line, tight line"
+          />
+          <FormField
+            label="Lashes"
+            value={currentMakeup.lashes}
+            onChange={(v) => handleFieldChange('lashes', v)}
+            readOnly={readOnly}
+            placeholder="e.g., Ardell Wispies, 2 coats mascara"
+          />
         </div>
       </section>
 
@@ -64,35 +178,64 @@ export function MakeupForm({ makeup, onChange, readOnly }: MakeupFormProps) {
         <h4 className="field-label text-gold mb-3">LIPS</h4>
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
-            <ReadOnlyField label="Lip Liner" value={makeup.lipLiner} />
-            <ReadOnlyField label="Lip Colour" value={makeup.lipColour} />
+            <FormField
+              label="Lip Liner"
+              value={currentMakeup.lipLiner}
+              onChange={(v) => handleFieldChange('lipLiner', v)}
+              readOnly={readOnly}
+              placeholder="e.g., MAC Spice"
+            />
+            <FormField
+              label="Lip Colour"
+              value={currentMakeup.lipColour}
+              onChange={(v) => handleFieldChange('lipColour', v)}
+              readOnly={readOnly}
+              placeholder="e.g., Charlotte Tilbury Pillow Talk"
+            />
           </div>
-          <ReadOnlyField label="Setting" value={makeup.setting} />
+          <FormField
+            label="Setting"
+            value={currentMakeup.setting}
+            onChange={(v) => handleFieldChange('setting', v)}
+            readOnly={readOnly}
+            placeholder="e.g., MAC Fix+, light powder"
+          />
         </div>
       </section>
     </div>
   );
 }
 
-interface ReadOnlyFieldProps {
+interface FormFieldProps {
   label: string;
   value: string;
+  onChange: (value: string) => void;
+  readOnly: boolean;
+  placeholder?: string;
 }
 
-function ReadOnlyField({ label, value }: ReadOnlyFieldProps) {
-  if (!value) {
+function FormField({ label, value, onChange, readOnly, placeholder }: FormFieldProps) {
+  if (readOnly) {
     return (
       <div>
         <label className="field-label block mb-1">{label}</label>
-        <div className="text-sm text-text-placeholder">—</div>
+        <div className="text-sm text-text-primary">
+          {value || <span className="text-text-placeholder">—</span>}
+        </div>
       </div>
     );
   }
 
   return (
     <div>
-      <label className="field-label block mb-1">{label}</label>
-      <div className="text-sm text-text-primary">{value}</div>
+      <label className="field-label block mb-1.5">{label}</label>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full bg-[#f8f7f5] border border-[#e8e6e1] rounded-lg px-3 py-3 text-sm text-[#1a1a1a] placeholder:text-[#999] focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold/30 transition-colors"
+      />
     </div>
   );
 }
