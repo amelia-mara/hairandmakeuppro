@@ -1068,9 +1068,9 @@ strong {
 }
 
 /* ============================================
-   SCENE COUNT
+   SCENE COUNT HEADER
    ============================================ */
-.scene-count {
+.scene-count-header {
     padding: 0 var(--spacing-md);
     font-size: 0.875rem;
     font-weight: 600;
@@ -1689,7 +1689,7 @@ strong {
     margin-bottom: var(--spacing-lg);
 }
 
-.reference-card {
+.reference-card-horizontal {
     display: flex;
     gap: var(--spacing-md);
     padding: var(--spacing-md);
@@ -1700,7 +1700,7 @@ strong {
     transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
-.reference-card:active {
+.reference-card-horizontal:active {
     border-color: var(--gold);
     box-shadow: 0 0 0 3px var(--gold-light);
 }
@@ -2924,13 +2924,6 @@ strong {
     text-align: center;
     max-width: 300px;
     margin-bottom: var(--spacing-xl);
-}
-
-.sync-code-input {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-sm);
-    margin-bottom: var(--spacing-lg);
 }
 
 .code-input {
