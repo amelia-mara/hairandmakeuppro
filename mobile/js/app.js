@@ -1198,6 +1198,12 @@ const App = {
         // Store current scene index
         this.currentSceneIndex = sceneIndex;
 
+        // Bind script button in header
+        const scriptBtn = document.getElementById('btn-scene-script');
+        if (scriptBtn) {
+            scriptBtn.onclick = () => this.openScriptViewer();
+        }
+
         this.navigateTo('screen-scene-detail');
     },
 
@@ -1384,16 +1390,743 @@ const App = {
         this.renderSceneSynopsis(scene, sceneIndex);
     },
 
+    // ============================================
+    // SCRIPT VIEWER
+    // ============================================
+
+    // Script viewer state
+    scriptViewerState: {
+        currentSceneIndex: 0,
+        zoomLevel: 'normal', // small, normal, large, xlarge
+        searchQuery: '',
+        searchResults: [],
+        searchCurrentIndex: 0,
+        scrollPositions: {}, // Store scroll positions per scene
+        jumpDropdownOpen: false
+    },
+
     /**
-     * View full scene script (placeholder)
+     * View full scene script - opens the script viewer screen
      */
     viewFullScene(scene) {
-        // For now, show an alert with the scene content if available
-        if (scene.content) {
-            alert(scene.content);
+        const sceneIndex = this.scenes.indexOf(scene);
+        if (sceneIndex === -1) {
+            this.scriptViewerState.currentSceneIndex = 0;
         } else {
-            alert(`Full scene content for "${scene.heading}" is not available.\n\nSync from desktop to get full script content.`);
+            this.scriptViewerState.currentSceneIndex = sceneIndex;
         }
+
+        this.navigateTo('screen-script-viewer');
+        this.initScriptViewer();
+    },
+
+    /**
+     * Open script viewer from header button
+     */
+    openScriptViewer() {
+        if (this.currentSceneIndex !== null) {
+            this.scriptViewerState.currentSceneIndex = this.currentSceneIndex;
+        }
+        this.navigateTo('screen-script-viewer');
+        this.initScriptViewer();
+    },
+
+    /**
+     * Initialize the script viewer
+     */
+    initScriptViewer() {
+        const loadingEl = document.getElementById('script-loading');
+        const notAvailableEl = document.getElementById('script-not-available');
+        const containerEl = document.getElementById('script-scenes-container');
+        const titleEl = document.getElementById('script-viewer-title');
+
+        // Check if any scenes have content
+        const hasAnyContent = this.scenes.some(scene => scene.content);
+
+        if (!hasAnyContent) {
+            // Show not available message
+            if (loadingEl) loadingEl.style.display = 'none';
+            if (notAvailableEl) notAvailableEl.classList.remove('hidden');
+            if (containerEl) containerEl.style.display = 'none';
+            return;
+        }
+
+        // Hide loading, show content
+        if (loadingEl) loadingEl.style.display = 'none';
+        if (notAvailableEl) notAvailableEl.classList.add('hidden');
+        if (containerEl) containerEl.style.display = 'block';
+
+        // Update title
+        const currentScene = this.scenes[this.scriptViewerState.currentSceneIndex];
+        if (titleEl && currentScene) {
+            titleEl.textContent = `Scene ${currentScene.number} Script`;
+        }
+
+        // Render scenes
+        this.renderScriptScenes();
+
+        // Bind script viewer events
+        this.bindScriptViewerEvents();
+
+        // Scroll to current scene after rendering
+        setTimeout(() => {
+            this.scrollToCurrentScene();
+        }, 100);
+    },
+
+    /**
+     * Render all scenes in the script viewer
+     */
+    renderScriptScenes() {
+        const container = document.getElementById('script-scenes-container');
+        if (!container) return;
+
+        const currentSceneIndex = this.scriptViewerState.currentSceneIndex;
+
+        container.innerHTML = this.scenes.map((scene, index) => {
+            const isCurrentScene = index === currentSceneIndex;
+            const hasPrevious = index > 0;
+            const hasNext = index < this.scenes.length - 1;
+            const prevScene = hasPrevious ? this.scenes[index - 1] : null;
+            const nextScene = hasNext ? this.scenes[index + 1] : null;
+
+            // Format scene content
+            const formattedContent = scene.content
+                ? this.formatScreenplayContent(scene.content, scene.heading)
+                : `<p class="screenplay-action" style="color: var(--text-tertiary); font-style: italic;">Script content not available for this scene.</p>`;
+
+            return `
+                <div class="script-scene-block ${isCurrentScene ? 'current-scene' : ''}"
+                     data-scene-index="${index}"
+                     id="script-scene-${index}">
+                    <div class="script-scene-divider">
+                        <span>Scene ${scene.number}</span>
+                    </div>
+                    <div class="screenplay-content">
+                        <div class="screenplay-scene-heading">${this.escapeHtml(scene.heading)}</div>
+                        ${formattedContent}
+                    </div>
+                    <div class="script-scene-nav">
+                        <button class="script-scene-nav-btn ${!hasPrevious ? 'disabled' : ''}"
+                                ${hasPrevious ? `data-goto-scene="${index - 1}"` : ''}>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M15 18l-6-6 6-6"/>
+                            </svg>
+                            ${hasPrevious ? `Scene ${prevScene.number}` : 'Start'}
+                        </button>
+                        <button class="script-scene-nav-btn ${!hasNext ? 'disabled' : ''}"
+                                ${hasNext ? `data-goto-scene="${index + 1}"` : ''}>
+                            ${hasNext ? `Scene ${nextScene.number}` : 'End'}
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 18l6-6-6-6"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        // Render scene jump dropdown
+        this.renderSceneJumpDropdown();
+    },
+
+    /**
+     * Format screenplay content with proper structure
+     */
+    formatScreenplayContent(content, heading) {
+        if (!content) return '';
+
+        // Split content into lines
+        const lines = content.split('\n');
+        let formattedHtml = '';
+        let inDialogue = false;
+        let currentCharacter = '';
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+
+            if (!line) {
+                // Empty line - reset dialogue state if needed
+                if (inDialogue) {
+                    inDialogue = false;
+                }
+                continue;
+            }
+
+            // Skip scene heading if it matches the header
+            if (this.isSceneHeading(line)) {
+                // Only show if it's a different scene heading
+                if (!heading || !line.toUpperCase().includes(heading.toUpperCase().slice(0, 20))) {
+                    formattedHtml += `<div class="screenplay-scene-heading">${this.escapeHtml(line)}</div>`;
+                }
+                continue;
+            }
+
+            // Check for transition (CUT TO:, FADE OUT, etc.)
+            if (this.isTransition(line)) {
+                formattedHtml += `<div class="screenplay-transition">${this.escapeHtml(line)}</div>`;
+                inDialogue = false;
+                continue;
+            }
+
+            // Check for character name (all caps, centered positioning indicator)
+            if (this.isCharacterName(line, lines[i + 1])) {
+                formattedHtml += `<div class="screenplay-character">${this.escapeHtml(line)}</div>`;
+                currentCharacter = line;
+                inDialogue = true;
+                continue;
+            }
+
+            // Check for parenthetical
+            if (this.isParenthetical(line)) {
+                formattedHtml += `<div class="screenplay-parenthetical">${this.escapeHtml(line)}</div>`;
+                continue;
+            }
+
+            // Dialogue or action
+            if (inDialogue) {
+                formattedHtml += `<div class="screenplay-dialogue">${this.escapeHtml(line)}</div>`;
+            } else {
+                formattedHtml += `<div class="screenplay-action">${this.escapeHtml(line)}</div>`;
+            }
+        }
+
+        return formattedHtml;
+    },
+
+    /**
+     * Check if line is a scene heading
+     */
+    isSceneHeading(line) {
+        const upperLine = line.toUpperCase();
+        return upperLine.startsWith('INT.') ||
+               upperLine.startsWith('EXT.') ||
+               upperLine.startsWith('INT/EXT') ||
+               upperLine.startsWith('I/E');
+    },
+
+    /**
+     * Check if line is a transition
+     */
+    isTransition(line) {
+        const upperLine = line.toUpperCase().trim();
+        return upperLine.endsWith('CUT TO:') ||
+               upperLine.endsWith('FADE OUT.') ||
+               upperLine.endsWith('FADE IN:') ||
+               upperLine.endsWith('DISSOLVE TO:') ||
+               upperLine.endsWith('SMASH CUT TO:') ||
+               upperLine === 'CUT TO BLACK.' ||
+               upperLine === 'FADE TO BLACK.';
+    },
+
+    /**
+     * Check if line is a character name
+     */
+    isCharacterName(line, nextLine) {
+        if (!line) return false;
+
+        // Character names are typically ALL CAPS
+        const isAllCaps = line === line.toUpperCase();
+
+        // Should not be too long
+        const isShort = line.length < 40;
+
+        // Should not start with action-like words
+        const startsWithAction = /^(THE|A|AN|HE|SHE|IT|THEY|WE|I\s)/i.test(line);
+
+        // Check for common character name patterns
+        const hasParenthetical = line.includes('(') && line.includes(')');
+        const nameOnly = hasParenthetical ? line.split('(')[0].trim() : line;
+        const looksLikeName = isAllCaps && isShort && !startsWithAction;
+
+        // Additional check: next line should exist and not be empty
+        const hasFollowingContent = nextLine && nextLine.trim().length > 0;
+
+        return looksLikeName && hasFollowingContent;
+    },
+
+    /**
+     * Check if line is a parenthetical
+     */
+    isParenthetical(line) {
+        const trimmed = line.trim();
+        return trimmed.startsWith('(') && trimmed.endsWith(')');
+    },
+
+    /**
+     * Render scene jump dropdown options
+     */
+    renderSceneJumpDropdown() {
+        const listEl = document.getElementById('scene-jump-list');
+        if (!listEl) return;
+
+        const currentIndex = this.scriptViewerState.currentSceneIndex;
+
+        listEl.innerHTML = this.scenes.map((scene, index) => `
+            <div class="scene-jump-item ${index === currentIndex ? 'active' : ''}"
+                 data-jump-to-scene="${index}">
+                <span class="scene-jump-number">${scene.number}</span>
+                <span class="scene-jump-heading">${this.escapeHtml(scene.heading)}</span>
+            </div>
+        `).join('');
+    },
+
+    /**
+     * Scroll to the current scene
+     */
+    scrollToCurrentScene() {
+        const currentIndex = this.scriptViewerState.currentSceneIndex;
+        const sceneEl = document.getElementById(`script-scene-${currentIndex}`);
+        const contentArea = document.getElementById('script-content-area');
+
+        if (sceneEl && contentArea) {
+            // Check for stored scroll position
+            const storedPosition = this.scriptViewerState.scrollPositions[currentIndex];
+            if (storedPosition !== undefined) {
+                contentArea.scrollTop = storedPosition;
+            } else {
+                // Scroll scene into view
+                sceneEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+    },
+
+    /**
+     * Jump to a specific scene
+     */
+    jumpToScene(sceneIndex) {
+        if (sceneIndex < 0 || sceneIndex >= this.scenes.length) return;
+
+        // Update current scene
+        this.scriptViewerState.currentSceneIndex = sceneIndex;
+
+        // Update title
+        const titleEl = document.getElementById('script-viewer-title');
+        const scene = this.scenes[sceneIndex];
+        if (titleEl && scene) {
+            titleEl.textContent = `Scene ${scene.number} Script`;
+        }
+
+        // Update current-scene class
+        document.querySelectorAll('.script-scene-block').forEach((block, index) => {
+            if (index === sceneIndex) {
+                block.classList.add('current-scene');
+            } else {
+                block.classList.remove('current-scene');
+            }
+        });
+
+        // Update dropdown active state
+        document.querySelectorAll('.scene-jump-item').forEach((item, index) => {
+            if (index === sceneIndex) {
+                item.classList.add('active');
+            } else {
+                item.classList.remove('active');
+            }
+        });
+
+        // Close dropdown
+        this.closeSceneJumpDropdown();
+
+        // Scroll to scene
+        const sceneEl = document.getElementById(`script-scene-${sceneIndex}`);
+        if (sceneEl) {
+            sceneEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    },
+
+    /**
+     * Toggle scene jump dropdown
+     */
+    toggleSceneJumpDropdown() {
+        const dropdown = document.getElementById('scene-jump-dropdown');
+        if (!dropdown) return;
+
+        if (dropdown.classList.contains('hidden')) {
+            dropdown.classList.remove('hidden');
+            this.scriptViewerState.jumpDropdownOpen = true;
+        } else {
+            dropdown.classList.add('hidden');
+            this.scriptViewerState.jumpDropdownOpen = false;
+        }
+    },
+
+    /**
+     * Close scene jump dropdown
+     */
+    closeSceneJumpDropdown() {
+        const dropdown = document.getElementById('scene-jump-dropdown');
+        if (dropdown) {
+            dropdown.classList.add('hidden');
+            this.scriptViewerState.jumpDropdownOpen = false;
+        }
+    },
+
+    /**
+     * Toggle script search bar
+     */
+    toggleScriptSearch() {
+        const searchBar = document.getElementById('script-search-bar');
+        const searchInput = document.getElementById('script-search-input');
+
+        if (!searchBar) return;
+
+        if (searchBar.classList.contains('hidden')) {
+            searchBar.classList.remove('hidden');
+            if (searchInput) {
+                searchInput.focus();
+            }
+        } else {
+            searchBar.classList.add('hidden');
+            this.clearScriptSearch();
+        }
+    },
+
+    /**
+     * Perform script search
+     */
+    performScriptSearch(query) {
+        this.scriptViewerState.searchQuery = query;
+        this.scriptViewerState.searchResults = [];
+        this.scriptViewerState.searchCurrentIndex = 0;
+
+        if (!query || query.length < 2) {
+            this.clearSearchHighlights();
+            document.getElementById('script-search-count').textContent = '';
+            return;
+        }
+
+        // Clear previous highlights
+        this.clearSearchHighlights();
+
+        // Find all matches
+        const container = document.getElementById('script-scenes-container');
+        if (!container) return;
+
+        const regex = new RegExp(`(${this.escapeRegex(query)})`, 'gi');
+
+        // Get all text nodes in screenplay content
+        const screenplayElements = container.querySelectorAll('.screenplay-action, .screenplay-dialogue, .screenplay-character, .screenplay-parenthetical');
+
+        screenplayElements.forEach(el => {
+            const text = el.textContent;
+            if (regex.test(text)) {
+                // Replace with highlighted version
+                el.innerHTML = text.replace(regex, '<mark class="search-highlight">$1</mark>');
+            }
+        });
+
+        // Collect all highlights
+        const highlights = container.querySelectorAll('.search-highlight');
+        this.scriptViewerState.searchResults = Array.from(highlights);
+
+        // Update count display
+        const countEl = document.getElementById('script-search-count');
+        if (countEl) {
+            const count = this.scriptViewerState.searchResults.length;
+            countEl.textContent = count > 0 ? `${1}/${count}` : '0 results';
+        }
+
+        // Scroll to first result
+        if (this.scriptViewerState.searchResults.length > 0) {
+            this.goToSearchResult(0);
+        }
+    },
+
+    /**
+     * Go to a specific search result
+     */
+    goToSearchResult(index) {
+        const results = this.scriptViewerState.searchResults;
+        if (results.length === 0) return;
+
+        // Wrap around
+        if (index < 0) index = results.length - 1;
+        if (index >= results.length) index = 0;
+
+        this.scriptViewerState.searchCurrentIndex = index;
+
+        // Remove current class from all
+        results.forEach(el => el.classList.remove('current'));
+
+        // Add current class to target
+        const target = results[index];
+        target.classList.add('current');
+
+        // Scroll into view
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        // Update count
+        const countEl = document.getElementById('script-search-count');
+        if (countEl) {
+            countEl.textContent = `${index + 1}/${results.length}`;
+        }
+    },
+
+    /**
+     * Go to next search result
+     */
+    nextSearchResult() {
+        this.goToSearchResult(this.scriptViewerState.searchCurrentIndex + 1);
+    },
+
+    /**
+     * Go to previous search result
+     */
+    prevSearchResult() {
+        this.goToSearchResult(this.scriptViewerState.searchCurrentIndex - 1);
+    },
+
+    /**
+     * Clear search highlights
+     */
+    clearSearchHighlights() {
+        const container = document.getElementById('script-scenes-container');
+        if (!container) return;
+
+        // Replace highlighted content with original text
+        const highlights = container.querySelectorAll('.search-highlight');
+        highlights.forEach(el => {
+            const text = el.textContent;
+            el.parentNode.replaceChild(document.createTextNode(text), el);
+        });
+
+        // Normalize text nodes
+        container.normalize();
+    },
+
+    /**
+     * Clear script search
+     */
+    clearScriptSearch() {
+        const searchInput = document.getElementById('script-search-input');
+        const countEl = document.getElementById('script-search-count');
+
+        if (searchInput) searchInput.value = '';
+        if (countEl) countEl.textContent = '';
+
+        this.scriptViewerState.searchQuery = '';
+        this.scriptViewerState.searchResults = [];
+        this.scriptViewerState.searchCurrentIndex = 0;
+
+        this.clearSearchHighlights();
+    },
+
+    /**
+     * Escape regex special characters
+     */
+    escapeRegex(string) {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    },
+
+    /**
+     * Close script viewer
+     */
+    closeScriptViewer() {
+        // Save scroll position
+        const contentArea = document.getElementById('script-content-area');
+        if (contentArea) {
+            this.scriptViewerState.scrollPositions[this.scriptViewerState.currentSceneIndex] = contentArea.scrollTop;
+        }
+
+        // Clear search
+        this.clearScriptSearch();
+
+        // Close dropdown
+        this.closeSceneJumpDropdown();
+
+        // Hide search bar
+        const searchBar = document.getElementById('script-search-bar');
+        if (searchBar) searchBar.classList.add('hidden');
+
+        // Navigate back
+        this.goBack();
+    },
+
+    /**
+     * Bind script viewer events
+     */
+    bindScriptViewerEvents() {
+        // Back button
+        const backBtn = document.getElementById('script-viewer-back');
+        if (backBtn) {
+            backBtn.onclick = () => this.closeScriptViewer();
+        }
+
+        // Done button
+        const doneBtn = document.getElementById('script-viewer-done');
+        if (doneBtn) {
+            doneBtn.onclick = () => this.closeScriptViewer();
+        }
+
+        // Scene jump button
+        const jumpBtn = document.getElementById('btn-scene-jump');
+        if (jumpBtn) {
+            jumpBtn.onclick = () => this.toggleSceneJumpDropdown();
+        }
+
+        // Scene jump list clicks
+        const jumpList = document.getElementById('scene-jump-list');
+        if (jumpList) {
+            jumpList.onclick = (e) => {
+                const item = e.target.closest('[data-jump-to-scene]');
+                if (item) {
+                    const sceneIndex = parseInt(item.dataset.jumpToScene, 10);
+                    this.jumpToScene(sceneIndex);
+                }
+            };
+        }
+
+        // Scene navigation buttons within scenes
+        const container = document.getElementById('script-scenes-container');
+        if (container) {
+            container.onclick = (e) => {
+                const navBtn = e.target.closest('[data-goto-scene]');
+                if (navBtn) {
+                    const sceneIndex = parseInt(navBtn.dataset.gotoScene, 10);
+                    this.jumpToScene(sceneIndex);
+                }
+            };
+        }
+
+        // Search toggle
+        const searchBtn = document.getElementById('btn-script-search');
+        if (searchBtn) {
+            searchBtn.onclick = () => this.toggleScriptSearch();
+        }
+
+        // Search input
+        const searchInput = document.getElementById('script-search-input');
+        if (searchInput) {
+            let debounceTimer;
+            searchInput.oninput = (e) => {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    this.performScriptSearch(e.target.value);
+                }, 300);
+            };
+        }
+
+        // Search navigation
+        const searchPrev = document.getElementById('script-search-prev');
+        const searchNext = document.getElementById('script-search-next');
+        const searchClear = document.getElementById('script-search-clear');
+
+        if (searchPrev) searchPrev.onclick = () => this.prevSearchResult();
+        if (searchNext) searchNext.onclick = () => this.nextSearchResult();
+        if (searchClear) searchClear.onclick = () => {
+            this.clearScriptSearch();
+            const searchBar = document.getElementById('script-search-bar');
+            if (searchBar) searchBar.classList.add('hidden');
+        };
+
+        // Back to scene button in not available message
+        const backToSceneBtn = document.getElementById('btn-script-back-to-scene');
+        if (backToSceneBtn) {
+            backToSceneBtn.onclick = () => this.closeScriptViewer();
+        }
+
+        // Close dropdown when clicking outside
+        const contentArea = document.getElementById('script-content-area');
+        if (contentArea) {
+            contentArea.onclick = () => {
+                if (this.scriptViewerState.jumpDropdownOpen) {
+                    this.closeSceneJumpDropdown();
+                }
+            };
+        }
+
+        // Pinch-to-zoom
+        this.bindPinchToZoom();
+    },
+
+    /**
+     * Bind pinch-to-zoom functionality
+     */
+    bindPinchToZoom() {
+        const contentArea = document.getElementById('script-content-area');
+        if (!contentArea) return;
+
+        let initialDistance = 0;
+        let currentZoom = this.scriptViewerState.zoomLevel;
+        const zoomLevels = ['small', 'normal', 'large', 'xlarge'];
+
+        contentArea.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                initialDistance = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+            }
+        }, { passive: true });
+
+        contentArea.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 2) {
+                const currentDistance = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+
+                const ratio = currentDistance / initialDistance;
+                const currentIndex = zoomLevels.indexOf(currentZoom);
+
+                if (ratio > 1.3 && currentIndex < zoomLevels.length - 1) {
+                    currentZoom = zoomLevels[currentIndex + 1];
+                    this.setZoomLevel(currentZoom);
+                    initialDistance = currentDistance;
+                } else if (ratio < 0.7 && currentIndex > 0) {
+                    currentZoom = zoomLevels[currentIndex - 1];
+                    this.setZoomLevel(currentZoom);
+                    initialDistance = currentDistance;
+                }
+            }
+        }, { passive: true });
+    },
+
+    /**
+     * Set zoom level
+     */
+    setZoomLevel(level) {
+        const contentArea = document.getElementById('script-content-area');
+        if (!contentArea) return;
+
+        // Remove all zoom classes
+        contentArea.classList.remove('zoom-small', 'zoom-normal', 'zoom-large', 'zoom-xlarge');
+
+        // Add new zoom class
+        contentArea.classList.add(`zoom-${level}`);
+
+        this.scriptViewerState.zoomLevel = level;
+
+        // Show zoom hint briefly
+        this.showZoomHint(level);
+    },
+
+    /**
+     * Show zoom level hint
+     */
+    showZoomHint(level) {
+        let hint = document.querySelector('.zoom-hint');
+
+        if (!hint) {
+            hint = document.createElement('div');
+            hint.className = 'zoom-hint';
+            document.getElementById('screen-script-viewer').appendChild(hint);
+        }
+
+        const labels = {
+            'small': 'Small Text',
+            'normal': 'Normal Text',
+            'large': 'Large Text',
+            'xlarge': 'Extra Large Text'
+        };
+
+        hint.textContent = labels[level] || level;
+        hint.classList.add('visible');
+
+        setTimeout(() => {
+            hint.classList.remove('visible');
+        }, 1500);
     },
 
     /**
