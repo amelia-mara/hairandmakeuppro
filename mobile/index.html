@@ -433,7 +433,7 @@
                     </svg>
                 </button>
                 <h1 class="top-bar-title">Scene <span id="detail-scene-number">1</span></h1>
-                <button class="top-bar-btn" id="btn-scene-reference">
+                <button class="top-bar-btn" id="btn-scene-script" title="View Full Script">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
                     </svg>
@@ -1328,6 +1328,100 @@
                     <span class="nav-label">Settings</span>
                 </button>
             </nav>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- SCREEN 13: SCRIPT VIEWER -->
+        <!-- ============================================ -->
+        <div class="screen" id="screen-script-viewer">
+            <div class="top-bar script-viewer-top-bar">
+                <button class="top-bar-btn back-btn" id="script-viewer-back">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M15 18l-6-6 6-6"/>
+                    </svg>
+                </button>
+                <div class="script-viewer-title-area">
+                    <h1 class="top-bar-title" id="script-viewer-title">Scene 1 Script</h1>
+                    <button class="scene-jump-btn" id="btn-scene-jump">
+                        <span id="scene-jump-label">Jump to Scene</span>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M6 9l6 6 6-6"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="script-viewer-actions">
+                    <button class="top-bar-btn" id="btn-script-search">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"/>
+                            <path d="M21 21l-4.35-4.35"/>
+                        </svg>
+                    </button>
+                    <button class="top-bar-btn" id="script-viewer-done">
+                        Done
+                    </button>
+                </div>
+            </div>
+
+            <!-- Script Search Bar -->
+            <div class="script-search-bar hidden" id="script-search-bar">
+                <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"/>
+                    <path d="M21 21l-4.35-4.35"/>
+                </svg>
+                <input type="text" class="search-input" id="script-search-input" placeholder="Search in script...">
+                <span class="search-results-count" id="script-search-count"></span>
+                <div class="search-nav-btns">
+                    <button class="search-nav-btn" id="script-search-prev">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 15l-6-6-6 6"/>
+                        </svg>
+                    </button>
+                    <button class="search-nav-btn" id="script-search-next">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M6 9l6 6 6-6"/>
+                        </svg>
+                    </button>
+                </div>
+                <button class="search-clear" id="script-search-clear">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Scene Jump Dropdown -->
+            <div class="scene-jump-dropdown hidden" id="scene-jump-dropdown">
+                <div class="scene-jump-list" id="scene-jump-list">
+                    <!-- Scene options rendered by JavaScript -->
+                </div>
+            </div>
+
+            <div class="screen-content scrollable script-content-area" id="script-content-area">
+                <!-- Script content will be rendered here -->
+                <div class="script-loading" id="script-loading">
+                    <div class="spinner"></div>
+                    <p>Loading script...</p>
+                </div>
+
+                <div class="script-not-available hidden" id="script-not-available">
+                    <div class="script-not-available-icon">
+                        <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 00-2 2v36a2 2 0 002 2h28a2 2 0 002-2V14z"/>
+                            <path d="M14 2v12h12"/>
+                            <path d="M12 25h16M12 31h10"/>
+                        </svg>
+                    </div>
+                    <h3>Script Text Not Available</h3>
+                    <p>Re-import your script from desktop to enable full script viewing.</p>
+                    <button class="btn btn-secondary" id="btn-script-back-to-scene">
+                        Back to Scene Detail
+                    </button>
+                </div>
+
+                <div class="script-scenes-container" id="script-scenes-container">
+                    <!-- Scenes will be rendered here -->
+                </div>
+            </div>
         </div>
 
         <!-- ============================================ -->
