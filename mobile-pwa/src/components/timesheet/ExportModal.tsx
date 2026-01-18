@@ -42,21 +42,27 @@ export function ExportModal({ isOpen, onClose, weekSummary, weekStartDate }: Exp
   // Calculate totals from entries
   const calculateTotals = () => {
     let preCallHours = 0;
+    let preCallPay = 0;
     let workingHours = 0;
+    let lateNightHours = 0;
     let basePay = 0;
     let otPay = 0;
+    let lateNightPay = 0;
     let sixthDayBonus = 0;
 
     weekSummary.entries.forEach(entry => {
       const calc = calculateEntry(entry);
       preCallHours += calc.preCallHours;
+      preCallPay += calc.preCallEarnings;
       workingHours += calc.workingHours;
+      lateNightHours += calc.lateNightHours;
       basePay += calc.dailyEarnings;
       otPay += calc.otEarnings;
+      lateNightPay += calc.lateNightEarnings;
       sixthDayBonus += calc.sixthDayBonus;
     });
 
-    return { preCallHours, workingHours, basePay, otPay, sixthDayBonus };
+    return { preCallHours, preCallPay, workingHours, lateNightHours, basePay, otPay, lateNightPay, sixthDayBonus };
   };
 
   const totals = calculateTotals();
@@ -87,15 +93,18 @@ export function ExportModal({ isOpen, onClose, weekSummary, weekStartDate }: Exp
       'Pre-Call',
       'Unit Call',
       'Out of Chair',
-      'Wrap',
+      'Wrap Out',
       '6th Day',
-      'Broken Lunch',
+      'Lunch (mins)',
       'Pre-Call Hours',
       'Working Hours',
       'OT Hours',
+      'Late Night Hours',
       'Total Hours',
+      'Pre-Call Pay',
       'Base Pay',
       'OT Pay',
+      'Late Night Pay',
       '6th Day Bonus',
       'Kit Rental',
       'Total Earnings',
@@ -108,15 +117,18 @@ export function ExportModal({ isOpen, onClose, weekSummary, weekStartDate }: Exp
       entry.preCall || '',
       entry.unitCall || '',
       entry.outOfChair || '',
-      entry.wrap || '',
+      entry.wrapOut || '',
       entry.isSixthDay ? 'Yes' : 'No',
-      entry.brokenLunch ? 'Yes' : 'No',
+      String(entry.lunchTaken ?? 60),
       calc.preCallHours.toFixed(2),
       calc.workingHours.toFixed(2),
       calc.otHours.toFixed(2),
+      calc.lateNightHours.toFixed(2),
       calc.totalHours.toFixed(2),
+      calc.preCallEarnings.toFixed(2),
       calc.dailyEarnings.toFixed(2),
       calc.otEarnings.toFixed(2),
+      calc.lateNightEarnings.toFixed(2),
       calc.sixthDayBonus.toFixed(2),
       calc.kitRental.toFixed(2),
       calc.totalEarnings.toFixed(2),
@@ -126,23 +138,26 @@ export function ExportModal({ isOpen, onClose, weekSummary, weekStartDate }: Exp
     // Add summary row
     rows.push([
       'TOTAL',
-      '',
-      '',
-      '',
-      '',
-      '',
-      '',
-      '',
+      '', // Day Type
+      '', // Pre-Call
+      '', // Unit Call
+      '', // Out of Chair
+      '', // Wrap Out
+      '', // 6th Day
+      '', // Lunch
       totals.preCallHours.toFixed(2),
       totals.workingHours.toFixed(2),
       weekSummary.otHours.toFixed(2),
+      totals.lateNightHours.toFixed(2),
       weekSummary.totalHours.toFixed(2),
+      totals.preCallPay.toFixed(2),
       totals.basePay.toFixed(2),
       totals.otPay.toFixed(2),
+      totals.lateNightPay.toFixed(2),
       totals.sixthDayBonus.toFixed(2),
       weekSummary.kitRentalTotal.toFixed(2),
       weekSummary.totalEarnings.toFixed(2),
-      '',
+      '', // Notes
     ]);
 
     return [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
@@ -209,7 +224,7 @@ export function ExportModal({ isOpen, onClose, weekSummary, weekStartDate }: Exp
                 <td><strong>${formatDate(date)}</strong>${entry.isSixthDay ? ' <span style="color:#C9A962">(6th)</span>' : ''}</td>
                 <td>${entry.preCall || '—'}</td>
                 <td>${entry.unitCall || '—'}</td>
-                <td>${entry.wrap || '—'}</td>
+                <td>${entry.wrapOut || '—'}</td>
                 <td>${calc.totalHours.toFixed(1)}</td>
                 <td>${calc.otHours > 0 ? calc.otHours.toFixed(1) : '—'}</td>
                 <td>£${calc.totalEarnings.toFixed(2)}</td>

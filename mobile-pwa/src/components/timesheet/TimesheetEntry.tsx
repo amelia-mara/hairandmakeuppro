@@ -149,6 +149,7 @@ export function TimesheetEntry({ onBack }: TimesheetEntryProps) {
               value={entry.preCall}
               onChange={(v) => updateField('preCall', v)}
               placeholder="05:30"
+              hint="1.5x rate"
             />
             <TimeInput
               label="UNIT CALL"
@@ -161,19 +162,37 @@ export function TimesheetEntry({ onBack }: TimesheetEntryProps) {
               value={entry.outOfChair}
               onChange={(v) => updateField('outOfChair', v)}
               placeholder="17:00"
+              hint="Talent leaves"
             />
             <TimeInput
-              label="WRAP"
-              value={entry.wrap}
-              onChange={(v) => updateField('wrap', v)}
+              label="WRAP OUT"
+              value={entry.wrapOut}
+              onChange={(v) => updateField('wrapOut', v)}
               placeholder="18:00"
+              hint="Leave building"
             />
           </div>
         </div>
 
-        {/* Checkboxes */}
+        {/* Lunch & 6th Day */}
         <div className="card">
-          <div className="flex gap-4">
+          <div className="flex items-center justify-between gap-4">
+            {/* Lunch duration */}
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-text-muted">Lunch</label>
+              <select
+                value={entry.lunchTaken}
+                onChange={(e) => updateField('lunchTaken', parseInt(e.target.value))}
+                className="input-field text-sm py-1.5 px-2"
+              >
+                <option value={30}>30 min</option>
+                <option value={45}>45 min</option>
+                <option value={60}>1 hour</option>
+                <option value={0}>None</option>
+              </select>
+            </div>
+
+            {/* 6th Day toggle */}
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -183,16 +202,6 @@ export function TimesheetEntry({ onBack }: TimesheetEntryProps) {
               />
               <span className="text-sm text-text-primary">6th Day</span>
               <span className="text-xs text-gold">(1.5x)</span>
-            </label>
-
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={entry.brokenLunch}
-                onChange={(e) => updateField('brokenLunch', e.target.checked)}
-                className="w-5 h-5 rounded border-border text-gold focus:ring-gold"
-              />
-              <span className="text-sm text-text-primary">Broken Lunch</span>
             </label>
           </div>
         </div>
@@ -243,12 +252,16 @@ interface TimeInputProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  hint?: string;
 }
 
-function TimeInput({ label, value, onChange, placeholder }: TimeInputProps) {
+function TimeInput({ label, value, onChange, placeholder, hint }: TimeInputProps) {
   return (
     <div>
-      <label className="field-label block mb-1.5">{label}</label>
+      <div className="flex items-center gap-1.5 mb-1.5">
+        <label className="field-label">{label}</label>
+        {hint && <span className="text-[9px] text-gold">{hint}</span>}
+      </div>
       <input
         type="time"
         value={value}
