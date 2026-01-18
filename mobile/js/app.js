@@ -40,6 +40,7 @@ const App = {
     // Timesheet entries
     timesheetEntries: [],
     timesheetFilter: 'this-week',
+    timesheetSelectedDate: null, // Currently selected date for quick entry
 
     // LocalStorage keys
     STORAGE_KEYS: {
@@ -165,11 +166,11 @@ const App = {
                 this.screenHistory = ['screen-home'];
                 break;
             case 'screen-timesheet':
-                this.renderTimesheet();
+                this.initQuickEntryTimesheet();
                 this.screenHistory = ['screen-home'];
                 break;
-            case 'screen-timesheet-form':
-                this.initTimesheetForm();
+            case 'screen-timesheet-history':
+                this.renderTimesheetHistory();
                 break;
             case 'screen-settings':
                 this.updateSettings();
@@ -193,7 +194,7 @@ const App = {
             'screen-photo-capture': 'scenes',
             'screen-lookbooks': 'lookbooks',
             'screen-timesheet': 'timesheet',
-            'screen-timesheet-form': 'timesheet',
+            'screen-timesheet-history': 'timesheet',
             'screen-settings': 'settings'
         };
 
@@ -1342,52 +1343,59 @@ const App = {
     },
 
     // ============================================
-    // TIMESHEET CALCULATION
+    // TIMESHEET - QUICK ENTRY
     // ============================================
 
     /**
-     * Bind timesheet calculation
+     * Bind timesheet calculation for quick entry
      */
     bindTimesheetCalculation() {
-        const callTime = document.getElementById('entry-call-time');
-        const wrapTime = document.getElementById('entry-wrap-time');
-        const mealBreak = document.getElementById('entry-meal-break');
-        const totalEl = document.getElementById('calculated-total');
-        const breakdownEl = document.getElementById('calc-breakdown');
+        const precall = document.getElementById('ts-precall');
+        const unitcall = document.getElementById('ts-unitcall');
+        const wrap = document.getElementById('ts-wrap');
+        const totalEl = document.getElementById('ts-total-hours');
+        const breakdownEl = document.getElementById('ts-hours-breakdown');
 
         const calculateTotal = () => {
-            if (!callTime || !wrapTime || !mealBreak) return;
+            if (!precall || !unitcall || !wrap) return;
 
-            const call = callTime.value.split(':').map(Number);
-            const wrap = wrapTime.value.split(':').map(Number);
-            const breakMins = parseInt(mealBreak.value) || 0;
+            const pre = precall.value.split(':').map(Number);
+            const unit = unitcall.value.split(':').map(Number);
+            const wrapTime = wrap.value.split(':').map(Number);
 
-            const callMinutes = call[0] * 60 + call[1];
-            const wrapMinutes = wrap[0] * 60 + wrap[1];
+            const preMinutes = pre[0] * 60 + pre[1];
+            const unitMinutes = unit[0] * 60 + unit[1];
+            let wrapMinutes = wrapTime[0] * 60 + wrapTime[1];
 
-            let workedMinutes = wrapMinutes - callMinutes;
-            if (workedMinutes < 0) workedMinutes += 24 * 60; // Handle overnight
+            // Handle overnight wrap
+            if (wrapMinutes < preMinutes) wrapMinutes += 24 * 60;
 
-            const totalMinutes = workedMinutes - breakMins;
-            const totalHours = totalMinutes / 60;
+            // Pre-call time (before unit call)
+            const precallDuration = Math.max(0, unitMinutes - preMinutes) / 60;
+
+            // Total worked time from unit call to wrap
+            const workedMinutes = wrapMinutes - unitMinutes;
+            const workedHours = workedMinutes / 60;
+
+            // Standard 30 min meal break (can be adjusted)
+            const breakMinutes = 30;
+            const breakHours = breakMinutes / 60;
+
+            // Total hours including pre-call
+            const totalHours = precallDuration + workedHours - breakHours;
 
             if (totalEl) {
                 totalEl.textContent = totalHours.toFixed(1);
             }
 
             if (breakdownEl) {
-                const workedHrs = Math.floor(workedMinutes / 60);
-                const workedMins = workedMinutes % 60;
-                const breakHrs = Math.floor(breakMins / 60);
-                const breakMinsRem = breakMins % 60;
-
-                breakdownEl.textContent = `${workedHrs}:${workedMins.toString().padStart(2, '0')} worked - ${breakHrs}:${breakMinsRem.toString().padStart(2, '0')} break`;
+                breakdownEl.textContent = `Pre-call: ${precallDuration.toFixed(1)} | Worked: ${workedHours.toFixed(1)} | Break: ${breakHours.toFixed(1)}`;
             }
         };
 
-        if (callTime) callTime.addEventListener('change', calculateTotal);
-        if (wrapTime) wrapTime.addEventListener('change', calculateTotal);
-        if (mealBreak) mealBreak.addEventListener('input', calculateTotal);
+        if (precall) precall.addEventListener('change', calculateTotal);
+        if (unitcall) unitcall.addEventListener('change', calculateTotal);
+        if (wrap) wrap.addEventListener('change', calculateTotal);
 
         // Calculate initial value
         calculateTotal();
@@ -1397,10 +1405,52 @@ const App = {
      * Bind timesheet event handlers
      */
     bindTimesheetEvents() {
-        // Save entry button
-        const saveBtn = document.getElementById('btn-save-entry');
+        // Save entry button (new quick entry)
+        const saveBtn = document.getElementById('btn-save-timesheet');
         if (saveBtn) {
-            saveBtn.addEventListener('click', () => this.saveTimesheetEntry());
+            saveBtn.addEventListener('click', () => this.saveQuickTimesheetEntry());
+        }
+
+        // Toggle buttons
+        const sixthDayBtn = document.getElementById('ts-sixth-day');
+        const brokenLunchBtn = document.getElementById('ts-broken-lunch');
+
+        if (sixthDayBtn) {
+            sixthDayBtn.addEventListener('click', () => {
+                sixthDayBtn.classList.toggle('active');
+            });
+        }
+
+        if (brokenLunchBtn) {
+            brokenLunchBtn.addEventListener('click', () => {
+                brokenLunchBtn.classList.toggle('active');
+            });
+        }
+
+        // Date navigation
+        const prevDayBtn = document.getElementById('ts-prev-day');
+        const nextDayBtn = document.getElementById('ts-next-day');
+        const dateDisplay = document.querySelector('.date-display');
+        const dateInput = document.getElementById('ts-date-input');
+
+        if (prevDayBtn) {
+            prevDayBtn.addEventListener('click', () => this.changeTimesheetDate(-1));
+        }
+
+        if (nextDayBtn) {
+            nextDayBtn.addEventListener('click', () => this.changeTimesheetDate(1));
+        }
+
+        if (dateDisplay && dateInput) {
+            dateDisplay.addEventListener('click', () => {
+                dateInput.showPicker?.() || dateInput.click();
+            });
+
+            dateInput.addEventListener('change', (e) => {
+                this.timesheetSelectedDate = new Date(e.target.value + 'T00:00:00');
+                this.updateTimesheetDateDisplay();
+                this.loadEntryForDate(this.timesheetSelectedDate);
+            });
         }
 
         // Export button
@@ -1414,6 +1464,232 @@ const App = {
 
         // Load saved timesheets
         this.loadTimesheets();
+    },
+
+    /**
+     * Initialize quick entry timesheet screen
+     */
+    initQuickEntryTimesheet() {
+        // Set selected date to today if not set
+        if (!this.timesheetSelectedDate) {
+            this.timesheetSelectedDate = new Date();
+            this.timesheetSelectedDate.setHours(0, 0, 0, 0);
+        }
+
+        // Update date display
+        this.updateTimesheetDateDisplay();
+
+        // Load entry for selected date if exists
+        this.loadEntryForDate(this.timesheetSelectedDate);
+
+        // Render week view
+        this.renderWeekView();
+
+        // Bind time input listeners
+        this.bindTimesheetCalculation();
+
+        // Reset toggle states
+        const sixthDayBtn = document.getElementById('ts-sixth-day');
+        const brokenLunchBtn = document.getElementById('ts-broken-lunch');
+        if (sixthDayBtn) sixthDayBtn.classList.remove('active');
+        if (brokenLunchBtn) brokenLunchBtn.classList.remove('active');
+    },
+
+    /**
+     * Update timesheet date display
+     */
+    updateTimesheetDateDisplay() {
+        const dayEl = document.getElementById('ts-date-day');
+        const fullEl = document.getElementById('ts-date-full');
+        const shootDayEl = document.getElementById('ts-shoot-day');
+        const dateInput = document.getElementById('ts-date-input');
+
+        if (!this.timesheetSelectedDate) return;
+
+        const date = this.timesheetSelectedDate;
+        const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
+        const fullDate = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+        if (dayEl) dayEl.textContent = dayName;
+        if (fullEl) fullEl.textContent = fullDate;
+        if (dateInput) dateInput.value = date.toISOString().split('T')[0];
+
+        // Calculate shoot day
+        const shootDay = this.timesheetEntries.length + 1;
+        if (shootDayEl) shootDayEl.textContent = `Day ${shootDay}`;
+    },
+
+    /**
+     * Change timesheet date by offset
+     */
+    changeTimesheetDate(offset) {
+        if (!this.timesheetSelectedDate) {
+            this.timesheetSelectedDate = new Date();
+        }
+
+        this.timesheetSelectedDate.setDate(this.timesheetSelectedDate.getDate() + offset);
+        this.updateTimesheetDateDisplay();
+        this.loadEntryForDate(this.timesheetSelectedDate);
+        this.renderWeekView();
+    },
+
+    /**
+     * Load entry for a specific date
+     */
+    loadEntryForDate(date) {
+        const dateStr = date.toISOString().split('T')[0];
+        const entry = this.timesheetEntries.find(e => e.date === dateStr);
+
+        const precall = document.getElementById('ts-precall');
+        const unitcall = document.getElementById('ts-unitcall');
+        const wrap = document.getElementById('ts-wrap');
+        const notes = document.getElementById('ts-notes');
+        const sixthDayBtn = document.getElementById('ts-sixth-day');
+        const brokenLunchBtn = document.getElementById('ts-broken-lunch');
+        const shootDayEl = document.getElementById('ts-shoot-day');
+
+        if (entry) {
+            // Load existing entry
+            if (precall) precall.value = entry.preCall || '05:30';
+            if (unitcall) unitcall.value = entry.unitCall || entry.callTime || '06:00';
+            if (wrap) wrap.value = entry.wrap || entry.wrapTime || '18:00';
+            if (notes) notes.value = entry.notes || '';
+            if (sixthDayBtn) sixthDayBtn.classList.toggle('active', entry.sixthDay || false);
+            if (brokenLunchBtn) brokenLunchBtn.classList.toggle('active', entry.brokenLunch || false);
+            if (shootDayEl) shootDayEl.textContent = entry.shootDay || `Day ${this.timesheetEntries.indexOf(entry) + 1}`;
+        } else {
+            // Reset to defaults
+            if (precall) precall.value = '05:30';
+            if (unitcall) unitcall.value = '06:00';
+            if (wrap) wrap.value = '18:00';
+            if (notes) notes.value = '';
+            if (sixthDayBtn) sixthDayBtn.classList.remove('active');
+            if (brokenLunchBtn) brokenLunchBtn.classList.remove('active');
+            if (shootDayEl) shootDayEl.textContent = `Day ${this.timesheetEntries.length + 1}`;
+        }
+
+        // Recalculate
+        this.bindTimesheetCalculation();
+    },
+
+    /**
+     * Render week view grid
+     */
+    renderWeekView() {
+        const container = document.getElementById('week-grid');
+        const weekTotalEl = document.getElementById('week-total-hours');
+        if (!container) return;
+
+        // Get start of current week (Sunday)
+        const today = new Date();
+        const startOfWeek = new Date(today);
+        startOfWeek.setDate(today.getDate() - today.getDay());
+        startOfWeek.setHours(0, 0, 0, 0);
+
+        const dayNames = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+        let weekTotal = 0;
+
+        container.innerHTML = '';
+
+        for (let i = 0; i < 7; i++) {
+            const dayDate = new Date(startOfWeek);
+            dayDate.setDate(startOfWeek.getDate() + i);
+            const dateStr = dayDate.toISOString().split('T')[0];
+
+            // Find entry for this day
+            const entry = this.timesheetEntries.find(e => e.date === dateStr);
+            const hours = entry?.totalHours || 0;
+            if (hours) weekTotal += hours;
+
+            const isToday = dayDate.toDateString() === today.toDateString();
+            const isSelected = this.timesheetSelectedDate &&
+                dayDate.toDateString() === this.timesheetSelectedDate.toDateString();
+
+            const dayEl = document.createElement('div');
+            dayEl.className = 'week-day';
+            if (isToday) dayEl.classList.add('today');
+            if (isSelected) dayEl.classList.add('selected');
+            if (entry) dayEl.classList.add('has-entry');
+
+            dayEl.innerHTML = `
+                <span class="week-day-name">${dayNames[i]}</span>
+                <span class="week-day-number">${dayDate.getDate()}</span>
+                <span class="week-day-hours">${hours ? hours.toFixed(1) : '-'}</span>
+            `;
+
+            dayEl.addEventListener('click', () => {
+                this.timesheetSelectedDate = dayDate;
+                this.updateTimesheetDateDisplay();
+                this.loadEntryForDate(dayDate);
+                this.renderWeekView();
+            });
+
+            container.appendChild(dayEl);
+        }
+
+        if (weekTotalEl) {
+            weekTotalEl.textContent = weekTotal.toFixed(1);
+        }
+    },
+
+    /**
+     * Save quick entry timesheet
+     */
+    saveQuickTimesheetEntry() {
+        const precall = document.getElementById('ts-precall');
+        const unitcall = document.getElementById('ts-unitcall');
+        const wrap = document.getElementById('ts-wrap');
+        const notes = document.getElementById('ts-notes');
+        const totalEl = document.getElementById('ts-total-hours');
+        const sixthDayBtn = document.getElementById('ts-sixth-day');
+        const brokenLunchBtn = document.getElementById('ts-broken-lunch');
+        const shootDayEl = document.getElementById('ts-shoot-day');
+
+        if (!this.timesheetSelectedDate) {
+            this.showToast('Please select a date');
+            return;
+        }
+
+        const dateStr = this.timesheetSelectedDate.toISOString().split('T')[0];
+
+        const entry = {
+            id: Date.now(),
+            date: dateStr,
+            shootDay: shootDayEl?.textContent || '',
+            preCall: precall?.value || '05:30',
+            unitCall: unitcall?.value || '06:00',
+            callTime: unitcall?.value || '06:00', // For backwards compatibility
+            wrap: wrap?.value || '18:00',
+            wrapTime: wrap?.value || '18:00', // For backwards compatibility
+            sixthDay: sixthDayBtn?.classList.contains('active') || false,
+            brokenLunch: brokenLunchBtn?.classList.contains('active') || false,
+            totalHours: parseFloat(totalEl?.textContent) || 0,
+            notes: notes?.value || '',
+            status: 'pending',
+            synced: false
+        };
+
+        // Check for existing entry for this date
+        const existingIndex = this.timesheetEntries.findIndex(e => e.date === dateStr);
+        if (existingIndex >= 0) {
+            // Update existing
+            entry.id = this.timesheetEntries[existingIndex].id;
+            this.timesheetEntries[existingIndex] = entry;
+            this.showToast('Entry updated');
+        } else {
+            // Add new
+            this.timesheetEntries.push(entry);
+            this.showToast('Entry saved');
+        }
+
+        // Sort by date
+        this.timesheetEntries.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        // Save to storage
+        this.saveTimesheets();
+
+        // Re-render week view
+        this.renderWeekView();
     },
 
     /**
@@ -1817,91 +2093,6 @@ const App = {
     },
 
     /**
-     * Initialize timesheet form (when navigating to form)
-     */
-    initTimesheetForm() {
-        const dateInput = document.getElementById('entry-date');
-        const shootDayInput = document.getElementById('entry-shoot-day');
-        const callTimeInput = document.getElementById('entry-call-time');
-        const wrapTimeInput = document.getElementById('entry-wrap-time');
-        const mealBreakInput = document.getElementById('entry-meal-break');
-        const notesInput = document.getElementById('entry-notes');
-
-        // Set today's date
-        if (dateInput) {
-            const today = new Date().toISOString().split('T')[0];
-            dateInput.value = today;
-        }
-
-        // Calculate shoot day based on existing entries
-        if (shootDayInput) {
-            const nextDay = this.timesheetEntries.length + 1;
-            shootDayInput.value = `Day ${nextDay}`;
-        }
-
-        // Reset other fields
-        if (callTimeInput) callTimeInput.value = '06:00';
-        if (wrapTimeInput) wrapTimeInput.value = '18:00';
-        if (mealBreakInput) mealBreakInput.value = '30';
-        if (notesInput) notesInput.value = '';
-
-        // Recalculate
-        this.bindTimesheetCalculation();
-    },
-
-    /**
-     * Save a timesheet entry
-     */
-    saveTimesheetEntry() {
-        const dateInput = document.getElementById('entry-date');
-        const shootDayInput = document.getElementById('entry-shoot-day');
-        const callTimeInput = document.getElementById('entry-call-time');
-        const wrapTimeInput = document.getElementById('entry-wrap-time');
-        const mealBreakInput = document.getElementById('entry-meal-break');
-        const notesInput = document.getElementById('entry-notes');
-        const totalEl = document.getElementById('calculated-total');
-
-        // Validate required fields
-        if (!dateInput?.value || !callTimeInput?.value || !wrapTimeInput?.value) {
-            this.showToast('Please fill in all required fields', 2500);
-            return;
-        }
-
-        const entry = {
-            id: Date.now(),
-            date: dateInput.value,
-            shootDay: shootDayInput?.value || '',
-            callTime: callTimeInput.value,
-            wrapTime: wrapTimeInput.value,
-            mealBreak: parseInt(mealBreakInput?.value) || 0,
-            totalHours: parseFloat(totalEl?.textContent) || 0,
-            notes: notesInput?.value || '',
-            status: 'pending'
-        };
-
-        // Check for duplicate date
-        const existingIndex = this.timesheetEntries.findIndex(e => e.date === entry.date);
-        if (existingIndex >= 0) {
-            // Update existing entry
-            this.timesheetEntries[existingIndex] = entry;
-            this.showToast('Entry updated');
-        } else {
-            // Add new entry
-            this.timesheetEntries.push(entry);
-            this.showToast('Entry saved');
-        }
-
-        // Sort by date (newest first)
-        this.timesheetEntries.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-        // Save to localStorage
-        this.saveTimesheets();
-
-        // Navigate back to timesheet list
-        this.navigateTo('screen-timesheet');
-    },
-
-    /**
      * Save timesheets to localStorage
      */
     saveTimesheets() {
@@ -1924,9 +2115,9 @@ const App = {
     },
 
     /**
-     * Render the timesheet list
+     * Render the timesheet history list
      */
-    renderTimesheet() {
+    renderTimesheetHistory() {
         const container = document.getElementById('timesheet-list');
         const weeklyHoursEl = document.getElementById('weekly-hours');
 
@@ -1962,15 +2153,28 @@ const App = {
             const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
             const fullDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
+            // Build badges for 6th day and broken lunch
+            let badges = '';
+            if (entry.sixthDay || entry.brokenLunch) {
+                badges = '<div class="entry-badges">';
+                if (entry.sixthDay) badges += '<span class="entry-badge sixth-day">6th Day</span>';
+                if (entry.brokenLunch) badges += '<span class="entry-badge broken-lunch">Broken Lunch</span>';
+                badges += '</div>';
+            }
+
+            const callTime = entry.unitCall || entry.callTime;
+            const wrapTime = entry.wrap || entry.wrapTime;
+
             return `
                 <div class="timesheet-entry" data-entry-id="${entry.id}">
                     <div class="entry-date">
                         <p class="entry-day">${dayName}</p>
                         <p class="entry-full-date">${fullDate}</p>
                         ${entry.shootDay ? `<span class="entry-shoot-day">${entry.shootDay}</span>` : ''}
+                        ${badges}
                     </div>
                     <div class="entry-times">
-                        <p class="entry-range">${entry.callTime} - ${entry.wrapTime}</p>
+                        <p class="entry-range">${callTime} - ${wrapTime}</p>
                         <p class="entry-hours">${entry.totalHours.toFixed(1)} hours</p>
                     </div>
                     <div class="entry-status ${entry.status}">${entry.status.charAt(0).toUpperCase() + entry.status.slice(1)}</div>
@@ -1978,7 +2182,7 @@ const App = {
             `;
         }).join('');
 
-        // Bind entry clicks for editing
+        // Bind entry clicks for editing (navigates to quick entry with that date)
         container.querySelectorAll('.timesheet-entry').forEach(entryEl => {
             entryEl.addEventListener('click', () => {
                 const entryId = parseInt(entryEl.dataset.entryId);
@@ -2024,7 +2228,7 @@ const App = {
      * Bind timesheet filter pills
      */
     bindTimesheetFilters() {
-        const filterPills = document.querySelectorAll('#screen-timesheet .filter-pills .pill');
+        const filterPills = document.querySelectorAll('#screen-timesheet-history .filter-pills .pill');
         filterPills.forEach(pill => {
             pill.addEventListener('click', () => {
                 // Update active state
@@ -2033,40 +2237,21 @@ const App = {
 
                 // Update filter and re-render
                 this.timesheetFilter = pill.dataset.filter;
-                this.renderTimesheet();
+                this.renderTimesheetHistory();
             });
         });
     },
 
     /**
-     * Edit an existing timesheet entry
+     * Edit an existing timesheet entry (go to quick entry screen with that date)
      */
     editTimesheetEntry(entryId) {
         const entry = this.timesheetEntries.find(e => e.id === entryId);
         if (!entry) return;
 
-        // Navigate to form
-        this.navigateTo('screen-timesheet-form');
-
-        // Populate form with entry data (after navigation)
-        setTimeout(() => {
-            const dateInput = document.getElementById('entry-date');
-            const shootDayInput = document.getElementById('entry-shoot-day');
-            const callTimeInput = document.getElementById('entry-call-time');
-            const wrapTimeInput = document.getElementById('entry-wrap-time');
-            const mealBreakInput = document.getElementById('entry-meal-break');
-            const notesInput = document.getElementById('entry-notes');
-
-            if (dateInput) dateInput.value = entry.date;
-            if (shootDayInput) shootDayInput.value = entry.shootDay;
-            if (callTimeInput) callTimeInput.value = entry.callTime;
-            if (wrapTimeInput) wrapTimeInput.value = entry.wrapTime;
-            if (mealBreakInput) mealBreakInput.value = entry.mealBreak;
-            if (notesInput) notesInput.value = entry.notes;
-
-            // Recalculate
-            this.bindTimesheetCalculation();
-        }, 50);
+        // Set selected date and navigate to quick entry
+        this.timesheetSelectedDate = new Date(entry.date + 'T00:00:00');
+        this.navigateTo('screen-timesheet');
     },
 
     // ============================================
@@ -2953,40 +3138,55 @@ const App = {
             }
         ];
 
-        // Demo timesheet entries
+        // Demo timesheet entries (with new quick entry fields)
         this.timesheetEntries = [
             {
                 id: Date.now() - 86400000 * 3,
                 date: this.getRelativeDate(-3),
                 shootDay: 'Day 1',
+                preCall: '05:00',
+                unitCall: '05:30',
                 callTime: '05:30',
+                wrap: '18:00',
                 wrapTime: '18:00',
-                mealBreak: 30,
+                sixthDay: false,
+                brokenLunch: false,
                 totalHours: 12,
                 notes: 'First day of production. Main cast looks established.',
-                status: 'approved'
+                status: 'approved',
+                synced: true
             },
             {
                 id: Date.now() - 86400000 * 2,
                 date: this.getRelativeDate(-2),
                 shootDay: 'Day 2',
+                preCall: '05:30',
+                unitCall: '06:00',
                 callTime: '06:00',
+                wrap: '19:30',
                 wrapTime: '19:30',
-                mealBreak: 45,
+                sixthDay: false,
+                brokenLunch: true,
                 totalHours: 12.75,
                 notes: 'Hospital scenes. Quick turnaround for Dr. Cole.',
-                status: 'approved'
+                status: 'approved',
+                synced: true
             },
             {
                 id: Date.now() - 86400000,
                 date: this.getRelativeDate(-1),
                 shootDay: 'Day 3',
+                preCall: '06:30',
+                unitCall: '07:00',
                 callTime: '07:00',
+                wrap: '17:00',
                 wrapTime: '17:00',
-                mealBreak: 30,
+                sixthDay: true,
+                brokenLunch: false,
                 totalHours: 9.5,
                 notes: 'Exterior scenes. Weather delays.',
-                status: 'pending'
+                status: 'pending',
+                synced: false
             }
         ];
 
