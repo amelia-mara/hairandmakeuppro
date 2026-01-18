@@ -286,7 +286,7 @@
                 </div>
 
                 <div class="modal-footer">
-                    <button class="btn btn-secondary" data-navigate="screen-scene-breakdown-preview">
+                    <button class="btn btn-secondary" data-navigate="screen-scene-list" data-action="close-modal">
                         Review Scenes First
                     </button>
                     <button class="btn btn-primary" data-navigate="screen-scene-list" data-action="confirm-characters">
@@ -329,7 +329,7 @@
                 <button class="pill" data-filter="incomplete">Incomplete</button>
             </div>
 
-            <div class="scene-count">
+            <div class="scene-count-header">
                 <span id="filtered-count">42</span> scenes
             </div>
 
@@ -701,7 +701,7 @@
                 <!-- Reference Photo Section -->
                 <div class="reference-section" id="reference-section" style="display: none;">
                     <h3 class="section-label">Previous Scene Reference</h3>
-                    <div class="reference-card" id="reference-card">
+                    <div class="reference-card-horizontal" id="reference-card">
                         <div class="reference-photo">
                             <img id="reference-photo-img" src="" alt="Reference photo">
                         </div>

@@ -3600,6 +3600,22 @@ const App = {
         if (markCompleteBtn) {
             markCompleteBtn.addEventListener('click', () => this.markSceneComplete());
         }
+
+        // Capture menu button (three dots)
+        const captureMenuBtn = document.getElementById('btn-capture-menu');
+        if (captureMenuBtn) {
+            captureMenuBtn.addEventListener('click', () => {
+                this.showToast('Photo options coming soon');
+            });
+        }
+
+        // Character search button
+        const characterSearchBtn = document.getElementById('btn-character-search');
+        if (characterSearchBtn) {
+            characterSearchBtn.addEventListener('click', () => {
+                this.showToast('Character search coming soon');
+            });
+        }
     },
 
     /**
