@@ -1,0 +1,3 @@
+export { MakeupForm } from './MakeupForm';
+export { HairForm } from './HairForm';
+export { NotesForm } from './NotesForm';
