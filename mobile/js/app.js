@@ -317,6 +317,12 @@ const App = {
                 this.filterLookbooks('');
             });
         }
+
+        // Lookbook export button
+        const lookbookExportBtn = document.getElementById('btn-export-lookbook');
+        if (lookbookExportBtn) {
+            lookbookExportBtn.addEventListener('click', () => this.exportLookbook());
+        }
     },
 
     /**
@@ -1395,8 +1401,417 @@ const App = {
             saveBtn.addEventListener('click', () => this.saveTimesheetEntry());
         }
 
+        // Export button
+        const exportBtn = document.getElementById('btn-export-timesheet');
+        if (exportBtn) {
+            exportBtn.addEventListener('click', () => this.showExportSheet());
+        }
+
+        // Export action sheet handlers
+        this.bindExportActions();
+
         // Load saved timesheets
         this.loadTimesheets();
+    },
+
+    /**
+     * Bind export action sheet events
+     */
+    bindExportActions() {
+        const actionSheet = document.getElementById('export-action-sheet');
+        const backdrop = actionSheet?.querySelector('.action-sheet-backdrop');
+        const cancelBtn = document.getElementById('export-cancel');
+        const csvBtn = document.getElementById('export-csv');
+        const pdfBtn = document.getElementById('export-pdf');
+        const shareBtn = document.getElementById('export-share');
+
+        // Close on backdrop click
+        if (backdrop) {
+            backdrop.addEventListener('click', () => this.hideExportSheet());
+        }
+
+        // Close on cancel
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => this.hideExportSheet());
+        }
+
+        // Export handlers
+        if (csvBtn) {
+            csvBtn.addEventListener('click', () => this.exportTimesheetCSV());
+        }
+
+        if (pdfBtn) {
+            pdfBtn.addEventListener('click', () => this.exportTimesheetPDF());
+        }
+
+        if (shareBtn) {
+            shareBtn.addEventListener('click', () => this.shareTimesheet());
+        }
+    },
+
+    /**
+     * Show export action sheet
+     */
+    showExportSheet() {
+        if (this.timesheetEntries.length === 0) {
+            this.showToast('No timesheet entries to export');
+            return;
+        }
+
+        const actionSheet = document.getElementById('export-action-sheet');
+        if (actionSheet) {
+            actionSheet.classList.add('active');
+        }
+    },
+
+    /**
+     * Hide export action sheet
+     */
+    hideExportSheet() {
+        const actionSheet = document.getElementById('export-action-sheet');
+        if (actionSheet) {
+            actionSheet.classList.remove('active');
+        }
+    },
+
+    /**
+     * Export timesheet as CSV
+     */
+    exportTimesheetCSV() {
+        this.hideExportSheet();
+
+        // Build CSV content
+        const headers = ['Date', 'Shoot Day', 'Call Time', 'Wrap Time', 'Meal Break (min)', 'Total Hours', 'Status', 'Notes'];
+        const rows = this.timesheetEntries.map(entry => {
+            const date = new Date(entry.date + 'T00:00:00');
+            const formattedDate = date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            });
+            return [
+                formattedDate,
+                entry.shootDay || '',
+                entry.callTime,
+                entry.wrapTime,
+                entry.mealBreak,
+                entry.totalHours.toFixed(2),
+                entry.status,
+                (entry.notes || '').replace(/"/g, '""') // Escape quotes
+            ];
+        });
+
+        // Add totals row
+        const totalHours = this.timesheetEntries.reduce((sum, e) => sum + e.totalHours, 0);
+        rows.push(['', '', '', '', 'TOTAL:', totalHours.toFixed(2), '', '']);
+
+        // Create CSV string
+        const csvContent = [
+            headers.join(','),
+            ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+        ].join('\n');
+
+        // Download file
+        this.downloadFile(csvContent, `timesheet-${this.getDateString()}.csv`, 'text/csv');
+        this.showToast('CSV exported successfully');
+    },
+
+    /**
+     * Export timesheet as PDF (HTML-based printable format)
+     */
+    exportTimesheetPDF() {
+        this.hideExportSheet();
+
+        // Calculate totals
+        const totalHours = this.timesheetEntries.reduce((sum, e) => sum + e.totalHours, 0);
+        const totalDays = this.timesheetEntries.length;
+
+        // Build HTML content
+        const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Timesheet Report - ${this.project.name}</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px; color: #1a1a1a; }
+        .header { margin-bottom: 30px; border-bottom: 2px solid #C9A961; padding-bottom: 20px; }
+        .header h1 { font-size: 24px; color: #1a1a1a; margin-bottom: 5px; }
+        .header p { font-size: 14px; color: #666; }
+        .summary { display: flex; gap: 40px; margin-bottom: 30px; }
+        .summary-item { }
+        .summary-label { font-size: 12px; color: #666; text-transform: uppercase; }
+        .summary-value { font-size: 28px; font-weight: 700; color: #C9A961; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+        th { background-color: #f5f5f5; text-align: left; padding: 12px; font-size: 12px; text-transform: uppercase; color: #666; border-bottom: 2px solid #ddd; }
+        td { padding: 12px; border-bottom: 1px solid #eee; font-size: 14px; }
+        .status { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+        .status.pending { background: #fff3cd; color: #856404; }
+        .status.approved { background: #d4edda; color: #155724; }
+        .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #999; }
+        @media print {
+            body { padding: 20px; }
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Timesheet Report</h1>
+        <p>${this.project.name} | Generated ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+    </div>
+
+    <div class="summary">
+        <div class="summary-item">
+            <p class="summary-label">Total Days</p>
+            <p class="summary-value">${totalDays}</p>
+        </div>
+        <div class="summary-item">
+            <p class="summary-label">Total Hours</p>
+            <p class="summary-value">${totalHours.toFixed(1)}</p>
+        </div>
+        <div class="summary-item">
+            <p class="summary-label">Avg Hours/Day</p>
+            <p class="summary-value">${totalDays > 0 ? (totalHours / totalDays).toFixed(1) : '0'}</p>
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Shoot Day</th>
+                <th>Call Time</th>
+                <th>Wrap Time</th>
+                <th>Break</th>
+                <th>Hours</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${this.timesheetEntries.map(entry => {
+                const date = new Date(entry.date + 'T00:00:00');
+                return `
+                    <tr>
+                        <td>${date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</td>
+                        <td>${entry.shootDay || '-'}</td>
+                        <td>${entry.callTime}</td>
+                        <td>${entry.wrapTime}</td>
+                        <td>${entry.mealBreak} min</td>
+                        <td><strong>${entry.totalHours.toFixed(1)}</strong></td>
+                        <td><span class="status ${entry.status}">${entry.status}</span></td>
+                    </tr>
+                `;
+            }).join('')}
+        </tbody>
+    </table>
+
+    <div class="footer">
+        <p>Hair & Makeup Pro | Timesheet Report</p>
+    </div>
+
+    <script class="no-print">
+        window.onload = function() { window.print(); }
+    </script>
+</body>
+</html>`;
+
+        // Open in new window for printing
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+            printWindow.document.write(htmlContent);
+            printWindow.document.close();
+            this.showToast('PDF report opened for printing');
+        } else {
+            this.showToast('Please allow popups to export PDF');
+        }
+    },
+
+    /**
+     * Share timesheet using Web Share API
+     */
+    async shareTimesheet() {
+        this.hideExportSheet();
+
+        // Build share text
+        const totalHours = this.timesheetEntries.reduce((sum, e) => sum + e.totalHours, 0);
+        const totalDays = this.timesheetEntries.length;
+
+        let shareText = `Timesheet Summary - ${this.project.name}\n\n`;
+        shareText += `Total Days: ${totalDays}\n`;
+        shareText += `Total Hours: ${totalHours.toFixed(1)}\n\n`;
+        shareText += `Daily Breakdown:\n`;
+
+        this.timesheetEntries.forEach(entry => {
+            const date = new Date(entry.date + 'T00:00:00');
+            const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            shareText += `${dateStr} (${entry.shootDay || '-'}): ${entry.totalHours.toFixed(1)} hrs\n`;
+        });
+
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: 'Timesheet Report',
+                    text: shareText
+                });
+                this.showToast('Shared successfully');
+            } catch (error) {
+                if (error.name !== 'AbortError') {
+                    console.error('Share failed:', error);
+                    this.copyToClipboard(shareText);
+                }
+            }
+        } else {
+            // Fallback: copy to clipboard
+            this.copyToClipboard(shareText);
+        }
+    },
+
+    /**
+     * Copy text to clipboard
+     */
+    async copyToClipboard(text) {
+        try {
+            await navigator.clipboard.writeText(text);
+            this.showToast('Copied to clipboard');
+        } catch (error) {
+            console.error('Copy failed:', error);
+            this.showToast('Could not copy to clipboard');
+        }
+    },
+
+    /**
+     * Download a file
+     */
+    downloadFile(content, filename, mimeType) {
+        const blob = new Blob([content], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    },
+
+    /**
+     * Get current date as string for filenames
+     */
+    getDateString() {
+        const now = new Date();
+        return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    },
+
+    /**
+     * Export lookbook as HTML gallery
+     */
+    async exportLookbook() {
+        if (this.characters.length === 0) {
+            this.showToast('No characters to export');
+            return;
+        }
+
+        this.showToast('Generating lookbook...');
+
+        try {
+            // Gather all photos for each character
+            const characterPhotos = [];
+
+            for (const character of this.characters) {
+                const photos = await PhotoStorage.getPhotosForCharacter(character.name);
+                if (photos.length > 0) {
+                    characterPhotos.push({
+                        name: character.name,
+                        photos: photos
+                    });
+                }
+            }
+
+            if (characterPhotos.length === 0) {
+                this.showToast('No photos to export');
+                return;
+            }
+
+            // Build HTML gallery
+            const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Lookbook - ${this.project.name}</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #1a1a1a; }
+        .header { background: linear-gradient(135deg, #C9A961 0%, #B8994F 100%); color: white; padding: 40px; text-align: center; }
+        .header h1 { font-size: 28px; margin-bottom: 5px; }
+        .header p { opacity: 0.9; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 30px; }
+        .character-section { background: white; border-radius: 12px; margin-bottom: 30px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .character-header { padding: 20px; border-bottom: 1px solid #eee; }
+        .character-header h2 { font-size: 20px; color: #1a1a1a; }
+        .character-header span { font-size: 14px; color: #666; }
+        .photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; padding: 20px; }
+        .photo-card { border-radius: 8px; overflow: hidden; background: #f9f9f9; }
+        .photo-card img { width: 100%; height: 200px; object-fit: cover; display: block; }
+        .photo-info { padding: 10px; }
+        .photo-info .angle { font-weight: 600; color: #1a1a1a; text-transform: capitalize; }
+        .photo-info .scene { font-size: 12px; color: #666; }
+        .footer { text-align: center; padding: 30px; color: #999; font-size: 12px; }
+        @media print {
+            .character-section { break-inside: avoid; }
+            .photo-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>${this.project.name}</h1>
+        <p>Character Lookbook | Generated ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+    </div>
+
+    <div class="container">
+        ${characterPhotos.map(char => `
+            <div class="character-section">
+                <div class="character-header">
+                    <h2>${char.name}</h2>
+                    <span>${char.photos.length} photo${char.photos.length !== 1 ? 's' : ''}</span>
+                </div>
+                <div class="photo-grid">
+                    ${char.photos.map(photo => `
+                        <div class="photo-card">
+                            <img src="${photo.imageData}" alt="${photo.angle}">
+                            <div class="photo-info">
+                                <p class="angle">${photo.angle}</p>
+                                <p class="scene">Scene ${photo.sceneIndex + 1}</p>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `).join('')}
+    </div>
+
+    <div class="footer">
+        <p>Hair & Makeup Pro | Character Lookbook</p>
+    </div>
+</body>
+</html>`;
+
+            // Open in new window
+            const galleryWindow = window.open('', '_blank');
+            if (galleryWindow) {
+                galleryWindow.document.write(htmlContent);
+                galleryWindow.document.close();
+                this.showToast('Lookbook exported');
+            } else {
+                this.showToast('Please allow popups to export');
+            }
+        } catch (error) {
+            console.error('Error exporting lookbook:', error);
+            this.showToast('Error exporting lookbook');
+        }
     },
 
     /**
