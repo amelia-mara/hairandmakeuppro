@@ -74,82 +74,261 @@ const ScriptProcessor = {
     },
 
     // ============================================
-    // PDF TEXT EXTRACTION (Enhanced)
+    // PDF TEXT EXTRACTION (Robust Position-Aware)
     // ============================================
 
     /**
-     * Extract text from a PDF file with proper line reconstruction
+     * Extract text fragments with X/Y positions from PDF
+     * pdf.js returns text as fragments, not logical lines - we need positions to reconstruct
+     * @param {File} file - The PDF file to process
+     * @returns {Promise<Array>} - Array of text items with positions
+     */
+    async extractTextWithPositions(file) {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+        const allItems = [];
+
+        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+            const page = await pdf.getPage(pageNum);
+            const textContent = await page.getTextContent();
+            const viewport = page.getViewport({ scale: 1.0 });
+
+            textContent.items.forEach(item => {
+                if (item.str.trim() === '') return;  // Skip empty
+
+                // Get position - Y is from bottom in PDF, flip it
+                const x = Math.round(item.transform[4]);
+                const y = Math.round(viewport.height - item.transform[5]);
+
+                allItems.push({
+                    text: item.str,
+                    x: x,
+                    y: y,
+                    page: pageNum,
+                    height: item.height || 12,
+                    width: item.width || item.str.length * 6
+                });
+            });
+        }
+
+        return { items: allItems, numPages: pdf.numPages };
+    },
+
+    /**
+     * Reconstruct logical lines from positioned text fragments
+     * A single line like "INT. KITCHEN - DAY" might be 3 separate fragments
+     * @param {Array} items - Text items with positions
+     * @returns {Array} - Reconstructed lines with position metadata
+     */
+    reconstructLines(items) {
+        // Sort by page, then Y (top to bottom), then X (left to right)
+        items.sort((a, b) => {
+            if (a.page !== b.page) return a.page - b.page;
+            if (Math.abs(a.y - b.y) > 5) return a.y - b.y;  // Different lines
+            return a.x - b.x;  // Same line, sort left to right
+        });
+
+        const lines = [];
+        let currentLine = [];
+        let lastY = null;
+        let lastPage = null;
+
+        items.forEach(item => {
+            // New page or new line (Y changed by more than threshold)
+            if (lastPage !== null && (item.page !== lastPage || Math.abs(item.y - lastY) > 8)) {
+                if (currentLine.length > 0) {
+                    lines.push(this.buildLine(currentLine));
+                }
+                currentLine = [];
+            }
+
+            currentLine.push(item);
+            lastY = item.y;
+            lastPage = item.page;
+        });
+
+        // Don't forget last line
+        if (currentLine.length > 0) {
+            lines.push(this.buildLine(currentLine));
+        }
+
+        return lines;
+    },
+
+    /**
+     * Build a single line from text fragments with proper spacing
+     * @param {Array} items - Text fragments that form one line
+     * @returns {Object} - Line object with text and position metadata
+     */
+    buildLine(items) {
+        // Sort items left to right
+        items.sort((a, b) => a.x - b.x);
+
+        // Calculate average X position (helps detect centered text like character names)
+        const avgX = items.reduce((sum, i) => sum + i.x, 0) / items.length;
+
+        // Join with appropriate spacing
+        let text = '';
+        let lastEndX = 0;
+
+        items.forEach((item, idx) => {
+            if (idx > 0) {
+                const gap = item.x - lastEndX;
+                if (gap > 20) {
+                    text += '   ';  // Large gap = intentional spacing (like tab)
+                } else if (gap > 3) {
+                    text += ' ';    // Normal word spacing
+                }
+                // else no space - fragments of same word
+            }
+            text += item.text;
+            lastEndX = item.x + item.width;
+        });
+
+        return {
+            text: text.trim(),
+            x: items[0].x,      // Leftmost X
+            avgX: avgX,         // Average X (for detecting centered text)
+            y: items[0].y,
+            page: items[0].page
+        };
+    },
+
+    /**
+     * Analyze screenplay structure based on indentation patterns
+     * Screenplays have consistent indentation for different elements
+     * @param {Array} lines - Reconstructed lines with positions
+     * @returns {Object} - Structure analysis with detection functions
+     */
+    analyzeStructure(lines) {
+        // Find the most common X positions to detect margins
+        const xCounts = {};
+        lines.forEach(line => {
+            const roundedX = Math.round(line.x / 10) * 10;  // Round to nearest 10
+            xCounts[roundedX] = (xCounts[roundedX] || 0) + 1;
+        });
+
+        // Sort by frequency
+        const commonX = Object.entries(xCounts)
+            .sort((a, b) => b[1] - a[1])
+            .map(e => parseInt(e[0]));
+
+        // Typically: leftMargin is most common (action), then dialogue indent, then character center
+        const leftMargin = commonX[0] || 70;
+
+        return {
+            leftMargin,
+            // Character names are usually centered (X > 180 and line is ALL CAPS)
+            isCharacterName: (line) => {
+                return line.x > leftMargin + 80 &&
+                       /^[A-Z][A-Z\s\-'\.]+(\s*\(.*\))?$/.test(line.text);
+            },
+            // Scene headings start with INT./EXT. at left margin
+            isSceneHeading: (line) => {
+                return line.x < leftMargin + 30 &&
+                       /^(INT\.|EXT\.|INT\.\/EXT\.|I\/E\.)/.test(line.text);
+            }
+        };
+    },
+
+    /**
+     * Convert reconstructed lines to clean text for parsing
+     * @param {Array} lines - Reconstructed lines
+     * @returns {string} - Clean text with proper line breaks
+     */
+    toCleanText(lines) {
+        return lines.map(l => l.text).join('\n');
+    },
+
+    /**
+     * Check if PDF is scanned/image-based
+     * @param {Array} items - Extracted text items
+     * @param {number} numPages - Number of pages in PDF
+     * @returns {Object} - Detection result with message if scanned
+     */
+    checkIfScanned(items, numPages) {
+        // If very few text items relative to page count, probably scanned
+        const textDensity = items.length / numPages;
+
+        if (textDensity < 50) {  // Normal script has 200+ items per page
+            return {
+                isScanned: true,
+                message: 'This PDF appears to be scanned or image-based. Text cannot be extracted. Please use a text-based PDF exported directly from screenwriting software (Final Draft, Highland, Fade In, etc.), or paste the script text manually.'
+            };
+        }
+
+        return { isScanned: false };
+    },
+
+    /**
+     * Full PDF extraction pipeline with robust text reconstruction
+     * @param {File} file - The PDF file to process
+     * @returns {Promise<Object>} - Extraction result with text and metadata
+     */
+    async extractScriptFromPDF(file) {
+        try {
+            // Step 1: Extract fragments with positions
+            const { items, numPages } = await this.extractTextWithPositions(file);
+
+            if (items.length === 0) {
+                throw new Error('No text found in PDF. The file may be scanned/image-based.');
+            }
+
+            // Step 2: Check if scanned
+            const scanCheck = this.checkIfScanned(items, numPages);
+            if (scanCheck.isScanned) {
+                throw new Error(scanCheck.message);
+            }
+
+            // Step 3: Reconstruct lines
+            const lines = this.reconstructLines(items);
+
+            // Step 4: Analyze structure (for future use/debugging)
+            const structure = this.analyzeStructure(lines);
+
+            // Step 5: Convert to clean text
+            const cleanText = this.toCleanText(lines);
+
+            // Additional validation
+            if (cleanText.trim().length < this.config.minTextLength) {
+                throw new Error('Very little text was extracted from this PDF. It may be corrupted, password-protected, or image-based.');
+            }
+
+            return {
+                success: true,
+                text: cleanText,
+                lines: lines,
+                structure: structure,
+                stats: {
+                    pages: numPages,
+                    fragments: items.length,
+                    lines: lines.length
+                }
+            };
+
+        } catch (error) {
+            return {
+                success: false,
+                error: error.message,
+                suggestion: 'Try pasting the script text directly, or export as .fountain from your screenwriting software.'
+            };
+        }
+    },
+
+    /**
+     * Legacy wrapper for backward compatibility
      * @param {File} file - The PDF file to process
      * @returns {Promise<string>} - The extracted text
      */
     async extractTextFromPDF(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
+        const result = await this.extractScriptFromPDF(file);
 
-            reader.onload = async (e) => {
-                try {
-                    const typedArray = new Uint8Array(e.target.result);
-                    const pdf = await pdfjsLib.getDocument(typedArray).promise;
+        if (!result.success) {
+            throw new Error(result.error);
+        }
 
-                    const pages = [];
-                    const numPages = pdf.numPages;
-
-                    for (let i = 1; i <= numPages; i++) {
-                        const page = await pdf.getPage(i);
-                        const textContent = await page.getTextContent();
-
-                        // Sort items by Y position (top to bottom), then X (left to right)
-                        const items = textContent.items.sort((a, b) => {
-                            const yDiff = b.transform[5] - a.transform[5]; // Y is inverted in PDF
-                            if (Math.abs(yDiff) > 5) return yDiff; // Different lines
-                            return a.transform[4] - b.transform[4]; // Same line, sort by X
-                        });
-
-                        // Reconstruct lines based on Y position
-                        const lines = [];
-                        let currentLine = [];
-                        let lastY = null;
-
-                        items.forEach(item => {
-                            const y = Math.round(item.transform[5]);
-                            if (lastY !== null && Math.abs(y - lastY) > 5) {
-                                // New line detected
-                                if (currentLine.length > 0) {
-                                    lines.push(currentLine.join(' ').trim());
-                                }
-                                currentLine = [];
-                            }
-                            if (item.str.trim()) {
-                                currentLine.push(item.str);
-                            }
-                            lastY = y;
-                        });
-
-                        // Don't forget the last line
-                        if (currentLine.length > 0) {
-                            lines.push(currentLine.join(' ').trim());
-                        }
-
-                        pages.push(lines.join('\n'));
-                    }
-
-                    const fullText = pages.join('\n\n');
-
-                    // Check if PDF is scanned/image-based
-                    if (fullText.trim().length < this.config.minTextLength) {
-                        reject(new Error('This PDF appears to be scanned or image-based. Please use a text-based PDF exported from screenwriting software (Final Draft, Highland, Fade In, etc.).'));
-                        return;
-                    }
-
-                    resolve(fullText);
-                } catch (error) {
-                    reject(new Error(`Failed to extract PDF text: ${error.message}`));
-                }
-            };
-
-            reader.onerror = () => reject(new Error('Failed to read file'));
-            reader.readAsArrayBuffer(file);
-        });
+        return result.text;
     },
 
     /**
@@ -178,6 +357,316 @@ const ScriptProcessor = {
             return this.extractTextFromPDF(file);
         } else {
             return this.extractTextFromFile(file);
+        }
+    },
+
+    // ============================================
+    // EXTRACTION VALIDATION & OCR FALLBACK
+    // ============================================
+
+    /**
+     * Validate extraction results to determine if OCR fallback is needed
+     * @param {string} text - Extracted text
+     * @param {Array} scenes - Detected scenes
+     * @returns {Object} - Validation result with confidence score
+     */
+    validateExtraction(text, scenes) {
+        const issues = [];
+
+        // Check 1: Do we have enough text?
+        if (!text || text.length < 500) {
+            issues.push('Very little text extracted');
+        }
+
+        // Check 2: Did we find any scenes?
+        if (!scenes || scenes.length === 0) {
+            issues.push('No scene headings found');
+        }
+
+        // Check 3: Do scenes have reasonable content?
+        if (scenes && scenes.length > 0) {
+            const avgContentLength = scenes.reduce((sum, s) => {
+                const contentLen = Array.isArray(s.content) ? s.content.join('\n').length : 0;
+                return sum + contentLen;
+            }, 0) / scenes.length;
+            if (avgContentLength < 100) {
+                issues.push('Scenes have very little content');
+            }
+        }
+
+        // Check 4: Did we find characters?
+        if (scenes && scenes.length > 0) {
+            const totalCharacters = [...new Set(scenes.flatMap(s => s.characters || []))].length;
+            if (totalCharacters === 0) {
+                issues.push('No characters detected');
+            }
+        }
+
+        // Check 5: Is the text garbled? (Look for too many special chars or no spaces)
+        if (text && text.length > 0) {
+            const alphaRatio = (text.match(/[a-zA-Z]/g) || []).length / text.length;
+            if (alphaRatio < 0.5) {
+                issues.push('Text appears garbled');
+            }
+        }
+
+        // Check 6: Does it have screenplay markers?
+        if (text) {
+            const hasScreenplayMarkers = /INT\.|EXT\.|FADE IN|CUT TO/i.test(text);
+            if (!hasScreenplayMarkers) {
+                issues.push('No screenplay formatting detected');
+            }
+        }
+
+        return {
+            isValid: issues.length === 0,
+            confidence: Math.max(0, 100 - (issues.length * 20)),  // Rough confidence score
+            issues: issues
+        };
+    },
+
+    /**
+     * Lazy load an external script
+     * @param {string} src - Script URL
+     * @returns {Promise} - Resolves when script is loaded
+     */
+    loadScript(src) {
+        return new Promise((resolve, reject) => {
+            // Check if already loaded
+            if (document.querySelector(`script[src="${src}"]`)) {
+                resolve();
+                return;
+            }
+            const script = document.createElement('script');
+            script.src = src;
+            script.onload = resolve;
+            script.onerror = () => reject(new Error(`Failed to load script: ${src}`));
+            document.head.appendChild(script);
+        });
+    },
+
+    /**
+     * Clean OCR text by fixing common misreads
+     * @param {string} text - Raw OCR text
+     * @returns {string} - Cleaned text
+     */
+    cleanOCRText(text) {
+        return text
+            // Fix common OCR misreads for screenplay terms
+            .replace(/lNT\./g, 'INT.')
+            .replace(/1NT\./g, 'INT.')
+            .replace(/EX T\./g, 'EXT.')
+            .replace(/EXT\s*\./g, 'EXT.')
+            .replace(/\|/g, 'I')
+            // Fix spacing issues
+            .replace(/[ \t]+/g, ' ')
+            .replace(/\n{3,}/g, '\n\n')
+            // Fix common character name issues
+            .replace(/([A-Z]{2,})\s*\n\s*([A-Z]{2,})/g, '$1 $2')  // Broken names
+            .trim();
+    },
+
+    /**
+     * Extract text from PDF using OCR (Tesseract.js)
+     * Used as fallback when text extraction fails or produces poor results
+     * @param {File} file - The PDF file
+     * @param {Function} onProgress - Progress callback
+     * @returns {Promise<string>} - OCR extracted text
+     */
+    async extractTextViaOCR(file, onProgress) {
+        // Lazy load Tesseract if not already loaded
+        if (!window.Tesseract) {
+            onProgress?.({ step: 'ocr_loading', message: 'Loading OCR engine...' });
+            await this.loadScript('https://unpkg.com/tesseract.js@4/dist/tesseract.min.js');
+        }
+
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+        onProgress?.({ step: 'ocr_init', message: 'Initializing OCR...' });
+
+        const worker = await Tesseract.createWorker('eng');
+        await worker.setParameters({
+            tessedit_pageseg_mode: '6',  // Assume uniform block of text
+            preserve_interword_spaces: '1'
+        });
+
+        const allText = [];
+        const totalPages = pdf.numPages;
+
+        for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+            const progress = Math.round((pageNum / totalPages) * 100);
+            onProgress?.({
+                step: 'ocr_page',
+                message: `OCR: Reading page ${pageNum} of ${totalPages}...`,
+                progress: progress,
+                currentPage: pageNum,
+                totalPages: totalPages
+            });
+
+            const page = await pdf.getPage(pageNum);
+            const scale = 2.0;  // Higher scale = better OCR accuracy
+            const viewport = page.getViewport({ scale });
+
+            // Create canvas for rendering
+            const canvas = document.createElement('canvas');
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            const ctx = canvas.getContext('2d');
+
+            // Render page to canvas
+            await page.render({ canvasContext: ctx, viewport }).promise;
+
+            // Run OCR on canvas
+            const { data: { text } } = await worker.recognize(canvas);
+            allText.push(text);
+
+            // Clean up canvas
+            canvas.remove();
+        }
+
+        await worker.terminate();
+
+        return this.cleanOCRText(allText.join('\n\n'));
+    },
+
+    /**
+     * Smart hybrid PDF import - tries text extraction first, falls back to OCR
+     * @param {File} file - The PDF file
+     * @param {Function} onProgress - Progress callback
+     * @returns {Promise<Object>} - Import result with method used
+     */
+    async importPDFScript(file, onProgress) {
+        const startTime = Date.now();
+
+        // =====================
+        // STEP 1: Try text extraction first (FAST)
+        // =====================
+        onProgress?.({
+            step: 'text_extract',
+            message: 'Extracting text...',
+            progress: 10
+        });
+
+        let textResult;
+        try {
+            textResult = await this.extractScriptFromPDF(file);
+        } catch (e) {
+            textResult = { success: false, error: e.message };
+        }
+
+        if (textResult.success) {
+            // Parse scenes from extracted text
+            const scenes = this.detectScenes(textResult.text);
+            const characters = this.extractCharacters(textResult.text, scenes);
+
+            // Assign characters to scenes
+            characters.forEach(char => {
+                char.sceneIndices.forEach(sceneIndex => {
+                    const scene = scenes[sceneIndex];
+                    if (scene && !scene.characters.includes(char.name)) {
+                        scene.characters.push(char.name);
+                    }
+                });
+            });
+
+            const validation = this.validateExtraction(textResult.text, scenes);
+
+            if (validation.isValid || validation.confidence >= 60) {
+                // Text extraction worked well enough
+                console.log(`Text extraction succeeded (${Date.now() - startTime}ms, confidence: ${validation.confidence}%)`);
+
+                return {
+                    success: true,
+                    method: 'text',
+                    scenes: scenes,
+                    characters: characters,
+                    duplicates: this.detectDuplicates(characters),
+                    rawText: textResult.text,
+                    confidence: validation.confidence,
+                    processingTime: Date.now() - startTime,
+                    stats: {
+                        ...textResult.stats,
+                        totalScenes: scenes.length,
+                        totalCharacters: characters.length
+                    }
+                };
+            } else {
+                console.log(`Text extraction quality poor: ${validation.issues.join(', ')}`);
+                onProgress?.({
+                    step: 'text_failed',
+                    message: `Text extraction: Low quality (${validation.issues.join(', ')})`,
+                    progress: 20
+                });
+            }
+        } else {
+            onProgress?.({
+                step: 'text_failed',
+                message: `Text extraction failed: ${textResult.error}`,
+                progress: 20
+            });
+        }
+
+        // =====================
+        // STEP 2: Fall back to OCR (SLOWER but reliable)
+        // =====================
+        onProgress?.({
+            step: 'ocr_start',
+            message: 'Text extraction insufficient. Switching to OCR...',
+            progress: 25
+        });
+
+        try {
+            const ocrText = await this.extractTextViaOCR(file, onProgress);
+            const ocrScenes = this.detectScenes(ocrText);
+            const ocrCharacters = this.extractCharacters(ocrText, ocrScenes);
+
+            // Assign characters to scenes
+            ocrCharacters.forEach(char => {
+                char.sceneIndices.forEach(sceneIndex => {
+                    const scene = ocrScenes[sceneIndex];
+                    if (scene && !scene.characters.includes(char.name)) {
+                        scene.characters.push(char.name);
+                    }
+                });
+            });
+
+            const ocrValidation = this.validateExtraction(ocrText, ocrScenes);
+
+            if (ocrScenes.length === 0) {
+                throw new Error('OCR could not detect scene headings. This may not be a screenplay.');
+            }
+
+            console.log(`OCR succeeded (${Date.now() - startTime}ms, confidence: ${ocrValidation.confidence}%)`);
+
+            return {
+                success: true,
+                method: 'ocr',
+                scenes: ocrScenes,
+                characters: ocrCharacters,
+                duplicates: this.detectDuplicates(ocrCharacters),
+                rawText: ocrText,
+                confidence: ocrValidation.confidence,
+                processingTime: Date.now() - startTime,
+                stats: {
+                    totalScenes: ocrScenes.length,
+                    totalCharacters: ocrCharacters.length
+                },
+                warnings: ocrValidation.issues.length > 0 ? ocrValidation.issues : null
+            };
+
+        } catch (ocrError) {
+            // Both methods failed
+            const processingTime = Date.now() - startTime;
+            console.error('Both text extraction and OCR failed:', ocrError);
+
+            return {
+                success: false,
+                error: 'Could not read this PDF',
+                details: `Text extraction: ${textResult?.error || 'Low quality'}. OCR: ${ocrError.message}`,
+                suggestion: 'Please try pasting the script text directly, or export as .fountain from your screenwriting software.',
+                processingTime: processingTime
+            };
         }
     },
 
@@ -697,23 +1186,116 @@ const ScriptProcessor = {
     // ============================================
 
     /**
-     * Process a script file completely
+     * Process a script file completely with robust PDF extraction
      * @param {File} file - The script file
      * @param {Function} onProgress - Progress callback
      * @returns {Promise<Object>} - Processing results
      */
     async processScript(file, onProgress = () => {}) {
         try {
-            // Step 1: Extract text with line reconstruction
-            onProgress({ step: 'extracting', progress: 10, message: 'Extracting text from PDF...' });
-            const text = await this.extractText(file);
+            const extension = file.name.split('.').pop().toLowerCase();
+
+            // For PDFs, use hybrid import with OCR fallback
+            if (extension === 'pdf') {
+                onProgress({ step: 'extracting', progress: 10, message: 'Extracting text from PDF...' });
+
+                // Use hybrid import - tries text extraction first, falls back to OCR
+                const importResult = await this.importPDFScript(file, (progress) => {
+                    // Map hybrid import progress to standard progress format
+                    if (progress.step === 'text_extract') {
+                        onProgress({ step: 'extracting', progress: 15, message: 'Extracting text...' });
+                    } else if (progress.step === 'text_failed') {
+                        onProgress({ step: 'extracting', progress: 20, message: progress.message });
+                    } else if (progress.step === 'ocr_loading') {
+                        onProgress({ step: 'ocr', progress: 25, message: 'Loading OCR engine...' });
+                    } else if (progress.step === 'ocr_init') {
+                        onProgress({ step: 'ocr', progress: 30, message: 'Initializing OCR...' });
+                    } else if (progress.step === 'ocr_start') {
+                        onProgress({ step: 'ocr', progress: 30, message: 'Text quality low. Switching to OCR...' });
+                    } else if (progress.step === 'ocr_page') {
+                        // Map OCR page progress (0-100) to our range (30-85)
+                        const mappedProgress = 30 + Math.round((progress.progress / 100) * 55);
+                        onProgress({
+                            step: 'ocr',
+                            progress: mappedProgress,
+                            message: progress.message,
+                            currentPage: progress.currentPage,
+                            totalPages: progress.totalPages
+                        });
+                    }
+                });
+
+                if (!importResult.success) {
+                    return {
+                        success: false,
+                        error: importResult.error,
+                        details: importResult.details,
+                        suggestion: importResult.suggestion,
+                        errorType: 'extraction',
+                        processingTime: importResult.processingTime
+                    };
+                }
+
+                // Hybrid import already detected scenes and characters
+                onProgress({ step: 'duplicates', progress: 90, message: 'Checking for duplicates...' });
+
+                onProgress({ step: 'complete', progress: 100, message: 'Analysis complete!' });
+
+                // Categorize characters by confidence
+                const highConfidence = importResult.characters.filter(c => c.confidence >= 0.7);
+                const mediumConfidence = importResult.characters.filter(c => c.confidence >= 0.4 && c.confidence < 0.7);
+                const lowConfidence = importResult.characters.filter(c => c.confidence < 0.4);
+
+                // Build warnings for potential issues
+                const warnings = importResult.warnings || [];
+                if (importResult.characters.length === 0) {
+                    warnings.push('No characters were detected. You may need to add them manually.');
+                } else if (importResult.characters.length < 3) {
+                    warnings.push(`Only ${importResult.characters.length} character(s) found. Some may have been missed.`);
+                }
+                if (lowConfidence.length > highConfidence.length) {
+                    warnings.push('Many low-confidence character detections. Review the list carefully.');
+                }
+                if (importResult.method === 'ocr') {
+                    warnings.push('OCR was used - please review for any misread text.');
+                }
+
+                return {
+                    success: true,
+                    scenes: importResult.scenes,
+                    characters: importResult.characters,
+                    duplicates: importResult.duplicates,
+                    rawText: importResult.rawText,
+                    method: importResult.method,  // 'text' or 'ocr'
+                    confidence: importResult.confidence,
+                    processingTime: importResult.processingTime,
+                    stats: {
+                        ...importResult.stats,
+                        highConfidenceCount: highConfidence.length,
+                        mediumConfidenceCount: mediumConfidence.length,
+                        lowConfidenceCount: lowConfidence.length,
+                        duplicateGroups: importResult.duplicates.length
+                    },
+                    warnings: warnings.length > 0 ? warnings : null
+                };
+            }
+
+            // For text files, use simple extraction
+            onProgress({ step: 'extracting', progress: 10, message: 'Reading text file...' });
+            const text = await this.extractTextFromFile(file);
 
             // Step 2: Detect scenes using pattern matching
             onProgress({ step: 'scenes', progress: 40, message: 'Detecting scenes...' });
             const scenes = this.detectScenes(text);
 
             if (scenes.length === 0) {
-                throw new Error('No scenes detected. Please ensure this is a properly formatted screenplay with scene headings (INT./EXT.).');
+                return {
+                    success: false,
+                    error: 'No scene headings (INT./EXT.) detected. Is this a properly formatted screenplay?',
+                    suggestion: 'Ensure your script uses standard scene headings like "INT. LOCATION - DAY" or "EXT. LOCATION - NIGHT".',
+                    errorType: 'no_scenes',
+                    rawText: text
+                };
             }
 
             // Step 3: Extract characters with confidence scoring
@@ -731,11 +1313,24 @@ const ScriptProcessor = {
             const mediumConfidence = characters.filter(c => c.confidence >= 0.4 && c.confidence < 0.7);
             const lowConfidence = characters.filter(c => c.confidence < 0.4);
 
+            // Build warnings for potential issues
+            const warnings = [];
+            if (characters.length === 0) {
+                warnings.push('No characters were detected. You may need to add them manually.');
+            } else if (characters.length < 3) {
+                warnings.push(`Only ${characters.length} character(s) found. Some may have been missed.`);
+            }
+            if (lowConfidence.length > highConfidence.length) {
+                warnings.push('Many low-confidence character detections. Review the list carefully.');
+            }
+
             return {
                 success: true,
                 scenes,
                 characters,
                 duplicates,
+                rawText: text,
+                method: 'text',
                 stats: {
                     totalScenes: scenes.length,
                     totalCharacters: characters.length,
@@ -743,13 +1338,22 @@ const ScriptProcessor = {
                     mediumConfidenceCount: mediumConfidence.length,
                     lowConfidenceCount: lowConfidence.length,
                     duplicateGroups: duplicates.length
-                }
+                },
+                warnings: warnings.length > 0 ? warnings : null
             };
         } catch (error) {
             console.error('Script processing error:', error);
+
+            let suggestion = 'Try pasting the script text directly, or export as .fountain from your screenwriting software.';
+
+            if (error.message.includes('password')) {
+                suggestion = 'This PDF may be password-protected. Please remove the password protection and try again.';
+            }
+
             return {
                 success: false,
-                error: error.message
+                error: error.message,
+                suggestion: suggestion
             };
         }
     },
