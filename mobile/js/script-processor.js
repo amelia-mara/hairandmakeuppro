@@ -74,82 +74,261 @@ const ScriptProcessor = {
     },
 
     // ============================================
-    // PDF TEXT EXTRACTION (Enhanced)
+    // PDF TEXT EXTRACTION (Robust Position-Aware)
     // ============================================
 
     /**
-     * Extract text from a PDF file with proper line reconstruction
+     * Extract text fragments with X/Y positions from PDF
+     * pdf.js returns text as fragments, not logical lines - we need positions to reconstruct
+     * @param {File} file - The PDF file to process
+     * @returns {Promise<Array>} - Array of text items with positions
+     */
+    async extractTextWithPositions(file) {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+        const allItems = [];
+
+        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+            const page = await pdf.getPage(pageNum);
+            const textContent = await page.getTextContent();
+            const viewport = page.getViewport({ scale: 1.0 });
+
+            textContent.items.forEach(item => {
+                if (item.str.trim() === '') return;  // Skip empty
+
+                // Get position - Y is from bottom in PDF, flip it
+                const x = Math.round(item.transform[4]);
+                const y = Math.round(viewport.height - item.transform[5]);
+
+                allItems.push({
+                    text: item.str,
+                    x: x,
+                    y: y,
+                    page: pageNum,
+                    height: item.height || 12,
+                    width: item.width || item.str.length * 6
+                });
+            });
+        }
+
+        return { items: allItems, numPages: pdf.numPages };
+    },
+
+    /**
+     * Reconstruct logical lines from positioned text fragments
+     * A single line like "INT. KITCHEN - DAY" might be 3 separate fragments
+     * @param {Array} items - Text items with positions
+     * @returns {Array} - Reconstructed lines with position metadata
+     */
+    reconstructLines(items) {
+        // Sort by page, then Y (top to bottom), then X (left to right)
+        items.sort((a, b) => {
+            if (a.page !== b.page) return a.page - b.page;
+            if (Math.abs(a.y - b.y) > 5) return a.y - b.y;  // Different lines
+            return a.x - b.x;  // Same line, sort left to right
+        });
+
+        const lines = [];
+        let currentLine = [];
+        let lastY = null;
+        let lastPage = null;
+
+        items.forEach(item => {
+            // New page or new line (Y changed by more than threshold)
+            if (lastPage !== null && (item.page !== lastPage || Math.abs(item.y - lastY) > 8)) {
+                if (currentLine.length > 0) {
+                    lines.push(this.buildLine(currentLine));
+                }
+                currentLine = [];
+            }
+
+            currentLine.push(item);
+            lastY = item.y;
+            lastPage = item.page;
+        });
+
+        // Don't forget last line
+        if (currentLine.length > 0) {
+            lines.push(this.buildLine(currentLine));
+        }
+
+        return lines;
+    },
+
+    /**
+     * Build a single line from text fragments with proper spacing
+     * @param {Array} items - Text fragments that form one line
+     * @returns {Object} - Line object with text and position metadata
+     */
+    buildLine(items) {
+        // Sort items left to right
+        items.sort((a, b) => a.x - b.x);
+
+        // Calculate average X position (helps detect centered text like character names)
+        const avgX = items.reduce((sum, i) => sum + i.x, 0) / items.length;
+
+        // Join with appropriate spacing
+        let text = '';
+        let lastEndX = 0;
+
+        items.forEach((item, idx) => {
+            if (idx > 0) {
+                const gap = item.x - lastEndX;
+                if (gap > 20) {
+                    text += '   ';  // Large gap = intentional spacing (like tab)
+                } else if (gap > 3) {
+                    text += ' ';    // Normal word spacing
+                }
+                // else no space - fragments of same word
+            }
+            text += item.text;
+            lastEndX = item.x + item.width;
+        });
+
+        return {
+            text: text.trim(),
+            x: items[0].x,      // Leftmost X
+            avgX: avgX,         // Average X (for detecting centered text)
+            y: items[0].y,
+            page: items[0].page
+        };
+    },
+
+    /**
+     * Analyze screenplay structure based on indentation patterns
+     * Screenplays have consistent indentation for different elements
+     * @param {Array} lines - Reconstructed lines with positions
+     * @returns {Object} - Structure analysis with detection functions
+     */
+    analyzeStructure(lines) {
+        // Find the most common X positions to detect margins
+        const xCounts = {};
+        lines.forEach(line => {
+            const roundedX = Math.round(line.x / 10) * 10;  // Round to nearest 10
+            xCounts[roundedX] = (xCounts[roundedX] || 0) + 1;
+        });
+
+        // Sort by frequency
+        const commonX = Object.entries(xCounts)
+            .sort((a, b) => b[1] - a[1])
+            .map(e => parseInt(e[0]));
+
+        // Typically: leftMargin is most common (action), then dialogue indent, then character center
+        const leftMargin = commonX[0] || 70;
+
+        return {
+            leftMargin,
+            // Character names are usually centered (X > 180 and line is ALL CAPS)
+            isCharacterName: (line) => {
+                return line.x > leftMargin + 80 &&
+                       /^[A-Z][A-Z\s\-'\.]+(\s*\(.*\))?$/.test(line.text);
+            },
+            // Scene headings start with INT./EXT. at left margin
+            isSceneHeading: (line) => {
+                return line.x < leftMargin + 30 &&
+                       /^(INT\.|EXT\.|INT\.\/EXT\.|I\/E\.)/.test(line.text);
+            }
+        };
+    },
+
+    /**
+     * Convert reconstructed lines to clean text for parsing
+     * @param {Array} lines - Reconstructed lines
+     * @returns {string} - Clean text with proper line breaks
+     */
+    toCleanText(lines) {
+        return lines.map(l => l.text).join('\n');
+    },
+
+    /**
+     * Check if PDF is scanned/image-based
+     * @param {Array} items - Extracted text items
+     * @param {number} numPages - Number of pages in PDF
+     * @returns {Object} - Detection result with message if scanned
+     */
+    checkIfScanned(items, numPages) {
+        // If very few text items relative to page count, probably scanned
+        const textDensity = items.length / numPages;
+
+        if (textDensity < 50) {  // Normal script has 200+ items per page
+            return {
+                isScanned: true,
+                message: 'This PDF appears to be scanned or image-based. Text cannot be extracted. Please use a text-based PDF exported directly from screenwriting software (Final Draft, Highland, Fade In, etc.), or paste the script text manually.'
+            };
+        }
+
+        return { isScanned: false };
+    },
+
+    /**
+     * Full PDF extraction pipeline with robust text reconstruction
+     * @param {File} file - The PDF file to process
+     * @returns {Promise<Object>} - Extraction result with text and metadata
+     */
+    async extractScriptFromPDF(file) {
+        try {
+            // Step 1: Extract fragments with positions
+            const { items, numPages } = await this.extractTextWithPositions(file);
+
+            if (items.length === 0) {
+                throw new Error('No text found in PDF. The file may be scanned/image-based.');
+            }
+
+            // Step 2: Check if scanned
+            const scanCheck = this.checkIfScanned(items, numPages);
+            if (scanCheck.isScanned) {
+                throw new Error(scanCheck.message);
+            }
+
+            // Step 3: Reconstruct lines
+            const lines = this.reconstructLines(items);
+
+            // Step 4: Analyze structure (for future use/debugging)
+            const structure = this.analyzeStructure(lines);
+
+            // Step 5: Convert to clean text
+            const cleanText = this.toCleanText(lines);
+
+            // Additional validation
+            if (cleanText.trim().length < this.config.minTextLength) {
+                throw new Error('Very little text was extracted from this PDF. It may be corrupted, password-protected, or image-based.');
+            }
+
+            return {
+                success: true,
+                text: cleanText,
+                lines: lines,
+                structure: structure,
+                stats: {
+                    pages: numPages,
+                    fragments: items.length,
+                    lines: lines.length
+                }
+            };
+
+        } catch (error) {
+            return {
+                success: false,
+                error: error.message,
+                suggestion: 'Try pasting the script text directly, or export as .fountain from your screenwriting software.'
+            };
+        }
+    },
+
+    /**
+     * Legacy wrapper for backward compatibility
      * @param {File} file - The PDF file to process
      * @returns {Promise<string>} - The extracted text
      */
     async extractTextFromPDF(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
+        const result = await this.extractScriptFromPDF(file);
 
-            reader.onload = async (e) => {
-                try {
-                    const typedArray = new Uint8Array(e.target.result);
-                    const pdf = await pdfjsLib.getDocument(typedArray).promise;
+        if (!result.success) {
+            throw new Error(result.error);
+        }
 
-                    const pages = [];
-                    const numPages = pdf.numPages;
-
-                    for (let i = 1; i <= numPages; i++) {
-                        const page = await pdf.getPage(i);
-                        const textContent = await page.getTextContent();
-
-                        // Sort items by Y position (top to bottom), then X (left to right)
-                        const items = textContent.items.sort((a, b) => {
-                            const yDiff = b.transform[5] - a.transform[5]; // Y is inverted in PDF
-                            if (Math.abs(yDiff) > 5) return yDiff; // Different lines
-                            return a.transform[4] - b.transform[4]; // Same line, sort by X
-                        });
-
-                        // Reconstruct lines based on Y position
-                        const lines = [];
-                        let currentLine = [];
-                        let lastY = null;
-
-                        items.forEach(item => {
-                            const y = Math.round(item.transform[5]);
-                            if (lastY !== null && Math.abs(y - lastY) > 5) {
-                                // New line detected
-                                if (currentLine.length > 0) {
-                                    lines.push(currentLine.join(' ').trim());
-                                }
-                                currentLine = [];
-                            }
-                            if (item.str.trim()) {
-                                currentLine.push(item.str);
-                            }
-                            lastY = y;
-                        });
-
-                        // Don't forget the last line
-                        if (currentLine.length > 0) {
-                            lines.push(currentLine.join(' ').trim());
-                        }
-
-                        pages.push(lines.join('\n'));
-                    }
-
-                    const fullText = pages.join('\n\n');
-
-                    // Check if PDF is scanned/image-based
-                    if (fullText.trim().length < this.config.minTextLength) {
-                        reject(new Error('This PDF appears to be scanned or image-based. Please use a text-based PDF exported from screenwriting software (Final Draft, Highland, Fade In, etc.).'));
-                        return;
-                    }
-
-                    resolve(fullText);
-                } catch (error) {
-                    reject(new Error(`Failed to extract PDF text: ${error.message}`));
-                }
-            };
-
-            reader.onerror = () => reject(new Error('Failed to read file'));
-            reader.readAsArrayBuffer(file);
-        });
+        return result.text;
     },
 
     /**
@@ -697,23 +876,53 @@ const ScriptProcessor = {
     // ============================================
 
     /**
-     * Process a script file completely
+     * Process a script file completely with robust PDF extraction
      * @param {File} file - The script file
      * @param {Function} onProgress - Progress callback
      * @returns {Promise<Object>} - Processing results
      */
     async processScript(file, onProgress = () => {}) {
         try {
-            // Step 1: Extract text with line reconstruction
+            const extension = file.name.split('.').pop().toLowerCase();
+            let text = '';
+            let extractionStats = {};
+
+            // Step 1: Extract text with robust line reconstruction
             onProgress({ step: 'extracting', progress: 10, message: 'Extracting text from PDF...' });
-            const text = await this.extractText(file);
+
+            if (extension === 'pdf') {
+                // Use robust PDF extraction pipeline
+                const pdfResult = await this.extractScriptFromPDF(file);
+
+                if (!pdfResult.success) {
+                    // Return error with helpful suggestion
+                    return {
+                        success: false,
+                        error: pdfResult.error,
+                        suggestion: pdfResult.suggestion,
+                        errorType: 'extraction'
+                    };
+                }
+
+                text = pdfResult.text;
+                extractionStats = pdfResult.stats;
+            } else {
+                // Plain text file
+                text = await this.extractTextFromFile(file);
+            }
 
             // Step 2: Detect scenes using pattern matching
             onProgress({ step: 'scenes', progress: 40, message: 'Detecting scenes...' });
             const scenes = this.detectScenes(text);
 
             if (scenes.length === 0) {
-                throw new Error('No scenes detected. Please ensure this is a properly formatted screenplay with scene headings (INT./EXT.).');
+                return {
+                    success: false,
+                    error: 'No scene headings (INT./EXT.) detected. Is this a properly formatted screenplay?',
+                    suggestion: 'Ensure your script uses standard scene headings like "INT. LOCATION - DAY" or "EXT. LOCATION - NIGHT".',
+                    errorType: 'no_scenes',
+                    rawText: text  // Include raw text so user can review
+                };
             }
 
             // Step 3: Extract characters with confidence scoring
@@ -731,25 +940,50 @@ const ScriptProcessor = {
             const mediumConfidence = characters.filter(c => c.confidence >= 0.4 && c.confidence < 0.7);
             const lowConfidence = characters.filter(c => c.confidence < 0.4);
 
+            // Build warnings for potential issues
+            const warnings = [];
+            if (characters.length === 0) {
+                warnings.push('No characters were detected. You may need to add them manually.');
+            } else if (characters.length < 3) {
+                warnings.push(`Only ${characters.length} character(s) found. Some may have been missed. Review and add manually if needed.`);
+            }
+            if (lowConfidence.length > highConfidence.length) {
+                warnings.push('Many low-confidence character detections. Review the character list carefully.');
+            }
+
             return {
                 success: true,
                 scenes,
                 characters,
                 duplicates,
+                rawText: text,  // Store for "View Full Scene" feature
                 stats: {
                     totalScenes: scenes.length,
                     totalCharacters: characters.length,
                     highConfidenceCount: highConfidence.length,
                     mediumConfidenceCount: mediumConfidence.length,
                     lowConfidenceCount: lowConfidence.length,
-                    duplicateGroups: duplicates.length
-                }
+                    duplicateGroups: duplicates.length,
+                    ...extractionStats  // Include pages, fragments, lines from PDF extraction
+                },
+                warnings: warnings.length > 0 ? warnings : null
             };
         } catch (error) {
             console.error('Script processing error:', error);
+
+            // Provide helpful error message based on error type
+            let suggestion = 'Try pasting the script text directly, or export as .fountain from your screenwriting software.';
+
+            if (error.message.includes('scanned') || error.message.includes('image')) {
+                suggestion = 'This PDF appears to be scanned. Please use a text-based PDF exported directly from your screenwriting software.';
+            } else if (error.message.includes('password')) {
+                suggestion = 'This PDF may be password-protected. Please remove the password protection and try again.';
+            }
+
             return {
                 success: false,
-                error: error.message
+                error: error.message,
+                suggestion: suggestion
             };
         }
     },
