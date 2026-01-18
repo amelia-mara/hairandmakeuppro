@@ -73,7 +73,7 @@ function MoreMenu({ onNavigate, onNavigateToTab }: MoreMenuProps) {
 
   const getDescription = (id: NavTab): string => {
     switch (id) {
-      case 'looks': return 'Lookbooks and character styles';
+      case 'lookbook': return 'Character looks and styles';
       case 'script': return 'View script PDF with scene search';
       case 'schedule': return 'Shooting schedule day-by-day';
       case 'callsheets': return 'Upload and manage call sheets';

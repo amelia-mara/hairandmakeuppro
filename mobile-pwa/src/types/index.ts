@@ -126,7 +126,7 @@ export interface ContinuityEvent {
 export type ContinuityEventType = 'Wound' | 'Bruise' | 'Prosthetic' | 'Scar' | 'Tattoo' | 'Other';
 
 // Navigation types
-export type NavTab = 'today' | 'breakdown' | 'looks' | 'hours' | 'script' | 'schedule' | 'callsheets' | 'settings' | 'more';
+export type NavTab = 'today' | 'breakdown' | 'lookbook' | 'hours' | 'script' | 'schedule' | 'callsheets' | 'settings' | 'more';
 
 // Navigation item configuration
 export interface NavItemConfig {
@@ -141,7 +141,7 @@ export type NavIconName = 'calendar' | 'grid' | 'book' | 'clock' | 'document' | 
 export const ALL_NAV_ITEMS: NavItemConfig[] = [
   { id: 'today', label: 'Today', iconName: 'calendar' },
   { id: 'breakdown', label: 'Breakdown', iconName: 'grid' },
-  { id: 'looks', label: 'Looks', iconName: 'book' },
+  { id: 'lookbook', label: 'Lookbook', iconName: 'book' },
   { id: 'hours', label: 'Hours', iconName: 'clock' },
   { id: 'script', label: 'Script', iconName: 'document' },
   { id: 'schedule', label: 'Schedule', iconName: 'schedule' },

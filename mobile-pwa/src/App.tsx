@@ -75,7 +75,7 @@ export default function App() {
         return <Today onSceneSelect={handleSceneSelect} />;
       case 'breakdown':
         return <Breakdown onSceneSelect={handleSceneSelect} />;
-      case 'looks':
+      case 'lookbook':
         return <Lookbooks />;
       case 'hours':
         return <Timesheet />;
