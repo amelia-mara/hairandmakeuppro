@@ -5,6 +5,10 @@ import path from 'path'
 
 export default defineConfig({
   base: '/mobile/',
+  build: {
+    outDir: '../mobile',
+    emptyDirBeforeWrite: true
+  },
   plugins: [
     react(),
     VitePWA({
