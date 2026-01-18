@@ -4157,3 +4157,105 @@ strong {
     width: 16px;
     height: 16px;
 }
+
+/* ============================================
+   RATE CARD STYLES
+   ============================================ */
+
+.form-static {
+    padding: var(--spacing-sm) var(--spacing-md);
+    background-color: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+.rate-summary {
+    background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
+    color: #FFFFFF;
+}
+
+.rate-summary-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    opacity: 0.9;
+    margin-bottom: var(--spacing-md);
+}
+
+.rate-summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-xs) 0;
+}
+
+.rate-summary-row + .rate-summary-row {
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.rate-label {
+    font-size: 0.875rem;
+    opacity: 0.9;
+}
+
+.rate-value {
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+/* Timesheet Earnings Display */
+.timesheet-earnings {
+    background: var(--gold-gradient);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-md);
+    margin-top: var(--spacing-md);
+    color: #FFFFFF;
+}
+
+.earnings-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    opacity: 0.9;
+    margin-bottom: var(--spacing-sm);
+}
+
+.earnings-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-sm);
+}
+
+.earnings-item {
+    text-align: center;
+}
+
+.earnings-item-label {
+    font-size: 0.6875rem;
+    opacity: 0.8;
+}
+
+.earnings-item-value {
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.earnings-total {
+    margin-top: var(--spacing-md);
+    padding-top: var(--spacing-md);
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    text-align: center;
+}
+
+.earnings-total-label {
+    font-size: 0.75rem;
+    opacity: 0.9;
+}
+
+.earnings-total-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
