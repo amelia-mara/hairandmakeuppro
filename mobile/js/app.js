@@ -2478,11 +2478,16 @@ const App = {
      * Update the day earnings display
      */
     updateDayEarningsDisplay() {
+        console.log('[Earnings] updateDayEarningsDisplay called, dailyRate:', this.rateCard.dailyRate);
         const earningsCard = document.getElementById('day-earnings');
-        if (!earningsCard) return;
+        if (!earningsCard) {
+            console.log('[Earnings] earningsCard element not found');
+            return;
+        }
 
         // Only show if rate card is configured
         if (this.rateCard.dailyRate <= 0) {
+            console.log('[Earnings] dailyRate is 0 or not set, hiding card');
             earningsCard.style.display = 'none';
             return;
         }
@@ -3431,12 +3436,16 @@ const App = {
      */
     loadRateCard() {
         const saved = localStorage.getItem(this.STORAGE_KEYS.RATE_CARD);
+        console.log('[RateCard] Loading from localStorage:', saved);
         if (saved) {
             try {
                 this.rateCard = { ...this.rateCard, ...JSON.parse(saved) };
+                console.log('[RateCard] Loaded rate card:', this.rateCard);
             } catch (e) {
                 console.error('Error loading rate card:', e);
             }
+        } else {
+            console.log('[RateCard] No saved rate card found');
         }
 
         // Populate form fields
@@ -3461,12 +3470,14 @@ const App = {
      * Update rate card from form inputs
      */
     updateRateCard() {
+        console.log('[RateCard] updateRateCard called');
         const dailyRateInput = document.getElementById('rate-daily-rate');
         const baseDaySelect = document.getElementById('rate-base-day');
         const kitRentalInput = document.getElementById('rate-kit-rental');
 
         if (dailyRateInput) {
             this.rateCard.dailyRate = parseFloat(dailyRateInput.value) || 0;
+            console.log('[RateCard] Daily rate set to:', this.rateCard.dailyRate);
         }
         if (baseDaySelect) {
             this.rateCard.baseDayHours = parseInt(baseDaySelect.value, 10) || 11;
@@ -3477,6 +3488,7 @@ const App = {
 
         // Save to localStorage
         localStorage.setItem(this.STORAGE_KEYS.RATE_CARD, JSON.stringify(this.rateCard));
+        console.log('[RateCard] Saved to localStorage:', this.rateCard);
 
         this.updateRateSummary();
     },
