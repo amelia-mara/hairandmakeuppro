@@ -55,6 +55,9 @@ interface ProjectState {
   markSceneIncomplete: (sceneId: string) => void;
   copyToNextScene: (currentSceneId: string, characterId: string) => string | null;
 
+  // Actions - Look Updates
+  updateLook: (lookId: string, updates: Partial<Look>) => void;
+
   // Computed/Derived
   getScene: (sceneId: string) => Scene | undefined;
   getCharacter: (characterId: string) => Character | undefined;
@@ -355,6 +358,22 @@ export const useProjectStore = create<ProjectState>()(
         }));
 
         return nextScene.id;
+      },
+
+      // Look updates
+      updateLook: (lookId, updates) => {
+        set((state) => {
+          if (!state.currentProject) return state;
+
+          return {
+            currentProject: {
+              ...state.currentProject,
+              looks: state.currentProject.looks.map((look) =>
+                look.id === lookId ? { ...look, ...updates } : look
+              ),
+            },
+          };
+        });
       },
 
       // Getters
