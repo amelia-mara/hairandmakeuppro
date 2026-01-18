@@ -65,13 +65,14 @@ function generateDemoScenes(): Scene[] {
       }
     }
 
+    const synopsis = getDemoSynopsis(sceneNum);
     return {
       id: `scene-${sceneNum}`,
       sceneNumber: sceneNum,
       slugline: `${location.intExt}. ${location.slugline} - ${timesOfDay[timeIndex]}`,
       intExt: location.intExt,
       timeOfDay: timesOfDay[timeIndex],
-      synopsis: sceneNum <= 5 ? getDemoSynopsis(sceneNum) : undefined,
+      synopsis: synopsis || undefined,
       scriptContent: sceneNum <= 3 ? getDemoScriptContent(sceneNum) : undefined,
       characters,
       isComplete: sceneNum <= 3,
@@ -87,6 +88,11 @@ function getDemoSynopsis(sceneNum: number): string {
     3: "Sarah and Mike argue on the busy street. A confrontation escalates unexpectedly.",
     4: "Sarah receives test results from Dr. Wilson. The news changes everything.",
     5: "Dr. Wilson reviews patient files alone, discovering a pattern that concerns him.",
+    8: "Sarah, Mike, and Dr. Wilson meet at the restaurant to discuss the treatment plan.",
+    12: "Sarah confronts Dr. Wilson about the test results in his office.",
+    15: "Sarah reflects alone in her bedroom, making a difficult decision about her future.",
+    16: "Dr. Wilson makes an urgent phone call that could change everything.",
+    23: "The group gathers at the rooftop bar for a tense celebration.",
   };
   return synopses[sceneNum] ?? '';
 }

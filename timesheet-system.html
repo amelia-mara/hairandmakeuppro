@@ -1443,7 +1443,7 @@
                                 <input type="number" class="rate-input" id="late-ot-multiplier" value="2.0" step="0.1" onchange="updateRates()">
                             </div>
                             <div class="rate-item">
-                                <label class="rate-label">Pre-Call/De-Rig Multiplier</label>
+                                <label class="rate-label">Pre-Call/Wrap Out Multiplier</label>
                                 <input type="number" class="rate-input" id="special-multiplier" value="1.5" step="0.1" onchange="updateRates()">
                             </div>
                         </div>
@@ -1526,15 +1526,15 @@
                                     <tr>
                                         <th>Pre-Call</th>
                                         <th>Unit Call</th>
-                                        <th>Actual Wrap</th>
-                                        <th>De-Rig</th>
+                                        <th>Out of Chair</th>
+                                        <th>Wrap Out</th>
                                         <th>Sched (min)</th>
                                         <th>Actual (min)</th>
                                         <th>Pre-Call (h)</th>
                                         <th>Base Hours</th>
                                         <th>Camera OT (h)</th>
                                         <th>OT >23:00 (h)</th>
-                                        <th>De-Rig (h)</th>
+                                        <th>Wrap Out (h)</th>
                                     </tr>
                                 </thead>
                                 <tbody id="timesheet-body">
@@ -1595,7 +1595,7 @@
                                         <th>Pre-Call (£)</th>
                                         <th>Camera OT (£)</th>
                                         <th>Late OT (£)</th>
-                                        <th>De-Rig (£)</th>
+                                        <th>Wrap Out (£)</th>
                                         <th>Total (£)</th>
                                     </tr>
                                 </thead>
@@ -2555,7 +2555,7 @@
 
             exportData() {
                 // Create CSV content
-                let csv = 'Crew Member,Position,Day,Date,Pre-Call,Unit Call,Scheduled Wrap,Actual Wrap,De-Rig,Camera OT (h),Late OT (h),Total Hours,Day Rate,Pre-Call Pay,Camera OT Pay,Late OT Pay,De-Rig Pay,Total Pay\n';
+                let csv = 'Crew Member,Position,Day,Date,Pre-Call,Unit Call,Scheduled Wrap,Out of Chair,Wrap Out,Camera OT (h),Late OT (h),Total Hours,Day Rate,Pre-Call Pay,Camera OT Pay,Late OT Pay,Wrap Out Pay,Total Pay\n';
                 
                 this.data.crew.forEach(crew => {
                     const timesheet = this.data.timesheets[crew.id];

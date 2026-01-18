@@ -36,6 +36,7 @@ export function CharacterProfile({ sceneId, characterId }: CharacterProfileProps
     copyToNextScene,
     setCurrentScene,
     sceneCaptures,
+    updateLook,
   } = useProjectStore();
 
   const character = getCharacter(characterId);
@@ -217,14 +218,20 @@ export function CharacterProfile({ sceneId, characterId }: CharacterProfileProps
           title="MAKEUP"
           count={look ? countFilledMakeupFields(look.makeup) : 0}
         >
-          <MakeupForm makeup={look?.makeup} readOnly />
+          <MakeupForm
+            makeup={look?.makeup}
+            onChange={look ? (makeup) => updateLook(look.id, { makeup }) : undefined}
+          />
         </Accordion>
 
         <Accordion
           title="HAIR"
           count={look ? countFilledHairFields(look.hair) : 0}
         >
-          <HairForm hair={look?.hair} readOnly />
+          <HairForm
+            hair={look?.hair}
+            onChange={look ? (hair) => updateLook(look.id, { hair }) : undefined}
+          />
         </Accordion>
 
         <Accordion title="SCENE NOTES">

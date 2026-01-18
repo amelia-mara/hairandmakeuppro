@@ -5,7 +5,81 @@
 
 const SyncImportExport = {
     // Version for data compatibility
-    SYNC_VERSION: '1.0.0',
+    SYNC_VERSION: '1.1.0',
+
+    // ============================================
+    // CONTINUITY EVENT TYPE MAPPING
+    // ============================================
+    // Website types: 'injury', 'condition', 'transformation', 'wardrobe_change', 'makeup_effect'
+    // Mobile types: 'Wound', 'Bruise', 'Prosthetic', 'Scar', 'Tattoo', 'Other'
+
+    WEBSITE_TO_MOBILE_EVENT_TYPES: {
+        'injury': 'Wound',
+        'condition': 'Other',
+        'transformation': 'Prosthetic',
+        'wardrobe_change': 'Other',
+        'makeup_effect': 'Other'
+    },
+
+    MOBILE_TO_WEBSITE_EVENT_TYPES: {
+        'Wound': 'injury',
+        'Bruise': 'injury',
+        'Prosthetic': 'transformation',
+        'Scar': 'makeup_effect',
+        'Tattoo': 'makeup_effect',
+        'Other': 'condition'
+    },
+
+    /**
+     * Map website continuity event to mobile format
+     */
+    mapWebsiteEventToMobile(event) {
+        return {
+            id: event.id,
+            type: this.WEBSITE_TO_MOBILE_EVENT_TYPES[event.type] || 'Other',
+            name: event.description?.split(' ').slice(0, 3).join(' ') || event.type,
+            description: event.description || '',
+            stage: event.progression?.[0]?.stage || 'Fresh',
+            sceneRange: event.startScene && event.endScene
+                ? `${event.startScene}-${event.endScene}`
+                : event.startScene?.toString() || '',
+            products: event.progression?.[0]?.makeupNotes || '',
+            referencePhotos: [],
+            // Preserve original data for reverse sync
+            _websiteType: event.type,
+            _progression: event.progression
+        };
+    },
+
+    /**
+     * Map mobile continuity event to website format
+     */
+    mapMobileEventToWebsite(event) {
+        // Parse scene range (e.g., "5-10" or "5")
+        let startScene = null, endScene = null;
+        if (event.sceneRange) {
+            const parts = event.sceneRange.split('-').map(s => parseInt(s.trim()));
+            startScene = parts[0] || null;
+            endScene = parts[1] || parts[0] || null;
+        }
+
+        return {
+            id: event.id,
+            character: event.characterName || '',
+            type: event._websiteType || this.MOBILE_TO_WEBSITE_EVENT_TYPES[event.type] || 'condition',
+            startScene: startScene,
+            endScene: endScene,
+            description: event.description || event.name || '',
+            progression: event._progression || [{
+                sceneIndex: startScene,
+                stage: event.stage || 'Fresh',
+                description: event.description,
+                makeupNotes: event.products,
+                hairNotes: ''
+            }],
+            createdAt: new Date().toISOString()
+        };
+    },
 
     /**
      * Build the sync payload to send to mobile
@@ -92,7 +166,16 @@ const SyncImportExport = {
             } : null,
 
             // Shooting schedule (if available)
-            schedule: this.getShootingSchedule()
+            schedule: this.getShootingSchedule(),
+
+            // Timesheet entries (mapped to mobile format)
+            timesheetEntries: this.getTimesheets().map(entry => this.mapWebsiteToMobileFields(entry)),
+
+            // Continuity events (mapped to mobile format)
+            continuityEvents: this.getContinuityEvents().map(event => this.mapWebsiteEventToMobile(event)),
+
+            // Continuity flags (quick status flags)
+            continuityFlags: this.getContinuityFlags()
         };
     },
 
@@ -136,7 +219,7 @@ const SyncImportExport = {
     },
 
     /**
-     * Import data from mobile (timesheet entries and photos)
+     * Import data from mobile (timesheet entries, photos, continuity data)
      */
     async importFromMobile(file) {
         try {
@@ -147,6 +230,7 @@ const SyncImportExport = {
                 success: true,
                 timesheetsImported: 0,
                 photosImported: 0,
+                continuityEventsImported: 0,
                 errors: []
             };
 
@@ -174,6 +258,25 @@ const SyncImportExport = {
                 }
             }
 
+            // Import continuity events from mobile
+            if (payload.continuityEvents && payload.continuityEvents.length > 0) {
+                try {
+                    this.saveContinuityEvents(payload.continuityEvents);
+                    result.continuityEventsImported = payload.continuityEvents.length;
+                } catch (e) {
+                    result.errors.push(`Continuity events: ${e.message}`);
+                }
+            }
+
+            // Import continuity flags from mobile
+            if (payload.continuityFlags) {
+                try {
+                    this.saveContinuityFlags(payload.continuityFlags);
+                } catch (e) {
+                    result.errors.push(`Continuity flags: ${e.message}`);
+                }
+            }
+
             // Recalculate pay for imported entries
             if (result.timesheetsImported > 0) {
                 this.recalculatePayForEntries(payload.timesheetEntries);
@@ -185,7 +288,8 @@ const SyncImportExport = {
                     deviceId: payload.deviceId,
                     projectId: payload.projectId,
                     timesheetsImported: result.timesheetsImported,
-                    photosImported: result.photosImported
+                    photosImported: result.photosImported,
+                    continuityEventsImported: result.continuityEventsImported
                 });
             }
 
@@ -197,20 +301,61 @@ const SyncImportExport = {
     },
 
     /**
+     * Map mobile timesheet fields to website format
+     * Mobile uses: outOfChair (done with talent), wrapOut (leave building)
+     * Website uses: actualWrap (done with work), deRig (leave building)
+     */
+    mapMobileToWebsiteFields(mobileEntry) {
+        return {
+            ...mobileEntry,
+            // Map mobile field names to website field names
+            actualWrap: mobileEntry.outOfChair || mobileEntry.actualWrap || '',
+            deRig: mobileEntry.wrapOut || mobileEntry.deRig || '',
+            sixthDay: mobileEntry.isSixthDay ?? mobileEntry.sixthDay ?? false,
+            lunchActual: mobileEntry.lunchTaken ?? mobileEntry.lunchActual ?? 60,
+            lunchSched: mobileEntry.lunchTaken ?? mobileEntry.lunchSched ?? 60,
+            // Keep original fields for reverse sync
+            outOfChair: mobileEntry.outOfChair || '',
+            wrapOut: mobileEntry.wrapOut || ''
+        };
+    },
+
+    /**
+     * Map website timesheet fields to mobile format
+     */
+    mapWebsiteToMobileFields(websiteEntry) {
+        return {
+            ...websiteEntry,
+            // Map website field names to mobile field names
+            outOfChair: websiteEntry.actualWrap || websiteEntry.outOfChair || '',
+            wrapOut: websiteEntry.deRig || websiteEntry.wrapOut || '',
+            isSixthDay: websiteEntry.sixthDay ?? websiteEntry.isSixthDay ?? false,
+            lunchTaken: websiteEntry.lunchActual ?? websiteEntry.lunchTaken ?? 60,
+            // Keep original fields for reverse sync
+            actualWrap: websiteEntry.actualWrap || '',
+            deRig: websiteEntry.deRig || ''
+        };
+    },
+
+    /**
      * Merge a timesheet entry (last-write-wins with merge for non-conflicting fields)
      */
     async mergeTimesheetEntry(incoming) {
         const timesheets = this.getTimesheets();
-        const existingIndex = timesheets.findIndex(t => t.id === incoming.id || t.date === incoming.date);
+
+        // Map mobile fields to website format
+        const mappedIncoming = this.mapMobileToWebsiteFields(incoming);
+
+        const existingIndex = timesheets.findIndex(t => t.id === mappedIncoming.id || t.date === mappedIncoming.date);
 
         if (existingIndex >= 0) {
             const existing = timesheets[existingIndex];
 
             // If incoming is newer, use it but preserve desktop-only calculations
-            if (!existing.lastModified || incoming.lastModified > existing.lastModified) {
+            if (!existing.lastModified || mappedIncoming.lastModified > existing.lastModified) {
                 timesheets[existingIndex] = {
                     ...existing,
-                    ...incoming,
+                    ...mappedIncoming,
                     // Preserve any desktop-specific fields
                     calculatedPay: existing.calculatedPay,
                     payBreakdown: existing.payBreakdown,
@@ -220,14 +365,14 @@ const SyncImportExport = {
             } else {
                 // Existing is newer, but add any new fields from incoming
                 timesheets[existingIndex] = {
-                    ...incoming,
+                    ...mappedIncoming,
                     ...existing
                 };
             }
         } else {
             // New entry
             timesheets.push({
-                ...incoming,
+                ...mappedIncoming,
                 importedAt: Date.now(),
                 source: 'mobile'
             });
@@ -337,22 +482,46 @@ const SyncImportExport = {
 
     /**
      * Calculate pay for a timesheet entry
+     * Handles both website format (actualWrap/deRig) and mobile format (outOfChair/wrapOut)
      */
     calculatePay(entry, rateCard) {
         const preCall = this.parseTime(entry.preCall);
         const unitCall = this.parseTime(entry.unitCall);
-        const wrap = this.parseTime(entry.wrap);
+        // Use actualWrap/outOfChair as main wrap time (done with talent)
+        const wrap = this.parseTime(entry.actualWrap || entry.outOfChair);
+        // Use deRig/wrapOut as final out time (leave building)
+        const finalOut = this.parseTime(entry.deRig || entry.wrapOut);
 
-        if (!preCall || !unitCall || !wrap) {
+        if (!unitCall || !wrap) {
             return { calculatedPay: null, payBreakdown: null };
         }
 
-        const preCallMinutes = (unitCall.hours * 60 + unitCall.minutes) - (preCall.hours * 60 + preCall.minutes);
-        const workMinutes = (wrap.hours * 60 + wrap.minutes) - (unitCall.hours * 60 + unitCall.minutes) - rateCard.lunchDuration;
-        const totalMinutes = preCallMinutes + workMinutes;
+        // Calculate pre-call hours (before unit call)
+        let preCallMinutes = 0;
+        if (preCall) {
+            preCallMinutes = (unitCall.hours * 60 + unitCall.minutes) - (preCall.hours * 60 + preCall.minutes);
+            if (preCallMinutes < 0) preCallMinutes = 0; // Handle edge cases
+        }
+
+        // Calculate main work minutes (unit call to wrap, minus lunch)
+        const lunchMinutes = entry.lunchActual ?? entry.lunchTaken ?? rateCard.lunchDuration ?? 60;
+        let workMinutes = (wrap.hours * 60 + wrap.minutes) - (unitCall.hours * 60 + unitCall.minutes) - lunchMinutes;
+        // Handle overnight wrap
+        if (workMinutes < 0) {
+            workMinutes += 24 * 60;
+        }
+
+        // Calculate de-rig/post-wrap time (after wrap, before leaving building)
+        let deRigMinutes = 0;
+        if (finalOut && wrap) {
+            deRigMinutes = (finalOut.hours * 60 + finalOut.minutes) - (wrap.hours * 60 + wrap.minutes);
+            if (deRigMinutes < 0) deRigMinutes += 24 * 60; // Handle overnight
+        }
+
+        const totalMinutes = preCallMinutes + workMinutes + deRigMinutes;
         const totalHours = totalMinutes / 60;
 
-        const baseHours = rateCard.baseHours;
+        const baseHours = rateCard.baseHours || 10;
         const hourlyRate = rateCard.dayRate / baseHours;
 
         let pay = rateCard.dayRate;
@@ -360,39 +529,58 @@ const SyncImportExport = {
             baseDay: rateCard.dayRate,
             preCallPay: 0,
             overtimePay: 0,
+            deRigPay: 0,
             sixthDayBonus: 0,
             brokenLunchPay: 0
         };
 
-        // Pre-call pay
+        // Pre-call pay (1.5x)
         if (preCallMinutes > 0) {
-            breakdown.preCallPay = (preCallMinutes / 60) * hourlyRate * rateCard.preCallMultiplier;
+            const multiplier = rateCard.preCallMultiplier || 1.5;
+            breakdown.preCallPay = (preCallMinutes / 60) * hourlyRate * multiplier;
             pay += breakdown.preCallPay;
         }
 
-        // Overtime pay
+        // Overtime pay (1.5x after base hours)
         if (workMinutes > baseHours * 60) {
             const otMinutes = workMinutes - (baseHours * 60);
-            breakdown.overtimePay = (otMinutes / 60) * hourlyRate * rateCard.otMultiplier;
+            const multiplier = rateCard.otMultiplier || 1.5;
+            breakdown.overtimePay = (otMinutes / 60) * hourlyRate * multiplier;
             pay += breakdown.overtimePay;
         }
 
+        // De-rig/post-wrap pay (1.5x)
+        if (deRigMinutes > 0) {
+            const multiplier = rateCard.deRigMultiplier || rateCard.preCallMultiplier || 1.5;
+            breakdown.deRigPay = (deRigMinutes / 60) * hourlyRate * multiplier;
+            pay += breakdown.deRigPay;
+        }
+
         // Sixth day bonus
-        if (entry.sixthDay) {
-            breakdown.sixthDayBonus = rateCard.dayRate * (rateCard.sixthDayMultiplier - 1);
+        const isSixthDay = entry.sixthDay ?? entry.isSixthDay ?? false;
+        if (isSixthDay) {
+            const multiplier = rateCard.sixthDayMultiplier || 1.5;
+            breakdown.sixthDayBonus = rateCard.dayRate * (multiplier - 1);
             pay += breakdown.sixthDayBonus;
         }
 
         // Broken lunch pay
         if (entry.brokenLunch) {
-            breakdown.brokenLunchPay = hourlyRate * rateCard.brokenLunchMultiplier;
+            const multiplier = rateCard.brokenLunchMultiplier || 1.5;
+            breakdown.brokenLunchPay = hourlyRate * multiplier;
             pay += breakdown.brokenLunchPay;
         }
 
         return {
             calculatedPay: Math.round(pay * 100) / 100,
             payBreakdown: breakdown,
-            totalHours: Math.round(totalHours * 100) / 100
+            totalHours: Math.round(totalHours * 100) / 100,
+            hoursBreakdown: {
+                preCall: Math.round((preCallMinutes / 60) * 100) / 100,
+                base: Math.min(workMinutes / 60, baseHours),
+                overtime: Math.max(0, (workMinutes / 60) - baseHours),
+                deRig: Math.round((deRigMinutes / 60) * 100) / 100
+            }
         };
     },
 
@@ -511,6 +699,66 @@ const SyncImportExport = {
             return schedule ? JSON.parse(schedule) : [];
         } catch {
             return [];
+        }
+    },
+
+    getContinuityEvents() {
+        try {
+            const events = localStorage.getItem('hmp_continuity_events');
+            return events ? JSON.parse(events) : [];
+        } catch {
+            return [];
+        }
+    },
+
+    getContinuityFlags() {
+        try {
+            const flags = localStorage.getItem('hmp_continuity_flags');
+            return flags ? JSON.parse(flags) : {};
+        } catch {
+            return {};
+        }
+    },
+
+    /**
+     * Save continuity events from mobile import
+     */
+    saveContinuityEvents(events) {
+        try {
+            const existing = this.getContinuityEvents();
+            const merged = [...existing];
+
+            for (const event of events) {
+                const mappedEvent = this.mapMobileEventToWebsite(event);
+                const existingIndex = merged.findIndex(e => e.id === mappedEvent.id);
+
+                if (existingIndex >= 0) {
+                    merged[existingIndex] = { ...merged[existingIndex], ...mappedEvent };
+                } else {
+                    merged.push(mappedEvent);
+                }
+            }
+
+            localStorage.setItem('hmp_continuity_events', JSON.stringify(merged));
+            return merged;
+        } catch (error) {
+            console.error('[SyncImportExport] Error saving continuity events:', error);
+            return [];
+        }
+    },
+
+    /**
+     * Save continuity flags from mobile import
+     */
+    saveContinuityFlags(flags) {
+        try {
+            const existing = this.getContinuityFlags();
+            const merged = { ...existing, ...flags };
+            localStorage.setItem('hmp_continuity_flags', JSON.stringify(merged));
+            return merged;
+        } catch (error) {
+            console.error('[SyncImportExport] Error saving continuity flags:', error);
+            return {};
         }
     },
 

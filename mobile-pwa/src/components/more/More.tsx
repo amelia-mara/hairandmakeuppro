@@ -1,14 +1,39 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
+import { useNavigationStore } from '@/stores/navigationStore';
 import { RateCardSettings } from '@/components/timesheet';
+import { NavIcon } from '@/components/navigation/BottomNav';
+import type { NavTab } from '@/types';
+import { ALL_NAV_ITEMS } from '@/types';
 
-type MoreView = 'menu' | 'script' | 'schedule' | 'callsheets' | 'settings';
+type MoreView = 'menu' | 'script' | 'schedule' | 'callsheets' | 'settings' | 'editMenu';
 
-export function More() {
+interface MoreProps {
+  onNavigateToTab?: (tab: NavTab) => void;
+}
+
+export function More({ onNavigateToTab }: MoreProps) {
   const [currentView, setCurrentView] = useState<MoreView>('menu');
+  const { isEditMenuOpen, closeEditMenu, openEditMenu } = useNavigationStore();
+
+  // If edit menu is open via store, show it
+  const effectiveView = isEditMenuOpen ? 'editMenu' : currentView;
+
+  const handleViewChange = (view: MoreView) => {
+    if (view === 'editMenu') {
+      openEditMenu();
+    } else {
+      setCurrentView(view);
+    }
+  };
+
+  const handleEditMenuClose = () => {
+    closeEditMenu();
+    setCurrentView('menu');
+  };
 
   const renderView = () => {
-    switch (currentView) {
+    switch (effectiveView) {
       case 'script':
         return <ScriptViewer onBack={() => setCurrentView('menu')} />;
       case 'schedule':
@@ -17,8 +42,10 @@ export function More() {
         return <CallSheetArchive onBack={() => setCurrentView('menu')} />;
       case 'settings':
         return <Settings onBack={() => setCurrentView('menu')} />;
+      case 'editMenu':
+        return <EditMenuScreen onDone={handleEditMenuClose} />;
       default:
-        return <MoreMenu onNavigate={setCurrentView} />;
+        return <MoreMenu onNavigate={handleViewChange} onNavigateToTab={onNavigateToTab} />;
     }
   };
 
@@ -32,52 +59,41 @@ export function More() {
 // Main Menu Component
 interface MoreMenuProps {
   onNavigate: (view: MoreView) => void;
+  onNavigateToTab?: (tab: NavTab) => void;
 }
 
-function MoreMenu({ onNavigate }: MoreMenuProps) {
-  const menuItems: { id: MoreView; icon: JSX.Element; label: string; description: string }[] = [
-    {
-      id: 'script',
-      label: 'Script',
-      description: 'View script PDF with scene search',
-      icon: (
-        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-        </svg>
-      ),
-    },
-    {
-      id: 'schedule',
-      label: 'Schedule',
-      description: 'Shooting schedule day-by-day',
-      icon: (
-        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5m-9-6h.008v.008H12v-.008zM12 15h.008v.008H12V15zm0 2.25h.008v.008H12v-.008zM9.75 15h.008v.008H9.75V15zm0 2.25h.008v.008H9.75v-.008zM7.5 15h.008v.008H7.5V15zm0 2.25h.008v.008H7.5v-.008zm6.75-4.5h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V15zm0 2.25h.008v.008h-.008v-.008zm2.25-4.5h.008v.008H16.5v-.008zm0 2.25h.008v.008H16.5V15z" />
-        </svg>
-      ),
-    },
-    {
-      id: 'callsheets',
-      label: 'Call Sheets',
-      description: 'Upload and manage call sheets',
-      icon: (
-        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
-        </svg>
-      ),
-    },
-    {
-      id: 'settings',
-      label: 'Settings',
-      description: 'Rate card, sync, preferences',
-      icon: (
-        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
-          <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-        </svg>
-      ),
-    },
-  ];
+function MoreMenu({ onNavigate, onNavigateToTab }: MoreMenuProps) {
+  const { getMoreMenuItems } = useNavigationStore();
+  const moreMenuItems = getMoreMenuItems();
+
+  // Get full config for items in the more menu
+  const menuItemConfigs = moreMenuItems
+    .map(id => ALL_NAV_ITEMS.find(item => item.id === id))
+    .filter(Boolean) as typeof ALL_NAV_ITEMS;
+
+  const getDescription = (id: NavTab): string => {
+    switch (id) {
+      case 'lookbook': return 'Character looks and styles';
+      case 'script': return 'View script PDF with scene search';
+      case 'schedule': return 'Shooting schedule day-by-day';
+      case 'callsheets': return 'Upload and manage call sheets';
+      case 'settings': return 'Rate card, sync, preferences';
+      case 'today': return 'Today\'s shooting schedule';
+      case 'breakdown': return 'Scene breakdown by character';
+      case 'hours': return 'Timesheet and earnings';
+      default: return '';
+    }
+  };
+
+  const handleItemClick = (id: NavTab) => {
+    // For items that have dedicated views in More, navigate to them
+    if (['script', 'schedule', 'callsheets', 'settings'].includes(id)) {
+      onNavigate(id as MoreView);
+    } else if (onNavigateToTab) {
+      // For other items (looks, today, breakdown, hours), navigate to that tab
+      onNavigateToTab(id);
+    }
+  };
 
   return (
     <>
@@ -91,27 +107,373 @@ function MoreMenu({ onNavigate }: MoreMenuProps) {
 
       <div className="mobile-container px-4 py-4">
         <div className="space-y-2">
-          {menuItems.map((item) => (
+          {menuItemConfigs.map((item) => (
             <button
               key={item.id}
-              onClick={() => onNavigate(item.id)}
+              onClick={() => handleItemClick(item.id)}
               className="w-full card flex items-center gap-4 active:scale-[0.98] transition-transform"
             >
               <div className="w-10 h-10 rounded-xl bg-gold-100/50 flex items-center justify-center text-gold">
-                {item.icon}
+                <NavIcon name={item.iconName} className="w-6 h-6" />
               </div>
               <div className="flex-1 text-left">
                 <h3 className="text-sm font-semibold text-text-primary">{item.label}</h3>
-                <p className="text-xs text-text-muted">{item.description}</p>
+                <p className="text-xs text-text-muted">{getDescription(item.id)}</p>
               </div>
               <svg className="w-5 h-5 text-text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
               </svg>
             </button>
           ))}
+
+          {/* Edit Menu button at the bottom */}
+          <div className="pt-4 border-t border-border mt-4">
+            <button
+              onClick={() => onNavigate('editMenu')}
+              className="w-full card flex items-center gap-4 active:scale-[0.98] transition-transform"
+            >
+              <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-text-muted">
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                </svg>
+              </div>
+              <div className="flex-1 text-left">
+                <h3 className="text-sm font-semibold text-text-primary">Edit Menu</h3>
+                <p className="text-xs text-text-muted">Customize bottom navigation</p>
+              </div>
+              <svg className="w-5 h-5 text-text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
     </>
+  );
+}
+
+// Edit Menu Screen with Drag and Drop
+interface EditMenuScreenProps {
+  onDone: () => void;
+}
+
+function EditMenuScreen({ onDone }: EditMenuScreenProps) {
+  const {
+    bottomNavItems,
+    setBottomNavItems,
+    moveToBottomNav,
+    moveToMoreMenu,
+  } = useNavigationStore();
+
+  const [draggedItem, setDraggedItem] = useState<NavTab | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [dragOverSection, setDragOverSection] = useState<'bottom' | 'more' | null>(null);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Get items not in bottom nav (for More section)
+  const moreItems = ALL_NAV_ITEMS.filter(item => !bottomNavItems.includes(item.id));
+
+  // Get full config for bottom nav items
+  const bottomNavConfigs = bottomNavItems
+    .map(id => ALL_NAV_ITEMS.find(item => item.id === id))
+    .filter(Boolean) as typeof ALL_NAV_ITEMS;
+
+  const handleDragStart = useCallback((item: NavTab) => {
+    setDraggedItem(item);
+  }, []);
+
+  const handleDragEnd = useCallback(() => {
+    if (draggedItem && dragOverIndex !== null && dragOverSection) {
+      if (dragOverSection === 'bottom') {
+        moveToBottomNav(draggedItem, dragOverIndex);
+      } else if (dragOverSection === 'more') {
+        moveToMoreMenu(draggedItem);
+      }
+    }
+    setDraggedItem(null);
+    setDragOverIndex(null);
+    setDragOverSection(null);
+  }, [draggedItem, dragOverIndex, dragOverSection, moveToBottomNav, moveToMoreMenu]);
+
+  const handleDragOver = useCallback((section: 'bottom' | 'more', index: number) => {
+    setDragOverSection(section);
+    setDragOverIndex(index);
+  }, []);
+
+  // Touch handlers for mobile drag
+  const handleTouchStart = useCallback((e: React.TouchEvent, item: NavTab) => {
+    touchStartRef.current = {
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY,
+    };
+
+    // Long press to start drag
+    longPressTimerRef.current = setTimeout(() => {
+      handleDragStart(item);
+      // Haptic feedback if available
+      if ('vibrate' in navigator) {
+        navigator.vibrate(50);
+      }
+    }, 300);
+  }, [handleDragStart]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!touchStartRef.current) return;
+
+    const deltaX = Math.abs(e.touches[0].clientX - touchStartRef.current.x);
+    const deltaY = Math.abs(e.touches[0].clientY - touchStartRef.current.y);
+
+    // If moved too much, cancel long press
+    if ((deltaX > 10 || deltaY > 10) && longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    touchStartRef.current = null;
+    handleDragEnd();
+  }, [handleDragEnd]);
+
+  // Reorder within bottom nav
+  const handleReorderBottomNav = (fromIndex: number, toIndex: number) => {
+    const newItems = [...bottomNavItems];
+    const [removed] = newItems.splice(fromIndex, 1);
+    newItems.splice(toIndex, 0, removed);
+    setBottomNavItems(newItems);
+  };
+
+  return (
+    <>
+      {/* Header */}
+      <div className="sticky top-0 z-30 bg-card border-b border-border safe-top">
+        <div className="mobile-container">
+          <div className="h-14 px-4 flex items-center justify-between">
+            <h1 className="text-lg font-semibold text-text-primary">Customize Menu</h1>
+            <button
+              onClick={onDone}
+              className="px-4 py-1.5 text-sm font-semibold text-gold active:opacity-70 transition-opacity"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="mobile-container px-4 py-4">
+        <p className="text-sm text-text-muted mb-6">
+          Drag items to reorder. First 3 appear in bottom nav.
+        </p>
+
+        {/* Bottom Nav Section */}
+        <div className="mb-6">
+          <h2 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-3">
+            BOTTOM NAV
+          </h2>
+          <div className="space-y-2">
+            {bottomNavConfigs.map((item, index) => (
+              <DraggableItem
+                key={item.id}
+                item={item}
+                index={index}
+                section="bottom"
+                isDragging={draggedItem === item.id}
+                isDragOver={dragOverSection === 'bottom' && dragOverIndex === index}
+                onDragStart={() => handleDragStart(item.id)}
+                onDragEnd={handleDragEnd}
+                onDragOver={() => handleDragOver('bottom', index)}
+                onTouchStart={(e) => handleTouchStart(e, item.id)}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                onMoveUp={index > 0 ? () => handleReorderBottomNav(index, index - 1) : undefined}
+                onMoveDown={index < bottomNavConfigs.length - 1 ? () => handleReorderBottomNav(index, index + 1) : undefined}
+                onRemove={bottomNavConfigs.length > 1 ? () => moveToMoreMenu(item.id) : undefined}
+              />
+            ))}
+
+            {/* Drop zone when bottom nav has less than 3 items */}
+            {bottomNavItems.length < 3 && (
+              <div
+                className={`border-2 border-dashed rounded-xl p-4 text-center transition-colors ${
+                  dragOverSection === 'bottom' && dragOverIndex === bottomNavItems.length
+                    ? 'border-gold bg-gold/5'
+                    : 'border-border'
+                }`}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  handleDragOver('bottom', bottomNavItems.length);
+                }}
+                onDrop={handleDragEnd}
+              >
+                <span className="text-sm text-text-light">Drop here to add</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div className="border-t border-border mb-6" />
+
+        {/* More Menu Section */}
+        <div>
+          <h2 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-3">
+            MORE MENU
+          </h2>
+          <div className="space-y-2">
+            {moreItems.map((item, index) => (
+              <DraggableItem
+                key={item.id}
+                item={item}
+                index={index}
+                section="more"
+                isDragging={draggedItem === item.id}
+                isDragOver={dragOverSection === 'more' && dragOverIndex === index}
+                onDragStart={() => handleDragStart(item.id)}
+                onDragEnd={handleDragEnd}
+                onDragOver={() => handleDragOver('more', index)}
+                onTouchStart={(e) => handleTouchStart(e, item.id)}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                onAddToNav={bottomNavItems.length < 3 ? () => moveToBottomNav(item.id, bottomNavItems.length) : undefined}
+              />
+            ))}
+
+            {moreItems.length === 0 && (
+              <div className="text-center py-6 text-text-light text-sm">
+                All items are in the bottom nav
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* More button is always slot 4 notice */}
+        <div className="mt-6 p-3 bg-gray-50 rounded-lg">
+          <div className="flex items-center gap-2 text-sm text-text-muted">
+            <NavIcon name="ellipsis" className="w-5 h-5" />
+            <span><strong>More</strong> button is always slot 4 and cannot be moved.</span>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// Draggable Item Component
+interface DraggableItemProps {
+  item: (typeof ALL_NAV_ITEMS)[number];
+  index: number;
+  section: 'bottom' | 'more';
+  isDragging: boolean;
+  isDragOver: boolean;
+  onDragStart: () => void;
+  onDragEnd: () => void;
+  onDragOver: () => void;
+  onTouchStart: (e: React.TouchEvent) => void;
+  onTouchMove: (e: React.TouchEvent) => void;
+  onTouchEnd: () => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
+  onRemove?: () => void;
+  onAddToNav?: () => void;
+}
+
+function DraggableItem({
+  item,
+  isDragging,
+  isDragOver,
+  onDragStart,
+  onDragEnd,
+  onDragOver,
+  onTouchStart,
+  onTouchMove,
+  onTouchEnd,
+  onMoveUp,
+  onMoveDown,
+  onRemove,
+  onAddToNav,
+}: DraggableItemProps) {
+  return (
+    <div
+      className={`card flex items-center gap-3 transition-all cursor-grab active:cursor-grabbing ${
+        isDragging ? 'opacity-50 scale-95' : ''
+      } ${isDragOver ? 'ring-2 ring-gold ring-offset-2' : ''}`}
+      draggable
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+      onDragOver={(e) => {
+        e.preventDefault();
+        onDragOver();
+      }}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+    >
+      {/* Drag handle */}
+      <div className="text-text-light touch-none">
+        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM14 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM14 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM14 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0z" />
+        </svg>
+      </div>
+
+      {/* Icon */}
+      <div className="w-8 h-8 rounded-lg bg-gold-100/50 flex items-center justify-center text-gold">
+        <NavIcon name={item.iconName} className="w-5 h-5" />
+      </div>
+
+      {/* Label */}
+      <span className="flex-1 text-sm font-medium text-text-primary">
+        {item.label}
+      </span>
+
+      {/* Action buttons */}
+      <div className="flex items-center gap-1">
+        {onMoveUp && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onMoveUp(); }}
+            className="p-1.5 rounded-lg hover:bg-gray-100 text-text-light"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+            </svg>
+          </button>
+        )}
+        {onMoveDown && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onMoveDown(); }}
+            className="p-1.5 rounded-lg hover:bg-gray-100 text-text-light"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+        )}
+        {onRemove && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onRemove(); }}
+            className="p-1.5 rounded-lg hover:bg-red-50 text-text-light hover:text-error"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
+        {onAddToNav && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onAddToNav(); }}
+            className="p-1.5 rounded-lg hover:bg-green-50 text-text-light hover:text-green-600"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -125,12 +487,10 @@ function ScriptViewer({ onBack }: ViewerProps) {
   const [selectedScene, setSelectedScene] = useState<number | null>(null);
   const { currentProject } = useProjectStore();
 
-  // Demo scene list for jumping
   const sceneNumbers = currentProject?.scenes.map(s => s.sceneNumber).sort((a, b) => a - b) || [];
 
   return (
     <>
-      {/* Header */}
       <div className="sticky top-0 z-30 bg-card border-b border-border safe-top">
         <div className="mobile-container">
           <div className="h-14 px-4 flex items-center gap-3">
@@ -145,7 +505,6 @@ function ScriptViewer({ onBack }: ViewerProps) {
             <h1 className="text-lg font-semibold text-text-primary">Script</h1>
           </div>
 
-          {/* Search and scene jump */}
           <div className="px-4 pb-3 flex gap-2">
             <div className="flex-1 relative">
               <svg className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -173,13 +532,10 @@ function ScriptViewer({ onBack }: ViewerProps) {
         </div>
       </div>
 
-      {/* Content */}
       <div className="mobile-container px-4 py-8">
         <div className="flex flex-col items-center justify-center py-12">
           <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
-            <svg className="w-8 h-8 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-            </svg>
+            <NavIcon name="document" className="w-8 h-8 text-gray-300" />
           </div>
           <h3 className="text-base font-semibold text-text-primary mb-1">No Script Uploaded</h3>
           <p className="text-sm text-text-muted text-center mb-6">
@@ -196,7 +552,6 @@ function ScriptViewer({ onBack }: ViewerProps) {
 
 // Schedule Viewer Component
 function ScheduleViewer({ onBack }: ViewerProps) {
-  // Demo schedule data
   const demoSchedule = [
     { dayNumber: 1, date: '2025-01-13', scenes: [1, 2, 3], location: 'COFFEE SHOP' },
     { dayNumber: 2, date: '2025-01-14', scenes: [4, 5, 6, 7], location: 'APARTMENT' },
@@ -216,7 +571,6 @@ function ScheduleViewer({ onBack }: ViewerProps) {
 
   return (
     <>
-      {/* Header */}
       <div className="sticky top-0 z-30 bg-card border-b border-border safe-top">
         <div className="mobile-container">
           <div className="h-14 px-4 flex items-center gap-3">
@@ -233,7 +587,6 @@ function ScheduleViewer({ onBack }: ViewerProps) {
         </div>
       </div>
 
-      {/* Content */}
       <div className="mobile-container px-4 py-4">
         <div className="space-y-2.5">
           {demoSchedule.map((day) => {
@@ -287,7 +640,6 @@ function ScheduleViewer({ onBack }: ViewerProps) {
 
 // Call Sheet Archive Component
 function CallSheetArchive({ onBack }: ViewerProps) {
-  // Demo call sheets
   const demoCallSheets = [
     { id: '1', date: '2025-01-18', productionDay: 4, scenes: 5 },
     { id: '2', date: '2025-01-15', productionDay: 3, scenes: 4 },
@@ -304,7 +656,6 @@ function CallSheetArchive({ onBack }: ViewerProps) {
 
   return (
     <>
-      {/* Header */}
       <div className="sticky top-0 z-30 bg-card border-b border-border safe-top">
         <div className="mobile-container">
           <div className="h-14 px-4 flex items-center justify-between">
@@ -328,7 +679,6 @@ function CallSheetArchive({ onBack }: ViewerProps) {
         </div>
       </div>
 
-      {/* Content */}
       <div className="mobile-container px-4 py-4">
         <div className="space-y-2">
           {demoCallSheets.map((sheet) => (
@@ -338,9 +688,7 @@ function CallSheetArchive({ onBack }: ViewerProps) {
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
-                  <svg className="w-5 h-5 text-text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-                  </svg>
+                  <NavIcon name="document" className="w-5 h-5 text-text-light" />
                 </div>
                 <div className="text-left">
                   <h3 className="text-sm font-semibold text-text-primary">Day {sheet.productionDay}</h3>
@@ -359,7 +707,6 @@ function CallSheetArchive({ onBack }: ViewerProps) {
           ))}
         </div>
 
-        {/* Upload button */}
         <div className="mt-6 text-center">
           <button className="px-6 py-2.5 rounded-button gold-gradient text-white text-sm font-medium active:scale-95 transition-transform">
             Upload Call Sheet PDF
@@ -373,11 +720,11 @@ function CallSheetArchive({ onBack }: ViewerProps) {
 // Settings Component
 function Settings({ onBack }: ViewerProps) {
   const { clearProject, currentProject } = useProjectStore();
+  const { resetToDefaults } = useNavigationStore();
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   return (
     <>
-      {/* Header */}
       <div className="sticky top-0 z-30 bg-card border-b border-border safe-top">
         <div className="mobile-container">
           <div className="h-14 px-4 flex items-center gap-3">
@@ -394,9 +741,7 @@ function Settings({ onBack }: ViewerProps) {
         </div>
       </div>
 
-      {/* Content */}
       <div className="mobile-container px-4 py-4">
-        {/* Project info */}
         <section className="mb-6">
           <h2 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-3">CURRENT PROJECT</h2>
           <div className="card">
@@ -411,7 +756,6 @@ function Settings({ onBack }: ViewerProps) {
           </div>
         </section>
 
-        {/* Rate Card Settings */}
         <section className="mb-6">
           <h2 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-3">RATE CARD</h2>
           <div className="card">
@@ -419,7 +763,16 @@ function Settings({ onBack }: ViewerProps) {
           </div>
         </section>
 
-        {/* Sync status */}
+        <section className="mb-6">
+          <h2 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-3">NAVIGATION</h2>
+          <button
+            onClick={resetToDefaults}
+            className="card w-full text-left text-text-primary hover:bg-gray-50 transition-colors"
+          >
+            Reset Menu to Defaults
+          </button>
+        </section>
+
         <section className="mb-6">
           <h2 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-3">SYNC STATUS</h2>
           <div className="card">
@@ -436,7 +789,6 @@ function Settings({ onBack }: ViewerProps) {
           </div>
         </section>
 
-        {/* App info */}
         <section className="mb-6">
           <h2 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-3">ABOUT</h2>
           <div className="card space-y-2">
@@ -451,7 +803,6 @@ function Settings({ onBack }: ViewerProps) {
           </div>
         </section>
 
-        {/* Clear data */}
         <section>
           <h2 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-3">DATA</h2>
           <button
@@ -462,7 +813,6 @@ function Settings({ onBack }: ViewerProps) {
           </button>
         </section>
 
-        {/* Clear confirmation modal */}
         {showClearConfirm && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
             <div className="bg-card rounded-xl p-6 max-w-sm w-full">
