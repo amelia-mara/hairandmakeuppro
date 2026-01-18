@@ -209,3 +209,94 @@ export const generateInitials = (name: string): string => {
 export const countFilledFields = (obj: Record<string, string>): number => {
   return Object.values(obj).filter(value => value.trim() !== '').length;
 };
+
+// ============================================
+// TIMESHEET TYPES
+// ============================================
+
+export type BaseDayHours = 10 | 11 | 12;
+export type DayType = 'SWD' | 'CWD' | 'SCWD';
+export type EntryStatus = 'draft' | 'pending' | 'approved';
+export type TimesheetView = 'week' | 'month';
+
+export interface RateCard {
+  dailyRate: number;
+  baseDayHours: BaseDayHours;
+  otMultiplier: number; // 1.5
+  sixthDayMultiplier: number; // 1.5
+  kitRental: number;
+}
+
+export interface TimesheetEntry {
+  id: string;
+  date: string; // ISO date string YYYY-MM-DD
+  dayType: DayType;
+  preCall: string; // "05:30" format
+  unitCall: string; // "06:00" format
+  outOfChair: string; // "17:00" format
+  wrap: string; // "18:00" format
+  isSixthDay: boolean;
+  brokenLunch: boolean;
+  notes: string;
+  status: EntryStatus;
+  productionDay?: number;
+}
+
+export interface TimesheetCalculation {
+  preCallHours: number;
+  workingHours: number;
+  totalHours: number;
+  baseHours: number;
+  otHours: number;
+  dailyEarnings: number;
+  otEarnings: number;
+  sixthDayBonus: number;
+  kitRental: number;
+  totalEarnings: number;
+}
+
+export interface WeekSummary {
+  startDate: string;
+  endDate: string;
+  totalHours: number;
+  baseHours: number;
+  otHours: number;
+  sixthDayHours: number;
+  kitRentalTotal: number;
+  totalEarnings: number;
+  entries: TimesheetEntry[];
+}
+
+export const DAY_TYPE_LABELS: Record<DayType, string> = {
+  SWD: 'Standard Working Day',
+  CWD: 'Continuous Working Day',
+  SCWD: 'Short Continuous Working Day',
+};
+
+export const BASE_DAY_OPTIONS: { value: BaseDayHours; label: string }[] = [
+  { value: 10, label: '10+1 (10 hours + 1hr unpaid lunch)' },
+  { value: 11, label: '11+1 (11 hours + 1hr unpaid lunch)' },
+  { value: 12, label: '12+1 (12 hours + 1hr unpaid lunch)' },
+];
+
+export const createDefaultRateCard = (): RateCard => ({
+  dailyRate: 0,
+  baseDayHours: 11,
+  otMultiplier: 1.5,
+  sixthDayMultiplier: 1.5,
+  kitRental: 0,
+});
+
+export const createEmptyTimesheetEntry = (date: string): TimesheetEntry => ({
+  id: `entry-${date}`,
+  date,
+  dayType: 'SWD',
+  preCall: '',
+  unitCall: '',
+  outOfChair: '',
+  wrap: '',
+  isSixthDay: false,
+  brokenLunch: false,
+  notes: '',
+  status: 'draft',
+});
