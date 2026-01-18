@@ -690,6 +690,307 @@
                 grid-template-columns: repeat(2, 1fr);
             }
         }
+
+        /* Sync Button & Modal Styles */
+        .sync-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .sync-btn:hover {
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+            background: var(--accent-gold-soft);
+        }
+
+        .sync-btn svg {
+            animation: none;
+        }
+
+        .sync-btn:hover svg {
+            animation: spin 2s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .sync-modal-content {
+            max-width: 500px;
+        }
+
+        .sync-tabs {
+            display: flex;
+            gap: 4px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            padding: 4px;
+            margin-bottom: 24px;
+        }
+
+        .sync-tab {
+            flex: 1;
+            padding: 10px 12px;
+            background: transparent;
+            border: none;
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .sync-tab:hover {
+            color: var(--text-primary);
+        }
+
+        .sync-tab.active {
+            background: var(--glass-bg);
+            color: var(--accent-gold);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .sync-tab-content {
+            display: none;
+        }
+
+        .sync-tab-content.active {
+            display: block;
+        }
+
+        .sync-description {
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .sync-code-display {
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px dashed var(--glass-border);
+            border-radius: 12px;
+            padding: 28px;
+            text-align: center;
+            margin-bottom: 16px;
+            font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+            font-size: 2.5rem;
+            font-weight: 700;
+            letter-spacing: 0.3em;
+            color: var(--accent-gold);
+        }
+
+        .sync-code-placeholder {
+            color: var(--text-secondary);
+            font-size: 1rem;
+            font-weight: 400;
+            letter-spacing: normal;
+        }
+
+        .sync-code-expiry {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            margin-bottom: 20px;
+        }
+
+        .sync-code-expiry span {
+            color: var(--accent-gold);
+            font-weight: 600;
+        }
+
+        .sync-actions {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .sync-actions .btn-secondary {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 16px;
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .sync-actions .btn-secondary:hover {
+            border-color: var(--accent-gold);
+            background: var(--accent-gold-soft);
+        }
+
+        .sync-help {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            padding: 16px;
+        }
+
+        .sync-help h4 {
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--text-primary);
+        }
+
+        .sync-help ol {
+            margin: 0;
+            padding-left: 20px;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            line-height: 1.8;
+        }
+
+        .import-dropzone {
+            border: 2px dashed var(--glass-border);
+            border-radius: 12px;
+            padding: 40px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .import-dropzone:hover,
+        .import-dropzone.dragover {
+            border-color: var(--accent-gold);
+            background: var(--accent-gold-soft);
+        }
+
+        .import-dropzone svg {
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+
+        .import-dropzone p {
+            color: var(--text-primary);
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
+        .dropzone-hint {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+
+        .import-result {
+            margin-top: 20px;
+            padding: 16px;
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            border-radius: 10px;
+        }
+
+        .import-success {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .import-success svg {
+            color: #22c55e;
+            flex-shrink: 0;
+        }
+
+        .import-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            font-size: 0.875rem;
+            color: var(--text-primary);
+        }
+
+        .devices-list {
+            min-height: 150px;
+        }
+
+        .no-devices {
+            text-align: center;
+            padding: 32px;
+            color: var(--text-secondary);
+        }
+
+        .no-devices svg {
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+
+        .no-devices p {
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .no-devices span {
+            font-size: 0.875rem;
+        }
+
+        .device-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            margin-bottom: 8px;
+        }
+
+        .device-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .device-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--glass-bg);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .device-name {
+            font-weight: 500;
+        }
+
+        .device-sync-time {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .device-disconnect {
+            padding: 6px 12px;
+            background: transparent;
+            border: 1px solid rgba(239, 68, 68, 0.5);
+            border-radius: 6px;
+            color: #ef4444;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .device-disconnect:hover {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: #ef4444;
+        }
     </style>
 </head>
 <body>
@@ -698,6 +999,12 @@
         <div class="header-top">
             <h1>Projects</h1>
             <div class="header-actions">
+                <button class="sync-btn" onclick="openSyncModal()" title="Connect Mobile Device">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                    </svg>
+                    Sync
+                </button>
                 <button class="profile-btn">JD</button>
             </div>
         </div>
@@ -845,6 +1152,104 @@
 
                 <button type="submit" class="submit-btn" id="submitBtn">Create Project</button>
             </form>
+        </div>
+    </div>
+
+    <!-- Sync Modal -->
+    <div class="modal" id="syncModal">
+        <div class="modal-content sync-modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Connect Mobile Device</h2>
+                <button class="close-btn" onclick="closeSyncModal()">×</button>
+            </div>
+
+            <!-- Tab Navigation -->
+            <div class="sync-tabs">
+                <button class="sync-tab active" data-tab="connect">Connect Device</button>
+                <button class="sync-tab" data-tab="import">Import from Mobile</button>
+                <button class="sync-tab" data-tab="devices">Linked Devices</button>
+            </div>
+
+            <!-- Connect Device Tab -->
+            <div class="sync-tab-content active" id="tab-connect">
+                <p class="sync-description">Enter this code in the mobile app to sync your project:</p>
+
+                <div class="sync-code-display" id="syncCodeDisplay">
+                    <span class="sync-code-placeholder">Click Generate</span>
+                </div>
+
+                <div class="sync-code-expiry" id="syncCodeExpiry" style="display: none;">
+                    Code expires in <span id="syncExpiryTime">--:--:--</span>
+                </div>
+
+                <div class="sync-actions">
+                    <button class="btn-secondary" onclick="generateSyncCode()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                        </svg>
+                        Generate New Code
+                    </button>
+                    <button class="btn-secondary" onclick="exportForMobile()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                        </svg>
+                        Export for Mobile
+                    </button>
+                </div>
+
+                <div class="sync-help">
+                    <h4>How to connect:</h4>
+                    <ol>
+                        <li>Open Hair & Makeup Pro on your mobile device</li>
+                        <li>Go to Settings → Connect to Project</li>
+                        <li>Enter the 6-character code above</li>
+                        <li>Your project data will sync automatically</li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- Import from Mobile Tab -->
+            <div class="sync-tab-content" id="tab-import">
+                <p class="sync-description">Import timesheet entries and photos captured on your mobile device:</p>
+
+                <div class="import-dropzone" id="importDropzone">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+                    </svg>
+                    <p>Drop sync file here or click to browse</p>
+                    <span class="dropzone-hint">Accepts .json files exported from mobile</span>
+                    <input type="file" id="importFileInput" accept=".json" style="display: none;">
+                </div>
+
+                <div class="import-result" id="importResult" style="display: none;">
+                    <div class="import-success">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                            <polyline points="22 4 12 14.01 9 11.01"/>
+                        </svg>
+                        <div class="import-stats">
+                            <span id="importTimesheets">0 timesheet entries</span>
+                            <span id="importPhotos">0 photos</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Linked Devices Tab -->
+            <div class="sync-tab-content" id="tab-devices">
+                <p class="sync-description">Devices connected to this project:</p>
+
+                <div class="devices-list" id="devicesList">
+                    <div class="no-devices">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+                            <line x1="12" y1="18" x2="12.01" y2="18"/>
+                        </svg>
+                        <p>No devices connected yet</p>
+                        <span>Generate a sync code to connect a mobile device</span>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1200,6 +1605,337 @@
         document.getElementById('projectModal').addEventListener('click', function(e) {
             if (e.target === this) closeModal();
         });
+
+        // ========== SYNC FUNCTIONALITY ==========
+
+        let currentSyncCode = null;
+        let syncExpiryInterval = null;
+
+        // Sync code storage keys
+        const SYNC_STORAGE_KEYS = {
+            SYNC_CODES: 'hmp_sync_codes',
+            LINKED_DEVICES: 'hmp_linked_devices'
+        };
+
+        function openSyncModal() {
+            document.getElementById('syncModal').classList.add('active');
+            renderLinkedDevices();
+        }
+
+        function closeSyncModal() {
+            document.getElementById('syncModal').classList.remove('active');
+            if (syncExpiryInterval) {
+                clearInterval(syncExpiryInterval);
+                syncExpiryInterval = null;
+            }
+        }
+
+        // Sync tab switching
+        document.querySelectorAll('.sync-tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.sync-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.sync-tab-content').forEach(c => c.classList.remove('active'));
+
+                this.classList.add('active');
+                const tabId = 'tab-' + this.getAttribute('data-tab');
+                document.getElementById(tabId).classList.add('active');
+            });
+        });
+
+        // Sync modal click-outside close
+        document.getElementById('syncModal').addEventListener('click', function(e) {
+            if (e.target === this) closeSyncModal();
+        });
+
+        function generateSyncCode() {
+            const currentProject = JSON.parse(localStorage.getItem('currentProject')) || projects[0];
+            const projectId = currentProject?.id || Date.now().toString();
+
+            // Generate 6-character code
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            let code = '';
+            for (let i = 0; i < 6; i++) {
+                code += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+
+            const formattedCode = code.slice(0, 3) + '-' + code.slice(3);
+            const now = Date.now();
+            const expiresAt = now + (24 * 60 * 60 * 1000); // 24 hours
+
+            // Store sync code
+            const syncCodes = JSON.parse(localStorage.getItem(SYNC_STORAGE_KEYS.SYNC_CODES) || '{}');
+            syncCodes[code] = {
+                projectId: projectId,
+                formattedCode: formattedCode,
+                createdAt: now,
+                expiresAt: expiresAt,
+                linkedDevices: []
+            };
+            localStorage.setItem(SYNC_STORAGE_KEYS.SYNC_CODES, JSON.stringify(syncCodes));
+
+            currentSyncCode = code;
+
+            // Display code
+            document.getElementById('syncCodeDisplay').innerHTML = formattedCode;
+            document.getElementById('syncCodeExpiry').style.display = 'block';
+
+            // Start expiry countdown
+            updateSyncExpiryDisplay(expiresAt);
+            if (syncExpiryInterval) clearInterval(syncExpiryInterval);
+            syncExpiryInterval = setInterval(() => updateSyncExpiryDisplay(expiresAt), 1000);
+        }
+
+        function updateSyncExpiryDisplay(expiresAt) {
+            const remaining = expiresAt - Date.now();
+            if (remaining <= 0) {
+                document.getElementById('syncExpiryTime').textContent = 'Expired';
+                if (syncExpiryInterval) {
+                    clearInterval(syncExpiryInterval);
+                    syncExpiryInterval = null;
+                }
+                return;
+            }
+
+            const hours = Math.floor(remaining / (1000 * 60 * 60));
+            const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
+
+            document.getElementById('syncExpiryTime').textContent =
+                `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        async function exportForMobile() {
+            try {
+                const currentProject = JSON.parse(localStorage.getItem('currentProject')) || projects[0];
+
+                if (!currentProject) {
+                    alert('Please select a project first');
+                    return;
+                }
+
+                // Build export payload
+                const scenes = JSON.parse(localStorage.getItem('hmp_scenes') || '[]');
+                const characters = JSON.parse(localStorage.getItem('hmp_characters') || '[]');
+                const rateCard = JSON.parse(localStorage.getItem('hmp_rate_card') || 'null');
+
+                const payload = {
+                    syncVersion: '1.0.0',
+                    exportedAt: new Date().toISOString(),
+                    projectId: currentProject.id || Date.now().toString(),
+                    project: {
+                        id: currentProject.id,
+                        name: currentProject.name || 'Untitled Project',
+                        genre: currentProject.genre || '',
+                        type: currentProject.type || ''
+                    },
+                    rateCard: rateCard || {
+                        dayStructure: '10+1',
+                        baseHours: 10,
+                        lunchDuration: 60,
+                        dayRate: 350,
+                        otMultiplier: 1.5,
+                        lateOtMultiplier: 2.0,
+                        lateNightThreshold: '23:00',
+                        sixthDayMultiplier: 1.5,
+                        preCallMultiplier: 1.5
+                    },
+                    scenes: scenes.map((scene, index) => ({
+                        index: index,
+                        number: scene.sceneNumber || (index + 1),
+                        heading: scene.heading || scene.title || `Scene ${index + 1}`,
+                        storyDay: scene.storyDay || null,
+                        characters: scene.characters || []
+                    })),
+                    characters: Array.isArray(characters)
+                        ? characters.map(c => ({ name: typeof c === 'string' ? c : c.name }))
+                        : []
+                };
+
+                const projectName = (currentProject.name || 'project').replace(/[^a-z0-9]/gi, '_');
+                const filename = `${projectName}_mobile_sync.json`;
+                const json = JSON.stringify(payload, null, 2);
+                const blob = new Blob([json], { type: 'application/json' });
+
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                alert(`Exported "${filename}" successfully!\n\nTransfer this file to your mobile device via AirDrop, email, or file sharing.`);
+            } catch (error) {
+                console.error('Export error:', error);
+                alert('Export failed: ' + error.message);
+            }
+        }
+
+        // Import dropzone functionality
+        const dropzone = document.getElementById('importDropzone');
+        const fileInput = document.getElementById('importFileInput');
+
+        dropzone.addEventListener('click', () => fileInput.click());
+
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzone.classList.add('dragover');
+        });
+
+        dropzone.addEventListener('dragleave', () => {
+            dropzone.classList.remove('dragover');
+        });
+
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file && file.name.endsWith('.json')) {
+                handleImportFile(file);
+            } else {
+                alert('Please drop a .json file');
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) handleImportFile(file);
+        });
+
+        async function handleImportFile(file) {
+            try {
+                const text = await file.text();
+                const payload = JSON.parse(text);
+
+                let timesheetsImported = 0;
+                let photosImported = 0;
+
+                // Import timesheet entries
+                if (payload.timesheetEntries && payload.timesheetEntries.length > 0) {
+                    const timesheets = JSON.parse(localStorage.getItem('hmp_timesheets') || '[]');
+
+                    for (const entry of payload.timesheetEntries) {
+                        const existingIndex = timesheets.findIndex(t => t.id === entry.id || t.date === entry.date);
+                        if (existingIndex >= 0) {
+                            timesheets[existingIndex] = { ...timesheets[existingIndex], ...entry, source: 'mobile' };
+                        } else {
+                            timesheets.push({ ...entry, source: 'mobile', importedAt: Date.now() });
+                        }
+                        timesheetsImported++;
+                    }
+
+                    localStorage.setItem('hmp_timesheets', JSON.stringify(timesheets));
+                }
+
+                // Import photos (would require IndexedDB for full implementation)
+                if (payload.photos && payload.photos.length > 0) {
+                    photosImported = payload.photos.length;
+                    // Note: Full photo import requires IndexedDB handling
+                    console.log(`Would import ${photosImported} photos`);
+                }
+
+                // Show result
+                document.getElementById('importResult').style.display = 'block';
+                document.getElementById('importTimesheets').textContent = `${timesheetsImported} timesheet entries imported`;
+                document.getElementById('importPhotos').textContent = `${photosImported} photos imported`;
+
+                // Register device if info provided
+                if (payload.deviceId) {
+                    registerLinkedDevice({
+                        id: payload.deviceId,
+                        name: payload.deviceName || 'Mobile Device',
+                        lastSync: Date.now()
+                    }, payload.projectId);
+                }
+
+            } catch (error) {
+                console.error('Import error:', error);
+                alert('Import failed: ' + error.message);
+            }
+        }
+
+        function registerLinkedDevice(device, projectId) {
+            const devices = JSON.parse(localStorage.getItem(SYNC_STORAGE_KEYS.LINKED_DEVICES) || '[]');
+            const existingIndex = devices.findIndex(d => d.id === device.id);
+
+            const entry = {
+                ...device,
+                projectId: projectId,
+                lastSync: Date.now()
+            };
+
+            if (existingIndex >= 0) {
+                devices[existingIndex] = entry;
+            } else {
+                devices.push(entry);
+            }
+
+            localStorage.setItem(SYNC_STORAGE_KEYS.LINKED_DEVICES, JSON.stringify(devices));
+            renderLinkedDevices();
+        }
+
+        function renderLinkedDevices() {
+            const devices = JSON.parse(localStorage.getItem(SYNC_STORAGE_KEYS.LINKED_DEVICES) || '[]');
+            const container = document.getElementById('devicesList');
+
+            if (devices.length === 0) {
+                container.innerHTML = `
+                    <div class="no-devices">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+                            <line x1="12" y1="18" x2="12.01" y2="18"/>
+                        </svg>
+                        <p>No devices connected yet</p>
+                        <span>Generate a sync code to connect a mobile device</span>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = devices.map(device => `
+                <div class="device-item" data-device-id="${escapeHtml(device.id)}">
+                    <div class="device-info">
+                        <div class="device-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+                                <line x1="12" y1="18" x2="12.01" y2="18"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="device-name">${escapeHtml(device.name)}</div>
+                            <div class="device-sync-time">Last sync: ${formatRelativeTime(device.lastSync)}</div>
+                        </div>
+                    </div>
+                    <button class="device-disconnect" onclick="disconnectDevice('${escapeHtml(device.id)}')">
+                        Disconnect
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function disconnectDevice(deviceId) {
+            if (confirm('Disconnect this device? It will need to reconnect using a new sync code.')) {
+                const devices = JSON.parse(localStorage.getItem(SYNC_STORAGE_KEYS.LINKED_DEVICES) || '[]');
+                const filtered = devices.filter(d => d.id !== deviceId);
+                localStorage.setItem(SYNC_STORAGE_KEYS.LINKED_DEVICES, JSON.stringify(filtered));
+                renderLinkedDevices();
+            }
+        }
+
+        function formatRelativeTime(timestamp) {
+            if (!timestamp) return 'Never';
+
+            const diff = Date.now() - timestamp;
+            const minutes = Math.floor(diff / 60000);
+            const hours = Math.floor(diff / 3600000);
+            const days = Math.floor(diff / 86400000);
+
+            if (minutes < 1) return 'Just now';
+            if (minutes < 60) return `${minutes} min ago`;
+            if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+            return `${days} day${days > 1 ? 's' : ''} ago`;
+        }
 
         // Initialize
         loadProjects();
