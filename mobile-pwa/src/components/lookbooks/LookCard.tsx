@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import type { Look, Character } from '@/types';
-import { formatSceneRange } from '@/utils/helpers';
 
 interface LookCardProps {
   look: Look;
@@ -14,7 +13,6 @@ export function LookCard({ look, character: _character, progress }: LookCardProp
   const { currentProject, sceneCaptures, setActiveTab, setCurrentScene } = useProjectStore();
 
   const progressPercent = progress.total > 0 ? (progress.captured / progress.total) * 100 : 0;
-  const sceneRange = formatSceneRange(look.scenes);
 
   // Get capture status for each scene in this look
   const getSceneCaptureStatus = (sceneNum: number): 'captured' | 'not-captured' => {
@@ -73,51 +71,74 @@ export function LookCard({ look, character: _character, progress }: LookCardProp
   const makeupSummary = getMakeupSummary();
   const hairSummary = getHairSummary();
 
+  const isComplete = progress.captured === progress.total && progress.total > 0;
+
+  // Get recent capture info (last captured scene)
+  const getRecentCapture = () => {
+    if (!currentProject) return null;
+    for (let i = look.scenes.length - 1; i >= 0; i--) {
+      const sceneNum = look.scenes[i];
+      const scene = currentProject.scenes.find(s => s.sceneNumber === sceneNum);
+      if (scene) {
+        const captureKey = `${scene.id}-${look.characterId}`;
+        const capture = sceneCaptures[captureKey];
+        if (capture && (capture.photos.front || capture.additionalPhotos.length > 0)) {
+          return { sceneNum, capture };
+        }
+      }
+    }
+    return null;
+  };
+
+  const recentCapture = getRecentCapture();
+
   return (
-    <div className="bg-input-bg rounded-lg overflow-hidden">
+    <div className="bg-card rounded-card overflow-hidden shadow-card">
       {/* Main card content - always visible */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full p-3 text-left active:bg-gray-100 transition-colors"
+        className="w-full p-4 text-left"
       >
         {/* Look name and info row */}
-        <div className="flex items-start justify-between gap-2 mb-2">
+        <div className="flex items-start justify-between gap-2 mb-3">
           <div className="flex-1 min-w-0">
-            <h4 className="font-semibold text-text-primary truncate">{look.name}</h4>
-            <div className="text-xs text-text-muted mt-0.5">
-              Sc {sceneRange} • ~{look.estimatedTime} min
-            </div>
+            <h4 className="text-[15px] font-bold text-text-primary">{look.name}</h4>
+            <p className="text-xs text-text-muted mt-1">
+              Scenes {look.scenes.join(', ')} • ~{look.estimatedTime} min
+            </p>
           </div>
-          <svg
-            className={`w-4 h-4 text-text-muted transition-transform duration-200 flex-shrink-0 mt-1 ${
-              isExpanded ? 'rotate-180' : ''
-            }`}
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
+          <div className="flex items-center gap-2">
+            <span className={`text-[11px] font-semibold ${isComplete ? 'text-success' : 'text-gold'}`}>
+              {progress.captured}/{progress.total}
+            </span>
+            <svg
+              className={`w-[18px] h-[18px] text-text-light transition-transform duration-200 ${
+                isExpanded ? 'rotate-180' : ''
+              }`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </div>
         </div>
 
         {/* Progress bar */}
         <div className="mb-3">
-          <div className="flex justify-between text-xs text-text-muted mb-1">
-            <span>{progress.captured}/{progress.total} scenes captured</span>
-            <span>{Math.round(progressPercent)}%</span>
-          </div>
-          <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+          <div className="h-[3px] bg-gray-100 rounded-sm overflow-hidden">
             <div
-              className="h-full gold-gradient rounded-full transition-all duration-300"
+              className={`h-full rounded-sm transition-all duration-300 ${isComplete ? 'bg-success' : 'gold-gradient'}`}
               style={{ width: `${progressPercent}%` }}
             />
           </div>
         </div>
 
-        {/* Thumbnail row */}
-        <div className="flex gap-2">
-          {/* Master reference - larger */}
-          <div className="w-16 h-16 rounded-lg bg-gray-200 flex-shrink-0 overflow-hidden">
+        {/* Preview row */}
+        <div className="flex gap-3 items-center">
+          {/* Master reference thumbnail */}
+          <div className="w-[60px] h-[60px] rounded-lg bg-input-bg border border-border flex-shrink-0 overflow-hidden flex items-center justify-center">
             {look.masterReference ? (
               <img
                 src={look.masterReference.thumbnail || look.masterReference.uri}
@@ -125,25 +146,47 @@ export function LookCard({ look, character: _character, progress }: LookCardProp
                 className="w-full h-full object-cover"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </div>
+              <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <circle cx="8.5" cy="8.5" r="1.5" />
+                <path d="M21 15l-5-5L5 21" />
+              </svg>
             )}
           </div>
 
-          {/* 4-angle mini grid */}
-          <div className="grid grid-cols-2 gap-1 flex-shrink-0">
-            {(['front', 'left', 'right', 'back'] as const).map((angle) => (
-              <div
-                key={angle}
-                className="w-7 h-7 rounded bg-gray-200 flex items-center justify-center"
-              >
-                <span className="text-[8px] text-gray-400 uppercase">{angle[0]}</span>
+          {/* Recent capture mini grid or placeholder */}
+          {recentCapture ? (
+            <div className="flex-1">
+              <span className="text-[9px] font-semibold tracking-wider uppercase text-text-light block mb-1.5">
+                Scene {recentCapture.sceneNum}
+              </span>
+              <div className="grid grid-cols-4 gap-1">
+                {(['front', 'left', 'right', 'back'] as const).map((angle) => {
+                  const hasPhoto = recentCapture.capture.photos[angle];
+                  return (
+                    <div
+                      key={angle}
+                      className={`aspect-[3/4] rounded ${hasPhoto ? 'bg-gray-200 border border-gold' : 'bg-input-bg border border-border'} flex items-center justify-center`}
+                    >
+                      {hasPhoto ? (
+                        <svg className="w-3 h-3 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      ) : (
+                        <svg className="w-2.5 h-2.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                          <rect x="3" y="3" width="18" height="18" rx="2" />
+                        </svg>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-            ))}
-          </div>
+            </div>
+          ) : (
+            <div className="flex-1 bg-input-bg rounded-lg p-3 text-center">
+              <span className="text-[11px] text-text-light">No captures yet</span>
+            </div>
+          )}
         </div>
       </button>
 
@@ -153,37 +196,54 @@ export function LookCard({ look, character: _character, progress }: LookCardProp
           isExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'
         }`}
       >
-        <div className="px-3 pb-3 space-y-4 border-t border-border/50 pt-3">
-          {/* Makeup summary */}
-          {makeupSummary.length > 0 && (
-            <div>
-              <h5 className="field-label mb-1.5">MAKEUP</h5>
-              <div className="space-y-0.5">
-                {makeupSummary.map((line, i) => (
-                  <p key={i} className="text-xs text-text-secondary">{line}</p>
-                ))}
+        <div className="px-3 pb-3 space-y-3 border-t border-border/50 pt-3">
+          {/* Look description */}
+          {look.notes && (
+            <p className="text-[13px] text-text-secondary leading-snug">
+              {look.notes}
+            </p>
+          )}
+
+          {/* Makeup & Hair side-by-side grid */}
+          {(makeupSummary.length > 0 || hairSummary.length > 0) && (
+            <div className="grid grid-cols-2 gap-2">
+              {/* Makeup */}
+              <div className="bg-gray-50 rounded-lg p-2.5">
+                <h5 className="text-[9px] font-bold tracking-wider uppercase text-text-light mb-1.5">MAKEUP</h5>
+                {makeupSummary.length > 0 ? (
+                  <div className="space-y-0.5">
+                    {makeupSummary.map((line, i) => (
+                      <p key={i} className="text-[11px] text-text-secondary">{line}</p>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-text-placeholder">Not specified</p>
+                )}
+              </div>
+
+              {/* Hair */}
+              <div className="bg-gray-50 rounded-lg p-2.5">
+                <h5 className="text-[9px] font-bold tracking-wider uppercase text-text-light mb-1.5">HAIR</h5>
+                {hairSummary.length > 0 ? (
+                  <div className="space-y-0.5">
+                    {hairSummary.map((line, i) => (
+                      <p key={i} className="text-[11px] text-text-secondary">{line}</p>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-text-placeholder">Not specified</p>
+                )}
               </div>
             </div>
           )}
 
-          {/* Hair summary */}
-          {hairSummary.length > 0 && (
-            <div>
-              <h5 className="field-label mb-1.5">HAIR</h5>
-              <div className="space-y-0.5">
-                {hairSummary.map((line, i) => (
-                  <p key={i} className="text-xs text-text-secondary">{line}</p>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Scene status pills */}
+          {/* Scene captures - horizontal scroll */}
           <div>
-            <h5 className="field-label mb-2">SCENE STATUS</h5>
-            <div className="flex flex-wrap gap-1.5">
+            <h5 className="text-[9px] font-bold tracking-wider uppercase text-text-light mb-2">SCENE CAPTURES</h5>
+            <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
               {look.scenes.map(sceneNum => {
                 const status = getSceneCaptureStatus(sceneNum);
+                const isCaptured = status === 'captured';
                 return (
                   <button
                     key={sceneNum}
@@ -191,18 +251,30 @@ export function LookCard({ look, character: _character, progress }: LookCardProp
                       e.stopPropagation();
                       handleSceneClick(sceneNum);
                     }}
-                    className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-                      status === 'captured'
-                        ? 'bg-gold-100 text-gold border border-gold'
-                        : 'bg-gray-100 text-text-muted border border-gray-200'
+                    className={`flex-shrink-0 w-16 rounded-lg border overflow-hidden transition-colors ${
+                      isCaptured
+                        ? 'border-gold bg-gold-100/30'
+                        : 'border-gray-200 bg-gray-50'
                     }`}
                   >
-                    {status === 'captured' && (
-                      <svg className="w-3 h-3 inline mr-1 -mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    )}
-                    {sceneNum}
+                    <div className="aspect-[3/4] flex items-center justify-center">
+                      {isCaptured ? (
+                        <svg className="w-5 h-5 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      ) : (
+                        <svg className="w-5 h-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                          <rect x="3" y="3" width="18" height="18" rx="2" />
+                          <circle cx="8.5" cy="8.5" r="1.5" />
+                          <path d="M21 15l-5-5L5 21" />
+                        </svg>
+                      )}
+                    </div>
+                    <div className={`py-1.5 text-center text-[10px] font-semibold ${
+                      isCaptured ? 'text-gold' : 'text-text-muted'
+                    }`}>
+                      Sc {sceneNum}
+                    </div>
                   </button>
                 );
               })}
@@ -210,7 +282,7 @@ export function LookCard({ look, character: _character, progress }: LookCardProp
           </div>
 
           {/* Action buttons */}
-          <div className="flex gap-2 pt-2">
+          <div className="flex gap-2 pt-1">
             <button
               onClick={(e) => {
                 e.stopPropagation();

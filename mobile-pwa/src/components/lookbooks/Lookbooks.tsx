@@ -70,7 +70,6 @@ export function Lookbooks() {
     return (
       <div className="min-h-screen bg-background pb-safe-bottom">
         <LookbooksHeader
-          syncStatus={syncStatus}
           viewMode={viewMode}
           onViewModeChange={setViewMode}
         />
@@ -81,46 +80,57 @@ export function Lookbooks() {
 
   const grouped = looksByCharacter();
   const hasLooks = currentProject.looks.length > 0;
+  const characterCount = currentProject.characters.length;
 
   return (
     <div className="min-h-screen bg-background pb-safe-bottom">
       <LookbooksHeader
-        syncStatus={syncStatus}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
       />
 
       <div className="mobile-container">
-        {hasLooks ? (
-          <div className="px-4 py-4 space-y-4 pb-24">
-            {viewMode === 'character' ? (
-              // By Character view
-              Array.from(grouped.entries()).map(([charId, looks]) => {
-                const character = getCharacter(charId);
-                if (!character) return null;
+        <div className="px-4 pt-4 pb-24">
+          {/* Sync Status Banner */}
+          <SyncBanner status={syncStatus} />
 
-                // Calculate total capture progress for character
-                let totalCaptured = 0;
-                let totalScenes = 0;
-                looks.forEach(look => {
-                  const progress = getCaptureProgress(look);
-                  totalCaptured += progress.captured;
-                  totalScenes += progress.total;
-                });
+          {hasLooks ? (
+            <>
+              {/* Characters count header */}
+              <div className="section-header mb-3">
+                CHARACTERS ({characterCount})
+              </div>
 
-                return (
-                  <CharacterSection
-                    key={charId}
-                    character={character}
-                    looks={looks}
-                    capturedScenes={totalCaptured}
-                    totalScenes={totalScenes}
-                    getCaptureProgress={getCaptureProgress}
-                    onAddLook={() => handleAddLook(charId)}
-                  />
-                );
-              })
-            ) : (
+              {viewMode === 'character' ? (
+                // By Character view
+                <div className="space-y-5">
+                  {Array.from(grouped.entries()).map(([charId, looks]) => {
+                    const character = getCharacter(charId);
+                    if (!character) return null;
+
+                    // Calculate total capture progress for character
+                    let totalCaptured = 0;
+                    let totalScenes = 0;
+                    looks.forEach(look => {
+                      const progress = getCaptureProgress(look);
+                      totalCaptured += progress.captured;
+                      totalScenes += progress.total;
+                    });
+
+                    return (
+                      <CharacterSection
+                        key={charId}
+                        character={character}
+                        looks={looks}
+                        capturedScenes={totalCaptured}
+                        totalScenes={totalScenes}
+                        getCaptureProgress={getCaptureProgress}
+                        onAddLook={() => handleAddLook(charId)}
+                      />
+                    );
+                  })}
+                </div>
+              ) : (
               // Timeline view - looks sorted by first scene number
               <div className="space-y-3">
                 {[...currentProject.looks]
@@ -139,11 +149,12 @@ export function Lookbooks() {
                     );
                   })}
               </div>
-            )}
-          </div>
-        ) : (
-          <EmptyState onAddLook={() => handleAddLook()} />
-        )}
+              )}
+            </>
+          ) : (
+            <EmptyState onAddLook={() => handleAddLook()} />
+          )}
+        </div>
       </div>
 
       {/* Floating Add Button */}
@@ -169,56 +180,59 @@ export function Lookbooks() {
 
 // Header component
 interface LookbooksHeaderProps {
-  syncStatus: SyncStatus;
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
 }
 
-function LookbooksHeader({ syncStatus, viewMode, onViewModeChange }: LookbooksHeaderProps) {
+function LookbooksHeader({ viewMode, onViewModeChange }: LookbooksHeaderProps) {
   return (
     <div className="sticky top-0 z-30 bg-card border-b border-border safe-top">
       <div className="mobile-container">
         <div className="h-14 px-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <h1 className="text-lg font-semibold text-text-primary">Lookbooks</h1>
-            <SyncIndicator status={syncStatus} />
-          </div>
-
-          {/* Pull-to-refresh hint would go here */}
+          <button className="p-2 -ml-2 text-text-primary">
+            <svg className="w-[22px] h-[22px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+          <h1 className="text-[17px] font-bold text-text-primary">Lookbooks</h1>
+          <button className="p-2 -mr-2 text-text-primary">
+            <svg className="w-[22px] h-[22px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+          </button>
         </div>
 
         {/* View toggle */}
-        <div className="px-4 pb-3">
-          <div className="flex bg-input-bg rounded-pill p-1">
-            <button
-              onClick={() => onViewModeChange('character')}
-              className={`flex-1 py-2 px-4 rounded-pill text-sm font-medium transition-all ${
-                viewMode === 'character'
-                  ? 'bg-card shadow text-text-primary'
-                  : 'text-text-muted'
-              }`}
-            >
-              By Character
-            </button>
-            <button
-              onClick={() => onViewModeChange('timeline')}
-              className={`flex-1 py-2 px-4 rounded-pill text-sm font-medium transition-all ${
-                viewMode === 'timeline'
-                  ? 'bg-card shadow text-text-primary'
-                  : 'text-text-muted'
-              }`}
-            >
-              Timeline
-            </button>
-          </div>
+        <div className="px-4 pb-3.5 flex gap-2">
+          <button
+            onClick={() => onViewModeChange('character')}
+            className={`flex-1 py-2.5 rounded-lg text-[13px] font-semibold transition-all ${
+              viewMode === 'character'
+                ? 'gold-gradient text-white'
+                : 'bg-input-bg text-text-muted'
+            }`}
+          >
+            By Character
+          </button>
+          <button
+            onClick={() => onViewModeChange('timeline')}
+            className={`flex-1 py-2.5 rounded-lg text-[13px] font-semibold transition-all ${
+              viewMode === 'timeline'
+                ? 'gold-gradient text-white'
+                : 'bg-input-bg text-text-muted'
+            }`}
+          >
+            Timeline
+          </button>
         </div>
       </div>
     </div>
   );
 }
 
-// Sync status indicator
-function SyncIndicator({ status }: { status: SyncStatus }) {
+// Sync status banner
+function SyncBanner({ status }: { status: SyncStatus }) {
   const colors = {
     synced: 'bg-success',
     pending: 'bg-warning',
@@ -226,15 +240,18 @@ function SyncIndicator({ status }: { status: SyncStatus }) {
   };
 
   const labels = {
-    synced: 'Synced',
-    pending: 'Pending sync',
-    offline: 'Offline',
+    synced: 'Synced with desktop',
+    pending: 'Pending sync...',
+    offline: 'Working offline',
   };
 
   return (
-    <div className="flex items-center gap-1.5" title={labels[status]}>
-      <div className={`w-2 h-2 rounded-full ${colors[status]} ${status === 'synced' ? 'animate-pulse' : ''}`} />
-      <span className="text-xs text-text-muted hidden sm:inline">{labels[status]}</span>
+    <div className="bg-card rounded-[10px] px-4 py-3 mb-4 flex items-center justify-between shadow-card">
+      <div className="flex items-center gap-2.5">
+        <div className={`w-2 h-2 rounded-full ${colors[status]}`} />
+        <span className="text-xs text-text-secondary">{labels[status]}</span>
+      </div>
+      <span className="text-[11px] text-text-light">2 min ago</span>
     </div>
   );
 }
