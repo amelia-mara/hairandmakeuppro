@@ -126,7 +126,31 @@ export interface ContinuityEvent {
 export type ContinuityEventType = 'Wound' | 'Bruise' | 'Prosthetic' | 'Scar' | 'Tattoo' | 'Other';
 
 // Navigation types
-export type NavTab = 'today' | 'breakdown' | 'looks' | 'hours' | 'more';
+export type NavTab = 'today' | 'breakdown' | 'looks' | 'hours' | 'script' | 'schedule' | 'callsheets' | 'settings' | 'more';
+
+// Navigation item configuration
+export interface NavItemConfig {
+  id: NavTab;
+  label: string;
+  iconName: NavIconName;
+}
+
+export type NavIconName = 'calendar' | 'grid' | 'book' | 'clock' | 'document' | 'schedule' | 'clipboard' | 'cog' | 'ellipsis';
+
+// All available nav items (except 'more' which is fixed)
+export const ALL_NAV_ITEMS: NavItemConfig[] = [
+  { id: 'today', label: 'Today', iconName: 'calendar' },
+  { id: 'breakdown', label: 'Breakdown', iconName: 'grid' },
+  { id: 'looks', label: 'Looks', iconName: 'book' },
+  { id: 'hours', label: 'Hours', iconName: 'clock' },
+  { id: 'script', label: 'Script', iconName: 'document' },
+  { id: 'schedule', label: 'Schedule', iconName: 'schedule' },
+  { id: 'callsheets', label: 'Call Sheets', iconName: 'clipboard' },
+  { id: 'settings', label: 'Settings', iconName: 'cog' },
+];
+
+// Default bottom nav items (first 3)
+export const DEFAULT_BOTTOM_NAV: NavTab[] = ['today', 'breakdown', 'hours'];
 
 // Filter types for scene list
 export type SceneFilter = 'all' | 'complete' | 'incomplete';
