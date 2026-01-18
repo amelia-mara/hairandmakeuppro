@@ -126,10 +126,61 @@ export interface ContinuityEvent {
 export type ContinuityEventType = 'Wound' | 'Bruise' | 'Prosthetic' | 'Scar' | 'Tattoo' | 'Other';
 
 // Navigation types
-export type NavTab = 'scenes' | 'lookbooks' | 'timesheet' | 'settings';
+export type NavTab = 'today' | 'breakdown' | 'looks' | 'hours' | 'more';
 
 // Filter types for scene list
 export type SceneFilter = 'all' | 'complete' | 'incomplete';
+
+// ============================================
+// CALL SHEET / TODAY TAB TYPES
+// ============================================
+
+export type ShootingSceneStatus = 'upcoming' | 'in-progress' | 'wrapped';
+
+export interface CallSheet {
+  id: string;
+  date: string; // ISO date YYYY-MM-DD
+  productionDay: number;
+  unitCallTime: string; // "06:00" format
+  firstShotEstimate?: string;
+  lunchEstimate?: string;
+  wrapEstimate?: string;
+  weatherNote?: string;
+  scenes: ShootingScene[];
+  uploadedAt: Date;
+  pdfUri?: string;
+}
+
+export interface ShootingScene {
+  sceneNumber: number;
+  shootOrder: number;
+  estimatedTime?: string;
+  status: ShootingSceneStatus;
+  notes?: string;
+}
+
+export interface ShootingSchedule {
+  days: ShootingDay[];
+}
+
+export interface ShootingDay {
+  dayNumber: number;
+  date: string;
+  scenes: number[];
+  location: string;
+  notes?: string;
+}
+
+// Breakdown filter types
+export type BreakdownViewMode = 'list' | 'grid';
+
+export interface BreakdownFilters {
+  characters: string[];
+  shootingDay: number | null;
+  location: string | null;
+  completionStatus: 'all' | 'complete' | 'incomplete';
+  lookId: string | null;
+}
 
 // Helper type for creating empty objects
 export const createEmptyMakeupDetails = (): MakeupDetails => ({
