@@ -3511,7 +3511,11 @@ const App = {
      * Calculate earnings for a timesheet entry
      */
     calculateEntryEarnings(entry) {
-        if (!entry || !entry.unitcall || !entry.wrap) {
+        // Support both camelCase (saved data) and lowercase (legacy) property names
+        const unitCall = entry.unitCall || entry.unitcall;
+        const preCall = entry.preCall || entry.precall;
+
+        if (!entry || !unitCall || !entry.wrap) {
             return {
                 preCallHours: 0,
                 workingHours: 0,
@@ -3540,9 +3544,9 @@ const App = {
         };
 
         // Calculate hours
-        const preCallHours = entry.precall ? getHoursDiff(entry.precall, entry.unitcall) : 0;
+        const preCallHours = preCall ? getHoursDiff(preCall, unitCall) : 0;
         const lunchDeduction = entry.brokenLunch ? 0.5 : 1;
-        const rawWorkingHours = getHoursDiff(entry.unitcall, entry.wrap);
+        const rawWorkingHours = getHoursDiff(unitCall, entry.wrap);
         const workingHours = Math.max(0, rawWorkingHours - lunchDeduction);
         const totalHours = preCallHours + workingHours;
 
