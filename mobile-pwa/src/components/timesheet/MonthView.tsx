@@ -40,7 +40,7 @@ export function MonthView({ year, month, onNavigate, onDaySelect, selectedDate }
     for (let day = 1; day <= daysInMonth; day++) {
       const date = formatDateString(new Date(year, month, day));
       const entry = entries[date];
-      const calc = entry && entry.unitCall && entry.wrap ? calculateEntry(entry) : null;
+      const calc = entry && entry.unitCall && entry.wrapOut ? calculateEntry(entry) : null;
 
       currentWeek.push({
         date,
@@ -74,7 +74,7 @@ export function MonthView({ year, month, onNavigate, onDaySelect, selectedDate }
     Object.values(entries).forEach((entry) => {
       const entryDate = new Date(entry.date);
       if (entryDate.getFullYear() === year && entryDate.getMonth() === month) {
-        if (entry.unitCall && entry.wrap) {
+        if (entry.unitCall && entry.wrapOut) {
           const calc = calculateEntry(entry);
           totalHours += calc.totalHours;
           totalEarnings += calc.totalEarnings;

@@ -273,21 +273,24 @@ export type TimesheetView = 'week' | 'month';
 export interface RateCard {
   dailyRate: number;
   baseDayHours: BaseDayHours;
-  otMultiplier: number; // 1.5
-  sixthDayMultiplier: number; // 1.5
+  otMultiplier: number; // 1.5x after base hours
+  lateNightMultiplier: number; // 2x after 23:00
+  preCallMultiplier: number; // 1.5x for pre-call hours
+  sixthDayMultiplier: number; // 1.5x
   kitRental: number;
+  lunchDuration: number; // in minutes (typically 60)
 }
 
 export interface TimesheetEntry {
   id: string;
   date: string; // ISO date string YYYY-MM-DD
   dayType: DayType;
-  preCall: string; // "05:30" format
-  unitCall: string; // "06:00" format
-  outOfChair: string; // "17:00" format
-  wrap: string; // "18:00" format
+  preCall: string; // "05:30" format - arrival before unit call
+  unitCall: string; // "06:00" format - official start
+  outOfChair: string; // "17:00" format - talent leaves chair
+  wrapOut: string; // "18:00" format - leave building
+  lunchTaken: number; // actual lunch in minutes
   isSixthDay: boolean;
-  brokenLunch: boolean;
   notes: string;
   status: EntryStatus;
   productionDay?: number;
@@ -295,12 +298,15 @@ export interface TimesheetEntry {
 
 export interface TimesheetCalculation {
   preCallHours: number;
+  preCallEarnings: number;
   workingHours: number;
-  totalHours: number;
   baseHours: number;
   otHours: number;
+  lateNightHours: number;
+  totalHours: number;
   dailyEarnings: number;
   otEarnings: number;
+  lateNightEarnings: number;
   sixthDayBonus: number;
   kitRental: number;
   totalEarnings: number;
@@ -334,8 +340,11 @@ export const createDefaultRateCard = (): RateCard => ({
   dailyRate: 0,
   baseDayHours: 11,
   otMultiplier: 1.5,
+  lateNightMultiplier: 2.0,
+  preCallMultiplier: 1.5,
   sixthDayMultiplier: 1.5,
   kitRental: 0,
+  lunchDuration: 60,
 });
 
 export const createEmptyTimesheetEntry = (date: string): TimesheetEntry => ({
@@ -345,9 +354,9 @@ export const createEmptyTimesheetEntry = (date: string): TimesheetEntry => ({
   preCall: '',
   unitCall: '',
   outOfChair: '',
-  wrap: '',
+  wrapOut: '',
+  lunchTaken: 60,
   isSixthDay: false,
-  brokenLunch: false,
   notes: '',
   status: 'draft',
 });

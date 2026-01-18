@@ -131,68 +131,92 @@ export const useTimesheetStore = create<TimesheetState>()(
       calculateEntry: (entry) => {
         const { rateCard } = get();
 
-        // Empty entry
-        if (!entry.unitCall || !entry.wrap) {
+        // Empty entry check
+        if (!entry.unitCall || !entry.wrapOut) {
           return {
             preCallHours: 0,
+            preCallEarnings: 0,
             workingHours: 0,
-            totalHours: 0,
             baseHours: 0,
             otHours: 0,
+            lateNightHours: 0,
+            totalHours: 0,
             dailyEarnings: 0,
             otEarnings: 0,
+            lateNightEarnings: 0,
             sixthDayBonus: 0,
             kitRental: 0,
             totalEarnings: 0,
           };
         }
 
-        // 1. Pre-call time = unitCall - preCall
-        const preCallHours = entry.preCall ? getHoursDiff(entry.preCall, entry.unitCall) : 0;
-
-        // 2. Working time = wrap - unitCall - lunch break
-        const lunchDeduction = entry.brokenLunch ? 0.5 : 1;
-        const rawWorkingHours = getHoursDiff(entry.unitCall, entry.wrap);
-        const workingHours = Math.max(0, rawWorkingHours - lunchDeduction);
-
-        // 3. Total hours
-        const totalHours = preCallHours + workingHours;
-
-        // 4. Base hours from rate card
-        const baseHours = Math.min(totalHours, rateCard.baseDayHours);
-
-        // 5. OT hours
-        const otHours = Math.max(0, totalHours - rateCard.baseDayHours);
-
-        // 6. Calculate hourly rate
+        // Calculate hourly rate
         const hourlyRate = rateCard.dailyRate / rateCard.baseDayHours;
 
-        // 7. Daily earnings (base)
-        let dailyEarnings = baseHours * hourlyRate;
+        // 1. Pre-call hours (before unit call) - paid at pre-call multiplier
+        const preCallHours = entry.preCall ? getHoursDiff(entry.preCall, entry.unitCall) : 0;
+        const preCallEarnings = preCallHours * hourlyRate * rateCard.preCallMultiplier;
+
+        // 2. Working time = wrapOut - unitCall - lunch break
+        const lunchDeduction = (entry.lunchTaken ?? rateCard.lunchDuration) / 60;
+        const rawWorkingHours = getHoursDiff(entry.unitCall, entry.wrapOut);
+        const workingHours = Math.max(0, rawWorkingHours - lunchDeduction);
+
+        // 3. Calculate late night hours (after 23:00)
+        const wrapTime = parseTime(entry.wrapOut);
+        const lateNightThreshold = 23; // 11 PM
+        let lateNightHours = 0;
+
+        if (wrapTime !== null) {
+          // If wrap is after midnight (0-6), treat as next day (add 24)
+          const adjustedWrap = wrapTime < 6 ? wrapTime + 24 : wrapTime;
+          if (adjustedWrap > lateNightThreshold) {
+            lateNightHours = adjustedWrap - lateNightThreshold;
+          }
+        }
+
+        // 4. Total hours
+        const totalHours = preCallHours + workingHours;
+
+        // 5. Base hours (capped at base day hours)
+        const baseHours = Math.min(workingHours, rateCard.baseDayHours);
+
+        // 6. OT hours (beyond base, excluding late night)
+        const otHours = Math.max(0, workingHours - rateCard.baseDayHours - lateNightHours);
+
+        // 7. Daily earnings (base hours at standard rate)
+        const dailyEarnings = baseHours * hourlyRate;
 
         // 8. OT earnings (at 1.5x)
         const otEarnings = otHours * hourlyRate * rateCard.otMultiplier;
 
-        // 9. Sixth day bonus (entire day at 1.5x, so add 0.5x to base)
+        // 9. Late night earnings (at 2x)
+        const lateNightEarnings = lateNightHours * hourlyRate * rateCard.lateNightMultiplier;
+
+        // 10. Sixth day bonus
         let sixthDayBonus = 0;
         if (entry.isSixthDay) {
-          sixthDayBonus = (dailyEarnings + otEarnings) * (rateCard.sixthDayMultiplier - 1);
+          const baseEarnings = dailyEarnings + otEarnings + lateNightEarnings + preCallEarnings;
+          sixthDayBonus = baseEarnings * (rateCard.sixthDayMultiplier - 1);
         }
 
-        // 10. Kit rental
+        // 11. Kit rental
         const kitRental = rateCard.kitRental;
 
-        // Total
-        const totalEarnings = dailyEarnings + otEarnings + sixthDayBonus + kitRental;
+        // Total earnings
+        const totalEarnings = preCallEarnings + dailyEarnings + otEarnings + lateNightEarnings + sixthDayBonus + kitRental;
 
         return {
-          preCallHours: Math.round(preCallHours * 10) / 10,
-          workingHours: Math.round(workingHours * 10) / 10,
-          totalHours: Math.round(totalHours * 10) / 10,
-          baseHours: Math.round(baseHours * 10) / 10,
-          otHours: Math.round(otHours * 10) / 10,
+          preCallHours: Math.round(preCallHours * 100) / 100,
+          preCallEarnings: Math.round(preCallEarnings * 100) / 100,
+          workingHours: Math.round(workingHours * 100) / 100,
+          baseHours: Math.round(baseHours * 100) / 100,
+          otHours: Math.round(otHours * 100) / 100,
+          lateNightHours: Math.round(lateNightHours * 100) / 100,
+          totalHours: Math.round(totalHours * 100) / 100,
           dailyEarnings: Math.round(dailyEarnings * 100) / 100,
           otEarnings: Math.round(otEarnings * 100) / 100,
+          lateNightEarnings: Math.round(lateNightEarnings * 100) / 100,
           sixthDayBonus: Math.round(sixthDayBonus * 100) / 100,
           kitRental,
           totalEarnings: Math.round(totalEarnings * 100) / 100,
@@ -228,7 +252,7 @@ export const useTimesheetStore = create<TimesheetState>()(
             sixthDayHours += calc.totalHours;
           }
           totalEarnings += calc.totalEarnings;
-          if (entry.unitCall && entry.wrap) {
+          if (entry.unitCall && entry.wrapOut) {
             kitRentalTotal += state.rateCard.kitRental;
           }
         });
