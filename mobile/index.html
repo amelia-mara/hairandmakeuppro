@@ -1094,21 +1094,33 @@
             </div>
 
             <div class="screen-content scrollable">
+                <!-- Sync Status Section -->
                 <div class="settings-section">
-                    <h3 class="settings-section-title">Account</h3>
-                    <div class="settings-card account-card">
-                        <div class="account-avatar">
+                    <h3 class="settings-section-title">Sync</h3>
+                    <div class="settings-card sync-status-card" id="settings-sync-card" data-navigate="screen-sync-status">
+                        <div class="sync-status-icon">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="8" r="4"/>
-                                <path d="M5 20c0-4.418 3.134-8 7-8s7 3.582 7 8"/>
+                                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
                             </svg>
                         </div>
-                        <div class="account-info">
-                            <p class="account-mode">Standalone Mode</p>
-                            <p class="account-hint">Sign in to sync with desktop</p>
+                        <div class="sync-status-info">
+                            <p class="sync-status-title" id="settings-sync-title">Not Connected</p>
+                            <p class="sync-status-detail" id="settings-sync-detail">Tap to connect to a desktop project</p>
+                        </div>
+                        <div class="sync-status-indicator" id="settings-sync-indicator">
+                            <span class="status-dot status-disconnected"></span>
                         </div>
                     </div>
-                    <button class="btn btn-secondary btn-full">Sign In to Sync</button>
+                    <button class="btn btn-secondary btn-full" id="btn-export-data" style="display: none;">
+                        <span class="btn-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7 10 12 15 17 10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                        </span>
+                        Export to Desktop
+                    </button>
                 </div>
 
                 <div class="settings-section">
@@ -1275,7 +1287,7 @@
         </div>
 
         <!-- ============================================ -->
-        <!-- ADDITIONAL: SYNC LOGIN SCREEN -->
+        <!-- ADDITIONAL: SYNC LOGIN SCREEN (Connect Project) -->
         <!-- ============================================ -->
         <div class="screen" id="screen-sync-login">
             <div class="top-bar">
@@ -1284,38 +1296,102 @@
                         <path d="M15 18l-6-6 6-6"/>
                     </svg>
                 </button>
-                <h1 class="top-bar-title">Sync from Desktop</h1>
+                <h1 class="top-bar-title">Connect to Project</h1>
                 <div class="top-bar-btn placeholder"></div>
             </div>
 
-            <div class="screen-content centered padded">
-                <div class="sync-icon">
-                    <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M8 8v10h.582m0 0a14 14 0 0126.836 0M8.582 18H18m22 22v-10h-.582m0 0a14 14 0 01-26.836 0M39.418 30H30"/>
-                    </svg>
+            <div class="screen-content scrollable padded">
+                <!-- Import from File Option -->
+                <div class="connect-option-card">
+                    <div class="connect-option-header">
+                        <div class="connect-option-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <polyline points="14 2 14 8 20 8"/>
+                                <line x1="16" y1="13" x2="8" y2="13"/>
+                                <line x1="16" y1="17" x2="8" y2="17"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3>Import from File</h3>
+                            <p>Select a sync file exported from desktop</p>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary btn-full" id="btn-import-file">
+                        <span class="btn-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="17 8 12 3 7 8"/>
+                                <line x1="12" y1="3" x2="12" y2="15"/>
+                            </svg>
+                        </span>
+                        Choose File
+                    </button>
+                    <input type="file" id="sync-file-input" accept=".json" style="display: none;">
                 </div>
 
-                <h2 class="sync-title">Enter Sync Code</h2>
-                <p class="sync-description">Open Hair & Makeup Pro on your desktop and generate a sync code to connect your devices.</p>
-
-                <div class="sync-code-input">
-                    <input type="text" class="code-input" id="sync-code-1" maxlength="4" placeholder="XXXX">
-                    <span class="code-separator">-</span>
-                    <input type="text" class="code-input" id="sync-code-2" maxlength="4" placeholder="XXXX">
+                <div class="connect-divider">
+                    <span>or</span>
                 </div>
 
-                <button class="btn btn-primary btn-full" id="btn-connect-sync" disabled>
-                    Connect
-                </button>
+                <!-- Sync Code Option -->
+                <div class="connect-option-card">
+                    <div class="connect-option-header">
+                        <div class="connect-option-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3>Enter Sync Code</h3>
+                            <p>Type the 6-character code from desktop</p>
+                        </div>
+                    </div>
+
+                    <div class="sync-code-inputs">
+                        <input type="text" class="sync-code-input" maxlength="1" pattern="[A-Z0-9]" inputmode="text" autocapitalize="characters">
+                        <input type="text" class="sync-code-input" maxlength="1" pattern="[A-Z0-9]" inputmode="text" autocapitalize="characters">
+                        <input type="text" class="sync-code-input" maxlength="1" pattern="[A-Z0-9]" inputmode="text" autocapitalize="characters">
+                        <span class="sync-code-dash">-</span>
+                        <input type="text" class="sync-code-input" maxlength="1" pattern="[A-Z0-9]" inputmode="text" autocapitalize="characters">
+                        <input type="text" class="sync-code-input" maxlength="1" pattern="[A-Z0-9]" inputmode="text" autocapitalize="characters">
+                        <input type="text" class="sync-code-input" maxlength="1" pattern="[A-Z0-9]" inputmode="text" autocapitalize="characters">
+                    </div>
+
+                    <button class="btn btn-secondary btn-full" id="btn-connect-sync" disabled>
+                        Connect
+                    </button>
+                    <p class="connect-hint">Cloud sync coming soon - use file import for now</p>
+                </div>
 
                 <div class="info-banner small">
                     <div class="info-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M12 16v-4M12 8h.01"/>
                         </svg>
                     </div>
-                    <p>Your desktop project will sync to this device. Photos captured here will upload to the cloud.</p>
+                    <p><strong>How to export from desktop:</strong> Click the "Sync" button in the header, then "Export for Mobile". Transfer the file via AirDrop, email, or file sharing.</p>
                 </div>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- ADDITIONAL: SYNC STATUS SCREEN -->
+        <!-- ============================================ -->
+        <div class="screen" id="screen-sync-status">
+            <div class="top-bar">
+                <button class="top-bar-btn back-btn" data-navigate="screen-settings">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M15 18l-6-6 6-6"/>
+                    </svg>
+                </button>
+                <h1 class="top-bar-title">Sync Status</h1>
+                <div class="top-bar-btn placeholder"></div>
+            </div>
+
+            <div class="screen-content scrollable padded" id="sync-status-content">
+                <!-- Content rendered by SyncUI.renderSyncStatus() -->
             </div>
         </div>
     </div>
@@ -1332,6 +1408,10 @@
 
     <!-- Photo Storage Module (IndexedDB) -->
     <script src="js/photo-storage.js"></script>
+
+    <!-- Sync Modules -->
+    <script src="js/sync.js"></script>
+    <script src="js/sync-ui.js"></script>
 
     <!-- App JavaScript -->
     <script src="js/app.js"></script>

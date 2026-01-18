@@ -174,10 +174,19 @@ const App = {
                 break;
             case 'screen-settings':
                 this.updateSettings();
+                this.updateSyncStatusInSettings();
                 this.screenHistory = ['screen-home'];
                 break;
             case 'screen-photo-capture':
                 this.initPhotoCapture();
+                break;
+            case 'screen-sync-login':
+                this.initSyncLoginScreen();
+                break;
+            case 'screen-sync-status':
+                if (typeof SyncUI !== 'undefined') {
+                    SyncUI.renderSyncStatus();
+                }
                 break;
         }
     },
@@ -482,37 +491,137 @@ const App = {
     },
 
     /**
-     * Bind sync code inputs
+     * Bind sync code inputs (6 single-character inputs)
      */
     bindSyncCodeInputs() {
-        const code1 = document.getElementById('sync-code-1');
-        const code2 = document.getElementById('sync-code-2');
+        // Initialize SyncUI if available
+        if (typeof SyncUI !== 'undefined') {
+            SyncUI.bindSyncCodeInputs();
+        }
+    },
+
+    /**
+     * Initialize the sync login screen
+     */
+    initSyncLoginScreen() {
+        // Bind file import button
+        const importFileBtn = document.getElementById('btn-import-file');
+        const fileInput = document.getElementById('sync-file-input');
+
+        if (importFileBtn && fileInput) {
+            importFileBtn.onclick = () => fileInput.click();
+            fileInput.onchange = (e) => this.handleSyncFileImport(e);
+        }
+
+        // Bind sync code inputs
+        if (typeof SyncUI !== 'undefined') {
+            SyncUI.bindSyncCodeInputs();
+        }
+
+        // Bind connect button
         const connectBtn = document.getElementById('btn-connect-sync');
-
-        if (code1 && code2 && connectBtn) {
-            const checkComplete = () => {
-                const complete = code1.value.length === 4 && code2.value.length === 4;
-                connectBtn.disabled = !complete;
+        if (connectBtn) {
+            connectBtn.onclick = () => {
+                if (typeof SyncUI !== 'undefined') {
+                    SyncUI.handleSyncCodeConnect();
+                }
             };
+        }
+    },
 
-            code1.addEventListener('input', (e) => {
-                e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-                if (e.target.value.length === 4) {
-                    code2.focus();
+    /**
+     * Handle sync file import
+     */
+    async handleSyncFileImport(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        if (!file.name.endsWith('.json')) {
+            alert('Please select a .json sync file');
+            return;
+        }
+
+        try {
+            if (typeof MobileSync !== 'undefined') {
+                const result = await MobileSync.importProjectFromFile(file);
+
+                if (result.success) {
+                    // Update app state with imported data
+                    this.project = result.project;
+                    this.scenes = JSON.parse(localStorage.getItem('hmp_scenes') || '[]');
+                    this.characters = JSON.parse(localStorage.getItem('hmp_characters') || '[]');
+
+                    alert(`Project "${result.project.name}" imported successfully!\n\n${result.scenesCount} scenes, ${result.charactersCount} characters`);
+
+                    // Navigate to scene list
+                    this.navigateTo('screen-scene-list');
+                } else {
+                    alert('Import failed: ' + result.error);
                 }
-                checkComplete();
-            });
+            } else {
+                // Fallback without MobileSync module
+                const text = await file.text();
+                const payload = JSON.parse(text);
 
-            code2.addEventListener('input', (e) => {
-                e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-                checkComplete();
-            });
-
-            code2.addEventListener('keydown', (e) => {
-                if (e.key === 'Backspace' && e.target.value === '') {
-                    code1.focus();
+                if (payload.project) {
+                    this.project = {
+                        name: payload.project.name || 'Imported Project',
+                        file: file.name,
+                        isDemo: false
+                    };
+                    localStorage.setItem(this.STORAGE_KEYS.PROJECT, JSON.stringify(this.project));
                 }
-            });
+
+                if (payload.scenes) {
+                    this.scenes = payload.scenes;
+                    localStorage.setItem(this.STORAGE_KEYS.SCENES, JSON.stringify(this.scenes));
+                }
+
+                if (payload.characters) {
+                    this.characters = payload.characters.map(c => c.name || c);
+                    localStorage.setItem(this.STORAGE_KEYS.CHARACTERS, JSON.stringify(this.characters));
+                }
+
+                alert('Project imported successfully!');
+                this.navigateTo('screen-scene-list');
+            }
+        } catch (error) {
+            console.error('Import error:', error);
+            alert('Failed to import file: ' + error.message);
+        }
+
+        // Clear file input
+        event.target.value = '';
+    },
+
+    /**
+     * Update sync status display in settings
+     */
+    updateSyncStatusInSettings() {
+        const titleEl = document.getElementById('settings-sync-title');
+        const detailEl = document.getElementById('settings-sync-detail');
+        const indicatorEl = document.getElementById('settings-sync-indicator');
+        const exportBtn = document.getElementById('btn-export-data');
+        const syncCard = document.getElementById('settings-sync-card');
+
+        if (!titleEl || !detailEl) return;
+
+        if (typeof MobileSync !== 'undefined') {
+            const status = MobileSync.getStatusSummary();
+
+            if (status.connected) {
+                titleEl.textContent = status.projectName || 'Connected';
+                detailEl.textContent = `Last sync: ${status.lastSyncFormatted}`;
+                indicatorEl.innerHTML = `<span class="status-dot ${status.statusClass}"></span>`;
+                if (exportBtn) exportBtn.style.display = 'block';
+                if (syncCard) syncCard.setAttribute('data-navigate', 'screen-sync-status');
+            } else {
+                titleEl.textContent = 'Not Connected';
+                detailEl.textContent = 'Tap to connect to a desktop project';
+                indicatorEl.innerHTML = '<span class="status-dot status-disconnected"></span>';
+                if (exportBtn) exportBtn.style.display = 'none';
+                if (syncCard) syncCard.setAttribute('data-navigate', 'screen-sync-login');
+            }
         }
     },
 
@@ -2771,6 +2880,23 @@ const App = {
         const installBtn = document.getElementById('btn-install-app');
         if (installBtn) {
             installBtn.addEventListener('click', () => this.installApp());
+        }
+
+        // Export data button (sync)
+        const exportDataBtn = document.getElementById('btn-export-data');
+        if (exportDataBtn) {
+            exportDataBtn.addEventListener('click', async () => {
+                if (typeof MobileSync !== 'undefined') {
+                    const result = await MobileSync.exportToFile({ includePhotos: true });
+                    if (result.success) {
+                        alert(`Exported ${result.filename}\n\nTransfer this file to your desktop to import timesheet entries and photos.`);
+                    } else {
+                        alert('Export failed: ' + result.error);
+                    }
+                } else {
+                    alert('Sync module not loaded');
+                }
+            });
         }
     },
 
