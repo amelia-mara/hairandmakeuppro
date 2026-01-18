@@ -3516,3 +3516,187 @@ strong {
     font-size: 0.9375rem;
     color: var(--text-primary);
 }
+
+/* ============================================
+   SCENE SYNOPSIS
+   ============================================ */
+
+.synopsis-section {
+    padding: var(--spacing-md);
+    background-color: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-light);
+}
+
+.synopsis-content {
+    position: relative;
+    cursor: pointer;
+}
+
+.synopsis-text {
+    font-size: 0.875rem;
+    font-style: italic;
+    color: #666666;
+    line-height: 1.5;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    transition: all var(--transition-normal);
+}
+
+.synopsis-text.expanded {
+    -webkit-line-clamp: unset;
+    display: block;
+}
+
+.synopsis-placeholder {
+    font-style: italic;
+    color: var(--text-tertiary);
+}
+
+.synopsis-expand-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    margin-top: var(--spacing-xs);
+    font-size: 0.8125rem;
+    color: var(--gold);
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.synopsis-expand-btn .expand-text::after {
+    content: '';
+}
+
+.synopsis-source-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.6875rem;
+    color: var(--text-tertiary);
+    font-style: normal;
+    margin-left: var(--spacing-sm);
+    vertical-align: middle;
+}
+
+.synopsis-source-badge svg {
+    width: 10px;
+    height: 10px;
+}
+
+/* View Full Scene Button */
+.btn-view-script {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    width: 100%;
+    height: 40px;
+    margin-top: var(--spacing-md);
+    background-color: transparent;
+    border: 1.5px solid var(--gold);
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--gold);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.btn-view-script svg {
+    width: 18px;
+    height: 18px;
+}
+
+.btn-view-script:active {
+    background-color: rgba(201, 169, 97, 0.1);
+}
+
+/* Edit Synopsis Modal */
+#modal-edit-synopsis .modal-content {
+    max-height: 80vh;
+}
+
+#modal-edit-synopsis .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+#modal-edit-synopsis .modal-header h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.modal-close-btn {
+    width: 32px;
+    height: 32px;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    transition: background-color var(--transition-fast);
+}
+
+.modal-close-btn:active {
+    background-color: var(--bg-secondary);
+}
+
+.modal-close-btn svg {
+    width: 20px;
+    height: 20px;
+}
+
+.modal-hint {
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-md);
+    line-height: 1.4;
+}
+
+.synopsis-textarea {
+    width: 100%;
+    min-height: 120px;
+    padding: var(--spacing-md);
+    border: 1px solid var(--border-medium);
+    border-radius: var(--radius-md);
+    background-color: var(--bg-secondary);
+    font-family: inherit;
+    font-size: 0.9375rem;
+    color: var(--text-primary);
+    line-height: 1.5;
+    resize: none;
+    transition: border-color var(--transition-fast);
+}
+
+.synopsis-textarea:focus {
+    outline: none;
+    border-color: var(--gold);
+}
+
+.synopsis-textarea::placeholder {
+    color: var(--text-tertiary);
+    font-style: italic;
+}
+
+.synopsis-char-count {
+    text-align: right;
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    margin-top: var(--spacing-xs);
+}
+
+.synopsis-char-count.near-limit {
+    color: var(--status-partial);
+}
+
+.synopsis-char-count.at-limit {
+    color: #EF4444;
+}

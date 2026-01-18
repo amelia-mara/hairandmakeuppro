@@ -1167,6 +1167,9 @@ const App = {
         if (sceneNumberEl) sceneNumberEl.textContent = scene.number;
         if (sceneHeadingEl) sceneHeadingEl.textContent = scene.heading;
 
+        // Render synopsis
+        this.renderSceneSynopsis(scene, sceneIndex);
+
         // Render character tabs
         if (characterTabsEl) {
             if (scene.characters.length === 0) {
@@ -1196,6 +1199,211 @@ const App = {
         this.currentSceneIndex = sceneIndex;
 
         this.navigateTo('screen-scene-detail');
+    },
+
+    // ============================================
+    // SCENE SYNOPSIS
+    // ============================================
+
+    /**
+     * Render the scene synopsis section
+     */
+    renderSceneSynopsis(scene, sceneIndex) {
+        const synopsisTextEl = document.getElementById('synopsis-text');
+        const expandBtnEl = document.getElementById('synopsis-expand-btn');
+        const synopsisContentEl = document.getElementById('synopsis-content');
+
+        if (!synopsisTextEl) return;
+
+        // Get synopsis from scene data (priority: desktop sync, manual, none)
+        const synopsis = scene.synopsis || null;
+        const synopsisSource = scene.synopsisSource || null;
+
+        if (synopsis) {
+            // Has synopsis
+            let sourceHtml = '';
+            if (synopsisSource === 'desktop') {
+                sourceHtml = `<span class="synopsis-source-badge">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                        <line x1="8" y1="21" x2="16" y2="21"/>
+                        <line x1="12" y1="17" x2="12" y2="21"/>
+                    </svg>
+                    from desktop
+                </span>`;
+            }
+
+            synopsisTextEl.innerHTML = this.escapeHtml(synopsis) + sourceHtml;
+            synopsisTextEl.classList.remove('expanded');
+
+            // Show expand button if text is long (roughly > 150 chars)
+            if (synopsis.length > 150) {
+                expandBtnEl.style.display = 'block';
+                expandBtnEl.querySelector('.expand-text').textContent = 'more...';
+            } else {
+                expandBtnEl.style.display = 'none';
+            }
+        } else {
+            // No synopsis - show placeholder
+            synopsisTextEl.innerHTML = '<span class="synopsis-placeholder">No synopsis available. Sync from desktop or tap to add.</span>';
+            synopsisTextEl.classList.remove('expanded');
+            expandBtnEl.style.display = 'none';
+        }
+
+        // Bind click events
+        synopsisContentEl.onclick = () => this.handleSynopsisClick(scene, sceneIndex);
+        expandBtnEl.onclick = (e) => {
+            e.stopPropagation();
+            this.toggleSynopsisExpand();
+        };
+
+        // Bind view script button
+        const viewScriptBtn = document.getElementById('btn-view-script');
+        if (viewScriptBtn) {
+            viewScriptBtn.onclick = () => this.viewFullScene(scene);
+        }
+    },
+
+    /**
+     * Handle click on synopsis content
+     */
+    handleSynopsisClick(scene, sceneIndex) {
+        const synopsisTextEl = document.getElementById('synopsis-text');
+
+        // If expanded, collapse first
+        if (synopsisTextEl.classList.contains('expanded')) {
+            this.toggleSynopsisExpand();
+            return;
+        }
+
+        // Open edit modal
+        this.openSynopsisEditor(scene, sceneIndex);
+    },
+
+    /**
+     * Toggle synopsis expand/collapse
+     */
+    toggleSynopsisExpand() {
+        const synopsisTextEl = document.getElementById('synopsis-text');
+        const expandBtnEl = document.getElementById('synopsis-expand-btn');
+
+        if (!synopsisTextEl || !expandBtnEl) return;
+
+        const isExpanded = synopsisTextEl.classList.toggle('expanded');
+        expandBtnEl.querySelector('.expand-text').textContent = isExpanded ? 'less' : 'more...';
+    },
+
+    /**
+     * Open synopsis editor modal
+     */
+    openSynopsisEditor(scene, sceneIndex) {
+        const modal = document.getElementById('modal-edit-synopsis');
+        const textarea = document.getElementById('synopsis-textarea');
+        const charCountEl = document.getElementById('synopsis-char-current');
+
+        if (!modal || !textarea) return;
+
+        // Set current value
+        textarea.value = scene.synopsis || '';
+        this.updateSynopsisCharCount();
+
+        // Show modal
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+
+        // Focus textarea
+        setTimeout(() => textarea.focus(), 100);
+
+        // Bind events
+        textarea.oninput = () => this.updateSynopsisCharCount();
+
+        document.getElementById('btn-close-synopsis-modal').onclick = () => this.closeSynopsisEditor();
+        document.getElementById('btn-cancel-synopsis').onclick = () => this.closeSynopsisEditor();
+        document.getElementById('btn-save-synopsis').onclick = () => this.saveSynopsis(sceneIndex);
+
+        // Close on overlay click
+        modal.querySelector('.modal-overlay').onclick = () => this.closeSynopsisEditor();
+    },
+
+    /**
+     * Update synopsis character count display
+     */
+    updateSynopsisCharCount() {
+        const textarea = document.getElementById('synopsis-textarea');
+        const charCountEl = document.getElementById('synopsis-char-current');
+        const charCountContainer = document.querySelector('.synopsis-char-count');
+
+        if (!textarea || !charCountEl) return;
+
+        const count = textarea.value.length;
+        charCountEl.textContent = count;
+
+        // Update styling based on count
+        charCountContainer.classList.remove('near-limit', 'at-limit');
+        if (count >= 200) {
+            charCountContainer.classList.add('at-limit');
+        } else if (count >= 180) {
+            charCountContainer.classList.add('near-limit');
+        }
+    },
+
+    /**
+     * Close synopsis editor modal
+     */
+    closeSynopsisEditor() {
+        const modal = document.getElementById('modal-edit-synopsis');
+        if (modal) {
+            modal.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+    },
+
+    /**
+     * Save synopsis to scene data
+     */
+    saveSynopsis(sceneIndex) {
+        const textarea = document.getElementById('synopsis-textarea');
+        if (!textarea) return;
+
+        const synopsis = textarea.value.trim();
+        const scene = this.scenes[sceneIndex];
+
+        if (!scene) return;
+
+        // Update scene data
+        scene.synopsis = synopsis || null;
+        scene.synopsisSource = synopsis ? 'manual' : null;
+
+        // Save to localStorage
+        localStorage.setItem(this.STORAGE_KEYS.SCENES, JSON.stringify(this.scenes));
+
+        // Close modal
+        this.closeSynopsisEditor();
+
+        // Re-render synopsis
+        this.renderSceneSynopsis(scene, sceneIndex);
+    },
+
+    /**
+     * View full scene script (placeholder)
+     */
+    viewFullScene(scene) {
+        // For now, show an alert with the scene content if available
+        if (scene.content) {
+            alert(scene.content);
+        } else {
+            alert(`Full scene content for "${scene.heading}" is not available.\n\nSync from desktop to get full script content.`);
+        }
+    },
+
+    /**
+     * Helper: Escape HTML for safe rendering
+     */
+    escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     },
 
     /**

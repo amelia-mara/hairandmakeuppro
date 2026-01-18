@@ -55,15 +55,23 @@ const SyncImportExport = {
             crewMember: this.getCrewMember(),
 
             // Scenes for continuity reference (simplified)
-            scenes: scenes.map((scene, index) => ({
-                index: index,
-                number: scene.sceneNumber || (index + 1),
-                heading: scene.heading || scene.title || `Scene ${index + 1}`,
-                storyDay: scene.storyDay || null,
-                timeOfDay: scene.timeOfDay || null,
-                location: scene.location || null,
-                characters: scene.characters || []
-            })),
+            scenes: scenes.map((scene, index) => {
+                // Get synopsis from sceneBreakdowns if available
+                const breakdown = sceneBreakdowns[index] || sceneBreakdowns[scene.sceneNumber] || {};
+                return {
+                    index: index,
+                    number: scene.sceneNumber || (index + 1),
+                    heading: scene.heading || scene.title || `Scene ${index + 1}`,
+                    storyDay: scene.storyDay || null,
+                    timeOfDay: scene.timeOfDay || null,
+                    location: scene.location || null,
+                    characters: scene.characters || [],
+                    // Include synopsis data
+                    synopsis: breakdown.synopsis || scene.synopsis || null,
+                    synopsisSource: (breakdown.synopsis || scene.synopsis) ? 'desktop' : null,
+                    content: scene.content || null // Full scene content if available
+                };
+            }),
 
             // Characters for continuity
             characters: characters.map(char => ({

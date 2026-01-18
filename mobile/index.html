@@ -444,6 +444,50 @@
                 <p class="scene-heading-large" id="detail-scene-heading">INT. SARAH'S APARTMENT - MORNING</p>
             </div>
 
+            <!-- Synopsis Section -->
+            <div class="synopsis-section" id="synopsis-section">
+                <div class="synopsis-content" id="synopsis-content">
+                    <p class="synopsis-text" id="synopsis-text">
+                        <span class="synopsis-placeholder">No synopsis available. Sync from desktop or tap to add.</span>
+                    </p>
+                    <button class="synopsis-expand-btn" id="synopsis-expand-btn" style="display: none;">
+                        <span class="expand-text">more...</span>
+                    </button>
+                </div>
+                <button class="btn-view-script" id="btn-view-script">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                    </svg>
+                    View Full Scene
+                </button>
+            </div>
+
+            <!-- Edit Synopsis Modal -->
+            <div class="modal" id="modal-edit-synopsis">
+                <div class="modal-overlay"></div>
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Edit Synopsis</h3>
+                        <button class="modal-close-btn" id="btn-close-synopsis-modal">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M18 6L6 18M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="modal-hint">Brief description of what happens in this scene (max 200 characters)</p>
+                        <textarea class="synopsis-textarea" id="synopsis-textarea" maxlength="200" placeholder="Enter a brief synopsis of this scene..."></textarea>
+                        <div class="synopsis-char-count">
+                            <span id="synopsis-char-current">0</span>/200
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" id="btn-cancel-synopsis">Cancel</button>
+                        <button class="btn btn-primary" id="btn-save-synopsis">Save</button>
+                    </div>
+                </div>
+            </div>
+
             <div class="character-tabs" id="character-tabs">
                 <button class="character-tab active" data-character="SARAH CHEN" data-navigate="screen-character-profile">SARAH CHEN</button>
                 <button class="character-tab" data-character="MIKE" data-navigate="screen-character-profile">MIKE</button>
