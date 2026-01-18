@@ -4,12 +4,10 @@ import type { Look, Character } from '@/types';
 import { CharacterSection } from './CharacterSection';
 import { AddLookModal } from './AddLookModal';
 
-type ViewMode = 'character' | 'timeline';
 type SyncStatus = 'synced' | 'pending' | 'offline';
 
 export function Lookbooks() {
   const { currentProject, sceneCaptures } = useProjectStore();
-  const [viewMode, setViewMode] = useState<ViewMode>('character');
   const [addLookOpen, setAddLookOpen] = useState(false);
   const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(null);
 
@@ -69,10 +67,7 @@ export function Lookbooks() {
   if (!currentProject) {
     return (
       <div className="min-h-screen bg-background pb-safe-bottom">
-        <LookbooksHeader
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-        />
+        <LookbooksHeader />
         <EmptyState onAddLook={() => handleAddLook()} />
       </div>
     );
@@ -84,10 +79,7 @@ export function Lookbooks() {
 
   return (
     <div className="min-h-screen bg-background pb-safe-bottom">
-      <LookbooksHeader
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
-      />
+      <LookbooksHeader />
 
       <div className="mobile-container">
         <div className="px-4 pt-4 pb-24">
@@ -101,55 +93,34 @@ export function Lookbooks() {
                 CHARACTERS ({characterCount})
               </div>
 
-              {viewMode === 'character' ? (
-                // By Character view
-                <div className="space-y-5">
-                  {Array.from(grouped.entries()).map(([charId, looks]) => {
-                    const character = getCharacter(charId);
-                    if (!character) return null;
+              {/* By Character view */}
+              <div className="space-y-5">
+                {Array.from(grouped.entries()).map(([charId, looks]) => {
+                  const character = getCharacter(charId);
+                  if (!character) return null;
 
-                    // Calculate total capture progress for character
-                    let totalCaptured = 0;
-                    let totalScenes = 0;
-                    looks.forEach(look => {
-                      const progress = getCaptureProgress(look);
-                      totalCaptured += progress.captured;
-                      totalScenes += progress.total;
-                    });
+                  // Calculate total capture progress for character
+                  let totalCaptured = 0;
+                  let totalScenes = 0;
+                  looks.forEach(look => {
+                    const progress = getCaptureProgress(look);
+                    totalCaptured += progress.captured;
+                    totalScenes += progress.total;
+                  });
 
-                    return (
-                      <CharacterSection
-                        key={charId}
-                        character={character}
-                        looks={looks}
-                        capturedScenes={totalCaptured}
-                        totalScenes={totalScenes}
-                        getCaptureProgress={getCaptureProgress}
-                        onAddLook={() => handleAddLook(charId)}
-                      />
-                    );
-                  })}
-                </div>
-              ) : (
-              // Timeline view - looks sorted by first scene number
-              <div className="space-y-3">
-                {[...currentProject.looks]
-                  .sort((a, b) => (a.scenes[0] || 0) - (b.scenes[0] || 0))
-                  .map(look => {
-                    const character = getCharacter(look.characterId);
-                    if (!character) return null;
-
-                    return (
-                      <TimelineLookCard
-                        key={look.id}
-                        look={look}
-                        character={character}
-                        progress={getCaptureProgress(look)}
-                      />
-                    );
-                  })}
+                  return (
+                    <CharacterSection
+                      key={charId}
+                      character={character}
+                      looks={looks}
+                      capturedScenes={totalCaptured}
+                      totalScenes={totalScenes}
+                      getCaptureProgress={getCaptureProgress}
+                      onAddLook={() => handleAddLook(charId)}
+                    />
+                  );
+                })}
               </div>
-              )}
             </>
           ) : (
             <EmptyState onAddLook={() => handleAddLook()} />
@@ -179,12 +150,7 @@ export function Lookbooks() {
 }
 
 // Header component
-interface LookbooksHeaderProps {
-  viewMode: ViewMode;
-  onViewModeChange: (mode: ViewMode) => void;
-}
-
-function LookbooksHeader({ viewMode, onViewModeChange }: LookbooksHeaderProps) {
+function LookbooksHeader() {
   return (
     <div className="sticky top-0 z-30 bg-card border-b border-border safe-top">
       <div className="mobile-container">
@@ -194,36 +160,12 @@ function LookbooksHeader({ viewMode, onViewModeChange }: LookbooksHeaderProps) {
               <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
-          <h1 className="text-[17px] font-bold text-text-primary">Lookbooks</h1>
+          <h1 className="text-[17px] font-bold text-text-primary">Lookbook</h1>
           <button className="p-2 -mr-2 text-text-primary">
             <svg className="w-[22px] h-[22px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <circle cx="11" cy="11" r="8" />
               <line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
-          </button>
-        </div>
-
-        {/* View toggle */}
-        <div className="px-4 pb-3.5 flex gap-2">
-          <button
-            onClick={() => onViewModeChange('character')}
-            className={`flex-1 py-2.5 rounded-lg text-[13px] font-semibold transition-all ${
-              viewMode === 'character'
-                ? 'gold-gradient text-white'
-                : 'bg-input-bg text-text-muted'
-            }`}
-          >
-            By Character
-          </button>
-          <button
-            onClick={() => onViewModeChange('timeline')}
-            className={`flex-1 py-2.5 rounded-lg text-[13px] font-semibold transition-all ${
-              viewMode === 'timeline'
-                ? 'gold-gradient text-white'
-                : 'bg-input-bg text-text-muted'
-            }`}
-          >
-            Timeline
           </button>
         </div>
       </div>
@@ -284,55 +226,3 @@ function EmptyState({ onAddLook }: { onAddLook: () => void }) {
   );
 }
 
-// Timeline view look card (simplified)
-interface TimelineLookCardProps {
-  look: Look;
-  character: Character;
-  progress: { captured: number; total: number };
-}
-
-function TimelineLookCard({ look, character, progress }: TimelineLookCardProps) {
-  const progressPercent = progress.total > 0 ? (progress.captured / progress.total) * 100 : 0;
-
-  return (
-    <div className="card">
-      <div className="flex items-start gap-3">
-        {/* Character avatar */}
-        <div
-          className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
-          style={{
-            background: `linear-gradient(135deg, ${character.avatarColour || '#C9A962'} 0%, ${character.avatarColour || '#B8962E'} 100%)`,
-          }}
-        >
-          {character.initials}
-        </div>
-
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <div className="text-xs text-text-muted">{character.name}</div>
-              <div className="font-semibold text-text-primary">{look.name}</div>
-            </div>
-            <div className="text-xs text-text-muted whitespace-nowrap">
-              Sc {look.scenes[0]}-{look.scenes[look.scenes.length - 1]}
-            </div>
-          </div>
-
-          {/* Progress bar */}
-          <div className="mt-2">
-            <div className="flex justify-between text-xs text-text-muted mb-1">
-              <span>{progress.captured}/{progress.total} scenes</span>
-              <span>~{look.estimatedTime} min</span>
-            </div>
-            <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
-              <div
-                className="h-full gold-gradient rounded-full transition-all duration-300"
-                style={{ width: `${progressPercent}%` }}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
