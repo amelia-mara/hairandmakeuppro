@@ -4,6 +4,7 @@ import { demoProject } from '@/stores/demoData';
 import { BottomNav } from '@/components/navigation';
 import { SceneList, SceneView } from '@/components/scenes';
 import { Lookbooks } from '@/components/lookbooks';
+import { Timesheet, RateCardSettings } from '@/components/timesheet';
 import type { NavTab } from '@/types';
 
 export default function App() {
@@ -67,7 +68,7 @@ export default function App() {
       case 'lookbooks':
         return <Lookbooks />;
       case 'timesheet':
-        return <PlaceholderScreen title="Timesheet" description="Track application times and working hours" />;
+        return <Timesheet />;
       case 'settings':
         return <SettingsScreen />;
       default:
@@ -82,38 +83,6 @@ export default function App() {
         activeTab={activeTab}
         onTabChange={handleTabChange}
       />
-    </div>
-  );
-}
-
-// Placeholder screen for tabs not yet implemented
-interface PlaceholderScreenProps {
-  title: string;
-  description: string;
-}
-
-function PlaceholderScreen({ title, description }: PlaceholderScreenProps) {
-  return (
-    <div className="min-h-screen bg-background pb-safe-bottom">
-      <div className="sticky top-0 z-30 bg-card border-b border-border safe-top">
-        <div className="mobile-container">
-          <div className="h-14 px-4 flex items-center">
-            <h1 className="text-lg font-semibold text-text-primary">{title}</h1>
-          </div>
-        </div>
-      </div>
-      <div className="mobile-container flex items-center justify-center min-h-[60vh]">
-        <div className="text-center px-8">
-          <div className="w-20 h-20 rounded-full bg-gold-100 flex items-center justify-center mx-auto mb-4">
-            <svg className="w-10 h-10 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-            </svg>
-          </div>
-          <h2 className="text-xl font-semibold text-text-primary mb-2">{title}</h2>
-          <p className="text-sm text-text-muted">{description}</p>
-          <p className="text-xs text-gold mt-4">Coming soon</p>
-        </div>
-      </div>
     </div>
   );
 }
@@ -146,6 +115,14 @@ function SettingsScreen() {
                 {currentProject.scenes.length} scenes • {currentProject.characters.length} characters
               </div>
             )}
+          </div>
+        </section>
+
+        {/* Rate Card Settings */}
+        <section className="mb-6">
+          <h2 className="section-header mb-3">RATE CARD</h2>
+          <div className="card">
+            <RateCardSettings />
           </div>
         </section>
 
