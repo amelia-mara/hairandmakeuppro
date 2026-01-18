@@ -2171,7 +2171,337 @@ strong {
 }
 
 /* ============================================
-   TIMESHEET
+   TIMESHEET - Quick Entry
+   ============================================ */
+
+/* Date Header */
+.timesheet-date-header {
+    background: var(--gold-gradient);
+    padding: var(--spacing-lg);
+    text-align: center;
+}
+
+.date-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.date-nav-btn {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    border-radius: var(--radius-md);
+    color: white;
+    cursor: pointer;
+    transition: background-color var(--transition-fast);
+}
+
+.date-nav-btn:active {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.date-nav-btn svg {
+    width: 24px;
+    height: 24px;
+}
+
+.date-display {
+    flex: 1;
+    cursor: pointer;
+}
+
+.date-day {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: white;
+    margin-bottom: 2px;
+}
+
+.date-full {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: var(--spacing-xs);
+}
+
+.date-shoot-day {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 4px 12px;
+    background: rgba(255, 255, 255, 0.25);
+    border-radius: var(--radius-full);
+    color: white;
+}
+
+.hidden-date-input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Quick Entry Form */
+.quick-entry-form {
+    padding: var(--spacing-md);
+}
+
+.time-inputs-row {
+    display: flex;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
+}
+
+.time-input-group {
+    flex: 1;
+}
+
+.time-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: var(--spacing-xs);
+    text-align: center;
+}
+
+.time-input {
+    width: 100%;
+    height: 56px;
+    padding: 0;
+    font-family: inherit;
+    font-size: 1.25rem;
+    font-weight: 700;
+    text-align: center;
+    color: var(--text-primary);
+    background-color: var(--bg-primary);
+    border: 2px solid var(--border-medium);
+    border-radius: var(--radius-lg);
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.time-input:focus {
+    outline: none;
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px var(--gold-light);
+}
+
+/* Toggle Buttons Row */
+.toggle-buttons-row {
+    display: flex;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
+}
+
+.toggle-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    height: 48px;
+    padding: 0 var(--spacing-md);
+    font-family: inherit;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    background-color: var(--bg-primary);
+    border: 2px solid var(--border-medium);
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.toggle-btn.active {
+    color: white;
+    background: var(--gold-gradient);
+    border-color: var(--gold);
+}
+
+.toggle-indicator {
+    width: 18px;
+    height: 18px;
+    border: 2px solid currentColor;
+    border-radius: 4px;
+    position: relative;
+}
+
+.toggle-btn.active .toggle-indicator::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 10px;
+    height: 10px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E");
+    background-size: contain;
+}
+
+/* Calculated Hours Compact */
+.calculated-hours-compact {
+    padding: var(--spacing-md);
+    background: var(--gold-gradient);
+    border-radius: var(--radius-lg);
+    text-align: center;
+    margin-bottom: var(--spacing-md);
+}
+
+.hours-display {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: var(--spacing-xs);
+    margin-bottom: var(--spacing-xs);
+}
+
+.hours-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: white;
+    line-height: 1;
+}
+
+.hours-label {
+    font-size: 1rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.hours-breakdown {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* Notes Compact */
+.notes-compact {
+    margin-bottom: var(--spacing-md);
+}
+
+.notes-input {
+    width: 100%;
+    min-height: 60px;
+    padding: var(--spacing-md);
+    font-family: inherit;
+    font-size: 0.9375rem;
+    color: var(--text-primary);
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-medium);
+    border-radius: var(--radius-lg);
+    resize: none;
+}
+
+.notes-input:focus {
+    outline: none;
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px var(--gold-light);
+}
+
+.notes-input::placeholder {
+    color: var(--text-tertiary);
+}
+
+/* Week View Section */
+.week-view-section {
+    padding: var(--spacing-md);
+    padding-top: 0;
+}
+
+.week-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: var(--spacing-xs);
+    margin-bottom: var(--spacing-md);
+}
+
+.week-day {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--spacing-sm);
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.week-day.selected {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 2px var(--gold-light);
+}
+
+.week-day.has-entry {
+    background-color: rgba(201, 169, 97, 0.1);
+    border-color: var(--gold-light);
+}
+
+.week-day.today {
+    border-color: var(--gold);
+}
+
+.week-day-name {
+    font-size: 0.625rem;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    margin-bottom: 2px;
+}
+
+.week-day-number {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+}
+
+.week-day.today .week-day-number {
+    color: var(--gold);
+}
+
+.week-day-hours {
+    font-size: 0.625rem;
+    font-weight: 600;
+    color: var(--gold);
+}
+
+.week-day:not(.has-entry) .week-day-hours {
+    color: var(--text-tertiary);
+}
+
+.week-total {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-sm);
+    background-color: var(--bg-secondary);
+    border-radius: var(--radius-md);
+}
+
+.week-total-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.week-total-hours {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--gold);
+}
+
+.week-total-suffix {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+/* ============================================
+   TIMESHEET - History/List View
    ============================================ */
 .timesheet-summary {
     padding: var(--spacing-xl);
@@ -2216,6 +2546,12 @@ strong {
     border: 1px solid var(--border-light);
     border-radius: var(--radius-lg);
     margin-bottom: var(--spacing-sm);
+    cursor: pointer;
+    transition: border-color var(--transition-fast);
+}
+
+.timesheet-entry:active {
+    border-color: var(--gold);
 }
 
 .entry-date {
@@ -2277,7 +2613,32 @@ strong {
     color: #166534;
 }
 
-/* Calculated Hours Card */
+/* Entry Badges */
+.entry-badges {
+    display: flex;
+    gap: 4px;
+    margin-top: 4px;
+}
+
+.entry-badge {
+    font-size: 0.625rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+
+.entry-badge.sixth-day {
+    background-color: #FEE2E2;
+    color: #DC2626;
+}
+
+.entry-badge.broken-lunch {
+    background-color: #FEF3C7;
+    color: #D97706;
+}
+
+/* Calculated Hours Card (for form view if needed) */
 .calculated-hours {
     padding: var(--spacing-lg);
     background: var(--gold-gradient);

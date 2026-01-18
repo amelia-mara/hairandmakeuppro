@@ -44,7 +44,7 @@
         <!-- SCREEN 1: HOME -->
         <!-- ============================================ -->
         <div class="screen active" id="screen-home">
-            <div class="screen-content centered">
+            <div class="screen-content centered scrollable">
                 <div class="home-logo">
                     <div class="logo-icon">
                         <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -895,7 +895,7 @@
         </div>
 
         <!-- ============================================ -->
-        <!-- SCREEN 10: TIMESHEET LIST -->
+        <!-- SCREEN 10: TIMESHEET - Quick Entry -->
         <!-- ============================================ -->
         <div class="screen has-bottom-nav" id="screen-timesheet">
             <div class="top-bar">
@@ -905,74 +905,107 @@
                     </svg>
                 </button>
                 <h1 class="top-bar-title">Timesheet</h1>
-                <button class="top-bar-btn" data-navigate="screen-timesheet-form">
+                <button class="top-bar-btn" id="btn-timesheet-history" data-navigate="screen-timesheet-history">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 5v14M5 12h14"/>
+                        <path d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8"/>
+                        <path d="M3 3v5h5"/>
+                        <path d="M12 7v5l4 2"/>
                     </svg>
                 </button>
             </div>
 
             <div class="screen-content scrollable">
-                <div class="timesheet-summary">
-                    <p class="summary-label">This Week</p>
-                    <p class="summary-hours"><span id="weekly-hours">32.5</span></p>
-                    <p class="summary-subtext">Total Hours</p>
+                <!-- Date Header -->
+                <div class="timesheet-date-header" id="timesheet-date-header">
+                    <div class="date-nav">
+                        <button class="date-nav-btn" id="ts-prev-day">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M15 18l-6-6 6-6"/>
+                            </svg>
+                        </button>
+                        <div class="date-display">
+                            <p class="date-day" id="ts-date-day">Friday</p>
+                            <p class="date-full" id="ts-date-full">January 17, 2026</p>
+                            <span class="date-shoot-day" id="ts-shoot-day">Day 4</span>
+                        </div>
+                        <button class="date-nav-btn" id="ts-next-day">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 18l6-6-6-6"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <input type="date" id="ts-date-input" class="hidden-date-input">
                 </div>
 
-                <div class="filter-pills">
-                    <button class="pill active" data-filter="this-week">This Week</button>
-                    <button class="pill" data-filter="last-week">Last Week</button>
-                    <button class="pill" data-filter="this-month">This Month</button>
+                <!-- Quick Entry Form -->
+                <div class="quick-entry-form">
+                    <div class="time-inputs-row">
+                        <div class="time-input-group">
+                            <label class="time-label">Pre-call</label>
+                            <input type="time" class="time-input" id="ts-precall" value="05:30">
+                        </div>
+                        <div class="time-input-group">
+                            <label class="time-label">Unit Call</label>
+                            <input type="time" class="time-input" id="ts-unitcall" value="06:00">
+                        </div>
+                        <div class="time-input-group">
+                            <label class="time-label">Wrap</label>
+                            <input type="time" class="time-input" id="ts-wrap" value="18:00">
+                        </div>
+                    </div>
+
+                    <!-- Toggle Buttons -->
+                    <div class="toggle-buttons-row">
+                        <button class="toggle-btn" id="ts-sixth-day">
+                            <span class="toggle-indicator"></span>
+                            <span class="toggle-text">6th Day</span>
+                        </button>
+                        <button class="toggle-btn" id="ts-broken-lunch">
+                            <span class="toggle-indicator"></span>
+                            <span class="toggle-text">Broken Lunch</span>
+                        </button>
+                    </div>
+
+                    <!-- Calculated Hours -->
+                    <div class="calculated-hours-compact">
+                        <div class="hours-display">
+                            <span class="hours-value" id="ts-total-hours">12.0</span>
+                            <span class="hours-label">hours</span>
+                        </div>
+                        <div class="hours-breakdown" id="ts-hours-breakdown">
+                            Pre-call: 0.5 | Worked: 12.0 | Break: 0.5
+                        </div>
+                    </div>
+
+                    <!-- Notes -->
+                    <div class="notes-compact">
+                        <textarea class="notes-input" id="ts-notes" placeholder="Add notes..."></textarea>
+                    </div>
+
+                    <!-- Save Button -->
+                    <button class="btn btn-primary btn-full" id="btn-save-timesheet">
+                        <span class="btn-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/>
+                                <path d="M17 21v-8H7v8M7 3v5h8"/>
+                            </svg>
+                        </span>
+                        Save Entry
+                    </button>
                 </div>
 
-                <h3 class="section-label">Daily Entries</h3>
-                <div class="timesheet-list" id="timesheet-list">
-                    <div class="timesheet-entry">
-                        <div class="entry-date">
-                            <p class="entry-day">Friday</p>
-                            <p class="entry-full-date">Jan 17, 2026</p>
-                            <span class="entry-shoot-day">Day 4</span>
-                        </div>
-                        <div class="entry-times">
-                            <p class="entry-range">06:00 - 18:00</p>
-                            <p class="entry-hours">11.5 hours</p>
-                        </div>
-                        <div class="entry-status pending">Pending</div>
+                <!-- Week View -->
+                <div class="week-view-section">
+                    <h3 class="section-label">This Week</h3>
+                    <div class="week-grid" id="week-grid">
+                        <!-- Week days will be rendered by JavaScript -->
                     </div>
-                    <div class="timesheet-entry">
-                        <div class="entry-date">
-                            <p class="entry-day">Thursday</p>
-                            <p class="entry-full-date">Jan 16, 2026</p>
-                            <span class="entry-shoot-day">Day 3</span>
-                        </div>
-                        <div class="entry-times">
-                            <p class="entry-range">07:00 - 19:30</p>
-                            <p class="entry-hours">12 hours</p>
-                        </div>
-                        <div class="entry-status approved">Approved</div>
-                    </div>
-                    <div class="timesheet-entry">
-                        <div class="entry-date">
-                            <p class="entry-day">Wednesday</p>
-                            <p class="entry-full-date">Jan 15, 2026</p>
-                            <span class="entry-shoot-day">Day 2</span>
-                        </div>
-                        <div class="entry-times">
-                            <p class="entry-range">06:30 - 15:30</p>
-                            <p class="entry-hours">9 hours</p>
-                        </div>
-                        <div class="entry-status approved">Approved</div>
+                    <div class="week-total">
+                        <span class="week-total-label">Week Total:</span>
+                        <span class="week-total-hours" id="week-total-hours">0.0</span>
+                        <span class="week-total-suffix">hours</span>
                     </div>
                 </div>
-
-                <button class="btn btn-secondary btn-full" data-navigate="screen-timesheet-form">
-                    <span class="btn-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M12 5v14M5 12h14"/>
-                        </svg>
-                    </span>
-                    Add New Entry
-                </button>
             </div>
 
             <!-- Bottom Navigation -->
@@ -1018,70 +1051,35 @@
         </div>
 
         <!-- ============================================ -->
-        <!-- SCREEN 11: TIMESHEET FORM -->
+        <!-- SCREEN 11: TIMESHEET HISTORY -->
         <!-- ============================================ -->
-        <div class="screen" id="screen-timesheet-form">
+        <div class="screen" id="screen-timesheet-history">
             <div class="top-bar">
                 <button class="top-bar-btn back-btn" data-navigate="screen-timesheet">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M15 18l-6-6 6-6"/>
                     </svg>
                 </button>
-                <h1 class="top-bar-title">Add Timesheet Entry</h1>
+                <h1 class="top-bar-title">Timesheet History</h1>
                 <div class="top-bar-btn placeholder"></div>
             </div>
 
-            <div class="screen-content scrollable padded">
-                <div class="info-banner small">
-                    <div class="info-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="10"/>
-                            <path d="M12 6v6l4 2"/>
-                        </svg>
-                    </div>
-                    <p>Track your hours for each shooting day.</p>
+            <div class="screen-content scrollable">
+                <div class="timesheet-summary">
+                    <p class="summary-label">This Week</p>
+                    <p class="summary-hours"><span id="weekly-hours">32.5</span></p>
+                    <p class="summary-subtext">Total Hours</p>
                 </div>
 
-                <div class="form-group">
-                    <label class="form-label">Date</label>
-                    <input type="date" class="form-input" id="entry-date" value="2026-01-17">
+                <div class="filter-pills">
+                    <button class="pill active" data-filter="this-week">This Week</button>
+                    <button class="pill" data-filter="last-week">Last Week</button>
+                    <button class="pill" data-filter="this-month">This Month</button>
                 </div>
 
-                <div class="form-group">
-                    <label class="form-label">Shoot Day</label>
-                    <input type="text" class="form-input" id="entry-shoot-day" placeholder="Day 4">
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label class="form-label">Call Time</label>
-                        <input type="time" class="form-input" id="entry-call-time" value="06:00">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Wrap Time</label>
-                        <input type="time" class="form-input" id="entry-wrap-time" value="18:00">
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Meal Break (minutes)</label>
-                    <input type="number" class="form-input" id="entry-meal-break" value="30" min="0" max="120">
-                </div>
-
-                <div class="calculated-hours">
-                    <p class="calc-label">Total Hours</p>
-                    <p class="calc-value" id="calculated-total">11.5</p>
-                    <p class="calc-breakdown" id="calc-breakdown">12:00 worked - 0:30 break</p>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Notes (Optional)</label>
-                    <textarea class="form-textarea" id="entry-notes" placeholder="Any additional notes about the day..."></textarea>
-                </div>
-
-                <div class="screen-actions">
-                    <button class="btn btn-secondary" data-navigate="screen-timesheet">Cancel</button>
-                    <button class="btn btn-primary" id="btn-save-entry">Save Entry</button>
+                <h3 class="section-label" style="padding: 0 var(--spacing-md);">Daily Entries</h3>
+                <div class="timesheet-list" id="timesheet-list">
+                    <!-- Entries rendered by JavaScript -->
                 </div>
             </div>
         </div>
