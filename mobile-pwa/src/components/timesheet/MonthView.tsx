@@ -68,6 +68,7 @@ export function MonthView({ year, month, onNavigate, onDaySelect, selectedDate }
   // Calculate monthly totals
   const monthlyTotals = useMemo(() => {
     let totalHours = 0;
+    let totalEarnings = 0;
     let daysWorked = 0;
 
     Object.values(entries).forEach((entry) => {
@@ -76,12 +77,13 @@ export function MonthView({ year, month, onNavigate, onDaySelect, selectedDate }
         if (entry.unitCall && entry.wrap) {
           const calc = calculateEntry(entry);
           totalHours += calc.totalHours;
+          totalEarnings += calc.totalEarnings;
           daysWorked++;
         }
       }
     });
 
-    return { totalHours, daysWorked };
+    return { totalHours, totalEarnings, daysWorked };
   }, [entries, year, month, calculateEntry]);
 
   const today = formatDateString(new Date());
@@ -178,14 +180,20 @@ export function MonthView({ year, month, onNavigate, onDaySelect, selectedDate }
 
       {/* Monthly totals */}
       <div className="mt-4 p-4 bg-gold-50 rounded-card">
-        <div className="flex justify-between items-center">
+        <div className="grid grid-cols-3 gap-2 text-center">
           <div>
-            <div className="text-xs text-text-muted uppercase tracking-wide">Days Worked</div>
+            <div className="text-xs text-text-muted uppercase tracking-wide">Days</div>
             <div className="text-lg font-bold text-text-primary">{monthlyTotals.daysWorked}</div>
           </div>
-          <div className="text-right">
-            <div className="text-xs text-text-muted uppercase tracking-wide">Total Hours</div>
-            <div className="text-lg font-bold text-gold">{monthlyTotals.totalHours.toFixed(1)}</div>
+          <div>
+            <div className="text-xs text-text-muted uppercase tracking-wide">Hours</div>
+            <div className="text-lg font-bold text-text-primary">{monthlyTotals.totalHours.toFixed(1)}</div>
+          </div>
+          <div>
+            <div className="text-xs text-text-muted uppercase tracking-wide">Earnings</div>
+            <div className="text-lg font-bold text-gold">
+              £{monthlyTotals.totalEarnings.toLocaleString('en-GB', { minimumFractionDigits: 2 })}
+            </div>
           </div>
         </div>
       </div>

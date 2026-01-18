@@ -3,7 +3,7 @@ import { useProjectStore } from '@/stores/projectStore';
 import { createPhotoFromBlob } from '@/utils/imageUtils';
 import { formatEstimatedTime, formatSceneRange, getCaptureStatus } from '@/utils/helpers';
 import type { PhotoAngle, ContinuityEvent, MakeupDetails, HairDetails } from '@/types';
-import { Button, Accordion, AccordionGroup } from '../ui';
+import { Button, Accordion } from '../ui';
 import { CharacterAvatar } from './CharacterAvatar';
 import { PhotoGrid, AdditionalPhotosGrid, MasterReference, PhotoCapture, SceneThumbnailSlot } from '../photos';
 import { QuickFlags } from '../continuity/QuickFlags';
@@ -108,54 +108,59 @@ export function CharacterProfile({ sceneId, characterId }: CharacterProfileProps
 
   return (
     <div className="mobile-container">
-      <div className="px-4 py-4 space-y-6 pb-32">
+      <div className="px-4 py-4 space-y-2.5 pb-32">
         {/* Character header section */}
-        <div className="flex items-start gap-4">
+        <div className="flex items-start gap-3.5">
           <CharacterAvatar character={character} size="xl" />
           <div className="flex-1 min-w-0">
             <h2 className="text-character-name text-gold font-bold truncate">
               {character.name}
             </h2>
-            <p className="text-sm text-text-muted mt-0.5">
+            <p className="text-[13px] text-text-muted mt-0.5">
               Scene {scene.sceneNumber} | {formatSluglineShort(scene.slugline)}
             </p>
-
-            {/* Current look badge */}
-            {look && (
-              <div className="mt-3 bg-gold-50 rounded-lg px-3 py-2">
-                <div className="text-sm font-semibold text-gold">{look.name}</div>
-                <div className="text-xs text-text-muted mt-0.5">
-                  Scenes {formatSceneRange(look.scenes)} • {formatEstimatedTime(look.estimatedTime)}
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
+        {/* Current look badge */}
+        {look && (
+          <div className="bg-input-bg rounded-[10px] px-4 py-3 flex justify-between items-center">
+            <div>
+              <span className="text-sm font-bold text-gold">{look.name}</span>
+              <span className="text-xs text-text-muted ml-2.5">
+                Scenes {formatSceneRange(look.scenes)}
+              </span>
+            </div>
+            <span className="text-xs text-text-muted font-medium">
+              ~{formatEstimatedTime(look.estimatedTime)}
+            </span>
+          </div>
+        )}
+
         {/* Scene Photos Section */}
-        <section>
+        <div className="card">
           <h3 className="section-header mb-3">SCENE PHOTOS</h3>
           <PhotoGrid
             photos={capture.photos}
             onCapture={(angle) => handleOpenCapture(angle)}
             onRemove={(angle) => removePhotoFromCapture(captureId, angle)}
           />
-        </section>
+        </div>
 
         {/* Master Reference Section */}
-        <section>
+        <div className="card">
           <h3 className="section-header mb-3">MASTER REFERENCE</h3>
           <MasterReference
             photo={look?.masterReference}
             onCapture={() => handleOpenCapture('front', true)}
           />
-        </section>
+        </div>
 
         {/* Scenes in This Look */}
         {lookScenes.length > 1 && (
-          <section>
+          <div className="card">
             <h3 className="section-header mb-3">SCENES IN THIS LOOK</h3>
-            <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-2">
+            <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-1">
               {lookScenes.map((lookScene) => {
                 const sceneCapture = sceneCaptures[`${lookScene.id}-${characterId}`];
                 const hasCaptured = sceneCapture ? getCaptureStatus(sceneCapture) !== 'not-started' : false;
@@ -171,88 +176,82 @@ export function CharacterProfile({ sceneId, characterId }: CharacterProfileProps
                 );
               })}
             </div>
-          </section>
+          </div>
         )}
 
         {/* Additional Photos Section */}
-        <section>
+        <div className="card">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="section-header">
-              ADDITIONAL PHOTOS
-              {capture.additionalPhotos.length > 0 && (
-                <span className="ml-2 text-text-light">({capture.additionalPhotos.length})</span>
-              )}
-            </h3>
+            <h3 className="section-header">ADDITIONAL PHOTOS</h3>
+            <span className="text-[11px] text-text-light">
+              {capture.additionalPhotos.length} photos
+            </span>
           </div>
           <AdditionalPhotosGrid
             photos={capture.additionalPhotos}
             onCapture={() => handleOpenCapture('additional')}
             onRemove={(photoId) => removePhotoFromCapture(captureId, 'additional', photoId)}
           />
-        </section>
+        </div>
 
         {/* Quick Flags Section */}
-        <section>
+        <div className="card">
           <h3 className="section-header mb-3">QUICK FLAGS</h3>
           <QuickFlags
             flags={capture.continuityFlags}
             onToggle={(flag) => toggleContinuityFlag(captureId, flag)}
           />
-        </section>
+        </div>
 
         {/* Continuity Events Section */}
-        <section>
+        <div className="card">
           <ContinuityEvents
             events={capture.continuityEvents}
             onAddEvent={() => setAddEventOpen(true)}
             onRemoveEvent={(eventId) => removeContinuityEvent(captureId, eventId)}
           />
-        </section>
+        </div>
 
         {/* Accordion sections for Makeup, Hair, Notes */}
-        <AccordionGroup>
-          <Accordion
-            title="MAKEUP"
-            count={look ? countFilledMakeupFields(look.makeup) : 0}
-          >
-            <MakeupForm makeup={look?.makeup} readOnly />
-          </Accordion>
+        <Accordion
+          title="MAKEUP"
+          count={look ? countFilledMakeupFields(look.makeup) : 0}
+        >
+          <MakeupForm makeup={look?.makeup} readOnly />
+        </Accordion>
 
-          <Accordion
-            title="HAIR"
-            count={look ? countFilledHairFields(look.hair) : 0}
-          >
-            <HairForm hair={look?.hair} readOnly />
-          </Accordion>
+        <Accordion
+          title="HAIR"
+          count={look ? countFilledHairFields(look.hair) : 0}
+        >
+          <HairForm hair={look?.hair} readOnly />
+        </Accordion>
 
-          <Accordion title="SCENE NOTES">
-            <NotesForm
-              notes={capture.notes}
-              onChange={(notes) => updateSceneCapture(captureId, { notes })}
-            />
-          </Accordion>
-        </AccordionGroup>
+        <Accordion title="SCENE NOTES">
+          <NotesForm
+            notes={capture.notes}
+            onChange={(notes) => updateSceneCapture(captureId, { notes })}
+          />
+        </Accordion>
 
         {/* Application Time */}
-        <section>
-          <div className="flex items-center gap-3">
-            <label className="field-label">APPLICATION TIME</label>
-            <input
-              type="number"
-              value={capture.applicationTime ?? look?.estimatedTime ?? ''}
-              onChange={(e) => updateSceneCapture(captureId, {
-                applicationTime: e.target.value ? parseInt(e.target.value, 10) : undefined
-              })}
-              className="input-field w-20 text-center"
-              placeholder="--"
-              min="0"
-            />
-            <span className="text-sm text-text-muted">minutes</span>
-          </div>
-        </section>
+        <div className="card flex items-center gap-3.5">
+          <label className="field-label whitespace-nowrap">APPLICATION TIME</label>
+          <input
+            type="number"
+            value={capture.applicationTime ?? look?.estimatedTime ?? ''}
+            onChange={(e) => updateSceneCapture(captureId, {
+              applicationTime: e.target.value ? parseInt(e.target.value, 10) : undefined
+            })}
+            className="input-field w-16 text-center font-semibold"
+            placeholder="--"
+            min="0"
+          />
+          <span className="text-sm text-text-muted">minutes</span>
+        </div>
 
         {/* Action Buttons */}
-        <section className="space-y-3">
+        <div className="space-y-2.5 pt-2">
           <Button
             variant="primary"
             size="lg"
@@ -270,7 +269,7 @@ export function CharacterProfile({ sceneId, characterId }: CharacterProfileProps
           >
             Copy to Next Scene
           </Button>
-        </section>
+        </div>
       </div>
 
       {/* Photo Capture Modal */}

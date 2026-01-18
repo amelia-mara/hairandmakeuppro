@@ -71,7 +71,7 @@ export const useProjectStore = create<ProjectState>()(
       currentProject: null,
       currentSceneId: null,
       currentCharacterId: null,
-      activeTab: 'scenes',
+      activeTab: 'today',
       sceneFilter: 'all',
       searchQuery: '',
       sceneCaptures: {},
