@@ -66,6 +66,7 @@ const App = {
         this.bindSceneSearch();
         this.bindPhotoCapture();
         this.bindSettingsEvents();
+        this.bindDemoButton();
 
         // Check for existing project and route accordingly
         this.checkInitialRoute();
@@ -155,6 +156,7 @@ const App = {
             case 'screen-scene-list':
                 this.renderSceneList();
                 this.updateSettings();
+                this.updateDemoBadge();
                 // These are main tab screens - clear history to home
                 this.screenHistory = ['screen-home'];
                 break;
@@ -316,6 +318,12 @@ const App = {
                 lookbookSearchInput.focus();
                 this.filterLookbooks('');
             });
+        }
+
+        // Lookbook export button
+        const lookbookExportBtn = document.getElementById('btn-export-lookbook');
+        if (lookbookExportBtn) {
+            lookbookExportBtn.addEventListener('click', () => this.exportLookbook());
         }
     },
 
@@ -1395,8 +1403,417 @@ const App = {
             saveBtn.addEventListener('click', () => this.saveTimesheetEntry());
         }
 
+        // Export button
+        const exportBtn = document.getElementById('btn-export-timesheet');
+        if (exportBtn) {
+            exportBtn.addEventListener('click', () => this.showExportSheet());
+        }
+
+        // Export action sheet handlers
+        this.bindExportActions();
+
         // Load saved timesheets
         this.loadTimesheets();
+    },
+
+    /**
+     * Bind export action sheet events
+     */
+    bindExportActions() {
+        const actionSheet = document.getElementById('export-action-sheet');
+        const backdrop = actionSheet?.querySelector('.action-sheet-backdrop');
+        const cancelBtn = document.getElementById('export-cancel');
+        const csvBtn = document.getElementById('export-csv');
+        const pdfBtn = document.getElementById('export-pdf');
+        const shareBtn = document.getElementById('export-share');
+
+        // Close on backdrop click
+        if (backdrop) {
+            backdrop.addEventListener('click', () => this.hideExportSheet());
+        }
+
+        // Close on cancel
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => this.hideExportSheet());
+        }
+
+        // Export handlers
+        if (csvBtn) {
+            csvBtn.addEventListener('click', () => this.exportTimesheetCSV());
+        }
+
+        if (pdfBtn) {
+            pdfBtn.addEventListener('click', () => this.exportTimesheetPDF());
+        }
+
+        if (shareBtn) {
+            shareBtn.addEventListener('click', () => this.shareTimesheet());
+        }
+    },
+
+    /**
+     * Show export action sheet
+     */
+    showExportSheet() {
+        if (this.timesheetEntries.length === 0) {
+            this.showToast('No timesheet entries to export');
+            return;
+        }
+
+        const actionSheet = document.getElementById('export-action-sheet');
+        if (actionSheet) {
+            actionSheet.classList.add('active');
+        }
+    },
+
+    /**
+     * Hide export action sheet
+     */
+    hideExportSheet() {
+        const actionSheet = document.getElementById('export-action-sheet');
+        if (actionSheet) {
+            actionSheet.classList.remove('active');
+        }
+    },
+
+    /**
+     * Export timesheet as CSV
+     */
+    exportTimesheetCSV() {
+        this.hideExportSheet();
+
+        // Build CSV content
+        const headers = ['Date', 'Shoot Day', 'Call Time', 'Wrap Time', 'Meal Break (min)', 'Total Hours', 'Status', 'Notes'];
+        const rows = this.timesheetEntries.map(entry => {
+            const date = new Date(entry.date + 'T00:00:00');
+            const formattedDate = date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            });
+            return [
+                formattedDate,
+                entry.shootDay || '',
+                entry.callTime,
+                entry.wrapTime,
+                entry.mealBreak,
+                entry.totalHours.toFixed(2),
+                entry.status,
+                (entry.notes || '').replace(/"/g, '""') // Escape quotes
+            ];
+        });
+
+        // Add totals row
+        const totalHours = this.timesheetEntries.reduce((sum, e) => sum + e.totalHours, 0);
+        rows.push(['', '', '', '', 'TOTAL:', totalHours.toFixed(2), '', '']);
+
+        // Create CSV string
+        const csvContent = [
+            headers.join(','),
+            ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+        ].join('\n');
+
+        // Download file
+        this.downloadFile(csvContent, `timesheet-${this.getDateString()}.csv`, 'text/csv');
+        this.showToast('CSV exported successfully');
+    },
+
+    /**
+     * Export timesheet as PDF (HTML-based printable format)
+     */
+    exportTimesheetPDF() {
+        this.hideExportSheet();
+
+        // Calculate totals
+        const totalHours = this.timesheetEntries.reduce((sum, e) => sum + e.totalHours, 0);
+        const totalDays = this.timesheetEntries.length;
+
+        // Build HTML content
+        const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Timesheet Report - ${this.project.name}</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px; color: #1a1a1a; }
+        .header { margin-bottom: 30px; border-bottom: 2px solid #C9A961; padding-bottom: 20px; }
+        .header h1 { font-size: 24px; color: #1a1a1a; margin-bottom: 5px; }
+        .header p { font-size: 14px; color: #666; }
+        .summary { display: flex; gap: 40px; margin-bottom: 30px; }
+        .summary-item { }
+        .summary-label { font-size: 12px; color: #666; text-transform: uppercase; }
+        .summary-value { font-size: 28px; font-weight: 700; color: #C9A961; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+        th { background-color: #f5f5f5; text-align: left; padding: 12px; font-size: 12px; text-transform: uppercase; color: #666; border-bottom: 2px solid #ddd; }
+        td { padding: 12px; border-bottom: 1px solid #eee; font-size: 14px; }
+        .status { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+        .status.pending { background: #fff3cd; color: #856404; }
+        .status.approved { background: #d4edda; color: #155724; }
+        .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #999; }
+        @media print {
+            body { padding: 20px; }
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Timesheet Report</h1>
+        <p>${this.project.name} | Generated ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+    </div>
+
+    <div class="summary">
+        <div class="summary-item">
+            <p class="summary-label">Total Days</p>
+            <p class="summary-value">${totalDays}</p>
+        </div>
+        <div class="summary-item">
+            <p class="summary-label">Total Hours</p>
+            <p class="summary-value">${totalHours.toFixed(1)}</p>
+        </div>
+        <div class="summary-item">
+            <p class="summary-label">Avg Hours/Day</p>
+            <p class="summary-value">${totalDays > 0 ? (totalHours / totalDays).toFixed(1) : '0'}</p>
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Shoot Day</th>
+                <th>Call Time</th>
+                <th>Wrap Time</th>
+                <th>Break</th>
+                <th>Hours</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${this.timesheetEntries.map(entry => {
+                const date = new Date(entry.date + 'T00:00:00');
+                return `
+                    <tr>
+                        <td>${date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</td>
+                        <td>${entry.shootDay || '-'}</td>
+                        <td>${entry.callTime}</td>
+                        <td>${entry.wrapTime}</td>
+                        <td>${entry.mealBreak} min</td>
+                        <td><strong>${entry.totalHours.toFixed(1)}</strong></td>
+                        <td><span class="status ${entry.status}">${entry.status}</span></td>
+                    </tr>
+                `;
+            }).join('')}
+        </tbody>
+    </table>
+
+    <div class="footer">
+        <p>Hair & Makeup Pro | Timesheet Report</p>
+    </div>
+
+    <script class="no-print">
+        window.onload = function() { window.print(); }
+    </script>
+</body>
+</html>`;
+
+        // Open in new window for printing
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+            printWindow.document.write(htmlContent);
+            printWindow.document.close();
+            this.showToast('PDF report opened for printing');
+        } else {
+            this.showToast('Please allow popups to export PDF');
+        }
+    },
+
+    /**
+     * Share timesheet using Web Share API
+     */
+    async shareTimesheet() {
+        this.hideExportSheet();
+
+        // Build share text
+        const totalHours = this.timesheetEntries.reduce((sum, e) => sum + e.totalHours, 0);
+        const totalDays = this.timesheetEntries.length;
+
+        let shareText = `Timesheet Summary - ${this.project.name}\n\n`;
+        shareText += `Total Days: ${totalDays}\n`;
+        shareText += `Total Hours: ${totalHours.toFixed(1)}\n\n`;
+        shareText += `Daily Breakdown:\n`;
+
+        this.timesheetEntries.forEach(entry => {
+            const date = new Date(entry.date + 'T00:00:00');
+            const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            shareText += `${dateStr} (${entry.shootDay || '-'}): ${entry.totalHours.toFixed(1)} hrs\n`;
+        });
+
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: 'Timesheet Report',
+                    text: shareText
+                });
+                this.showToast('Shared successfully');
+            } catch (error) {
+                if (error.name !== 'AbortError') {
+                    console.error('Share failed:', error);
+                    this.copyToClipboard(shareText);
+                }
+            }
+        } else {
+            // Fallback: copy to clipboard
+            this.copyToClipboard(shareText);
+        }
+    },
+
+    /**
+     * Copy text to clipboard
+     */
+    async copyToClipboard(text) {
+        try {
+            await navigator.clipboard.writeText(text);
+            this.showToast('Copied to clipboard');
+        } catch (error) {
+            console.error('Copy failed:', error);
+            this.showToast('Could not copy to clipboard');
+        }
+    },
+
+    /**
+     * Download a file
+     */
+    downloadFile(content, filename, mimeType) {
+        const blob = new Blob([content], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    },
+
+    /**
+     * Get current date as string for filenames
+     */
+    getDateString() {
+        const now = new Date();
+        return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    },
+
+    /**
+     * Export lookbook as HTML gallery
+     */
+    async exportLookbook() {
+        if (this.characters.length === 0) {
+            this.showToast('No characters to export');
+            return;
+        }
+
+        this.showToast('Generating lookbook...');
+
+        try {
+            // Gather all photos for each character
+            const characterPhotos = [];
+
+            for (const character of this.characters) {
+                const photos = await PhotoStorage.getPhotosForCharacter(character.name);
+                if (photos.length > 0) {
+                    characterPhotos.push({
+                        name: character.name,
+                        photos: photos
+                    });
+                }
+            }
+
+            if (characterPhotos.length === 0) {
+                this.showToast('No photos to export');
+                return;
+            }
+
+            // Build HTML gallery
+            const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Lookbook - ${this.project.name}</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #1a1a1a; }
+        .header { background: linear-gradient(135deg, #C9A961 0%, #B8994F 100%); color: white; padding: 40px; text-align: center; }
+        .header h1 { font-size: 28px; margin-bottom: 5px; }
+        .header p { opacity: 0.9; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 30px; }
+        .character-section { background: white; border-radius: 12px; margin-bottom: 30px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .character-header { padding: 20px; border-bottom: 1px solid #eee; }
+        .character-header h2 { font-size: 20px; color: #1a1a1a; }
+        .character-header span { font-size: 14px; color: #666; }
+        .photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; padding: 20px; }
+        .photo-card { border-radius: 8px; overflow: hidden; background: #f9f9f9; }
+        .photo-card img { width: 100%; height: 200px; object-fit: cover; display: block; }
+        .photo-info { padding: 10px; }
+        .photo-info .angle { font-weight: 600; color: #1a1a1a; text-transform: capitalize; }
+        .photo-info .scene { font-size: 12px; color: #666; }
+        .footer { text-align: center; padding: 30px; color: #999; font-size: 12px; }
+        @media print {
+            .character-section { break-inside: avoid; }
+            .photo-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>${this.project.name}</h1>
+        <p>Character Lookbook | Generated ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+    </div>
+
+    <div class="container">
+        ${characterPhotos.map(char => `
+            <div class="character-section">
+                <div class="character-header">
+                    <h2>${char.name}</h2>
+                    <span>${char.photos.length} photo${char.photos.length !== 1 ? 's' : ''}</span>
+                </div>
+                <div class="photo-grid">
+                    ${char.photos.map(photo => `
+                        <div class="photo-card">
+                            <img src="${photo.imageData}" alt="${photo.angle}">
+                            <div class="photo-info">
+                                <p class="angle">${photo.angle}</p>
+                                <p class="scene">Scene ${photo.sceneIndex + 1}</p>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `).join('')}
+    </div>
+
+    <div class="footer">
+        <p>Hair & Makeup Pro | Character Lookbook</p>
+    </div>
+</body>
+</html>`;
+
+            // Open in new window
+            const galleryWindow = window.open('', '_blank');
+            if (galleryWindow) {
+                galleryWindow.document.write(htmlContent);
+                galleryWindow.document.close();
+                this.showToast('Lookbook exported');
+            } else {
+                this.showToast('Please allow popups to export');
+            }
+        } catch (error) {
+            console.error('Error exporting lookbook:', error);
+            this.showToast('Error exporting lookbook');
+        }
     },
 
     /**
@@ -2409,6 +2826,270 @@ const App = {
                 installSection.style.display = 'block';
             } else {
                 installSection.style.display = 'none';
+            }
+        }
+    },
+
+    // ============================================
+    // DEMO MODE
+    // ============================================
+
+    /**
+     * Bind demo button event
+     */
+    bindDemoButton() {
+        const demoBtn = document.getElementById('btn-try-demo');
+        if (demoBtn) {
+            demoBtn.addEventListener('click', () => this.loadDemoProject());
+        }
+    },
+
+    /**
+     * Load demo project with sample data
+     */
+    async loadDemoProject() {
+        this.showToast('Loading demo project...');
+
+        // Demo project metadata
+        this.project = {
+            name: 'The Morning After',
+            file: 'demo-script.pdf',
+            isDemo: true
+        };
+
+        // Demo scenes - realistic film production scenarios
+        this.scenes = [
+            {
+                index: 0,
+                number: '1',
+                heading: 'INT. SARAH\'S APARTMENT - MORNING',
+                characters: ['SARAH CHEN', 'MIKE TORRES'],
+                status: 'pending'
+            },
+            {
+                index: 1,
+                number: '2',
+                heading: 'EXT. CITY STREET - DAY',
+                characters: ['SARAH CHEN', 'DR. AMANDA COLE'],
+                status: 'pending'
+            },
+            {
+                index: 2,
+                number: '3',
+                heading: 'INT. COFFEE SHOP - DAY',
+                characters: ['SARAH CHEN', 'MIKE TORRES', 'EMMA WRIGHT'],
+                status: 'pending'
+            },
+            {
+                index: 3,
+                number: '4',
+                heading: 'INT. HOSPITAL - NIGHT',
+                characters: ['DR. AMANDA COLE', 'MIKE TORRES'],
+                status: 'pending'
+            },
+            {
+                index: 4,
+                number: '5',
+                heading: 'EXT. ROOFTOP - SUNSET',
+                characters: ['SARAH CHEN', 'EMMA WRIGHT'],
+                status: 'pending'
+            },
+            {
+                index: 5,
+                number: '6',
+                heading: 'INT. SARAH\'S APARTMENT - NIGHT',
+                characters: ['SARAH CHEN', 'MIKE TORRES', 'DR. AMANDA COLE'],
+                status: 'pending'
+            },
+            {
+                index: 6,
+                number: '7',
+                heading: 'EXT. PARK - MORNING',
+                characters: ['EMMA WRIGHT'],
+                status: 'pending'
+            },
+            {
+                index: 7,
+                number: '8',
+                heading: 'INT. OFFICE BUILDING - DAY',
+                characters: ['SARAH CHEN', 'MIKE TORRES'],
+                status: 'pending'
+            }
+        ];
+
+        // Demo characters with look descriptions
+        this.characters = [
+            {
+                name: 'SARAH CHEN',
+                sceneCount: 6,
+                looks: [{
+                    name: 'Day 1 - Professional',
+                    description: 'Clean, polished professional look. Natural makeup with subtle contouring, well-groomed hair in a neat low bun.'
+                }]
+            },
+            {
+                name: 'MIKE TORRES',
+                sceneCount: 4,
+                looks: [{
+                    name: 'Casual Weekend',
+                    description: 'Natural, minimal styling. Light stubble, textured hair with product for casual tousled look.'
+                }]
+            },
+            {
+                name: 'DR. AMANDA COLE',
+                sceneCount: 3,
+                looks: [{
+                    name: 'Hospital Professional',
+                    description: 'Minimal makeup, hair pulled back in professional ponytail. Clean, clinical appearance.'
+                }]
+            },
+            {
+                name: 'EMMA WRIGHT',
+                sceneCount: 3,
+                looks: [{
+                    name: 'Artistic Bohemian',
+                    description: 'Creative, expressive style. Bold eye makeup, loose wavy hair, artistic accessories.'
+                }]
+            }
+        ];
+
+        // Demo timesheet entries
+        this.timesheetEntries = [
+            {
+                id: Date.now() - 86400000 * 3,
+                date: this.getRelativeDate(-3),
+                shootDay: 'Day 1',
+                callTime: '05:30',
+                wrapTime: '18:00',
+                mealBreak: 30,
+                totalHours: 12,
+                notes: 'First day of production. Main cast looks established.',
+                status: 'approved'
+            },
+            {
+                id: Date.now() - 86400000 * 2,
+                date: this.getRelativeDate(-2),
+                shootDay: 'Day 2',
+                callTime: '06:00',
+                wrapTime: '19:30',
+                mealBreak: 45,
+                totalHours: 12.75,
+                notes: 'Hospital scenes. Quick turnaround for Dr. Cole.',
+                status: 'approved'
+            },
+            {
+                id: Date.now() - 86400000,
+                date: this.getRelativeDate(-1),
+                shootDay: 'Day 3',
+                callTime: '07:00',
+                wrapTime: '17:00',
+                mealBreak: 30,
+                totalHours: 9.5,
+                notes: 'Exterior scenes. Weather delays.',
+                status: 'pending'
+            }
+        ];
+
+        // Save to storage
+        this.saveToStorage();
+        this.saveTimesheets();
+
+        // Generate some sample placeholder photos
+        await this.generateDemoPhotos();
+
+        // Update scene statuses
+        await this.updateSceneStatuses();
+
+        // Navigate to scene list
+        this.navigateTo('screen-scene-list');
+
+        this.showToast('Demo project loaded!');
+    },
+
+    /**
+     * Get date relative to today
+     */
+    getRelativeDate(daysOffset) {
+        const date = new Date();
+        date.setDate(date.getDate() + daysOffset);
+        return date.toISOString().split('T')[0];
+    },
+
+    /**
+     * Generate demo placeholder photos
+     */
+    async generateDemoPhotos() {
+        // Generate SVG placeholder photos for first scene/character
+        const angles = ['front', 'left', 'right', 'back'];
+        const colors = {
+            front: '#C9A961',
+            left: '#667eea',
+            right: '#764ba2',
+            back: '#48bb78'
+        };
+
+        for (const angle of angles) {
+            const svg = this.createPlaceholderSVG(angle, colors[angle], 'SARAH CHEN', 'Scene 1');
+            const imageData = 'data:image/svg+xml;base64,' + btoa(svg);
+
+            await PhotoStorage.savePhoto({
+                sceneIndex: 0,
+                characterName: 'SARAH CHEN',
+                angle: angle,
+                imageData: imageData,
+                timestamp: Date.now(),
+                isDemo: true
+            });
+        }
+
+        // Add a couple more photos for variety
+        const svg2 = this.createPlaceholderSVG('front', '#C9A961', 'MIKE TORRES', 'Scene 1');
+        await PhotoStorage.savePhoto({
+            sceneIndex: 0,
+            characterName: 'MIKE TORRES',
+            angle: 'front',
+            imageData: 'data:image/svg+xml;base64,' + btoa(svg2),
+            timestamp: Date.now(),
+            isDemo: true
+        });
+    },
+
+    /**
+     * Create placeholder SVG image
+     */
+    createPlaceholderSVG(angle, color, character, scene) {
+        return `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">
+            <rect width="400" height="400" fill="${color}"/>
+            <circle cx="200" cy="150" r="60" fill="white" opacity="0.3"/>
+            <rect x="140" y="220" width="120" height="80" rx="10" fill="white" opacity="0.3"/>
+            <text x="200" y="320" text-anchor="middle" fill="white" font-family="system-ui" font-size="18" font-weight="bold">${angle.toUpperCase()}</text>
+            <text x="200" y="350" text-anchor="middle" fill="white" font-family="system-ui" font-size="14" opacity="0.8">${character}</text>
+            <text x="200" y="375" text-anchor="middle" fill="white" font-family="system-ui" font-size="12" opacity="0.6">${scene}</text>
+        </svg>`;
+    },
+
+    /**
+     * Check if currently in demo mode
+     */
+    isDemoMode() {
+        return this.project.isDemo === true;
+    },
+
+    /**
+     * Update demo badge visibility
+     */
+    updateDemoBadge() {
+        // Remove existing badges
+        document.querySelectorAll('.demo-badge').forEach(b => b.remove());
+
+        if (this.isDemoMode()) {
+            // Add badge to scene list title
+            const sceneListTitle = document.querySelector('#screen-scene-list .top-bar-title');
+            if (sceneListTitle && !sceneListTitle.querySelector('.demo-badge')) {
+                const badge = document.createElement('span');
+                badge.className = 'demo-badge';
+                badge.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Demo`;
+                sceneListTitle.appendChild(badge);
             }
         }
     },

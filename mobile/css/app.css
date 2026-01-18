@@ -287,6 +287,16 @@ strong {
     color: white;
 }
 
+.btn-outline {
+    background-color: transparent;
+    color: var(--gold);
+    border: 2px solid var(--gold);
+}
+
+.btn-outline:active {
+    background-color: rgba(201, 169, 97, 0.1);
+}
+
 .btn-gold {
     background: var(--gold-gradient);
     color: white;
@@ -362,6 +372,53 @@ strong {
     width: 100%;
     max-width: 320px;
     margin-bottom: var(--spacing-xl);
+}
+
+.home-divider {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    margin: var(--spacing-xs) 0;
+}
+
+.home-divider::before,
+.home-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background-color: var(--border-light);
+}
+
+.home-divider span {
+    font-size: 0.8125rem;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Demo Mode Badge */
+.demo-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-radius: var(--radius-full);
+    margin-left: var(--spacing-sm);
+}
+
+.demo-badge svg {
+    width: 12px;
+    height: 12px;
+}
+
+.top-bar-title .demo-badge {
+    vertical-align: middle;
 }
 
 /* ============================================
@@ -1679,6 +1736,147 @@ strong {
 .reference-hint {
     font-size: 0.8125rem;
     color: var(--text-tertiary);
+}
+
+/* ============================================
+   ACTION SHEET
+   ============================================ */
+.action-sheet {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--transition-normal), visibility var(--transition-normal);
+}
+
+.action-sheet.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.action-sheet-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.action-sheet-content {
+    position: relative;
+    width: 100%;
+    max-width: 500px;
+    background-color: var(--bg-primary);
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    padding: var(--spacing-lg);
+    padding-bottom: max(var(--spacing-lg), env(safe-area-inset-bottom));
+    transform: translateY(100%);
+    transition: transform var(--transition-normal);
+}
+
+.action-sheet.active .action-sheet-content {
+    transform: translateY(0);
+}
+
+.action-sheet-header {
+    text-align: center;
+    margin-bottom: var(--spacing-lg);
+}
+
+.action-sheet-header h3 {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.action-sheet-header p {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.action-sheet-options {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-lg);
+}
+
+.action-option {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    transition: background-color var(--transition-fast), border-color var(--transition-fast);
+    text-align: left;
+}
+
+.action-option:active {
+    background-color: var(--bg-tertiary);
+    border-color: var(--gold);
+}
+
+.action-icon {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--gold-gradient);
+    border-radius: var(--radius-md);
+    color: white;
+    flex-shrink: 0;
+}
+
+.action-icon svg {
+    width: 22px;
+    height: 22px;
+}
+
+.action-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.action-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.action-desc {
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+}
+
+.action-cancel {
+    width: 100%;
+    padding: var(--spacing-md);
+    background-color: var(--bg-tertiary);
+    border: none;
+    border-radius: var(--radius-lg);
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: background-color var(--transition-fast);
+}
+
+.action-cancel:active {
+    background-color: var(--border-light);
 }
 
 /* ============================================
