@@ -41,20 +41,22 @@ Badge.displayName = 'Badge';
 
 export interface CountBadgeProps extends HTMLAttributes<HTMLSpanElement> {
   count: number;
+  label?: string;
 }
 
 export const CountBadge = forwardRef<HTMLSpanElement, CountBadgeProps>(
-  ({ className, count, ...props }, ref) => {
+  ({ className, count, label = 'fields', ...props }, ref) => {
     return (
       <span
         ref={ref}
         className={clsx(
-          'inline-flex items-center justify-center w-5 h-5 text-[10px] font-semibold rounded-full bg-gold-100 text-gold-700',
+          'inline-flex items-center justify-center px-2.5 py-0.5 text-[10px] font-semibold rounded-xl',
+          'bg-gold-100/60 text-gold',
           className
         )}
         {...props}
       >
-        {count}
+        {count} {label}
       </span>
     );
   }

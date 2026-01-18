@@ -1,5 +1,4 @@
 import type { ContinuityEvent } from '@/types';
-import { Badge } from '../ui';
 
 interface EventCardProps {
   event: ContinuityEvent;
@@ -8,54 +7,54 @@ interface EventCardProps {
 
 export function EventCard({ event, onRemove }: EventCardProps) {
   return (
-    <div className="card relative">
+    <div className="bg-card border border-border rounded-[10px] p-3.5 relative">
       {/* Remove button */}
       {onRemove && (
         <button
           onClick={onRemove}
-          className="absolute top-3 right-3 w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-text-muted hover:text-error hover:bg-red-50 transition-colors tap-target touch-manipulation"
+          className="absolute top-3 right-3 p-1 text-text-light hover:text-text-muted transition-colors touch-manipulation"
           aria-label="Remove event"
         >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
           </svg>
         </button>
       )}
 
       {/* Type badge */}
-      <Badge variant="gold" size="md" className="mb-2">
+      <span className="inline-block text-[9px] font-bold tracking-widest uppercase text-gold bg-gold-100/50 px-2 py-0.5 rounded mb-2">
         {event.type}
-      </Badge>
+      </span>
 
       {/* Event name */}
-      <h4 className="font-semibold text-text-primary text-base mb-1">
+      <h4 className="font-semibold text-text-primary text-[15px] mb-1">
         {event.name}
       </h4>
 
       {/* Description */}
       {event.description && (
-        <p className="text-sm text-text-secondary mb-3">
+        <p className="text-[13px] text-text-secondary leading-snug mb-2.5">
           {event.description}
         </p>
       )}
 
       {/* Stage and Scene range grid */}
-      <div className="grid grid-cols-2 gap-3 mb-3">
+      <div className="grid grid-cols-2 gap-2 text-xs mb-2">
         <div>
-          <div className="field-label mb-1">STAGE</div>
-          <div className="text-sm text-text-primary">{event.stage || '—'}</div>
+          <span className="text-text-muted">Stage:</span>
+          <span className="text-text-primary font-medium ml-1.5">{event.stage || '—'}</span>
         </div>
         <div>
-          <div className="field-label mb-1">SCENES</div>
-          <div className="text-sm text-text-primary">{event.sceneRange || '—'}</div>
+          <span className="text-text-muted">Scenes:</span>
+          <span className="text-text-primary font-medium ml-1.5">{event.sceneRange || '—'}</span>
         </div>
       </div>
 
       {/* Products */}
       {event.products && (
-        <div>
-          <div className="field-label mb-1">PRODUCTS</div>
-          <div className="text-sm text-text-secondary">{event.products}</div>
+        <div className="text-xs mt-2">
+          <span className="text-text-muted">Products:</span>
+          <span className="text-text-primary ml-1.5">{event.products}</span>
         </div>
       )}
 
