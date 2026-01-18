@@ -66,6 +66,7 @@ const App = {
         this.bindSceneSearch();
         this.bindPhotoCapture();
         this.bindSettingsEvents();
+        this.bindDemoButton();
 
         // Check for existing project and route accordingly
         this.checkInitialRoute();
@@ -155,6 +156,7 @@ const App = {
             case 'screen-scene-list':
                 this.renderSceneList();
                 this.updateSettings();
+                this.updateDemoBadge();
                 // These are main tab screens - clear history to home
                 this.screenHistory = ['screen-home'];
                 break;
@@ -2824,6 +2826,270 @@ const App = {
                 installSection.style.display = 'block';
             } else {
                 installSection.style.display = 'none';
+            }
+        }
+    },
+
+    // ============================================
+    // DEMO MODE
+    // ============================================
+
+    /**
+     * Bind demo button event
+     */
+    bindDemoButton() {
+        const demoBtn = document.getElementById('btn-try-demo');
+        if (demoBtn) {
+            demoBtn.addEventListener('click', () => this.loadDemoProject());
+        }
+    },
+
+    /**
+     * Load demo project with sample data
+     */
+    async loadDemoProject() {
+        this.showToast('Loading demo project...');
+
+        // Demo project metadata
+        this.project = {
+            name: 'The Morning After',
+            file: 'demo-script.pdf',
+            isDemo: true
+        };
+
+        // Demo scenes - realistic film production scenarios
+        this.scenes = [
+            {
+                index: 0,
+                number: '1',
+                heading: 'INT. SARAH\'S APARTMENT - MORNING',
+                characters: ['SARAH CHEN', 'MIKE TORRES'],
+                status: 'pending'
+            },
+            {
+                index: 1,
+                number: '2',
+                heading: 'EXT. CITY STREET - DAY',
+                characters: ['SARAH CHEN', 'DR. AMANDA COLE'],
+                status: 'pending'
+            },
+            {
+                index: 2,
+                number: '3',
+                heading: 'INT. COFFEE SHOP - DAY',
+                characters: ['SARAH CHEN', 'MIKE TORRES', 'EMMA WRIGHT'],
+                status: 'pending'
+            },
+            {
+                index: 3,
+                number: '4',
+                heading: 'INT. HOSPITAL - NIGHT',
+                characters: ['DR. AMANDA COLE', 'MIKE TORRES'],
+                status: 'pending'
+            },
+            {
+                index: 4,
+                number: '5',
+                heading: 'EXT. ROOFTOP - SUNSET',
+                characters: ['SARAH CHEN', 'EMMA WRIGHT'],
+                status: 'pending'
+            },
+            {
+                index: 5,
+                number: '6',
+                heading: 'INT. SARAH\'S APARTMENT - NIGHT',
+                characters: ['SARAH CHEN', 'MIKE TORRES', 'DR. AMANDA COLE'],
+                status: 'pending'
+            },
+            {
+                index: 6,
+                number: '7',
+                heading: 'EXT. PARK - MORNING',
+                characters: ['EMMA WRIGHT'],
+                status: 'pending'
+            },
+            {
+                index: 7,
+                number: '8',
+                heading: 'INT. OFFICE BUILDING - DAY',
+                characters: ['SARAH CHEN', 'MIKE TORRES'],
+                status: 'pending'
+            }
+        ];
+
+        // Demo characters with look descriptions
+        this.characters = [
+            {
+                name: 'SARAH CHEN',
+                sceneCount: 6,
+                looks: [{
+                    name: 'Day 1 - Professional',
+                    description: 'Clean, polished professional look. Natural makeup with subtle contouring, well-groomed hair in a neat low bun.'
+                }]
+            },
+            {
+                name: 'MIKE TORRES',
+                sceneCount: 4,
+                looks: [{
+                    name: 'Casual Weekend',
+                    description: 'Natural, minimal styling. Light stubble, textured hair with product for casual tousled look.'
+                }]
+            },
+            {
+                name: 'DR. AMANDA COLE',
+                sceneCount: 3,
+                looks: [{
+                    name: 'Hospital Professional',
+                    description: 'Minimal makeup, hair pulled back in professional ponytail. Clean, clinical appearance.'
+                }]
+            },
+            {
+                name: 'EMMA WRIGHT',
+                sceneCount: 3,
+                looks: [{
+                    name: 'Artistic Bohemian',
+                    description: 'Creative, expressive style. Bold eye makeup, loose wavy hair, artistic accessories.'
+                }]
+            }
+        ];
+
+        // Demo timesheet entries
+        this.timesheetEntries = [
+            {
+                id: Date.now() - 86400000 * 3,
+                date: this.getRelativeDate(-3),
+                shootDay: 'Day 1',
+                callTime: '05:30',
+                wrapTime: '18:00',
+                mealBreak: 30,
+                totalHours: 12,
+                notes: 'First day of production. Main cast looks established.',
+                status: 'approved'
+            },
+            {
+                id: Date.now() - 86400000 * 2,
+                date: this.getRelativeDate(-2),
+                shootDay: 'Day 2',
+                callTime: '06:00',
+                wrapTime: '19:30',
+                mealBreak: 45,
+                totalHours: 12.75,
+                notes: 'Hospital scenes. Quick turnaround for Dr. Cole.',
+                status: 'approved'
+            },
+            {
+                id: Date.now() - 86400000,
+                date: this.getRelativeDate(-1),
+                shootDay: 'Day 3',
+                callTime: '07:00',
+                wrapTime: '17:00',
+                mealBreak: 30,
+                totalHours: 9.5,
+                notes: 'Exterior scenes. Weather delays.',
+                status: 'pending'
+            }
+        ];
+
+        // Save to storage
+        this.saveToStorage();
+        this.saveTimesheets();
+
+        // Generate some sample placeholder photos
+        await this.generateDemoPhotos();
+
+        // Update scene statuses
+        await this.updateSceneStatuses();
+
+        // Navigate to scene list
+        this.navigateTo('screen-scene-list');
+
+        this.showToast('Demo project loaded!');
+    },
+
+    /**
+     * Get date relative to today
+     */
+    getRelativeDate(daysOffset) {
+        const date = new Date();
+        date.setDate(date.getDate() + daysOffset);
+        return date.toISOString().split('T')[0];
+    },
+
+    /**
+     * Generate demo placeholder photos
+     */
+    async generateDemoPhotos() {
+        // Generate SVG placeholder photos for first scene/character
+        const angles = ['front', 'left', 'right', 'back'];
+        const colors = {
+            front: '#C9A961',
+            left: '#667eea',
+            right: '#764ba2',
+            back: '#48bb78'
+        };
+
+        for (const angle of angles) {
+            const svg = this.createPlaceholderSVG(angle, colors[angle], 'SARAH CHEN', 'Scene 1');
+            const imageData = 'data:image/svg+xml;base64,' + btoa(svg);
+
+            await PhotoStorage.savePhoto({
+                sceneIndex: 0,
+                characterName: 'SARAH CHEN',
+                angle: angle,
+                imageData: imageData,
+                timestamp: Date.now(),
+                isDemo: true
+            });
+        }
+
+        // Add a couple more photos for variety
+        const svg2 = this.createPlaceholderSVG('front', '#C9A961', 'MIKE TORRES', 'Scene 1');
+        await PhotoStorage.savePhoto({
+            sceneIndex: 0,
+            characterName: 'MIKE TORRES',
+            angle: 'front',
+            imageData: 'data:image/svg+xml;base64,' + btoa(svg2),
+            timestamp: Date.now(),
+            isDemo: true
+        });
+    },
+
+    /**
+     * Create placeholder SVG image
+     */
+    createPlaceholderSVG(angle, color, character, scene) {
+        return `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">
+            <rect width="400" height="400" fill="${color}"/>
+            <circle cx="200" cy="150" r="60" fill="white" opacity="0.3"/>
+            <rect x="140" y="220" width="120" height="80" rx="10" fill="white" opacity="0.3"/>
+            <text x="200" y="320" text-anchor="middle" fill="white" font-family="system-ui" font-size="18" font-weight="bold">${angle.toUpperCase()}</text>
+            <text x="200" y="350" text-anchor="middle" fill="white" font-family="system-ui" font-size="14" opacity="0.8">${character}</text>
+            <text x="200" y="375" text-anchor="middle" fill="white" font-family="system-ui" font-size="12" opacity="0.6">${scene}</text>
+        </svg>`;
+    },
+
+    /**
+     * Check if currently in demo mode
+     */
+    isDemoMode() {
+        return this.project.isDemo === true;
+    },
+
+    /**
+     * Update demo badge visibility
+     */
+    updateDemoBadge() {
+        // Remove existing badges
+        document.querySelectorAll('.demo-badge').forEach(b => b.remove());
+
+        if (this.isDemoMode()) {
+            // Add badge to scene list title
+            const sceneListTitle = document.querySelector('#screen-scene-list .top-bar-title');
+            if (sceneListTitle && !sceneListTitle.querySelector('.demo-badge')) {
+                const badge = document.createElement('span');
+                badge.className = 'demo-badge';
+                badge.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Demo`;
+                sceneListTitle.appendChild(badge);
             }
         }
     },
