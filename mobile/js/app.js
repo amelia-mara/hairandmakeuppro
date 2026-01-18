@@ -42,12 +42,22 @@ const App = {
     timesheetFilter: 'this-week',
     timesheetSelectedDate: null, // Currently selected date for quick entry
 
+    // Rate card settings
+    rateCard: {
+        dailyRate: 0,
+        baseDayHours: 11,
+        otMultiplier: 1.5,
+        sixthDayMultiplier: 1.5,
+        kitRental: 0
+    },
+
     // LocalStorage keys
     STORAGE_KEYS: {
         PROJECT: 'hmp_project',
         SCENES: 'hmp_scenes',
         CHARACTERS: 'hmp_characters',
-        TIMESHEETS: 'hmp_timesheets'
+        TIMESHEETS: 'hmp_timesheets',
+        RATE_CARD: 'hmp_rate_card'
     },
 
     // Initialize the app
@@ -68,6 +78,8 @@ const App = {
         this.bindPhotoCapture();
         this.bindSettingsEvents();
         this.bindDemoButton();
+        this.bindRateCardEvents();
+        this.loadRateCard();
 
         // Check for existing project and route accordingly
         this.checkInitialRoute();
@@ -2441,14 +2453,78 @@ const App = {
             if (breakdownEl) {
                 breakdownEl.textContent = `Pre-call: ${precallDuration.toFixed(1)} | Worked: ${workedHours.toFixed(1)} | Break: ${breakHours.toFixed(1)}`;
             }
+
+            // Update earnings display if rate card is set
+            this.updateDayEarningsDisplay();
         };
 
         if (precall) precall.addEventListener('change', calculateTotal);
         if (unitcall) unitcall.addEventListener('change', calculateTotal);
         if (wrap) wrap.addEventListener('change', calculateTotal);
 
+        // Also listen to 6th day toggle for earnings
+        const sixthDayBtn = document.getElementById('ts-sixth-day');
+        if (sixthDayBtn) {
+            sixthDayBtn.addEventListener('click', () => {
+                setTimeout(() => this.updateDayEarningsDisplay(), 10);
+            });
+        }
+
         // Calculate initial value
         calculateTotal();
+    },
+
+    /**
+     * Update the day earnings display
+     */
+    updateDayEarningsDisplay() {
+        const earningsCard = document.getElementById('day-earnings');
+        if (!earningsCard) return;
+
+        // Only show if rate card is configured
+        if (this.rateCard.dailyRate <= 0) {
+            earningsCard.style.display = 'none';
+            return;
+        }
+
+        // Build a temporary entry from current form values
+        const precall = document.getElementById('ts-precall');
+        const unitcall = document.getElementById('ts-unitcall');
+        const wrap = document.getElementById('ts-wrap');
+        const sixthDayBtn = document.getElementById('ts-sixth-day');
+        const brokenLunchBtn = document.getElementById('ts-broken-lunch');
+
+        const entry = {
+            precall: precall?.value || '',
+            unitcall: unitcall?.value || '',
+            wrap: wrap?.value || '',
+            sixthDay: sixthDayBtn?.classList.contains('active') || false,
+            brokenLunch: brokenLunchBtn?.classList.contains('active') || false
+        };
+
+        // Calculate earnings
+        const earnings = this.calculateEntryEarnings(entry);
+
+        // Show or hide card based on whether times are entered
+        if (!entry.unitcall || !entry.wrap) {
+            earningsCard.style.display = 'none';
+            return;
+        }
+
+        earningsCard.style.display = 'block';
+
+        // Update display elements
+        const basePay = document.getElementById('day-base-pay');
+        const otPay = document.getElementById('day-ot-pay');
+        const sixthPay = document.getElementById('day-sixth-pay');
+        const kitPay = document.getElementById('day-kit-pay');
+        const totalPay = document.getElementById('day-total-pay');
+
+        if (basePay) basePay.textContent = `£${earnings.dailyEarnings.toFixed(2)}`;
+        if (otPay) otPay.textContent = `£${earnings.otEarnings.toFixed(2)}`;
+        if (sixthPay) sixthPay.textContent = `£${earnings.sixthDayBonus.toFixed(2)}`;
+        if (kitPay) kitPay.textContent = `£${earnings.kitRental.toFixed(2)}`;
+        if (totalPay) totalPay.textContent = `£${earnings.totalEarnings.toFixed(2)}`;
     },
 
     /**
@@ -2628,6 +2704,8 @@ const App = {
     renderWeekView() {
         const container = document.getElementById('week-grid');
         const weekTotalEl = document.getElementById('week-total-hours');
+        const weekEarningsContainer = document.getElementById('week-total-earnings');
+        const weekEarningsValue = document.getElementById('week-earnings-value');
         if (!container) return;
 
         // Get start of current week (Sunday)
@@ -2638,6 +2716,7 @@ const App = {
 
         const dayNames = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
         let weekTotal = 0;
+        let weekEarnings = 0;
 
         container.innerHTML = '';
 
@@ -2650,6 +2729,12 @@ const App = {
             const entry = this.timesheetEntries.find(e => e.date === dateStr);
             const hours = entry?.totalHours || 0;
             if (hours) weekTotal += hours;
+
+            // Calculate earnings for this entry
+            if (entry && this.rateCard.dailyRate > 0) {
+                const earnings = this.calculateEntryEarnings(entry);
+                weekEarnings += earnings.totalEarnings;
+            }
 
             const isToday = dayDate.toDateString() === today.toDateString();
             const isSelected = this.timesheetSelectedDate &&
@@ -2679,6 +2764,16 @@ const App = {
 
         if (weekTotalEl) {
             weekTotalEl.textContent = weekTotal.toFixed(1);
+        }
+
+        // Update week earnings display
+        if (weekEarningsContainer && weekEarningsValue) {
+            if (this.rateCard.dailyRate > 0 && weekEarnings > 0) {
+                weekEarningsContainer.style.display = 'inline';
+                weekEarningsValue.textContent = `£${weekEarnings.toFixed(2)}`;
+            } else {
+                weekEarningsContainer.style.display = 'none';
+            }
         }
     },
 
@@ -3302,6 +3397,184 @@ const App = {
         // Set selected date and navigate to quick entry
         this.timesheetSelectedDate = new Date(entry.date + 'T00:00:00');
         this.navigateTo('screen-timesheet');
+    },
+
+    // ============================================
+    // RATE CARD MANAGEMENT
+    // ============================================
+
+    /**
+     * Bind rate card input events
+     */
+    bindRateCardEvents() {
+        const dailyRateInput = document.getElementById('rate-daily-rate');
+        const baseDaySelect = document.getElementById('rate-base-day');
+        const kitRentalInput = document.getElementById('rate-kit-rental');
+
+        if (dailyRateInput) {
+            dailyRateInput.addEventListener('change', () => this.updateRateCard());
+            dailyRateInput.addEventListener('input', () => this.updateRateSummary());
+        }
+
+        if (baseDaySelect) {
+            baseDaySelect.addEventListener('change', () => this.updateRateCard());
+        }
+
+        if (kitRentalInput) {
+            kitRentalInput.addEventListener('change', () => this.updateRateCard());
+            kitRentalInput.addEventListener('input', () => this.updateRateSummary());
+        }
+    },
+
+    /**
+     * Load rate card from storage
+     */
+    loadRateCard() {
+        const saved = localStorage.getItem(this.STORAGE_KEYS.RATE_CARD);
+        if (saved) {
+            try {
+                this.rateCard = { ...this.rateCard, ...JSON.parse(saved) };
+            } catch (e) {
+                console.error('Error loading rate card:', e);
+            }
+        }
+
+        // Populate form fields
+        const dailyRateInput = document.getElementById('rate-daily-rate');
+        const baseDaySelect = document.getElementById('rate-base-day');
+        const kitRentalInput = document.getElementById('rate-kit-rental');
+
+        if (dailyRateInput && this.rateCard.dailyRate > 0) {
+            dailyRateInput.value = this.rateCard.dailyRate;
+        }
+        if (baseDaySelect) {
+            baseDaySelect.value = this.rateCard.baseDayHours;
+        }
+        if (kitRentalInput && this.rateCard.kitRental > 0) {
+            kitRentalInput.value = this.rateCard.kitRental;
+        }
+
+        this.updateRateSummary();
+    },
+
+    /**
+     * Update rate card from form inputs
+     */
+    updateRateCard() {
+        const dailyRateInput = document.getElementById('rate-daily-rate');
+        const baseDaySelect = document.getElementById('rate-base-day');
+        const kitRentalInput = document.getElementById('rate-kit-rental');
+
+        if (dailyRateInput) {
+            this.rateCard.dailyRate = parseFloat(dailyRateInput.value) || 0;
+        }
+        if (baseDaySelect) {
+            this.rateCard.baseDayHours = parseInt(baseDaySelect.value, 10) || 11;
+        }
+        if (kitRentalInput) {
+            this.rateCard.kitRental = parseFloat(kitRentalInput.value) || 0;
+        }
+
+        // Save to localStorage
+        localStorage.setItem(this.STORAGE_KEYS.RATE_CARD, JSON.stringify(this.rateCard));
+
+        this.updateRateSummary();
+    },
+
+    /**
+     * Update the rate summary display
+     */
+    updateRateSummary() {
+        const summaryEl = document.getElementById('rate-summary');
+        const hourlyEl = document.getElementById('rate-hourly');
+        const otHourlyEl = document.getElementById('rate-ot-hourly');
+        const maxDayEl = document.getElementById('rate-max-day');
+
+        if (!summaryEl) return;
+
+        if (this.rateCard.dailyRate > 0) {
+            summaryEl.style.display = 'block';
+
+            const hourlyRate = this.rateCard.dailyRate / this.rateCard.baseDayHours;
+            const otRate = hourlyRate * this.rateCard.otMultiplier;
+            const maxDay = this.rateCard.dailyRate + this.rateCard.kitRental;
+
+            if (hourlyEl) hourlyEl.textContent = `£${hourlyRate.toFixed(2)}/hr`;
+            if (otHourlyEl) otHourlyEl.textContent = `£${otRate.toFixed(2)}/hr`;
+            if (maxDayEl) maxDayEl.textContent = `£${maxDay.toFixed(2)}`;
+        } else {
+            summaryEl.style.display = 'none';
+        }
+    },
+
+    /**
+     * Calculate earnings for a timesheet entry
+     */
+    calculateEntryEarnings(entry) {
+        if (!entry || !entry.unitcall || !entry.wrap) {
+            return {
+                preCallHours: 0,
+                workingHours: 0,
+                baseHours: 0,
+                otHours: 0,
+                totalHours: 0,
+                dailyEarnings: 0,
+                otEarnings: 0,
+                sixthDayBonus: 0,
+                kitRental: 0,
+                totalEarnings: 0
+            };
+        }
+
+        const parseTime = (timeStr) => {
+            if (!timeStr) return null;
+            const [hours, minutes] = timeStr.split(':').map(Number);
+            return hours + (minutes / 60);
+        };
+
+        const getHoursDiff = (startTime, endTime) => {
+            const start = parseTime(startTime);
+            const end = parseTime(endTime);
+            if (start === null || end === null) return 0;
+            return end >= start ? end - start : (24 - start) + end;
+        };
+
+        // Calculate hours
+        const preCallHours = entry.precall ? getHoursDiff(entry.precall, entry.unitcall) : 0;
+        const lunchDeduction = entry.brokenLunch ? 0.5 : 1;
+        const rawWorkingHours = getHoursDiff(entry.unitcall, entry.wrap);
+        const workingHours = Math.max(0, rawWorkingHours - lunchDeduction);
+        const totalHours = preCallHours + workingHours;
+
+        // Calculate OT
+        const baseHours = Math.min(workingHours, this.rateCard.baseDayHours);
+        const otHours = Math.max(0, workingHours - this.rateCard.baseDayHours);
+
+        // Calculate earnings
+        const hourlyRate = this.rateCard.dailyRate / this.rateCard.baseDayHours;
+        const dailyEarnings = this.rateCard.dailyRate;
+        const otEarnings = otHours * hourlyRate * this.rateCard.otMultiplier;
+        const kitRental = this.rateCard.kitRental;
+
+        // 6th day bonus
+        const sixthDayBonus = entry.sixthDay
+            ? dailyEarnings * (this.rateCard.sixthDayMultiplier - 1)
+            : 0;
+
+        const totalEarnings = dailyEarnings + otEarnings + sixthDayBonus + kitRental;
+
+        return {
+            preCallHours,
+            workingHours,
+            baseHours,
+            otHours,
+            totalHours,
+            dailyEarnings,
+            otEarnings,
+            sixthDayBonus,
+            kitRental,
+            totalEarnings
+        };
     },
 
     // ============================================
