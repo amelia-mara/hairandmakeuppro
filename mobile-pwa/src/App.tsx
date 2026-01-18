@@ -3,6 +3,7 @@ import { useProjectStore } from '@/stores/projectStore';
 import { demoProject } from '@/stores/demoData';
 import { BottomNav } from '@/components/navigation';
 import { SceneList, SceneView } from '@/components/scenes';
+import { Lookbooks } from '@/components/lookbooks';
 import type { NavTab } from '@/types';
 
 export default function App() {
@@ -64,7 +65,7 @@ export default function App() {
       case 'scenes':
         return <SceneList onSceneSelect={handleSceneSelect} />;
       case 'lookbooks':
-        return <PlaceholderScreen title="Lookbooks" description="Character lookbooks will appear here" />;
+        return <Lookbooks />;
       case 'timesheet':
         return <PlaceholderScreen title="Timesheet" description="Track application times and working hours" />;
       case 'settings':
