@@ -30,7 +30,7 @@ export function PhotoGrid({
   ];
 
   return (
-    <div className={clsx('grid grid-cols-2 gap-3', className)}>
+    <div className={clsx('grid grid-cols-4 gap-2.5', className)}>
       {slots.map(({ angle, photo }) => (
         <PhotoSlot
           key={angle}
@@ -39,7 +39,7 @@ export function PhotoGrid({
           onCapture={() => onCapture(angle)}
           onView={photo && onView ? () => onView(photo, angle) : undefined}
           onRemove={photo && onRemove ? () => onRemove(angle) : undefined}
-          size="md"
+          size="portrait"
           showLabel
           isPrimary={angle === 'front'}
         />

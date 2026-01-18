@@ -20,18 +20,18 @@ export function Accordion({
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <div className={clsx('border-b border-border', className)}>
+    <div className={clsx('bg-card rounded-card shadow-card overflow-hidden', className)}>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between py-4 text-left touch-manipulation"
+        className="w-full flex items-center justify-between px-[18px] py-4 text-left touch-manipulation"
         aria-expanded={isOpen}
       >
-        <div className="flex items-center gap-2">
-          <span className="section-header">{title}</span>
+        <span className="section-header">{title}</span>
+        <div className="flex items-center gap-2.5">
           {count !== undefined && count > 0 && <CountBadge count={count} />}
+          <ChevronIcon isOpen={isOpen} />
         </div>
-        <ChevronIcon isOpen={isOpen} />
       </button>
       <div
         className={clsx(
@@ -42,7 +42,7 @@ export function Accordion({
           }
         )}
       >
-        <div className="pb-4">{children}</div>
+        <div className="px-[18px] pb-[18px]">{children}</div>
       </div>
     </div>
   );

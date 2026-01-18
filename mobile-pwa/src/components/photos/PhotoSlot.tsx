@@ -7,7 +7,7 @@ interface PhotoSlotProps {
   onCapture: () => void;
   onView?: () => void;
   onRemove?: () => void;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'portrait';
   showLabel?: boolean;
   isPrimary?: boolean;
 }
@@ -47,13 +47,14 @@ export function PhotoSlot({
         type="button"
         onClick={handleClick}
         className={clsx(
-          'relative rounded-lg overflow-hidden touch-manipulation transition-all duration-200',
+          'relative rounded-[10px] overflow-hidden touch-manipulation transition-all duration-200',
           'focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-2',
           {
             // Size variants
             'w-full aspect-square': size === 'sm',
             'w-full aspect-[4/3]': size === 'md',
             'w-full aspect-[16/9]': size === 'lg',
+            'w-full aspect-[3/4]': size === 'portrait',
             // Border styles
             'border-2 border-dashed': !hasPhoto,
             'border-gold': !hasPhoto && isPrimary,
@@ -82,13 +83,13 @@ export function PhotoSlot({
           // Empty state
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50">
             <CameraIcon className={clsx('text-gray-400', {
-              'w-5 h-5': size === 'sm',
+              'w-5 h-5': size === 'sm' || size === 'portrait',
               'w-6 h-6': size === 'md',
               'w-8 h-8': size === 'lg',
             })} />
             {showLabel && label && (
-              <span className={clsx('font-medium text-gray-400 mt-1', {
-                'text-[9px]': size === 'sm',
+              <span className={clsx('font-bold uppercase tracking-widest text-gray-400 mt-2', {
+                'text-[9px]': size === 'sm' || size === 'portrait',
                 'text-[10px]': size === 'md',
                 'text-xs': size === 'lg',
               })}>
