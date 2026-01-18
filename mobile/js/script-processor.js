@@ -361,6 +361,316 @@ const ScriptProcessor = {
     },
 
     // ============================================
+    // EXTRACTION VALIDATION & OCR FALLBACK
+    // ============================================
+
+    /**
+     * Validate extraction results to determine if OCR fallback is needed
+     * @param {string} text - Extracted text
+     * @param {Array} scenes - Detected scenes
+     * @returns {Object} - Validation result with confidence score
+     */
+    validateExtraction(text, scenes) {
+        const issues = [];
+
+        // Check 1: Do we have enough text?
+        if (!text || text.length < 500) {
+            issues.push('Very little text extracted');
+        }
+
+        // Check 2: Did we find any scenes?
+        if (!scenes || scenes.length === 0) {
+            issues.push('No scene headings found');
+        }
+
+        // Check 3: Do scenes have reasonable content?
+        if (scenes && scenes.length > 0) {
+            const avgContentLength = scenes.reduce((sum, s) => {
+                const contentLen = Array.isArray(s.content) ? s.content.join('\n').length : 0;
+                return sum + contentLen;
+            }, 0) / scenes.length;
+            if (avgContentLength < 100) {
+                issues.push('Scenes have very little content');
+            }
+        }
+
+        // Check 4: Did we find characters?
+        if (scenes && scenes.length > 0) {
+            const totalCharacters = [...new Set(scenes.flatMap(s => s.characters || []))].length;
+            if (totalCharacters === 0) {
+                issues.push('No characters detected');
+            }
+        }
+
+        // Check 5: Is the text garbled? (Look for too many special chars or no spaces)
+        if (text && text.length > 0) {
+            const alphaRatio = (text.match(/[a-zA-Z]/g) || []).length / text.length;
+            if (alphaRatio < 0.5) {
+                issues.push('Text appears garbled');
+            }
+        }
+
+        // Check 6: Does it have screenplay markers?
+        if (text) {
+            const hasScreenplayMarkers = /INT\.|EXT\.|FADE IN|CUT TO/i.test(text);
+            if (!hasScreenplayMarkers) {
+                issues.push('No screenplay formatting detected');
+            }
+        }
+
+        return {
+            isValid: issues.length === 0,
+            confidence: Math.max(0, 100 - (issues.length * 20)),  // Rough confidence score
+            issues: issues
+        };
+    },
+
+    /**
+     * Lazy load an external script
+     * @param {string} src - Script URL
+     * @returns {Promise} - Resolves when script is loaded
+     */
+    loadScript(src) {
+        return new Promise((resolve, reject) => {
+            // Check if already loaded
+            if (document.querySelector(`script[src="${src}"]`)) {
+                resolve();
+                return;
+            }
+            const script = document.createElement('script');
+            script.src = src;
+            script.onload = resolve;
+            script.onerror = () => reject(new Error(`Failed to load script: ${src}`));
+            document.head.appendChild(script);
+        });
+    },
+
+    /**
+     * Clean OCR text by fixing common misreads
+     * @param {string} text - Raw OCR text
+     * @returns {string} - Cleaned text
+     */
+    cleanOCRText(text) {
+        return text
+            // Fix common OCR misreads for screenplay terms
+            .replace(/lNT\./g, 'INT.')
+            .replace(/1NT\./g, 'INT.')
+            .replace(/EX T\./g, 'EXT.')
+            .replace(/EXT\s*\./g, 'EXT.')
+            .replace(/\|/g, 'I')
+            // Fix spacing issues
+            .replace(/[ \t]+/g, ' ')
+            .replace(/\n{3,}/g, '\n\n')
+            // Fix common character name issues
+            .replace(/([A-Z]{2,})\s*\n\s*([A-Z]{2,})/g, '$1 $2')  // Broken names
+            .trim();
+    },
+
+    /**
+     * Extract text from PDF using OCR (Tesseract.js)
+     * Used as fallback when text extraction fails or produces poor results
+     * @param {File} file - The PDF file
+     * @param {Function} onProgress - Progress callback
+     * @returns {Promise<string>} - OCR extracted text
+     */
+    async extractTextViaOCR(file, onProgress) {
+        // Lazy load Tesseract if not already loaded
+        if (!window.Tesseract) {
+            onProgress?.({ step: 'ocr_loading', message: 'Loading OCR engine...' });
+            await this.loadScript('https://unpkg.com/tesseract.js@4/dist/tesseract.min.js');
+        }
+
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+        onProgress?.({ step: 'ocr_init', message: 'Initializing OCR...' });
+
+        const worker = await Tesseract.createWorker('eng');
+        await worker.setParameters({
+            tessedit_pageseg_mode: '6',  // Assume uniform block of text
+            preserve_interword_spaces: '1'
+        });
+
+        const allText = [];
+        const totalPages = pdf.numPages;
+
+        for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+            const progress = Math.round((pageNum / totalPages) * 100);
+            onProgress?.({
+                step: 'ocr_page',
+                message: `OCR: Reading page ${pageNum} of ${totalPages}...`,
+                progress: progress,
+                currentPage: pageNum,
+                totalPages: totalPages
+            });
+
+            const page = await pdf.getPage(pageNum);
+            const scale = 2.0;  // Higher scale = better OCR accuracy
+            const viewport = page.getViewport({ scale });
+
+            // Create canvas for rendering
+            const canvas = document.createElement('canvas');
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            const ctx = canvas.getContext('2d');
+
+            // Render page to canvas
+            await page.render({ canvasContext: ctx, viewport }).promise;
+
+            // Run OCR on canvas
+            const { data: { text } } = await worker.recognize(canvas);
+            allText.push(text);
+
+            // Clean up canvas
+            canvas.remove();
+        }
+
+        await worker.terminate();
+
+        return this.cleanOCRText(allText.join('\n\n'));
+    },
+
+    /**
+     * Smart hybrid PDF import - tries text extraction first, falls back to OCR
+     * @param {File} file - The PDF file
+     * @param {Function} onProgress - Progress callback
+     * @returns {Promise<Object>} - Import result with method used
+     */
+    async importPDFScript(file, onProgress) {
+        const startTime = Date.now();
+
+        // =====================
+        // STEP 1: Try text extraction first (FAST)
+        // =====================
+        onProgress?.({
+            step: 'text_extract',
+            message: 'Extracting text...',
+            progress: 10
+        });
+
+        let textResult;
+        try {
+            textResult = await this.extractScriptFromPDF(file);
+        } catch (e) {
+            textResult = { success: false, error: e.message };
+        }
+
+        if (textResult.success) {
+            // Parse scenes from extracted text
+            const scenes = this.detectScenes(textResult.text);
+            const characters = this.extractCharacters(textResult.text, scenes);
+
+            // Assign characters to scenes
+            characters.forEach(char => {
+                char.sceneIndices.forEach(sceneIndex => {
+                    const scene = scenes[sceneIndex];
+                    if (scene && !scene.characters.includes(char.name)) {
+                        scene.characters.push(char.name);
+                    }
+                });
+            });
+
+            const validation = this.validateExtraction(textResult.text, scenes);
+
+            if (validation.isValid || validation.confidence >= 60) {
+                // Text extraction worked well enough
+                console.log(`Text extraction succeeded (${Date.now() - startTime}ms, confidence: ${validation.confidence}%)`);
+
+                return {
+                    success: true,
+                    method: 'text',
+                    scenes: scenes,
+                    characters: characters,
+                    duplicates: this.detectDuplicates(characters),
+                    rawText: textResult.text,
+                    confidence: validation.confidence,
+                    processingTime: Date.now() - startTime,
+                    stats: {
+                        ...textResult.stats,
+                        totalScenes: scenes.length,
+                        totalCharacters: characters.length
+                    }
+                };
+            } else {
+                console.log(`Text extraction quality poor: ${validation.issues.join(', ')}`);
+                onProgress?.({
+                    step: 'text_failed',
+                    message: `Text extraction: Low quality (${validation.issues.join(', ')})`,
+                    progress: 20
+                });
+            }
+        } else {
+            onProgress?.({
+                step: 'text_failed',
+                message: `Text extraction failed: ${textResult.error}`,
+                progress: 20
+            });
+        }
+
+        // =====================
+        // STEP 2: Fall back to OCR (SLOWER but reliable)
+        // =====================
+        onProgress?.({
+            step: 'ocr_start',
+            message: 'Text extraction insufficient. Switching to OCR...',
+            progress: 25
+        });
+
+        try {
+            const ocrText = await this.extractTextViaOCR(file, onProgress);
+            const ocrScenes = this.detectScenes(ocrText);
+            const ocrCharacters = this.extractCharacters(ocrText, ocrScenes);
+
+            // Assign characters to scenes
+            ocrCharacters.forEach(char => {
+                char.sceneIndices.forEach(sceneIndex => {
+                    const scene = ocrScenes[sceneIndex];
+                    if (scene && !scene.characters.includes(char.name)) {
+                        scene.characters.push(char.name);
+                    }
+                });
+            });
+
+            const ocrValidation = this.validateExtraction(ocrText, ocrScenes);
+
+            if (ocrScenes.length === 0) {
+                throw new Error('OCR could not detect scene headings. This may not be a screenplay.');
+            }
+
+            console.log(`OCR succeeded (${Date.now() - startTime}ms, confidence: ${ocrValidation.confidence}%)`);
+
+            return {
+                success: true,
+                method: 'ocr',
+                scenes: ocrScenes,
+                characters: ocrCharacters,
+                duplicates: this.detectDuplicates(ocrCharacters),
+                rawText: ocrText,
+                confidence: ocrValidation.confidence,
+                processingTime: Date.now() - startTime,
+                stats: {
+                    totalScenes: ocrScenes.length,
+                    totalCharacters: ocrCharacters.length
+                },
+                warnings: ocrValidation.issues.length > 0 ? ocrValidation.issues : null
+            };
+
+        } catch (ocrError) {
+            // Both methods failed
+            const processingTime = Date.now() - startTime;
+            console.error('Both text extraction and OCR failed:', ocrError);
+
+            return {
+                success: false,
+                error: 'Could not read this PDF',
+                details: `Text extraction: ${textResult?.error || 'Low quality'}. OCR: ${ocrError.message}`,
+                suggestion: 'Please try pasting the script text directly, or export as .fountain from your screenwriting software.',
+                processingTime: processingTime
+            };
+        }
+    },
+
+    // ============================================
     // SCENE DETECTION (Pattern Matching)
     // ============================================
 
@@ -884,32 +1194,95 @@ const ScriptProcessor = {
     async processScript(file, onProgress = () => {}) {
         try {
             const extension = file.name.split('.').pop().toLowerCase();
-            let text = '';
-            let extractionStats = {};
 
-            // Step 1: Extract text with robust line reconstruction
-            onProgress({ step: 'extracting', progress: 10, message: 'Extracting text from PDF...' });
-
+            // For PDFs, use hybrid import with OCR fallback
             if (extension === 'pdf') {
-                // Use robust PDF extraction pipeline
-                const pdfResult = await this.extractScriptFromPDF(file);
+                onProgress({ step: 'extracting', progress: 10, message: 'Extracting text from PDF...' });
 
-                if (!pdfResult.success) {
-                    // Return error with helpful suggestion
+                // Use hybrid import - tries text extraction first, falls back to OCR
+                const importResult = await this.importPDFScript(file, (progress) => {
+                    // Map hybrid import progress to standard progress format
+                    if (progress.step === 'text_extract') {
+                        onProgress({ step: 'extracting', progress: 15, message: 'Extracting text...' });
+                    } else if (progress.step === 'text_failed') {
+                        onProgress({ step: 'extracting', progress: 20, message: progress.message });
+                    } else if (progress.step === 'ocr_loading') {
+                        onProgress({ step: 'ocr', progress: 25, message: 'Loading OCR engine...' });
+                    } else if (progress.step === 'ocr_init') {
+                        onProgress({ step: 'ocr', progress: 30, message: 'Initializing OCR...' });
+                    } else if (progress.step === 'ocr_start') {
+                        onProgress({ step: 'ocr', progress: 30, message: 'Text quality low. Switching to OCR...' });
+                    } else if (progress.step === 'ocr_page') {
+                        // Map OCR page progress (0-100) to our range (30-85)
+                        const mappedProgress = 30 + Math.round((progress.progress / 100) * 55);
+                        onProgress({
+                            step: 'ocr',
+                            progress: mappedProgress,
+                            message: progress.message,
+                            currentPage: progress.currentPage,
+                            totalPages: progress.totalPages
+                        });
+                    }
+                });
+
+                if (!importResult.success) {
                     return {
                         success: false,
-                        error: pdfResult.error,
-                        suggestion: pdfResult.suggestion,
-                        errorType: 'extraction'
+                        error: importResult.error,
+                        details: importResult.details,
+                        suggestion: importResult.suggestion,
+                        errorType: 'extraction',
+                        processingTime: importResult.processingTime
                     };
                 }
 
-                text = pdfResult.text;
-                extractionStats = pdfResult.stats;
-            } else {
-                // Plain text file
-                text = await this.extractTextFromFile(file);
+                // Hybrid import already detected scenes and characters
+                onProgress({ step: 'duplicates', progress: 90, message: 'Checking for duplicates...' });
+
+                onProgress({ step: 'complete', progress: 100, message: 'Analysis complete!' });
+
+                // Categorize characters by confidence
+                const highConfidence = importResult.characters.filter(c => c.confidence >= 0.7);
+                const mediumConfidence = importResult.characters.filter(c => c.confidence >= 0.4 && c.confidence < 0.7);
+                const lowConfidence = importResult.characters.filter(c => c.confidence < 0.4);
+
+                // Build warnings for potential issues
+                const warnings = importResult.warnings || [];
+                if (importResult.characters.length === 0) {
+                    warnings.push('No characters were detected. You may need to add them manually.');
+                } else if (importResult.characters.length < 3) {
+                    warnings.push(`Only ${importResult.characters.length} character(s) found. Some may have been missed.`);
+                }
+                if (lowConfidence.length > highConfidence.length) {
+                    warnings.push('Many low-confidence character detections. Review the list carefully.');
+                }
+                if (importResult.method === 'ocr') {
+                    warnings.push('OCR was used - please review for any misread text.');
+                }
+
+                return {
+                    success: true,
+                    scenes: importResult.scenes,
+                    characters: importResult.characters,
+                    duplicates: importResult.duplicates,
+                    rawText: importResult.rawText,
+                    method: importResult.method,  // 'text' or 'ocr'
+                    confidence: importResult.confidence,
+                    processingTime: importResult.processingTime,
+                    stats: {
+                        ...importResult.stats,
+                        highConfidenceCount: highConfidence.length,
+                        mediumConfidenceCount: mediumConfidence.length,
+                        lowConfidenceCount: lowConfidence.length,
+                        duplicateGroups: importResult.duplicates.length
+                    },
+                    warnings: warnings.length > 0 ? warnings : null
+                };
             }
+
+            // For text files, use simple extraction
+            onProgress({ step: 'extracting', progress: 10, message: 'Reading text file...' });
+            const text = await this.extractTextFromFile(file);
 
             // Step 2: Detect scenes using pattern matching
             onProgress({ step: 'scenes', progress: 40, message: 'Detecting scenes...' });
@@ -921,7 +1294,7 @@ const ScriptProcessor = {
                     error: 'No scene headings (INT./EXT.) detected. Is this a properly formatted screenplay?',
                     suggestion: 'Ensure your script uses standard scene headings like "INT. LOCATION - DAY" or "EXT. LOCATION - NIGHT".',
                     errorType: 'no_scenes',
-                    rawText: text  // Include raw text so user can review
+                    rawText: text
                 };
             }
 
@@ -945,10 +1318,10 @@ const ScriptProcessor = {
             if (characters.length === 0) {
                 warnings.push('No characters were detected. You may need to add them manually.');
             } else if (characters.length < 3) {
-                warnings.push(`Only ${characters.length} character(s) found. Some may have been missed. Review and add manually if needed.`);
+                warnings.push(`Only ${characters.length} character(s) found. Some may have been missed.`);
             }
             if (lowConfidence.length > highConfidence.length) {
-                warnings.push('Many low-confidence character detections. Review the character list carefully.');
+                warnings.push('Many low-confidence character detections. Review the list carefully.');
             }
 
             return {
@@ -956,27 +1329,24 @@ const ScriptProcessor = {
                 scenes,
                 characters,
                 duplicates,
-                rawText: text,  // Store for "View Full Scene" feature
+                rawText: text,
+                method: 'text',
                 stats: {
                     totalScenes: scenes.length,
                     totalCharacters: characters.length,
                     highConfidenceCount: highConfidence.length,
                     mediumConfidenceCount: mediumConfidence.length,
                     lowConfidenceCount: lowConfidence.length,
-                    duplicateGroups: duplicates.length,
-                    ...extractionStats  // Include pages, fragments, lines from PDF extraction
+                    duplicateGroups: duplicates.length
                 },
                 warnings: warnings.length > 0 ? warnings : null
             };
         } catch (error) {
             console.error('Script processing error:', error);
 
-            // Provide helpful error message based on error type
             let suggestion = 'Try pasting the script text directly, or export as .fountain from your screenwriting software.';
 
-            if (error.message.includes('scanned') || error.message.includes('image')) {
-                suggestion = 'This PDF appears to be scanned. Please use a text-based PDF exported directly from your screenwriting software.';
-            } else if (error.message.includes('password')) {
+            if (error.message.includes('password')) {
                 suggestion = 'This PDF may be password-protected. Please remove the password protection and try again.';
             }
 
