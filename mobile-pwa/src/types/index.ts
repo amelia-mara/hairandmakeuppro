@@ -519,3 +519,181 @@ export const createEmptyTimesheetEntry = (date: string): TimesheetEntry => ({
   notes: '',
   status: 'draft',
 });
+
+// ============================================
+// PROJECT LIFECYCLE & EXPORT TYPES
+// ============================================
+
+export type ProjectLifecycleState = 'active' | 'wrapped' | 'archived' | 'deleted';
+
+export interface ProjectLifecycle {
+  state: ProjectLifecycleState;
+  wrappedAt?: Date;
+  wrapReason?: 'all_scenes_complete' | 'manual' | 'inactivity';
+  lastActivityAt: Date;
+  deletionDate?: Date; // 90 days from wrap
+  archiveDate?: Date; // When moved to archived (90 days after wrap)
+  reminderDismissedAt?: Date; // When user dismissed wrap reminder
+  nextReminderAt?: Date; // When to show reminder again (7 days after dismiss)
+}
+
+export interface ExportDocument {
+  id: ExportDocumentType;
+  name: string;
+  description: string;
+  format: ExportFormat;
+  selected: boolean;
+  estimatedSize?: number; // in bytes
+}
+
+export type ExportDocumentType =
+  | 'continuity_bible'
+  | 'scene_breakdown'
+  | 'character_lookbooks'
+  | 'photo_archive'
+  | 'timesheets'
+  | 'invoice_summary';
+
+export type ExportFormat = 'pdf' | 'csv' | 'excel' | 'zip' | 'pdf_zip';
+
+export type ExportDeliveryMethod = 'download' | 'share' | 'email' | 'cloud';
+
+export interface ExportOptions {
+  documents: ExportDocumentType[];
+  deliveryMethod: ExportDeliveryMethod;
+  email?: string;
+  cloudProvider?: 'google_drive' | 'icloud';
+}
+
+export interface ExportProgress {
+  status: 'idle' | 'preparing' | 'generating' | 'packaging' | 'complete' | 'error';
+  currentDocument?: ExportDocumentType;
+  progress: number; // 0-100
+  error?: string;
+  outputUrl?: string;
+  outputFilename?: string;
+}
+
+// Extended Project interface with lifecycle
+export interface ProjectWithLifecycle extends Project {
+  lifecycle: ProjectLifecycle;
+  firstShootDate?: Date;
+  lastShootDate?: Date;
+  preparedBy?: string;
+}
+
+// Archive/Wrapped project summary for listing
+export interface ArchivedProjectSummary {
+  id: string;
+  name: string;
+  state: ProjectLifecycleState;
+  wrappedAt?: Date;
+  daysUntilDeletion: number;
+  scenesCount: number;
+  charactersCount: number;
+  photosCount: number;
+}
+
+// Export document configurations
+export const EXPORT_DOCUMENTS: ExportDocument[] = [
+  {
+    id: 'continuity_bible',
+    name: 'Continuity Bible',
+    description: 'Complete reference document - all characters, all looks, all scenes with photos',
+    format: 'pdf',
+    selected: true,
+  },
+  {
+    id: 'scene_breakdown',
+    name: 'Scene Breakdown',
+    description: 'Spreadsheet of all scenes with H&MU details per character',
+    format: 'csv',
+    selected: true,
+  },
+  {
+    id: 'character_lookbooks',
+    name: 'Character Lookbooks',
+    description: 'Individual PDFs per character with all their looks',
+    format: 'pdf_zip',
+    selected: true,
+  },
+  {
+    id: 'photo_archive',
+    name: 'Photo Archive',
+    description: 'All captured photos organized by character/scene',
+    format: 'zip',
+    selected: true,
+  },
+  {
+    id: 'timesheets',
+    name: 'Timesheets',
+    description: 'All logged hours for the production',
+    format: 'pdf',
+    selected: true,
+  },
+  {
+    id: 'invoice_summary',
+    name: 'Invoice Summary',
+    description: 'Total hours, rates, kit rental for invoicing',
+    format: 'pdf',
+    selected: false,
+  },
+];
+
+// Project lifecycle constants
+export const PROJECT_RETENTION_DAYS = 90; // Days until archival after wrap
+export const PROJECT_ARCHIVE_DAYS = 180; // Total days until deletion (90 + 90)
+export const REMINDER_INTERVAL_DAYS = 7; // Days between wrap reminders
+export const INACTIVITY_TRIGGER_DAYS = 30; // Days of inactivity to trigger wrap
+
+// Notification types for push notifications
+export interface ProjectNotification {
+  type: 'deletion_30_days' | 'deletion_7_days' | 'deletion_1_day' | 'wrap_reminder';
+  projectId: string;
+  projectName: string;
+  scheduledAt: Date;
+  sent: boolean;
+}
+
+// Helper to create default lifecycle
+export const createDefaultLifecycle = (): ProjectLifecycle => ({
+  state: 'active',
+  lastActivityAt: new Date(),
+});
+
+// Helper to calculate days until deletion
+export const calculateDaysUntilDeletion = (wrappedAt: Date): number => {
+  const now = new Date();
+  const deletionDate = new Date(wrappedAt);
+  deletionDate.setDate(deletionDate.getDate() + PROJECT_RETENTION_DAYS);
+  const diffTime = deletionDate.getTime() - now.getTime();
+  return Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+};
+
+// Helper to check if project should trigger wrap
+export const shouldTriggerWrap = (
+  project: Project,
+  lifecycle: ProjectLifecycle
+): { trigger: boolean; reason?: ProjectLifecycle['wrapReason'] } => {
+  // Already wrapped or archived
+  if (lifecycle.state !== 'active') {
+    return { trigger: false };
+  }
+
+  // Check if all scenes are complete
+  const allScenesComplete = project.scenes.length > 0 &&
+    project.scenes.every(scene => scene.isComplete);
+  if (allScenesComplete) {
+    return { trigger: true, reason: 'all_scenes_complete' };
+  }
+
+  // Check for inactivity (30 days)
+  const now = new Date();
+  const lastActivity = new Date(lifecycle.lastActivityAt);
+  const daysSinceActivity = Math.floor((now.getTime() - lastActivity.getTime()) / (1000 * 60 * 60 * 24));
+  if (daysSinceActivity >= INACTIVITY_TRIGGER_DAYS) {
+    return { trigger: true, reason: 'inactivity' };
+  }
+
+  return { trigger: false };
+};
