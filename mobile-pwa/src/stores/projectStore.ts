@@ -14,6 +14,7 @@ import type {
   ProjectLifecycle,
   ProjectLifecycleState,
   ArchivedProjectSummary,
+  SceneFilmingStatus,
 } from '@/types';
 import {
   createEmptyContinuityFlags,
@@ -81,6 +82,9 @@ interface ProjectState {
   markSceneComplete: (sceneId: string) => void;
   markSceneIncomplete: (sceneId: string) => void;
   copyToNextScene: (currentSceneId: string, characterId: string) => string | null;
+
+  // Actions - Scene Filming Status (synced between Today and Breakdown)
+  updateSceneFilmingStatus: (sceneNumber: number, filmingStatus: SceneFilmingStatus, filmingNotes?: string) => void;
 
   // Actions - Look Updates
   updateLook: (lookId: string, updates: Partial<Look>) => void;
@@ -475,6 +479,24 @@ export const useProjectStore = create<ProjectState>()(
         }));
 
         return nextScene.id;
+      },
+
+      // Scene filming status - syncs to project scenes for Breakdown view
+      updateSceneFilmingStatus: (sceneNumber, filmingStatus, filmingNotes) => {
+        set((state) => {
+          if (!state.currentProject) return state;
+
+          return {
+            currentProject: {
+              ...state.currentProject,
+              scenes: state.currentProject.scenes.map((s) =>
+                s.sceneNumber === sceneNumber
+                  ? { ...s, filmingStatus, filmingNotes }
+                  : s
+              ),
+            },
+          };
+        });
       },
 
       // Look updates

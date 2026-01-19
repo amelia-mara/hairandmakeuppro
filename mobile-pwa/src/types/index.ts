@@ -221,22 +221,25 @@ export const SCENE_FILMING_STATUS_CONFIG: Record<SceneFilmingStatus, {
   textClass: string;
   borderClass: string;
   color: string;
+  glassOverlay: string;
 }> = {
   'not-filmed': {
-    label: 'Not Filmed',
-    shortLabel: 'Not Filmed',
-    bgClass: 'bg-gray-100',
-    textClass: 'text-gray-500',
-    borderClass: 'border-gray-300',
-    color: '#6b7280',
+    label: 'Incomplete',
+    shortLabel: 'Incomplete',
+    bgClass: 'bg-red-100',
+    textClass: 'text-red-600',
+    borderClass: 'border-red-400',
+    color: '#dc2626',
+    glassOverlay: 'rgba(239, 68, 68, 0.15)',
   },
   'partial': {
-    label: 'Partially Filmed',
-    shortLabel: 'Partial',
-    bgClass: 'bg-orange-100',
-    textClass: 'text-orange-600',
-    borderClass: 'border-orange-400',
-    color: '#ea580c',
+    label: 'Part Complete',
+    shortLabel: 'Part Complete',
+    bgClass: 'bg-amber-100',
+    textClass: 'text-amber-600',
+    borderClass: 'border-amber-400',
+    color: '#d97706',
+    glassOverlay: 'rgba(245, 158, 11, 0.15)',
   },
   'complete': {
     label: 'Complete',
@@ -245,6 +248,7 @@ export const SCENE_FILMING_STATUS_CONFIG: Record<SceneFilmingStatus, {
     textClass: 'text-green-600',
     borderClass: 'border-green-400',
     color: '#16a34a',
+    glassOverlay: 'rgba(34, 197, 94, 0.15)',
   },
 };
 
