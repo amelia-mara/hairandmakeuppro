@@ -9,6 +9,7 @@ import { Timesheet } from '@/components/timesheet';
 import { Budget } from '@/components/budget';
 import { More, WrapPopupModal, LifecycleBanner, ProjectExportScreen } from '@/components/more';
 import { Home } from '@/components/home';
+import { ChatAssistant } from '@/components/chat/ChatAssistant';
 import type { NavTab } from '@/types';
 
 export default function App() {
@@ -147,6 +148,9 @@ export default function App() {
         activeTab={activeTab}
         onTabChange={handleTabChange}
       />
+
+      {/* AI Chat Assistant */}
+      <ChatAssistant />
 
       {/* Wrap Popup Modal (shows when project completion is triggered) */}
       <WrapPopupModal onExport={() => setShowExport(true)} />
