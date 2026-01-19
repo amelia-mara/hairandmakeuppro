@@ -1,6 +1,7 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import type { Scene, Character } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
+import { parseScriptWithAI, checkAIAvailability } from '@/services/aiService';
 
 // Configure PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
@@ -20,6 +21,7 @@ export interface ParsedScene {
   timeOfDay: 'DAY' | 'NIGHT' | 'MORNING' | 'EVENING' | 'CONTINUOUS';
   characters: string[]; // Character names appearing in scene
   content: string;
+  synopsis?: string;
 }
 
 export interface ParsedCharacter {
@@ -29,10 +31,19 @@ export interface ParsedCharacter {
   dialogueCount: number;
   scenes: string[]; // Scene numbers where character appears
   variants: string[]; // Name variations found (e.g., "JOHN", "JOHN (V.O.)")
+  description?: string;
+}
+
+interface TextItem {
+  str: string;
+  transform: number[];
+  width: number;
+  height: number;
 }
 
 /**
- * Extract text content from a PDF file
+ * Extract text content from a PDF file with improved line structure preservation
+ * Groups text items by Y position to reconstruct lines properly
  */
 async function extractTextFromPDF(file: File): Promise<string> {
   const arrayBuffer = await file.arrayBuffer();
@@ -40,16 +51,89 @@ async function extractTextFromPDF(file: File): Promise<string> {
 
   let fullText = '';
 
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
+  for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+    const page = await pdf.getPage(pageNum);
     const textContent = await page.getTextContent();
-    const pageText = textContent.items
-      .map((item: any) => item.str)
-      .join(' ');
-    fullText += pageText + '\n';
+
+    // Group text items by Y position (line-by-line reconstruction)
+    const lines: Map<number, Array<{ x: number; text: string; width: number }>> = new Map();
+
+    for (const item of textContent.items as TextItem[]) {
+      if (!item.str || item.str.trim() === '') continue;
+
+      // Round Y position to group items on the same line (allow 2px tolerance)
+      const y = Math.round(item.transform[5] / 2) * 2;
+      const x = item.transform[4];
+
+      if (!lines.has(y)) {
+        lines.set(y, []);
+      }
+      lines.get(y)!.push({ x, text: item.str, width: item.width || 0 });
+    }
+
+    // Sort lines by Y position (top to bottom, so descending Y)
+    const sortedYPositions = Array.from(lines.keys()).sort((a, b) => b - a);
+
+    for (const y of sortedYPositions) {
+      const lineItems = lines.get(y)!;
+      // Sort items within line by X position (left to right)
+      lineItems.sort((a, b) => a.x - b.x);
+
+      // Reconstruct line with proper spacing
+      let lineText = '';
+      let lastX = 0;
+      let lastWidth = 0;
+
+      for (const item of lineItems) {
+        // Calculate gap between items
+        const gap = item.x - (lastX + lastWidth);
+
+        // Add spaces for significant gaps (indicates word separation)
+        if (lastX > 0 && gap > 3) {
+          // Large gap might indicate tab/column separation
+          if (gap > 20) {
+            lineText += '    '; // Tab-like spacing
+          } else {
+            lineText += ' ';
+          }
+        }
+
+        lineText += item.text;
+        lastX = item.x;
+        lastWidth = item.width;
+      }
+
+      fullText += lineText.trimEnd() + '\n';
+    }
+
+    fullText += '\n'; // Page break
   }
 
-  return fullText;
+  // Normalize the text for better script parsing
+  return normalizeScriptText(fullText);
+}
+
+/**
+ * Normalize script text to fix common PDF extraction issues
+ */
+function normalizeScriptText(text: string): string {
+  return text
+    // Fix split INT/EXT headings (e.g., "INT" on one line, ". LOCATION" on next)
+    .replace(/\b(INT|EXT)\s*\n\s*\./g, '$1.')
+    .replace(/\b(INT|EXT)\s*\n\s*\/\s*(INT|EXT)/g, '$1/$2')
+    // Fix split CONTINUOUS
+    .replace(/CONTIN\s*\n\s*UED?/gi, 'CONTINUOUS')
+    .replace(/CONT['']?D/gi, "CONT'D")
+    // Fix split character names with (V.O.) or (O.S.)
+    .replace(/\(\s*V\s*\.\s*O\s*\.\s*\)/gi, '(V.O.)')
+    .replace(/\(\s*O\s*\.\s*S\s*\.\s*\)/gi, '(O.S.)')
+    // Normalize multiple spaces
+    .replace(/[ \t]+/g, ' ')
+    // Normalize multiple newlines (but keep paragraph breaks)
+    .replace(/\n{4,}/g, '\n\n\n')
+    // Clean up scene number patterns like "1 ." -> "1."
+    .replace(/(\d+[A-Z]?)\s+\./g, '$1.')
+    .trim();
 }
 
 /**
@@ -312,10 +396,23 @@ export function parseScriptText(text: string): ParsedScript {
 
 /**
  * Parse a script file (PDF, FDX, or plain text/fountain)
+ * @param file - The script file to parse
+ * @param options - Parsing options
+ * @param options.useAI - Whether to use AI for parsing (recommended for better accuracy)
+ * @param options.onProgress - Progress callback for status updates
  */
-export async function parseScriptFile(file: File): Promise<ParsedScript> {
+export async function parseScriptFile(
+  file: File,
+  options: {
+    useAI?: boolean;
+    onProgress?: (status: string) => void;
+  } = {}
+): Promise<ParsedScript> {
+  const { useAI = true, onProgress } = options;
   const fileName = file.name.toLowerCase();
   let text: string;
+
+  onProgress?.('Reading document...');
 
   if (fileName.endsWith('.pdf')) {
     text = await extractTextFromPDF(file);
@@ -327,7 +424,81 @@ export async function parseScriptFile(file: File): Promise<ParsedScript> {
     text = await file.text();
   }
 
+  // Try AI parsing first if enabled
+  if (useAI) {
+    onProgress?.('Checking AI availability...');
+    const aiAvailable = await checkAIAvailability();
+
+    if (aiAvailable) {
+      try {
+        onProgress?.('Analyzing script with AI...');
+        return await parseScriptWithAIFallback(text, onProgress);
+      } catch (error) {
+        console.warn('AI parsing failed, falling back to regex parsing:', error);
+        onProgress?.('AI unavailable, using standard parsing...');
+      }
+    } else {
+      onProgress?.('AI service unavailable, using standard parsing...');
+    }
+  }
+
+  onProgress?.('Parsing script format...');
   return parseScriptText(text);
+}
+
+/**
+ * Parse script using AI with fallback to regex parsing
+ */
+async function parseScriptWithAIFallback(
+  text: string,
+  onProgress?: (status: string) => void
+): Promise<ParsedScript> {
+  const aiResult = await parseScriptWithAI(text, onProgress);
+
+  // Convert AI results to ParsedScript format
+  const scenes: ParsedScene[] = aiResult.scenes.map(s => ({
+    sceneNumber: s.sceneNumber,
+    slugline: s.slugline,
+    intExt: s.intExt,
+    location: s.location,
+    timeOfDay: normalizeTimeOfDay(s.timeOfDay),
+    characters: s.characters,
+    content: s.content || '',
+    synopsis: s.synopsis,
+  }));
+
+  const characters: ParsedCharacter[] = aiResult.characters.map(c => ({
+    name: c.name,
+    normalizedName: c.normalizedName,
+    sceneCount: c.sceneCount,
+    dialogueCount: c.dialogueCount,
+    scenes: c.scenes,
+    variants: c.variants,
+    description: c.description,
+  }));
+
+  // Extract title
+  const titleMatch = text.slice(0, 1000).match(/^(?:title[:\s]*)?([A-Z][A-Z\s\d\-\'\"]+)(?:\n|by)/im);
+  const title = titleMatch ? titleMatch[1].trim() : 'Untitled Script';
+
+  return {
+    title,
+    scenes,
+    characters,
+    rawText: text,
+  };
+}
+
+/**
+ * Normalize time of day string to standard format
+ */
+function normalizeTimeOfDay(tod: string): 'DAY' | 'NIGHT' | 'MORNING' | 'EVENING' | 'CONTINUOUS' {
+  const upper = (tod || 'DAY').toUpperCase();
+  if (upper.includes('NIGHT')) return 'NIGHT';
+  if (upper.includes('MORNING') || upper.includes('DAWN')) return 'MORNING';
+  if (upper.includes('EVENING') || upper.includes('DUSK') || upper.includes('SUNSET')) return 'EVENING';
+  if (upper.includes('CONTINUOUS') || upper.includes('CONT')) return 'CONTINUOUS';
+  return 'DAY';
 }
 
 /**
