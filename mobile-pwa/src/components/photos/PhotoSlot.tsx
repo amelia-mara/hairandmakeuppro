@@ -122,7 +122,7 @@ export function PhotoSlot({
 
 // Compact photo slot for scene thumbnails
 interface SceneThumbnailSlotProps {
-  sceneNumber: number;
+  sceneNumber: string;
   hasCaptured: boolean;
   isActive: boolean;
   onClick: () => void;

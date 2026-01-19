@@ -141,7 +141,7 @@ export const useTimesheetStore = create<TimesheetState>()(
           productionDay: callSheet.productionDay,
           autoFilledFrom: callSheet.id,
           callSheetUnitCall: callSheet.unitCallTime,
-          callSheetLunch: callSheet.lunchEstimate,
+          callSheetLunch: callSheet.lunchTime,
           callSheetWrap: callSheet.wrapEstimate,
         };
 

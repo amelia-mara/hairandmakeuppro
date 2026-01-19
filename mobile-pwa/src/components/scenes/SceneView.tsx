@@ -134,7 +134,7 @@ export function SceneView({ sceneId, onBack }: SceneViewProps) {
 
 interface FullScriptModalProps {
   content: string;
-  sceneNumber: number;
+  sceneNumber: string;
   onClose: () => void;
 }
 

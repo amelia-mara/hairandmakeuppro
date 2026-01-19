@@ -75,7 +75,7 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
       }
     }
 
-    return scenes.sort((a, b) => a.sceneNumber - b.sceneNumber);
+    return scenes.sort((a, b) => a.sceneNumber.localeCompare(b.sceneNumber, undefined, { numeric: true }));
   }, [currentProject, filters]);
 
   // Get scene completion progress
@@ -104,7 +104,7 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
   };
 
   // Get look for character in scene
-  const getLookForCharacter = (characterId: string, sceneNumber: number) => {
+  const getLookForCharacter = (characterId: string, sceneNumber: string) => {
     return currentProject?.looks.find(
       l => l.characterId === characterId && l.scenes.includes(sceneNumber)
     );
@@ -257,7 +257,7 @@ interface BreakdownListViewProps {
   onToggleExpand: (id: string) => void;
   onSceneSelect: (id: string) => void;
   getCharactersForScene: (scene: Scene) => Character[];
-  getLookForCharacter: (characterId: string, sceneNumber: number) => any;
+  getLookForCharacter: (characterId: string, sceneNumber: string) => any;
   getCapture: (sceneId: string, characterId: string) => any;
   getSceneProgress: (scene: Scene) => { captured: number; total: number };
 }

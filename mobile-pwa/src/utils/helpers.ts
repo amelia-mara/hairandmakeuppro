@@ -86,29 +86,44 @@ export function parseSceneRange(range: string): number[] {
 }
 
 /**
- * Format scene range from array of numbers
- * e.g., [1, 2, 3, 5, 6, 10] -> "1-3, 5-6, 10"
+ * Format scene range from array of scene numbers
+ * e.g., ['1', '2', '3', '5', '6', '10'] -> "1-3, 5-6, 10"
+ * For alphanumeric scenes like '4A', just lists them
  */
-export function formatSceneRange(scenes: number[]): string {
+export function formatSceneRange(scenes: string[]): string {
   if (scenes.length === 0) return '';
-  if (scenes.length === 1) return scenes[0].toString();
+  if (scenes.length === 1) return scenes[0];
 
-  const sorted = [...scenes].sort((a, b) => a - b);
+  // Sort numerically where possible
+  const sorted = [...scenes].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+
+  // Try to form ranges for purely numeric scenes
   const ranges: string[] = [];
   let start = sorted[0];
   let end = sorted[0];
+  let startNum = parseInt(start, 10);
+  let endNum = startNum;
 
   for (let i = 1; i < sorted.length; i++) {
-    if (sorted[i] === end + 1) {
-      end = sorted[i];
+    const current = sorted[i];
+    const currentNum = parseInt(current, 10);
+
+    // Only form ranges if both are simple integers and consecutive
+    if (!isNaN(endNum) && !isNaN(currentNum) &&
+        current === String(currentNum) && end === String(endNum) &&
+        currentNum === endNum + 1) {
+      end = current;
+      endNum = currentNum;
     } else {
-      ranges.push(start === end ? start.toString() : `${start}-${end}`);
-      start = sorted[i];
-      end = sorted[i];
+      ranges.push(start === end ? start : `${start}-${end}`);
+      start = current;
+      end = current;
+      startNum = currentNum;
+      endNum = currentNum;
     }
   }
 
-  ranges.push(start === end ? start.toString() : `${start}-${end}`);
+  ranges.push(start === end ? start : `${start}-${end}`);
   return ranges.join(', ');
 }
 
