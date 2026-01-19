@@ -24,9 +24,9 @@ export function WeekView({ weekStartDate, onNavigate, onDaySelect, selectedDate 
     const endMonth = end.toLocaleDateString('en-GB', { month: 'short' });
 
     if (startMonth === endMonth) {
-      return `${DAY_LABELS[0]} ${startDay} - ${DAY_LABELS[6]} ${endDay} ${startMonth}`;
+      return `${startDay} - ${endDay} ${startMonth}`;
     }
-    return `${DAY_LABELS[0]} ${startDay} ${startMonth} - ${DAY_LABELS[6]} ${endDay} ${endMonth}`;
+    return `${startDay} ${startMonth} - ${endDay} ${endMonth}`;
   };
 
   // Generate week days
@@ -50,18 +50,22 @@ export function WeekView({ weekStartDate, onNavigate, onDaySelect, selectedDate 
       <div className="flex items-center justify-between mb-4">
         <button
           onClick={() => onNavigate('prev')}
-          className="p-2 text-text-muted hover:text-text-primary transition-colors"
+          className="p-2 transition-colors"
+          style={{ color: 'var(--color-text-muted)' }}
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
 
-        <h2 className="text-base font-semibold text-text-primary">{formatDateRange()}</h2>
+        <h2 className="text-base font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+          {formatDateRange()}
+        </h2>
 
         <button
           onClick={() => onNavigate('next')}
-          className="p-2 text-text-muted hover:text-text-primary transition-colors"
+          className="p-2 transition-colors"
+          style={{ color: 'var(--color-text-muted)' }}
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -75,6 +79,10 @@ export function WeekView({ weekStartDate, onNavigate, onDaySelect, selectedDate 
           const hasEntry = entry && entry.unitCall && entry.wrapOut;
           const isSelected = date === selectedDate;
           const isWeekend = dayLabel === 'S';
+          const hasOT = calc && calc.otHours > 0;
+          const hasPreCall = calc && calc.preCallHours > 0;
+          const is6thDay = entry?.isSixthDay;
+          const is7thDay = entry?.isSeventhDay;
 
           return (
             <button
@@ -83,37 +91,72 @@ export function WeekView({ weekStartDate, onNavigate, onDaySelect, selectedDate 
               className={`w-full p-3 rounded-card flex items-center gap-3 transition-all active:scale-[0.98] ${
                 isSelected
                   ? 'bg-gold-50 border-2 border-gold'
-                  : 'bg-card border border-border hover:border-gold/50'
+                  : 'card hover:border-gold/50'
               }`}
             >
               {/* Date column */}
               <div className="flex-shrink-0 w-12 text-center">
                 <div
                   className={`text-xs font-bold ${
-                    isWeekend ? 'text-gold' : 'text-text-muted'
+                    isWeekend ? 'text-gold' : ''
                   }`}
+                  style={{ color: isWeekend ? undefined : 'var(--color-text-muted)' }}
                 >
                   {dayLabel}
                 </div>
-                <div className="text-lg font-bold text-text-primary">{dayNumber}</div>
+                <div className="text-lg font-bold" style={{ color: 'var(--color-text-primary)' }}>
+                  {dayNumber}
+                </div>
               </div>
 
-              {/* Hours and earnings */}
+              {/* Hours breakdown - Production accountability focus */}
               <div className="flex-1 text-left">
                 {hasEntry ? (
                   <>
-                    <div className="text-sm font-semibold text-text-primary">
-                      {calc?.totalHours.toFixed(1)} hours
+                    {/* Total hours - primary display */}
+                    <div className="text-sm font-bold" style={{ color: 'var(--color-text-primary)' }}>
+                      {calc?.totalHours.toFixed(1)} hrs
                     </div>
-                    <div className="text-xs text-text-muted">
-                      £{calc?.totalEarnings.toFixed(2)}
-                      {entry?.isSixthDay && (
-                        <span className="ml-1 text-gold">(6th Day)</span>
+
+                    {/* Hours breakdown badges */}
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {hasPreCall && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-gold/20 text-gold font-medium">
+                          Pre {calc.preCallHours.toFixed(1)}h
+                        </span>
+                      )}
+                      {calc && calc.baseHours > 0 && (
+                        <span
+                          className="text-[10px] px-1.5 py-0.5 rounded font-medium"
+                          style={{
+                            backgroundColor: 'var(--color-input-bg)',
+                            color: 'var(--color-text-muted)'
+                          }}
+                        >
+                          Base {calc.baseHours.toFixed(1)}h
+                        </span>
+                      )}
+                      {hasOT && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-500 font-medium">
+                          OT {calc.otHours.toFixed(1)}h
+                        </span>
+                      )}
+                      {is7thDay && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-500/30 text-orange-600 font-semibold">
+                          7th
+                        </span>
+                      )}
+                      {is6thDay && !is7thDay && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-gold/30 text-gold font-semibold">
+                          6th
+                        </span>
                       )}
                     </div>
                   </>
                 ) : (
-                  <div className="text-sm text-text-placeholder">—</div>
+                  <div className="text-sm" style={{ color: 'var(--color-text-placeholder)' }}>
+                    —
+                  </div>
                 )}
               </div>
 
@@ -124,7 +167,8 @@ export function WeekView({ weekStartDate, onNavigate, onDaySelect, selectedDate 
 
               {/* Chevron */}
               <svg
-                className="w-4 h-4 text-text-muted flex-shrink-0"
+                className="w-4 h-4 flex-shrink-0"
+                style={{ color: 'var(--color-text-muted)' }}
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -154,14 +198,13 @@ function StatusIndicator({ status, hasEntry }: { status: EntryStatus; hasEntry: 
 
   const labels: Record<EntryStatus, string> = {
     draft: 'Draft',
-    pending: 'Pending Approval',
+    pending: 'Pending',
     approved: 'Approved',
   };
 
   return (
     <div className="flex items-center gap-1.5">
       <div className={`w-2 h-2 rounded-full ${colors[status]}`} title={labels[status]} />
-      <span className="text-xs text-text-muted hidden sm:inline">{labels[status]}</span>
     </div>
   );
 }

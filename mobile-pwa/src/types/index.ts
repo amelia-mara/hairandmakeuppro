@@ -436,6 +436,7 @@ export interface RateCard {
   lateNightMultiplier: number; // 2x after 23:00
   preCallMultiplier: number; // 1.5x for pre-call hours
   sixthDayMultiplier: number; // 1.5x
+  seventhDayMultiplier: number; // 2x for 7th consecutive day
   kitRental: number;
   lunchDuration: number; // in minutes (typically 60)
 }
@@ -446,13 +447,21 @@ export interface TimesheetEntry {
   dayType: DayType;
   preCall: string; // "05:30" format - arrival before unit call
   unitCall: string; // "06:00" format - official start
+  lunchStart?: string; // "13:00" format - lunch start time
+  lunchEnd?: string; // "14:00" format - lunch end time
   outOfChair: string; // "17:00" format - talent leaves chair
   wrapOut: string; // "18:00" format - leave building
   lunchTaken: number; // actual lunch in minutes
   isSixthDay: boolean;
-  notes: string;
+  isSeventhDay: boolean; // 7th consecutive day (2x multiplier)
+  notes: string; // OT justification notes for production accounting
   status: EntryStatus;
   productionDay?: number;
+  // Call sheet auto-fill tracking
+  autoFilledFrom?: string; // call sheet ID if auto-filled
+  callSheetUnitCall?: string; // original call sheet value for comparison
+  callSheetLunch?: string;
+  callSheetWrap?: string;
 }
 
 export interface TimesheetCalculation {
@@ -467,6 +476,7 @@ export interface TimesheetCalculation {
   otEarnings: number;
   lateNightEarnings: number;
   sixthDayBonus: number;
+  seventhDayBonus: number;
   kitRental: number;
   totalEarnings: number;
 }
@@ -475,9 +485,12 @@ export interface WeekSummary {
   startDate: string;
   endDate: string;
   totalHours: number;
+  preCallHours: number;
   baseHours: number;
   otHours: number;
   sixthDayHours: number;
+  seventhDayHours: number;
+  lateNightHours: number;
   kitRentalTotal: number;
   totalEarnings: number;
   entries: TimesheetEntry[];
@@ -502,6 +515,7 @@ export const createDefaultRateCard = (): RateCard => ({
   lateNightMultiplier: 2.0,
   preCallMultiplier: 1.5,
   sixthDayMultiplier: 1.5,
+  seventhDayMultiplier: 2.0,
   kitRental: 0,
   lunchDuration: 60,
 });
@@ -512,10 +526,13 @@ export const createEmptyTimesheetEntry = (date: string): TimesheetEntry => ({
   dayType: 'SWD',
   preCall: '',
   unitCall: '',
+  lunchStart: '',
+  lunchEnd: '',
   outOfChair: '',
   wrapOut: '',
   lunchTaken: 60,
   isSixthDay: false,
+  isSeventhDay: false,
   notes: '',
   status: 'draft',
 });
