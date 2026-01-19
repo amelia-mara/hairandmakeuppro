@@ -173,7 +173,7 @@ export interface ContinuityEvent {
 export type ContinuityEventType = 'Wound' | 'Bruise' | 'Prosthetic' | 'Scar' | 'Tattoo' | 'Other';
 
 // Navigation types
-export type NavTab = 'today' | 'breakdown' | 'lookbook' | 'hours' | 'script' | 'schedule' | 'callsheets' | 'settings' | 'more';
+export type NavTab = 'today' | 'breakdown' | 'lookbook' | 'hours' | 'budget' | 'script' | 'schedule' | 'callsheets' | 'settings' | 'more';
 
 // Navigation item configuration
 export interface NavItemConfig {
@@ -182,7 +182,7 @@ export interface NavItemConfig {
   iconName: NavIconName;
 }
 
-export type NavIconName = 'calendar' | 'grid' | 'book' | 'clock' | 'document' | 'schedule' | 'clipboard' | 'cog' | 'ellipsis';
+export type NavIconName = 'calendar' | 'grid' | 'book' | 'clock' | 'wallet' | 'document' | 'schedule' | 'clipboard' | 'cog' | 'ellipsis';
 
 // All available nav items (except 'more' which is fixed)
 export const ALL_NAV_ITEMS: NavItemConfig[] = [
@@ -190,6 +190,7 @@ export const ALL_NAV_ITEMS: NavItemConfig[] = [
   { id: 'breakdown', label: 'Breakdown', iconName: 'grid' },
   { id: 'lookbook', label: 'Lookbook', iconName: 'book' },
   { id: 'hours', label: 'Hours', iconName: 'clock' },
+  { id: 'budget', label: 'Budget', iconName: 'wallet' },
   { id: 'script', label: 'Script', iconName: 'document' },
   { id: 'schedule', label: 'Schedule', iconName: 'schedule' },
   { id: 'callsheets', label: 'Call Sheets', iconName: 'clipboard' },
