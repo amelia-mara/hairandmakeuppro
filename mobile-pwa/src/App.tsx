@@ -1,6 +1,5 @@
-import { useEffect } from 'react';
+import { useState } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
-import { demoProject } from '@/stores/demoData';
 import { BottomNav } from '@/components/navigation';
 import { SceneView } from '@/components/scenes';
 import { Today } from '@/components/today';
@@ -9,12 +8,12 @@ import { Lookbooks } from '@/components/lookbooks';
 import { Timesheet } from '@/components/timesheet';
 import { Budget } from '@/components/budget';
 import { More } from '@/components/more';
+import { Home } from '@/components/home';
 import type { NavTab } from '@/types';
 
 export default function App() {
   const {
     currentProject,
-    setProject,
     activeTab,
     setActiveTab,
     currentSceneId,
@@ -22,12 +21,19 @@ export default function App() {
     setCurrentCharacter,
   } = useProjectStore();
 
-  // Load demo data on first mount
-  useEffect(() => {
-    if (!currentProject) {
-      setProject(demoProject);
-    }
-  }, [currentProject, setProject]);
+  // Track if we're showing the home/setup screen
+  const [showHome, setShowHome] = useState(!currentProject);
+
+  // Handle project ready (from Home component)
+  const handleProjectReady = () => {
+    setShowHome(false);
+    setActiveTab('today');
+  };
+
+  // Handle starting a new project (from Settings)
+  const handleStartNewProject = () => {
+    setShowHome(true);
+  };
 
   // Handle scene selection (from Today or Breakdown)
   const handleSceneSelect = (sceneId: string) => {
@@ -57,6 +63,11 @@ export default function App() {
   const handleNavigateToTab = (tab: NavTab) => {
     handleTabChange(tab);
   };
+
+  // Show Home screen if no project or explicitly requested
+  if (showHome || !currentProject) {
+    return <Home onProjectReady={handleProjectReady} />;
+  }
 
   // Render content based on active tab and current view
   const renderContent = () => {
@@ -89,7 +100,7 @@ export default function App() {
       case 'callsheets':
       case 'settings':
       case 'more':
-        return <More onNavigateToTab={handleNavigateToTab} />;
+        return <More onNavigateToTab={handleNavigateToTab} onStartNewProject={handleStartNewProject} />;
       default:
         return <Today onSceneSelect={handleSceneSelect} />;
     }

@@ -11,9 +11,10 @@ type MoreView = 'menu' | 'script' | 'schedule' | 'callsheets' | 'settings' | 'ed
 
 interface MoreProps {
   onNavigateToTab?: (tab: NavTab) => void;
+  onStartNewProject?: () => void;
 }
 
-export function More({ onNavigateToTab }: MoreProps) {
+export function More({ onNavigateToTab, onStartNewProject }: MoreProps) {
   const [currentView, setCurrentView] = useState<MoreView>('menu');
   const { isEditMenuOpen, closeEditMenu, openEditMenu } = useNavigationStore();
 
@@ -42,7 +43,7 @@ export function More({ onNavigateToTab }: MoreProps) {
       case 'callsheets':
         return <CallSheetArchive onBack={() => setCurrentView('menu')} />;
       case 'settings':
-        return <Settings onBack={() => setCurrentView('menu')} />;
+        return <Settings onBack={() => setCurrentView('menu')} onStartNewProject={onStartNewProject} />;
       case 'editMenu':
         return <EditMenuScreen onDone={handleEditMenuClose} />;
       default:
@@ -855,10 +856,23 @@ function CallSheetArchive({ onBack }: ViewerProps) {
 }
 
 // Settings Component
-function Settings({ onBack }: ViewerProps) {
+interface SettingsProps {
+  onBack: () => void;
+  onStartNewProject?: () => void;
+}
+
+function Settings({ onBack, onStartNewProject }: SettingsProps) {
   const { clearProject, currentProject } = useProjectStore();
   const { resetToDefaults } = useNavigationStore();
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [showNewProjectConfirm, setShowNewProjectConfirm] = useState(false);
+
+  const handleStartNewProject = () => {
+    clearProject();
+    resetToDefaults();
+    setShowNewProjectConfirm(false);
+    onStartNewProject?.();
+  };
 
   return (
     <>
@@ -890,6 +904,40 @@ function Settings({ onBack }: ViewerProps) {
                 {currentProject.scenes.length} scenes • {currentProject.characters.length} characters
               </div>
             )}
+          </div>
+        </section>
+
+        <section className="mb-6">
+          <h2 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-3">PROJECT</h2>
+          <div className="space-y-2">
+            <button
+              onClick={() => setShowNewProjectConfirm(true)}
+              className="card w-full text-left flex items-center gap-3 hover:bg-gold/5 transition-colors"
+            >
+              <div className="w-8 h-8 rounded-lg bg-gold/10 flex items-center justify-center">
+                <svg className="w-4 h-4 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+              </div>
+              <div>
+                <span className="text-sm font-medium text-text-primary block">Start New Project</span>
+                <span className="text-xs text-text-muted">Upload a new script and start fresh</span>
+              </div>
+            </button>
+            <button
+              onClick={() => setShowClearConfirm(true)}
+              className="card w-full text-left flex items-center gap-3 hover:bg-red-50 transition-colors"
+            >
+              <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center">
+                <svg className="w-4 h-4 text-error" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </div>
+              <div>
+                <span className="text-sm font-medium text-error block">Clear All Data</span>
+                <span className="text-xs text-text-muted">Delete all photos and captured data</span>
+              </div>
+            </button>
           </div>
         </section>
 
@@ -940,16 +988,6 @@ function Settings({ onBack }: ViewerProps) {
           </div>
         </section>
 
-        <section>
-          <h2 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-3">DATA</h2>
-          <button
-            onClick={() => setShowClearConfirm(true)}
-            className="card w-full text-left text-error hover:bg-red-50 transition-colors"
-          >
-            Clear All Data
-          </button>
-        </section>
-
         {showClearConfirm && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
             <div className="bg-card rounded-xl p-6 max-w-sm w-full">
@@ -972,6 +1010,31 @@ function Settings({ onBack }: ViewerProps) {
                   className="flex-1 px-4 py-2.5 rounded-button bg-error text-white font-medium"
                 >
                   Clear Data
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showNewProjectConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-card rounded-xl p-6 max-w-sm w-full">
+              <h3 className="text-lg font-semibold text-text-primary mb-2">Start New Project?</h3>
+              <p className="text-sm text-text-muted mb-6">
+                This will clear all current project data and take you to the setup screen. Make sure you've synced any important data first.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowNewProjectConfirm(false)}
+                  className="flex-1 px-4 py-2.5 rounded-button bg-gray-100 text-text-primary font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleStartNewProject}
+                  className="flex-1 px-4 py-2.5 rounded-button gold-gradient text-white font-medium"
+                >
+                  Start New
                 </button>
               </div>
             </div>
