@@ -2,17 +2,66 @@
 @tailwind components;
 @tailwind utilities;
 
+/* CSS Custom Properties for theming */
+:root {
+  /* Light mode (default) */
+  --color-background: #f5f4f2;
+  --color-card: #ffffff;
+  --color-card-hover: #fafafa;
+  --color-input-bg: #f8f7f5;
+  --color-border: #e8e6e1;
+  --color-border-focus: #C9A962;
+  --color-text-primary: #333333;
+  --color-text-secondary: #666666;
+  --color-text-muted: #888888;
+  --color-text-light: #999999;
+  --color-text-placeholder: #aaaaaa;
+  --color-shadow: rgba(0, 0, 0, 0.04);
+  --color-shadow-hover: rgba(0, 0, 0, 0.08);
+  --color-nav-bg: #ffffff;
+  --color-nav-shadow: rgba(0, 0, 0, 0.05);
+  --color-overlay: rgba(0, 0, 0, 0.5);
+  --color-gold-soft: rgba(201, 169, 97, 0.1);
+  --backdrop-blur: 0px;
+}
+
+/* Dark mode */
+.dark {
+  --color-background: #000000;
+  --color-card: rgba(26, 24, 22, 0.8);
+  --color-card-hover: rgba(32, 30, 28, 0.9);
+  --color-input-bg: rgba(20, 18, 16, 0.6);
+  --color-border: rgba(201, 169, 97, 0.15);
+  --color-border-focus: rgba(201, 169, 97, 0.4);
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #a0a0a0;
+  --color-text-muted: #777777;
+  --color-text-light: #666666;
+  --color-text-placeholder: #555555;
+  --color-shadow: rgba(0, 0, 0, 0.4);
+  --color-shadow-hover: rgba(201, 169, 97, 0.15);
+  --color-nav-bg: rgba(20, 18, 16, 0.95);
+  --color-nav-shadow: rgba(0, 0, 0, 0.5);
+  --color-overlay: rgba(0, 0, 0, 0.7);
+  --color-gold-soft: rgba(201, 169, 97, 0.08);
+  --backdrop-blur: 20px;
+}
+
 @layer base {
   html {
     -webkit-tap-highlight-color: transparent;
     -webkit-text-size-adjust: 100%;
+    transition: background-color 0.3s ease;
   }
 
   body {
-    @apply bg-background text-text-primary font-sans;
+    background-color: var(--color-background);
+    color: var(--color-text-primary);
+    @apply font-sans;
     min-height: 100vh;
     min-height: 100dvh;
     overscroll-behavior: none;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 
   #root {
@@ -46,22 +95,55 @@
 @layer components {
   /* Section header style */
   .section-header {
-    @apply text-[10px] uppercase tracking-[0.1em] font-bold text-text-muted;
+    @apply text-[10px] uppercase tracking-[0.1em] font-bold;
+    color: var(--color-text-muted);
   }
 
   /* Field label style */
   .field-label {
-    @apply text-[10px] uppercase tracking-[0.06em] font-semibold text-text-light;
+    @apply text-[10px] uppercase tracking-[0.06em] font-semibold;
+    color: var(--color-text-light);
   }
 
-  /* Card style */
+  /* Card style - uses CSS variables for theming */
   .card {
-    @apply bg-card rounded-card p-card-padding shadow-card;
+    background-color: var(--color-card);
+    border: 1px solid var(--color-border);
+    box-shadow: 0 2px 8px var(--color-shadow);
+    backdrop-filter: blur(var(--backdrop-blur));
+    -webkit-backdrop-filter: blur(var(--backdrop-blur));
+    @apply rounded-card p-card-padding transition-all duration-200;
   }
 
-  /* Input field style */
+  .card:hover {
+    background-color: var(--color-card-hover);
+    box-shadow: 0 4px 12px var(--color-shadow-hover);
+  }
+
+  /* Dark mode glow effect on cards */
+  .dark .card:hover {
+    box-shadow: 0 4px 20px var(--color-shadow), 0 0 20px rgba(201, 169, 97, 0.1);
+  }
+
+  /* Input field style - uses CSS variables */
   .input-field {
-    @apply bg-input-bg border border-border rounded-input px-3 py-2 text-sm text-text-primary placeholder:text-text-placeholder focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold/30 transition-colors;
+    background-color: var(--color-input-bg);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-primary);
+    @apply rounded-input px-3 py-2 text-sm focus:outline-none transition-colors;
+  }
+
+  .input-field::placeholder {
+    color: var(--color-text-placeholder);
+  }
+
+  .input-field:focus {
+    border-color: var(--color-border-focus);
+    box-shadow: 0 0 0 2px rgba(201, 169, 97, 0.2);
+  }
+
+  .dark .input-field:focus {
+    box-shadow: 0 0 0 2px rgba(201, 169, 97, 0.15), 0 0 15px rgba(201, 169, 97, 0.1);
   }
 
   /* Gold gradient background */
@@ -77,26 +159,62 @@
 
   /* Active pill toggle */
   .pill-active {
-    @apply bg-gold-50 text-gold border-gold;
+    @apply text-gold border-gold;
+    background-color: var(--color-gold-soft);
   }
 
   /* Inactive pill toggle */
   .pill-inactive {
-    @apply bg-gray-100 text-text-muted border-gray-200;
+    background-color: var(--color-input-bg);
+    color: var(--color-text-muted);
+    border-color: var(--color-border);
   }
 
   /* Photo slot dashed border */
   .photo-slot-empty {
-    @apply border-2 border-dashed border-gray-300;
+    @apply border-2 border-dashed;
+    border-color: var(--color-border);
+  }
+
+  .dark .photo-slot-empty {
+    border-color: rgba(201, 169, 97, 0.2);
   }
 
   .photo-slot-filled {
     @apply border-2 border-solid border-gold;
   }
 
+  /* Bottom nav - uses CSS variables */
+  .bottom-nav {
+    background-color: var(--color-nav-bg);
+    border-top: 1px solid var(--color-border);
+    box-shadow: 0 -2px 10px var(--color-nav-shadow);
+    backdrop-filter: blur(var(--backdrop-blur));
+    -webkit-backdrop-filter: blur(var(--backdrop-blur));
+  }
+
+  .dark .bottom-nav {
+    box-shadow: 0 -2px 20px var(--color-nav-shadow), 0 0 30px rgba(201, 169, 97, 0.03);
+  }
+
   /* Bottom nav safe area */
   .bottom-nav-safe {
     padding-bottom: max(env(safe-area-inset-bottom), 16px);
+  }
+
+  /* Modal overlay */
+  .modal-overlay {
+    background-color: var(--color-overlay);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+
+  /* Header/Sticky elements */
+  .sticky-header {
+    background-color: var(--color-card);
+    border-bottom: 1px solid var(--color-border);
+    backdrop-filter: blur(var(--backdrop-blur));
+    -webkit-backdrop-filter: blur(var(--backdrop-blur));
   }
 
   /* Hide scrollbar but keep functionality */
@@ -107,6 +225,19 @@
 
   .hide-scrollbar::-webkit-scrollbar {
     display: none;
+  }
+
+  /* Dark mode specific enhancements */
+  .dark .gold-gradient {
+    box-shadow: 0 0 20px rgba(201, 169, 97, 0.3);
+  }
+
+  /* Glass morphism effect for dark mode */
+  .dark .glass {
+    background: rgba(26, 24, 22, 0.6);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(201, 169, 97, 0.08);
   }
 }
 

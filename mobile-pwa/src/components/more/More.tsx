@@ -1,13 +1,15 @@
 import { useState, useRef, useCallback } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { useNavigationStore, MAX_BOTTOM_NAV_ITEMS } from '@/stores/navigationStore';
+import { useThemeStore, type Theme } from '@/stores/themeStore';
 import { RateCardSettings } from '@/components/timesheet';
 import { NavIcon } from '@/components/navigation/BottomNav';
 import { formatShortDate } from '@/utils/helpers';
 import type { NavTab } from '@/types';
-import { ALL_NAV_ITEMS } from '@/types';
+import { ALL_NAV_ITEMS, PROJECT_RETENTION_DAYS } from '@/types';
+import { ProjectExportScreen } from './ProjectExportScreen';
 
-type MoreView = 'menu' | 'script' | 'schedule' | 'callsheets' | 'settings' | 'editMenu';
+type MoreView = 'menu' | 'script' | 'schedule' | 'callsheets' | 'settings' | 'editMenu' | 'export' | 'archivedProjects';
 
 interface MoreProps {
   onNavigateToTab?: (tab: NavTab) => void;
@@ -43,9 +45,13 @@ export function More({ onNavigateToTab, onStartNewProject }: MoreProps) {
       case 'callsheets':
         return <CallSheetArchive onBack={() => setCurrentView('menu')} />;
       case 'settings':
-        return <Settings onBack={() => setCurrentView('menu')} onStartNewProject={onStartNewProject} />;
+        return <Settings onBack={() => setCurrentView('menu')} onStartNewProject={onStartNewProject} onNavigateToExport={() => setCurrentView('export')} onNavigateToArchived={() => setCurrentView('archivedProjects')} />;
       case 'editMenu':
         return <EditMenuScreen onDone={handleEditMenuClose} />;
+      case 'export':
+        return <ProjectExportScreen onBack={() => setCurrentView('settings')} onExportComplete={() => setCurrentView('settings')} />;
+      case 'archivedProjects':
+        return <ArchivedProjectsScreen onBack={() => setCurrentView('settings')} />;
       default:
         return <MoreMenu onNavigate={handleViewChange} onNavigateToTab={onNavigateToTab} />;
     }
@@ -859,13 +865,59 @@ function CallSheetArchive({ onBack }: ViewerProps) {
 interface SettingsProps {
   onBack: () => void;
   onStartNewProject?: () => void;
+  onNavigateToExport?: () => void;
+  onNavigateToArchived?: () => void;
 }
 
-function Settings({ onBack, onStartNewProject }: SettingsProps) {
-  const { clearProject, currentProject } = useProjectStore();
+function Settings({ onBack, onStartNewProject, onNavigateToExport, onNavigateToArchived }: SettingsProps) {
+  const {
+    clearProject,
+    currentProject,
+    lifecycle,
+    wrapProject,
+    restoreProject,
+    getDaysUntilDeletion,
+    getArchivedProjects,
+  } = useProjectStore();
   const { resetToDefaults } = useNavigationStore();
+  const { theme, setTheme } = useThemeStore();
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showNewProjectConfirm, setShowNewProjectConfirm] = useState(false);
+  const [showWrapConfirm, setShowWrapConfirm] = useState(false);
+
+  const archivedProjects = getArchivedProjects();
+  const daysUntilDeletion = getDaysUntilDeletion();
+
+  // Theme options
+  const themeOptions: { value: Theme; label: string; icon: JSX.Element }[] = [
+    {
+      value: 'light',
+      label: 'Light',
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+      ),
+    },
+    {
+      value: 'dark',
+      label: 'Dark',
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+        </svg>
+      ),
+    },
+    {
+      value: 'system',
+      label: 'System',
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+        </svg>
+      ),
+    },
+  ];
 
   const handleStartNewProject = () => {
     clearProject();
@@ -900,10 +952,148 @@ function Settings({ onBack, onStartNewProject }: SettingsProps) {
               {currentProject?.name ?? 'No project loaded'}
             </div>
             {currentProject && (
-              <div className="text-sm text-text-muted mt-1">
-                {currentProject.scenes.length} scenes • {currentProject.characters.length} characters
-              </div>
+              <>
+                <div className="text-sm text-text-muted mt-1">
+                  {currentProject.scenes.length} scenes • {currentProject.characters.length} characters
+                </div>
+                {lifecycle.state === 'wrapped' && (
+                  <div className="mt-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-amber-800">
+                        Wrapped • {daysUntilDeletion} days until archive
+                      </span>
+                      <button
+                        onClick={() => restoreProject()}
+                        className="text-xs font-medium text-gold"
+                      >
+                        Restore
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {lifecycle.state === 'archived' && (
+                  <div className="mt-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
+                    <span className="text-sm text-red-800">
+                      Archived - Read Only
+                    </span>
+                  </div>
+                )}
+              </>
             )}
+          </div>
+        </section>
+
+        {/* Export Section */}
+        {currentProject && (
+          <section className="mb-6">
+            <h2 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-3">EXPORT & WRAP</h2>
+            <div className="space-y-2">
+              <button
+                onClick={onNavigateToExport}
+                className="card w-full text-left flex items-center gap-3 hover:bg-gold/5 transition-colors"
+              >
+                <div className="w-8 h-8 rounded-lg bg-gold/10 flex items-center justify-center">
+                  <svg className="w-4 h-4 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                  </svg>
+                </div>
+                <div>
+                  <span className="text-sm font-medium text-text-primary block">Export Project</span>
+                  <span className="text-xs text-text-muted">Download continuity documents</span>
+                </div>
+              </button>
+
+              {lifecycle.state === 'active' && (
+                <button
+                  onClick={() => setShowWrapConfirm(true)}
+                  className="card w-full text-left flex items-center gap-3 hover:bg-amber-50 transition-colors"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
+                    <svg className="w-4 h-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h1.5C5.496 19.5 6 18.996 6 18.375m-3.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-1.5A1.875 1.875 0 0118 18.375M20.625 4.5H3.375m17.25 0c.621 0 1.125.504 1.125 1.125M20.625 4.5h-1.5C18.504 4.5 18 5.004 18 5.625m3.75 0v1.5c0 .621-.504 1.125-1.125 1.125M3.375 4.5c-.621 0-1.125.504-1.125 1.125M3.375 4.5h1.5C5.496 4.5 6 5.004 6 5.625m-3.75 0v1.5c0 .621.504 1.125 1.125 1.125m0 0h1.5m-1.5 0c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125m1.5-3.75C5.496 8.25 6 7.746 6 7.125v-1.5M4.875 8.25C5.496 8.25 6 8.754 6 9.375v1.5m0-5.25v5.25m0-5.25C6 5.004 6.504 4.5 7.125 4.5h9.75c.621 0 1.125.504 1.125 1.125" />
+                    </svg>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-amber-700 block">Mark as Wrapped</span>
+                    <span className="text-xs text-text-muted">Production complete, archive in {PROJECT_RETENTION_DAYS} days</span>
+                  </div>
+                </button>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* Archived Projects Section */}
+        {archivedProjects.length > 0 && (
+          <section className="mb-6">
+            <h2 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-3">ARCHIVED PROJECTS</h2>
+            <button
+              onClick={onNavigateToArchived}
+              className="card w-full text-left flex items-center justify-between"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center">
+                  <svg className="w-4 h-4 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                  </svg>
+                </div>
+                <div>
+                  <span className="text-sm font-medium text-text-primary block">Archived Projects</span>
+                  <span className="text-xs text-text-muted">{archivedProjects.length} project{archivedProjects.length !== 1 ? 's' : ''}</span>
+                </div>
+              </div>
+              <svg className="w-5 h-5 text-text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </section>
+        )}
+
+        {/* Project Retention Info */}
+        <section className="mb-6">
+          <h2 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-3">DATA RETENTION</h2>
+          <div className="card">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-text-secondary">Project Retention</span>
+              <span className="text-sm font-medium text-text-primary">{PROJECT_RETENTION_DAYS} days</span>
+            </div>
+            <p className="text-xs text-text-muted mt-2">
+              Wrapped projects are stored for {PROJECT_RETENTION_DAYS} days before being archived. Export your data to keep a permanent backup.
+            </p>
+          </div>
+        </section>
+
+        {/* Appearance / Theme Section */}
+        <section className="mb-6">
+          <h2 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-3">APPEARANCE</h2>
+          <div className="card">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-medium text-text-primary">Theme</span>
+              <span className="text-xs text-text-muted capitalize">{theme}</span>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {themeOptions.map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => setTheme(option.value)}
+                  className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${
+                    theme === option.value
+                      ? 'border-gold bg-gold/10 text-gold'
+                      : 'border-border bg-input-bg text-text-muted hover:border-gold/30'
+                  }`}
+                >
+                  {option.icon}
+                  <span className="text-xs font-medium">{option.label}</span>
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-text-muted mt-3">
+              {theme === 'dark'
+                ? 'Dark mode matches the website aesthetic with gold accents.'
+                : theme === 'system'
+                ? 'Automatically matches your device settings.'
+                : 'Classic light mode with warm tones.'}
+            </p>
           </div>
         </section>
 
@@ -1038,6 +1228,133 @@ function Settings({ onBack, onStartNewProject }: SettingsProps) {
                 </button>
               </div>
             </div>
+          </div>
+        )}
+
+        {showWrapConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-card rounded-xl p-6 max-w-sm w-full">
+              <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-amber-100 flex items-center justify-center">
+                <svg className="w-6 h-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h1.5C5.496 19.5 6 18.996 6 18.375m-3.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-1.5A1.875 1.875 0 0118 18.375M20.625 4.5H3.375m17.25 0c.621 0 1.125.504 1.125 1.125" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-text-primary text-center mb-2">Wrap Project?</h3>
+              <p className="text-sm text-text-muted text-center mb-4">
+                This will mark "{currentProject?.name}" as wrapped. The project will be stored for {PROJECT_RETENTION_DAYS} days before being automatically archived.
+              </p>
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-6">
+                <p className="text-xs text-amber-800">
+                  You can still access and edit your project during this time. Export your continuity documents to keep a permanent backup.
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowWrapConfirm(false)}
+                  className="flex-1 px-4 py-2.5 rounded-button bg-gray-100 text-text-primary font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    wrapProject('manual');
+                    setShowWrapConfirm(false);
+                  }}
+                  className="flex-1 px-4 py-2.5 rounded-button bg-amber-500 text-white font-medium"
+                >
+                  Wrap Project
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+// Archived Projects Screen
+interface ArchivedProjectsScreenProps {
+  onBack: () => void;
+}
+
+function ArchivedProjectsScreen({ onBack }: ArchivedProjectsScreenProps) {
+  const { getArchivedProjects, loadArchivedProject } = useProjectStore();
+  const archivedProjects = getArchivedProjects();
+
+  return (
+    <>
+      <div className="sticky top-0 z-30 bg-card border-b border-border safe-top">
+        <div className="mobile-container">
+          <div className="h-14 px-4 flex items-center gap-3">
+            <button
+              onClick={onBack}
+              className="p-2 -ml-2 text-text-muted active:text-gold transition-colors touch-manipulation"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <h1 className="text-lg font-semibold text-text-primary">Archived Projects</h1>
+          </div>
+        </div>
+      </div>
+
+      <div className="mobile-container px-4 py-4">
+        {archivedProjects.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+              <svg className="w-8 h-8 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+              </svg>
+            </div>
+            <h3 className="text-base font-semibold text-text-primary mb-1">No Archived Projects</h3>
+            <p className="text-sm text-text-muted">
+              Wrapped projects will appear here after {PROJECT_RETENTION_DAYS} days.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {archivedProjects.map((project) => (
+              <div key={project.id} className="card">
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <h3 className="text-base font-semibold text-text-primary">{project.name}</h3>
+                    <p className="text-xs text-text-muted">
+                      {project.scenesCount} scenes • {project.charactersCount} characters • {project.photosCount} photos
+                    </p>
+                  </div>
+                  <span className={`px-2 py-1 text-[10px] font-medium rounded-full ${
+                    project.state === 'wrapped'
+                      ? 'bg-amber-100 text-amber-700'
+                      : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    {project.state === 'wrapped' ? 'Wrapped' : 'Archived'}
+                  </span>
+                </div>
+
+                {project.wrappedAt && (
+                  <p className="text-xs text-text-light mb-3">
+                    Wrapped {formatShortDate(new Date(project.wrappedAt).toISOString().split('T')[0])}
+                    {project.daysUntilDeletion > 0 && ` • ${project.daysUntilDeletion} days until deletion`}
+                  </p>
+                )}
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => loadArchivedProject(project.id)}
+                    className="flex-1 px-3 py-2 text-sm font-medium rounded-button bg-gold/10 text-gold active:scale-[0.98] transition-transform"
+                  >
+                    Restore Project
+                  </button>
+                  <button
+                    className="px-3 py-2 text-sm font-medium rounded-button bg-gray-100 text-text-secondary active:scale-[0.98] transition-transform"
+                  >
+                    Export
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>

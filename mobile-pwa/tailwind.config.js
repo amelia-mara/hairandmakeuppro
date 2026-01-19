@@ -4,6 +4,7 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
@@ -22,6 +23,7 @@ export default {
           800: '#66531A',
           900: '#3D3210',
         },
+        // Light mode colors (default)
         background: '#f5f4f2',
         card: '#ffffff',
         'input-bg': '#f8f7f5',
@@ -34,6 +36,19 @@ export default {
         success: '#4CAF50',
         warning: '#FF9800',
         error: '#f44336',
+        // Dark mode specific colors
+        'dark-bg': '#000000',
+        'dark-bg-secondary': 'rgba(20, 18, 16, 0.95)',
+        'dark-bg-tertiary': 'rgba(26, 24, 22, 0.9)',
+        'dark-card': 'rgba(26, 24, 22, 0.8)',
+        'dark-card-hover': 'rgba(32, 30, 28, 0.9)',
+        'dark-input-bg': 'rgba(20, 18, 16, 0.6)',
+        'dark-border': 'rgba(201, 169, 97, 0.15)',
+        'dark-border-focus': 'rgba(201, 169, 97, 0.35)',
+        'dark-text-primary': '#ffffff',
+        'dark-text-secondary': '#a0a0a0',
+        'dark-text-muted': '#777777',
+        'dark-text-light': '#666666',
       },
       fontFamily: {
         sans: [
@@ -66,6 +81,15 @@ export default {
         'card': '0 2px 8px rgba(0, 0, 0, 0.04)',
         'card-hover': '0 4px 12px rgba(0, 0, 0, 0.08)',
         'nav': '0 -2px 10px rgba(0, 0, 0, 0.05)',
+        // Dark mode shadows with gold glow
+        'dark-card': '0 4px 20px rgba(0, 0, 0, 0.3), 0 0 1px rgba(201, 169, 97, 0.1)',
+        'dark-card-hover': '0 8px 30px rgba(0, 0, 0, 0.4), 0 0 20px rgba(201, 169, 97, 0.15)',
+        'dark-nav': '0 -2px 20px rgba(0, 0, 0, 0.5), 0 0 30px rgba(201, 169, 97, 0.05)',
+        'dark-glow': '0 0 20px rgba(201, 169, 97, 0.15)',
+        'dark-glow-strong': '0 0 30px rgba(201, 169, 97, 0.25)',
+      },
+      backdropBlur: {
+        'glass': '20px',
       },
     },
   },
