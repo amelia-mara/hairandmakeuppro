@@ -169,8 +169,15 @@ function EditMenuScreen({ onDone }: EditMenuScreenProps) {
   const [draggedItem, setDraggedItem] = useState<NavTab | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [dragOverSection, setDragOverSection] = useState<'bottom' | 'more' | null>(null);
-  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+
+  // Touch drag state
+  const [touchDragActive, setTouchDragActive] = useState(false);
+  const [touchPosition, setTouchPosition] = useState<{ x: number; y: number } | null>(null);
+  const touchStartRef = useRef<{ x: number; y: number; item: NavTab } | null>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const bottomSectionRef = useRef<HTMLDivElement>(null);
+  const moreSectionRef = useRef<HTMLDivElement>(null);
 
   // Get items not in bottom nav (for More section)
   const moreItems = ALL_NAV_ITEMS.filter(item => !bottomNavItems.includes(item.id));
@@ -195,6 +202,8 @@ function EditMenuScreen({ onDone }: EditMenuScreenProps) {
     setDraggedItem(null);
     setDragOverIndex(null);
     setDragOverSection(null);
+    setTouchDragActive(false);
+    setTouchPosition(null);
   }, [draggedItem, dragOverIndex, dragOverSection, moveToBottomNav, moveToMoreMenu]);
 
   const handleDragOver = useCallback((section: 'bottom' | 'more', index: number) => {
@@ -202,35 +211,91 @@ function EditMenuScreen({ onDone }: EditMenuScreenProps) {
     setDragOverIndex(index);
   }, []);
 
+  // Calculate which drop zone the touch is over
+  const calculateDropZone = useCallback((touchY: number) => {
+    // Check bottom section items
+    const bottomSection = bottomSectionRef.current;
+    const moreSection = moreSectionRef.current;
+
+    if (bottomSection) {
+      const bottomRect = bottomSection.getBoundingClientRect();
+      if (touchY >= bottomRect.top && touchY <= bottomRect.bottom) {
+        // Find which item we're over
+        let foundIndex = bottomNavConfigs.length; // default to end
+        for (let i = 0; i < bottomNavConfigs.length; i++) {
+          const itemEl = itemRefs.current.get(`bottom-${bottomNavConfigs[i].id}`);
+          if (itemEl) {
+            const itemRect = itemEl.getBoundingClientRect();
+            const itemMiddle = itemRect.top + itemRect.height / 2;
+            if (touchY < itemMiddle) {
+              foundIndex = i;
+              break;
+            }
+          }
+        }
+        setDragOverSection('bottom');
+        setDragOverIndex(foundIndex);
+        return;
+      }
+    }
+
+    if (moreSection) {
+      const moreRect = moreSection.getBoundingClientRect();
+      if (touchY >= moreRect.top && touchY <= moreRect.bottom) {
+        setDragOverSection('more');
+        setDragOverIndex(0);
+        return;
+      }
+    }
+
+    // Not over any section
+    setDragOverSection(null);
+    setDragOverIndex(null);
+  }, [bottomNavConfigs]);
+
   // Touch handlers for mobile drag
   const handleTouchStart = useCallback((e: React.TouchEvent, item: NavTab) => {
+    const touch = e.touches[0];
     touchStartRef.current = {
-      x: e.touches[0].clientX,
-      y: e.touches[0].clientY,
+      x: touch.clientX,
+      y: touch.clientY,
+      item,
     };
 
     // Long press to start drag
     longPressTimerRef.current = setTimeout(() => {
-      handleDragStart(item);
+      setDraggedItem(item);
+      setTouchDragActive(true);
+      setTouchPosition({ x: touch.clientX, y: touch.clientY });
       // Haptic feedback if available
       if ('vibrate' in navigator) {
         navigator.vibrate(50);
       }
-    }, 300);
-  }, [handleDragStart]);
+    }, 200);
+  }, []);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    const touch = e.touches[0];
+
     if (!touchStartRef.current) return;
 
-    const deltaX = Math.abs(e.touches[0].clientX - touchStartRef.current.x);
-    const deltaY = Math.abs(e.touches[0].clientY - touchStartRef.current.y);
+    const deltaX = Math.abs(touch.clientX - touchStartRef.current.x);
+    const deltaY = Math.abs(touch.clientY - touchStartRef.current.y);
 
-    // If moved too much, cancel long press
-    if ((deltaX > 10 || deltaY > 10) && longPressTimerRef.current) {
+    // If not yet dragging and moved too much, cancel long press
+    if (!touchDragActive && (deltaX > 10 || deltaY > 10) && longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
+      return;
     }
-  }, []);
+
+    // If actively dragging, update position and calculate drop zone
+    if (touchDragActive) {
+      e.preventDefault();
+      setTouchPosition({ x: touch.clientX, y: touch.clientY });
+      calculateDropZone(touch.clientY);
+    }
+  }, [touchDragActive, calculateDropZone]);
 
   const handleTouchEnd = useCallback(() => {
     if (longPressTimerRef.current) {
@@ -238,8 +303,38 @@ function EditMenuScreen({ onDone }: EditMenuScreenProps) {
       longPressTimerRef.current = null;
     }
     touchStartRef.current = null;
-    handleDragEnd();
-  }, [handleDragEnd]);
+
+    if (touchDragActive) {
+      handleDragEnd();
+    }
+  }, [touchDragActive, handleDragEnd]);
+
+  const handleTouchCancel = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    touchStartRef.current = null;
+    setDraggedItem(null);
+    setDragOverIndex(null);
+    setDragOverSection(null);
+    setTouchDragActive(false);
+    setTouchPosition(null);
+  }, []);
+
+  // Handle touch move on overlay (non-passive)
+  const handleOverlayTouchMove = useCallback((e: React.TouchEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const touch = e.touches[0];
+    setTouchPosition({ x: touch.clientX, y: touch.clientY });
+    calculateDropZone(touch.clientY);
+  }, [calculateDropZone]);
+
+  const handleOverlayTouchEnd = useCallback((e: React.TouchEvent) => {
+    e.preventDefault();
+    handleTouchEnd();
+  }, [handleTouchEnd]);
 
   // Reorder within bottom nav
   const handleReorderBottomNav = (fromIndex: number, toIndex: number) => {
@@ -248,6 +343,15 @@ function EditMenuScreen({ onDone }: EditMenuScreenProps) {
     newItems.splice(toIndex, 0, removed);
     setBottomNavItems(newItems);
   };
+
+  // Register item ref
+  const setItemRef = useCallback((key: string, el: HTMLDivElement | null) => {
+    if (el) {
+      itemRefs.current.set(key, el);
+    } else {
+      itemRefs.current.delete(key);
+    }
+  }, []);
 
   return (
     <>
@@ -272,7 +376,7 @@ function EditMenuScreen({ onDone }: EditMenuScreenProps) {
         </p>
 
         {/* Bottom Nav Section */}
-        <div className="mb-6">
+        <div className="mb-6" ref={bottomSectionRef}>
           <h2 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-3">
             BOTTOM NAV
           </h2>
@@ -291,9 +395,11 @@ function EditMenuScreen({ onDone }: EditMenuScreenProps) {
                 onTouchStart={(e) => handleTouchStart(e, item.id)}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
+                onTouchCancel={handleTouchCancel}
                 onMoveUp={index > 0 ? () => handleReorderBottomNav(index, index - 1) : undefined}
                 onMoveDown={index < bottomNavConfigs.length - 1 ? () => handleReorderBottomNav(index, index + 1) : undefined}
                 onRemove={bottomNavConfigs.length > 1 ? () => moveToMoreMenu(item.id) : undefined}
+                refCallback={(el) => setItemRef(`bottom-${item.id}`, el)}
               />
             ))}
 
@@ -321,7 +427,7 @@ function EditMenuScreen({ onDone }: EditMenuScreenProps) {
         <div className="border-t border-border mb-6" />
 
         {/* More Menu Section */}
-        <div>
+        <div ref={moreSectionRef}>
           <h2 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-3">
             MORE MENU
           </h2>
@@ -340,7 +446,9 @@ function EditMenuScreen({ onDone }: EditMenuScreenProps) {
                 onTouchStart={(e) => handleTouchStart(e, item.id)}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
+                onTouchCancel={handleTouchCancel}
                 onAddToNav={bottomNavItems.length < 3 ? () => moveToBottomNav(item.id, bottomNavItems.length) : undefined}
+                refCallback={(el) => setItemRef(`more-${item.id}`, el)}
               />
             ))}
 
@@ -351,6 +459,41 @@ function EditMenuScreen({ onDone }: EditMenuScreenProps) {
             )}
           </div>
         </div>
+
+        {/* Touch overlay to capture touch events during drag (prevents scroll) */}
+        {touchDragActive && (
+          <div
+            className="fixed inset-0 z-40"
+            style={{ touchAction: 'none' }}
+            onTouchMove={handleOverlayTouchMove}
+            onTouchEnd={handleOverlayTouchEnd}
+            onTouchCancel={handleTouchCancel}
+          />
+        )}
+
+        {/* Floating drag indicator for touch */}
+        {touchDragActive && touchPosition && draggedItem && (
+          <div
+            className="fixed z-50 pointer-events-none"
+            style={{
+              left: touchPosition.x - 100,
+              top: touchPosition.y - 30,
+            }}
+          >
+            <div className="bg-gold text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 opacity-90">
+              <NavIcon
+                name={ALL_NAV_ITEMS.find(i => i.id === draggedItem)?.iconName || 'ellipsis'}
+                className="w-5 h-5"
+              />
+              <span className="text-sm font-medium">
+                {ALL_NAV_ITEMS.find(i => i.id === draggedItem)?.label}
+              </span>
+            </div>
+            <div className="text-xs text-center mt-1 text-gold font-medium">
+              {dragOverSection === 'bottom' ? 'Drop in Bottom Nav' : dragOverSection === 'more' ? 'Drop in More Menu' : 'Drag to reorder'}
+            </div>
+          </div>
+        )}
 
         {/* More button is always slot 4 notice */}
         <div className="mt-6 p-3 bg-gray-50 rounded-lg">
@@ -377,10 +520,12 @@ interface DraggableItemProps {
   onTouchStart: (e: React.TouchEvent) => void;
   onTouchMove: (e: React.TouchEvent) => void;
   onTouchEnd: () => void;
+  onTouchCancel: () => void;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
   onRemove?: () => void;
   onAddToNav?: () => void;
+  refCallback?: (el: HTMLDivElement | null) => void;
 }
 
 function DraggableItem({
@@ -393,14 +538,17 @@ function DraggableItem({
   onTouchStart,
   onTouchMove,
   onTouchEnd,
+  onTouchCancel,
   onMoveUp,
   onMoveDown,
   onRemove,
   onAddToNav,
+  refCallback,
 }: DraggableItemProps) {
   return (
     <div
-      className={`card flex items-center gap-3 transition-all cursor-grab active:cursor-grabbing ${
+      ref={refCallback}
+      className={`card flex items-center gap-3 transition-all cursor-grab active:cursor-grabbing select-none ${
         isDragging ? 'opacity-50 scale-95' : ''
       } ${isDragOver ? 'ring-2 ring-gold ring-offset-2' : ''}`}
       draggable
@@ -413,6 +561,7 @@ function DraggableItem({
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
+      onTouchCancel={onTouchCancel}
     >
       {/* Drag handle */}
       <div className="text-text-light touch-none">
