@@ -2,7 +2,8 @@ import { useState, useMemo } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { CharacterAvatar } from '@/components/characters/CharacterAvatar';
 import { formatShortDate } from '@/utils/helpers';
-import type { ShootingSceneStatus, CallSheet, ShootingScene } from '@/types';
+import type { ShootingSceneStatus, SceneFilmingStatus, CallSheet, ShootingScene } from '@/types';
+import { SCENE_FILMING_STATUS_CONFIG } from '@/types';
 
 // Demo call sheet for development
 const demoCallSheet: CallSheet = {
@@ -15,9 +16,9 @@ const demoCallSheet: CallSheet = {
   wrapEstimate: '19:00',
   weatherNote: 'Sunny, 22°C',
   scenes: [
-    { sceneNumber: 12, shootOrder: 1, estimatedTime: '07:30', status: 'wrapped' },
-    { sceneNumber: 15, shootOrder: 2, estimatedTime: '09:15', status: 'in-progress' },
-    { sceneNumber: 16, shootOrder: 3, estimatedTime: '11:00', status: 'upcoming' },
+    { sceneNumber: 12, shootOrder: 1, estimatedTime: '07:30', status: 'wrapped', filmingStatus: 'complete' },
+    { sceneNumber: 15, shootOrder: 2, estimatedTime: '09:15', status: 'wrapped', filmingStatus: 'partial', filmingNotes: 'Missing wide shot due to lighting' },
+    { sceneNumber: 16, shootOrder: 3, estimatedTime: '11:00', status: 'in-progress' },
     { sceneNumber: 8, shootOrder: 4, estimatedTime: '14:00', status: 'upcoming' },
     { sceneNumber: 23, shootOrder: 5, estimatedTime: '16:30', status: 'upcoming' },
   ],
@@ -96,6 +97,23 @@ export function Today({ onSceneSelect }: TodayProps) {
       ...callSheet,
       scenes: callSheet.scenes.map(s =>
         s.sceneNumber === sceneNumber ? { ...s, status } : s
+      ),
+    });
+  };
+
+  // Update scene filming status
+  const updateSceneFilmingStatus = (
+    sceneNumber: number,
+    filmingStatus: SceneFilmingStatus,
+    filmingNotes?: string
+  ) => {
+    if (!callSheet) return;
+    setCallSheet({
+      ...callSheet,
+      scenes: callSheet.scenes.map(s =>
+        s.sceneNumber === sceneNumber
+          ? { ...s, filmingStatus, filmingNotes, status: 'wrapped' as ShootingSceneStatus }
+          : s
       ),
     });
   };
@@ -215,6 +233,9 @@ export function Today({ onSceneSelect }: TodayProps) {
                     getLookForCharacter={getLookForCharacter}
                     onTap={() => handleSceneTap(shootingScene.sceneNumber)}
                     onStatusChange={(status) => updateSceneStatus(shootingScene.sceneNumber, status)}
+                    onFilmingStatusChange={(filmingStatus, notes) =>
+                      updateSceneFilmingStatus(shootingScene.sceneNumber, filmingStatus, notes)
+                    }
                   />
                 );
               })}
@@ -238,6 +259,7 @@ interface TodaySceneCardProps {
   getLookForCharacter: (characterId: string, sceneNumber: number) => any;
   onTap: () => void;
   onStatusChange: (status: ShootingSceneStatus) => void;
+  onFilmingStatusChange: (status: SceneFilmingStatus, notes?: string) => void;
 }
 
 function TodaySceneCard({
@@ -248,13 +270,24 @@ function TodaySceneCard({
   getLookForCharacter,
   onTap,
   onStatusChange,
+  onFilmingStatusChange,
 }: TodaySceneCardProps) {
   const [showActions, setShowActions] = useState(false);
+  const [showFilmingStatusModal, setShowFilmingStatusModal] = useState(false);
+  const [filmingNotes, setFilmingNotes] = useState(shootingScene.filmingNotes || '');
 
-  const statusColors: Record<ShootingSceneStatus, { bg: string; text: string; border: string }> = {
-    'upcoming': { bg: 'bg-gray-50', text: 'text-text-muted', border: 'border-gray-200' },
-    'in-progress': { bg: 'bg-gold-100/50', text: 'text-gold', border: 'border-gold' },
-    'wrapped': { bg: 'bg-green-50', text: 'text-green-600', border: 'border-green-200' },
+  // Get background color based on filming status (when wrapped)
+  const getBackgroundStyle = () => {
+    if (shootingScene.status === 'wrapped' && shootingScene.filmingStatus) {
+      const config = SCENE_FILMING_STATUS_CONFIG[shootingScene.filmingStatus];
+      return { borderLeftColor: config.color };
+    }
+    const colors: Record<ShootingSceneStatus, string> = {
+      'upcoming': '#e5e7eb',
+      'in-progress': '#C9A962',
+      'wrapped': '#22c55e',
+    };
+    return { borderLeftColor: colors[shootingScene.status] };
   };
 
   const statusLabels: Record<ShootingSceneStatus, string> = {
@@ -263,11 +296,36 @@ function TodaySceneCard({
     'wrapped': 'Wrapped',
   };
 
-  const colors = statusColors[shootingScene.status];
+  // Get status badge styling
+  const getStatusBadge = () => {
+    if (shootingScene.status === 'wrapped' && shootingScene.filmingStatus) {
+      const config = SCENE_FILMING_STATUS_CONFIG[shootingScene.filmingStatus];
+      return {
+        bg: config.bgClass,
+        text: config.textClass,
+        label: config.shortLabel,
+      };
+    }
+    const statusColors: Record<ShootingSceneStatus, { bg: string; text: string }> = {
+      'upcoming': { bg: 'bg-gray-50', text: 'text-text-muted' },
+      'in-progress': { bg: 'bg-gold-100/50', text: 'text-gold' },
+      'wrapped': { bg: 'bg-green-50', text: 'text-green-600' },
+    };
+    return { ...statusColors[shootingScene.status], label: statusLabels[shootingScene.status] };
+  };
+
+  const statusBadge = getStatusBadge();
 
   // Long press handler
   const handleLongPress = () => {
     setShowActions(true);
+  };
+
+  // Handle filming status selection
+  const handleFilmingStatusSelect = (status: SceneFilmingStatus) => {
+    onFilmingStatusChange(status, filmingNotes);
+    setShowFilmingStatusModal(false);
+    setShowActions(false);
   };
 
   return (
@@ -278,7 +336,8 @@ function TodaySceneCard({
           e.preventDefault();
           handleLongPress();
         }}
-        className={`w-full text-left card border-l-4 ${colors.border} transition-all active:scale-[0.98]`}
+        className={`w-full text-left card border-l-4 transition-all active:scale-[0.98]`}
+        style={getBackgroundStyle()}
       >
         {/* Top row: Scene number + Location + Status */}
         <div className="flex items-start justify-between mb-2">
@@ -307,8 +366,8 @@ function TodaySceneCard({
                 </svg>
               </span>
             )}
-            <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-full ${colors.bg} ${colors.text}`}>
-              {statusLabels[shootingScene.status]}
+            <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-full ${statusBadge.bg} ${statusBadge.text}`}>
+              {statusBadge.label}
             </span>
           </div>
         </div>
@@ -324,6 +383,15 @@ function TodaySceneCard({
                 {scene.synopsis}
               </p>
             )}
+          </div>
+        )}
+
+        {/* Filming notes if partial or not filmed */}
+        {shootingScene.filmingStatus && shootingScene.filmingStatus !== 'complete' && shootingScene.filmingNotes && (
+          <div className={`mb-3 px-2 py-1.5 rounded text-xs ${
+            shootingScene.filmingStatus === 'partial' ? 'bg-orange-50 text-orange-700' : 'bg-gray-50 text-gray-600'
+          }`}>
+            <span className="font-medium">Note:</span> {shootingScene.filmingNotes}
           </div>
         )}
 
@@ -384,27 +452,65 @@ function TodaySceneCard({
                   Mark In Progress
                 </button>
               )}
-              {shootingScene.status !== 'wrapped' && (
+
+              {/* Filming Status Options */}
+              <div className="border-t border-border mt-2 pt-2">
+                <div className="px-4 py-2">
+                  <span className="text-[10px] font-bold tracking-wider uppercase text-text-light">
+                    FILMING STATUS
+                  </span>
+                </div>
                 <button
-                  onClick={() => {
-                    onStatusChange('wrapped');
-                    setShowActions(false);
-                  }}
+                  onClick={() => handleFilmingStatusSelect('complete')}
                   className="w-full px-4 py-3 text-left text-sm text-text-primary hover:bg-gray-50 flex items-center gap-3"
                 >
-                  <svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                  Mark Wrapped
+                  <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
+                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <div>
+                    <span className="font-medium">Complete</span>
+                    <p className="text-xs text-text-muted">Scene fully filmed</p>
+                  </div>
                 </button>
-              )}
+                <button
+                  onClick={() => setShowFilmingStatusModal(true)}
+                  className="w-full px-4 py-3 text-left text-sm text-text-primary hover:bg-gray-50 flex items-center gap-3"
+                >
+                  <div className="w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center">
+                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                  </div>
+                  <div>
+                    <span className="font-medium">Partial</span>
+                    <p className="text-xs text-text-muted">Some shots still needed</p>
+                  </div>
+                </button>
+                <button
+                  onClick={() => setShowFilmingStatusModal(true)}
+                  className="w-full px-4 py-3 text-left text-sm text-text-primary hover:bg-gray-50 flex items-center gap-3"
+                >
+                  <div className="w-5 h-5 rounded-full bg-gray-400 flex items-center justify-center">
+                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </div>
+                  <div>
+                    <span className="font-medium">Not Filmed</span>
+                    <p className="text-xs text-text-muted">Scene not shot today</p>
+                  </div>
+                </button>
+              </div>
+
               {shootingScene.status !== 'upcoming' && (
                 <button
                   onClick={() => {
                     onStatusChange('upcoming');
                     setShowActions(false);
                   }}
-                  className="w-full px-4 py-3 text-left text-sm text-text-muted hover:bg-gray-50 flex items-center gap-3"
+                  className="w-full px-4 py-3 text-left text-sm text-text-muted hover:bg-gray-50 flex items-center gap-3 border-t border-border mt-2"
                 >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
@@ -416,6 +522,53 @@ function TodaySceneCard({
             <button
               onClick={() => setShowActions(false)}
               className="w-full p-4 text-center text-sm font-medium text-gold border-t border-border"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Filming Status Modal with Notes */}
+      {showFilmingStatusModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setShowFilmingStatusModal(false)}
+        >
+          <div
+            className="w-full max-w-md bg-card rounded-2xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-4 border-b border-border">
+              <h3 className="text-base font-semibold text-text-primary">Scene {shootingScene.sceneNumber} - Add Notes</h3>
+              <p className="text-xs text-text-muted mt-1">Why wasn't this scene fully filmed?</p>
+            </div>
+            <div className="p-4">
+              <textarea
+                value={filmingNotes}
+                onChange={(e) => setFilmingNotes(e.target.value)}
+                placeholder="e.g., Ran out of time, weather issues, actor unavailable..."
+                rows={3}
+                className="w-full p-3 border border-border rounded-lg text-sm bg-input-bg text-text-primary resize-none"
+              />
+            </div>
+            <div className="p-4 border-t border-border flex gap-3">
+              <button
+                onClick={() => handleFilmingStatusSelect('partial')}
+                className="flex-1 py-2.5 rounded-button bg-orange-500 text-white text-sm font-medium"
+              >
+                Mark Partial
+              </button>
+              <button
+                onClick={() => handleFilmingStatusSelect('not-filmed')}
+                className="flex-1 py-2.5 rounded-button bg-gray-500 text-white text-sm font-medium"
+              >
+                Not Filmed
+              </button>
+            </div>
+            <button
+              onClick={() => setShowFilmingStatusModal(false)}
+              className="w-full p-3 text-center text-sm text-text-muted border-t border-border"
             >
               Cancel
             </button>

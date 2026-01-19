@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { CharacterAvatar } from '@/components/characters/CharacterAvatar';
-import type { Scene, Character, BreakdownViewMode, BreakdownFilters } from '@/types';
+import type { Scene, Character, BreakdownViewMode, BreakdownFilters, SceneFilmingStatus } from '@/types';
+import { SCENE_FILMING_STATUS_CONFIG } from '@/types';
 import { clsx } from 'clsx';
 
 interface BreakdownProps {
@@ -17,6 +18,7 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
     shootingDay: null,
     location: null,
     completionStatus: 'all',
+    filmingStatus: 'all',
     lookId: null,
   });
   const [expandedSceneId, setExpandedSceneId] = useState<string | null>(null);
@@ -46,11 +48,16 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
       );
     }
 
-    // Filter by completion status
+    // Filter by completion status (continuity capture)
     if (filters.completionStatus === 'complete') {
       scenes = scenes.filter(scene => scene.isComplete);
     } else if (filters.completionStatus === 'incomplete') {
       scenes = scenes.filter(scene => !scene.isComplete);
+    }
+
+    // Filter by filming status
+    if (filters.filmingStatus !== 'all') {
+      scenes = scenes.filter(scene => scene.filmingStatus === filters.filmingStatus);
     }
 
     // Filter by location
@@ -115,6 +122,7 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
       shootingDay: null,
       location: null,
       completionStatus: 'all',
+      filmingStatus: 'all',
       lookId: null,
     });
   };
@@ -123,6 +131,7 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
     filters.shootingDay !== null ||
     filters.location !== null ||
     filters.completionStatus !== 'all' ||
+    filters.filmingStatus !== 'all' ||
     filters.lookId !== null;
 
   if (!currentProject) {
@@ -271,8 +280,19 @@ function BreakdownListView({
         const progress = getSceneProgress(scene);
         const isComplete = progress.total > 0 && progress.captured === progress.total;
 
+        // Get filming status styling
+        const filmingStatusConfig = scene.filmingStatus
+          ? SCENE_FILMING_STATUS_CONFIG[scene.filmingStatus]
+          : null;
+
         return (
-          <div key={scene.id} className="card overflow-hidden">
+          <div
+            key={scene.id}
+            className={clsx(
+              'card overflow-hidden border-l-4',
+              filmingStatusConfig ? filmingStatusConfig.borderClass : 'border-gray-200'
+            )}
+          >
             {/* Row header - always visible */}
             <button
               onClick={() => onToggleExpand(scene.id)}
@@ -308,7 +328,18 @@ function BreakdownListView({
                 )}
               </span>
 
-              {/* Status indicator */}
+              {/* Filming status badge */}
+              {scene.filmingStatus && (
+                <span className={clsx(
+                  'px-1.5 py-0.5 text-[9px] font-semibold rounded-full flex-shrink-0',
+                  filmingStatusConfig?.bgClass,
+                  filmingStatusConfig?.textClass
+                )}>
+                  {filmingStatusConfig?.shortLabel}
+                </span>
+              )}
+
+              {/* Status indicator (continuity captured) */}
               <span className={clsx(
                 'w-2 h-2 rounded-full flex-shrink-0',
                 isComplete ? 'bg-green-500' : progress.captured > 0 ? 'bg-gold' : 'bg-gray-200'
@@ -338,6 +369,26 @@ function BreakdownListView({
                 {/* Synopsis if available */}
                 {scene.synopsis && (
                   <p className="text-xs text-text-muted">{scene.synopsis}</p>
+                )}
+
+                {/* Filming status with notes */}
+                {scene.filmingStatus && (
+                  <div className={clsx(
+                    'p-2.5 rounded-lg',
+                    filmingStatusConfig?.bgClass
+                  )}>
+                    <div className="flex items-center gap-2">
+                      <FilmingStatusIcon status={scene.filmingStatus} />
+                      <span className={clsx('text-sm font-medium', filmingStatusConfig?.textClass)}>
+                        {filmingStatusConfig?.label}
+                      </span>
+                    </div>
+                    {scene.filmingNotes && (
+                      <p className={clsx('text-xs mt-1.5', filmingStatusConfig?.textClass)}>
+                        {scene.filmingNotes}
+                      </p>
+                    )}
+                  </div>
                 )}
 
                 {/* Character breakdown cards */}
@@ -447,6 +498,37 @@ function BreakdownListView({
   );
 }
 
+// Filming status icon component
+function FilmingStatusIcon({ status }: { status: SceneFilmingStatus }) {
+  const config = SCENE_FILMING_STATUS_CONFIG[status];
+
+  if (status === 'complete') {
+    return (
+      <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: config.color }}>
+        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+        </svg>
+      </div>
+    );
+  }
+  if (status === 'partial') {
+    return (
+      <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: config.color }}>
+        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+        </svg>
+      </div>
+    );
+  }
+  return (
+    <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: config.color }}>
+      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </div>
+  );
+}
+
 // Grid View Component
 interface BreakdownGridViewProps {
   scenes: Scene[];
@@ -468,21 +550,40 @@ function BreakdownGridView({
         const progress = getSceneProgress(scene);
         const progressPercent = progress.total > 0 ? (progress.captured / progress.total) * 100 : 0;
 
+        // Get filming status styling
+        const filmingStatusConfig = scene.filmingStatus
+          ? SCENE_FILMING_STATUS_CONFIG[scene.filmingStatus]
+          : null;
+
         return (
           <button
             key={scene.id}
             onClick={() => onSceneSelect(scene.id)}
-            className="card text-left active:scale-[0.98] transition-transform"
+            className={clsx(
+              'card text-left active:scale-[0.98] transition-transform border-l-4',
+              filmingStatusConfig ? filmingStatusConfig.borderClass : 'border-gray-200'
+            )}
           >
             {/* Scene number and INT/EXT */}
             <div className="flex items-center justify-between mb-1.5">
               <span className="text-xl font-bold text-text-primary">{scene.sceneNumber}</span>
-              <span className={clsx(
-                'px-1.5 py-0.5 text-[9px] font-bold rounded',
-                scene.intExt === 'INT' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
-              )}>
-                {scene.intExt}
-              </span>
+              <div className="flex items-center gap-1">
+                {scene.filmingStatus && (
+                  <span className={clsx(
+                    'px-1 py-0.5 text-[8px] font-semibold rounded-full',
+                    filmingStatusConfig?.bgClass,
+                    filmingStatusConfig?.textClass
+                  )}>
+                    {filmingStatusConfig?.shortLabel}
+                  </span>
+                )}
+                <span className={clsx(
+                  'px-1.5 py-0.5 text-[9px] font-bold rounded',
+                  scene.intExt === 'INT' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
+                )}>
+                  {scene.intExt}
+                </span>
+              </div>
             </div>
 
             {/* Slugline (truncated) */}
@@ -502,11 +603,14 @@ function BreakdownGridView({
               )}
             </div>
 
-            {/* Progress bar */}
+            {/* Progress bar - color based on filming status */}
             <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
               <div
                 className={clsx(
                   'h-full rounded-full transition-all',
+                  scene.filmingStatus === 'complete' ? 'bg-green-500' :
+                  scene.filmingStatus === 'partial' ? 'bg-orange-500' :
+                  scene.filmingStatus === 'not-filmed' ? 'bg-gray-400' :
                   progressPercent === 100 ? 'bg-green-500' : 'bg-gold'
                 )}
                 style={{ width: `${progressPercent}%` }}
@@ -572,10 +676,51 @@ function FilterDrawer({
         </div>
 
         <div className="p-4 space-y-5">
-          {/* Completion Status */}
+          {/* Filming Status */}
           <div>
             <h3 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-2">
-              STATUS
+              FILMING STATUS
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => onFiltersChange({ ...filters, filmingStatus: 'all' })}
+                className={clsx(
+                  'px-3 py-1.5 text-xs font-medium rounded-full transition-colors',
+                  filters.filmingStatus === 'all'
+                    ? 'bg-gold text-white'
+                    : 'bg-gray-100 text-text-muted'
+                )}
+              >
+                All
+              </button>
+              {(['complete', 'partial', 'not-filmed'] as SceneFilmingStatus[]).map((status) => {
+                const config = SCENE_FILMING_STATUS_CONFIG[status];
+                return (
+                  <button
+                    key={status}
+                    onClick={() => onFiltersChange({ ...filters, filmingStatus: status })}
+                    className={clsx(
+                      'px-3 py-1.5 text-xs font-medium rounded-full transition-colors flex items-center gap-1.5',
+                      filters.filmingStatus === status
+                        ? `${config.bgClass} ${config.textClass}`
+                        : 'bg-gray-100 text-text-muted'
+                    )}
+                  >
+                    <span
+                      className="w-2 h-2 rounded-full"
+                      style={{ backgroundColor: config.color }}
+                    />
+                    {config.shortLabel}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Continuity Status */}
+          <div>
+            <h3 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-2">
+              CONTINUITY STATUS
             </h3>
             <div className="flex flex-wrap gap-2">
               {(['all', 'complete', 'incomplete'] as const).map((status) => (
@@ -589,7 +734,7 @@ function FilterDrawer({
                       : 'bg-gray-100 text-text-muted'
                   )}
                 >
-                  {status === 'all' ? 'All' : status === 'complete' ? 'Complete' : 'Incomplete'}
+                  {status === 'all' ? 'All' : status === 'complete' ? 'Captured' : 'Not Captured'}
                 </button>
               ))}
             </div>
