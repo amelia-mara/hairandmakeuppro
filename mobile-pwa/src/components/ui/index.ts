@@ -5,3 +5,4 @@ export { Badge, CountBadge, type BadgeProps, type CountBadgeProps } from './Badg
 export { TogglePill, Switch, type TogglePillProps, type SwitchProps } from './Toggle';
 export { Accordion, AccordionGroup, type AccordionProps } from './Accordion';
 export { Modal, BottomSheet, type ModalProps, type BottomSheetProps } from './Modal';
+export { FormField } from './FormField';

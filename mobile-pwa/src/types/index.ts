@@ -65,13 +65,59 @@ export interface MakeupDetails {
   setting: string;
 }
 
+// Hair Types
+export type HairType = 'Natural' | 'Wig' | 'Hair Pieces' | 'Extensions';
+export type WigType = 'Lace Front' | 'Full Lace' | 'Hard Front' | 'U-Part' | 'Closure';
+export type WigAttachment = 'Glue' | 'Tape' | 'Pins' | 'Combs' | 'Clips' | 'Elastic';
+export type HairlineStyle = 'Natural' | 'Laid' | 'Concealed' | 'Bleached Knots';
+
+export const HAIR_TYPES: HairType[] = ['Natural', 'Wig', 'Hair Pieces', 'Extensions'];
+export const WIG_TYPES: WigType[] = ['Lace Front', 'Full Lace', 'Hard Front', 'U-Part', 'Closure'];
+export const WIG_ATTACHMENTS: WigAttachment[] = ['Glue', 'Tape', 'Pins', 'Combs', 'Clips', 'Elastic'];
+export const HAIRLINE_STYLES: HairlineStyle[] = ['Natural', 'Laid', 'Concealed', 'Bleached Knots'];
+
 export interface HairDetails {
+  // Standard fields
   style: string;
   products: string;
   parting: string;
   piecesOut: string;
   pins: string;
   accessories: string;
+  // Hair type (controls wig fields visibility)
+  hairType: HairType;
+  // Wig-specific fields
+  wigNameId: string;
+  wigType: WigType | '';
+  wigCapMethod: string;
+  wigAttachment: WigAttachment[];
+  hairline: HairlineStyle | '';
+  laceTint: string;
+  edgesBabyHairs: string;
+}
+
+// SFX Types
+export type SFXType = 'Prosthetics' | 'Wounds' | 'Scars' | 'Tattoos' | 'Aging' | 'Bald Cap' | 'Contact Lenses' | 'Teeth' | 'Body Paint';
+export type BloodType = 'Fresh' | 'Dried' | 'Arterial' | 'Mouth Blood' | 'Bruising';
+
+export const SFX_TYPES: SFXType[] = ['Prosthetics', 'Wounds', 'Scars', 'Tattoos', 'Aging', 'Bald Cap', 'Contact Lenses', 'Teeth', 'Body Paint'];
+export const BLOOD_TYPES: BloodType[] = ['Fresh', 'Dried', 'Arterial', 'Mouth Blood', 'Bruising'];
+
+export interface SFXDetails {
+  sfxRequired: boolean;
+  sfxTypes: SFXType[];
+  prostheticPieces: string;
+  prostheticAdhesive: string;
+  bloodTypes: BloodType[];
+  bloodProducts: string;
+  bloodPlacement: string;
+  tattooCoverage: string;
+  temporaryTattoos: string;
+  contactLenses: string;
+  teeth: string;
+  agingCharacterNotes: string;
+  sfxApplicationTime: number | null;
+  sfxReferencePhotos: Photo[];
 }
 
 export interface SceneCapture {
@@ -89,6 +135,7 @@ export interface SceneCapture {
   additionalPhotos: Photo[];
   continuityFlags: ContinuityFlags;
   continuityEvents: ContinuityEvent[];
+  sfxDetails: SFXDetails;
   notes: string;
   applicationTime?: number;
 }
@@ -126,7 +173,7 @@ export interface ContinuityEvent {
 export type ContinuityEventType = 'Wound' | 'Bruise' | 'Prosthetic' | 'Scar' | 'Tattoo' | 'Other';
 
 // Navigation types
-export type NavTab = 'today' | 'breakdown' | 'lookbook' | 'hours' | 'script' | 'schedule' | 'callsheets' | 'settings' | 'more';
+export type NavTab = 'today' | 'breakdown' | 'lookbook' | 'hours' | 'budget' | 'script' | 'schedule' | 'callsheets' | 'settings' | 'more';
 
 // Navigation item configuration
 export interface NavItemConfig {
@@ -135,7 +182,7 @@ export interface NavItemConfig {
   iconName: NavIconName;
 }
 
-export type NavIconName = 'calendar' | 'grid' | 'book' | 'clock' | 'document' | 'schedule' | 'clipboard' | 'cog' | 'ellipsis';
+export type NavIconName = 'calendar' | 'grid' | 'book' | 'clock' | 'wallet' | 'document' | 'schedule' | 'clipboard' | 'cog' | 'ellipsis';
 
 // All available nav items (except 'more' which is fixed)
 export const ALL_NAV_ITEMS: NavItemConfig[] = [
@@ -143,6 +190,7 @@ export const ALL_NAV_ITEMS: NavItemConfig[] = [
   { id: 'breakdown', label: 'Breakdown', iconName: 'grid' },
   { id: 'lookbook', label: 'Lookbook', iconName: 'book' },
   { id: 'hours', label: 'Hours', iconName: 'clock' },
+  { id: 'budget', label: 'Budget', iconName: 'wallet' },
   { id: 'script', label: 'Script', iconName: 'document' },
   { id: 'schedule', label: 'Schedule', iconName: 'schedule' },
   { id: 'callsheets', label: 'Call Sheets', iconName: 'clipboard' },
@@ -238,6 +286,31 @@ export const createEmptyHairDetails = (): HairDetails => ({
   piecesOut: '',
   pins: '',
   accessories: '',
+  hairType: 'Natural',
+  wigNameId: '',
+  wigType: '',
+  wigCapMethod: '',
+  wigAttachment: [],
+  hairline: '',
+  laceTint: '',
+  edgesBabyHairs: '',
+});
+
+export const createEmptySFXDetails = (): SFXDetails => ({
+  sfxRequired: false,
+  sfxTypes: [],
+  prostheticPieces: '',
+  prostheticAdhesive: '',
+  bloodTypes: [],
+  bloodProducts: '',
+  bloodPlacement: '',
+  tattooCoverage: '',
+  temporaryTattoos: '',
+  contactLenses: '',
+  teeth: '',
+  agingCharacterNotes: '',
+  sfxApplicationTime: null,
+  sfxReferencePhotos: [],
 });
 
 export const createEmptyContinuityFlags = (): ContinuityFlags => ({
@@ -280,9 +353,71 @@ export const generateInitials = (name: string): string => {
     .slice(0, 2);
 };
 
-// Helper function to count filled fields in makeup/hair details
-export const countFilledFields = (obj: Record<string, string>): number => {
-  return Object.values(obj).filter(value => value.trim() !== '').length;
+// Helper function to count filled fields in makeup/hair/sfx details
+export const countFilledFields = (obj: MakeupDetails | HairDetails | SFXDetails): number => {
+  return Object.entries(obj).filter(([key, value]) => {
+    // Skip hairType as it always has a value
+    if (key === 'hairType') return false;
+    // Skip sfxRequired toggle - it's not a "filled field"
+    if (key === 'sfxRequired') return false;
+    // Handle arrays (wigAttachment, sfxTypes, bloodTypes, sfxReferencePhotos)
+    if (Array.isArray(value)) return value.length > 0;
+    // Handle numbers (sfxApplicationTime)
+    if (typeof value === 'number') return value > 0;
+    if (value === null) return false;
+    // Handle booleans
+    if (typeof value === 'boolean') return false;
+    // Handle strings
+    if (typeof value === 'string') return value.trim() !== '';
+    return false;
+  }).length;
+};
+
+// Count hair fields including wig fields when applicable
+export const countHairFields = (hair: HairDetails): number => {
+  const standardFields = ['style', 'products', 'parting', 'piecesOut', 'pins', 'accessories'];
+  const wigFields = ['wigNameId', 'wigType', 'wigCapMethod', 'wigAttachment', 'hairline', 'laceTint', 'edgesBabyHairs'];
+
+  let count = 0;
+
+  // Count standard fields
+  standardFields.forEach(field => {
+    const value = hair[field as keyof HairDetails];
+    if (typeof value === 'string' && value.trim() !== '') count++;
+  });
+
+  // Count wig fields only if not Natural
+  if (hair.hairType !== 'Natural') {
+    wigFields.forEach(field => {
+      const value = hair[field as keyof HairDetails];
+      if (Array.isArray(value) && value.length > 0) count++;
+      else if (typeof value === 'string' && value.trim() !== '') count++;
+    });
+  }
+
+  return count;
+};
+
+// Count SFX fields (only when sfxRequired is true)
+export const countSFXFields = (sfx: SFXDetails): number => {
+  if (!sfx.sfxRequired) return 0;
+
+  let count = 0;
+  if (sfx.sfxTypes.length > 0) count++;
+  if (sfx.prostheticPieces.trim() !== '') count++;
+  if (sfx.prostheticAdhesive.trim() !== '') count++;
+  if (sfx.bloodTypes.length > 0) count++;
+  if (sfx.bloodProducts.trim() !== '') count++;
+  if (sfx.bloodPlacement.trim() !== '') count++;
+  if (sfx.tattooCoverage.trim() !== '') count++;
+  if (sfx.temporaryTattoos.trim() !== '') count++;
+  if (sfx.contactLenses.trim() !== '') count++;
+  if (sfx.teeth.trim() !== '') count++;
+  if (sfx.agingCharacterNotes.trim() !== '') count++;
+  if (sfx.sfxApplicationTime !== null && sfx.sfxApplicationTime > 0) count++;
+  if (sfx.sfxReferencePhotos.length > 0) count++;
+
+  return count;
 };
 
 // ============================================

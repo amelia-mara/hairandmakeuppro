@@ -1,8 +1,9 @@
 import { useState, useRef, useCallback } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
-import { useNavigationStore } from '@/stores/navigationStore';
+import { useNavigationStore, MAX_BOTTOM_NAV_ITEMS } from '@/stores/navigationStore';
 import { RateCardSettings } from '@/components/timesheet';
 import { NavIcon } from '@/components/navigation/BottomNav';
+import { formatShortDate } from '@/utils/helpers';
 import type { NavTab } from '@/types';
 import { ALL_NAV_ITEMS } from '@/types';
 
@@ -10,9 +11,10 @@ type MoreView = 'menu' | 'script' | 'schedule' | 'callsheets' | 'settings' | 'ed
 
 interface MoreProps {
   onNavigateToTab?: (tab: NavTab) => void;
+  onStartNewProject?: () => void;
 }
 
-export function More({ onNavigateToTab }: MoreProps) {
+export function More({ onNavigateToTab, onStartNewProject }: MoreProps) {
   const [currentView, setCurrentView] = useState<MoreView>('menu');
   const { isEditMenuOpen, closeEditMenu, openEditMenu } = useNavigationStore();
 
@@ -41,7 +43,7 @@ export function More({ onNavigateToTab }: MoreProps) {
       case 'callsheets':
         return <CallSheetArchive onBack={() => setCurrentView('menu')} />;
       case 'settings':
-        return <Settings onBack={() => setCurrentView('menu')} />;
+        return <Settings onBack={() => setCurrentView('menu')} onStartNewProject={onStartNewProject} />;
       case 'editMenu':
         return <EditMenuScreen onDone={handleEditMenuClose} />;
       default:
@@ -81,6 +83,7 @@ function MoreMenu({ onNavigate, onNavigateToTab }: MoreMenuProps) {
       case 'today': return 'Today\'s shooting schedule';
       case 'breakdown': return 'Scene breakdown by character';
       case 'hours': return 'Timesheet and earnings';
+      case 'budget': return 'Expenses overview, scan receipts';
       default: return '';
     }
   };
@@ -168,8 +171,15 @@ function EditMenuScreen({ onDone }: EditMenuScreenProps) {
   const [draggedItem, setDraggedItem] = useState<NavTab | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [dragOverSection, setDragOverSection] = useState<'bottom' | 'more' | null>(null);
-  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+
+  // Touch drag state
+  const [touchDragActive, setTouchDragActive] = useState(false);
+  const [touchPosition, setTouchPosition] = useState<{ x: number; y: number } | null>(null);
+  const touchStartRef = useRef<{ x: number; y: number; item: NavTab } | null>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const bottomSectionRef = useRef<HTMLDivElement>(null);
+  const moreSectionRef = useRef<HTMLDivElement>(null);
 
   // Get items not in bottom nav (for More section)
   const moreItems = ALL_NAV_ITEMS.filter(item => !bottomNavItems.includes(item.id));
@@ -194,6 +204,8 @@ function EditMenuScreen({ onDone }: EditMenuScreenProps) {
     setDraggedItem(null);
     setDragOverIndex(null);
     setDragOverSection(null);
+    setTouchDragActive(false);
+    setTouchPosition(null);
   }, [draggedItem, dragOverIndex, dragOverSection, moveToBottomNav, moveToMoreMenu]);
 
   const handleDragOver = useCallback((section: 'bottom' | 'more', index: number) => {
@@ -201,35 +213,91 @@ function EditMenuScreen({ onDone }: EditMenuScreenProps) {
     setDragOverIndex(index);
   }, []);
 
+  // Calculate which drop zone the touch is over
+  const calculateDropZone = useCallback((touchY: number) => {
+    // Check bottom section items
+    const bottomSection = bottomSectionRef.current;
+    const moreSection = moreSectionRef.current;
+
+    if (bottomSection) {
+      const bottomRect = bottomSection.getBoundingClientRect();
+      if (touchY >= bottomRect.top && touchY <= bottomRect.bottom) {
+        // Find which item we're over
+        let foundIndex = bottomNavConfigs.length; // default to end
+        for (let i = 0; i < bottomNavConfigs.length; i++) {
+          const itemEl = itemRefs.current.get(`bottom-${bottomNavConfigs[i].id}`);
+          if (itemEl) {
+            const itemRect = itemEl.getBoundingClientRect();
+            const itemMiddle = itemRect.top + itemRect.height / 2;
+            if (touchY < itemMiddle) {
+              foundIndex = i;
+              break;
+            }
+          }
+        }
+        setDragOverSection('bottom');
+        setDragOverIndex(foundIndex);
+        return;
+      }
+    }
+
+    if (moreSection) {
+      const moreRect = moreSection.getBoundingClientRect();
+      if (touchY >= moreRect.top && touchY <= moreRect.bottom) {
+        setDragOverSection('more');
+        setDragOverIndex(0);
+        return;
+      }
+    }
+
+    // Not over any section
+    setDragOverSection(null);
+    setDragOverIndex(null);
+  }, [bottomNavConfigs]);
+
   // Touch handlers for mobile drag
   const handleTouchStart = useCallback((e: React.TouchEvent, item: NavTab) => {
+    const touch = e.touches[0];
     touchStartRef.current = {
-      x: e.touches[0].clientX,
-      y: e.touches[0].clientY,
+      x: touch.clientX,
+      y: touch.clientY,
+      item,
     };
 
     // Long press to start drag
     longPressTimerRef.current = setTimeout(() => {
-      handleDragStart(item);
+      setDraggedItem(item);
+      setTouchDragActive(true);
+      setTouchPosition({ x: touch.clientX, y: touch.clientY });
       // Haptic feedback if available
       if ('vibrate' in navigator) {
         navigator.vibrate(50);
       }
-    }, 300);
-  }, [handleDragStart]);
+    }, 200);
+  }, []);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    const touch = e.touches[0];
+
     if (!touchStartRef.current) return;
 
-    const deltaX = Math.abs(e.touches[0].clientX - touchStartRef.current.x);
-    const deltaY = Math.abs(e.touches[0].clientY - touchStartRef.current.y);
+    const deltaX = Math.abs(touch.clientX - touchStartRef.current.x);
+    const deltaY = Math.abs(touch.clientY - touchStartRef.current.y);
 
-    // If moved too much, cancel long press
-    if ((deltaX > 10 || deltaY > 10) && longPressTimerRef.current) {
+    // If not yet dragging and moved too much, cancel long press
+    if (!touchDragActive && (deltaX > 10 || deltaY > 10) && longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
+      return;
     }
-  }, []);
+
+    // If actively dragging, update position and calculate drop zone
+    if (touchDragActive) {
+      e.preventDefault();
+      setTouchPosition({ x: touch.clientX, y: touch.clientY });
+      calculateDropZone(touch.clientY);
+    }
+  }, [touchDragActive, calculateDropZone]);
 
   const handleTouchEnd = useCallback(() => {
     if (longPressTimerRef.current) {
@@ -237,8 +305,38 @@ function EditMenuScreen({ onDone }: EditMenuScreenProps) {
       longPressTimerRef.current = null;
     }
     touchStartRef.current = null;
-    handleDragEnd();
-  }, [handleDragEnd]);
+
+    if (touchDragActive) {
+      handleDragEnd();
+    }
+  }, [touchDragActive, handleDragEnd]);
+
+  const handleTouchCancel = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    touchStartRef.current = null;
+    setDraggedItem(null);
+    setDragOverIndex(null);
+    setDragOverSection(null);
+    setTouchDragActive(false);
+    setTouchPosition(null);
+  }, []);
+
+  // Handle touch move on overlay (non-passive)
+  const handleOverlayTouchMove = useCallback((e: React.TouchEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const touch = e.touches[0];
+    setTouchPosition({ x: touch.clientX, y: touch.clientY });
+    calculateDropZone(touch.clientY);
+  }, [calculateDropZone]);
+
+  const handleOverlayTouchEnd = useCallback((e: React.TouchEvent) => {
+    e.preventDefault();
+    handleTouchEnd();
+  }, [handleTouchEnd]);
 
   // Reorder within bottom nav
   const handleReorderBottomNav = (fromIndex: number, toIndex: number) => {
@@ -247,6 +345,15 @@ function EditMenuScreen({ onDone }: EditMenuScreenProps) {
     newItems.splice(toIndex, 0, removed);
     setBottomNavItems(newItems);
   };
+
+  // Register item ref
+  const setItemRef = useCallback((key: string, el: HTMLDivElement | null) => {
+    if (el) {
+      itemRefs.current.set(key, el);
+    } else {
+      itemRefs.current.delete(key);
+    }
+  }, []);
 
   return (
     <>
@@ -267,11 +374,11 @@ function EditMenuScreen({ onDone }: EditMenuScreenProps) {
 
       <div className="mobile-container px-4 py-4">
         <p className="text-sm text-text-muted mb-6">
-          Drag items to reorder. First 3 appear in bottom nav.
+          Drag items to reorder. Up to {MAX_BOTTOM_NAV_ITEMS} appear in bottom nav.
         </p>
 
         {/* Bottom Nav Section */}
-        <div className="mb-6">
+        <div className="mb-6" ref={bottomSectionRef}>
           <h2 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-3">
             BOTTOM NAV
           </h2>
@@ -290,14 +397,16 @@ function EditMenuScreen({ onDone }: EditMenuScreenProps) {
                 onTouchStart={(e) => handleTouchStart(e, item.id)}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
+                onTouchCancel={handleTouchCancel}
                 onMoveUp={index > 0 ? () => handleReorderBottomNav(index, index - 1) : undefined}
                 onMoveDown={index < bottomNavConfigs.length - 1 ? () => handleReorderBottomNav(index, index + 1) : undefined}
                 onRemove={bottomNavConfigs.length > 1 ? () => moveToMoreMenu(item.id) : undefined}
+                refCallback={(el) => setItemRef(`bottom-${item.id}`, el)}
               />
             ))}
 
             {/* Drop zone when bottom nav has less than 3 items */}
-            {bottomNavItems.length < 3 && (
+            {bottomNavItems.length < MAX_BOTTOM_NAV_ITEMS && (
               <div
                 className={`border-2 border-dashed rounded-xl p-4 text-center transition-colors ${
                   dragOverSection === 'bottom' && dragOverIndex === bottomNavItems.length
@@ -320,7 +429,7 @@ function EditMenuScreen({ onDone }: EditMenuScreenProps) {
         <div className="border-t border-border mb-6" />
 
         {/* More Menu Section */}
-        <div>
+        <div ref={moreSectionRef}>
           <h2 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-3">
             MORE MENU
           </h2>
@@ -339,7 +448,9 @@ function EditMenuScreen({ onDone }: EditMenuScreenProps) {
                 onTouchStart={(e) => handleTouchStart(e, item.id)}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
-                onAddToNav={bottomNavItems.length < 3 ? () => moveToBottomNav(item.id, bottomNavItems.length) : undefined}
+                onTouchCancel={handleTouchCancel}
+                onAddToNav={bottomNavItems.length < MAX_BOTTOM_NAV_ITEMS ? () => moveToBottomNav(item.id, bottomNavItems.length) : undefined}
+                refCallback={(el) => setItemRef(`more-${item.id}`, el)}
               />
             ))}
 
@@ -351,11 +462,46 @@ function EditMenuScreen({ onDone }: EditMenuScreenProps) {
           </div>
         </div>
 
-        {/* More button is always slot 4 notice */}
+        {/* Touch overlay to capture touch events during drag (prevents scroll) */}
+        {touchDragActive && (
+          <div
+            className="fixed inset-0 z-40"
+            style={{ touchAction: 'none' }}
+            onTouchMove={handleOverlayTouchMove}
+            onTouchEnd={handleOverlayTouchEnd}
+            onTouchCancel={handleTouchCancel}
+          />
+        )}
+
+        {/* Floating drag indicator for touch */}
+        {touchDragActive && touchPosition && draggedItem && (
+          <div
+            className="fixed z-50 pointer-events-none"
+            style={{
+              left: touchPosition.x - 100,
+              top: touchPosition.y - 30,
+            }}
+          >
+            <div className="bg-gold text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 opacity-90">
+              <NavIcon
+                name={ALL_NAV_ITEMS.find(i => i.id === draggedItem)?.iconName || 'ellipsis'}
+                className="w-5 h-5"
+              />
+              <span className="text-sm font-medium">
+                {ALL_NAV_ITEMS.find(i => i.id === draggedItem)?.label}
+              </span>
+            </div>
+            <div className="text-xs text-center mt-1 text-gold font-medium">
+              {dragOverSection === 'bottom' ? 'Drop in Bottom Nav' : dragOverSection === 'more' ? 'Drop in More Menu' : 'Drag to reorder'}
+            </div>
+          </div>
+        )}
+
+        {/* More button notice */}
         <div className="mt-6 p-3 bg-gray-50 rounded-lg">
           <div className="flex items-center gap-2 text-sm text-text-muted">
             <NavIcon name="ellipsis" className="w-5 h-5" />
-            <span><strong>More</strong> button is always slot 4 and cannot be moved.</span>
+            <span><strong>More</strong> button is always last and cannot be moved.</span>
           </div>
         </div>
       </div>
@@ -376,10 +522,12 @@ interface DraggableItemProps {
   onTouchStart: (e: React.TouchEvent) => void;
   onTouchMove: (e: React.TouchEvent) => void;
   onTouchEnd: () => void;
+  onTouchCancel: () => void;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
   onRemove?: () => void;
   onAddToNav?: () => void;
+  refCallback?: (el: HTMLDivElement | null) => void;
 }
 
 function DraggableItem({
@@ -392,14 +540,17 @@ function DraggableItem({
   onTouchStart,
   onTouchMove,
   onTouchEnd,
+  onTouchCancel,
   onMoveUp,
   onMoveDown,
   onRemove,
   onAddToNav,
+  refCallback,
 }: DraggableItemProps) {
   return (
     <div
-      className={`card flex items-center gap-3 transition-all cursor-grab active:cursor-grabbing ${
+      ref={refCallback}
+      className={`card flex items-center gap-3 transition-all cursor-grab active:cursor-grabbing select-none ${
         isDragging ? 'opacity-50 scale-95' : ''
       } ${isDragOver ? 'ring-2 ring-gold ring-offset-2' : ''}`}
       draggable
@@ -412,6 +563,7 @@ function DraggableItem({
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
+      onTouchCancel={onTouchCancel}
     >
       {/* Drag handle */}
       <div className="text-text-light touch-none">
@@ -560,13 +712,6 @@ function ScheduleViewer({ onBack }: ViewerProps) {
     { dayNumber: 5, date: '2025-01-19', scenes: [10, 11], location: 'OFFICE' },
   ];
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return `${days[date.getDay()]} ${date.getDate()} ${months[date.getMonth()]}`;
-  };
-
   const today = new Date().toISOString().split('T')[0];
 
   return (
@@ -606,7 +751,7 @@ function ScheduleViewer({ onBack }: ViewerProps) {
                         </span>
                       )}
                     </div>
-                    <span className="text-sm text-text-muted">{formatDate(day.date)}</span>
+                    <span className="text-sm text-text-muted">{formatShortDate(day.date)}</span>
                   </div>
                   <span className="text-xs text-text-light">{day.scenes.length} scenes</span>
                 </div>
@@ -647,13 +792,6 @@ function CallSheetArchive({ onBack }: ViewerProps) {
     { id: '4', date: '2025-01-13', productionDay: 1, scenes: 3 },
   ];
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return `${days[date.getDay()]} ${date.getDate()} ${months[date.getMonth()]}`;
-  };
-
   return (
     <>
       <div className="sticky top-0 z-30 bg-card border-b border-border safe-top">
@@ -692,7 +830,7 @@ function CallSheetArchive({ onBack }: ViewerProps) {
                 </div>
                 <div className="text-left">
                   <h3 className="text-sm font-semibold text-text-primary">Day {sheet.productionDay}</h3>
-                  <p className="text-xs text-text-muted">{formatDate(sheet.date)} • {sheet.scenes} scenes</p>
+                  <p className="text-xs text-text-muted">{formatShortDate(sheet.date)} • {sheet.scenes} scenes</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -718,10 +856,23 @@ function CallSheetArchive({ onBack }: ViewerProps) {
 }
 
 // Settings Component
-function Settings({ onBack }: ViewerProps) {
+interface SettingsProps {
+  onBack: () => void;
+  onStartNewProject?: () => void;
+}
+
+function Settings({ onBack, onStartNewProject }: SettingsProps) {
   const { clearProject, currentProject } = useProjectStore();
   const { resetToDefaults } = useNavigationStore();
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [showNewProjectConfirm, setShowNewProjectConfirm] = useState(false);
+
+  const handleStartNewProject = () => {
+    clearProject();
+    resetToDefaults();
+    setShowNewProjectConfirm(false);
+    onStartNewProject?.();
+  };
 
   return (
     <>
@@ -753,6 +904,40 @@ function Settings({ onBack }: ViewerProps) {
                 {currentProject.scenes.length} scenes • {currentProject.characters.length} characters
               </div>
             )}
+          </div>
+        </section>
+
+        <section className="mb-6">
+          <h2 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-3">PROJECT</h2>
+          <div className="space-y-2">
+            <button
+              onClick={() => setShowNewProjectConfirm(true)}
+              className="card w-full text-left flex items-center gap-3 hover:bg-gold/5 transition-colors"
+            >
+              <div className="w-8 h-8 rounded-lg bg-gold/10 flex items-center justify-center">
+                <svg className="w-4 h-4 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+              </div>
+              <div>
+                <span className="text-sm font-medium text-text-primary block">Start New Project</span>
+                <span className="text-xs text-text-muted">Upload a new script and start fresh</span>
+              </div>
+            </button>
+            <button
+              onClick={() => setShowClearConfirm(true)}
+              className="card w-full text-left flex items-center gap-3 hover:bg-red-50 transition-colors"
+            >
+              <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center">
+                <svg className="w-4 h-4 text-error" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </div>
+              <div>
+                <span className="text-sm font-medium text-error block">Clear All Data</span>
+                <span className="text-xs text-text-muted">Delete all photos and captured data</span>
+              </div>
+            </button>
           </div>
         </section>
 
@@ -803,16 +988,6 @@ function Settings({ onBack }: ViewerProps) {
           </div>
         </section>
 
-        <section>
-          <h2 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-3">DATA</h2>
-          <button
-            onClick={() => setShowClearConfirm(true)}
-            className="card w-full text-left text-error hover:bg-red-50 transition-colors"
-          >
-            Clear All Data
-          </button>
-        </section>
-
         {showClearConfirm && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
             <div className="bg-card rounded-xl p-6 max-w-sm w-full">
@@ -835,6 +1010,31 @@ function Settings({ onBack }: ViewerProps) {
                   className="flex-1 px-4 py-2.5 rounded-button bg-error text-white font-medium"
                 >
                   Clear Data
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showNewProjectConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-card rounded-xl p-6 max-w-sm w-full">
+              <h3 className="text-lg font-semibold text-text-primary mb-2">Start New Project?</h3>
+              <p className="text-sm text-text-muted mb-6">
+                This will clear all current project data and take you to the setup screen. Make sure you've synced any important data first.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowNewProjectConfirm(false)}
+                  className="flex-1 px-4 py-2.5 rounded-button bg-gray-100 text-text-primary font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleStartNewProject}
+                  className="flex-1 px-4 py-2.5 rounded-button gold-gradient text-white font-medium"
+                >
+                  Start New
                 </button>
               </div>
             </div>
