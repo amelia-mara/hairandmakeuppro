@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { useNavigationStore, MAX_BOTTOM_NAV_ITEMS } from '@/stores/navigationStore';
 import { useThemeStore, type Theme } from '@/stores/themeStore';
@@ -14,11 +14,29 @@ type MoreView = 'menu' | 'script' | 'schedule' | 'callsheets' | 'settings' | 'ed
 interface MoreProps {
   onNavigateToTab?: (tab: NavTab) => void;
   onStartNewProject?: () => void;
+  initialView?: NavTab;
 }
 
-export function More({ onNavigateToTab, onStartNewProject }: MoreProps) {
-  const [currentView, setCurrentView] = useState<MoreView>('menu');
+export function More({ onNavigateToTab, onStartNewProject, initialView }: MoreProps) {
+  // Determine initial view based on the tab that was navigated to
+  const getInitialView = (): MoreView => {
+    if (initialView && ['script', 'schedule', 'callsheets', 'settings'].includes(initialView)) {
+      return initialView as MoreView;
+    }
+    return 'menu';
+  };
+
+  const [currentView, setCurrentView] = useState<MoreView>(getInitialView);
   const { isEditMenuOpen, closeEditMenu, openEditMenu } = useNavigationStore();
+
+  // Update view when initialView prop changes (e.g., user taps different tab)
+  useEffect(() => {
+    if (initialView && ['script', 'schedule', 'callsheets', 'settings'].includes(initialView)) {
+      setCurrentView(initialView as MoreView);
+    } else if (initialView === 'more') {
+      setCurrentView('menu');
+    }
+  }, [initialView]);
 
   // If edit menu is open via store, show it
   const effectiveView = isEditMenuOpen ? 'editMenu' : currentView;
@@ -36,16 +54,26 @@ export function More({ onNavigateToTab, onStartNewProject }: MoreProps) {
     setCurrentView('menu');
   };
 
+  // Handle back navigation - if user came from bottom nav, go to 'today' instead of 'menu'
+  const handleBack = () => {
+    if (initialView && ['script', 'schedule', 'callsheets', 'settings'].includes(initialView)) {
+      // User navigated directly from bottom nav - go to Today
+      onNavigateToTab?.('today');
+    } else {
+      setCurrentView('menu');
+    }
+  };
+
   const renderView = () => {
     switch (effectiveView) {
       case 'script':
-        return <ScriptViewer onBack={() => setCurrentView('menu')} />;
+        return <ScriptViewer onBack={handleBack} />;
       case 'schedule':
-        return <ScheduleViewer onBack={() => setCurrentView('menu')} />;
+        return <ScheduleViewer onBack={handleBack} />;
       case 'callsheets':
-        return <CallSheetArchive onBack={() => setCurrentView('menu')} />;
+        return <CallSheetArchive onBack={handleBack} />;
       case 'settings':
-        return <Settings onBack={() => setCurrentView('menu')} onStartNewProject={onStartNewProject} onNavigateToExport={() => setCurrentView('export')} onNavigateToArchived={() => setCurrentView('archivedProjects')} />;
+        return <Settings onBack={handleBack} onStartNewProject={onStartNewProject} onNavigateToExport={() => setCurrentView('export')} onNavigateToArchived={() => setCurrentView('archivedProjects')} />;
       case 'editMenu':
         return <EditMenuScreen onDone={handleEditMenuClose} />;
       case 'export':

@@ -123,13 +123,13 @@ export default function App() {
       case 'budget':
         return <Budget />;
       // These tabs are handled by the More component internally,
-      // but if user navigates directly (e.g., from customized nav), show More
+      // but if user navigates directly (e.g., from customized nav), show the specific view
       case 'script':
       case 'schedule':
       case 'callsheets':
       case 'settings':
       case 'more':
-        return <More onNavigateToTab={handleNavigateToTab} onStartNewProject={handleStartNewProject} />;
+        return <More onNavigateToTab={handleNavigateToTab} onStartNewProject={handleStartNewProject} initialView={activeTab} />;
       default:
         return <Today onSceneSelect={handleSceneSelect} />;
     }
