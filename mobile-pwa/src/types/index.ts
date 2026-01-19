@@ -12,7 +12,7 @@ export interface Project {
 
 export interface Scene {
   id: string;
-  sceneNumber: number;
+  sceneNumber: string; // Can be "4A", "4B", etc. for alphanumeric scene numbers
   slugline: string;
   intExt: 'INT' | 'EXT';
   timeOfDay: 'DAY' | 'NIGHT' | 'MORNING' | 'EVENING' | 'CONTINUOUS';
@@ -36,7 +36,7 @@ export interface Look {
   id: string;
   characterId: string;
   name: string;
-  scenes: number[];
+  scenes: string[]; // Scene numbers can be alphanumeric
   estimatedTime: number;
   masterReference?: Photo;
   makeup: MakeupDetails;
@@ -221,22 +221,25 @@ export const SCENE_FILMING_STATUS_CONFIG: Record<SceneFilmingStatus, {
   textClass: string;
   borderClass: string;
   color: string;
+  glassOverlay: string;
 }> = {
   'not-filmed': {
-    label: 'Not Filmed',
-    shortLabel: 'Not Filmed',
-    bgClass: 'bg-gray-100',
-    textClass: 'text-gray-500',
-    borderClass: 'border-gray-300',
-    color: '#6b7280',
+    label: 'Incomplete',
+    shortLabel: 'Incomplete',
+    bgClass: 'bg-red-100',
+    textClass: 'text-red-600',
+    borderClass: 'border-red-400',
+    color: '#dc2626',
+    glassOverlay: 'rgba(239, 68, 68, 0.15)',
   },
   'partial': {
-    label: 'Partially Filmed',
-    shortLabel: 'Partial',
-    bgClass: 'bg-orange-100',
-    textClass: 'text-orange-600',
-    borderClass: 'border-orange-400',
-    color: '#ea580c',
+    label: 'Part Complete',
+    shortLabel: 'Part Complete',
+    bgClass: 'bg-amber-100',
+    textClass: 'text-amber-600',
+    borderClass: 'border-amber-400',
+    color: '#d97706',
+    glassOverlay: 'rgba(245, 158, 11, 0.15)',
   },
   'complete': {
     label: 'Complete',
@@ -245,30 +248,139 @@ export const SCENE_FILMING_STATUS_CONFIG: Record<SceneFilmingStatus, {
     textClass: 'text-green-600',
     borderClass: 'border-green-400',
     color: '#16a34a',
+    glassOverlay: 'rgba(34, 197, 94, 0.15)',
   },
 };
 
+// Call Sheet Types - Comprehensive model for PDF call sheets
 export interface CallSheet {
   id: string;
   date: string; // ISO date YYYY-MM-DD
   productionDay: number;
+  totalProductionDays?: number;
+  dayType?: string; // e.g., "10 HRS CONTINUOUS WORKING DAY"
+
+  // Call times
   unitCallTime: string; // "06:00" format
-  firstShotEstimate?: string;
-  lunchEstimate?: string;
+  onSetTime?: string; // When to be on set
+  rehearsalsTime?: string; // "07:45" format
+  firstShotTime?: string; // "08:20" format (TO SHOOT FOR)
+
+  // Pre-call times by department
+  preCalls?: {
+    ads?: string;
+    hmu?: string; // Hair & Makeup
+    costume?: string;
+    production?: string;
+    location?: string;
+  };
+
+  // Meal times
+  breakfastTime?: string; // "05:30 - 06:00"
+  lunchTime?: string; // "11:30 ONWARDS" or time range
+  lunchLocation?: string; // "IN HAND, HOTBOX" or location
+
+  // Wrap estimates
+  cameraWrapEstimate?: string;
   wrapEstimate?: string;
-  weatherNote?: string;
-  scenes: ShootingScene[];
+
+  // Weather
+  weather?: {
+    conditions?: string; // "Showers", "Sunny", etc.
+    tempHigh?: number;
+    tempLow?: number;
+    sunrise?: string;
+    sunset?: string;
+  };
+
+  // Location info
+  unitBase?: CallSheetLocation;
+  shootLocation?: CallSheetLocation;
+  crewParking?: CallSheetLocation;
+
+  // Unit notes
+  unitNotes?: string[];
+
+  // Scene schedule
+  scenes: CallSheetScene[];
+
+  // Cast call times
+  castCalls?: CastCall[];
+
+  // Supporting artists (SA/extras)
+  supportingArtists?: SupportingArtistCall[];
+
+  // Metadata
   uploadedAt: Date;
   pdfUri?: string;
+  rawText?: string; // Original extracted text for debugging
 }
 
+export interface CallSheetLocation {
+  name: string;
+  address?: string;
+  what3words?: string;
+  notes?: string;
+}
+
+export interface CallSheetScene {
+  sceneNumber: string; // Can be "4A", "4B", etc.
+  location?: string; // "LOC1", "LOC2", etc.
+  setDescription: string; // "EXT. FARMHOUSE - DRIVEWAY"
+  action?: string; // Brief description of what happens
+  dayNight: 'D' | 'N' | 'D/N' | string; // D1 = Day 1, N = Night
+  pages?: string; // "1/8", "2/8", "1", etc.
+  cast?: string[]; // Cast IDs or numbers ["1", "2", "4", "7"]
+  notes?: string; // HMU notes, AV notes, etc.
+  estimatedTime?: string; // "08:20 - 08:40"
+  startTime?: string;
+  endTime?: string;
+
+  // Runtime tracking (for Today page)
+  shootOrder: number;
+  status: ShootingSceneStatus;
+  filmingStatus?: SceneFilmingStatus;
+  filmingNotes?: string;
+}
+
+export interface CastCall {
+  id: string; // Cast number from call sheet
+  name: string;
+  character: string;
+  status: 'SW' | 'SWF' | 'W' | 'WF' | 'H' | 'T' | 'R' | string; // Start Work, Start Work Finish, Work, etc.
+  pickup?: string; // Pickup time
+  driver?: string; // Driver type: "RW", "MINIBUS", "LW", etc.
+  callTime: string; // Report time at unit base
+  makeupCall?: string; // B/Fast or direct to HMU
+  costumeCall?: string;
+  hmuCall?: string; // Hair & Makeup time
+  travelTime?: string; // Travel to set
+  onSetTime?: string; // On set time
+  notes?: string;
+}
+
+export interface SupportingArtistCall {
+  id: string;
+  name: string;
+  designation: string; // Role/character
+  status: string;
+  callTime: string;
+  makeupCall?: string;
+  costumeCall?: string;
+  hmuCall?: string;
+  travelTime?: string;
+  onSetTime?: string;
+  notes?: string;
+}
+
+// Legacy interface for backwards compatibility
 export interface ShootingScene {
   sceneNumber: number;
   shootOrder: number;
   estimatedTime?: string;
   status: ShootingSceneStatus;
-  filmingStatus?: SceneFilmingStatus; // Tracks actual filming outcome
-  filmingNotes?: string; // Reason for not filmed/partial
+  filmingStatus?: SceneFilmingStatus;
+  filmingNotes?: string;
   notes?: string;
 }
 

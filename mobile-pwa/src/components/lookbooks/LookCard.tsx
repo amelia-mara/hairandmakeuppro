@@ -15,7 +15,7 @@ export function LookCard({ look, character: _character, progress }: LookCardProp
   const progressPercent = progress.total > 0 ? (progress.captured / progress.total) * 100 : 0;
 
   // Get capture status for each scene in this look
-  const getSceneCaptureStatus = (sceneNum: number): 'captured' | 'not-captured' => {
+  const getSceneCaptureStatus = (sceneNum: string): 'captured' | 'not-captured' => {
     if (!currentProject) return 'not-captured';
     const scene = currentProject.scenes.find(s => s.sceneNumber === sceneNum);
     if (!scene) return 'not-captured';
@@ -28,7 +28,7 @@ export function LookCard({ look, character: _character, progress }: LookCardProp
   };
 
   // Navigate to scene for capturing
-  const handleSceneClick = (sceneNum: number) => {
+  const handleSceneClick = (sceneNum: string) => {
     if (!currentProject) return;
     const scene = currentProject.scenes.find(s => s.sceneNumber === sceneNum);
     if (scene) {

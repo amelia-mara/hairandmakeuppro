@@ -1,7 +1,8 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { useNavigationStore, MAX_BOTTOM_NAV_ITEMS } from '@/stores/navigationStore';
 import { useThemeStore, type Theme } from '@/stores/themeStore';
+import { useCallSheetStore } from '@/stores/callSheetStore';
 import { RateCardSettings } from '@/components/timesheet';
 import { NavIcon } from '@/components/navigation/BottomNav';
 import { formatShortDate } from '@/utils/helpers';
@@ -14,11 +15,29 @@ type MoreView = 'menu' | 'script' | 'schedule' | 'callsheets' | 'settings' | 'ed
 interface MoreProps {
   onNavigateToTab?: (tab: NavTab) => void;
   onStartNewProject?: () => void;
+  initialView?: NavTab;
 }
 
-export function More({ onNavigateToTab, onStartNewProject }: MoreProps) {
-  const [currentView, setCurrentView] = useState<MoreView>('menu');
+export function More({ onNavigateToTab, onStartNewProject, initialView }: MoreProps) {
+  // Determine initial view based on the tab that was navigated to
+  const getInitialView = (): MoreView => {
+    if (initialView && ['script', 'schedule', 'callsheets', 'settings'].includes(initialView)) {
+      return initialView as MoreView;
+    }
+    return 'menu';
+  };
+
+  const [currentView, setCurrentView] = useState<MoreView>(getInitialView);
   const { isEditMenuOpen, closeEditMenu, openEditMenu } = useNavigationStore();
+
+  // Update view when initialView prop changes (e.g., user taps different tab)
+  useEffect(() => {
+    if (initialView && ['script', 'schedule', 'callsheets', 'settings'].includes(initialView)) {
+      setCurrentView(initialView as MoreView);
+    } else if (initialView === 'more') {
+      setCurrentView('menu');
+    }
+  }, [initialView]);
 
   // If edit menu is open via store, show it
   const effectiveView = isEditMenuOpen ? 'editMenu' : currentView;
@@ -36,16 +55,26 @@ export function More({ onNavigateToTab, onStartNewProject }: MoreProps) {
     setCurrentView('menu');
   };
 
+  // Handle back navigation - if user came from bottom nav, go to 'today' instead of 'menu'
+  const handleBack = () => {
+    if (initialView && ['script', 'schedule', 'callsheets', 'settings'].includes(initialView)) {
+      // User navigated directly from bottom nav - go to Today
+      onNavigateToTab?.('today');
+    } else {
+      setCurrentView('menu');
+    }
+  };
+
   const renderView = () => {
     switch (effectiveView) {
       case 'script':
-        return <ScriptViewer onBack={() => setCurrentView('menu')} />;
+        return <ScriptViewer onBack={handleBack} />;
       case 'schedule':
-        return <ScheduleViewer onBack={() => setCurrentView('menu')} />;
+        return <ScheduleViewer onBack={handleBack} />;
       case 'callsheets':
-        return <CallSheetArchive onBack={() => setCurrentView('menu')} />;
+        return <CallSheetArchive onBack={handleBack} />;
       case 'settings':
-        return <Settings onBack={() => setCurrentView('menu')} onStartNewProject={onStartNewProject} onNavigateToExport={() => setCurrentView('export')} onNavigateToArchived={() => setCurrentView('archivedProjects')} />;
+        return <Settings onBack={handleBack} onStartNewProject={onStartNewProject} onNavigateToExport={() => setCurrentView('export')} onNavigateToArchived={() => setCurrentView('archivedProjects')} />;
       case 'editMenu':
         return <EditMenuScreen onDone={handleEditMenuClose} />;
       case 'export':
@@ -642,10 +671,10 @@ interface ViewerProps {
 
 function ScriptViewer({ onBack }: ViewerProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedScene, setSelectedScene] = useState<number | null>(null);
+  const [selectedScene, setSelectedScene] = useState<string | null>(null);
   const { currentProject } = useProjectStore();
 
-  const sceneNumbers = currentProject?.scenes.map(s => s.sceneNumber).sort((a, b) => a - b) || [];
+  const sceneNumbers = currentProject?.scenes.map(s => s.sceneNumber).sort((a, b) => a.localeCompare(b, undefined, { numeric: true })) || [];
 
   return (
     <>
@@ -678,7 +707,7 @@ function ScriptViewer({ onBack }: ViewerProps) {
             </div>
             <select
               value={selectedScene || ''}
-              onChange={(e) => setSelectedScene(Number(e.target.value) || null)}
+              onChange={(e) => setSelectedScene(e.target.value || null)}
               className="px-3 py-2 text-sm border border-border rounded-lg bg-card text-text-primary"
             >
               <option value="">Jump to...</option>
@@ -791,12 +820,37 @@ function ScheduleViewer({ onBack }: ViewerProps) {
 
 // Call Sheet Archive Component
 function CallSheetArchive({ onBack }: ViewerProps) {
-  const demoCallSheets = [
-    { id: '1', date: '2025-01-18', productionDay: 4, scenes: 5 },
-    { id: '2', date: '2025-01-15', productionDay: 3, scenes: 4 },
-    { id: '3', date: '2025-01-14', productionDay: 2, scenes: 6 },
-    { id: '4', date: '2025-01-13', productionDay: 1, scenes: 3 },
-  ];
+  const { callSheets, activeCallSheetId, setActiveCallSheet, uploadCallSheet, deleteCallSheet, isUploading, uploadError } = useCallSheetStore();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedSheet, setSelectedSheet] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type === 'application/pdf') {
+      try {
+        await uploadCallSheet(file);
+      } catch (err) {
+        console.error('Failed to upload call sheet:', err);
+      }
+    }
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleSetActive = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setActiveCallSheet(id);
+  };
+
+  const handleDelete = (id: string) => {
+    deleteCallSheet(id);
+    setShowDeleteConfirm(null);
+  };
+
+  const selectedCallSheet = selectedSheet ? callSheets.find(cs => cs.id === selectedSheet) : null;
 
   return (
     <>
@@ -814,49 +868,315 @@ function CallSheetArchive({ onBack }: ViewerProps) {
               </button>
               <h1 className="text-lg font-semibold text-text-primary">Call Sheets</h1>
             </div>
-            <button className="p-2 text-gold active:opacity-70 transition-opacity touch-manipulation">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-              </svg>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="p-2 text-gold active:opacity-70 transition-opacity touch-manipulation"
+              disabled={isUploading}
+            >
+              {isUploading ? (
+                <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+              )}
             </button>
           </div>
         </div>
       </div>
 
-      <div className="mobile-container px-4 py-4">
-        <div className="space-y-2">
-          {demoCallSheets.map((sheet) => (
-            <button
-              key={sheet.id}
-              className="w-full card flex items-center justify-between active:scale-[0.98] transition-transform"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
-                  <NavIcon name="document" className="w-5 h-5 text-text-light" />
-                </div>
-                <div className="text-left">
-                  <h3 className="text-sm font-semibold text-text-primary">Day {sheet.productionDay}</h3>
-                  <p className="text-xs text-text-muted">{formatShortDate(sheet.date)} • {sheet.scenes} scenes</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <button className="px-2.5 py-1 text-[10px] font-medium rounded-full bg-gold-100 text-gold">
-                  Set Today
-                </button>
-                <svg className="w-4 h-4 text-text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
-            </button>
-          ))}
-        </div>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf"
+        onChange={handleFileSelect}
+        className="hidden"
+      />
 
-        <div className="mt-6 text-center">
-          <button className="px-6 py-2.5 rounded-button gold-gradient text-white text-sm font-medium active:scale-95 transition-transform">
-            Upload Call Sheet PDF
-          </button>
-        </div>
+      <div className="mobile-container px-4 py-4">
+        {uploadError && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm text-red-600">{uploadError}</p>
+          </div>
+        )}
+
+        {callSheets.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12">
+            <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+              <NavIcon name="document" className="w-8 h-8 text-gray-300" />
+            </div>
+            <h3 className="text-base font-semibold text-text-primary mb-1">No Call Sheets</h3>
+            <p className="text-sm text-text-muted text-center mb-6">
+              Upload your daily call sheet PDFs to track scenes and times
+            </p>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+              className="px-6 py-2.5 rounded-button gold-gradient text-white text-sm font-medium active:scale-95 transition-transform disabled:opacity-50"
+            >
+              {isUploading ? 'Uploading...' : 'Upload Call Sheet PDF'}
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="space-y-2">
+              {callSheets.map((sheet) => (
+                <div
+                  key={sheet.id}
+                  onClick={() => setSelectedSheet(sheet.id)}
+                  className="w-full card flex items-center justify-between active:scale-[0.98] transition-transform cursor-pointer"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                      sheet.id === activeCallSheetId ? 'bg-gold-100' : 'bg-gray-100'
+                    }`}>
+                      <NavIcon name="document" className={`w-5 h-5 ${
+                        sheet.id === activeCallSheetId ? 'text-gold' : 'text-text-light'
+                      }`} />
+                    </div>
+                    <div className="text-left">
+                      <h3 className="text-sm font-semibold text-text-primary">
+                        Day {sheet.productionDay}
+                        {sheet.totalProductionDays && ` of ${sheet.totalProductionDays}`}
+                      </h3>
+                      <p className="text-xs text-text-muted">
+                        {formatShortDate(sheet.date)} • {sheet.scenes.length} scene{sheet.scenes.length !== 1 ? 's' : ''}
+                        {sheet.unitCallTime && ` • Call: ${sheet.unitCallTime}`}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {sheet.id === activeCallSheetId ? (
+                      <span className="px-2.5 py-1 text-[10px] font-medium rounded-full bg-green-100 text-green-600">
+                        Active
+                      </span>
+                    ) : (
+                      <button
+                        onClick={(e) => handleSetActive(sheet.id, e)}
+                        className="px-2.5 py-1 text-[10px] font-medium rounded-full bg-gold-100 text-gold hover:bg-gold-200 transition-colors"
+                      >
+                        Set Active
+                      </button>
+                    )}
+                    <svg className="w-4 h-4 text-text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 text-center">
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+                className="px-6 py-2.5 rounded-button gold-gradient text-white text-sm font-medium active:scale-95 transition-transform disabled:opacity-50"
+              >
+                {isUploading ? 'Uploading...' : 'Upload Call Sheet PDF'}
+              </button>
+            </div>
+          </>
+        )}
       </div>
+
+      {/* Call Sheet Detail Modal */}
+      {selectedCallSheet && (
+        <div
+          className="fixed inset-0 z-50 bg-black/50 flex items-end justify-center"
+          onClick={() => setSelectedSheet(null)}
+        >
+          <div
+            className="w-full max-w-lg bg-card rounded-t-2xl max-h-[85vh] overflow-hidden animate-slideUp"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sticky top-0 bg-card border-b border-border px-4 py-3 flex items-center justify-between">
+              <div>
+                <h2 className="text-base font-semibold text-text-primary">
+                  Day {selectedCallSheet.productionDay} Call Sheet
+                </h2>
+                <p className="text-xs text-text-muted">{formatShortDate(selectedCallSheet.date)}</p>
+              </div>
+              <button
+                onClick={() => setSelectedSheet(null)}
+                className="p-1 text-text-muted hover:text-text-primary"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="overflow-y-auto p-4 space-y-4" style={{ maxHeight: 'calc(85vh - 120px)' }}>
+              {/* Call Times */}
+              <div className="card">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-text-light mb-3">Call Times</h3>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-text-muted">Unit Call:</span>
+                    <span className="ml-2 font-semibold text-text-primary">{selectedCallSheet.unitCallTime}</span>
+                  </div>
+                  {selectedCallSheet.rehearsalsTime && (
+                    <div>
+                      <span className="text-text-muted">Rehearsals:</span>
+                      <span className="ml-2 font-semibold text-text-primary">{selectedCallSheet.rehearsalsTime}</span>
+                    </div>
+                  )}
+                  {selectedCallSheet.firstShotTime && (
+                    <div>
+                      <span className="text-text-muted">First Shot:</span>
+                      <span className="ml-2 font-semibold text-text-primary">{selectedCallSheet.firstShotTime}</span>
+                    </div>
+                  )}
+                  {selectedCallSheet.wrapEstimate && (
+                    <div>
+                      <span className="text-text-muted">Est. Wrap:</span>
+                      <span className="ml-2 font-semibold text-text-primary">{selectedCallSheet.wrapEstimate}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Pre-calls */}
+              {selectedCallSheet.preCalls && (
+                <div className="card">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-text-light mb-3">Pre-Calls</h3>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    {selectedCallSheet.preCalls.hmu && (
+                      <div>
+                        <span className="text-text-muted">H&MU:</span>
+                        <span className="ml-2 font-semibold text-gold">{selectedCallSheet.preCalls.hmu}</span>
+                      </div>
+                    )}
+                    {selectedCallSheet.preCalls.costume && (
+                      <div>
+                        <span className="text-text-muted">Costume:</span>
+                        <span className="ml-2 font-semibold text-text-primary">{selectedCallSheet.preCalls.costume}</span>
+                      </div>
+                    )}
+                    {selectedCallSheet.preCalls.ads && (
+                      <div>
+                        <span className="text-text-muted">ADs:</span>
+                        <span className="ml-2 font-semibold text-text-primary">{selectedCallSheet.preCalls.ads}</span>
+                      </div>
+                    )}
+                    {selectedCallSheet.preCalls.production && (
+                      <div>
+                        <span className="text-text-muted">Production:</span>
+                        <span className="ml-2 font-semibold text-text-primary">{selectedCallSheet.preCalls.production}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Scenes */}
+              <div className="card">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-text-light mb-3">
+                  Scenes ({selectedCallSheet.scenes.length})
+                </h3>
+                <div className="space-y-2">
+                  {selectedCallSheet.scenes.map((scene, idx) => (
+                    <div key={idx} className="flex items-start gap-3 py-2 border-b border-border last:border-0">
+                      <span className="w-8 text-sm font-bold text-text-primary">{scene.sceneNumber}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-text-secondary truncate">{scene.setDescription}</p>
+                        {scene.estimatedTime && (
+                          <p className="text-xs text-text-muted">{scene.estimatedTime}</p>
+                        )}
+                        {scene.notes && (
+                          <p className="text-xs text-amber-600 mt-1">{scene.notes}</p>
+                        )}
+                      </div>
+                      <span className="text-xs text-text-light">{scene.dayNight}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Cast Calls */}
+              {selectedCallSheet.castCalls && selectedCallSheet.castCalls.length > 0 && (
+                <div className="card">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-text-light mb-3">
+                    Cast Calls ({selectedCallSheet.castCalls.length})
+                  </h3>
+                  <div className="space-y-2">
+                    {selectedCallSheet.castCalls.map((cast, idx) => (
+                      <div key={idx} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+                        <div>
+                          <p className="text-sm font-medium text-text-primary">{cast.name}</p>
+                          <p className="text-xs text-text-muted">{cast.character}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-semibold text-text-primary">{cast.callTime}</p>
+                          {cast.hmuCall && (
+                            <p className="text-xs text-gold">HMU: {cast.hmuCall}</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Weather */}
+              {selectedCallSheet.weather && (
+                <div className="card">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-text-light mb-3">Weather</h3>
+                  <div className="flex items-center gap-4 text-sm">
+                    {selectedCallSheet.weather.conditions && (
+                      <span className="text-text-primary">{selectedCallSheet.weather.conditions}</span>
+                    )}
+                    {(selectedCallSheet.weather.tempHigh || selectedCallSheet.weather.tempLow) && (
+                      <span className="text-text-muted">
+                        {selectedCallSheet.weather.tempHigh && `${selectedCallSheet.weather.tempHigh}°`}
+                        {selectedCallSheet.weather.tempLow && ` / ${selectedCallSheet.weather.tempLow}°`}
+                      </span>
+                    )}
+                    {selectedCallSheet.weather.sunrise && (
+                      <span className="text-text-muted text-xs">
+                        Sunrise: {selectedCallSheet.weather.sunrise}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Delete Button */}
+              <div className="pt-4 border-t border-border">
+                {showDeleteConfirm === selectedCallSheet.id ? (
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setShowDeleteConfirm(null)}
+                      className="flex-1 py-2.5 rounded-button border border-border text-text-muted text-sm font-medium"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => {
+                        handleDelete(selectedCallSheet.id);
+                        setSelectedSheet(null);
+                      }}
+                      className="flex-1 py-2.5 rounded-button bg-red-500 text-white text-sm font-medium"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setShowDeleteConfirm(selectedCallSheet.id)}
+                    className="w-full py-2.5 rounded-button border border-red-200 text-red-500 text-sm font-medium"
+                  >
+                    Delete Call Sheet
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
