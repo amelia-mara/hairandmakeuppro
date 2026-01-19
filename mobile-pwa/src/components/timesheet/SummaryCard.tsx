@@ -31,86 +31,63 @@ export function SummaryCard({ summary }: SummaryCardProps) {
   }
 
   return (
-    <div className="card space-y-4">
-      {/* Header with total hours - Production accountability focus */}
-      <div className="flex items-center justify-between">
-        <h3 className="section-header">WEEKLY HOURS</h3>
-        <div className="text-right">
-          <span className="text-2xl font-bold text-gold">{summary.totalHours.toFixed(1)}</span>
-          <span className="text-sm font-medium text-gold ml-1">hrs</span>
-        </div>
-      </div>
-
-      {/* Hours breakdown - Primary focus for production */}
-      <div className="grid grid-cols-2 gap-3">
-        {/* Pre-Call Hours - Gold highlight */}
-        {summary.preCallHours > 0 && (
-          <SummaryItem
-            label="Pre-Call"
-            value={`${summary.preCallHours.toFixed(1)}h`}
-            highlight="gold"
-          />
-        )}
-
-        {/* Base Hours */}
+    <div className="card">
+      {/* Compact 4-column summary grid */}
+      <div className="grid grid-cols-4 gap-2 text-center">
         <SummaryItem
-          label="Base Hours"
-          value={`${summary.baseHours.toFixed(1)}h`}
+          label="Days"
+          value={summary.entries.length.toString()}
         />
-
-        {/* OT Hours - Orange highlight */}
-        {summary.otHours > 0 && (
-          <SummaryItem
-            label="Overtime"
-            value={`${summary.otHours.toFixed(1)}h`}
-            highlight="orange"
-          />
-        )}
-
-        {/* Late Night Hours */}
-        {summary.lateNightHours > 0 && (
-          <SummaryItem
-            label="Late Night"
-            value={`${summary.lateNightHours.toFixed(1)}h`}
-            highlight="red"
-          />
-        )}
-
-        {/* 6th Day Hours */}
-        {summary.sixthDayHours > 0 && (
-          <SummaryItem
-            label="6th Day"
-            value={`${summary.sixthDayHours.toFixed(1)}h`}
-            highlight="gold"
-            badge="1.5x"
-          />
-        )}
-
-        {/* 7th Day Hours */}
-        {summary.seventhDayHours > 0 && (
-          <SummaryItem
-            label="7th Day"
-            value={`${summary.seventhDayHours.toFixed(1)}h`}
-            highlight="orange"
-            badge="2x"
-          />
-        )}
+        <SummaryItem
+          label="Base Hrs"
+          value={summary.baseHours.toFixed(0)}
+        />
+        <SummaryItem
+          label="Pre-Call"
+          value={summary.preCallHours.toFixed(1)}
+          subtext="@ 1.5x"
+        />
+        <SummaryItem
+          label="Overtime"
+          value={summary.otHours.toFixed(1)}
+          subtext="@ 1.5x"
+          highlight
+        />
       </div>
 
-      {/* Days worked */}
-      <div
-        className="flex items-center justify-between py-3 px-3 rounded-lg"
-        style={{ backgroundColor: 'var(--color-gold-soft)' }}
-      >
-        <span className="text-sm font-medium" style={{ color: 'var(--color-text-muted)' }}>
-          Days Worked
-        </span>
-        <span className="text-lg font-bold text-gold">{summary.entries.length}</span>
-      </div>
+      {/* Additional breakdown for 6th/7th day and late night if present */}
+      {(summary.sixthDayHours > 0 || summary.seventhDayHours > 0 || summary.lateNightHours > 0) && (
+        <div
+          className="grid grid-cols-3 gap-2 text-center mt-3 pt-3"
+          style={{ borderTop: '1px solid var(--color-border)' }}
+        >
+          {summary.sixthDayHours > 0 && (
+            <SummaryItem
+              label="6th Day"
+              value={summary.sixthDayHours.toFixed(1)}
+              subtext="@ 1.5x"
+            />
+          )}
+          {summary.seventhDayHours > 0 && (
+            <SummaryItem
+              label="7th Day"
+              value={summary.seventhDayHours.toFixed(1)}
+              subtext="@ 2x"
+            />
+          )}
+          {summary.lateNightHours > 0 && (
+            <SummaryItem
+              label="Late Night"
+              value={summary.lateNightHours.toFixed(1)}
+              subtext="@ 2x"
+            />
+          )}
+        </div>
+      )}
 
       {/* Optional: Earnings section (collapsed by default for production focus) */}
       {summary.totalEarnings > 0 && (
-        <details className="group">
+        <details className="group mt-4">
           <summary
             className="flex items-center justify-between cursor-pointer py-2"
             style={{ borderTop: '1px solid var(--color-border)' }}
@@ -155,48 +132,30 @@ export function SummaryCard({ summary }: SummaryCardProps) {
 interface SummaryItemProps {
   label: string;
   value: string;
-  highlight?: 'gold' | 'orange' | 'red';
-  badge?: string;
+  subtext?: string;
+  highlight?: boolean;
 }
 
-function SummaryItem({ label, value, highlight, badge }: SummaryItemProps) {
-  const highlightColors = {
-    gold: 'border-l-gold',
-    orange: 'border-l-orange-500',
-    red: 'border-l-red-500',
-  };
-
-  const textColors = {
-    gold: 'text-gold',
-    orange: 'text-orange-500',
-    red: 'text-red-500',
-  };
-
-  const badgeColors = {
-    gold: 'bg-gold/20 text-gold',
-    orange: 'bg-orange-500/20 text-orange-500',
-    red: 'bg-red-500/20 text-red-500',
-  };
-
+function SummaryItem({ label, value, subtext, highlight }: SummaryItemProps) {
   return (
-    <div
-      className={`rounded-lg p-3 ${highlight ? `border-l-4 ${highlightColors[highlight]}` : ''}`}
-      style={{ backgroundColor: 'var(--color-input-bg)' }}
-    >
-      <div className="flex items-center gap-1.5">
-        <span className="text-xs uppercase tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
-          {label}
-        </span>
-        {badge && highlight && (
-          <span className={`text-[9px] px-1 py-0.5 rounded font-semibold ${badgeColors[highlight]}`}>
-            {badge}
-          </span>
-        )}
+    <div className="py-2 px-1">
+      <div
+        className="text-[9px] uppercase tracking-wide font-medium mb-1"
+        style={{ color: 'var(--color-text-placeholder)' }}
+      >
+        {label}
       </div>
-      <div className={`text-lg font-semibold ${highlight ? textColors[highlight] : ''}`}
-           style={{ color: highlight ? undefined : 'var(--color-text-primary)' }}>
+      <div
+        className={`text-lg font-bold ${highlight ? 'text-gold' : ''}`}
+        style={{ color: highlight ? undefined : 'var(--color-text-primary)' }}
+      >
         {value}
       </div>
+      {subtext && (
+        <div className="text-[10px]" style={{ color: 'var(--color-text-placeholder)' }}>
+          {subtext}
+        </div>
+      )}
     </div>
   );
 }
