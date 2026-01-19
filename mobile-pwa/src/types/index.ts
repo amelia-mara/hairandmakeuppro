@@ -21,6 +21,8 @@ export interface Scene {
   characters: string[];
   isComplete: boolean;
   completedAt?: Date;
+  filmingStatus?: SceneFilmingStatus; // Tracks actual filming outcome
+  filmingNotes?: string; // Reason for not filmed/partial
 }
 
 export interface Character {
@@ -209,6 +211,43 @@ export type SceneFilter = 'all' | 'complete' | 'incomplete';
 
 export type ShootingSceneStatus = 'upcoming' | 'in-progress' | 'wrapped';
 
+// Filming completion status - tracks whether scene was actually filmed
+export type SceneFilmingStatus = 'not-filmed' | 'partial' | 'complete';
+
+export const SCENE_FILMING_STATUS_CONFIG: Record<SceneFilmingStatus, {
+  label: string;
+  shortLabel: string;
+  bgClass: string;
+  textClass: string;
+  borderClass: string;
+  color: string;
+}> = {
+  'not-filmed': {
+    label: 'Not Filmed',
+    shortLabel: 'Not Filmed',
+    bgClass: 'bg-gray-100',
+    textClass: 'text-gray-500',
+    borderClass: 'border-gray-300',
+    color: '#6b7280',
+  },
+  'partial': {
+    label: 'Partially Filmed',
+    shortLabel: 'Partial',
+    bgClass: 'bg-orange-100',
+    textClass: 'text-orange-600',
+    borderClass: 'border-orange-400',
+    color: '#ea580c',
+  },
+  'complete': {
+    label: 'Complete',
+    shortLabel: 'Complete',
+    bgClass: 'bg-green-100',
+    textClass: 'text-green-600',
+    borderClass: 'border-green-400',
+    color: '#16a34a',
+  },
+};
+
 export interface CallSheet {
   id: string;
   date: string; // ISO date YYYY-MM-DD
@@ -228,6 +267,8 @@ export interface ShootingScene {
   shootOrder: number;
   estimatedTime?: string;
   status: ShootingSceneStatus;
+  filmingStatus?: SceneFilmingStatus; // Tracks actual filming outcome
+  filmingNotes?: string; // Reason for not filmed/partial
   notes?: string;
 }
 
@@ -251,6 +292,7 @@ export interface BreakdownFilters {
   shootingDay: number | null;
   location: string | null;
   completionStatus: 'all' | 'complete' | 'incomplete';
+  filmingStatus: SceneFilmingStatus | 'all';
   lookId: string | null;
 }
 
