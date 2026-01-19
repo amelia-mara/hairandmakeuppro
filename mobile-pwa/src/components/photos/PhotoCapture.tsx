@@ -10,7 +10,7 @@ interface PhotoCaptureProps {
   onCapture: (blob: Blob) => void;
   angle?: PhotoAngle;
   characterName?: string;
-  sceneNumber?: number;
+  sceneNumber?: string;
   lookName?: string;
 }
 

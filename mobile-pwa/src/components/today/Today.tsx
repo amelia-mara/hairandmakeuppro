@@ -1,26 +1,28 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
+import { useCallSheetStore } from '@/stores/callSheetStore';
 import { CharacterAvatar } from '@/components/characters/CharacterAvatar';
 import { formatShortDate } from '@/utils/helpers';
-import type { ShootingSceneStatus, SceneFilmingStatus, CallSheet, ShootingScene } from '@/types';
+import type { ShootingSceneStatus, SceneFilmingStatus, CallSheet, CallSheetScene } from '@/types';
 import { SCENE_FILMING_STATUS_CONFIG } from '@/types';
+import { clsx } from 'clsx';
 
-// Demo call sheet for development
+// Demo call sheet for development (used when no call sheet is uploaded)
 const demoCallSheet: CallSheet = {
   id: 'call-1',
   date: new Date().toISOString().split('T')[0],
   productionDay: 4,
   unitCallTime: '06:00',
-  firstShotEstimate: '07:30',
-  lunchEstimate: '13:00',
+  firstShotTime: '07:30',
+  lunchTime: '13:00',
   wrapEstimate: '19:00',
-  weatherNote: 'Sunny, 22°C',
+  weather: { conditions: 'Sunny', tempHigh: 22 },
   scenes: [
-    { sceneNumber: 12, shootOrder: 1, estimatedTime: '07:30', status: 'wrapped', filmingStatus: 'complete' },
-    { sceneNumber: 15, shootOrder: 2, estimatedTime: '09:15', status: 'wrapped', filmingStatus: 'partial', filmingNotes: 'Missing wide shot due to lighting' },
-    { sceneNumber: 16, shootOrder: 3, estimatedTime: '11:00', status: 'in-progress' },
-    { sceneNumber: 8, shootOrder: 4, estimatedTime: '14:00', status: 'upcoming' },
-    { sceneNumber: 23, shootOrder: 5, estimatedTime: '16:30', status: 'upcoming' },
+    { sceneNumber: '12', setDescription: 'INT. COFFEE SHOP - DAY', dayNight: 'D', shootOrder: 1, estimatedTime: '07:30', status: 'wrapped', filmingStatus: 'complete' },
+    { sceneNumber: '15', setDescription: 'EXT. PARK - DAY', dayNight: 'D', shootOrder: 2, estimatedTime: '09:15', status: 'wrapped', filmingStatus: 'partial', filmingNotes: 'Missing wide shot due to lighting' },
+    { sceneNumber: '16', setDescription: 'INT. APARTMENT - DAY', dayNight: 'D', shootOrder: 3, estimatedTime: '11:00', status: 'in-progress' },
+    { sceneNumber: '8', setDescription: 'EXT. STREET - NIGHT', dayNight: 'N', shootOrder: 4, estimatedTime: '14:00', status: 'upcoming' },
+    { sceneNumber: '23', setDescription: 'INT. OFFICE - DAY', dayNight: 'D', shootOrder: 5, estimatedTime: '16:30', status: 'upcoming' },
   ],
   uploadedAt: new Date(),
 };
@@ -30,9 +32,20 @@ interface TodayProps {
 }
 
 export function Today({ onSceneSelect }: TodayProps) {
-  const { currentProject, sceneCaptures } = useProjectStore();
+  const { currentProject, sceneCaptures, updateSceneFilmingStatus: syncFilmingStatus } = useProjectStore();
+  const { getActiveCallSheet } = useCallSheetStore();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [callSheet, setCallSheet] = useState<CallSheet | null>(demoCallSheet);
+
+  // Get active call sheet from store, fallback to demo
+  const activeCallSheet = getActiveCallSheet();
+  const [callSheet, setCallSheet] = useState<CallSheet | null>(activeCallSheet || demoCallSheet);
+
+  // Update local state when active call sheet changes
+  useEffect(() => {
+    if (activeCallSheet) {
+      setCallSheet(activeCallSheet);
+    }
+  }, [activeCallSheet]);
 
   // Navigate days
   const navigateDay = (direction: -1 | 1) => {
@@ -57,13 +70,13 @@ export function Today({ onSceneSelect }: TodayProps) {
     });
   }, [callSheet]);
 
-  // Get scene data from project
-  const getSceneData = (sceneNumber: number) => {
+  // Get scene data from project (sceneNumber can be "4A", "12", etc.)
+  const getSceneData = (sceneNumber: string) => {
     return currentProject?.scenes.find(s => s.sceneNumber === sceneNumber);
   };
 
   // Get characters in scene
-  const getCharactersInScene = (sceneNumber: number) => {
+  const getCharactersInScene = (sceneNumber: string) => {
     const scene = getSceneData(sceneNumber);
     if (!scene || !currentProject) return [];
     return scene.characters
@@ -72,14 +85,14 @@ export function Today({ onSceneSelect }: TodayProps) {
   };
 
   // Get look for character in scene
-  const getLookForCharacter = (characterId: string, sceneNumber: number) => {
+  const getLookForCharacter = (characterId: string, sceneNumber: string) => {
     return currentProject?.looks.find(
       l => l.characterId === characterId && l.scenes.includes(sceneNumber)
     );
   };
 
   // Check if all characters have continuity captured for scene
-  const isSceneContinuityCaptured = (sceneNumber: number) => {
+  const isSceneContinuityCaptured = (sceneNumber: string) => {
     const scene = getSceneData(sceneNumber);
     if (!scene) return false;
 
@@ -91,7 +104,7 @@ export function Today({ onSceneSelect }: TodayProps) {
   };
 
   // Update scene status
-  const updateSceneStatus = (sceneNumber: number, status: ShootingSceneStatus) => {
+  const updateSceneStatus = (sceneNumber: string, status: ShootingSceneStatus) => {
     if (!callSheet) return;
     setCallSheet({
       ...callSheet,
@@ -101,25 +114,28 @@ export function Today({ onSceneSelect }: TodayProps) {
     });
   };
 
-  // Update scene filming status
+  // Update scene filming status - also syncs to project store for Breakdown view
   const updateSceneFilmingStatus = (
-    sceneNumber: number,
+    sceneNumber: string,
     filmingStatus: SceneFilmingStatus,
     filmingNotes?: string
   ) => {
     if (!callSheet) return;
+    // Update local call sheet state
     setCallSheet({
       ...callSheet,
       scenes: callSheet.scenes.map(s =>
         s.sceneNumber === sceneNumber
-          ? { ...s, filmingStatus, filmingNotes, status: 'wrapped' as ShootingSceneStatus }
+          ? { ...s, filmingStatus, filmingNotes }
           : s
       ),
     });
+    // Sync to project store for Breakdown view
+    syncFilmingStatus(sceneNumber, filmingStatus, filmingNotes);
   };
 
   // Handle scene tap
-  const handleSceneTap = (sceneNumber: number) => {
+  const handleSceneTap = (sceneNumber: string) => {
     const scene = getSceneData(sceneNumber);
     if (scene) {
       onSceneSelect(scene.id);
@@ -162,13 +178,14 @@ export function Today({ onSceneSelect }: TodayProps) {
           </div>
 
           {/* Weather note */}
-          {callSheet?.weatherNote && (
+          {callSheet?.weather?.conditions && (
             <div className="px-4 pb-3 -mt-1">
               <span className="text-xs text-text-muted flex items-center gap-1.5">
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
                 </svg>
-                {callSheet.weatherNote}
+                {callSheet.weather.conditions}
+                {callSheet.weather.tempHigh && `, ${callSheet.weather.tempHigh}°C`}
               </span>
             </div>
           )}
@@ -188,16 +205,16 @@ export function Today({ onSceneSelect }: TodayProps) {
                   <span className="text-sm text-text-muted">Unit Call</span>
                   <span className="text-sm font-semibold text-text-primary">{callSheet.unitCallTime}</span>
                 </div>
-                {callSheet.firstShotEstimate && (
+                {callSheet.firstShotTime && (
                   <div className="flex justify-between">
                     <span className="text-sm text-text-muted">First Shot</span>
-                    <span className="text-sm font-semibold text-text-primary">{callSheet.firstShotEstimate}</span>
+                    <span className="text-sm font-semibold text-text-primary">{callSheet.firstShotTime}</span>
                   </div>
                 )}
-                {callSheet.lunchEstimate && (
+                {callSheet.lunchTime && (
                   <div className="flex justify-between">
                     <span className="text-sm text-text-muted">Lunch</span>
-                    <span className="text-sm font-semibold text-text-primary">{callSheet.lunchEstimate}</span>
+                    <span className="text-sm font-semibold text-text-primary">{callSheet.lunchTime}</span>
                   </div>
                 )}
                 {callSheet.wrapEstimate && (
@@ -252,11 +269,11 @@ export function Today({ onSceneSelect }: TodayProps) {
 
 // Scene Card Component
 interface TodaySceneCardProps {
-  shootingScene: ShootingScene;
+  shootingScene: CallSheetScene;
   scene?: ReturnType<typeof useProjectStore.getState>['currentProject'] extends { scenes: (infer S)[] } | null ? S : never;
   characters: any[];
   isCaptured: boolean;
-  getLookForCharacter: (characterId: string, sceneNumber: number) => any;
+  getLookForCharacter: (characterId: string, sceneNumber: string) => any;
   onTap: () => void;
   onStatusChange: (status: ShootingSceneStatus) => void;
   onFilmingStatusChange: (status: SceneFilmingStatus, notes?: string) => void;
@@ -274,21 +291,37 @@ function TodaySceneCard({
 }: TodaySceneCardProps) {
   const [showActions, setShowActions] = useState(false);
   const [showFilmingStatusModal, setShowFilmingStatusModal] = useState(false);
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [filmingNotes, setFilmingNotes] = useState(shootingScene.filmingNotes || '');
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Get background color based on filming status (when wrapped)
-  const getBackgroundStyle = () => {
-    if (shootingScene.status === 'wrapped' && shootingScene.filmingStatus) {
-      const config = SCENE_FILMING_STATUS_CONFIG[shootingScene.filmingStatus];
-      return { borderLeftColor: config.color };
-    }
-    const colors: Record<ShootingSceneStatus, string> = {
-      'upcoming': '#e5e7eb',
-      'in-progress': '#C9A962',
-      'wrapped': '#22c55e',
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowStatusDropdown(false);
+      }
     };
-    return { borderLeftColor: colors[shootingScene.status] };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Get the glass overlay class based on filming status
+  const getGlassOverlayClass = () => {
+    if (!shootingScene.filmingStatus) return null;
+    switch (shootingScene.filmingStatus) {
+      case 'complete':
+        return 'scene-glass-complete';
+      case 'partial':
+        return 'scene-glass-partial';
+      case 'not-filmed':
+        return 'scene-glass-incomplete';
+      default:
+        return null;
+    }
   };
+
+  const glassOverlayClass = getGlassOverlayClass();
 
   const statusLabels: Record<ShootingSceneStatus, string> = {
     'upcoming': 'Upcoming',
@@ -298,18 +331,19 @@ function TodaySceneCard({
 
   // Get status badge styling
   const getStatusBadge = () => {
-    if (shootingScene.status === 'wrapped' && shootingScene.filmingStatus) {
+    if (shootingScene.filmingStatus) {
       const config = SCENE_FILMING_STATUS_CONFIG[shootingScene.filmingStatus];
       return {
         bg: config.bgClass,
         text: config.textClass,
         label: config.shortLabel,
+        color: config.color,
       };
     }
-    const statusColors: Record<ShootingSceneStatus, { bg: string; text: string }> = {
-      'upcoming': { bg: 'bg-gray-50', text: 'text-text-muted' },
-      'in-progress': { bg: 'bg-gold-100/50', text: 'text-gold' },
-      'wrapped': { bg: 'bg-green-50', text: 'text-green-600' },
+    const statusColors: Record<ShootingSceneStatus, { bg: string; text: string; color: string }> = {
+      'upcoming': { bg: 'bg-gray-100', text: 'text-text-muted', color: '#6b7280' },
+      'in-progress': { bg: 'bg-gold-100/50', text: 'text-gold', color: '#C9A962' },
+      'wrapped': { bg: 'bg-green-50', text: 'text-green-600', color: '#22c55e' },
     };
     return { ...statusColors[shootingScene.status], label: statusLabels[shootingScene.status] };
   };
@@ -321,7 +355,19 @@ function TodaySceneCard({
     setShowActions(true);
   };
 
-  // Handle filming status selection
+  // Handle filming status selection from dropdown
+  const handleStatusSelect = (status: SceneFilmingStatus) => {
+    if (status === 'not-filmed' || status === 'partial') {
+      // Show notes modal for partial/incomplete
+      setShowFilmingStatusModal(true);
+      setShowStatusDropdown(false);
+    } else {
+      onFilmingStatusChange(status);
+      setShowStatusDropdown(false);
+    }
+  };
+
+  // Handle filming status selection with notes
   const handleFilmingStatusSelect = (status: SceneFilmingStatus) => {
     onFilmingStatusChange(status, filmingNotes);
     setShowFilmingStatusModal(false);
@@ -330,15 +376,20 @@ function TodaySceneCard({
 
   return (
     <>
-      <button
-        onClick={onTap}
-        onContextMenu={(e) => {
-          e.preventDefault();
-          handleLongPress();
-        }}
-        className={`w-full text-left card border-l-4 transition-all active:scale-[0.98]`}
-        style={getBackgroundStyle()}
-      >
+      <div className="relative">
+        {/* Glass overlay */}
+        {glassOverlayClass && (
+          <div className={clsx('scene-glass-overlay', glassOverlayClass)} />
+        )}
+
+        <div
+          onClick={onTap}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            handleLongPress();
+          }}
+          className="w-full text-left card transition-all active:scale-[0.98] relative z-10 cursor-pointer"
+        >
         {/* Top row: Scene number + Location + Status */}
         <div className="flex items-start justify-between mb-2">
           <div className="flex items-center gap-3">
@@ -366,9 +417,61 @@ function TodaySceneCard({
                 </svg>
               </span>
             )}
-            <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-full ${statusBadge.bg} ${statusBadge.text}`}>
-              {statusBadge.label}
-            </span>
+            {/* Status Dropdown */}
+            <div ref={dropdownRef} className="relative">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowStatusDropdown(!showStatusDropdown);
+                }}
+                className="status-dropdown-btn touch-manipulation"
+                style={{ borderColor: shootingScene.filmingStatus ? statusBadge.color : undefined }}
+              >
+                <span
+                  className="w-2.5 h-2.5 rounded-full"
+                  style={{ backgroundColor: statusBadge.color }}
+                />
+                <span className={statusBadge.text}>{statusBadge.label}</span>
+                <svg className={clsx('w-3 h-3 text-text-muted transition-transform', showStatusDropdown && 'rotate-180')} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {/* Dropdown menu */}
+              {showStatusDropdown && (
+                <div className="absolute right-0 top-full mt-1 w-44 bg-card border border-border rounded-lg shadow-lg z-50 overflow-hidden animate-fadeIn">
+                  {(['complete', 'partial', 'not-filmed'] as SceneFilmingStatus[]).map((status) => {
+                    const config = SCENE_FILMING_STATUS_CONFIG[status];
+                    const isSelected = shootingScene.filmingStatus === status;
+                    return (
+                      <button
+                        key={status}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleStatusSelect(status);
+                        }}
+                        className={clsx(
+                          'w-full px-3 py-2.5 text-left text-sm flex items-center gap-2.5 transition-colors',
+                          isSelected ? config.bgClass : 'hover:bg-gray-50'
+                        )}
+                      >
+                        <span
+                          className="w-3 h-3 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: config.color }}
+                        />
+                        <span className={clsx('font-medium', isSelected && config.textClass)}>
+                          {config.label}
+                        </span>
+                        {isSelected && (
+                          <svg className={clsx('w-4 h-4 ml-auto', config.textClass)} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -386,11 +489,12 @@ function TodaySceneCard({
           </div>
         )}
 
-        {/* Filming notes if partial or not filmed */}
+        {/* Filming notes if partial or incomplete */}
         {shootingScene.filmingStatus && shootingScene.filmingStatus !== 'complete' && shootingScene.filmingNotes && (
-          <div className={`mb-3 px-2 py-1.5 rounded text-xs ${
-            shootingScene.filmingStatus === 'partial' ? 'bg-orange-50 text-orange-700' : 'bg-gray-50 text-gray-600'
-          }`}>
+          <div className={clsx(
+            'mb-3 px-2 py-1.5 rounded text-xs',
+            shootingScene.filmingStatus === 'partial' ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'
+          )}>
             <span className="font-medium">Note:</span> {shootingScene.filmingNotes}
           </div>
         )}
@@ -422,7 +526,8 @@ function TodaySceneCard({
             <span className="text-xs text-text-muted">Est. {shootingScene.estimatedTime}</span>
           </div>
         )}
-      </button>
+        </div>
+      </div>
 
       {/* Quick Actions Modal */}
       {showActions && (
@@ -478,13 +583,13 @@ function TodaySceneCard({
                   onClick={() => setShowFilmingStatusModal(true)}
                   className="w-full px-4 py-3 text-left text-sm text-text-primary hover:bg-gray-50 flex items-center gap-3"
                 >
-                  <div className="w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center">
+                  <div className="w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center">
                     <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                     </svg>
                   </div>
                   <div>
-                    <span className="font-medium">Partial</span>
+                    <span className="font-medium">Part Complete</span>
                     <p className="text-xs text-text-muted">Some shots still needed</p>
                   </div>
                 </button>
@@ -492,14 +597,14 @@ function TodaySceneCard({
                   onClick={() => setShowFilmingStatusModal(true)}
                   className="w-full px-4 py-3 text-left text-sm text-text-primary hover:bg-gray-50 flex items-center gap-3"
                 >
-                  <div className="w-5 h-5 rounded-full bg-gray-400 flex items-center justify-center">
+                  <div className="w-5 h-5 rounded-full bg-red-500 flex items-center justify-center">
                     <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </div>
                   <div>
-                    <span className="font-medium">Not Filmed</span>
-                    <p className="text-xs text-text-muted">Scene not shot today</p>
+                    <span className="font-medium">Incomplete</span>
+                    <p className="text-xs text-text-muted">Scene not filmed</p>
                   </div>
                 </button>
               </div>
@@ -555,15 +660,15 @@ function TodaySceneCard({
             <div className="p-4 border-t border-border flex gap-3">
               <button
                 onClick={() => handleFilmingStatusSelect('partial')}
-                className="flex-1 py-2.5 rounded-button bg-orange-500 text-white text-sm font-medium"
+                className="flex-1 py-2.5 rounded-button bg-amber-500 text-white text-sm font-medium"
               >
-                Mark Partial
+                Part Complete
               </button>
               <button
                 onClick={() => handleFilmingStatusSelect('not-filmed')}
-                className="flex-1 py-2.5 rounded-button bg-gray-500 text-white text-sm font-medium"
+                className="flex-1 py-2.5 rounded-button bg-red-500 text-white text-sm font-medium"
               >
-                Not Filmed
+                Incomplete
               </button>
             </div>
             <button

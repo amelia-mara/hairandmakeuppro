@@ -14,6 +14,7 @@ import type {
   ProjectLifecycle,
   ProjectLifecycleState,
   ArchivedProjectSummary,
+  SceneFilmingStatus,
 } from '@/types';
 import {
   createEmptyContinuityFlags,
@@ -82,6 +83,9 @@ interface ProjectState {
   markSceneIncomplete: (sceneId: string) => void;
   copyToNextScene: (currentSceneId: string, characterId: string) => string | null;
 
+  // Actions - Scene Filming Status (synced between Today and Breakdown)
+  updateSceneFilmingStatus: (sceneNumber: string, filmingStatus: SceneFilmingStatus, filmingNotes?: string) => void;
+
   // Actions - Look Updates
   updateLook: (lookId: string, updates: Partial<Look>) => void;
 
@@ -101,7 +105,7 @@ interface ProjectState {
   // Computed/Derived
   getScene: (sceneId: string) => Scene | undefined;
   getCharacter: (characterId: string) => Character | undefined;
-  getLookForCharacterInScene: (characterId: string, sceneNumber: number) => Look | undefined;
+  getLookForCharacterInScene: (characterId: string, sceneNumber: string) => Look | undefined;
   getSceneCapture: (sceneId: string, characterId: string) => SceneCapture | undefined;
   getFilteredScenes: () => Scene[];
   getScenesForLook: (lookId: string) => Scene[];
@@ -157,9 +161,10 @@ export const useProjectStore = create<ProjectState>()(
 
         if (existing) return existing;
 
+        const sceneNumber = state.currentProject?.scenes.find(s => s.id === sceneId)?.sceneNumber;
         const look = state.currentProject?.looks.find(
           l => l.characterId === characterId &&
-          l.scenes.includes(state.currentProject?.scenes.find(s => s.id === sceneId)?.sceneNumber ?? -1)
+          sceneNumber !== undefined && l.scenes.includes(sceneNumber)
         );
 
         const newCapture: SceneCapture = {
@@ -477,6 +482,24 @@ export const useProjectStore = create<ProjectState>()(
         return nextScene.id;
       },
 
+      // Scene filming status - syncs to project scenes for Breakdown view
+      updateSceneFilmingStatus: (sceneNumber, filmingStatus, filmingNotes) => {
+        set((state) => {
+          if (!state.currentProject) return state;
+
+          return {
+            currentProject: {
+              ...state.currentProject,
+              scenes: state.currentProject.scenes.map((s) =>
+                s.sceneNumber === sceneNumber
+                  ? { ...s, filmingStatus, filmingNotes }
+                  : s
+              ),
+            },
+          };
+        });
+      },
+
       // Look updates
       updateLook: (lookId, updates) => {
         set((state) => {
@@ -535,7 +558,7 @@ export const useProjectStore = create<ProjectState>()(
           );
         }
 
-        return scenes.sort((a, b) => a.sceneNumber - b.sceneNumber);
+        return scenes.sort((a, b) => a.sceneNumber.localeCompare(b.sceneNumber, undefined, { numeric: true }));
       },
 
       getScenesForLook: (lookId) => {
@@ -547,7 +570,7 @@ export const useProjectStore = create<ProjectState>()(
 
         return state.currentProject.scenes
           .filter(s => look.scenes.includes(s.sceneNumber))
-          .sort((a, b) => a.sceneNumber - b.sceneNumber);
+          .sort((a, b) => a.sceneNumber.localeCompare(b.sceneNumber, undefined, { numeric: true }));
       },
 
       // Lifecycle actions

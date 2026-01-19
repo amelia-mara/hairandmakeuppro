@@ -40,7 +40,7 @@ export function generateContinuityBiblePDF(
 
   // Generate scene sections
   const sceneSections = project.scenes
-    .sort((a, b) => a.sceneNumber - b.sceneNumber)
+    .sort((a, b) => a.sceneNumber.localeCompare(b.sceneNumber, undefined, { numeric: true }))
     .map(scene => generateSceneSection(scene, project.characters, project.looks, sceneCaptures))
     .join('');
 
@@ -480,7 +480,7 @@ export function generateSceneBreakdownCSV(
   ];
 
   const rows = project.scenes
-    .sort((a, b) => a.sceneNumber - b.sceneNumber)
+    .sort((a, b) => a.sceneNumber.localeCompare(b.sceneNumber, undefined, { numeric: true }))
     .map(scene => {
       const sceneCharacters = project.characters.filter(c => scene.characters.includes(c.id));
       const characterNames = sceneCharacters.map(c => c.name).join('; ');
