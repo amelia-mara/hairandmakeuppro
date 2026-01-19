@@ -1,5 +1,6 @@
 import type { MakeupDetails } from '@/types';
 import { createEmptyMakeupDetails } from '@/types';
+import { FormField } from '../ui/FormField';
 
 interface MakeupFormProps {
   makeup?: MakeupDetails;
@@ -202,40 +203,6 @@ export function MakeupForm({ makeup, onChange, readOnly = false }: MakeupFormPro
           />
         </div>
       </section>
-    </div>
-  );
-}
-
-interface FormFieldProps {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  readOnly: boolean;
-  placeholder?: string;
-}
-
-function FormField({ label, value, onChange, readOnly, placeholder }: FormFieldProps) {
-  if (readOnly) {
-    return (
-      <div>
-        <label className="field-label block mb-1">{label}</label>
-        <div className="text-sm text-text-primary">
-          {value || <span className="text-text-placeholder">—</span>}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      <label className="field-label block mb-1.5">{label}</label>
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="w-full bg-[#f8f7f5] border border-[#e8e6e1] rounded-lg px-3 py-3 text-sm text-[#1a1a1a] placeholder:text-[#999] focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold/30 transition-colors"
-      />
     </div>
   );
 }

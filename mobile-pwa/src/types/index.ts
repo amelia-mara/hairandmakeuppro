@@ -281,7 +281,7 @@ export const generateInitials = (name: string): string => {
 };
 
 // Helper function to count filled fields in makeup/hair details
-export const countFilledFields = (obj: Record<string, string>): number => {
+export const countFilledFields = (obj: MakeupDetails | HairDetails): number => {
   return Object.values(obj).filter(value => value.trim() !== '').length;
 };
 

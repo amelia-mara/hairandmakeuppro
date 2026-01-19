@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { createPhotoFromBlob } from '@/utils/imageUtils';
 import { formatEstimatedTime, formatSceneRange, getCaptureStatus } from '@/utils/helpers';
-import type { PhotoAngle, ContinuityEvent, MakeupDetails, HairDetails } from '@/types';
+import type { PhotoAngle, ContinuityEvent } from '@/types';
+import { countFilledFields } from '@/types';
 import { Button, Accordion } from '../ui';
 import { CharacterAvatar } from './CharacterAvatar';
 import { PhotoGrid, AdditionalPhotosGrid, MasterReference, PhotoCapture, SceneThumbnailSlot } from '../photos';
@@ -216,7 +217,7 @@ export function CharacterProfile({ sceneId, characterId }: CharacterProfileProps
         {/* Accordion sections for Makeup, Hair, Notes */}
         <Accordion
           title="MAKEUP"
-          count={look ? countFilledMakeupFields(look.makeup) : 0}
+          count={look ? countFilledFields(look.makeup) : 0}
         >
           <MakeupForm
             makeup={look?.makeup}
@@ -226,7 +227,7 @@ export function CharacterProfile({ sceneId, characterId }: CharacterProfileProps
 
         <Accordion
           title="HAIR"
-          count={look ? countFilledHairFields(look.hair) : 0}
+          count={look ? countFilledFields(look.hair) : 0}
         >
           <HairForm
             hair={look?.hair}
@@ -300,20 +301,10 @@ export function CharacterProfile({ sceneId, characterId }: CharacterProfileProps
   );
 }
 
-// Helper functions
+// Helper function
 function formatSluglineShort(slugline: string): string {
   return slugline
     .replace(/^(INT\.|EXT\.)\s*/i, '')
     .replace(/\s*-\s*(DAY|NIGHT|MORNING|EVENING|CONTINUOUS)\s*$/i, '')
     .split(' - ')[0];
-}
-
-function countFilledMakeupFields(makeup: MakeupDetails | undefined): number {
-  if (!makeup) return 0;
-  return Object.values(makeup).filter(v => v && v.trim() !== '').length;
-}
-
-function countFilledHairFields(hair: HairDetails | undefined): number {
-  if (!hair) return 0;
-  return Object.values(hair).filter(v => v && v.trim() !== '').length;
 }
