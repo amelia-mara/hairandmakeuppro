@@ -3,6 +3,7 @@ import { useProjectStore } from '@/stores/projectStore';
 import { useNavigationStore } from '@/stores/navigationStore';
 import { RateCardSettings } from '@/components/timesheet';
 import { NavIcon } from '@/components/navigation/BottomNav';
+import { formatShortDate } from '@/utils/helpers';
 import type { NavTab } from '@/types';
 import { ALL_NAV_ITEMS } from '@/types';
 
@@ -560,13 +561,6 @@ function ScheduleViewer({ onBack }: ViewerProps) {
     { dayNumber: 5, date: '2025-01-19', scenes: [10, 11], location: 'OFFICE' },
   ];
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return `${days[date.getDay()]} ${date.getDate()} ${months[date.getMonth()]}`;
-  };
-
   const today = new Date().toISOString().split('T')[0];
 
   return (
@@ -606,7 +600,7 @@ function ScheduleViewer({ onBack }: ViewerProps) {
                         </span>
                       )}
                     </div>
-                    <span className="text-sm text-text-muted">{formatDate(day.date)}</span>
+                    <span className="text-sm text-text-muted">{formatShortDate(day.date)}</span>
                   </div>
                   <span className="text-xs text-text-light">{day.scenes.length} scenes</span>
                 </div>
@@ -647,13 +641,6 @@ function CallSheetArchive({ onBack }: ViewerProps) {
     { id: '4', date: '2025-01-13', productionDay: 1, scenes: 3 },
   ];
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return `${days[date.getDay()]} ${date.getDate()} ${months[date.getMonth()]}`;
-  };
-
   return (
     <>
       <div className="sticky top-0 z-30 bg-card border-b border-border safe-top">
@@ -692,7 +679,7 @@ function CallSheetArchive({ onBack }: ViewerProps) {
                 </div>
                 <div className="text-left">
                   <h3 className="text-sm font-semibold text-text-primary">Day {sheet.productionDay}</h3>
-                  <p className="text-xs text-text-muted">{formatDate(sheet.date)} • {sheet.scenes} scenes</p>
+                  <p className="text-xs text-text-muted">{formatShortDate(sheet.date)} • {sheet.scenes} scenes</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">

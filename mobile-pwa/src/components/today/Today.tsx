@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { CharacterAvatar } from '@/components/characters/CharacterAvatar';
+import { formatShortDate } from '@/utils/helpers';
 import type { ShootingSceneStatus, CallSheet, ShootingScene } from '@/types';
 
 // Demo call sheet for development
@@ -31,13 +32,6 @@ export function Today({ onSceneSelect }: TodayProps) {
   const { currentProject, sceneCaptures } = useProjectStore();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [callSheet, setCallSheet] = useState<CallSheet | null>(demoCallSheet);
-
-  // Format date for header
-  const formatDate = (date: Date) => {
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return `${days[date.getDay()]} ${date.getDate()} ${months[date.getMonth()]}`;
-  };
 
   // Navigate days
   const navigateDay = (direction: -1 | 1) => {
@@ -130,7 +124,7 @@ export function Today({ onSceneSelect }: TodayProps) {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
-              <h1 className="text-lg font-semibold text-text-primary">{formatDate(currentDate)}</h1>
+              <h1 className="text-lg font-semibold text-text-primary">{formatShortDate(currentDate)}</h1>
               <button
                 onClick={() => navigateDay(1)}
                 className="p-2 text-text-muted active:text-gold transition-colors touch-manipulation"

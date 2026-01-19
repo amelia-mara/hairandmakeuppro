@@ -1,5 +1,6 @@
 import type { HairDetails } from '@/types';
 import { createEmptyHairDetails } from '@/types';
+import { FormField } from '../ui/FormField';
 
 interface HairFormProps {
   hair?: HairDetails;
@@ -72,58 +73,6 @@ export function HairForm({ hair, onChange, readOnly = false }: HairFormProps) {
         onChange={(v) => handleFieldChange('accessories', v)}
         readOnly={readOnly}
         placeholder="e.g., Gold barrette, silk ribbon"
-      />
-    </div>
-  );
-}
-
-interface FormFieldProps {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  readOnly: boolean;
-  placeholder?: string;
-  multiline?: boolean;
-}
-
-function FormField({ label, value, onChange, readOnly, placeholder, multiline }: FormFieldProps) {
-  if (readOnly) {
-    return (
-      <div>
-        <label className="field-label block mb-1">{label}</label>
-        <div className="text-sm text-text-primary">
-          {value || <span className="text-text-placeholder">—</span>}
-        </div>
-      </div>
-    );
-  }
-
-  const inputClasses = "w-full bg-[#f8f7f5] border border-[#e8e6e1] rounded-lg px-3 py-3 text-sm text-[#1a1a1a] placeholder:text-[#999] focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold/30 transition-colors";
-
-  if (multiline) {
-    return (
-      <div>
-        <label className="field-label block mb-1.5">{label}</label>
-        <textarea
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          rows={2}
-          className={`${inputClasses} resize-none`}
-        />
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      <label className="field-label block mb-1.5">{label}</label>
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className={inputClasses}
       />
     </div>
   );
