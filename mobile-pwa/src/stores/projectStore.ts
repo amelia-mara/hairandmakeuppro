@@ -14,7 +14,9 @@ import type {
 } from '@/types';
 import {
   createEmptyContinuityFlags,
+  createEmptySFXDetails,
 } from '@/types';
+import type { SFXDetails } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 
 interface ProjectState {
@@ -49,6 +51,11 @@ interface ProjectState {
   addContinuityEvent: (captureId: string, event: ContinuityEvent) => void;
   updateContinuityEvent: (captureId: string, eventId: string, updates: Partial<ContinuityEvent>) => void;
   removeContinuityEvent: (captureId: string, eventId: string) => void;
+
+  // Actions - SFX
+  updateSFXDetails: (captureId: string, sfx: SFXDetails) => void;
+  addSFXPhoto: (captureId: string, photo: Photo) => void;
+  removeSFXPhoto: (captureId: string, photoId: string) => void;
 
   // Actions - Scene Completion
   markSceneComplete: (sceneId: string) => void;
@@ -118,6 +125,7 @@ export const useProjectStore = create<ProjectState>()(
           additionalPhotos: [],
           continuityFlags: createEmptyContinuityFlags(),
           continuityEvents: [],
+          sfxDetails: createEmptySFXDetails(),
           notes: '',
         };
 
@@ -282,6 +290,64 @@ export const useProjectStore = create<ProjectState>()(
         });
       },
 
+      // SFX actions
+      updateSFXDetails: (captureId, sfx) => {
+        set((state) => {
+          const capture = state.sceneCaptures[captureId];
+          if (!capture) return state;
+
+          return {
+            sceneCaptures: {
+              ...state.sceneCaptures,
+              [captureId]: {
+                ...capture,
+                sfxDetails: sfx,
+              },
+            },
+          };
+        });
+      },
+
+      addSFXPhoto: (captureId, photo) => {
+        set((state) => {
+          const capture = state.sceneCaptures[captureId];
+          if (!capture) return state;
+
+          return {
+            sceneCaptures: {
+              ...state.sceneCaptures,
+              [captureId]: {
+                ...capture,
+                sfxDetails: {
+                  ...capture.sfxDetails,
+                  sfxReferencePhotos: [...capture.sfxDetails.sfxReferencePhotos, photo],
+                },
+              },
+            },
+          };
+        });
+      },
+
+      removeSFXPhoto: (captureId, photoId) => {
+        set((state) => {
+          const capture = state.sceneCaptures[captureId];
+          if (!capture) return state;
+
+          return {
+            sceneCaptures: {
+              ...state.sceneCaptures,
+              [captureId]: {
+                ...capture,
+                sfxDetails: {
+                  ...capture.sfxDetails,
+                  sfxReferencePhotos: capture.sfxDetails.sfxReferencePhotos.filter(p => p.id !== photoId),
+                },
+              },
+            },
+          };
+        });
+      },
+
       // Scene completion
       markSceneComplete: (sceneId) => {
         set((state) => {
@@ -345,6 +411,10 @@ export const useProjectStore = create<ProjectState>()(
           additionalPhotos: [], // Don't copy photos
           continuityFlags: { ...currentCapture.continuityFlags },
           continuityEvents: currentCapture.continuityEvents.map(e => ({ ...e, id: uuidv4() })),
+          sfxDetails: {
+            ...currentCapture.sfxDetails,
+            sfxReferencePhotos: [], // Don't copy SFX reference photos
+          },
           notes: currentCapture.notes,
           applicationTime: currentCapture.applicationTime,
         };
