@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
-import { useNavigationStore } from '@/stores/navigationStore';
+import { useNavigationStore, MAX_BOTTOM_NAV_ITEMS } from '@/stores/navigationStore';
 import { RateCardSettings } from '@/components/timesheet';
 import { NavIcon } from '@/components/navigation/BottomNav';
 import { formatShortDate } from '@/utils/helpers';
@@ -82,6 +82,7 @@ function MoreMenu({ onNavigate, onNavigateToTab }: MoreMenuProps) {
       case 'today': return 'Today\'s shooting schedule';
       case 'breakdown': return 'Scene breakdown by character';
       case 'hours': return 'Timesheet and earnings';
+      case 'budget': return 'Expenses overview, scan receipts';
       default: return '';
     }
   };
@@ -372,7 +373,7 @@ function EditMenuScreen({ onDone }: EditMenuScreenProps) {
 
       <div className="mobile-container px-4 py-4">
         <p className="text-sm text-text-muted mb-6">
-          Drag items to reorder. First 3 appear in bottom nav.
+          Drag items to reorder. Up to {MAX_BOTTOM_NAV_ITEMS} appear in bottom nav.
         </p>
 
         {/* Bottom Nav Section */}
@@ -404,7 +405,7 @@ function EditMenuScreen({ onDone }: EditMenuScreenProps) {
             ))}
 
             {/* Drop zone when bottom nav has less than 3 items */}
-            {bottomNavItems.length < 3 && (
+            {bottomNavItems.length < MAX_BOTTOM_NAV_ITEMS && (
               <div
                 className={`border-2 border-dashed rounded-xl p-4 text-center transition-colors ${
                   dragOverSection === 'bottom' && dragOverIndex === bottomNavItems.length
@@ -447,7 +448,7 @@ function EditMenuScreen({ onDone }: EditMenuScreenProps) {
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
                 onTouchCancel={handleTouchCancel}
-                onAddToNav={bottomNavItems.length < 3 ? () => moveToBottomNav(item.id, bottomNavItems.length) : undefined}
+                onAddToNav={bottomNavItems.length < MAX_BOTTOM_NAV_ITEMS ? () => moveToBottomNav(item.id, bottomNavItems.length) : undefined}
                 refCallback={(el) => setItemRef(`more-${item.id}`, el)}
               />
             ))}
@@ -495,11 +496,11 @@ function EditMenuScreen({ onDone }: EditMenuScreenProps) {
           </div>
         )}
 
-        {/* More button is always slot 4 notice */}
+        {/* More button notice */}
         <div className="mt-6 p-3 bg-gray-50 rounded-lg">
           <div className="flex items-center gap-2 text-sm text-text-muted">
             <NavIcon name="ellipsis" className="w-5 h-5" />
-            <span><strong>More</strong> button is always slot 4 and cannot be moved.</span>
+            <span><strong>More</strong> button is always last and cannot be moved.</span>
           </div>
         </div>
       </div>

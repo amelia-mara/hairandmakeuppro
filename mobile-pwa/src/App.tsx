@@ -7,6 +7,7 @@ import { Today } from '@/components/today';
 import { Breakdown } from '@/components/breakdown';
 import { Lookbooks } from '@/components/lookbooks';
 import { Timesheet } from '@/components/timesheet';
+import { Budget } from '@/components/budget';
 import { More } from '@/components/more';
 import type { NavTab } from '@/types';
 
@@ -79,6 +80,8 @@ export default function App() {
         return <Lookbooks />;
       case 'hours':
         return <Timesheet />;
+      case 'budget':
+        return <Budget />;
       // These tabs are handled by the More component internally,
       // but if user navigates directly (e.g., from customized nav), show More
       case 'script':
