@@ -1,8 +1,12 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { demoProject } from '@/stores/demoData';
+import { parseScriptFile, convertParsedScriptToProject, suggestCharacterMerges } from '@/utils/scriptParser';
+import type { ParsedScript } from '@/utils/scriptParser';
+import type { Project } from '@/types';
+import { createEmptyMakeupDetails, createEmptyHairDetails } from '@/types';
 
-type HomeView = 'welcome' | 'upload' | 'processing' | 'setup';
+type HomeView = 'welcome' | 'upload' | 'processing' | 'characters' | 'setup';
 
 interface HomeProps {
   onProjectReady: () => void;
@@ -13,10 +17,63 @@ export function Home({ onProjectReady }: HomeProps) {
   const [projectName, setProjectName] = useState('');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [processingProgress, setProcessingProgress] = useState(0);
-  const [detectedScenes, setDetectedScenes] = useState<number>(0);
-  const [detectedCharacters, setDetectedCharacters] = useState<string[]>([]);
+  const [processingStatus, setProcessingStatus] = useState('Reading document...');
+  const [parsedScript, setParsedScript] = useState<ParsedScript | null>(null);
+  const [selectedCharacters, setSelectedCharacters] = useState<Set<string>>(new Set());
+  const [mergeMap, setMergeMap] = useState<Map<string, string>>(new Map()); // maps merged -> primary
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { setProject } = useProjectStore();
+
+  const processScript = useCallback(async (file: File) => {
+    try {
+      setProcessingProgress(10);
+      setProcessingStatus('Reading document...');
+
+      // Small delay to show initial state
+      await new Promise(r => setTimeout(r, 300));
+
+      setProcessingProgress(30);
+      setProcessingStatus('Parsing script format...');
+
+      const parsed = await parseScriptFile(file);
+
+      setProcessingProgress(60);
+      setProcessingStatus('Identifying scenes...');
+      await new Promise(r => setTimeout(r, 200));
+
+      setProcessingProgress(80);
+      setProcessingStatus('Detecting characters...');
+      await new Promise(r => setTimeout(r, 200));
+
+      setProcessingProgress(100);
+      setProcessingStatus('Complete!');
+
+      setParsedScript(parsed);
+
+      // Auto-select top characters (by scene count)
+      const topCharacters = parsed.characters
+        .filter(c => c.sceneCount >= 1)
+        .slice(0, 20) // Reasonable limit
+        .map(c => c.name);
+      setSelectedCharacters(new Set(topCharacters));
+
+      // Check for merge suggestions
+      const suggestions = suggestCharacterMerges(parsed.characters);
+      const newMergeMap = new Map<string, string>();
+      suggestions.forEach(s => {
+        s.similar.forEach(sim => newMergeMap.set(sim, s.primary));
+      });
+      setMergeMap(newMergeMap);
+
+      // Move to character selection view
+      setTimeout(() => setView('characters'), 500);
+    } catch (error) {
+      console.error('Script parsing error:', error);
+      // Show error and return to upload
+      alert(error instanceof Error ? error.message : 'Failed to parse script');
+      setView('upload');
+    }
+  }, []);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -26,33 +83,57 @@ export function Home({ onProjectReady }: HomeProps) {
       const name = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
       setProjectName(name);
       setView('processing');
-      simulateProcessing();
+      processScript(file);
     }
   };
 
-  const simulateProcessing = () => {
-    // Simulate script processing with progress
-    let progress = 0;
-    const interval = setInterval(() => {
-      progress += Math.random() * 15;
-      if (progress >= 100) {
-        progress = 100;
-        clearInterval(interval);
-        // Simulated results
-        setDetectedScenes(Math.floor(Math.random() * 20) + 10);
-        setDetectedCharacters(['SARAH', 'JAMES', 'MOM', 'DETECTIVE CHEN', 'NURSE']);
-        setTimeout(() => setView('setup'), 500);
-      }
-      setProcessingProgress(Math.min(progress, 100));
-    }, 200);
-  };
-
   const handleStartProject = () => {
-    // For now, use demo data but with custom name
-    const project = {
-      ...demoProject,
-      name: projectName || 'Untitled Project',
+    if (!parsedScript) {
+      // No script parsed - create empty project
+      const emptyProject: Project = {
+        id: `project-${Date.now()}`,
+        name: projectName || 'Untitled Project',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        scenes: [],
+        characters: [],
+        looks: [],
+      };
+      setProject(emptyProject);
+      onProjectReady();
+      return;
+    }
+
+    // Apply merges to character selection
+    const finalCharacters = Array.from(selectedCharacters).filter(name => {
+      // If this character is merged into another, exclude it
+      return !mergeMap.has(name);
+    });
+
+    // Convert parsed script to project
+    const { scenes, characters } = convertParsedScriptToProject(parsedScript, finalCharacters);
+
+    // Create empty looks for each character
+    const looks = characters.map((char) => ({
+      id: `look-${char.id}`,
+      characterId: char.id,
+      name: 'Look 1',
+      scenes: scenes.filter(s => s.characters.includes(char.id)).map(s => s.sceneNumber),
+      estimatedTime: 30,
+      makeup: createEmptyMakeupDetails(),
+      hair: createEmptyHairDetails(),
+    }));
+
+    const project: Project = {
+      id: `project-${Date.now()}`,
+      name: projectName || parsedScript.title || 'Untitled Project',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      scenes,
+      characters,
+      looks,
     };
+
     setProject(project);
     onProjectReady();
   };
@@ -63,9 +144,39 @@ export function Home({ onProjectReady }: HomeProps) {
   };
 
   const handleSkipToSetup = () => {
-    setDetectedScenes(0);
-    setDetectedCharacters([]);
+    setParsedScript(null);
+    setSelectedCharacters(new Set());
     setView('setup');
+  };
+
+  const handleToggleCharacter = (name: string) => {
+    setSelectedCharacters(prev => {
+      const next = new Set(prev);
+      if (next.has(name)) {
+        next.delete(name);
+      } else {
+        next.add(name);
+      }
+      return next;
+    });
+  };
+
+  const handleMergeCharacter = (from: string, into: string) => {
+    setMergeMap(prev => {
+      const next = new Map(prev);
+      if (from === into) {
+        next.delete(from);
+      } else {
+        next.set(from, into);
+      }
+      return next;
+    });
+    // Ensure primary is selected
+    setSelectedCharacters(prev => {
+      const next = new Set(prev);
+      next.add(into);
+      return next;
+    });
   };
 
   return (
@@ -89,6 +200,19 @@ export function Home({ onProjectReady }: HomeProps) {
         <ProcessingScreen
           fileName={uploadedFile?.name || ''}
           progress={processingProgress}
+          status={processingStatus}
+        />
+      )}
+
+      {view === 'characters' && parsedScript && (
+        <CharacterSelectionScreen
+          parsedScript={parsedScript}
+          selectedCharacters={selectedCharacters}
+          mergeMap={mergeMap}
+          onToggleCharacter={handleToggleCharacter}
+          onMergeCharacter={handleMergeCharacter}
+          onContinue={() => setView('setup')}
+          onBack={() => setView('upload')}
         />
       )}
 
@@ -96,10 +220,10 @@ export function Home({ onProjectReady }: HomeProps) {
         <SetupScreen
           projectName={projectName}
           onNameChange={setProjectName}
-          detectedScenes={detectedScenes}
-          detectedCharacters={detectedCharacters}
+          detectedScenes={parsedScript?.scenes.length || 0}
+          detectedCharacters={Array.from(selectedCharacters).filter(name => !mergeMap.has(name))}
           onStart={handleStartProject}
-          onBack={() => setView('upload')}
+          onBack={() => parsedScript ? setView('characters') : setView('upload')}
         />
       )}
 
@@ -107,7 +231,7 @@ export function Home({ onProjectReady }: HomeProps) {
       <input
         ref={fileInputRef}
         type="file"
-        accept=".pdf,.fdx,.fountain"
+        accept=".pdf,.fdx,.fountain,.txt"
         onChange={handleFileSelect}
         className="hidden"
       />
@@ -134,7 +258,7 @@ function WelcomeScreen({ onUploadScript, onLoadDemo }: WelcomeScreenProps) {
 
         <h1 className="text-2xl font-bold text-text-primary mb-2">Hair & Makeup Pro</h1>
         <p className="text-text-muted text-center max-w-xs mb-8">
-          Your mobile companion for on-set continuity tracking
+          Your mobile companion for on-set continuity tracking keeping checks happy
         </p>
 
         {/* Features list */}
@@ -261,9 +385,10 @@ function UploadScreen({ fileInputRef, onBack, onSkip }: UploadScreenProps) {
 interface ProcessingScreenProps {
   fileName: string;
   progress: number;
+  status: string;
 }
 
-function ProcessingScreen({ fileName, progress }: ProcessingScreenProps) {
+function ProcessingScreen({ fileName, progress, status }: ProcessingScreenProps) {
   return (
     <div className="flex flex-col min-h-screen items-center justify-center px-6">
       <div className="w-20 h-20 rounded-full bg-gold/10 flex items-center justify-center mb-6">
@@ -284,12 +409,221 @@ function ProcessingScreen({ fileName, progress }: ProcessingScreenProps) {
           />
         </div>
         <p className="text-xs text-text-light text-center">
-          {progress < 30 && 'Reading document...'}
-          {progress >= 30 && progress < 60 && 'Identifying scenes...'}
-          {progress >= 60 && progress < 90 && 'Detecting characters...'}
-          {progress >= 90 && 'Finalizing...'}
+          {status}
         </p>
       </div>
+    </div>
+  );
+}
+
+// Character Selection Screen
+interface CharacterSelectionScreenProps {
+  parsedScript: ParsedScript;
+  selectedCharacters: Set<string>;
+  mergeMap: Map<string, string>;
+  onToggleCharacter: (name: string) => void;
+  onMergeCharacter: (from: string, into: string) => void;
+  onContinue: () => void;
+  onBack: () => void;
+}
+
+function CharacterSelectionScreen({
+  parsedScript,
+  selectedCharacters,
+  mergeMap,
+  onToggleCharacter,
+  onMergeCharacter,
+  onContinue,
+  onBack,
+}: CharacterSelectionScreenProps) {
+  const [showMergeModal, setShowMergeModal] = useState(false);
+  const [mergeTarget, setMergeTarget] = useState<string | null>(null);
+
+  // Characters sorted by scene count, with merge info
+  const sortedCharacters = [...parsedScript.characters].sort((a, b) => b.sceneCount - a.sceneCount);
+
+  const handleMergeClick = (charName: string) => {
+    setMergeTarget(charName);
+    setShowMergeModal(true);
+  };
+
+  return (
+    <div className="flex flex-col min-h-screen">
+      {/* Header */}
+      <div className="px-4 py-3 flex items-center gap-3 border-b border-border">
+        <button
+          onClick={onBack}
+          className="p-2 -ml-2 text-text-muted active:text-gold transition-colors"
+        >
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <h1 className="text-lg font-semibold text-text-primary">Select Characters</h1>
+      </div>
+
+      {/* Summary */}
+      <div className="px-6 py-4 bg-gold/5 border-b border-border">
+        <div className="flex justify-around text-center">
+          <div>
+            <p className="text-2xl font-bold text-gold">{parsedScript.scenes.length}</p>
+            <p className="text-xs text-text-muted">Scenes</p>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-gold">{parsedScript.characters.length}</p>
+            <p className="text-xs text-text-muted">Characters Found</p>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-gold">{selectedCharacters.size - mergeMap.size}</p>
+            <p className="text-xs text-text-muted">Selected</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Instructions */}
+      <div className="px-6 py-3">
+        <p className="text-sm text-text-muted">
+          Select the characters you want to track. Tap the merge icon to combine similar characters.
+        </p>
+      </div>
+
+      {/* Character list */}
+      <div className="flex-1 overflow-y-auto px-6 pb-6">
+        <div className="space-y-2">
+          {sortedCharacters.map((char) => {
+            const isSelected = selectedCharacters.has(char.name);
+            const mergedInto = mergeMap.get(char.name);
+            const isMerged = !!mergedInto;
+
+            return (
+              <div
+                key={char.name}
+                className={`rounded-xl border transition-all ${
+                  isMerged
+                    ? 'border-gray-200 bg-gray-50 opacity-60'
+                    : isSelected
+                    ? 'border-gold bg-gold/5'
+                    : 'border-border bg-card'
+                }`}
+              >
+                <div className="flex items-center gap-3 p-3">
+                  {/* Checkbox */}
+                  <button
+                    onClick={() => !isMerged && onToggleCharacter(char.name)}
+                    disabled={isMerged}
+                    className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all ${
+                      isMerged
+                        ? 'border-gray-300 bg-gray-200'
+                        : isSelected
+                        ? 'border-gold bg-gold'
+                        : 'border-gray-300'
+                    }`}
+                  >
+                    {(isSelected || isMerged) && (
+                      <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    )}
+                  </button>
+
+                  {/* Character info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className={`font-medium truncate ${isMerged ? 'text-text-muted line-through' : 'text-text-primary'}`}>
+                        {char.name}
+                      </span>
+                      {isMerged && (
+                        <span className="text-xs text-text-muted">
+                          → {mergedInto}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-text-muted">
+                      {char.sceneCount} scene{char.sceneCount !== 1 ? 's' : ''}
+                      {char.variants.length > 1 && ` • ${char.variants.length} variants`}
+                    </p>
+                  </div>
+
+                  {/* Merge button */}
+                  {!isMerged && (
+                    <button
+                      onClick={() => handleMergeClick(char.name)}
+                      className="p-2 text-text-muted hover:text-gold transition-colors"
+                      title="Merge with another character"
+                    >
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 16.875h3.375m0 0h3.375m-3.375 0V13.5m0 3.375v3.375M6 10.5h2.25a2.25 2.25 0 002.25-2.25V6a2.25 2.25 0 00-2.25-2.25H6A2.25 2.25 0 003.75 6v2.25A2.25 2.25 0 006 10.5zm0 9.75h2.25A2.25 2.25 0 0010.5 18v-2.25a2.25 2.25 0 00-2.25-2.25H6a2.25 2.25 0 00-2.25 2.25V18A2.25 2.25 0 006 20.25zm9.75-9.75H18a2.25 2.25 0 002.25-2.25V6A2.25 2.25 0 0018 3.75h-2.25A2.25 2.25 0 0013.5 6v2.25a2.25 2.25 0 002.25 2.25z" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Continue button */}
+      <div className="px-6 pb-8 pt-4 border-t border-border">
+        <button
+          onClick={onContinue}
+          disabled={selectedCharacters.size - mergeMap.size === 0}
+          className="w-full py-4 rounded-button gold-gradient text-white font-semibold text-base shadow-lg active:scale-[0.98] transition-transform disabled:opacity-50"
+        >
+          Continue with {selectedCharacters.size - mergeMap.size} Character{selectedCharacters.size - mergeMap.size !== 1 ? 's' : ''}
+        </button>
+      </div>
+
+      {/* Merge Modal */}
+      {showMergeModal && mergeTarget && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-end justify-center">
+          <div className="bg-card w-full max-w-lg rounded-t-3xl max-h-[70vh] flex flex-col">
+            <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-text-primary">Merge "{mergeTarget}" into...</h3>
+              <button
+                onClick={() => setShowMergeModal(false)}
+                className="p-2 text-text-muted"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              <div className="space-y-2">
+                {/* Option to unmerge */}
+                {mergeMap.has(mergeTarget) && (
+                  <button
+                    onClick={() => {
+                      onMergeCharacter(mergeTarget, mergeTarget);
+                      setShowMergeModal(false);
+                    }}
+                    className="w-full p-3 text-left rounded-lg border border-red-200 bg-red-50 text-red-700"
+                  >
+                    <span className="font-medium">Remove merge</span>
+                    <span className="text-sm text-red-500 block">Keep as separate character</span>
+                  </button>
+                )}
+                {sortedCharacters
+                  .filter(c => c.name !== mergeTarget && !mergeMap.has(c.name))
+                  .map(char => (
+                    <button
+                      key={char.name}
+                      onClick={() => {
+                        onMergeCharacter(mergeTarget, char.name);
+                        setShowMergeModal(false);
+                      }}
+                      className="w-full p-3 text-left rounded-lg border border-border bg-card hover:border-gold transition-colors"
+                    >
+                      <span className="font-medium text-text-primary">{char.name}</span>
+                      <span className="text-xs text-text-muted block">{char.sceneCount} scenes</span>
+                    </button>
+                  ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
