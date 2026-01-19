@@ -6,6 +6,7 @@ import type {
   TimesheetCalculation,
   WeekSummary,
   TimesheetView,
+  CallSheet,
 } from '@/types';
 import { createDefaultRateCard, createEmptyTimesheetEntry } from '@/types';
 
@@ -26,6 +27,7 @@ interface TimesheetState {
   getEntry: (date: string) => TimesheetEntry;
   saveEntry: (entry: TimesheetEntry) => void;
   deleteEntry: (date: string) => void;
+  autoFillFromCallSheet: (date: string, callSheet: CallSheet) => TimesheetEntry;
 
   // Actions - Navigation
   setSelectedDate: (date: string) => void;
@@ -127,6 +129,25 @@ export const useTimesheetStore = create<TimesheetState>()(
         set({ selectedDate: newDate });
       },
 
+      // Call sheet auto-fill
+      autoFillFromCallSheet: (date, callSheet) => {
+        const existingEntry = get().entries[date] || createEmptyTimesheetEntry(date);
+
+        const autoFilledEntry: TimesheetEntry = {
+          ...existingEntry,
+          unitCall: callSheet.unitCallTime || existingEntry.unitCall,
+          wrapOut: callSheet.wrapEstimate || existingEntry.wrapOut,
+          lunchTaken: 60, // Default 1 hour lunch from call sheet
+          productionDay: callSheet.productionDay,
+          autoFilledFrom: callSheet.id,
+          callSheetUnitCall: callSheet.unitCallTime,
+          callSheetLunch: callSheet.lunchEstimate,
+          callSheetWrap: callSheet.wrapEstimate,
+        };
+
+        return autoFilledEntry;
+      },
+
       // Calculations
       calculateEntry: (entry) => {
         const { rateCard } = get();
@@ -145,6 +166,7 @@ export const useTimesheetStore = create<TimesheetState>()(
             otEarnings: 0,
             lateNightEarnings: 0,
             sixthDayBonus: 0,
+            seventhDayBonus: 0,
             kitRental: 0,
             totalEarnings: 0,
           };
@@ -193,18 +215,25 @@ export const useTimesheetStore = create<TimesheetState>()(
         // 9. Late night earnings (at 2x)
         const lateNightEarnings = lateNightHours * hourlyRate * rateCard.lateNightMultiplier;
 
-        // 10. Sixth day bonus
+        // 10. Sixth day bonus (1.5x)
         let sixthDayBonus = 0;
-        if (entry.isSixthDay) {
+        if (entry.isSixthDay && !entry.isSeventhDay) {
           const baseEarnings = dailyEarnings + otEarnings + lateNightEarnings + preCallEarnings;
           sixthDayBonus = baseEarnings * (rateCard.sixthDayMultiplier - 1);
         }
 
-        // 11. Kit rental
+        // 11. Seventh day bonus (2x)
+        let seventhDayBonus = 0;
+        if (entry.isSeventhDay) {
+          const baseEarnings = dailyEarnings + otEarnings + lateNightEarnings + preCallEarnings;
+          seventhDayBonus = baseEarnings * (rateCard.seventhDayMultiplier - 1);
+        }
+
+        // 12. Kit rental
         const kitRental = rateCard.kitRental;
 
         // Total earnings
-        const totalEarnings = preCallEarnings + dailyEarnings + otEarnings + lateNightEarnings + sixthDayBonus + kitRental;
+        const totalEarnings = preCallEarnings + dailyEarnings + otEarnings + lateNightEarnings + sixthDayBonus + seventhDayBonus + kitRental;
 
         return {
           preCallHours: Math.round(preCallHours * 100) / 100,
@@ -218,6 +247,7 @@ export const useTimesheetStore = create<TimesheetState>()(
           otEarnings: Math.round(otEarnings * 100) / 100,
           lateNightEarnings: Math.round(lateNightEarnings * 100) / 100,
           sixthDayBonus: Math.round(sixthDayBonus * 100) / 100,
+          seventhDayBonus: Math.round(seventhDayBonus * 100) / 100,
           kitRental,
           totalEarnings: Math.round(totalEarnings * 100) / 100,
         };
@@ -237,19 +267,27 @@ export const useTimesheetStore = create<TimesheetState>()(
 
         // Calculate totals
         let totalHours = 0;
+        let preCallHours = 0;
         let baseHours = 0;
         let otHours = 0;
+        let lateNightHours = 0;
         let sixthDayHours = 0;
+        let seventhDayHours = 0;
         let totalEarnings = 0;
         let kitRentalTotal = 0;
 
         entries.forEach((entry) => {
           const calc = get().calculateEntry(entry);
           totalHours += calc.totalHours;
+          preCallHours += calc.preCallHours;
           baseHours += calc.baseHours;
           otHours += calc.otHours;
-          if (entry.isSixthDay) {
+          lateNightHours += calc.lateNightHours;
+          if (entry.isSixthDay && !entry.isSeventhDay) {
             sixthDayHours += calc.totalHours;
+          }
+          if (entry.isSeventhDay) {
+            seventhDayHours += calc.totalHours;
           }
           totalEarnings += calc.totalEarnings;
           if (entry.unitCall && entry.wrapOut) {
@@ -261,9 +299,12 @@ export const useTimesheetStore = create<TimesheetState>()(
           startDate: weekStartDate,
           endDate: addDays(weekStartDate, 6),
           totalHours: Math.round(totalHours * 10) / 10,
+          preCallHours: Math.round(preCallHours * 10) / 10,
           baseHours: Math.round(baseHours * 10) / 10,
           otHours: Math.round(otHours * 10) / 10,
           sixthDayHours: Math.round(sixthDayHours * 10) / 10,
+          seventhDayHours: Math.round(seventhDayHours * 10) / 10,
+          lateNightHours: Math.round(lateNightHours * 10) / 10,
           kitRentalTotal,
           totalEarnings: Math.round(totalEarnings * 100) / 100,
           entries,

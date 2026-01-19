@@ -2,13 +2,14 @@ import { useState, useEffect } from 'react';
 import { useTimesheetStore } from '@/stores/timesheetStore';
 import type { DayType, TimesheetEntry as TimesheetEntryType } from '@/types';
 import { DAY_TYPE_LABELS, createEmptyTimesheetEntry } from '@/types';
-import { CalculationCard } from './CalculationCard';
+import { HoursBreakdownCard } from './HoursBreakdownCard';
 
 interface TimesheetEntryProps {
   onBack: () => void;
 }
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const DAY_TYPES: DayType[] = ['SWD', 'CWD', 'SCWD'];
 
 export function TimesheetEntry({ onBack }: TimesheetEntryProps) {
   const {
@@ -17,7 +18,6 @@ export function TimesheetEntry({ onBack }: TimesheetEntryProps) {
     getEntry,
     saveEntry,
     calculateEntry,
-    rateCard,
   } = useTimesheetStore();
 
   const [entry, setEntry] = useState<TimesheetEntryType>(() =>
@@ -58,12 +58,19 @@ export function TimesheetEntry({ onBack }: TimesheetEntryProps) {
     onBack();
   };
 
-  // Check if rate card is configured
-  const rateCardConfigured = rateCard.dailyRate > 0;
+  // Check if auto-filled from call sheet
+  const isAutoFilled = !!entry.autoFilledFrom;
+
+  // Check if time differs from call sheet
+  const hasCallSheetDiff = (field: 'unitCall' | 'wrapOut'): boolean => {
+    if (!isAutoFilled) return false;
+    const callSheetValue = field === 'unitCall' ? entry.callSheetUnitCall : entry.callSheetWrap;
+    return !!(callSheetValue && entry[field] !== callSheetValue);
+  };
 
   return (
-    <div className="min-h-screen bg-background pb-safe-bottom">
-      {/* Gold gradient header with date navigation */}
+    <div className="min-h-screen pb-safe-bottom" style={{ backgroundColor: 'var(--color-background)' }}>
+      {/* Header with date navigation */}
       <div className="gold-gradient safe-top">
         <div className="mobile-container">
           {/* Back button and title */}
@@ -76,7 +83,7 @@ export function TimesheetEntry({ onBack }: TimesheetEntryProps) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </button>
-            <h1 className="text-lg font-semibold text-white ml-2">Edit Entry</h1>
+            <h1 className="text-lg font-semibold text-white ml-2">Log Hours</h1>
           </div>
 
           {/* Date navigation */}
@@ -94,7 +101,7 @@ export function TimesheetEntry({ onBack }: TimesheetEntryProps) {
               <div className="text-white/80 text-sm">{dayName}</div>
               <div className="text-white text-lg font-semibold">{formatted}</div>
               {entry.productionDay && (
-                <div className="text-white/80 text-xs">Day {entry.productionDay}</div>
+                <div className="text-white/80 text-xs mt-0.5">Day {entry.productionDay}</div>
               )}
             </div>
 
@@ -112,74 +119,99 @@ export function TimesheetEntry({ onBack }: TimesheetEntryProps) {
 
       {/* Form content */}
       <div className="mobile-container px-4 py-4 space-y-4">
-        {/* Rate card warning */}
-        {!rateCardConfigured && (
-          <div className="bg-warning/10 border border-warning/30 rounded-card p-3 flex gap-2">
-            <svg className="w-5 h-5 text-warning flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        {/* Call sheet auto-fill indicator */}
+        {isAutoFilled && (
+          <div className="bg-gold/10 border border-gold/30 rounded-card p-3 flex items-center gap-2">
+            <svg className="w-4 h-4 text-gold flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            <div className="text-sm text-warning">
-              Configure your rate card in Settings to see earnings calculations.
-            </div>
+            <span className="text-sm text-gold">Auto-filled from Call Sheet</span>
           </div>
         )}
 
-        {/* Day Type */}
+        {/* Day Type Pills */}
         <div className="card">
-          <label className="field-label block mb-2">DAY TYPE</label>
-          <select
-            value={entry.dayType}
-            onChange={(e) => updateField('dayType', e.target.value as DayType)}
-            className="input-field w-full"
-          >
-            {(Object.keys(DAY_TYPE_LABELS) as DayType[]).map((type) => (
-              <option key={type} value={type}>
-                {type} - {DAY_TYPE_LABELS[type]}
-              </option>
+          <label className="field-label block mb-3">DAY TYPE</label>
+          <div className="flex gap-2">
+            {DAY_TYPES.map((type) => (
+              <button
+                key={type}
+                onClick={() => updateField('dayType', type)}
+                className={`flex-1 py-2 px-3 rounded-pill text-sm font-medium border transition-all ${
+                  entry.dayType === type
+                    ? 'pill-active border-gold'
+                    : 'pill-inactive hover:border-gold/50'
+                }`}
+              >
+                <div className="font-semibold">{type}</div>
+                <div className="text-[9px] opacity-70 mt-0.5">{DAY_TYPE_LABELS[type].replace(' Working Day', '')}</div>
+              </button>
             ))}
-          </select>
+          </div>
         </div>
 
-        {/* Time inputs */}
+        {/* Time inputs - Core times for production */}
         <div className="card">
-          <h3 className="field-label mb-3">TIME INPUTS</h3>
+          <h3 className="field-label mb-3">CALL TIMES</h3>
           <div className="grid grid-cols-2 gap-3">
             <TimeInput
               label="PRE-CALL"
               value={entry.preCall}
               onChange={(v) => updateField('preCall', v)}
               placeholder="05:30"
-              hint="1.5x rate"
+              highlight="gold"
+              hint="1.5x"
             />
             <TimeInput
               label="UNIT CALL"
               value={entry.unitCall}
               onChange={(v) => updateField('unitCall', v)}
               placeholder="06:00"
+              hasCallSheetDiff={hasCallSheetDiff('unitCall')}
+              callSheetValue={entry.callSheetUnitCall}
+            />
+          </div>
+        </div>
+
+        {/* Wrap times */}
+        <div className="card">
+          <h3 className="field-label mb-3">WRAP TIMES</h3>
+          <div className="grid grid-cols-2 gap-3">
+            <TimeInput
+              label="LUNCH START"
+              value={entry.lunchStart || ''}
+              onChange={(v) => updateField('lunchStart', v)}
+              placeholder="13:00"
+            />
+            <TimeInput
+              label="LUNCH END"
+              value={entry.lunchEnd || ''}
+              onChange={(v) => updateField('lunchEnd', v)}
+              placeholder="14:00"
             />
             <TimeInput
               label="OUT OF CHAIR"
               value={entry.outOfChair}
               onChange={(v) => updateField('outOfChair', v)}
               placeholder="17:00"
-              hint="Talent leaves"
             />
             <TimeInput
               label="WRAP OUT"
               value={entry.wrapOut}
               onChange={(v) => updateField('wrapOut', v)}
               placeholder="18:00"
-              hint="Leave building"
+              hasCallSheetDiff={hasCallSheetDiff('wrapOut')}
+              callSheetValue={entry.callSheetWrap}
             />
           </div>
         </div>
 
-        {/* Lunch & 6th Day */}
+        {/* Lunch & Day multipliers */}
         <div className="card">
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-4">
             {/* Lunch duration */}
             <div className="flex items-center gap-2">
-              <label className="text-sm text-text-muted">Lunch</label>
+              <label className="text-sm" style={{ color: 'var(--color-text-muted)' }}>Lunch</label>
               <select
                 value={entry.lunchTaken}
                 onChange={(e) => updateField('lunchTaken', parseInt(e.target.value))}
@@ -192,38 +224,70 @@ export function TimesheetEntry({ onBack }: TimesheetEntryProps) {
               </select>
             </div>
 
+            <div className="flex-1" />
+
             {/* 6th Day toggle */}
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={entry.isSixthDay}
-                onChange={(e) => updateField('isSixthDay', e.target.checked)}
+                onChange={(e) => {
+                  updateField('isSixthDay', e.target.checked);
+                  if (e.target.checked) updateField('isSeventhDay', false);
+                }}
                 className="w-5 h-5 rounded border-border text-gold focus:ring-gold"
               />
-              <span className="text-sm text-text-primary">6th Day</span>
-              <span className="text-xs text-gold">(1.5x)</span>
+              <span className="text-sm" style={{ color: 'var(--color-text-primary)' }}>6th Day</span>
+              <span className="text-xs text-gold font-semibold">(1.5x)</span>
+            </label>
+
+            {/* 7th Day toggle */}
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={entry.isSeventhDay}
+                onChange={(e) => {
+                  updateField('isSeventhDay', e.target.checked);
+                  if (e.target.checked) updateField('isSixthDay', false);
+                }}
+                className="w-5 h-5 rounded border-border text-orange-500 focus:ring-orange-500"
+              />
+              <span className="text-sm" style={{ color: 'var(--color-text-primary)' }}>7th Day</span>
+              <span className="text-xs text-orange-500 font-semibold">(2x)</span>
             </label>
           </div>
         </div>
 
-        {/* Calculation summary */}
-        <CalculationCard calculation={calculation} rateCard={rateCard} />
+        {/* Hours Breakdown Card - Production Accountability Focus */}
+        <HoursBreakdownCard calculation={calculation} entry={entry} />
 
-        {/* Notes */}
+        {/* Notes - OT justification for production */}
         <div className="card">
-          <label className="field-label block mb-2">NOTES</label>
+          <label className="field-label block mb-2">
+            NOTES / OT JUSTIFICATION
+            {calculation.otHours > 0 && (
+              <span className="text-orange-500 ml-2">(Required for OT)</span>
+            )}
+          </label>
           <textarea
             value={entry.notes}
             onChange={(e) => updateField('notes', e.target.value)}
-            placeholder="Add notes..."
+            placeholder={calculation.otHours > 0
+              ? "Explain overtime reason for production accounting..."
+              : "Add any notes for this day..."
+            }
             rows={3}
-            className="input-field w-full resize-none"
+            className={`input-field w-full resize-none ${
+              calculation.otHours > 0 && !entry.notes
+                ? 'border-orange-500/50 focus:border-orange-500'
+                : ''
+            }`}
           />
         </div>
 
-        {/* Production day (optional) */}
+        {/* Production day */}
         <div className="card">
-          <label className="field-label block mb-2">PRODUCTION DAY (OPTIONAL)</label>
+          <label className="field-label block mb-2">PRODUCTION DAY</label>
           <input
             type="number"
             value={entry.productionDay || ''}
@@ -246,29 +310,65 @@ export function TimesheetEntry({ onBack }: TimesheetEntryProps) {
   );
 }
 
-// Time input component
+// Time input component with call sheet diff indicator
 interface TimeInputProps {
   label: string;
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
   hint?: string;
+  highlight?: 'gold' | 'orange';
+  hasCallSheetDiff?: boolean;
+  callSheetValue?: string;
 }
 
-function TimeInput({ label, value, onChange, placeholder, hint }: TimeInputProps) {
+function TimeInput({
+  label,
+  value,
+  onChange,
+  placeholder,
+  hint,
+  highlight,
+  hasCallSheetDiff,
+  callSheetValue
+}: TimeInputProps) {
+  const highlightClass = highlight === 'gold'
+    ? 'text-gold'
+    : highlight === 'orange'
+    ? 'text-orange-500'
+    : '';
+
   return (
     <div>
       <div className="flex items-center gap-1.5 mb-1.5">
-        <label className="field-label">{label}</label>
-        {hint && <span className="text-[9px] text-gold">{hint}</span>}
+        <label className={`field-label ${highlightClass}`}>{label}</label>
+        {hint && (
+          <span className={`text-[9px] font-semibold ${
+            highlight === 'gold' ? 'text-gold' :
+            highlight === 'orange' ? 'text-orange-500' : 'text-gold'
+          }`}>
+            {hint}
+          </span>
+        )}
       </div>
       <input
         type="time"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="input-field w-full"
+        className={`input-field w-full ${
+          highlight === 'gold' ? 'border-gold/30 focus:border-gold' :
+          highlight === 'orange' ? 'border-orange-500/30 focus:border-orange-500' : ''
+        }`}
       />
+      {hasCallSheetDiff && callSheetValue && (
+        <div className="text-[10px] text-warning mt-1 flex items-center gap-1">
+          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01" />
+          </svg>
+          <span>Call sheet: {callSheetValue}</span>
+        </div>
+      )}
     </div>
   );
 }
