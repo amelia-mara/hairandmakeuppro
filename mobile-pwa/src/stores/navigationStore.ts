@@ -3,8 +3,11 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import type { NavTab } from '@/types';
 import { DEFAULT_BOTTOM_NAV, ALL_NAV_ITEMS } from '@/types';
 
+// Maximum items in bottom nav (more button is always last)
+export const MAX_BOTTOM_NAV_ITEMS = 5;
+
 interface NavigationState {
-  // Bottom nav slots (3 items max, 'more' is always slot 4)
+  // Bottom nav slots (up to 5 items, 'more' is always the last slot)
   bottomNavItems: NavTab[];
 
   // Whether the edit menu is open
@@ -38,8 +41,8 @@ export const useNavigationStore = create<NavigationState>()(
       isEditMenuOpen: false,
 
       setBottomNavItems: (items) => {
-        // Ensure max 3 items and settings is always accessible
-        const validItems = items.slice(0, 3);
+        // Ensure max items and settings is always accessible
+        const validItems = items.slice(0, MAX_BOTTOM_NAV_ITEMS);
         set({ bottomNavItems: validItems });
       },
 
@@ -54,7 +57,7 @@ export const useNavigationStore = create<NavigationState>()(
           // Item already in bottom nav, reorder
           current.splice(itemIndex, 1);
           current.splice(position, 0, item);
-        } else if (current.length < 3) {
+        } else if (current.length < MAX_BOTTOM_NAV_ITEMS) {
           // Room to add
           current.splice(position, 0, item);
         } else {
@@ -62,7 +65,7 @@ export const useNavigationStore = create<NavigationState>()(
           current[position] = item;
         }
 
-        set({ bottomNavItems: current.slice(0, 3) });
+        set({ bottomNavItems: current.slice(0, MAX_BOTTOM_NAV_ITEMS) });
       },
 
       moveToMoreMenu: (item) => {

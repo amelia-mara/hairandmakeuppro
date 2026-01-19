@@ -5,6 +5,7 @@ import { CountBadge } from './Badge';
 export interface AccordionProps {
   title: string;
   count?: number;
+  badge?: string;
   defaultOpen?: boolean;
   children: ReactNode;
   className?: string;
@@ -13,6 +14,7 @@ export interface AccordionProps {
 export function Accordion({
   title,
   count,
+  badge,
   defaultOpen = false,
   children,
   className,
@@ -29,6 +31,7 @@ export function Accordion({
       >
         <span className="section-header">{title}</span>
         <div className="flex items-center gap-2.5">
+          {badge && <span className="text-xs text-text-muted">{badge}</span>}
           {count !== undefined && count > 0 && <CountBadge count={count} />}
           <ChevronIcon isOpen={isOpen} />
         </div>
