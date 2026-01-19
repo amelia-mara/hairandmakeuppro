@@ -262,6 +262,21 @@ interface BreakdownListViewProps {
   getSceneProgress: (scene: Scene) => { captured: number; total: number };
 }
 
+// Get glass overlay class based on filming status
+const getGlassOverlayClass = (filmingStatus?: string | null) => {
+  if (!filmingStatus) return null;
+  switch (filmingStatus) {
+    case 'complete':
+      return 'scene-glass-complete';
+    case 'partial':
+      return 'scene-glass-partial';
+    case 'not-filmed':
+      return 'scene-glass-incomplete';
+    default:
+      return null;
+  }
+};
+
 function BreakdownListView({
   scenes,
   expandedSceneId,
@@ -285,14 +300,20 @@ function BreakdownListView({
           ? SCENE_FILMING_STATUS_CONFIG[scene.filmingStatus]
           : null;
 
+        const glassOverlayClass = getGlassOverlayClass(scene.filmingStatus);
+
         return (
           <div
             key={scene.id}
-            className={clsx(
-              'card overflow-hidden border-l-4',
-              filmingStatusConfig ? filmingStatusConfig.borderClass : 'border-gray-200'
-            )}
+            className="relative"
           >
+            {/* Glass overlay */}
+            {glassOverlayClass && (
+              <div className={clsx('scene-glass-overlay', glassOverlayClass)} />
+            )}
+            <div
+              className="card overflow-hidden relative z-10"
+            >
             {/* Row header - always visible */}
             <button
               onClick={() => onToggleExpand(scene.id)}
@@ -491,6 +512,7 @@ function BreakdownListView({
                 </button>
               </div>
             )}
+            </div>
           </div>
         );
       })}
@@ -555,15 +577,18 @@ function BreakdownGridView({
           ? SCENE_FILMING_STATUS_CONFIG[scene.filmingStatus]
           : null;
 
+        const glassOverlayClass = getGlassOverlayClass(scene.filmingStatus);
+
         return (
-          <button
-            key={scene.id}
-            onClick={() => onSceneSelect(scene.id)}
-            className={clsx(
-              'card text-left active:scale-[0.98] transition-transform border-l-4',
-              filmingStatusConfig ? filmingStatusConfig.borderClass : 'border-gray-200'
+          <div key={scene.id} className="relative">
+            {/* Glass overlay */}
+            {glassOverlayClass && (
+              <div className={clsx('scene-glass-overlay', glassOverlayClass)} />
             )}
-          >
+            <button
+              onClick={() => onSceneSelect(scene.id)}
+              className="card text-left active:scale-[0.98] transition-transform w-full relative z-10"
+            >
             {/* Scene number and INT/EXT */}
             <div className="flex items-center justify-between mb-1.5">
               <span className="text-xl font-bold text-text-primary">{scene.sceneNumber}</span>
@@ -609,8 +634,8 @@ function BreakdownGridView({
                 className={clsx(
                   'h-full rounded-full transition-all',
                   scene.filmingStatus === 'complete' ? 'bg-green-500' :
-                  scene.filmingStatus === 'partial' ? 'bg-orange-500' :
-                  scene.filmingStatus === 'not-filmed' ? 'bg-gray-400' :
+                  scene.filmingStatus === 'partial' ? 'bg-amber-500' :
+                  scene.filmingStatus === 'not-filmed' ? 'bg-red-500' :
                   progressPercent === 100 ? 'bg-green-500' : 'bg-gold'
                 )}
                 style={{ width: `${progressPercent}%` }}
@@ -619,7 +644,8 @@ function BreakdownGridView({
             <span className="text-[10px] text-text-light mt-1 block">
               {progress.captured}/{progress.total} captured
             </span>
-          </button>
+            </button>
+          </div>
         );
       })}
     </div>
