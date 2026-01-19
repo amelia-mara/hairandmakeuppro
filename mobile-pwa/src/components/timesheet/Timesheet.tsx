@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useTimesheetStore, getWeekStart, addDays } from '@/stores/timesheetStore';
 import { WeekView } from './WeekView';
 import { MonthView } from './MonthView';
-import { TimesheetEntry } from './TimesheetEntry';
 import { SummaryCard } from './SummaryCard';
 import { ExportModal } from './ExportModal';
 
@@ -12,9 +11,8 @@ export function Timesheet() {
     setViewMode,
     selectedDate,
     setSelectedDate,
-    editingEntry,
-    setEditingEntry,
     getWeekSummary,
+    rateCard,
   } = useTimesheetStore();
 
   const [currentWeekStart, setCurrentWeekStart] = useState(() => getWeekStart(selectedDate));
@@ -23,6 +21,7 @@ export function Timesheet() {
     return { year: date.getFullYear(), month: date.getMonth() };
   });
   const [showExportModal, setShowExportModal] = useState(false);
+  const [rateCardExpanded, setRateCardExpanded] = useState(false);
 
   // Navigate weeks
   const navigateWeek = (direction: 'prev' | 'next') => {
@@ -46,23 +45,28 @@ export function Timesheet() {
     });
   };
 
-  // Handle day selection
+  // Handle day selection (for month view)
   const handleDaySelect = (date: string) => {
     setSelectedDate(date);
-    setEditingEntry(true);
+    // Switch to week view and navigate to that week
+    setViewMode('week');
+    setCurrentWeekStart(getWeekStart(date));
   };
-
-  // Handle back from entry
-  const handleBack = () => {
-    setEditingEntry(false);
-  };
-
-  // If editing an entry, show the entry form
-  if (editingEntry) {
-    return <TimesheetEntry onBack={handleBack} />;
-  }
 
   const weekSummary = getWeekSummary(currentWeekStart);
+
+  // Format rate card summary
+  const formatRateCardSummary = () => {
+    const parts = [];
+    if (rateCard.dailyRate > 0) {
+      parts.push(`£${rateCard.dailyRate}/day`);
+    }
+    parts.push(`${rateCard.baseDayHours}+1`);
+    if (rateCard.kitRental > 0) {
+      parts.push(`Kit £${rateCard.kitRental}`);
+    }
+    return parts.join(' · ');
+  };
 
   return (
     <div className="min-h-screen bg-background pb-safe-bottom">
@@ -89,11 +93,13 @@ export function Timesheet() {
 
           {/* View toggle */}
           <div className="px-4 pb-3">
-            <div className="flex bg-input-bg rounded-pill p-1">
+            <div className="flex bg-input-bg rounded-pill p-1 border border-border">
               <button
                 onClick={() => setViewMode('week')}
                 className={`flex-1 py-2 px-4 rounded-pill text-sm font-medium transition-all ${
-                  viewMode === 'week' ? 'bg-card shadow text-text-primary' : 'text-text-muted'
+                  viewMode === 'week'
+                    ? 'bg-card text-text-primary border-2 border-gold'
+                    : 'text-text-muted'
                 }`}
               >
                 Week
@@ -101,7 +107,9 @@ export function Timesheet() {
               <button
                 onClick={() => setViewMode('month')}
                 className={`flex-1 py-2 px-4 rounded-pill text-sm font-medium transition-all ${
-                  viewMode === 'month' ? 'bg-card shadow text-text-primary' : 'text-text-muted'
+                  viewMode === 'month'
+                    ? 'bg-card text-text-primary border-2 border-gold'
+                    : 'text-text-muted'
                 }`}
               >
                 Month
@@ -113,11 +121,58 @@ export function Timesheet() {
 
       {/* Content */}
       <div className="mobile-container">
+        {/* Collapsible Rate Card */}
+        <div className="mx-4 mt-4 mb-3">
+          <div
+            className={`rounded-xl border overflow-hidden transition-all ${
+              rateCardExpanded ? 'border-gold' : 'border-border'
+            }`}
+            style={{ backgroundColor: 'var(--color-card)' }}
+          >
+            {/* Rate Card Header - Always visible */}
+            <div
+              onClick={() => setRateCardExpanded(!rateCardExpanded)}
+              className="px-4 py-3 flex items-center justify-between cursor-pointer"
+              style={{ backgroundColor: 'var(--color-input-bg)' }}
+            >
+              <span className="text-xs font-medium flex items-center gap-2" style={{ color: 'var(--color-text-muted)' }}>
+                <span>💰</span> Rate Card
+              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs" style={{ color: 'var(--color-text-placeholder)' }}>
+                  {formatRateCardSummary()}
+                </span>
+                <svg
+                  className={`w-2.5 h-2.5 transition-transform ${rateCardExpanded ? 'rotate-180' : ''}`}
+                  style={{ color: 'var(--color-text-muted)' }}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
+
+            {/* Rate Card Content - Expandable */}
+            {rateCardExpanded && (
+              <div className="px-4 py-3 space-y-2" style={{ borderTop: '1px solid var(--color-border)' }}>
+                <RateRow label="Daily Rate" value={`£${rateCard.dailyRate.toFixed(2)}`} />
+                <RateRow label="Base Day" value={`${rateCard.baseDayHours} hrs + 1hr lunch`} />
+                <RateRow label="Pre-Call Rate" value={`x${rateCard.preCallMultiplier}`} />
+                <RateRow label="Overtime Rate" value={`x${rateCard.otMultiplier}`} />
+                <RateRow label="6th Day" value={`x${rateCard.sixthDayMultiplier} (whole day)`} />
+                <RateRow label="7th Day" value={`x${rateCard.seventhDayMultiplier} (whole day)`} />
+                <RateRow label="Kit / Box Rental" value={`£${rateCard.kitRental.toFixed(2)}/day`} />
+              </div>
+            )}
+          </div>
+        </div>
+
         {viewMode === 'week' ? (
           <WeekView
             weekStartDate={currentWeekStart}
             onNavigate={navigateWeek}
-            onDaySelect={handleDaySelect}
             selectedDate={selectedDate}
           />
         ) : (
@@ -130,7 +185,7 @@ export function Timesheet() {
           />
         )}
 
-        {/* Summary Card */}
+        {/* Week Summary Card */}
         <div className="px-4 pb-24">
           <SummaryCard summary={weekSummary} />
         </div>
@@ -143,6 +198,19 @@ export function Timesheet() {
         weekSummary={weekSummary}
         weekStartDate={currentWeekStart}
       />
+    </div>
+  );
+}
+
+// Rate row component for collapsed rate card
+function RateRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div
+      className="flex justify-between items-center py-2 text-[13px]"
+      style={{ borderBottom: '1px solid var(--color-border)' }}
+    >
+      <span style={{ color: 'var(--color-text-muted)' }}>{label}</span>
+      <span className="font-medium" style={{ color: 'var(--color-text-primary)' }}>{value}</span>
     </div>
   );
 }
