@@ -32,17 +32,41 @@ export function Home({ onProjectReady }: HomeProps) {
       // Small delay to show initial state
       await new Promise(r => setTimeout(r, 300));
 
-      setProcessingProgress(30);
-      setProcessingStatus('Parsing script format...');
+      // Progress tracking for AI parsing
+      let lastProgress = 10;
+      const onProgress = (status: string) => {
+        setProcessingStatus(status);
+        // Increment progress based on status
+        if (status.includes('Checking AI')) {
+          lastProgress = 20;
+        } else if (status.includes('Analyzing script with AI')) {
+          lastProgress = 30;
+        } else if (status.includes('Analyzing script section')) {
+          // Extract section number for progress
+          const match = status.match(/section (\d+) of (\d+)/);
+          if (match) {
+            const current = parseInt(match[1]);
+            const total = parseInt(match[2]);
+            lastProgress = 30 + Math.round((current / total) * 50);
+          }
+        } else if (status.includes('Script analysis complete') || status.includes('Complete')) {
+          lastProgress = 90;
+        } else if (status.includes('standard parsing') || status.includes('Parsing script')) {
+          lastProgress = 40;
+        } else if (status.includes('unavailable')) {
+          lastProgress = 25;
+        }
+        setProcessingProgress(lastProgress);
+      };
 
-      const parsed = await parseScriptFile(file);
+      // Parse with AI support
+      const parsed = await parseScriptFile(file, {
+        useAI: true,
+        onProgress,
+      });
 
-      setProcessingProgress(60);
-      setProcessingStatus('Identifying scenes...');
-      await new Promise(r => setTimeout(r, 200));
-
-      setProcessingProgress(80);
-      setProcessingStatus('Detecting characters...');
+      setProcessingProgress(95);
+      setProcessingStatus('Finalizing...');
       await new Promise(r => setTimeout(r, 200));
 
       setProcessingProgress(100);
