@@ -1,27 +1,28 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
+import { useCallSheetStore } from '@/stores/callSheetStore';
 import { CharacterAvatar } from '@/components/characters/CharacterAvatar';
 import { formatShortDate } from '@/utils/helpers';
-import type { ShootingSceneStatus, SceneFilmingStatus, CallSheet, ShootingScene } from '@/types';
+import type { ShootingSceneStatus, SceneFilmingStatus, CallSheet, CallSheetScene } from '@/types';
 import { SCENE_FILMING_STATUS_CONFIG } from '@/types';
 import { clsx } from 'clsx';
 
-// Demo call sheet for development
+// Demo call sheet for development (used when no call sheet is uploaded)
 const demoCallSheet: CallSheet = {
   id: 'call-1',
   date: new Date().toISOString().split('T')[0],
   productionDay: 4,
   unitCallTime: '06:00',
-  firstShotEstimate: '07:30',
-  lunchEstimate: '13:00',
+  firstShotTime: '07:30',
+  lunchTime: '13:00',
   wrapEstimate: '19:00',
-  weatherNote: 'Sunny, 22°C',
+  weather: { conditions: 'Sunny', tempHigh: 22 },
   scenes: [
-    { sceneNumber: 12, shootOrder: 1, estimatedTime: '07:30', status: 'wrapped', filmingStatus: 'complete' },
-    { sceneNumber: 15, shootOrder: 2, estimatedTime: '09:15', status: 'wrapped', filmingStatus: 'partial', filmingNotes: 'Missing wide shot due to lighting' },
-    { sceneNumber: 16, shootOrder: 3, estimatedTime: '11:00', status: 'in-progress' },
-    { sceneNumber: 8, shootOrder: 4, estimatedTime: '14:00', status: 'upcoming' },
-    { sceneNumber: 23, shootOrder: 5, estimatedTime: '16:30', status: 'upcoming' },
+    { sceneNumber: '12', setDescription: 'INT. COFFEE SHOP - DAY', dayNight: 'D', shootOrder: 1, estimatedTime: '07:30', status: 'wrapped', filmingStatus: 'complete' },
+    { sceneNumber: '15', setDescription: 'EXT. PARK - DAY', dayNight: 'D', shootOrder: 2, estimatedTime: '09:15', status: 'wrapped', filmingStatus: 'partial', filmingNotes: 'Missing wide shot due to lighting' },
+    { sceneNumber: '16', setDescription: 'INT. APARTMENT - DAY', dayNight: 'D', shootOrder: 3, estimatedTime: '11:00', status: 'in-progress' },
+    { sceneNumber: '8', setDescription: 'EXT. STREET - NIGHT', dayNight: 'N', shootOrder: 4, estimatedTime: '14:00', status: 'upcoming' },
+    { sceneNumber: '23', setDescription: 'INT. OFFICE - DAY', dayNight: 'D', shootOrder: 5, estimatedTime: '16:30', status: 'upcoming' },
   ],
   uploadedAt: new Date(),
 };
@@ -32,8 +33,19 @@ interface TodayProps {
 
 export function Today({ onSceneSelect }: TodayProps) {
   const { currentProject, sceneCaptures, updateSceneFilmingStatus: syncFilmingStatus } = useProjectStore();
+  const { getActiveCallSheet } = useCallSheetStore();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [callSheet, setCallSheet] = useState<CallSheet | null>(demoCallSheet);
+
+  // Get active call sheet from store, fallback to demo
+  const activeCallSheet = getActiveCallSheet();
+  const [callSheet, setCallSheet] = useState<CallSheet | null>(activeCallSheet || demoCallSheet);
+
+  // Update local state when active call sheet changes
+  useEffect(() => {
+    if (activeCallSheet) {
+      setCallSheet(activeCallSheet);
+    }
+  }, [activeCallSheet]);
 
   // Navigate days
   const navigateDay = (direction: -1 | 1) => {
@@ -58,13 +70,13 @@ export function Today({ onSceneSelect }: TodayProps) {
     });
   }, [callSheet]);
 
-  // Get scene data from project
-  const getSceneData = (sceneNumber: number) => {
+  // Get scene data from project (sceneNumber can be "4A", "12", etc.)
+  const getSceneData = (sceneNumber: string) => {
     return currentProject?.scenes.find(s => s.sceneNumber === sceneNumber);
   };
 
   // Get characters in scene
-  const getCharactersInScene = (sceneNumber: number) => {
+  const getCharactersInScene = (sceneNumber: string) => {
     const scene = getSceneData(sceneNumber);
     if (!scene || !currentProject) return [];
     return scene.characters
@@ -73,14 +85,14 @@ export function Today({ onSceneSelect }: TodayProps) {
   };
 
   // Get look for character in scene
-  const getLookForCharacter = (characterId: string, sceneNumber: number) => {
+  const getLookForCharacter = (characterId: string, sceneNumber: string) => {
     return currentProject?.looks.find(
       l => l.characterId === characterId && l.scenes.includes(sceneNumber)
     );
   };
 
   // Check if all characters have continuity captured for scene
-  const isSceneContinuityCaptured = (sceneNumber: number) => {
+  const isSceneContinuityCaptured = (sceneNumber: string) => {
     const scene = getSceneData(sceneNumber);
     if (!scene) return false;
 
@@ -92,7 +104,7 @@ export function Today({ onSceneSelect }: TodayProps) {
   };
 
   // Update scene status
-  const updateSceneStatus = (sceneNumber: number, status: ShootingSceneStatus) => {
+  const updateSceneStatus = (sceneNumber: string, status: ShootingSceneStatus) => {
     if (!callSheet) return;
     setCallSheet({
       ...callSheet,
@@ -104,7 +116,7 @@ export function Today({ onSceneSelect }: TodayProps) {
 
   // Update scene filming status - also syncs to project store for Breakdown view
   const updateSceneFilmingStatus = (
-    sceneNumber: number,
+    sceneNumber: string,
     filmingStatus: SceneFilmingStatus,
     filmingNotes?: string
   ) => {
@@ -123,7 +135,7 @@ export function Today({ onSceneSelect }: TodayProps) {
   };
 
   // Handle scene tap
-  const handleSceneTap = (sceneNumber: number) => {
+  const handleSceneTap = (sceneNumber: string) => {
     const scene = getSceneData(sceneNumber);
     if (scene) {
       onSceneSelect(scene.id);
@@ -166,13 +178,14 @@ export function Today({ onSceneSelect }: TodayProps) {
           </div>
 
           {/* Weather note */}
-          {callSheet?.weatherNote && (
+          {callSheet?.weather?.conditions && (
             <div className="px-4 pb-3 -mt-1">
               <span className="text-xs text-text-muted flex items-center gap-1.5">
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
                 </svg>
-                {callSheet.weatherNote}
+                {callSheet.weather.conditions}
+                {callSheet.weather.tempHigh && `, ${callSheet.weather.tempHigh}°C`}
               </span>
             </div>
           )}
@@ -192,16 +205,16 @@ export function Today({ onSceneSelect }: TodayProps) {
                   <span className="text-sm text-text-muted">Unit Call</span>
                   <span className="text-sm font-semibold text-text-primary">{callSheet.unitCallTime}</span>
                 </div>
-                {callSheet.firstShotEstimate && (
+                {callSheet.firstShotTime && (
                   <div className="flex justify-between">
                     <span className="text-sm text-text-muted">First Shot</span>
-                    <span className="text-sm font-semibold text-text-primary">{callSheet.firstShotEstimate}</span>
+                    <span className="text-sm font-semibold text-text-primary">{callSheet.firstShotTime}</span>
                   </div>
                 )}
-                {callSheet.lunchEstimate && (
+                {callSheet.lunchTime && (
                   <div className="flex justify-between">
                     <span className="text-sm text-text-muted">Lunch</span>
-                    <span className="text-sm font-semibold text-text-primary">{callSheet.lunchEstimate}</span>
+                    <span className="text-sm font-semibold text-text-primary">{callSheet.lunchTime}</span>
                   </div>
                 )}
                 {callSheet.wrapEstimate && (
@@ -256,11 +269,11 @@ export function Today({ onSceneSelect }: TodayProps) {
 
 // Scene Card Component
 interface TodaySceneCardProps {
-  shootingScene: ShootingScene;
+  shootingScene: CallSheetScene;
   scene?: ReturnType<typeof useProjectStore.getState>['currentProject'] extends { scenes: (infer S)[] } | null ? S : never;
   characters: any[];
   isCaptured: boolean;
-  getLookForCharacter: (characterId: string, sceneNumber: number) => any;
+  getLookForCharacter: (characterId: string, sceneNumber: string) => any;
   onTap: () => void;
   onStatusChange: (status: ShootingSceneStatus) => void;
   onFilmingStatusChange: (status: SceneFilmingStatus, notes?: string) => void;

@@ -68,7 +68,7 @@ function generateDemoScenes(): Scene[] {
     const synopsis = getDemoSynopsis(sceneNum);
     return {
       id: `scene-${sceneNum}`,
-      sceneNumber: sceneNum,
+      sceneNumber: String(sceneNum),
       slugline: `${location.intExt}. ${location.slugline} - ${timesOfDay[timeIndex]}`,
       intExt: location.intExt,
       timeOfDay: timesOfDay[timeIndex],
@@ -199,7 +199,7 @@ const demoLooks: Look[] = [
     id: 'look-sarah-1',
     characterId: 'char-sarah',
     name: 'Day 1 - Professional',
-    scenes: [1, 2, 3, 4, 5, 6, 7, 8],
+    scenes: ['1', '2', '3', '4', '5', '6', '7', '8'],
     estimatedTime: 30,
     makeup: {
       ...createEmptyMakeupDetails(),
@@ -239,7 +239,7 @@ const demoLooks: Look[] = [
     id: 'look-sarah-2',
     characterId: 'char-sarah',
     name: 'Day 2 - Casual',
-    scenes: [9, 10, 11, 12, 13, 14, 15],
+    scenes: ['9', '10', '11', '12', '13', '14', '15'],
     estimatedTime: 20,
     makeup: {
       ...createEmptyMakeupDetails(),
@@ -270,7 +270,7 @@ const demoLooks: Look[] = [
     id: 'look-mike-1',
     characterId: 'char-mike',
     name: 'Standard Look',
-    scenes: [1, 3, 7, 8, 9, 11, 14, 18, 19],
+    scenes: ['1', '3', '7', '8', '9', '11', '14', '18', '19'],
     estimatedTime: 10,
     makeup: {
       ...createEmptyMakeupDetails(),
@@ -290,7 +290,7 @@ const demoLooks: Look[] = [
     id: 'look-wilson-1',
     characterId: 'char-wilson',
     name: 'Doctor Look',
-    scenes: [4, 5, 8, 12, 16, 17, 18],
+    scenes: ['4', '5', '8', '12', '16', '17', '18'],
     estimatedTime: 15,
     makeup: {
       ...createEmptyMakeupDetails(),

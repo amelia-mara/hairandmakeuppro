@@ -44,9 +44,9 @@ export function AddLookModal({ isOpen, onClose, preselectedCharacterId }: AddLoo
 
     const start = parseInt(sceneStart, 10) || 1;
     const end = parseInt(sceneEnd, 10) || start;
-    const scenes: number[] = [];
+    const scenes: string[] = [];
     for (let i = Math.min(start, end); i <= Math.max(start, end); i++) {
-      scenes.push(i);
+      scenes.push(String(i));
     }
 
     const newLook: Look = {
