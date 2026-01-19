@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { createPhotoFromBlob } from '@/utils/imageUtils';
 import { formatEstimatedTime, formatSceneRange, getCaptureStatus } from '@/utils/helpers';
-import type { PhotoAngle, ContinuityEvent } from '@/types';
-import { countFilledFields } from '@/types';
+import type { PhotoAngle, ContinuityEvent, SFXDetails } from '@/types';
+import { countFilledFields, countHairFields, countSFXFields } from '@/types';
 import { Button, Accordion } from '../ui';
 import { CharacterAvatar } from './CharacterAvatar';
 import { PhotoGrid, AdditionalPhotosGrid, MasterReference, PhotoCapture, SceneThumbnailSlot } from '../photos';
@@ -12,6 +12,7 @@ import { ContinuityEvents } from '../continuity/ContinuityEvents';
 import { AddEventModal } from '../continuity/AddEventModal';
 import { MakeupForm } from '../forms/MakeupForm';
 import { HairForm } from '../forms/HairForm';
+import { SFXForm } from '../forms/SFXForm';
 import { NotesForm } from '../forms/NotesForm';
 
 interface CharacterProfileProps {
@@ -33,6 +34,9 @@ export function CharacterProfile({ sceneId, characterId }: CharacterProfileProps
     toggleContinuityFlag,
     addContinuityEvent,
     removeContinuityEvent,
+    updateSFXDetails,
+    addSFXPhoto,
+    removeSFXPhoto,
     markSceneComplete,
     copyToNextScene,
     setCurrentScene,
@@ -51,6 +55,7 @@ export function CharacterProfile({ sceneId, characterId }: CharacterProfileProps
   const [captureOpen, setCaptureOpen] = useState(false);
   const [captureAngle, setCaptureAngle] = useState<PhotoAngle>('front');
   const [captureMaster, setCaptureMaster] = useState(false);
+  const [captureSFX, setCaptureSFX] = useState(false);
 
   // Add event modal state
   const [addEventOpen, setAddEventOpen] = useState(false);
@@ -62,22 +67,31 @@ export function CharacterProfile({ sceneId, characterId }: CharacterProfileProps
   const captureId = capture.id;
 
   // Handle photo capture
-  const handleOpenCapture = (angle: PhotoAngle, isMaster: boolean = false) => {
+  const handleOpenCapture = (angle: PhotoAngle, isMaster: boolean = false, isSFX: boolean = false) => {
     setCaptureAngle(angle);
     setCaptureMaster(isMaster);
+    setCaptureSFX(isSFX);
     setCaptureOpen(true);
   };
 
   const handlePhotoCapture = async (blob: Blob) => {
-    const photo = await createPhotoFromBlob(blob, captureMaster ? undefined : captureAngle);
+    const photo = await createPhotoFromBlob(blob, captureMaster || captureSFX ? undefined : captureAngle);
 
-    if (captureMaster && look) {
+    if (captureSFX) {
+      // Add to SFX reference photos
+      addSFXPhoto(captureId, photo);
+    } else if (captureMaster && look) {
       // Update look's master reference (would need store update)
       // For now, store as first additional photo or use separate logic
       addPhotoToCapture(captureId, photo, 'additional');
     } else {
       addPhotoToCapture(captureId, photo, captureAngle === 'additional' ? 'additional' : captureAngle);
     }
+  };
+
+  // Handle SFX details change
+  const handleSFXChange = (sfx: SFXDetails) => {
+    updateSFXDetails(captureId, sfx);
   };
 
   // Handle mark complete
@@ -227,11 +241,24 @@ export function CharacterProfile({ sceneId, characterId }: CharacterProfileProps
 
         <Accordion
           title="HAIR"
-          count={look ? countFilledFields(look.hair) : 0}
+          count={look ? countHairFields(look.hair) : 0}
         >
           <HairForm
             hair={look?.hair}
             onChange={look ? (hair) => updateLook(look.id, { hair }) : undefined}
+          />
+        </Accordion>
+
+        <Accordion
+          title="SPECIAL EFFECTS"
+          count={countSFXFields(capture.sfxDetails)}
+          badge={!capture.sfxDetails.sfxRequired ? 'None' : undefined}
+        >
+          <SFXForm
+            sfx={capture.sfxDetails}
+            onChange={handleSFXChange}
+            onCapturePhoto={() => handleOpenCapture('additional', false, true)}
+            onRemovePhoto={(photoId) => removeSFXPhoto(captureId, photoId)}
           />
         </Accordion>
 
