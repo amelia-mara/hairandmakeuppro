@@ -177,18 +177,6 @@ function extractTextFromFDX(xmlContent: string): string {
 }
 
 /**
- * Parse time of day from scene heading (legacy function, kept for compatibility)
- */
-function _parseTimeOfDay(text: string): 'DAY' | 'NIGHT' | 'MORNING' | 'EVENING' | 'CONTINUOUS' {
-  const upper = text.toUpperCase();
-  if (upper.includes('NIGHT')) return 'NIGHT';
-  if (upper.includes('MORNING')) return 'MORNING';
-  if (upper.includes('EVENING') || upper.includes('DUSK') || upper.includes('SUNSET')) return 'EVENING';
-  if (upper.includes('CONTINUOUS') || upper.includes('CONT')) return 'CONTINUOUS';
-  return 'DAY';
-}
-
-/**
  * Normalize time of day string to the scene's expected type
  * Maps various script time indicators to our standard set
  */
@@ -212,28 +200,6 @@ function normalizeTimeOfDayForScene(timeStr: string): 'DAY' | 'NIGHT' | 'MORNING
 
   // Day is default (including AFTERNOON, FLASHBACK, PRESENT, ESTABLISHING, etc.)
   return 'DAY';
-}
-
-/**
- * Parse INT/EXT from scene heading
- */
-function _parseIntExt(text: string): 'INT' | 'EXT' {
-  const upper = text.toUpperCase().trim();
-  if (upper.startsWith('EXT')) return 'EXT';
-  return 'INT';
-}
-
-/**
- * Extract location from scene heading
- */
-function _parseLocation(slugline: string): string {
-  // Remove INT./EXT. prefix
-  let location = slugline.replace(/^(INT\.?\/EXT\.?|EXT\.?\/INT\.?|INT\.?|EXT\.?)\s*/i, '');
-
-  // Remove time of day suffix
-  location = location.replace(/\s*[-–—]\s*(DAY|NIGHT|MORNING|EVENING|DUSK|DAWN|SUNSET|SUNRISE|CONTINUOUS|CONT|LATER|SAME|MOMENTS LATER).*$/i, '');
-
-  return location.trim();
 }
 
 /**
@@ -342,11 +308,6 @@ interface ParsedSceneHeading {
  *   "12A  EXT. PARK - NIGHT  12A"
  *   "I/E. FARMHOUSE - KITCHEN - DAY"
  */
-function _isSceneHeading(line: string): boolean {
-  const result = parseSceneHeadingLine(line);
-  return result.isValid;
-}
-
 /**
  * Parse a scene heading line and extract all components
  * Handles various formats:
