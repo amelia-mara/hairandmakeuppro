@@ -36,6 +36,7 @@ export function Today({ onSceneSelect }: TodayProps) {
   const { currentProject, sceneCaptures, updateSceneFilmingStatus: syncFilmingStatus } = useProjectStore();
   const { getActiveCallSheet } = useCallSheetStore();
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [isReorderMode, setIsReorderMode] = useState(false);
 
   // Get active call sheet from store, fallback to demo
   const activeCallSheet = getActiveCallSheet();
@@ -59,9 +60,16 @@ export function Today({ onSceneSelect }: TodayProps) {
     // In real app, would load call sheet for that date
   };
 
-  // Sort scenes: In Progress → Upcoming → Wrapped
+  // Sort scenes: In reorder mode, just by shootOrder. Otherwise In Progress → Upcoming → Wrapped
   const sortedScenes = useMemo(() => {
     if (!callSheet) return [];
+
+    // In reorder mode, just sort by shoot order
+    if (isReorderMode) {
+      return [...callSheet.scenes].sort((a, b) => a.shootOrder - b.shootOrder);
+    }
+
+    // Normal mode: group by status, then by shoot order
     const statusOrder: Record<ShootingSceneStatus, number> = {
       'in-progress': 0,
       'upcoming': 1,
@@ -72,7 +80,34 @@ export function Today({ onSceneSelect }: TodayProps) {
       if (statusDiff !== 0) return statusDiff;
       return a.shootOrder - b.shootOrder;
     });
-  }, [callSheet]);
+  }, [callSheet, isReorderMode]);
+
+  // Move scene up or down in the order
+  const moveScene = (sceneNumber: string, direction: 'up' | 'down') => {
+    if (!callSheet) return;
+
+    const scenes = [...callSheet.scenes].sort((a, b) => a.shootOrder - b.shootOrder);
+    const currentIndex = scenes.findIndex(s => s.sceneNumber === sceneNumber);
+
+    if (currentIndex === -1) return;
+    if (direction === 'up' && currentIndex === 0) return;
+    if (direction === 'down' && currentIndex === scenes.length - 1) return;
+
+    const swapIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+
+    // Swap shoot orders
+    const currentOrder = scenes[currentIndex].shootOrder;
+    const swapOrder = scenes[swapIndex].shootOrder;
+
+    setCallSheet({
+      ...callSheet,
+      scenes: callSheet.scenes.map(s => {
+        if (s.sceneNumber === sceneNumber) return { ...s, shootOrder: swapOrder };
+        if (s.sceneNumber === scenes[swapIndex].sceneNumber) return { ...s, shootOrder: currentOrder };
+        return s;
+      }),
+    });
+  };
 
   // Get scene data from project (sceneNumber can be "4A", "12", etc.)
   const getSceneData = (sceneNumber: string) => {
@@ -173,12 +208,36 @@ export function Today({ onSceneSelect }: TodayProps) {
               </button>
             </div>
 
-            {/* Production day badge */}
-            {callSheet && (
-              <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-gold-100 text-gold">
-                Day {callSheet.productionDay}
-              </span>
-            )}
+            {/* Reorder button and Production day badge */}
+            <div className="flex items-center gap-2">
+              {callSheet && (
+                <>
+                  <button
+                    onClick={() => setIsReorderMode(!isReorderMode)}
+                    className={clsx(
+                      'p-2 rounded-lg transition-colors touch-manipulation',
+                      isReorderMode
+                        ? 'bg-gold text-white'
+                        : 'text-text-muted hover:text-gold'
+                    )}
+                    title={isReorderMode ? 'Done reordering' : 'Reorder scenes'}
+                  >
+                    {isReorderMode ? (
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    ) : (
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                      </svg>
+                    )}
+                  </button>
+                  <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-gold-100 text-gold">
+                    Day {callSheet.productionDay}
+                  </span>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Weather note */}
@@ -237,9 +296,22 @@ export function Today({ onSceneSelect }: TodayProps) {
               </h2>
             </div>
 
+            {/* Reorder mode header */}
+            {isReorderMode && (
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm text-text-muted">Drag to reorder shooting schedule</p>
+                <button
+                  onClick={() => setIsReorderMode(false)}
+                  className="text-sm font-medium text-gold"
+                >
+                  Done
+                </button>
+              </div>
+            )}
+
             {/* Scenes List */}
             <div className="space-y-2.5">
-              {sortedScenes.map((shootingScene) => {
+              {sortedScenes.map((shootingScene, index) => {
                 const scene = getSceneData(shootingScene.sceneNumber);
                 const characters = getCharactersInScene(shootingScene.sceneNumber);
                 const isCaptured = isSceneContinuityCaptured(shootingScene.sceneNumber);
@@ -258,6 +330,11 @@ export function Today({ onSceneSelect }: TodayProps) {
                     onFilmingStatusChange={(filmingStatus, notes) =>
                       updateSceneFilmingStatus(shootingScene.sceneNumber, filmingStatus, notes)
                     }
+                    isReorderMode={isReorderMode}
+                    isFirst={index === 0}
+                    isLast={index === sortedScenes.length - 1}
+                    onMoveUp={() => moveScene(shootingScene.sceneNumber, 'up')}
+                    onMoveDown={() => moveScene(shootingScene.sceneNumber, 'down')}
                   />
                 );
               })}
@@ -291,6 +368,12 @@ interface TodaySceneCardProps {
   onSynopsisClick: (scene: Scene) => void;
   onStatusChange: (status: ShootingSceneStatus) => void;
   onFilmingStatusChange: (status: SceneFilmingStatus, notes?: string) => void;
+  // Reorder mode props
+  isReorderMode?: boolean;
+  isFirst?: boolean;
+  isLast?: boolean;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
 }
 
 function TodaySceneCard({
@@ -303,6 +386,11 @@ function TodaySceneCard({
   onSynopsisClick,
   onStatusChange,
   onFilmingStatusChange,
+  isReorderMode = false,
+  isFirst = false,
+  isLast = false,
+  onMoveUp,
+  onMoveDown,
 }: TodaySceneCardProps) {
   const [showActions, setShowActions] = useState(false);
   const [showFilmingStatusModal, setShowFilmingStatusModal] = useState(false);
@@ -408,33 +496,77 @@ function TodaySceneCard({
     <>
       {/* Container needs z-index when dropdown is open to ensure dropdown appears above other cards */}
       <div className={clsx('relative', showStatusDropdown && 'z-40')}>
+        {/* Reorder mode controls */}
+        {isReorderMode && (
+          <div className="absolute right-2 top-1/2 -translate-y-1/2 z-20 flex flex-col gap-1">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onMoveUp?.();
+              }}
+              disabled={isFirst}
+              className={clsx(
+                'p-2 rounded-lg transition-all touch-manipulation',
+                isFirst
+                  ? 'text-gray-300 cursor-not-allowed'
+                  : 'text-text-muted hover:text-gold hover:bg-gold/10 active:scale-95'
+              )}
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+              </svg>
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onMoveDown?.();
+              }}
+              disabled={isLast}
+              className={clsx(
+                'p-2 rounded-lg transition-all touch-manipulation',
+                isLast
+                  ? 'text-gray-300 cursor-not-allowed'
+                  : 'text-text-muted hover:text-gold hover:bg-gold/10 active:scale-95'
+              )}
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+          </div>
+        )}
+
         <div
-          onClick={onTap}
+          onClick={isReorderMode ? undefined : onTap}
           onContextMenu={(e) => {
+            if (isReorderMode) return;
             e.preventDefault();
             handleLongPress();
           }}
-          className="w-full text-left card transition-all active:scale-[0.98] relative overflow-hidden cursor-pointer"
+          className={clsx(
+            'w-full text-left card transition-all relative overflow-hidden',
+            isReorderMode ? 'pr-16' : 'active:scale-[0.98] cursor-pointer'
+          )}
         >
           {/* Glass overlay - positioned inside card to cover entire pill */}
           {glassOverlayClass && (
             <div className={clsx('scene-glass-overlay', glassOverlayClass)} />
           )}
 
-          {/* Status accent bar on left edge */}
+          {/* Status accent bar on left edge - sophisticated gradient */}
           <div
             className="absolute left-0 top-0 bottom-0 w-1 rounded-l-card"
             style={{
-              backgroundColor: shootingScene.status === 'in-progress'
-                ? '#C9A962' // Gold for in progress
+              background: shootingScene.status === 'in-progress'
+                ? 'linear-gradient(180deg, #d4a853 0%, #c9a962 100%)' // Gold gradient
                 : shootingScene.status === 'wrapped'
                   ? shootingScene.filmingStatus === 'complete'
-                    ? '#22c55e' // Green for complete
+                    ? 'linear-gradient(180deg, #10b981 0%, #059669 100%)' // Emerald gradient
                     : shootingScene.filmingStatus === 'partial'
-                      ? '#f59e0b' // Amber for partial
+                      ? 'linear-gradient(180deg, #d4a853 0%, #c9a962 100%)' // Warm gold gradient
                       : shootingScene.filmingStatus === 'not-filmed'
-                        ? '#ef4444' // Red for not filmed
-                        : '#9ca3af' // Gray for wrapped without filming status
+                        ? 'linear-gradient(180deg, #f87171 0%, #ef4444 100%)' // Soft red gradient
+                        : 'linear-gradient(180deg, #d1d5db 0%, #9ca3af 100%)' // Gray gradient
                   : 'transparent' // No bar for upcoming
             }}
           />
@@ -453,8 +585,8 @@ function TodaySceneCard({
                     {(scene?.intExt || parsedSceneInfo?.intExt) && (
                       <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded ${
                         (scene?.intExt || parsedSceneInfo?.intExt) === 'INT'
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'bg-amber-100 text-amber-700'
+                          ? 'bg-slate-100 text-slate-600'
+                          : 'bg-stone-100 text-stone-600'
                       }`}>
                         {scene?.intExt || parsedSceneInfo?.intExt}
                       </span>

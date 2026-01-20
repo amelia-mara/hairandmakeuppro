@@ -240,43 +240,108 @@
     border: 1px solid rgba(201, 169, 97, 0.08);
   }
 
-  /* Scene completion status glass overlays */
+  /* Scene completion status glass overlays - Premium Apple-inspired liquid glass */
   .scene-glass-overlay {
     @apply absolute inset-0 rounded-card pointer-events-none;
-    backdrop-filter: blur(8px) saturate(120%);
-    -webkit-backdrop-filter: blur(8px) saturate(120%);
-    transition: all 0.3s ease;
+    backdrop-filter: blur(12px) saturate(140%);
+    -webkit-backdrop-filter: blur(12px) saturate(140%);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
+  /* Complete - Sophisticated emerald tones */
   .scene-glass-complete {
-    background: linear-gradient(135deg, rgba(34, 197, 94, 0.12) 0%, rgba(34, 197, 94, 0.18) 100%);
-    box-shadow: inset 0 0 30px rgba(34, 197, 94, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    background: linear-gradient(
+      145deg,
+      rgba(16, 185, 129, 0.08) 0%,
+      rgba(52, 211, 153, 0.12) 50%,
+      rgba(16, 185, 129, 0.06) 100%
+    );
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.4),
+      inset 0 -1px 0 rgba(16, 185, 129, 0.1),
+      0 0 0 1px rgba(16, 185, 129, 0.08);
   }
 
+  /* Partial - Warm sophisticated amber/gold */
   .scene-glass-partial {
-    background: linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(245, 158, 11, 0.18) 100%);
-    box-shadow: inset 0 0 30px rgba(245, 158, 11, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    background: linear-gradient(
+      145deg,
+      rgba(217, 176, 96, 0.08) 0%,
+      rgba(245, 200, 120, 0.12) 50%,
+      rgba(217, 176, 96, 0.06) 100%
+    );
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.4),
+      inset 0 -1px 0 rgba(217, 176, 96, 0.1),
+      0 0 0 1px rgba(217, 176, 96, 0.08);
   }
 
+  /* Incomplete - Muted rose/coral instead of harsh red */
   .scene-glass-incomplete {
-    background: linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(239, 68, 68, 0.18) 100%);
-    box-shadow: inset 0 0 30px rgba(239, 68, 68, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    background: linear-gradient(
+      145deg,
+      rgba(244, 114, 114, 0.06) 0%,
+      rgba(251, 146, 146, 0.10) 50%,
+      rgba(244, 114, 114, 0.05) 100%
+    );
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.4),
+      inset 0 -1px 0 rgba(244, 114, 114, 0.08),
+      0 0 0 1px rgba(244, 114, 114, 0.06);
   }
 
-  /* Dark mode glass overlays - more pronounced effect */
+  /* Left accent bar colors - refined palette */
+  .accent-bar-complete {
+    background: linear-gradient(180deg, #10b981 0%, #059669 100%);
+  }
+  .accent-bar-partial {
+    background: linear-gradient(180deg, #d4a853 0%, #c9a962 100%);
+  }
+  .accent-bar-incomplete {
+    background: linear-gradient(180deg, #f87171 0%, #ef4444 100%);
+  }
+  .accent-bar-neutral {
+    background: linear-gradient(180deg, #d1d5db 0%, #9ca3af 100%);
+  }
+
+  /* Dark mode glass overlays - deeper, richer effect */
   .dark .scene-glass-complete {
-    background: linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(34, 197, 94, 0.22) 100%);
-    box-shadow: inset 0 0 40px rgba(34, 197, 94, 0.15), inset 0 1px 0 rgba(34, 197, 94, 0.3);
+    background: linear-gradient(
+      145deg,
+      rgba(16, 185, 129, 0.12) 0%,
+      rgba(52, 211, 153, 0.18) 50%,
+      rgba(16, 185, 129, 0.10) 100%
+    );
+    box-shadow:
+      inset 0 1px 0 rgba(16, 185, 129, 0.2),
+      inset 0 -1px 0 rgba(16, 185, 129, 0.15),
+      0 0 0 1px rgba(16, 185, 129, 0.15);
   }
 
   .dark .scene-glass-partial {
-    background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0.22) 100%);
-    box-shadow: inset 0 0 40px rgba(245, 158, 11, 0.15), inset 0 1px 0 rgba(245, 158, 11, 0.3);
+    background: linear-gradient(
+      145deg,
+      rgba(217, 176, 96, 0.12) 0%,
+      rgba(245, 200, 120, 0.18) 50%,
+      rgba(217, 176, 96, 0.10) 100%
+    );
+    box-shadow:
+      inset 0 1px 0 rgba(217, 176, 96, 0.2),
+      inset 0 -1px 0 rgba(217, 176, 96, 0.15),
+      0 0 0 1px rgba(217, 176, 96, 0.15);
   }
 
   .dark .scene-glass-incomplete {
-    background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(239, 68, 68, 0.22) 100%);
-    box-shadow: inset 0 0 40px rgba(239, 68, 68, 0.15), inset 0 1px 0 rgba(239, 68, 68, 0.3);
+    background: linear-gradient(
+      145deg,
+      rgba(244, 114, 114, 0.10) 0%,
+      rgba(251, 146, 146, 0.14) 50%,
+      rgba(244, 114, 114, 0.08) 100%
+    );
+    box-shadow:
+      inset 0 1px 0 rgba(244, 114, 114, 0.15),
+      inset 0 -1px 0 rgba(244, 114, 114, 0.12),
+      0 0 0 1px rgba(244, 114, 114, 0.12);
   }
 
   /* Status dropdown button styling */
