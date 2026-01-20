@@ -86,6 +86,10 @@ interface ProjectState {
   // Actions - Scene Filming Status (synced between Today and Breakdown)
   updateSceneFilmingStatus: (sceneNumber: string, filmingStatus: SceneFilmingStatus, filmingNotes?: string) => void;
 
+  // Actions - Scene Synopsis
+  updateSceneSynopsis: (sceneId: string, synopsis: string) => void;
+  updateAllSceneSynopses: (scenes: Scene[]) => void;
+
   // Actions - Look Updates
   updateLook: (lookId: string, updates: Partial<Look>) => void;
 
@@ -495,6 +499,47 @@ export const useProjectStore = create<ProjectState>()(
                   ? { ...s, filmingStatus, filmingNotes }
                   : s
               ),
+            },
+          };
+        });
+      },
+
+      // Scene synopsis - update a single scene's synopsis
+      updateSceneSynopsis: (sceneId, synopsis) => {
+        set((state) => {
+          if (!state.currentProject) return state;
+
+          return {
+            currentProject: {
+              ...state.currentProject,
+              scenes: state.currentProject.scenes.map((s) =>
+                s.id === sceneId ? { ...s, synopsis } : s
+              ),
+            },
+          };
+        });
+      },
+
+      // Scene synopsis - update all scenes with new synopsis data (used after sync/generate)
+      updateAllSceneSynopses: (updatedScenes) => {
+        set((state) => {
+          if (!state.currentProject) return state;
+
+          // Create a map of scene id to synopsis for quick lookup
+          const synopsisMap = new Map<string, string | undefined>();
+          updatedScenes.forEach(s => {
+            if (s.synopsis) {
+              synopsisMap.set(s.id, s.synopsis);
+            }
+          });
+
+          return {
+            currentProject: {
+              ...state.currentProject,
+              scenes: state.currentProject.scenes.map((s) => {
+                const newSynopsis = synopsisMap.get(s.id);
+                return newSynopsis ? { ...s, synopsis: newSynopsis } : s;
+              }),
             },
           };
         });

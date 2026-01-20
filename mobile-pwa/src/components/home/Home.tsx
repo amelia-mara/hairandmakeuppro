@@ -436,6 +436,13 @@ function ProcessingScreen({ fileName, progress, status }: ProcessingScreenProps)
           {status}
         </p>
       </div>
+
+      {/* Informative note */}
+      <div className="mt-8 max-w-xs text-center">
+        <p className="text-xs text-text-muted leading-relaxed">
+          This may take a few minutes. Our system is carefully analyzing your script to ensure all scenes, characters, and details are accurately captured and broken down for your continuity needs.
+        </p>
+      </div>
     </div>
   );
 }

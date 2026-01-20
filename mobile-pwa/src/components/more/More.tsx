@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { useNavigationStore, MAX_BOTTOM_NAV_ITEMS } from '@/stores/navigationStore';
 import { useThemeStore, type Theme } from '@/stores/themeStore';
@@ -672,9 +672,54 @@ interface ViewerProps {
 function ScriptViewer({ onBack }: ViewerProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedScene, setSelectedScene] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'full' | 'scenes'>('full');
   const { currentProject } = useProjectStore();
+  const sceneRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
-  const sceneNumbers = currentProject?.scenes.map(s => s.sceneNumber).sort((a, b) => a.localeCompare(b, undefined, { numeric: true })) || [];
+  // Sort scenes by scene number
+  const sortedScenes = useMemo(() => {
+    if (!currentProject?.scenes) return [];
+    return [...currentProject.scenes].sort((a, b) =>
+      a.sceneNumber.localeCompare(b.sceneNumber, undefined, { numeric: true })
+    );
+  }, [currentProject?.scenes]);
+
+  // Check if we have script content
+  const hasScriptContent = sortedScenes.some(s => s.scriptContent);
+
+  // Filter scenes by search query
+  const filteredScenes = useMemo(() => {
+    if (!searchQuery.trim()) return sortedScenes;
+    const query = searchQuery.toLowerCase();
+    return sortedScenes.filter(scene =>
+      scene.scriptContent?.toLowerCase().includes(query) ||
+      scene.slugline.toLowerCase().includes(query) ||
+      scene.synopsis?.toLowerCase().includes(query)
+    );
+  }, [sortedScenes, searchQuery]);
+
+  // Scroll to scene when selected
+  useEffect(() => {
+    if (selectedScene) {
+      const sceneEl = sceneRefs.current.get(selectedScene);
+      if (sceneEl) {
+        sceneEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      // Clear selection after scroll
+      setTimeout(() => setSelectedScene(null), 500);
+    }
+  }, [selectedScene]);
+
+  // Highlight search matches in text
+  const highlightText = (text: string, query: string) => {
+    if (!query.trim()) return text;
+    const parts = text.split(new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
+    return parts.map((part, i) =>
+      part.toLowerCase() === query.toLowerCase()
+        ? <mark key={i} className="bg-gold/30 text-text-primary px-0.5 rounded">{part}</mark>
+        : part
+    );
+  };
 
   return (
     <>
@@ -690,48 +735,244 @@ function ScriptViewer({ onBack }: ViewerProps) {
               </svg>
             </button>
             <h1 className="text-lg font-semibold text-text-primary">Script</h1>
+            {hasScriptContent && (
+              <span className="ml-auto text-xs text-text-muted">
+                {sortedScenes.length} scenes
+              </span>
+            )}
           </div>
 
-          <div className="px-4 pb-3 flex gap-2">
-            <div className="flex-1 relative">
-              <svg className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <input
-                type="text"
-                placeholder="Search text..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 text-sm border border-border rounded-lg bg-card text-text-primary"
-              />
-            </div>
-            <select
-              value={selectedScene || ''}
-              onChange={(e) => setSelectedScene(e.target.value || null)}
-              className="px-3 py-2 text-sm border border-border rounded-lg bg-card text-text-primary"
-            >
-              <option value="">Jump to...</option>
-              {sceneNumbers.map((num) => (
-                <option key={num} value={num}>Scene {num}</option>
-              ))}
-            </select>
-          </div>
+          {hasScriptContent && (
+            <>
+              <div className="px-4 pb-2 flex gap-2">
+                <div className="flex-1 relative">
+                  <svg className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  <input
+                    type="text"
+                    placeholder="Search script..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 text-sm border border-border rounded-lg bg-card text-text-primary"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-text-light hover:text-text-muted"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+                <select
+                  value={selectedScene || ''}
+                  onChange={(e) => setSelectedScene(e.target.value || null)}
+                  className="px-3 py-2 text-sm border border-border rounded-lg bg-card text-text-primary min-w-[100px]"
+                >
+                  <option value="">Jump to...</option>
+                  {sortedScenes.map((scene) => (
+                    <option key={scene.sceneNumber} value={scene.sceneNumber}>
+                      Scene {scene.sceneNumber}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* View mode toggle */}
+              <div className="px-4 pb-3 flex gap-2">
+                <button
+                  onClick={() => setViewMode('full')}
+                  className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                    viewMode === 'full'
+                      ? 'bg-gold text-white'
+                      : 'bg-gray-100 text-text-muted'
+                  }`}
+                >
+                  Full Script
+                </button>
+                <button
+                  onClick={() => setViewMode('scenes')}
+                  className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                    viewMode === 'scenes'
+                      ? 'bg-gold text-white'
+                      : 'bg-gray-100 text-text-muted'
+                  }`}
+                >
+                  Scene Cards
+                </button>
+              </div>
+
+              {/* Search results count */}
+              {searchQuery && (
+                <div className="px-4 pb-2">
+                  <span className="text-xs text-text-muted">
+                    {filteredScenes.length} scene{filteredScenes.length !== 1 ? 's' : ''} found
+                  </span>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
 
-      <div className="mobile-container px-4 py-8">
-        <div className="flex flex-col items-center justify-center py-12">
-          <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
-            <NavIcon name="document" className="w-8 h-8 text-gray-300" />
+      <div className="mobile-container pb-safe-bottom">
+        {!hasScriptContent ? (
+          /* Empty State */
+          <div className="px-4 py-8">
+            <div className="flex flex-col items-center justify-center py-12">
+              <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+                <NavIcon name="document" className="w-8 h-8 text-gray-300" />
+              </div>
+              <h3 className="text-base font-semibold text-text-primary mb-1">No Script Content</h3>
+              <p className="text-sm text-text-muted text-center mb-6">
+                Upload a script (PDF, FDX, or Fountain) to view it here
+              </p>
+              <button className="px-4 py-2.5 rounded-button gold-gradient text-white text-sm font-medium active:scale-95 transition-transform">
+                Upload Script
+              </button>
+            </div>
           </div>
-          <h3 className="text-base font-semibold text-text-primary mb-1">No Script Uploaded</h3>
-          <p className="text-sm text-text-muted text-center mb-6">
-            Upload your script PDF to view it here
-          </p>
-          <button className="px-4 py-2.5 rounded-button gold-gradient text-white text-sm font-medium active:scale-95 transition-transform">
-            Upload Script PDF
-          </button>
-        </div>
+        ) : viewMode === 'full' ? (
+          /* Full Script View */
+          <div className="px-4 py-4">
+            {filteredScenes.map((scene) => (
+              <div
+                key={scene.id}
+                ref={(el) => {
+                  if (el) sceneRefs.current.set(scene.sceneNumber, el);
+                }}
+                className="mb-6"
+              >
+                {/* Scene header */}
+                <div className="sticky top-[120px] z-10 bg-gold/10 backdrop-blur-sm border-l-4 border-gold px-3 py-2 mb-2 rounded-r-lg">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-gold">
+                      SCENE {scene.sceneNumber}
+                    </span>
+                    <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded ${
+                      scene.intExt === 'INT' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
+                    }`}>
+                      {scene.intExt}
+                    </span>
+                    <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-gray-100 text-text-muted">
+                      {scene.timeOfDay}
+                    </span>
+                  </div>
+                  <p className="text-sm font-semibold text-text-primary mt-1">
+                    {scene.slugline}
+                  </p>
+                  {scene.synopsis && (
+                    <p className="text-xs text-text-muted italic mt-1">
+                      {highlightText(scene.synopsis, searchQuery)}
+                    </p>
+                  )}
+                </div>
+
+                {/* Script content */}
+                {scene.scriptContent ? (
+                  <pre className="whitespace-pre-wrap font-mono text-sm text-text-primary leading-relaxed pl-3">
+                    {searchQuery
+                      ? highlightText(scene.scriptContent, searchQuery)
+                      : scene.scriptContent}
+                  </pre>
+                ) : (
+                  <p className="text-sm text-text-muted italic pl-3">
+                    No script content available for this scene
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          /* Scene Cards View */
+          <div className="px-4 py-4 space-y-3">
+            {filteredScenes.map((scene) => (
+              <div
+                key={scene.id}
+                ref={(el) => {
+                  if (el) sceneRefs.current.set(scene.sceneNumber, el);
+                }}
+                className="card"
+              >
+                {/* Scene header */}
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-sm font-bold text-gold">
+                    {scene.sceneNumber}
+                  </span>
+                  <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded ${
+                    scene.intExt === 'INT' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
+                  }`}>
+                    {scene.intExt}
+                  </span>
+                  <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-gray-100 text-text-muted">
+                    {scene.timeOfDay}
+                  </span>
+                  {scene.filmingStatus && (
+                    <span className={`ml-auto px-1.5 py-0.5 text-[10px] font-medium rounded ${
+                      scene.filmingStatus === 'complete' ? 'bg-green-100 text-green-700' :
+                      scene.filmingStatus === 'partial' ? 'bg-amber-100 text-amber-700' :
+                      'bg-red-100 text-red-700'
+                    }`}>
+                      {scene.filmingStatus === 'complete' ? 'Complete' :
+                       scene.filmingStatus === 'partial' ? 'Partial' : 'Incomplete'}
+                    </span>
+                  )}
+                </div>
+
+                {/* Slugline */}
+                <p className="text-sm font-medium text-text-primary mb-1">
+                  {highlightText(scene.slugline, searchQuery)}
+                </p>
+
+                {/* Synopsis */}
+                {scene.synopsis && (
+                  <p className="text-xs text-text-muted italic mb-3">
+                    {highlightText(scene.synopsis, searchQuery)}
+                  </p>
+                )}
+
+                {/* Script content preview */}
+                {scene.scriptContent && (
+                  <details className="group">
+                    <summary className="text-xs text-gold cursor-pointer flex items-center gap-1 select-none">
+                      <svg className="w-3 h-3 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
+                      View full scene ({scene.scriptContent.split('\n').length} lines)
+                    </summary>
+                    <pre className="whitespace-pre-wrap font-mono text-xs text-text-secondary leading-relaxed mt-2 p-3 bg-gray-50 rounded-lg max-h-96 overflow-y-auto">
+                      {searchQuery
+                        ? highlightText(scene.scriptContent, searchQuery)
+                        : scene.scriptContent}
+                    </pre>
+                  </details>
+                )}
+
+                {/* Characters in scene */}
+                {scene.characters.length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-border">
+                    <span className="text-[10px] font-bold tracking-wider uppercase text-text-light">
+                      Characters ({scene.characters.length})
+                    </span>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {scene.characters.map((charId) => {
+                        const char = currentProject?.characters.find(c => c.id === charId);
+                        return char ? (
+                          <span key={charId} className="px-2 py-0.5 text-[10px] rounded-full bg-gray-100 text-text-muted">
+                            {char.name}
+                          </span>
+                        ) : null;
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </>
   );
