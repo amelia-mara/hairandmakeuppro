@@ -179,7 +179,7 @@ function extractTextFromFDX(xmlContent: string): string {
 /**
  * Parse time of day from scene heading (legacy function, kept for compatibility)
  */
-function parseTimeOfDay(text: string): 'DAY' | 'NIGHT' | 'MORNING' | 'EVENING' | 'CONTINUOUS' {
+function _parseTimeOfDay(text: string): 'DAY' | 'NIGHT' | 'MORNING' | 'EVENING' | 'CONTINUOUS' {
   const upper = text.toUpperCase();
   if (upper.includes('NIGHT')) return 'NIGHT';
   if (upper.includes('MORNING')) return 'MORNING';
@@ -217,7 +217,7 @@ function normalizeTimeOfDayForScene(timeStr: string): 'DAY' | 'NIGHT' | 'MORNING
 /**
  * Parse INT/EXT from scene heading
  */
-function parseIntExt(text: string): 'INT' | 'EXT' {
+function _parseIntExt(text: string): 'INT' | 'EXT' {
   const upper = text.toUpperCase().trim();
   if (upper.startsWith('EXT')) return 'EXT';
   return 'INT';
@@ -226,7 +226,7 @@ function parseIntExt(text: string): 'INT' | 'EXT' {
 /**
  * Extract location from scene heading
  */
-function parseLocation(slugline: string): string {
+function _parseLocation(slugline: string): string {
   // Remove INT./EXT. prefix
   let location = slugline.replace(/^(INT\.?\/EXT\.?|EXT\.?\/INT\.?|INT\.?|EXT\.?)\s*/i, '');
 
@@ -342,7 +342,7 @@ interface ParsedSceneHeading {
  *   "12A  EXT. PARK - NIGHT  12A"
  *   "I/E. FARMHOUSE - KITCHEN - DAY"
  */
-function isSceneHeading(line: string): boolean {
+function _isSceneHeading(line: string): boolean {
   const result = parseSceneHeadingLine(line);
   return result.isValid;
 }
@@ -358,7 +358,6 @@ function isSceneHeading(line: string): boolean {
  */
 function parseSceneHeadingLine(line: string): ParsedSceneHeading {
   const trimmed = line.trim();
-  const upper = trimmed.toUpperCase();
 
   // Default invalid result
   const invalidResult: ParsedSceneHeading = {
@@ -419,15 +418,6 @@ function parseSceneHeadingLine(line: string): ParsedSceneHeading {
   workingLine = workingLine.replace(/^[\.\-–—]\s*/, '').trim();
 
   // Now extract time of day and location
-  // Time of day patterns at the end
-  const timePatterns = [
-    'DAY', 'NIGHT', 'MORNING', 'EVENING', 'AFTERNOON', 'DAWN', 'DUSK',
-    'SUNSET', 'SUNRISE', 'CONTINUOUS', 'CONT', 'LATER', 'SAME', 'SAME TIME',
-    'MOMENTS LATER', 'SIMULTANEOUS', 'MAGIC HOUR', 'GOLDEN HOUR',
-    'FLASHBACK', 'PRESENT', 'DREAM', 'FANTASY', 'NIGHTMARE',
-    'ESTABLISHING'
-  ];
-
   // Build regex to find time of day (handling various separators)
   // Matches: "- DAY", "-- DAY", "– DAY", "— DAY", ". DAY", ", DAY", just "DAY" at end
   const timeSeparatorPattern = /(?:\s*[-–—\.]+\s*|\s+)(DAY|NIGHT|MORNING|EVENING|AFTERNOON|DAWN|DUSK|SUNSET|SUNRISE|CONTINUOUS|CONT|LATER|SAME|SAME TIME|MOMENTS LATER|SIMULTANEOUS|MAGIC HOUR|GOLDEN HOUR|FLASHBACK|PRESENT|DREAM|FANTASY|NIGHTMARE|ESTABLISHING)(?:\s*[-–—]?\s*(?:FLASHBACK|PRESENT|CONT(?:'D)?)?)?$/i;
@@ -457,11 +447,6 @@ function parseSceneHeadingLine(line: string): ParsedSceneHeading {
     return invalidResult;
   }
 
-  // Build the clean slugline
-  const rawSlugline = sceneNumber
-    ? `${sceneNumber} ${intExt}. ${location} - ${timeOfDay}`
-    : `${intExt}. ${location} - ${timeOfDay}`;
-
   return {
     sceneNumber,
     intExt,
@@ -484,7 +469,6 @@ export function parseScriptText(text: string): ParsedScript {
   let fallbackSceneNumber = 0; // Used only if script doesn't have scene numbers
   let currentSceneContent = '';
   let lastLineWasCharacter = false;
-  let lastCharacterName = '';
   let dialogueCount = 0;
 
   for (let i = 0; i < lines.length; i++) {
