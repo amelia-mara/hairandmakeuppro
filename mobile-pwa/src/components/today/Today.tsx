@@ -421,20 +421,20 @@ function TodaySceneCard({
             <div className={clsx('scene-glass-overlay', glassOverlayClass)} />
           )}
 
-          {/* Status accent bar on left edge */}
+          {/* Status accent bar on left edge - sophisticated gradient */}
           <div
             className="absolute left-0 top-0 bottom-0 w-1 rounded-l-card"
             style={{
-              backgroundColor: shootingScene.status === 'in-progress'
-                ? '#C9A962' // Gold for in progress
+              background: shootingScene.status === 'in-progress'
+                ? 'linear-gradient(180deg, #d4a853 0%, #c9a962 100%)' // Gold gradient
                 : shootingScene.status === 'wrapped'
                   ? shootingScene.filmingStatus === 'complete'
-                    ? '#22c55e' // Green for complete
+                    ? 'linear-gradient(180deg, #10b981 0%, #059669 100%)' // Emerald gradient
                     : shootingScene.filmingStatus === 'partial'
-                      ? '#f59e0b' // Amber for partial
+                      ? 'linear-gradient(180deg, #d4a853 0%, #c9a962 100%)' // Warm gold gradient
                       : shootingScene.filmingStatus === 'not-filmed'
-                        ? '#ef4444' // Red for not filmed
-                        : '#9ca3af' // Gray for wrapped without filming status
+                        ? 'linear-gradient(180deg, #f87171 0%, #ef4444 100%)' // Soft red gradient
+                        : 'linear-gradient(180deg, #d1d5db 0%, #9ca3af 100%)' // Gray gradient
                   : 'transparent' // No bar for upcoming
             }}
           />
@@ -453,8 +453,8 @@ function TodaySceneCard({
                     {(scene?.intExt || parsedSceneInfo?.intExt) && (
                       <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded ${
                         (scene?.intExt || parsedSceneInfo?.intExt) === 'INT'
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'bg-amber-100 text-amber-700'
+                          ? 'bg-slate-100 text-slate-600'
+                          : 'bg-stone-100 text-stone-600'
                       }`}>
                         {scene?.intExt || parsedSceneInfo?.intExt}
                       </span>

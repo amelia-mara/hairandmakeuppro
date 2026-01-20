@@ -321,6 +321,17 @@ function BreakdownListView({
 
         const glassOverlayClass = getGlassOverlayClass(scene.filmingStatus);
 
+        // Get accent bar class based on filming status
+        const getAccentBarClass = () => {
+          if (!scene.filmingStatus) return 'accent-bar-neutral';
+          switch (scene.filmingStatus) {
+            case 'complete': return 'accent-bar-complete';
+            case 'partial': return 'accent-bar-partial';
+            case 'not-filmed': return 'accent-bar-incomplete';
+            default: return 'accent-bar-neutral';
+          }
+        };
+
         return (
           <div
             key={scene.id}
@@ -333,6 +344,8 @@ function BreakdownListView({
             <div
               className="card overflow-hidden relative z-10"
             >
+            {/* Left accent bar */}
+            <div className={clsx('absolute left-0 top-0 bottom-0 w-1 rounded-l-card', getAccentBarClass())} />
             {/* Row header - always visible */}
             <button
               onClick={() => onToggleExpand(scene.id)}
@@ -346,7 +359,7 @@ function BreakdownListView({
               {/* INT/EXT badge */}
               <span className={clsx(
                 'px-1.5 py-0.5 text-[10px] font-bold rounded flex-shrink-0',
-                scene.intExt === 'INT' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
+                scene.intExt === 'INT' ? 'bg-slate-100 text-slate-600' : 'bg-stone-100 text-stone-600'
               )}>
                 {scene.intExt}
               </span>
@@ -627,6 +640,17 @@ function BreakdownGridView({
 
         const glassOverlayClass = getGlassOverlayClass(scene.filmingStatus);
 
+        // Get accent bar class based on filming status
+        const getAccentBarClass = () => {
+          if (!scene.filmingStatus) return 'accent-bar-neutral';
+          switch (scene.filmingStatus) {
+            case 'complete': return 'accent-bar-complete';
+            case 'partial': return 'accent-bar-partial';
+            case 'not-filmed': return 'accent-bar-incomplete';
+            default: return 'accent-bar-neutral';
+          }
+        };
+
         return (
           <div key={scene.id} className="relative">
             {/* Glass overlay */}
@@ -635,8 +659,11 @@ function BreakdownGridView({
             )}
             <button
               onClick={() => onSceneSelect(scene.id)}
-              className="card text-left active:scale-[0.98] transition-transform w-full relative z-10"
+              className="card text-left active:scale-[0.98] transition-transform w-full relative z-10 overflow-hidden"
             >
+            {/* Left accent bar */}
+            <div className={clsx('absolute left-0 top-0 bottom-0 w-1', getAccentBarClass())} />
+
             {/* Scene number and INT/EXT */}
             <div className="flex items-center justify-between mb-1.5">
               <span className="text-xl font-bold text-text-primary">{scene.sceneNumber}</span>
@@ -652,7 +679,7 @@ function BreakdownGridView({
                 )}
                 <span className={clsx(
                   'px-1.5 py-0.5 text-[9px] font-bold rounded',
-                  scene.intExt === 'INT' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
+                  scene.intExt === 'INT' ? 'bg-slate-100 text-slate-600' : 'bg-stone-100 text-stone-600'
                 )}>
                   {scene.intExt}
                 </span>
@@ -676,17 +703,22 @@ function BreakdownGridView({
               )}
             </div>
 
-            {/* Progress bar - color based on filming status */}
-            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            {/* Progress bar - sophisticated color palette */}
+            <div className="h-1.5 bg-gray-100/80 rounded-full overflow-hidden">
               <div
-                className={clsx(
-                  'h-full rounded-full transition-all',
-                  scene.filmingStatus === 'complete' ? 'bg-green-500' :
-                  scene.filmingStatus === 'partial' ? 'bg-amber-500' :
-                  scene.filmingStatus === 'not-filmed' ? 'bg-red-500' :
-                  progressPercent === 100 ? 'bg-green-500' : 'bg-gold'
-                )}
-                style={{ width: `${progressPercent}%` }}
+                className="h-full rounded-full transition-all"
+                style={{
+                  width: `${progressPercent}%`,
+                  background: scene.filmingStatus === 'complete'
+                    ? 'linear-gradient(90deg, #10b981 0%, #059669 100%)'
+                    : scene.filmingStatus === 'partial'
+                    ? 'linear-gradient(90deg, #d4a853 0%, #c9a962 100%)'
+                    : scene.filmingStatus === 'not-filmed'
+                    ? 'linear-gradient(90deg, #f87171 0%, #ef4444 100%)'
+                    : progressPercent === 100
+                    ? 'linear-gradient(90deg, #10b981 0%, #059669 100%)'
+                    : 'linear-gradient(90deg, #c9a962 0%, #d4a853 100%)'
+                }}
               />
             </div>
             <span className="text-[10px] text-text-light mt-1 block">
