@@ -546,7 +546,7 @@ export function convertParsedScriptToProject(
       slugline: `${ps.intExt}. ${ps.location} - ${ps.timeOfDay}`,
       intExt: ps.intExt,
       timeOfDay: ps.timeOfDay,
-      synopsis: undefined,
+      synopsis: ps.synopsis,
       scriptContent: ps.content,
       characters: sceneCharIds,
       isComplete: false,
