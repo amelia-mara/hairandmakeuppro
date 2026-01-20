@@ -177,7 +177,7 @@ function extractTextFromFDX(xmlContent: string): string {
 }
 
 /**
- * Parse time of day from scene heading
+ * Parse time of day from scene heading (legacy function, kept for compatibility)
  */
 function parseTimeOfDay(text: string): 'DAY' | 'NIGHT' | 'MORNING' | 'EVENING' | 'CONTINUOUS' {
   const upper = text.toUpperCase();
@@ -185,6 +185,32 @@ function parseTimeOfDay(text: string): 'DAY' | 'NIGHT' | 'MORNING' | 'EVENING' |
   if (upper.includes('MORNING')) return 'MORNING';
   if (upper.includes('EVENING') || upper.includes('DUSK') || upper.includes('SUNSET')) return 'EVENING';
   if (upper.includes('CONTINUOUS') || upper.includes('CONT')) return 'CONTINUOUS';
+  return 'DAY';
+}
+
+/**
+ * Normalize time of day string to the scene's expected type
+ * Maps various script time indicators to our standard set
+ */
+function normalizeTimeOfDayForScene(timeStr: string): 'DAY' | 'NIGHT' | 'MORNING' | 'EVENING' | 'CONTINUOUS' {
+  const upper = (timeStr || 'DAY').toUpperCase();
+
+  // Night variations
+  if (upper === 'NIGHT' || upper === 'NIGHTMARE') return 'NIGHT';
+
+  // Morning variations
+  if (upper === 'MORNING' || upper === 'DAWN' || upper === 'SUNRISE') return 'MORNING';
+
+  // Evening variations
+  if (upper === 'EVENING' || upper === 'DUSK' || upper === 'SUNSET' ||
+      upper === 'MAGIC HOUR' || upper === 'GOLDEN HOUR') return 'EVENING';
+
+  // Continuous variations
+  if (upper === 'CONTINUOUS' || upper === 'CONT' || upper === 'LATER' ||
+      upper === 'SAME' || upper === 'SAME TIME' || upper === 'MOMENTS LATER' ||
+      upper === 'SIMULTANEOUS') return 'CONTINUOUS';
+
+  // Day is default (including AFTERNOON, FLASHBACK, PRESENT, ESTABLISHING, etc.)
   return 'DAY';
 }
 
@@ -212,17 +238,30 @@ function parseLocation(slugline: string): string {
 
 /**
  * Normalize character name for comparison
+ * Handles dual character names like "DEAN/PUNK ROCKER" by taking the first name
  */
 function normalizeCharacterName(name: string): string {
-  return name
-    .toUpperCase()
-    .replace(/\s*\(.*?\)\s*/g, '') // Remove parentheticals (V.O.), (O.S.), (CONT'D)
-    .replace(/\s+/g, ' ')
-    .trim();
+  let normalized = name.toUpperCase();
+
+  // Remove parentheticals (V.O.), (O.S.), (CONT'D), etc.
+  normalized = normalized.replace(/\s*\(.*?\)\s*/g, '');
+
+  // Handle dual character names - take the first name as primary
+  // e.g., "DEAN/PUNK ROCKER" -> "DEAN"
+  if (normalized.includes('/') && !normalized.startsWith('INT') && !normalized.startsWith('EXT')) {
+    const parts = normalized.split('/');
+    // Only split if both parts look like names (not INT/EXT)
+    if (parts[0].length >= 2 && parts[0].length <= 20) {
+      normalized = parts[0].trim();
+    }
+  }
+
+  return normalized.replace(/\s+/g, ' ').trim();
 }
 
 /**
  * Check if a line is a character cue (character name before dialogue)
+ * Improved to better filter out false positives from action lines
  */
 function isCharacterCue(line: string): boolean {
   const trimmed = line.trim();
@@ -235,11 +274,16 @@ function isCharacterCue(line: string): boolean {
 
   // Should not start with common non-character patterns
   const nonCharPatterns = [
-    /^(INT\.|EXT\.|INT\/EXT|EXT\/INT)/i,
-    /^(CUT TO|FADE|DISSOLVE|SMASH|MATCH)/i,
-    /^(THE END|CONTINUED|MORE)/i,
+    /^(INT\.|EXT\.|INT\/EXT|EXT\/INT|I\/E\.)/i,
+    /^(CUT TO|FADE|DISSOLVE|SMASH|MATCH|WIPE)/i,
+    /^(THE END|CONTINUED|MORE|\(MORE\))/i,
     /^\d+\s*$/,
     /^\s*$/,
+    /^(TITLE:|SUPER:|CHYRON:|CARD:|INSERT:|INTERCUT)/i,
+    /^(FLASHBACK|END FLASHBACK|FLASH BACK|DREAM SEQUENCE)/i,
+    /^(BACK TO|RESUME|ANGLE ON|CLOSE ON|WIDE ON|POV)/i,
+    /^(LATER|CONTINUOUS|MOMENTS LATER|SAME TIME)/i,
+    /^(SUPERIMPOSE|SUBTITLE|CAPTION)/i,
   ];
 
   for (const pattern of nonCharPatterns) {
@@ -249,19 +293,183 @@ function isCharacterCue(line: string): boolean {
   // Should contain at least one letter
   if (!/[A-Z]/.test(trimmed)) return false;
 
+  // Filter out common action line patterns that are all caps
+  // These typically describe what's happening, not who's speaking
+  const actionPatterns = [
+    /^(A |AN |THE |HE |SHE |THEY |WE |IT |HIS |HER |THEIR )/,
+    /^(IN THE |AT THE |ON THE |FROM THE |TO THE |INTO THE )/,
+    /^(ARRIVING|ENTERING|LEAVING|WALKING|RUNNING|STANDING|SITTING)/,
+    / (ENTERS|EXITS|WALKS|RUNS|STANDS|SITS|LOOKS|TURNS|MOVES)$/,
+    / (IS |ARE |WAS |WERE |HAS |HAVE |THE |A |AN )/, // Action lines have articles/verbs mid-sentence
+    /^[A-Z]+ [A-Z]+ [A-Z]+ [A-Z]+ [A-Z]+/, // 5+ words is likely an action line
+    /\.$/, // Character cues don't end with periods
+    /^\d+[A-Z]?\s+/, // Starts with scene number
+  ];
+
+  for (const pattern of actionPatterns) {
+    if (pattern.test(trimmed)) return false;
+  }
+
   // Allow parentheticals like (V.O.), (O.S.), (CONT'D)
   const nameWithoutParen = trimmed.replace(/\s*\(.*?\)\s*/g, '').trim();
 
+  // Character names should be reasonably short (1-4 words typically)
+  const wordCount = nameWithoutParen.split(/\s+/).length;
+  if (wordCount > 4) return false;
+
   // Character names should be reasonably short
-  return nameWithoutParen.length >= 2 && nameWithoutParen.length <= 30;
+  return nameWithoutParen.length >= 2 && nameWithoutParen.length <= 35;
+}
+
+/**
+ * Parsed scene heading result
+ */
+interface ParsedSceneHeading {
+  sceneNumber: string | null;
+  intExt: 'INT' | 'EXT';
+  location: string;
+  timeOfDay: string;
+  rawSlugline: string;
+  isValid: boolean;
 }
 
 /**
  * Check if a line is a scene heading
+ * Handles scene numbers before and after INT/EXT
+ * Examples:
+ *   "4    INT. HOTEL ROOM - CONTINUOUS    4"
+ *   "INT. COFFEE SHOP - DAY"
+ *   "12A  EXT. PARK - NIGHT  12A"
+ *   "I/E. FARMHOUSE - KITCHEN - DAY"
  */
 function isSceneHeading(line: string): boolean {
-  const trimmed = line.trim().toUpperCase();
-  return /^(INT\.?|EXT\.?|INT\.?\/EXT\.?|EXT\.?\/INT\.?)(\s|$)/.test(trimmed);
+  const result = parseSceneHeadingLine(line);
+  return result.isValid;
+}
+
+/**
+ * Parse a scene heading line and extract all components
+ * Handles various formats:
+ *   - Scene numbers on left: "4 INT. LOCATION - TIME"
+ *   - Scene numbers on both sides: "4 INT. LOCATION - TIME 4"
+ *   - Scene numbers with letters: "4A INT. LOCATION - TIME"
+ *   - Various INT/EXT formats: INT., EXT., I/E., INT./EXT., INT/EXT
+ *   - Various separators: dashes, periods, commas
+ */
+function parseSceneHeadingLine(line: string): ParsedSceneHeading {
+  const trimmed = line.trim();
+  const upper = trimmed.toUpperCase();
+
+  // Default invalid result
+  const invalidResult: ParsedSceneHeading = {
+    sceneNumber: null,
+    intExt: 'INT',
+    location: '',
+    timeOfDay: 'DAY',
+    rawSlugline: trimmed,
+    isValid: false,
+  };
+
+  if (!trimmed || trimmed.length < 5) return invalidResult;
+
+  // Remove revision asterisks from end
+  let cleanLine = trimmed.replace(/\s*\*+\s*$/, '').trim();
+
+  // Pattern to match scene numbers (with optional letter suffix)
+  const sceneNumPattern = /^(\d+[A-Z]?)\s+/i;
+  const trailingSceneNumPattern = /\s+(\d+[A-Z]?)\s*$/i;
+
+  let sceneNumber: string | null = null;
+  let workingLine = cleanLine;
+
+  // Extract leading scene number
+  const leadingMatch = workingLine.match(sceneNumPattern);
+  if (leadingMatch) {
+    sceneNumber = leadingMatch[1].toUpperCase();
+    workingLine = workingLine.slice(leadingMatch[0].length).trim();
+  }
+
+  // Extract trailing scene number (and validate it matches leading if both exist)
+  const trailingMatch = workingLine.match(trailingSceneNumPattern);
+  if (trailingMatch) {
+    const trailingNum = trailingMatch[1].toUpperCase();
+    if (!sceneNumber) {
+      sceneNumber = trailingNum;
+    }
+    // Remove trailing scene number
+    workingLine = workingLine.slice(0, -trailingMatch[0].length).trim();
+  }
+
+  // Now check for INT/EXT pattern
+  // Supports: INT. INT EXT. EXT I/E. I/E INT./EXT. INT/EXT EXT./INT. EXT/INT
+  const intExtPattern = /^(INT\.?\/EXT\.?|EXT\.?\/INT\.?|I\/E\.?|INT\.?|EXT\.?)\s*/i;
+  const intExtMatch = workingLine.match(intExtPattern);
+
+  if (!intExtMatch) {
+    return invalidResult;
+  }
+
+  const intExtRaw = intExtMatch[1].toUpperCase().replace(/\.$/, '');
+  const intExt: 'INT' | 'EXT' = intExtRaw.startsWith('EXT') ? 'EXT' : 'INT';
+
+  // Remove INT/EXT from working line
+  workingLine = workingLine.slice(intExtMatch[0].length).trim();
+
+  // Remove leading period or dash if present (some scripts have "INT. - LOCATION")
+  workingLine = workingLine.replace(/^[\.\-–—]\s*/, '').trim();
+
+  // Now extract time of day and location
+  // Time of day patterns at the end
+  const timePatterns = [
+    'DAY', 'NIGHT', 'MORNING', 'EVENING', 'AFTERNOON', 'DAWN', 'DUSK',
+    'SUNSET', 'SUNRISE', 'CONTINUOUS', 'CONT', 'LATER', 'SAME', 'SAME TIME',
+    'MOMENTS LATER', 'SIMULTANEOUS', 'MAGIC HOUR', 'GOLDEN HOUR',
+    'FLASHBACK', 'PRESENT', 'DREAM', 'FANTASY', 'NIGHTMARE',
+    'ESTABLISHING'
+  ];
+
+  // Build regex to find time of day (handling various separators)
+  // Matches: "- DAY", "-- DAY", "– DAY", "— DAY", ". DAY", ", DAY", just "DAY" at end
+  const timeSeparatorPattern = /(?:\s*[-–—\.]+\s*|\s+)(DAY|NIGHT|MORNING|EVENING|AFTERNOON|DAWN|DUSK|SUNSET|SUNRISE|CONTINUOUS|CONT|LATER|SAME|SAME TIME|MOMENTS LATER|SIMULTANEOUS|MAGIC HOUR|GOLDEN HOUR|FLASHBACK|PRESENT|DREAM|FANTASY|NIGHTMARE|ESTABLISHING)(?:\s*[-–—]?\s*(?:FLASHBACK|PRESENT|CONT(?:'D)?)?)?$/i;
+
+  let timeOfDay = 'DAY';
+  let location = workingLine;
+
+  const timeMatch = workingLine.match(timeSeparatorPattern);
+  if (timeMatch) {
+    timeOfDay = timeMatch[1].toUpperCase();
+    // Normalize some time values
+    if (timeOfDay === 'CONT') timeOfDay = 'CONTINUOUS';
+
+    // Extract location (everything before the time match)
+    location = workingLine.slice(0, timeMatch.index).trim();
+    // Clean up trailing separators from location
+    location = location.replace(/[\s\-–—\.,]+$/, '').trim();
+  }
+
+  // If no time found but line is valid scene heading format, assume DAY
+  if (!timeMatch && workingLine.length > 0) {
+    location = workingLine.replace(/[\s\-–—\.,]+$/, '').trim();
+  }
+
+  // Validate: must have a location
+  if (!location || location.length < 2) {
+    return invalidResult;
+  }
+
+  // Build the clean slugline
+  const rawSlugline = sceneNumber
+    ? `${sceneNumber} ${intExt}. ${location} - ${timeOfDay}`
+    : `${intExt}. ${location} - ${timeOfDay}`;
+
+  return {
+    sceneNumber,
+    intExt,
+    location,
+    timeOfDay,
+    rawSlugline: trimmed, // Keep original for reference
+    isValid: true,
+  };
 }
 
 /**
@@ -273,32 +481,39 @@ export function parseScriptText(text: string): ParsedScript {
   const characterMap = new Map<string, ParsedCharacter>();
 
   let currentScene: ParsedScene | null = null;
-  let sceneNumber = 0;
+  let fallbackSceneNumber = 0; // Used only if script doesn't have scene numbers
   let currentSceneContent = '';
   let lastLineWasCharacter = false;
+  let lastCharacterName = '';
   let dialogueCount = 0;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const trimmed = line.trim();
 
-    // Check for scene heading
-    if (isSceneHeading(trimmed)) {
+    // Check for scene heading using the new robust parser
+    const parsedHeading = parseSceneHeadingLine(trimmed);
+
+    if (parsedHeading.isValid) {
       // Save previous scene
       if (currentScene) {
         currentScene.content = currentSceneContent.trim();
         scenes.push(currentScene);
       }
 
-      sceneNumber++;
-      const sceneNum = String(sceneNumber);
+      // Use scene number from script, or fall back to sequential
+      fallbackSceneNumber++;
+      const sceneNum = parsedHeading.sceneNumber || String(fallbackSceneNumber);
+
+      // Normalize time of day to our expected types
+      const normalizedTime = normalizeTimeOfDayForScene(parsedHeading.timeOfDay);
 
       currentScene = {
         sceneNumber: sceneNum,
-        slugline: trimmed,
-        intExt: parseIntExt(trimmed),
-        location: parseLocation(trimmed),
-        timeOfDay: parseTimeOfDay(trimmed),
+        slugline: trimmed, // Keep original for display
+        intExt: parsedHeading.intExt,
+        location: parsedHeading.location,
+        timeOfDay: normalizedTime,
         characters: [],
         content: '',
       };
