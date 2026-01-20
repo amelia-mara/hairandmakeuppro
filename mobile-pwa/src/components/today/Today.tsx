@@ -306,6 +306,21 @@ function TodaySceneCard({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Parse INT/EXT and time of day from setDescription when no scene data
+  const parsedSceneInfo = useMemo(() => {
+    if (scene) return null; // Use actual scene data if available
+    const desc = shootingScene.setDescription || '';
+    // Parse patterns like "INT. COFFEE SHOP - DAY" or "EXT. PARK - NIGHT"
+    const intExtMatch = desc.match(/^(INT|EXT)\./i);
+    const timeMatch = desc.match(/- (DAY|NIGHT|MORNING|EVENING|DUSK|DAWN|CONTINUOUS)$/i);
+    const locationMatch = desc.match(/^(?:INT|EXT)\.\s*(.+?)(?:\s*-\s*(?:DAY|NIGHT|MORNING|EVENING|DUSK|DAWN|CONTINUOUS))?$/i);
+    return {
+      intExt: intExtMatch ? intExtMatch[1].toUpperCase() : null,
+      timeOfDay: timeMatch ? timeMatch[1].toUpperCase() : null,
+      location: locationMatch ? locationMatch[1].trim() : desc,
+    };
+  }, [scene, shootingScene.setDescription]);
+
   // Get the glass overlay class based on filming status
   const getGlassOverlayClass = () => {
     if (!shootingScene.filmingStatus) return null;
@@ -376,156 +391,188 @@ function TodaySceneCard({
 
   return (
     <>
-      <div className="relative">
-        {/* Glass overlay */}
-        {glassOverlayClass && (
-          <div className={clsx('scene-glass-overlay', glassOverlayClass)} />
-        )}
-
+      {/* Container needs z-index when dropdown is open to ensure dropdown appears above other cards */}
+      <div className={clsx('relative', showStatusDropdown && 'z-40')}>
         <div
           onClick={onTap}
           onContextMenu={(e) => {
             e.preventDefault();
             handleLongPress();
           }}
-          className="w-full text-left card transition-all active:scale-[0.98] relative z-10 cursor-pointer"
+          className="w-full text-left card transition-all active:scale-[0.98] relative overflow-hidden cursor-pointer"
         >
-        {/* Top row: Scene number + Location + Status */}
-        <div className="flex items-start justify-between mb-2">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl font-bold text-text-primary">
-              {shootingScene.sceneNumber}
-            </span>
-            {scene && (
+          {/* Glass overlay - positioned inside card to cover entire pill */}
+          {glassOverlayClass && (
+            <div className={clsx('scene-glass-overlay', glassOverlayClass)} />
+          )}
+
+          {/* Status accent bar on left edge */}
+          <div
+            className="absolute left-0 top-0 bottom-0 w-1 rounded-l-card"
+            style={{
+              backgroundColor: shootingScene.status === 'in-progress'
+                ? '#C9A962' // Gold for in progress
+                : shootingScene.status === 'wrapped'
+                  ? shootingScene.filmingStatus === 'complete'
+                    ? '#22c55e' // Green for complete
+                    : shootingScene.filmingStatus === 'partial'
+                      ? '#f59e0b' // Amber for partial
+                      : shootingScene.filmingStatus === 'not-filmed'
+                        ? '#ef4444' // Red for not filmed
+                        : '#9ca3af' // Gray for wrapped without filming status
+                  : 'transparent' // No bar for upcoming
+            }}
+          />
+
+          {/* Card content - positioned above glass overlay */}
+          <div className="relative z-10 pl-2">
+            {/* Top row: Scene number + INT/EXT + Status */}
+            <div className="flex items-start justify-between mb-2">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl font-bold text-text-primary">
+                  {shootingScene.sceneNumber}
+                </span>
+                {/* Show INT/EXT badge and time of day from scene data or parsed from setDescription */}
+                {(scene || parsedSceneInfo) && (
+                  <div className="flex items-center gap-2">
+                    {(scene?.intExt || parsedSceneInfo?.intExt) && (
+                      <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded ${
+                        (scene?.intExt || parsedSceneInfo?.intExt) === 'INT'
+                          ? 'bg-blue-100 text-blue-700'
+                          : 'bg-amber-100 text-amber-700'
+                      }`}>
+                        {scene?.intExt || parsedSceneInfo?.intExt}
+                      </span>
+                    )}
+                    {(scene?.timeOfDay || parsedSceneInfo?.timeOfDay) && (
+                      <span className="text-xs text-text-muted">
+                        {scene?.timeOfDay || parsedSceneInfo?.timeOfDay}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+
               <div className="flex items-center gap-2">
-                <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded ${
-                  scene.intExt === 'INT' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
-                }`}>
-                  {scene.intExt}
-                </span>
-                <span className="text-xs text-text-muted">
-                  {scene.timeOfDay}
-                </span>
+                {isCaptured && (
+                  <span className="text-green-500">
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                  </span>
+                )}
+                {/* Status Dropdown */}
+                <div ref={dropdownRef} className="relative">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowStatusDropdown(!showStatusDropdown);
+                    }}
+                    className="status-dropdown-btn touch-manipulation"
+                    style={{ borderColor: shootingScene.filmingStatus ? statusBadge.color : undefined }}
+                  >
+                    <span
+                      className="w-2.5 h-2.5 rounded-full"
+                      style={{ backgroundColor: statusBadge.color }}
+                    />
+                    <span className={statusBadge.text}>{statusBadge.label}</span>
+                    <svg className={clsx('w-3 h-3 text-text-muted transition-transform', showStatusDropdown && 'rotate-180')} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {/* Dropdown menu */}
+                  {showStatusDropdown && (
+                    <div className="absolute right-0 top-full mt-1 w-44 bg-card border border-border rounded-lg shadow-lg z-50 overflow-hidden animate-fadeIn">
+                      {(['complete', 'partial', 'not-filmed'] as SceneFilmingStatus[]).map((status) => {
+                        const config = SCENE_FILMING_STATUS_CONFIG[status];
+                        const isSelected = shootingScene.filmingStatus === status;
+                        return (
+                          <button
+                            key={status}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleStatusSelect(status);
+                            }}
+                            className={clsx(
+                              'w-full px-3 py-2.5 text-left text-sm flex items-center gap-2.5 transition-colors',
+                              isSelected ? config.bgClass : 'hover:bg-gray-50'
+                            )}
+                          >
+                            <span
+                              className="w-3 h-3 rounded-full flex-shrink-0"
+                              style={{ backgroundColor: config.color }}
+                            />
+                            <span className={clsx('font-medium', isSelected && config.textClass)}>
+                              {config.label}
+                            </span>
+                            {isSelected && (
+                              <svg className={clsx('w-4 h-4 ml-auto', config.textClass)} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Location & Synopsis */}
+            {(scene || parsedSceneInfo?.location) && (
+              <div className="mb-3">
+                <p className="text-sm font-medium text-text-primary line-clamp-1">
+                  {scene
+                    ? scene.slugline.replace(/^(INT|EXT)\.\s*/, '').replace(/\s*-\s*(DAY|NIGHT|MORNING|EVENING|CONTINUOUS)$/i, '')
+                    : parsedSceneInfo?.location}
+                </p>
+                {scene?.synopsis && (
+                  <p className="text-[13px] text-[#666] italic line-clamp-1 mt-1">
+                    {scene.synopsis}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Filming notes if partial or incomplete */}
+            {shootingScene.filmingStatus && shootingScene.filmingStatus !== 'complete' && shootingScene.filmingNotes && (
+              <div className={clsx(
+                'mb-3 px-2 py-1.5 rounded text-xs',
+                shootingScene.filmingStatus === 'partial' ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'
+              )}>
+                <span className="font-medium">Note:</span> {shootingScene.filmingNotes}
+              </div>
+            )}
+
+            {/* Characters with looks */}
+            {characters.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {characters.map((char) => {
+                  const look = getLookForCharacter(char.id, shootingScene.sceneNumber);
+                  return (
+                    <div key={char.id} className="flex items-center gap-1.5 bg-gray-50 rounded-full pl-1 pr-2.5 py-1">
+                      <CharacterAvatar character={char} size="xs" />
+                      <span className="text-xs font-medium text-text-primary">{char.name.split(' ')[0]}</span>
+                      {look && (
+                        <span className="text-[10px] text-text-muted">• {look.name}</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Estimated time */}
+            {shootingScene.estimatedTime && (
+              <div className="mt-2 pt-2 border-t border-border/50 flex items-center gap-1.5">
+                <svg className="w-3.5 h-3.5 text-text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-xs text-text-muted">Est. {shootingScene.estimatedTime}</span>
               </div>
             )}
           </div>
-          <div className="flex items-center gap-2">
-            {isCaptured && (
-              <span className="text-green-500">
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-              </span>
-            )}
-            {/* Status Dropdown */}
-            <div ref={dropdownRef} className="relative">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowStatusDropdown(!showStatusDropdown);
-                }}
-                className="status-dropdown-btn touch-manipulation"
-                style={{ borderColor: shootingScene.filmingStatus ? statusBadge.color : undefined }}
-              >
-                <span
-                  className="w-2.5 h-2.5 rounded-full"
-                  style={{ backgroundColor: statusBadge.color }}
-                />
-                <span className={statusBadge.text}>{statusBadge.label}</span>
-                <svg className={clsx('w-3 h-3 text-text-muted transition-transform', showStatusDropdown && 'rotate-180')} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-              {/* Dropdown menu */}
-              {showStatusDropdown && (
-                <div className="absolute right-0 top-full mt-1 w-44 bg-card border border-border rounded-lg shadow-lg z-50 overflow-hidden animate-fadeIn">
-                  {(['complete', 'partial', 'not-filmed'] as SceneFilmingStatus[]).map((status) => {
-                    const config = SCENE_FILMING_STATUS_CONFIG[status];
-                    const isSelected = shootingScene.filmingStatus === status;
-                    return (
-                      <button
-                        key={status}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleStatusSelect(status);
-                        }}
-                        className={clsx(
-                          'w-full px-3 py-2.5 text-left text-sm flex items-center gap-2.5 transition-colors',
-                          isSelected ? config.bgClass : 'hover:bg-gray-50'
-                        )}
-                      >
-                        <span
-                          className="w-3 h-3 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: config.color }}
-                        />
-                        <span className={clsx('font-medium', isSelected && config.textClass)}>
-                          {config.label}
-                        </span>
-                        {isSelected && (
-                          <svg className={clsx('w-4 h-4 ml-auto', config.textClass)} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                          </svg>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Location & Synopsis */}
-        {scene && (
-          <div className="mb-3">
-            <p className="text-sm text-text-secondary line-clamp-1">
-              {scene.slugline.replace(/^(INT|EXT)\.\s*/, '').replace(/\s*-\s*(DAY|NIGHT|MORNING|EVENING|CONTINUOUS)$/i, '')}
-            </p>
-            {scene.synopsis && (
-              <p className="text-[13px] text-[#666] italic line-clamp-1 mt-1">
-                {scene.synopsis}
-              </p>
-            )}
-          </div>
-        )}
-
-        {/* Filming notes if partial or incomplete */}
-        {shootingScene.filmingStatus && shootingScene.filmingStatus !== 'complete' && shootingScene.filmingNotes && (
-          <div className={clsx(
-            'mb-3 px-2 py-1.5 rounded text-xs',
-            shootingScene.filmingStatus === 'partial' ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'
-          )}>
-            <span className="font-medium">Note:</span> {shootingScene.filmingNotes}
-          </div>
-        )}
-
-        {/* Characters with looks */}
-        {characters.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {characters.map((char) => {
-              const look = getLookForCharacter(char.id, shootingScene.sceneNumber);
-              return (
-                <div key={char.id} className="flex items-center gap-1.5 bg-gray-50 rounded-full pl-1 pr-2.5 py-1">
-                  <CharacterAvatar character={char} size="xs" />
-                  <span className="text-xs font-medium text-text-primary">{char.name.split(' ')[0]}</span>
-                  {look && (
-                    <span className="text-[10px] text-text-muted">• {look.name}</span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Estimated time */}
-        {shootingScene.estimatedTime && (
-          <div className="mt-2 pt-2 border-t border-border/50 flex items-center gap-1.5">
-            <svg className="w-3.5 h-3.5 text-text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span className="text-xs text-text-muted">Est. {shootingScene.estimatedTime}</span>
-          </div>
-        )}
         </div>
       </div>
 
