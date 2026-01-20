@@ -169,6 +169,7 @@ export interface AIExtractedCharacter {
 
 /**
  * Split script into processable chunks, trying to break at scene boundaries
+ * Updated to handle scene numbers before INT/EXT (e.g., "4 INT. LOCATION - DAY")
  */
 function splitScriptIntoChunks(text: string, maxSize: number): string[] {
   if (text.length <= maxSize) {
@@ -190,7 +191,8 @@ function splitScriptIntoChunks(text: string, maxSize: number): string[] {
     const searchText = remaining.slice(searchStart, maxSize + 1000);
 
     // Look for scene heading patterns to break at
-    const scenePattern = /\n\s*(INT\.|EXT\.|INT\/EXT|EXT\/INT)/gi;
+    // Updated pattern to handle optional leading scene numbers (e.g., "4 INT." or "12A EXT.")
+    const scenePattern = /\n\s*(?:\d+[A-Z]?\s+)?(INT\.?|EXT\.?|INT\.?\/EXT\.?|EXT\.?\/INT\.?|I\/E\.?)\s/gi;
     let lastMatch = null;
     let match;
 
