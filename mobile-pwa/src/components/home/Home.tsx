@@ -432,15 +432,13 @@ function ProcessingScreen({ fileName, progress, status }: ProcessingScreenProps)
             style={{ width: `${progress}%` }}
           />
         </div>
-        <p className="text-xs text-text-light text-center">
+        <p className="text-xs text-text-light text-center mb-4">
           {status}
         </p>
-      </div>
 
-      {/* Informative note */}
-      <div className="mt-8 max-w-xs text-center">
-        <p className="text-xs text-text-muted leading-relaxed">
-          This may take a few minutes. Our system is carefully analyzing your script to ensure all scenes, characters, and details are accurately captured and broken down for your continuity needs.
+        {/* Informative note - directly under progress */}
+        <p className="text-sm text-text-muted text-center leading-relaxed">
+          This may take a few minutes. We're carefully analyzing your script to accurately capture all scenes and characters.
         </p>
       </div>
     </div>
