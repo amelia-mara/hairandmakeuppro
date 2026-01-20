@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { CharacterAvatar } from '@/components/characters/CharacterAvatar';
+import { SceneScriptModal } from '@/components/scenes/SceneScriptModal';
 import type { Scene, Character, BreakdownViewMode, BreakdownFilters, SceneFilmingStatus } from '@/types';
 import { SCENE_FILMING_STATUS_CONFIG } from '@/types';
 import { clsx } from 'clsx';
@@ -22,6 +23,13 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
     lookId: null,
   });
   const [expandedSceneId, setExpandedSceneId] = useState<string | null>(null);
+  const [scriptModalSceneId, setScriptModalSceneId] = useState<string | null>(null);
+
+  // Get scene for script modal
+  const scriptModalScene = useMemo(() => {
+    if (!scriptModalSceneId || !currentProject) return null;
+    return currentProject.scenes.find(s => s.id === scriptModalSceneId) || null;
+  }, [scriptModalSceneId, currentProject]);
 
   // Get unique locations from scenes
   const locations = useMemo(() => {
@@ -219,6 +227,7 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
             expandedSceneId={expandedSceneId}
             onToggleExpand={(id) => setExpandedSceneId(expandedSceneId === id ? null : id)}
             onSceneSelect={onSceneSelect}
+            onSynopsisClick={(sceneId) => setScriptModalSceneId(sceneId)}
             getCharactersForScene={getCharactersForScene}
             getLookForCharacter={getLookForCharacter}
             getCapture={getCapture}
@@ -246,6 +255,14 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
           onClear={clearFilters}
         />
       )}
+
+      {/* Scene Script Modal */}
+      {scriptModalScene && (
+        <SceneScriptModal
+          scene={scriptModalScene}
+          onClose={() => setScriptModalSceneId(null)}
+        />
+      )}
     </div>
   );
 }
@@ -256,6 +273,7 @@ interface BreakdownListViewProps {
   expandedSceneId: string | null;
   onToggleExpand: (id: string) => void;
   onSceneSelect: (id: string) => void;
+  onSynopsisClick: (sceneId: string) => void;
   getCharactersForScene: (scene: Scene) => Character[];
   getLookForCharacter: (characterId: string, sceneNumber: string) => any;
   getCapture: (sceneId: string, characterId: string) => any;
@@ -282,6 +300,7 @@ function BreakdownListView({
   expandedSceneId,
   onToggleExpand,
   onSceneSelect,
+  onSynopsisClick,
   getCharactersForScene,
   getLookForCharacter,
   getCapture,
@@ -387,10 +406,39 @@ function BreakdownListView({
                 {/* Full slugline */}
                 <p className="text-sm font-medium text-text-primary">{scene.slugline}</p>
 
-                {/* Synopsis if available */}
-                {scene.synopsis && (
-                  <p className="text-xs text-text-muted">{scene.synopsis}</p>
-                )}
+                {/* Synopsis - clickable to view full scene */}
+                {scene.synopsis ? (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSynopsisClick(scene.id);
+                    }}
+                    className="w-full text-left group"
+                  >
+                    <p className="text-xs text-text-muted italic group-hover:text-gold transition-colors">
+                      {scene.synopsis}
+                    </p>
+                    <span className="text-[10px] text-gold flex items-center gap-1 mt-1">
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      Tap to view full scene
+                    </span>
+                  </button>
+                ) : scene.scriptContent ? (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSynopsisClick(scene.id);
+                    }}
+                    className="text-xs text-gold flex items-center gap-1"
+                  >
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    View full scene
+                  </button>
+                ) : null}
 
                 {/* Filming status with notes */}
                 {scene.filmingStatus && (
