@@ -2,8 +2,9 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { useCallSheetStore } from '@/stores/callSheetStore';
 import { CharacterAvatar } from '@/components/characters/CharacterAvatar';
+import { SceneScriptModal } from '@/components/scenes/SceneScriptModal';
 import { formatShortDate } from '@/utils/helpers';
-import type { ShootingSceneStatus, SceneFilmingStatus, CallSheet, CallSheetScene } from '@/types';
+import type { ShootingSceneStatus, SceneFilmingStatus, CallSheet, CallSheetScene, Scene } from '@/types';
 import { SCENE_FILMING_STATUS_CONFIG } from '@/types';
 import { clsx } from 'clsx';
 
@@ -46,6 +47,9 @@ export function Today({ onSceneSelect }: TodayProps) {
       setCallSheet(activeCallSheet);
     }
   }, [activeCallSheet]);
+
+  // State for scene script modal
+  const [scriptModalScene, setScriptModalScene] = useState<Scene | null>(null);
 
   // Navigate days
   const navigateDay = (direction: -1 | 1) => {
@@ -249,6 +253,7 @@ export function Today({ onSceneSelect }: TodayProps) {
                     isCaptured={isCaptured}
                     getLookForCharacter={getLookForCharacter}
                     onTap={() => handleSceneTap(shootingScene.sceneNumber)}
+                    onSynopsisClick={(scene) => setScriptModalScene(scene)}
                     onStatusChange={(status) => updateSceneStatus(shootingScene.sceneNumber, status)}
                     onFilmingStatusChange={(filmingStatus, notes) =>
                       updateSceneFilmingStatus(shootingScene.sceneNumber, filmingStatus, notes)
@@ -263,6 +268,14 @@ export function Today({ onSceneSelect }: TodayProps) {
           <EmptyState />
         )}
       </div>
+
+      {/* Scene Script Modal */}
+      {scriptModalScene && (
+        <SceneScriptModal
+          scene={scriptModalScene}
+          onClose={() => setScriptModalScene(null)}
+        />
+      )}
     </div>
   );
 }
@@ -270,11 +283,12 @@ export function Today({ onSceneSelect }: TodayProps) {
 // Scene Card Component
 interface TodaySceneCardProps {
   shootingScene: CallSheetScene;
-  scene?: ReturnType<typeof useProjectStore.getState>['currentProject'] extends { scenes: (infer S)[] } | null ? S : never;
+  scene?: Scene;
   characters: any[];
   isCaptured: boolean;
   getLookForCharacter: (characterId: string, sceneNumber: string) => any;
   onTap: () => void;
+  onSynopsisClick: (scene: Scene) => void;
   onStatusChange: (status: ShootingSceneStatus) => void;
   onFilmingStatusChange: (status: SceneFilmingStatus, notes?: string) => void;
 }
@@ -286,6 +300,7 @@ function TodaySceneCard({
   isCaptured,
   getLookForCharacter,
   onTap,
+  onSynopsisClick,
   onStatusChange,
   onFilmingStatusChange,
 }: TodaySceneCardProps) {
@@ -527,11 +542,39 @@ function TodaySceneCard({
                     ? scene.slugline.replace(/^(INT|EXT)\.\s*/, '').replace(/\s*-\s*(DAY|NIGHT|MORNING|EVENING|CONTINUOUS)$/i, '')
                     : parsedSceneInfo?.location}
                 </p>
-                {scene?.synopsis && (
-                  <p className="text-[13px] text-[#666] italic line-clamp-1 mt-1">
-                    {scene.synopsis}
-                  </p>
-                )}
+                {/* Synopsis - clickable to view full scene */}
+                {scene?.synopsis ? (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSynopsisClick(scene);
+                    }}
+                    className="w-full text-left group mt-1"
+                  >
+                    <p className="text-[13px] text-[#666] italic line-clamp-1 group-hover:text-gold transition-colors">
+                      {scene.synopsis}
+                    </p>
+                    <span className="text-[10px] text-gold flex items-center gap-1 mt-0.5 opacity-80">
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      View full scene
+                    </span>
+                  </button>
+                ) : scene?.scriptContent ? (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSynopsisClick(scene);
+                    }}
+                    className="text-[10px] text-gold flex items-center gap-1 mt-1"
+                  >
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    View full scene
+                  </button>
+                ) : null}
               </div>
             )}
 
