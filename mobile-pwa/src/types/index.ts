@@ -23,6 +23,8 @@ export interface Scene {
   completedAt?: Date;
   filmingStatus?: SceneFilmingStatus; // Tracks actual filming outcome
   filmingNotes?: string; // Reason for not filmed/partial
+  shootingDay?: number; // Which production day this scene is scheduled
+  hasScheduleDiscrepancy?: boolean; // Flag if schedule doesn't match breakdown
 }
 
 export interface Character {
@@ -394,6 +396,89 @@ export interface ShootingDay {
   scenes: number[];
   location: string;
   notes?: string;
+}
+
+// ============================================
+// PRODUCTION SCHEDULE TYPES (PDF Upload)
+// ============================================
+
+// Cast member from schedule (name-to-number mapping)
+export interface ScheduleCastMember {
+  number: number; // The cast number (1, 2, 3, etc.)
+  name: string; // Actor name or character name as listed
+  character?: string; // Character name if separate from actor name
+}
+
+// Full production schedule data
+export interface ProductionSchedule {
+  id: string;
+  productionName?: string;
+  scriptVersion?: string;
+  scheduleVersion?: string;
+
+  // Cast list extracted from first page
+  castList: ScheduleCastMember[];
+
+  // All shooting days
+  days: ScheduleDay[];
+
+  // Total shooting days
+  totalDays: number;
+
+  // Metadata
+  uploadedAt: Date;
+  pdfUri?: string;
+  rawText?: string;
+}
+
+// A single shooting day in the schedule
+export interface ScheduleDay {
+  dayNumber: number;
+  date?: string; // YYYY-MM-DD if available
+  dayOfWeek?: string; // "Monday", "Tuesday", etc.
+  location: string; // Main location for the day
+  hours?: string; // "0600 - 1600" format
+  dayType?: string; // "CWD", "SWD", etc.
+  sunrise?: string; // "08:27" format
+  sunset?: string; // "15:54" format
+  notes?: string[]; // "Drone Day", "UNIT MOVE", etc.
+
+  // Scenes scheduled for this day
+  scenes: ScheduleSceneEntry[];
+
+  // Total pages for the day
+  totalPages?: string;
+}
+
+// A scene entry in the schedule
+export interface ScheduleSceneEntry {
+  sceneNumber: string; // "4A", "18B", "162 p1", etc.
+  pages?: string; // "1/8", "3/8", "1 2/8", etc.
+  intExt: 'INT' | 'EXT';
+  dayNight: string; // "Day", "Night", "Morning", "D/N", etc.
+  setLocation: string; // "FARMHOUSE - DRIVEWAY", "TAXI - ISLAND"
+  description?: string; // "TAXI passes the road to the Farmhouse"
+  castNumbers: number[]; // [1, 2, 4, 7] - references castList
+  estimatedTime?: string; // ":30", "1:30", etc.
+  shootOrder: number; // Order within the day
+}
+
+// Discrepancy between schedule and breakdown
+export type DiscrepancyType =
+  | 'scene_not_in_breakdown' // Scene in schedule but not in breakdown
+  | 'scene_not_in_schedule' // Scene in breakdown but not in schedule
+  | 'character_mismatch' // Different characters listed
+  | 'int_ext_mismatch' // INT/EXT doesn't match
+  | 'location_mismatch'; // Set/location doesn't match
+
+export interface SceneDiscrepancy {
+  sceneNumber: string;
+  type: DiscrepancyType;
+  message: string;
+  scheduleValue?: string; // What the schedule says
+  breakdownValue?: string; // What the breakdown says
+  scheduleCast?: string[]; // Characters from schedule
+  breakdownCast?: string[]; // Characters from breakdown
 }
 
 // Breakdown filter types
