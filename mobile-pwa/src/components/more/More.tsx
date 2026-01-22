@@ -502,9 +502,10 @@ function EditMenuScreen({ onDone }: EditMenuScreenProps) {
         </div>
 
         {/* Touch overlay to capture touch events during drag (prevents scroll) */}
+        {/* z-30 to stay below BottomNav (z-40) so users can still navigate away */}
         {touchDragActive && (
           <div
-            className="fixed inset-0 z-40"
+            className="fixed inset-0 z-30"
             style={{ touchAction: 'none' }}
             onTouchMove={handleOverlayTouchMove}
             onTouchEnd={handleOverlayTouchEnd}

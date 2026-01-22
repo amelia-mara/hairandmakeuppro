@@ -154,10 +154,10 @@ export function ChatAssistant() {
         )}
       </button>
 
-      {/* Chat Panel */}
+      {/* Chat Panel - z-30 to stay below BottomNav (z-40) so users can navigate away */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-40 flex flex-col"
+          className="fixed inset-0 z-30 flex flex-col"
           style={{ backgroundColor: 'var(--color-background)' }}
         >
           {/* Header */}
