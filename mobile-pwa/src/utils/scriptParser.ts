@@ -746,6 +746,45 @@ export async function parseScriptFile(
 }
 
 /**
+ * Extract scene content from raw script text using slugline matching
+ */
+function extractSceneContent(slugline: string, text: string): string {
+  // Escape special regex characters in the slugline
+  const escapedSlugline = slugline.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  // Try to find the slugline in the text (allow for some flexibility with whitespace)
+  const sluglinePattern = new RegExp(escapedSlugline.replace(/\s+/g, '\\s+'), 'im');
+  const sluglineMatch = text.match(sluglinePattern);
+
+  if (!sluglineMatch || sluglineMatch.index === undefined) {
+    // Try a more flexible match - just the INT/EXT and location
+    const flexPattern = new RegExp(`(INT|EXT)\\.?\\s+${slugline.replace(/^(INT|EXT)\\.?\s*/i, '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+')}`, 'im');
+    const flexMatch = text.match(flexPattern);
+    if (!flexMatch || flexMatch.index === undefined) {
+      return '';
+    }
+    const sceneStart = flexMatch.index;
+    return extractContentFromPosition(text, sceneStart);
+  }
+
+  const sceneStart = sluglineMatch.index;
+  return extractContentFromPosition(text, sceneStart);
+}
+
+/**
+ * Extract content from a position until the next scene heading
+ */
+function extractContentFromPosition(text: string, startIndex: number): string {
+  // Find the next scene heading pattern
+  const nextScenePattern = /\n\s*(?:\d+[A-Z]?\s+)?(?:INT|EXT)\./gi;
+  nextScenePattern.lastIndex = startIndex + 1;
+  const nextMatch = nextScenePattern.exec(text);
+
+  const endIndex = nextMatch ? nextMatch.index : text.length;
+  return text.slice(startIndex, endIndex).trim();
+}
+
+/**
  * Parse script using AI with fallback to regex parsing
  */
 async function parseScriptWithAIFallback(
@@ -755,16 +794,21 @@ async function parseScriptWithAIFallback(
   const aiResult = await parseScriptWithAI(text, onProgress);
 
   // Convert AI results to ParsedScript format
-  const scenes: ParsedScene[] = aiResult.scenes.map(s => ({
-    sceneNumber: s.sceneNumber,
-    slugline: s.slugline,
-    intExt: s.intExt,
-    location: s.location,
-    timeOfDay: normalizeTimeOfDay(s.timeOfDay),
-    characters: s.characters,
-    content: s.content || '',
-    synopsis: s.synopsis,
-  }));
+  // Extract actual scene content from the raw text using the sluglines
+  const scenes: ParsedScene[] = aiResult.scenes.map(s => {
+    // Extract content from the original text using the slugline
+    const content = extractSceneContent(s.slugline, text);
+    return {
+      sceneNumber: s.sceneNumber,
+      slugline: s.slugline,
+      intExt: s.intExt,
+      location: s.location,
+      timeOfDay: normalizeTimeOfDay(s.timeOfDay),
+      characters: s.characters,
+      content: content,
+      synopsis: s.synopsis,
+    };
+  });
 
   const characters: ParsedCharacter[] = aiResult.characters.map(c => ({
     name: c.name,
