@@ -7,8 +7,18 @@ import type {
   WeekSummary,
   TimesheetView,
   CallSheet,
+  DayType,
 } from '@/types';
-import { createDefaultRateCard, createEmptyTimesheetEntry } from '@/types';
+import { createDefaultRateCard, createEmptyTimesheetEntry, getLunchDurationForDayType } from '@/types';
+
+// Parse call sheet dayType string to determine DayType
+function parseDayTypeFromCallSheet(dayTypeStr?: string): DayType {
+  if (!dayTypeStr) return 'SWD';
+  const upper = dayTypeStr.toUpperCase();
+  if (upper.includes('SCWD') || upper.includes('SHORT CONTINUOUS')) return 'SCWD';
+  if (upper.includes('CWD') || upper.includes('CONTINUOUS')) return 'CWD';
+  return 'SWD';
+}
 
 interface TimesheetState {
   // Data
@@ -140,20 +150,31 @@ export const useTimesheetStore = create<TimesheetState>()(
         set({ selectedDate: newDate });
       },
 
-      // Call sheet auto-fill
+      // Call sheet auto-fill - sets pre-call, unit call, and day type; leaves wrap empty for user
       autoFillFromCallSheet: (date, callSheet) => {
         const existingEntry = get().entries[date] || createEmptyTimesheetEntry(date);
 
+        // Determine day type from call sheet
+        const dayType = parseDayTypeFromCallSheet(callSheet.dayType);
+        const lunchDuration = getLunchDurationForDayType(dayType);
+
+        // Get HMU pre-call time from call sheet
+        const preCallTime = callSheet.preCalls?.hmu || '';
+
         const autoFilledEntry: TimesheetEntry = {
           ...existingEntry,
+          preCall: preCallTime || existingEntry.preCall,
           unitCall: callSheet.unitCallTime || existingEntry.unitCall,
-          wrapOut: callSheet.wrapEstimate || existingEntry.wrapOut,
-          lunchTaken: 60, // Default 1 hour lunch from call sheet
+          dayType: dayType,
+          // Leave wrap times empty for user to fill
+          wrapOut: existingEntry.wrapOut || '', // Don't auto-fill wrap
+          outOfChair: existingEntry.outOfChair || '', // Don't auto-fill out of chair
+          lunchTaken: lunchDuration,
           productionDay: callSheet.productionDay,
           autoFilledFrom: callSheet.id,
           callSheetUnitCall: callSheet.unitCallTime,
           callSheetLunch: callSheet.lunchTime,
-          callSheetWrap: callSheet.wrapEstimate,
+          callSheetWrap: callSheet.wrapEstimate, // Store for reference but don't auto-fill
         };
 
         return autoFilledEntry;
