@@ -4,6 +4,9 @@ import { useNavigationStore, MAX_BOTTOM_NAV_ITEMS } from '@/stores/navigationSto
 import { useThemeStore, type Theme } from '@/stores/themeStore';
 import { useCallSheetStore } from '@/stores/callSheetStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
+import { useChatStore } from '@/stores/chatStore';
+import { useTimesheetStore } from '@/stores/timesheetStore';
+import { clearAllData as clearIndexedDBData } from '@/db';
 import { RateCardSettings } from '@/components/timesheet';
 import { NavIcon } from '@/components/navigation/BottomNav';
 import { formatShortDate } from '@/utils/helpers';
@@ -1822,6 +1825,10 @@ function Settings({ onBack, onStartNewProject, onNavigateToExport, onNavigateToA
   } = useProjectStore();
   const { resetToDefaults } = useNavigationStore();
   const { theme, setTheme } = useThemeStore();
+  const { clearAll: clearCallSheets } = useCallSheetStore();
+  const { clearSchedule } = useScheduleStore();
+  const { clearMessages: clearChat } = useChatStore();
+  const { clearAll: clearTimesheet } = useTimesheetStore();
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showNewProjectConfirm, setShowNewProjectConfirm] = useState(false);
   const [showWrapConfirm, setShowWrapConfirm] = useState(false);
@@ -1860,9 +1867,16 @@ function Settings({ onBack, onStartNewProject, onNavigateToExport, onNavigateToA
     },
   ];
 
-  const handleStartNewProject = () => {
+  const handleStartNewProject = async () => {
+    // Clear all stores
     clearProject();
+    clearCallSheets();
+    clearSchedule();
+    clearChat();
+    clearTimesheet();
     resetToDefaults();
+    // Clear IndexedDB data (photos, captures, etc.)
+    await clearIndexedDBData();
     setShowNewProjectConfirm(false);
     onStartNewProject?.();
   };
@@ -2134,8 +2148,15 @@ function Settings({ onBack, onStartNewProject, onNavigateToExport, onNavigateToA
                   Cancel
                 </button>
                 <button
-                  onClick={() => {
+                  onClick={async () => {
+                    // Clear all stores
                     clearProject();
+                    clearCallSheets();
+                    clearSchedule();
+                    clearChat();
+                    clearTimesheet();
+                    // Clear IndexedDB data (photos, captures, etc.)
+                    await clearIndexedDBData();
                     setShowClearConfirm(false);
                   }}
                   className="flex-1 px-4 py-2.5 rounded-button bg-error text-white font-medium"
