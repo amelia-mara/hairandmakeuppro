@@ -90,6 +90,12 @@ interface ProjectState {
   updateSceneSynopsis: (sceneId: string, synopsis: string) => void;
   updateAllSceneSynopses: (scenes: Scene[]) => void;
 
+  // Actions - Schedule Integration
+  updateSceneShootingDays: (
+    shootingDayMap: Record<string, number>,
+    discrepancies: Array<{ sceneNumber: string }>
+  ) => void;
+
   // Actions - Look Updates
   updateLook: (lookId: string, updates: Partial<Look>) => void;
 
@@ -540,6 +546,26 @@ export const useProjectStore = create<ProjectState>()(
                 const newSynopsis = synopsisMap.get(s.id);
                 return newSynopsis ? { ...s, synopsis: newSynopsis } : s;
               }),
+            },
+          };
+        });
+      },
+
+      // Schedule integration - update shooting days and discrepancy flags
+      updateSceneShootingDays: (shootingDayMap, discrepancies) => {
+        set((state) => {
+          if (!state.currentProject) return state;
+
+          const discrepancyScenes = new Set(discrepancies.map(d => d.sceneNumber));
+
+          return {
+            currentProject: {
+              ...state.currentProject,
+              scenes: state.currentProject.scenes.map((s) => ({
+                ...s,
+                shootingDay: shootingDayMap[s.sceneNumber] ?? s.shootingDay,
+                hasScheduleDiscrepancy: discrepancyScenes.has(s.sceneNumber),
+              })),
             },
           };
         });
