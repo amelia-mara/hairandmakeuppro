@@ -27,6 +27,7 @@ interface TimesheetState {
   getEntry: (date: string) => TimesheetEntry;
   saveEntry: (entry: TimesheetEntry) => void;
   deleteEntry: (date: string) => void;
+  clearAll: () => void;
   autoFillFromCallSheet: (date: string, callSheet: CallSheet) => TimesheetEntry;
 
   // Actions - Navigation
@@ -115,6 +116,16 @@ export const useTimesheetStore = create<TimesheetState>()(
           const newEntries = { ...state.entries };
           delete newEntries[date];
           return { entries: newEntries };
+        });
+      },
+
+      clearAll: () => {
+        set({
+          rateCard: createDefaultRateCard(),
+          entries: {},
+          selectedDate: formatDateString(new Date()),
+          viewMode: 'week',
+          editingEntry: false,
         });
       },
 
