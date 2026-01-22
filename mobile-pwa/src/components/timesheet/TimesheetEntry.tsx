@@ -1,8 +1,39 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTimesheetStore } from '@/stores/timesheetStore';
 import type { DayType, TimesheetEntry as TimesheetEntryType } from '@/types';
 import { DAY_TYPE_LABELS, createEmptyTimesheetEntry } from '@/types';
 import { HoursBreakdownCard } from './HoursBreakdownCard';
+
+// Debounce helper with flush capability
+function debounce<T extends unknown[]>(
+  fn: (...args: T) => void,
+  delay: number
+): { debounced: (...args: T) => void; flush: () => void } {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  let lastArgs: T | null = null;
+
+  const debounced = (...args: T) => {
+    lastArgs = args;
+    if (timeoutId) clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => {
+      fn(...args);
+      lastArgs = null;
+    }, delay);
+  };
+
+  const flush = () => {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      timeoutId = null;
+    }
+    if (lastArgs) {
+      fn(...lastArgs);
+      lastArgs = null;
+    }
+  };
+
+  return { debounced, flush };
+}
 
 interface TimesheetEntryProps {
   onBack: () => void;
@@ -24,10 +55,38 @@ export function TimesheetEntry({ onBack }: TimesheetEntryProps) {
     getEntry(selectedDate) || createEmptyTimesheetEntry(selectedDate)
   );
 
-  // Update entry when selectedDate changes
+  // Create debounced save function (300ms delay)
+  const { debounced: debouncedSave, flush: flushSave } = useRef(
+    debounce((entryToSave: TimesheetEntryType) => {
+      saveEntry(entryToSave);
+    }, 300)
+  ).current;
+
+  // Track if entry has been modified to avoid unnecessary saves
+  const isInitialMount = useRef(true);
+
+  // Auto-save when entry changes (after initial mount)
   useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    debouncedSave(entry);
+  }, [entry, debouncedSave]);
+
+  // Flush pending save and update entry when selectedDate changes
+  useEffect(() => {
+    flushSave(); // Save any pending changes for the previous date
+    isInitialMount.current = true; // Reset to avoid auto-save on date change load
     setEntry(getEntry(selectedDate) || createEmptyTimesheetEntry(selectedDate));
-  }, [selectedDate, getEntry]);
+  }, [selectedDate, getEntry, flushSave]);
+
+  // Flush pending save on unmount
+  useEffect(() => {
+    return () => {
+      flushSave();
+    };
+  }, [flushSave]);
 
   // Calculate values
   const calculation = calculateEntry(entry);
@@ -52,9 +111,9 @@ export function TimesheetEntry({ onBack }: TimesheetEntryProps) {
     setEntry((prev) => ({ ...prev, [field]: value }));
   };
 
-  // Handle save
+  // Handle save button - flush any pending auto-save and navigate back
   const handleSave = () => {
-    saveEntry(entry);
+    flushSave();
     onBack();
   };
 
