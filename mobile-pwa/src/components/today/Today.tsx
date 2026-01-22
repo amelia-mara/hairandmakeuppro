@@ -23,6 +23,9 @@ export function Today({ onSceneSelect }: TodayProps) {
   const uploadCallSheet = useCallSheetStore(state => state.uploadCallSheet);
   const isUploading = useCallSheetStore(state => state.isUploading);
   const uploadError = useCallSheetStore(state => state.uploadError);
+  // Get persistent update methods from callSheetStore
+  const persistSceneStatus = useCallSheetStore(state => state.updateSceneStatus);
+  const persistSceneFilmingStatus = useCallSheetStore(state => state.updateSceneFilmingStatus);
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isReorderMode, setIsReorderMode] = useState(false);
@@ -193,31 +196,36 @@ export function Today({ onSceneSelect }: TodayProps) {
     });
   };
 
-  // Update scene status using local overrides
+  // Update scene status - persists to store and updates local state for immediate UI feedback
   const updateSceneStatus = (sceneNumber: string, status: ShootingSceneStatus) => {
-    if (!callSheet) return;
+    if (!baseCallSheet) return;
+    // Update local overrides for immediate UI feedback
     setLocalSceneOverrides(prev => {
       const next = new Map(prev);
       const existing = next.get(sceneNumber) || {};
       next.set(sceneNumber, { ...existing, status });
       return next;
     });
+    // Persist to callSheetStore so changes survive navigation
+    persistSceneStatus(baseCallSheet.id, sceneNumber, status);
   };
 
-  // Update scene filming status - also syncs to project store for Breakdown view
+  // Update scene filming status - persists to callSheetStore and syncs to project store for Breakdown view
   const updateSceneFilmingStatus = (
     sceneNumber: string,
     filmingStatus: SceneFilmingStatus,
     filmingNotes?: string
   ) => {
-    if (!callSheet) return;
-    // Update local overrides
+    if (!baseCallSheet) return;
+    // Update local overrides for immediate UI feedback (also set status to wrapped)
     setLocalSceneOverrides(prev => {
       const next = new Map(prev);
       const existing = next.get(sceneNumber) || {};
-      next.set(sceneNumber, { ...existing, filmingStatus, filmingNotes });
+      next.set(sceneNumber, { ...existing, filmingStatus, filmingNotes, status: 'wrapped' as ShootingSceneStatus });
       return next;
     });
+    // Persist to callSheetStore so changes survive navigation
+    persistSceneFilmingStatus(baseCallSheet.id, sceneNumber, filmingStatus, filmingNotes);
     // Sync to project store for Breakdown view
     syncFilmingStatus(sceneNumber, filmingStatus, filmingNotes);
   };
@@ -351,6 +359,12 @@ export function Today({ onSceneSelect }: TodayProps) {
                   <span className="text-sm text-text-muted">Unit Call</span>
                   <span className="text-sm font-semibold text-text-primary">{callSheet.unitCallTime}</span>
                 </div>
+                {callSheet.preCalls?.hmu && (
+                  <div className="flex justify-between">
+                    <span className="text-sm text-text-muted">HMU Pre-call</span>
+                    <span className="text-sm font-semibold text-gold">{callSheet.preCalls.hmu}</span>
+                  </div>
+                )}
                 {callSheet.firstShotTime && (
                   <div className="flex justify-between">
                     <span className="text-sm text-text-muted">First Shot</span>
@@ -363,6 +377,12 @@ export function Today({ onSceneSelect }: TodayProps) {
                     <span className="text-sm font-semibold text-text-primary">{callSheet.lunchTime}</span>
                   </div>
                 )}
+                {callSheet.cameraWrapEstimate && (
+                  <div className="flex justify-between">
+                    <span className="text-sm text-text-muted">Camera Wrap</span>
+                    <span className="text-sm font-semibold text-text-primary">{callSheet.cameraWrapEstimate}</span>
+                  </div>
+                )}
                 {callSheet.wrapEstimate && (
                   <div className="flex justify-between">
                     <span className="text-sm text-text-muted">Est. Wrap</span>
@@ -371,6 +391,46 @@ export function Today({ onSceneSelect }: TodayProps) {
                 )}
               </div>
             </div>
+
+            {/* Cast HMU Calls - show makeup call times for cast members */}
+            {callSheet.castCalls && callSheet.castCalls.length > 0 && (
+              <div className="card">
+                <h2 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-3">
+                  HMU CALLS
+                </h2>
+                <div className="space-y-2">
+                  {callSheet.castCalls
+                    .filter(cast => cast.hmuCall || cast.makeupCall)
+                    .sort((a, b) => {
+                      const timeA = a.hmuCall || a.makeupCall || '';
+                      const timeB = b.hmuCall || b.makeupCall || '';
+                      return timeA.localeCompare(timeB);
+                    })
+                    .map(cast => (
+                      <div key={cast.id} className="flex items-center justify-between py-1.5 border-b border-border/30 last:border-0">
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm font-medium text-text-primary truncate block">
+                            {cast.character}
+                          </span>
+                          <span className="text-xs text-text-muted truncate block">
+                            {cast.name}
+                          </span>
+                        </div>
+                        <div className="text-right ml-3">
+                          <span className="text-sm font-semibold text-gold">
+                            {cast.hmuCall || cast.makeupCall}
+                          </span>
+                          {cast.onSetTime && (
+                            <span className="text-xs text-text-muted block">
+                              On set: {cast.onSetTime}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
 
             {/* Scenes Header */}
             <div className="flex items-center justify-between">
