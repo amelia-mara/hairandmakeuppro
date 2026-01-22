@@ -1016,9 +1016,16 @@ export async function analyzeScript(scriptText, scenes, progressCallback) {
 /**
  * PHASE 1: Scene Structure Extraction
  * Uses PROMPT 1 to extract all scenes with metadata
+ * Now includes pre-extraction of character names for cross-chunk consistency
  */
 async function extractSceneStructure(scriptText, scenes) {
     console.log('Extracting scene structure...');
+
+    // STEP 1: Pre-extract ALL character names from the entire script BEFORE chunking
+    // This ensures we have a complete cast list to reference across all chunks
+    const allCharacterNames = extractCharacterNamesFromText(scriptText);
+    const characterList = Array.from(allCharacterNames).slice(0, 100); // Limit to top 100
+    console.log(`Pre-extracted ${characterList.length} character names for cross-chunk reference`);
 
     // For very long scripts, process in chunks
     const chunks = chunkScript(scriptText);
@@ -1026,9 +1033,9 @@ async function extractSceneStructure(scriptText, scenes) {
 
     for (let i = 0; i < chunks.length; i++) {
         const chunk = chunks[i];
-        const isLastChunk = i === chunks.length - 1;
 
-        const prompt = buildSceneExtractionPrompt(chunk, scenes, i, chunks.length);
+        // Pass the full character list to each chunk's prompt
+        const prompt = buildSceneExtractionPrompt(chunk, scenes, i, chunks.length, characterList);
 
         try {
             const response = await callAIWithRetry(prompt, CONFIG.MAX_TOKENS_SCENE_ANALYSIS);
@@ -1044,19 +1051,32 @@ async function extractSceneStructure(scriptText, scenes) {
         }
     }
 
+    // STEP 2: Post-process to cross-validate and normalize character names
+    const validatedSceneData = crossValidateCharacters(allSceneData, characterList, scenes);
+
     // Merge with existing scene data
-    return mergeSceneData(scenes, allSceneData);
+    return mergeSceneData(scenes, validatedSceneData);
 }
 
 /**
  * Build the scene extraction prompt (PROMPT 1)
+ * Now includes pre-extracted character list for cross-chunk consistency
  */
-function buildSceneExtractionPrompt(scriptChunk, scenes, chunkIndex, totalChunks) {
+function buildSceneExtractionPrompt(scriptChunk, scenes, chunkIndex, totalChunks, characterList = []) {
+    // Build character reference section if we have pre-extracted names
+    const characterReference = characterList.length > 0
+        ? `\nKNOWN CHARACTERS IN THIS SCRIPT (use these exact names when found):
+${characterList.join(', ')}
+
+When you encounter any of these characters in a scene, use the EXACT name from this list.
+`
+        : '';
+
     return `You are analyzing a film screenplay to extract structural information with PRECISE character detection.
 
 YOUR TASK:
 Parse this script section and identify ALL scenes with their metadata, with special focus on accurate character identification.
-
+${characterReference}
 ${totalChunks > 1 ? `NOTE: This is chunk ${chunkIndex + 1} of ${totalChunks}. Process only the scenes in this portion.` : ''}
 
 SCENE IDENTIFICATION RULES:
@@ -1867,6 +1887,93 @@ function parseJSONResponse(response) {
  */
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Cross-validate characters across all scenes
+ * This helps catch characters that the AI might have:
+ * 1. Missed due to chunk boundaries
+ * 2. Named inconsistently across chunks
+ * 3. Forgotten about in later chunks ("lost in the middle")
+ */
+function crossValidateCharacters(sceneData, knownCharacters, originalScenes) {
+    console.log('Cross-validating characters across scenes...');
+
+    // Build a map of normalized character names to their canonical form
+    const characterMap = new Map();
+    knownCharacters.forEach(name => {
+        const normalized = normalizeCharacterName(name);
+        if (!characterMap.has(normalized)) {
+            characterMap.set(normalized, name);
+        }
+    });
+
+    // Process each scene
+    return sceneData.map((scene, idx) => {
+        const originalScene = originalScenes[idx];
+        const sceneContent = originalScene?.content || originalScene?.text || '';
+
+        // Start with AI-detected characters
+        let characters = [...(scene.characters_present || [])];
+
+        // Normalize all character names
+        characters = characters.map(name => {
+            const normalized = normalizeCharacterName(name);
+            // Use canonical name if we have it
+            return characterMap.get(normalized) || name;
+        });
+
+        // Check for characters that might have been missed
+        // by scanning the original scene content for known character names
+        knownCharacters.forEach(charName => {
+            const normalized = normalizeCharacterName(charName);
+            const alreadyIncluded = characters.some(c =>
+                normalizeCharacterName(c) === normalized
+            );
+
+            if (!alreadyIncluded) {
+                // Check if this character appears in the scene content
+                // Look for the character name in dialogue cues (ALL CAPS on own line)
+                const dialoguePattern = new RegExp(
+                    `^\\s*${escapeRegex(charName)}\\s*(?:\\([^)]*\\))?\\s*$`,
+                    'im'
+                );
+
+                // Also check for name in action lines
+                const actionPattern = new RegExp(
+                    `\\b${escapeRegex(charName)}\\b`,
+                    'i'
+                );
+
+                if (dialoguePattern.test(sceneContent) ||
+                    (sceneContent.length < 5000 && actionPattern.test(sceneContent))) {
+                    characters.push(charName);
+                    console.log(`  + Added missing character "${charName}" to scene ${scene.scene_number}`);
+                }
+            }
+        });
+
+        // Remove duplicates (case-insensitive)
+        const seen = new Set();
+        characters = characters.filter(name => {
+            const normalized = normalizeCharacterName(name);
+            if (seen.has(normalized)) return false;
+            seen.add(normalized);
+            return true;
+        });
+
+        return {
+            ...scene,
+            characters_present: characters
+        };
+    });
+}
+
+/**
+ * Escape special regex characters in a string
+ */
+function escapeRegex(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 /**
