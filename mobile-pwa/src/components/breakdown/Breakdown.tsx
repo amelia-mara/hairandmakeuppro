@@ -428,22 +428,39 @@ function BreakdownListView({
                 )}
               </span>
 
-              {/* Filming status badge */}
+              {/* Filming status badge - styled like Today page */}
               {scene.filmingStatus && (
                 <span className={clsx(
-                  'px-1.5 py-0.5 text-[9px] font-semibold rounded-full flex-shrink-0',
+                  'flex items-center gap-1.5 px-2 py-1 text-[10px] font-semibold rounded-lg flex-shrink-0 border',
                   filmingStatusConfig?.bgClass,
-                  filmingStatusConfig?.textClass
+                  filmingStatusConfig?.textClass,
+                  scene.filmingStatus === 'complete' && 'border-green-200',
+                  scene.filmingStatus === 'partial' && 'border-amber-200',
+                  scene.filmingStatus === 'not-filmed' && 'border-red-200'
                 )}>
+                  <span className={clsx(
+                    'w-2 h-2 rounded-full',
+                    scene.filmingStatus === 'complete' && 'bg-green-500',
+                    scene.filmingStatus === 'partial' && 'bg-amber-500',
+                    scene.filmingStatus === 'not-filmed' && 'bg-red-500'
+                  )} />
                   {filmingStatusConfig?.shortLabel}
                 </span>
               )}
 
-              {/* Status indicator (continuity captured) */}
-              <span className={clsx(
-                'w-2 h-2 rounded-full flex-shrink-0',
-                isComplete ? 'bg-green-500' : progress.captured > 0 ? 'bg-gold' : 'bg-gray-200'
-              )} />
+              {/* Checkmark icon when complete - like Today page */}
+              {isComplete && (
+                <span className="text-green-500 flex-shrink-0">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                </span>
+              )}
+
+              {/* Partial progress indicator */}
+              {!isComplete && progress.captured > 0 && (
+                <span className="w-2.5 h-2.5 rounded-full flex-shrink-0 bg-gold" />
+              )}
 
               {/* Expand chevron */}
               <svg
@@ -736,6 +753,7 @@ function BreakdownGridView({
         const characters = getCharactersForScene(scene);
         const progress = getSceneProgress(scene);
         const progressPercent = progress.total > 0 ? (progress.captured / progress.total) * 100 : 0;
+        const isComplete = progress.total > 0 && progress.captured === progress.total;
 
         // Get filming status styling
         const filmingStatusConfig = scene.filmingStatus
@@ -770,14 +788,33 @@ function BreakdownGridView({
 
             {/* Scene number and INT/EXT */}
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xl font-bold text-text-primary">{scene.sceneNumber}</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xl font-bold text-text-primary">{scene.sceneNumber}</span>
+                {/* Checkmark icon when complete - like Today page */}
+                {isComplete && (
+                  <span className="text-green-500">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                  </span>
+                )}
+              </div>
               <div className="flex items-center gap-1">
                 {scene.filmingStatus && (
                   <span className={clsx(
-                    'px-1 py-0.5 text-[8px] font-semibold rounded-full',
+                    'flex items-center gap-1 px-1.5 py-0.5 text-[8px] font-semibold rounded-lg border',
                     filmingStatusConfig?.bgClass,
-                    filmingStatusConfig?.textClass
+                    filmingStatusConfig?.textClass,
+                    scene.filmingStatus === 'complete' && 'border-green-200',
+                    scene.filmingStatus === 'partial' && 'border-amber-200',
+                    scene.filmingStatus === 'not-filmed' && 'border-red-200'
                   )}>
+                    <span className={clsx(
+                      'w-1.5 h-1.5 rounded-full',
+                      scene.filmingStatus === 'complete' && 'bg-green-500',
+                      scene.filmingStatus === 'partial' && 'bg-amber-500',
+                      scene.filmingStatus === 'not-filmed' && 'bg-red-500'
+                    )} />
                     {filmingStatusConfig?.shortLabel}
                   </span>
                 )}
