@@ -25,26 +25,26 @@
   --backdrop-blur: 0px;
 }
 
-/* Dark mode */
+/* Dark mode - Clean, premium aesthetic */
 .dark {
-  --color-background: #000000;
-  --color-card: rgba(26, 24, 22, 0.8);
-  --color-card-hover: rgba(32, 30, 28, 0.9);
-  --color-input-bg: rgba(20, 18, 16, 0.6);
-  --color-border: rgba(201, 169, 97, 0.15);
-  --color-border-focus: rgba(201, 169, 97, 0.4);
-  --color-text-primary: #ffffff;
-  --color-text-secondary: #a0a0a0;
-  --color-text-muted: #777777;
-  --color-text-light: #666666;
-  --color-text-placeholder: #555555;
-  --color-shadow: rgba(0, 0, 0, 0.4);
-  --color-shadow-hover: rgba(201, 169, 97, 0.15);
-  --color-nav-bg: rgba(20, 18, 16, 0.95);
-  --color-nav-shadow: rgba(0, 0, 0, 0.5);
-  --color-overlay: rgba(0, 0, 0, 0.7);
-  --color-gold-soft: rgba(201, 169, 97, 0.08);
-  --backdrop-blur: 20px;
+  --color-background: #0a0a0a;
+  --color-card: #1a1a1a;
+  --color-card-hover: #242424;
+  --color-input-bg: #141414;
+  --color-border: #2a2a2a;
+  --color-border-focus: rgba(201, 169, 97, 0.5);
+  --color-text-primary: #f5f5f5;
+  --color-text-secondary: #b0b0b0;
+  --color-text-muted: #808080;
+  --color-text-light: #6a6a6a;
+  --color-text-placeholder: #505050;
+  --color-shadow: rgba(0, 0, 0, 0.5);
+  --color-shadow-hover: rgba(0, 0, 0, 0.6);
+  --color-nav-bg: #121212;
+  --color-nav-shadow: rgba(0, 0, 0, 0.6);
+  --color-overlay: rgba(0, 0, 0, 0.8);
+  --color-gold-soft: rgba(201, 169, 97, 0.12);
+  --backdrop-blur: 0px;
 }
 
 @layer base {
@@ -120,9 +120,90 @@
     box-shadow: 0 4px 12px var(--color-shadow-hover);
   }
 
-  /* Dark mode glow effect on cards */
+  /* Dark mode card styling - subtle gold border accent */
+  .dark .card {
+    border-color: #2a2a2a;
+  }
+
   .dark .card:hover {
-    box-shadow: 0 4px 20px var(--color-shadow), 0 0 20px rgba(201, 169, 97, 0.1);
+    border-color: rgba(201, 169, 97, 0.25);
+    box-shadow: 0 4px 20px var(--color-shadow), 0 0 15px rgba(201, 169, 97, 0.08);
+  }
+
+  /* Dark mode badge overrides */
+  .dark .bg-gray-100 {
+    background-color: #2a2a2a;
+  }
+
+  .dark .bg-gray-50 {
+    background-color: #1f1f1f;
+  }
+
+  .dark .bg-slate-100 {
+    background-color: #1e293b;
+  }
+
+  .dark .bg-stone-100 {
+    background-color: #292524;
+  }
+
+  .dark .bg-green-100 {
+    background-color: rgba(34, 197, 94, 0.15);
+  }
+
+  .dark .bg-amber-100 {
+    background-color: rgba(245, 158, 11, 0.15);
+  }
+
+  .dark .bg-red-100 {
+    background-color: rgba(239, 68, 68, 0.15);
+  }
+
+  .dark .bg-blue-100 {
+    background-color: rgba(59, 130, 246, 0.15);
+  }
+
+  .dark .bg-amber-50 {
+    background-color: rgba(245, 158, 11, 0.1);
+  }
+
+  .dark .bg-red-50 {
+    background-color: rgba(239, 68, 68, 0.1);
+  }
+
+  /* Dark mode text color adjustments for colored badges */
+  .dark .text-slate-600 {
+    color: #94a3b8;
+  }
+
+  .dark .text-stone-600 {
+    color: #a8a29e;
+  }
+
+  .dark .text-text-muted {
+    color: var(--color-text-muted);
+  }
+
+  /* Dark mode border adjustments */
+  .dark .border-gray-100 {
+    border-color: #2a2a2a;
+  }
+
+  .dark .border-amber-200 {
+    border-color: rgba(245, 158, 11, 0.3);
+  }
+
+  .dark .border-red-200 {
+    border-color: rgba(239, 68, 68, 0.3);
+  }
+
+  .dark .border {
+    border-color: #2a2a2a;
+  }
+
+  /* Dark mode white backgrounds in nested elements */
+  .dark .bg-white {
+    background-color: #1f1f1f;
   }
 
   /* Input field style - uses CSS variables */
@@ -229,15 +310,24 @@
 
   /* Dark mode specific enhancements */
   .dark .gold-gradient {
-    box-shadow: 0 0 20px rgba(201, 169, 97, 0.3);
+    box-shadow: 0 0 20px rgba(201, 169, 97, 0.25);
   }
 
   /* Glass morphism effect for dark mode */
   .dark .glass {
-    background: rgba(26, 24, 22, 0.6);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    border: 1px solid rgba(201, 169, 97, 0.08);
+    background: #1a1a1a;
+    border: 1px solid #2a2a2a;
+  }
+
+  /* Dark mode bottom nav enhancement */
+  .dark .bottom-nav {
+    background-color: #121212;
+    border-top-color: #2a2a2a;
+  }
+
+  /* Gold accent on active nav items in dark mode */
+  .dark .text-gold {
+    text-shadow: 0 0 10px rgba(201, 169, 97, 0.3);
   }
 
   /* Scene completion status glass overlays - Premium Apple-inspired liquid glass */
@@ -304,44 +394,23 @@
     background: linear-gradient(180deg, #d1d5db 0%, #9ca3af 100%);
   }
 
-  /* Dark mode glass overlays - deeper, richer effect */
+  /* Dark mode glass overlays - subtle tinted backgrounds */
   .dark .scene-glass-complete {
-    background: linear-gradient(
-      145deg,
-      rgba(16, 185, 129, 0.12) 0%,
-      rgba(52, 211, 153, 0.18) 50%,
-      rgba(16, 185, 129, 0.10) 100%
-    );
-    box-shadow:
-      inset 0 1px 0 rgba(16, 185, 129, 0.2),
-      inset 0 -1px 0 rgba(16, 185, 129, 0.15),
-      0 0 0 1px rgba(16, 185, 129, 0.15);
+    background: rgba(16, 185, 129, 0.08);
+    box-shadow: none;
+    border-left: 3px solid #10b981;
   }
 
   .dark .scene-glass-partial {
-    background: linear-gradient(
-      145deg,
-      rgba(217, 176, 96, 0.12) 0%,
-      rgba(245, 200, 120, 0.18) 50%,
-      rgba(217, 176, 96, 0.10) 100%
-    );
-    box-shadow:
-      inset 0 1px 0 rgba(217, 176, 96, 0.2),
-      inset 0 -1px 0 rgba(217, 176, 96, 0.15),
-      0 0 0 1px rgba(217, 176, 96, 0.15);
+    background: rgba(245, 158, 11, 0.08);
+    box-shadow: none;
+    border-left: 3px solid #f59e0b;
   }
 
   .dark .scene-glass-incomplete {
-    background: linear-gradient(
-      145deg,
-      rgba(244, 114, 114, 0.10) 0%,
-      rgba(251, 146, 146, 0.14) 50%,
-      rgba(244, 114, 114, 0.08) 100%
-    );
-    box-shadow:
-      inset 0 1px 0 rgba(244, 114, 114, 0.15),
-      inset 0 -1px 0 rgba(244, 114, 114, 0.12),
-      0 0 0 1px rgba(244, 114, 114, 0.12);
+    background: rgba(239, 68, 68, 0.08);
+    box-shadow: none;
+    border-left: 3px solid #ef4444;
   }
 
   /* Status dropdown button styling */
