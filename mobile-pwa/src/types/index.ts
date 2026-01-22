@@ -3,6 +3,7 @@
 export interface Project {
   id: string;
   name: string;
+  isDemoProject?: boolean; // True only when loaded via demo button
   createdAt: Date;
   updatedAt: Date;
   scenes: Scene[];

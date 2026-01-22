@@ -48,8 +48,9 @@ export function Today({ onSceneSelect }: TodayProps) {
   // Determine which call sheet to display:
   // 1. If there's a call sheet for the selected date, use that
   // 2. Otherwise use the active call sheet
-  // 3. Fall back to demo if nothing is uploaded
-  const baseCallSheet = callSheetForDate || activeCallSheet || demoCallSheet;
+  // 3. Only use demo call sheet if in demo mode (entered via demo button)
+  const baseCallSheet = callSheetForDate || activeCallSheet ||
+    (currentProject?.isDemoProject ? demoCallSheet : null);
 
   // Apply local scene overrides to the base call sheet
   const callSheet = useMemo(() => {
@@ -369,8 +370,8 @@ export function Today({ onSceneSelect }: TodayProps) {
             </div>
           </>
         ) : (
-          /* Empty State */
-          <EmptyState />
+          /* Empty State - shown when no call sheet is uploaded */
+          <EmptyState hasAnyCallSheets={callSheets.length > 0} />
         )}
       </div>
 
@@ -935,26 +936,44 @@ function TodaySceneCard({
 }
 
 // Empty State Component
-function EmptyState() {
+interface EmptyStateProps {
+  hasAnyCallSheets: boolean;
+}
+
+function EmptyState({ hasAnyCallSheets }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center py-16 px-6">
       <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mb-4">
         <svg className="w-10 h-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+          {hasAnyCallSheets ? (
+            // Calendar icon when call sheets exist but not for this date
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+          ) : (
+            // Document upload icon when no call sheets uploaded
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m6.75 12l-3-3m0 0l-3 3m3-3v6m-1.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+          )}
         </svg>
       </div>
-      <h3 className="text-lg font-semibold text-text-primary mb-1">No Call Sheet</h3>
-      <p className="text-sm text-text-muted text-center mb-6">
-        Upload a call sheet or manually add today's scenes
+      {hasAnyCallSheets ? (
+        // Message when call sheets exist but not for this date
+        <>
+          <h3 className="text-lg font-semibold text-text-primary mb-1">No Call Sheet for This Date</h3>
+          <p className="text-sm text-text-muted text-center mb-6">
+            Upload a call sheet for this production day to see today's scenes
+          </p>
+        </>
+      ) : (
+        // Message when no call sheets uploaded at all
+        <>
+          <h3 className="text-lg font-semibold text-text-primary mb-1">Upload a Call Sheet</h3>
+          <p className="text-sm text-text-muted text-center mb-6">
+            Upload your first call sheet to see today's scenes and start tracking continuity
+          </p>
+        </>
+      )}
+      <p className="text-xs text-text-light text-center">
+        Go to the Call Sheet tab to upload a PDF
       </p>
-      <div className="flex gap-3">
-        <button className="px-4 py-2.5 rounded-button border border-gold text-gold text-sm font-medium active:scale-95 transition-transform">
-          Upload PDF
-        </button>
-        <button className="px-4 py-2.5 rounded-button gold-gradient text-white text-sm font-medium active:scale-95 transition-transform">
-          Select Scenes
-        </button>
-      </div>
     </div>
   );
 }
