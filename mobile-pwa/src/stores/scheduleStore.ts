@@ -7,60 +7,11 @@ import type {
   Scene,
 } from '@/types';
 import { parseSchedulePDF } from '@/utils/scheduleParser';
-
-// Helper to extract base scene number from any scene format
-// Examples: "4" -> "4", "4A" -> "4", "4B" -> "4", "18B" -> "18",
-// "4 PT1" -> "4", "4PT1" -> "4", "4-A" -> "4", "4.1" -> "4"
-const getBaseSceneNumber = (sceneNumber: string): string => {
-  // Trim and extract leading digits
-  const trimmed = sceneNumber.trim();
-  const match = trimmed.match(/^(\d+)/);
-  return match ? match[1] : trimmed;
-};
-
-// Helper to check if a scene exists in a set, considering all variants
-// Scenes with the same base number are considered matching
-// E.g., "4" matches "4A", "4B"; "4A" matches "4", "4B"; "18B" matches "18"
-const sceneExistsInSet = (sceneSet: Set<string>, sceneNumber: string): boolean => {
-  // First check exact match
-  if (sceneSet.has(sceneNumber)) return true;
-
-  // Get base scene number for comparison
-  const baseScene = getBaseSceneNumber(sceneNumber);
-
-  // Check if any scene in the set has the same base number
-  for (const s of sceneSet) {
-    if (getBaseSceneNumber(s) === baseScene) {
-      return true;
-    }
-  }
-
-  return false;
-};
-
-// Helper to find matching scene data from a map, considering variants
-// Prioritizes exact match, then any variant with same base number
-const findMatchingSceneData = <T>(
-  sceneMap: Map<string, T>,
-  sceneNumber: string
-): T | undefined => {
-  // First check exact match
-  if (sceneMap.has(sceneNumber)) {
-    return sceneMap.get(sceneNumber);
-  }
-
-  // Get base scene number for comparison
-  const baseScene = getBaseSceneNumber(sceneNumber);
-
-  // Find any scene with the same base number
-  for (const [key, value] of sceneMap) {
-    if (getBaseSceneNumber(key) === baseScene) {
-      return value;
-    }
-  }
-
-  return undefined;
-};
+import {
+  getBaseSceneNumber,
+  sceneExistsInSet,
+  findMatchingSceneData,
+} from '@/utils/helpers';
 
 interface ScheduleState {
   // The uploaded production schedule

@@ -1,32 +1,13 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { useCallSheetStore } from '@/stores/callSheetStore';
+import { demoCallSheet } from '@/stores/demoData';
 import { CharacterAvatar } from '@/components/characters/CharacterAvatar';
 import { SceneScriptModal } from '@/components/scenes/SceneScriptModal';
 import { formatShortDate } from '@/utils/helpers';
-import type { ShootingSceneStatus, SceneFilmingStatus, CallSheet, CallSheetScene, Scene } from '@/types';
+import type { ShootingSceneStatus, SceneFilmingStatus, CallSheet, CallSheetScene, Scene, Character, Look } from '@/types';
 import { SCENE_FILMING_STATUS_CONFIG } from '@/types';
 import { clsx } from 'clsx';
-
-// Demo call sheet for development (used when no call sheet is uploaded)
-const demoCallSheet: CallSheet = {
-  id: 'call-1',
-  date: new Date().toISOString().split('T')[0],
-  productionDay: 4,
-  unitCallTime: '06:00',
-  firstShotTime: '07:30',
-  lunchTime: '13:00',
-  wrapEstimate: '19:00',
-  weather: { conditions: 'Sunny', tempHigh: 22 },
-  scenes: [
-    { sceneNumber: '12', setDescription: 'INT. COFFEE SHOP - DAY', dayNight: 'D', shootOrder: 1, estimatedTime: '07:30', status: 'wrapped', filmingStatus: 'complete' },
-    { sceneNumber: '15', setDescription: 'EXT. PARK - DAY', dayNight: 'D', shootOrder: 2, estimatedTime: '09:15', status: 'wrapped', filmingStatus: 'partial', filmingNotes: 'Missing wide shot due to lighting' },
-    { sceneNumber: '16', setDescription: 'INT. APARTMENT - DAY', dayNight: 'D', shootOrder: 3, estimatedTime: '11:00', status: 'in-progress' },
-    { sceneNumber: '8', setDescription: 'EXT. STREET - NIGHT', dayNight: 'N', shootOrder: 4, estimatedTime: '14:00', status: 'upcoming' },
-    { sceneNumber: '23', setDescription: 'INT. OFFICE - DAY', dayNight: 'D', shootOrder: 5, estimatedTime: '16:30', status: 'upcoming' },
-  ],
-  uploadedAt: new Date(),
-};
 
 interface TodayProps {
   onSceneSelect: (sceneId: string) => void;
@@ -115,12 +96,12 @@ export function Today({ onSceneSelect }: TodayProps) {
   };
 
   // Get characters in scene
-  const getCharactersInScene = (sceneNumber: string) => {
+  const getCharactersInScene = (sceneNumber: string): Character[] => {
     const scene = getSceneData(sceneNumber);
     if (!scene || !currentProject) return [];
     return scene.characters
       .map(charId => currentProject.characters.find(c => c.id === charId))
-      .filter(Boolean);
+      .filter((c): c is Character => c !== undefined);
   };
 
   // Get look for character in scene
@@ -361,9 +342,9 @@ export function Today({ onSceneSelect }: TodayProps) {
 interface TodaySceneCardProps {
   shootingScene: CallSheetScene;
   scene?: Scene;
-  characters: any[];
+  characters: Character[];
   isCaptured: boolean;
-  getLookForCharacter: (characterId: string, sceneNumber: string) => any;
+  getLookForCharacter: (characterId: string, sceneNumber: string) => Look | null | undefined;
   onTap: () => void;
   onSynopsisClick: (scene: Scene) => void;
   onStatusChange: (status: ShootingSceneStatus) => void;

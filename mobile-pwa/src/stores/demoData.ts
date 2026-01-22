@@ -1,4 +1,4 @@
-import type { Project, Scene, Character, Look } from '@/types';
+import type { Project, Scene, Character, Look, CallSheet } from '@/types';
 import { createEmptyMakeupDetails, createEmptyHairDetails } from '@/types';
 
 // Generate demo scenes (42 total)
@@ -336,3 +336,23 @@ export const demoProject: Project = {
 export function loadDemoData(setProject: (project: Project) => void) {
   setProject(demoProject);
 }
+
+// Demo call sheet for development (used when no call sheet is uploaded)
+export const demoCallSheet: CallSheet = {
+  id: 'call-1',
+  date: new Date().toISOString().split('T')[0],
+  productionDay: 4,
+  unitCallTime: '06:00',
+  firstShotTime: '07:30',
+  lunchTime: '13:00',
+  wrapEstimate: '19:00',
+  weather: { conditions: 'Sunny', tempHigh: 22 },
+  scenes: [
+    { sceneNumber: '12', setDescription: 'INT. COFFEE SHOP - DAY', dayNight: 'D', shootOrder: 1, estimatedTime: '07:30', status: 'wrapped', filmingStatus: 'complete' },
+    { sceneNumber: '15', setDescription: 'EXT. PARK - DAY', dayNight: 'D', shootOrder: 2, estimatedTime: '09:15', status: 'wrapped', filmingStatus: 'partial', filmingNotes: 'Missing wide shot due to lighting' },
+    { sceneNumber: '16', setDescription: 'INT. APARTMENT - DAY', dayNight: 'D', shootOrder: 3, estimatedTime: '11:00', status: 'in-progress' },
+    { sceneNumber: '8', setDescription: 'EXT. STREET - NIGHT', dayNight: 'N', shootOrder: 4, estimatedTime: '14:00', status: 'upcoming' },
+    { sceneNumber: '23', setDescription: 'INT. OFFICE - DAY', dayNight: 'D', shootOrder: 5, estimatedTime: '16:30', status: 'upcoming' },
+  ],
+  uploadedAt: new Date(),
+};
