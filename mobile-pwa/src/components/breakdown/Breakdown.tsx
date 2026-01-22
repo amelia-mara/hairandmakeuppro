@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { CharacterAvatar } from '@/components/characters/CharacterAvatar';
 import { SceneScriptModal } from '@/components/scenes/SceneScriptModal';
+import { generateSceneSynopsis } from '@/services/aiService';
 import type { Scene, Character, BreakdownViewMode, BreakdownFilters, SceneFilmingStatus } from '@/types';
 import { SCENE_FILMING_STATUS_CONFIG } from '@/types';
 import { clsx } from 'clsx';
@@ -11,7 +12,7 @@ interface BreakdownProps {
 }
 
 export function Breakdown({ onSceneSelect }: BreakdownProps) {
-  const { currentProject, sceneCaptures } = useProjectStore();
+  const { currentProject, sceneCaptures, updateSceneSynopsis } = useProjectStore();
   const [viewMode, setViewMode] = useState<BreakdownViewMode>('list');
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<BreakdownFilters>({
@@ -24,6 +25,27 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
   });
   const [expandedSceneId, setExpandedSceneId] = useState<string | null>(null);
   const [scriptModalSceneId, setScriptModalSceneId] = useState<string | null>(null);
+  const [generatingSynopsisId, setGeneratingSynopsisId] = useState<string | null>(null);
+
+  // Handle generating synopsis for a scene
+  const handleGenerateSynopsis = async (scene: Scene) => {
+    if (generatingSynopsisId) return; // Already generating
+
+    setGeneratingSynopsisId(scene.id);
+    try {
+      const synopsis = await generateSceneSynopsis(
+        scene.slugline,
+        scene.scriptContent || ''
+      );
+      if (synopsis) {
+        updateSceneSynopsis(scene.id, synopsis);
+      }
+    } catch (error) {
+      console.error('Failed to generate synopsis:', error);
+    } finally {
+      setGeneratingSynopsisId(null);
+    }
+  };
 
   // Get scene for script modal
   const scriptModalScene = useMemo(() => {
@@ -228,6 +250,8 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
             onToggleExpand={(id) => setExpandedSceneId(expandedSceneId === id ? null : id)}
             onSceneSelect={onSceneSelect}
             onSynopsisClick={(sceneId) => setScriptModalSceneId(sceneId)}
+            onGenerateSynopsis={handleGenerateSynopsis}
+            generatingSynopsisId={generatingSynopsisId}
             getCharactersForScene={getCharactersForScene}
             getLookForCharacter={getLookForCharacter}
             getCapture={getCapture}
@@ -274,6 +298,8 @@ interface BreakdownListViewProps {
   onToggleExpand: (id: string) => void;
   onSceneSelect: (id: string) => void;
   onSynopsisClick: (sceneId: string) => void;
+  onGenerateSynopsis: (scene: Scene) => void;
+  generatingSynopsisId: string | null;
   getCharactersForScene: (scene: Scene) => Character[];
   getLookForCharacter: (characterId: string, sceneNumber: string) => any;
   getCapture: (sceneId: string, characterId: string) => any;
@@ -301,6 +327,8 @@ function BreakdownListView({
   onToggleExpand,
   onSceneSelect,
   onSynopsisClick,
+  onGenerateSynopsis,
+  generatingSynopsisId,
   getCharactersForScene,
   getLookForCharacter,
   getCapture,
@@ -438,20 +466,58 @@ function BreakdownListView({
                       Tap to view full scene
                     </span>
                   </button>
-                ) : scene.scriptContent ? (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onSynopsisClick(scene.id);
-                    }}
-                    className="text-xs text-gold flex items-center gap-1"
-                  >
-                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    View full scene
-                  </button>
-                ) : null}
+                ) : (
+                  <div className="flex items-center gap-2">
+                    {/* Generate Synopsis Button */}
+                    {scene.scriptContent && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onGenerateSynopsis(scene);
+                        }}
+                        disabled={generatingSynopsisId === scene.id}
+                        className={clsx(
+                          'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all',
+                          generatingSynopsisId === scene.id
+                            ? 'bg-gray-100 text-text-muted cursor-wait'
+                            : 'bg-gold-100 text-gold hover:bg-gold-200 active:scale-95'
+                        )}
+                      >
+                        {generatingSynopsisId === scene.id ? (
+                          <>
+                            <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                            </svg>
+                            Generating...
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" />
+                            </svg>
+                            Generate Synopsis
+                          </>
+                        )}
+                      </button>
+                    )}
+                    {/* View full scene link */}
+                    {scene.scriptContent && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSynopsisClick(scene.id);
+                        }}
+                        className="text-xs text-text-muted flex items-center gap-1 hover:text-gold transition-colors"
+                      >
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        View script
+                      </button>
+                    )}
+                  </div>
+                )}
 
                 {/* Filming status with notes */}
                 {scene.filmingStatus && (
