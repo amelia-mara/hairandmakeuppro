@@ -1,9 +1,15 @@
 import { useTimesheetStore } from '@/stores/timesheetStore';
-import type { BaseDayHours } from '@/types';
-import { BASE_DAY_OPTIONS } from '@/types';
+import type { BaseDayHours, DayType } from '@/types';
+import { BASE_DAY_OPTIONS, DAY_TYPE_OPTIONS, getLunchDurationForDayType } from '@/types';
 
 export function RateCardSettings() {
   const { rateCard, updateRateCard } = useTimesheetStore();
+
+  // Handle day type change - auto-update lunch duration
+  const handleDayTypeChange = (newDayType: DayType) => {
+    const lunchDuration = getLunchDurationForDayType(newDayType);
+    updateRateCard({ dayType: newDayType, lunchDuration });
+  };
 
   return (
     <div className="space-y-4">
@@ -48,50 +54,110 @@ export function RateCardSettings() {
         </p>
       </div>
 
-      {/* Lunch Duration */}
+      {/* Working Day Type - determines lunch duration */}
       <div>
-        <label className="field-label block mb-2">DEFAULT LUNCH</label>
+        <label className="field-label block mb-2">WORKING DAY TYPE</label>
         <select
-          value={rateCard.lunchDuration}
-          onChange={(e) =>
-            updateRateCard({ lunchDuration: parseInt(e.target.value, 10) })
-          }
+          value={rateCard.dayType || 'SWD'}
+          onChange={(e) => handleDayTypeChange(e.target.value as DayType)}
           className="input-field w-full"
         >
-          <option value={30}>30 minutes</option>
-          <option value={45}>45 minutes</option>
-          <option value={60}>1 hour</option>
+          {DAY_TYPE_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
         </select>
         <p className="text-xs text-text-muted mt-1">
-          Scheduled lunch break (unpaid)
+          Determines lunch break: SWD = 1hr, CWD/SCWD = 30min
         </p>
       </div>
 
-      {/* Rate Multipliers */}
-      <div className="bg-gray-50 rounded-card p-4 space-y-3">
+      {/* Rate Multipliers - now editable */}
+      <div className="bg-gray-50 rounded-card p-4 space-y-4">
         <h4 className="field-label">RATE MULTIPLIERS</h4>
 
-        <div className="flex justify-between items-center text-sm">
-          <span className="text-text-muted">Pre-Call</span>
-          <span className="font-medium text-gold">x{rateCard.preCallMultiplier}</span>
+        <div>
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-text-muted">Pre-Call</span>
+            <div className="flex items-center gap-1">
+              <span className="text-sm text-text-muted">x</span>
+              <input
+                type="number"
+                value={rateCard.preCallMultiplier}
+                onChange={(e) =>
+                  updateRateCard({ preCallMultiplier: parseFloat(e.target.value) || 1.5 })
+                }
+                min="1"
+                max="5"
+                step="0.1"
+                className="input-field w-16 text-center text-gold font-medium"
+              />
+            </div>
+          </div>
+          <p className="text-[11px] text-text-light mt-1">Hours before unit call</p>
         </div>
-        <p className="text-[11px] text-text-light -mt-2">Hours before unit call</p>
 
-        <div className="flex justify-between items-center text-sm">
-          <span className="text-text-muted">Overtime (after base hours)</span>
-          <span className="font-medium text-gold">x{rateCard.otMultiplier}</span>
+        <div>
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-text-muted">Overtime (after base hours)</span>
+            <div className="flex items-center gap-1">
+              <span className="text-sm text-text-muted">x</span>
+              <input
+                type="number"
+                value={rateCard.otMultiplier}
+                onChange={(e) =>
+                  updateRateCard({ otMultiplier: parseFloat(e.target.value) || 1.5 })
+                }
+                min="1"
+                max="5"
+                step="0.1"
+                className="input-field w-16 text-center text-gold font-medium"
+              />
+            </div>
+          </div>
         </div>
 
-        <div className="flex justify-between items-center text-sm">
-          <span className="text-text-muted">Late Night (after 23:00)</span>
-          <span className="font-medium text-gold">x{rateCard.lateNightMultiplier}</span>
+        <div>
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-text-muted">Late Night (after 23:00)</span>
+            <div className="flex items-center gap-1">
+              <span className="text-sm text-text-muted">x</span>
+              <input
+                type="number"
+                value={rateCard.lateNightMultiplier}
+                onChange={(e) =>
+                  updateRateCard({ lateNightMultiplier: parseFloat(e.target.value) || 2.0 })
+                }
+                min="1"
+                max="5"
+                step="0.1"
+                className="input-field w-16 text-center text-gold font-medium"
+              />
+            </div>
+          </div>
         </div>
 
-        <div className="flex justify-between items-center text-sm">
-          <span className="text-text-muted">6th Day</span>
-          <span className="font-medium text-gold">x{rateCard.sixthDayMultiplier}</span>
+        <div>
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-text-muted">6th Day</span>
+            <div className="flex items-center gap-1">
+              <span className="text-sm text-text-muted">x</span>
+              <input
+                type="number"
+                value={rateCard.sixthDayMultiplier}
+                onChange={(e) =>
+                  updateRateCard({ sixthDayMultiplier: parseFloat(e.target.value) || 1.5 })
+                }
+                min="1"
+                max="5"
+                step="0.1"
+                className="input-field w-16 text-center text-gold font-medium"
+              />
+            </div>
+          </div>
+          <p className="text-[11px] text-text-light mt-1">Applied to entire day's earnings</p>
         </div>
-        <p className="text-[11px] text-text-light -mt-2">Applied to entire day's earnings</p>
       </div>
 
       {/* Kit Rental */}

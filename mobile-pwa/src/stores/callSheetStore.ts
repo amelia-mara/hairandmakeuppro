@@ -165,7 +165,7 @@ export const useCallSheetStore = create<CallSheetState>()(
               ...cs,
               scenes: cs.scenes.map(scene =>
                 scene.sceneNumber === sceneNumber
-                  ? { ...scene, filmingStatus, filmingNotes }
+                  ? { ...scene, filmingStatus, filmingNotes, status: 'wrapped' as ShootingSceneStatus }
                   : scene
               ),
             };
