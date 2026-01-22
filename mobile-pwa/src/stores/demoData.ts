@@ -325,6 +325,7 @@ export const demoContinuityEvent = {
 export const demoProject: Project = {
   id: 'demo-project',
   name: 'Demo Production',
+  isDemoProject: true,
   createdAt: new Date('2024-01-15'),
   updatedAt: new Date(),
   scenes: generateDemoScenes(),

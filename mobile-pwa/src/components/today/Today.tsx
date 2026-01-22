@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { useCallSheetStore } from '@/stores/callSheetStore';
+import { demoCallSheet } from '@/stores/demoData';
 import { CharacterAvatar } from '@/components/characters/CharacterAvatar';
 import { SceneScriptModal } from '@/components/scenes/SceneScriptModal';
 import { formatShortDate } from '@/utils/helpers';
@@ -47,8 +48,9 @@ export function Today({ onSceneSelect }: TodayProps) {
   // Determine which call sheet to display:
   // 1. If there's a call sheet for the selected date, use that
   // 2. Otherwise use the active call sheet
-  // Scenes are only shown after a call sheet has been uploaded
-  const baseCallSheet = callSheetForDate || activeCallSheet;
+  // 3. Only use demo call sheet if in demo mode (entered via demo button)
+  const baseCallSheet = callSheetForDate || activeCallSheet ||
+    (currentProject?.isDemoProject ? demoCallSheet : null);
 
   // Apply local scene overrides to the base call sheet
   const callSheet = useMemo(() => {
