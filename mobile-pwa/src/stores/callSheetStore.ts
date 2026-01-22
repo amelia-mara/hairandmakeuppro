@@ -3,6 +3,9 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import type { CallSheet, CallSheetScene, ShootingSceneStatus, SceneFilmingStatus } from '@/types';
 import { parseCallSheetPDF } from '@/utils/callSheetParser';
 
+// Current version of the store schema - increment when making breaking changes
+const STORE_VERSION = 2;
+
 interface CallSheetState {
   // All uploaded call sheets
   callSheets: CallSheet[];
@@ -35,6 +38,18 @@ interface CallSheetState {
   clearAll: () => void;
 }
 
+// Validate that a call sheet has proper structure (scenes belong to this call sheet only)
+function validateCallSheet(cs: CallSheet): boolean {
+  if (!cs.id || !cs.date || !Array.isArray(cs.scenes)) return false;
+  // Ensure scenes array is reasonable (not accumulated from multiple days)
+  // A single day's call sheet typically has 1-20 scenes, rarely more than 30
+  if (cs.scenes.length > 50) {
+    console.warn(`Call sheet ${cs.id} has ${cs.scenes.length} scenes - possible data corruption`);
+    return false;
+  }
+  return true;
+}
+
 export const useCallSheetStore = create<CallSheetState>()(
   persist(
     (set, get) => ({
@@ -49,33 +64,45 @@ export const useCallSheetStore = create<CallSheetState>()(
         try {
           const callSheet = await parseCallSheetPDF(file);
 
-          // Check if we already have a call sheet for this day
+          // Ensure the new call sheet has a clean scenes array (no merging)
+          const cleanCallSheet: CallSheet = {
+            ...callSheet,
+            // Explicitly create a new scenes array to prevent any reference issues
+            scenes: [...callSheet.scenes],
+          };
+
+          // Check if we already have a call sheet for this day (by date OR production day)
           const existing = get().callSheets.find(
-            cs => cs.date === callSheet.date || cs.productionDay === callSheet.productionDay
+            cs => cs.date === cleanCallSheet.date || cs.productionDay === cleanCallSheet.productionDay
           );
 
           if (existing) {
-            // Update existing call sheet
+            // COMPLETELY REPLACE existing call sheet - do not merge scenes
+            const replacementSheet: CallSheet = {
+              ...cleanCallSheet,
+              id: existing.id, // Keep the same ID for reference stability
+            };
+
             set(state => ({
               callSheets: state.callSheets.map(cs =>
-                cs.id === existing.id ? { ...callSheet, id: existing.id } : cs
+                cs.id === existing.id ? replacementSheet : cs
               ),
               isUploading: false,
               activeCallSheetId: existing.id,
             }));
-            return { ...callSheet, id: existing.id };
+            return replacementSheet;
           }
 
-          // Add new call sheet
+          // Add new call sheet (not replacing any existing)
           set(state => ({
-            callSheets: [...state.callSheets, callSheet].sort(
+            callSheets: [...state.callSheets, cleanCallSheet].sort(
               (a, b) => a.productionDay - b.productionDay
             ),
             isUploading: false,
-            activeCallSheetId: callSheet.id,
+            activeCallSheetId: cleanCallSheet.id,
           }));
 
-          return callSheet;
+          return cleanCallSheet;
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Failed to parse call sheet';
           set({ isUploading: false, uploadError: message });
@@ -152,11 +179,51 @@ export const useCallSheetStore = create<CallSheetState>()(
     }),
     {
       name: 'hair-makeup-callsheets',
+      version: STORE_VERSION,
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         callSheets: state.callSheets,
         activeCallSheetId: state.activeCallSheetId,
       }),
+      // Migrate from old versions or corrupted data
+      migrate: (persistedState: unknown, version: number) => {
+        const state = persistedState as Partial<CallSheetState>;
+
+        // If coming from an older version or no version, validate and clean data
+        if (version < STORE_VERSION) {
+          console.log(`Migrating call sheet store from version ${version} to ${STORE_VERSION}`);
+
+          // Filter out any corrupted call sheets
+          const validCallSheets = (state.callSheets || []).filter(validateCallSheet);
+
+          // If we filtered out corrupted data, log it
+          if (validCallSheets.length !== (state.callSheets || []).length) {
+            console.warn('Removed corrupted call sheet data during migration');
+          }
+
+          return {
+            callSheets: validCallSheets,
+            activeCallSheetId: state.activeCallSheetId || null,
+            isUploading: false,
+            uploadError: null,
+          };
+        }
+
+        return state as CallSheetState;
+      },
+      // Custom merge to ensure clean state on rehydration
+      merge: (persistedState, currentState) => {
+        const persisted = persistedState as Partial<CallSheetState>;
+
+        // Validate persisted call sheets before merging
+        const validCallSheets = (persisted.callSheets || []).filter(validateCallSheet);
+
+        return {
+          ...currentState,
+          callSheets: validCallSheets,
+          activeCallSheetId: persisted.activeCallSheetId || null,
+        };
+      },
     }
   )
 );

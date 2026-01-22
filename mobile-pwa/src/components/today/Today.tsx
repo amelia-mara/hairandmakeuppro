@@ -5,7 +5,7 @@ import { demoCallSheet } from '@/stores/demoData';
 import { CharacterAvatar } from '@/components/characters/CharacterAvatar';
 import { SceneScriptModal } from '@/components/scenes/SceneScriptModal';
 import { formatShortDate } from '@/utils/helpers';
-import type { ShootingSceneStatus, SceneFilmingStatus, CallSheet, CallSheetScene, Scene, Character, Look } from '@/types';
+import type { ShootingSceneStatus, SceneFilmingStatus, CallSheetScene, Scene, Character, Look } from '@/types';
 import { SCENE_FILMING_STATUS_CONFIG } from '@/types';
 import { clsx } from 'clsx';
 
@@ -15,30 +15,78 @@ interface TodayProps {
 
 export function Today({ onSceneSelect }: TodayProps) {
   const { currentProject, sceneCaptures, updateSceneFilmingStatus: syncFilmingStatus } = useProjectStore();
-  const { getActiveCallSheet } = useCallSheetStore();
+
+  // Subscribe to actual state values from call sheet store for proper reactivity
+  const callSheets = useCallSheetStore(state => state.callSheets);
+  const activeCallSheetId = useCallSheetStore(state => state.activeCallSheetId);
+  const getCallSheetByDate = useCallSheetStore(state => state.getCallSheetByDate);
+
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isReorderMode, setIsReorderMode] = useState(false);
+  // Track local scene modifications (status, order) separately from the base call sheet
+  const [localSceneOverrides, setLocalSceneOverrides] = useState<Map<string, Partial<CallSheetScene>>>(new Map());
 
-  // Get active call sheet from store, fallback to demo
-  const activeCallSheet = getActiveCallSheet();
-  const [callSheet, setCallSheet] = useState<CallSheet | null>(activeCallSheet || demoCallSheet);
+  // Derive the call sheet for the current date from the store
+  // This ensures we always show scenes from the correct day's call sheet
+  const callSheetForDate = useMemo(() => {
+    const dateStr = currentDate.toISOString().split('T')[0];
+    return getCallSheetByDate(dateStr);
+  }, [currentDate, getCallSheetByDate, callSheets]); // Include callSheets to react to uploads
 
-  // Update local state when active call sheet changes
-  useEffect(() => {
-    if (activeCallSheet) {
-      setCallSheet(activeCallSheet);
+  // Get the active call sheet (most recently uploaded/selected)
+  const activeCallSheet = useMemo(() => {
+    if (!activeCallSheetId) {
+      // Default to most recent call sheet by date
+      const sorted = [...callSheets].sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+      return sorted[0] || null;
     }
-  }, [activeCallSheet]);
+    return callSheets.find(cs => cs.id === activeCallSheetId) || null;
+  }, [callSheets, activeCallSheetId]);
+
+  // Determine which call sheet to display:
+  // 1. If there's a call sheet for the selected date, use that
+  // 2. Otherwise use the active call sheet
+  // 3. Fall back to demo if nothing is uploaded
+  const baseCallSheet = callSheetForDate || activeCallSheet || demoCallSheet;
+
+  // Apply local scene overrides to the base call sheet
+  const callSheet = useMemo(() => {
+    if (!baseCallSheet) return null;
+    if (localSceneOverrides.size === 0) return baseCallSheet;
+
+    return {
+      ...baseCallSheet,
+      scenes: baseCallSheet.scenes.map(scene => {
+        const override = localSceneOverrides.get(scene.sceneNumber);
+        return override ? { ...scene, ...override } : scene;
+      }),
+    };
+  }, [baseCallSheet, localSceneOverrides]);
+
+  // Clear local overrides when the base call sheet changes (new upload)
+  useEffect(() => {
+    setLocalSceneOverrides(new Map());
+  }, [baseCallSheet?.id]);
+
+  // Sync current date to match the active call sheet when it changes
+  useEffect(() => {
+    if (activeCallSheet?.date) {
+      setCurrentDate(new Date(activeCallSheet.date));
+    }
+  }, [activeCallSheet?.id, activeCallSheet?.date]);
 
   // State for scene script modal
   const [scriptModalScene, setScriptModalScene] = useState<Scene | null>(null);
 
-  // Navigate days
+  // Navigate days - now properly loads call sheet for that date
   const navigateDay = (direction: -1 | 1) => {
     const newDate = new Date(currentDate);
     newDate.setDate(newDate.getDate() + direction);
     setCurrentDate(newDate);
-    // In real app, would load call sheet for that date
+    // Clear local overrides when navigating to a different day
+    setLocalSceneOverrides(new Map());
   };
 
   // Sort scenes: In reorder mode, just by shootOrder. Otherwise In Progress → Upcoming → Wrapped
@@ -76,17 +124,18 @@ export function Today({ onSceneSelect }: TodayProps) {
 
     const swapIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
 
-    // Swap shoot orders
+    // Swap shoot orders using local overrides
     const currentOrder = scenes[currentIndex].shootOrder;
     const swapOrder = scenes[swapIndex].shootOrder;
+    const swapSceneNumber = scenes[swapIndex].sceneNumber;
 
-    setCallSheet({
-      ...callSheet,
-      scenes: callSheet.scenes.map(s => {
-        if (s.sceneNumber === sceneNumber) return { ...s, shootOrder: swapOrder };
-        if (s.sceneNumber === scenes[swapIndex].sceneNumber) return { ...s, shootOrder: currentOrder };
-        return s;
-      }),
+    setLocalSceneOverrides(prev => {
+      const next = new Map(prev);
+      const currentOverride = next.get(sceneNumber) || {};
+      const swapOverride = next.get(swapSceneNumber) || {};
+      next.set(sceneNumber, { ...currentOverride, shootOrder: swapOrder });
+      next.set(swapSceneNumber, { ...swapOverride, shootOrder: currentOrder });
+      return next;
     });
   };
 
@@ -123,14 +172,14 @@ export function Today({ onSceneSelect }: TodayProps) {
     });
   };
 
-  // Update scene status
+  // Update scene status using local overrides
   const updateSceneStatus = (sceneNumber: string, status: ShootingSceneStatus) => {
     if (!callSheet) return;
-    setCallSheet({
-      ...callSheet,
-      scenes: callSheet.scenes.map(s =>
-        s.sceneNumber === sceneNumber ? { ...s, status } : s
-      ),
+    setLocalSceneOverrides(prev => {
+      const next = new Map(prev);
+      const existing = next.get(sceneNumber) || {};
+      next.set(sceneNumber, { ...existing, status });
+      return next;
     });
   };
 
@@ -141,14 +190,12 @@ export function Today({ onSceneSelect }: TodayProps) {
     filmingNotes?: string
   ) => {
     if (!callSheet) return;
-    // Update local call sheet state
-    setCallSheet({
-      ...callSheet,
-      scenes: callSheet.scenes.map(s =>
-        s.sceneNumber === sceneNumber
-          ? { ...s, filmingStatus, filmingNotes }
-          : s
-      ),
+    // Update local overrides
+    setLocalSceneOverrides(prev => {
+      const next = new Map(prev);
+      const existing = next.get(sceneNumber) || {};
+      next.set(sceneNumber, { ...existing, filmingStatus, filmingNotes });
+      return next;
     });
     // Sync to project store for Breakdown view
     syncFilmingStatus(sceneNumber, filmingStatus, filmingNotes);
