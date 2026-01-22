@@ -37,21 +37,23 @@ export async function parseCallSheetText(text: string, pdfUri?: string): Promise
 IMPORTANT: Call sheets vary significantly between productions and ADs. The text extraction may lose table structure, so look for patterns and context clues.
 
 Common patterns to look for:
-- Production day: "DAY X" or "DAY X OF Y" or "SHOOT DAY X"
+- Production day: "DAY X" or "DAY X OF Y" or "SHOOT DAY X" or "CALL SHEET X OF Y"
 - Dates: Various formats like "MONDAY 24TH NOVEMBER 2025" or "24/11/25"
-- Unit call time: "UNIT CALL" followed by time
-- Pre-calls: HMU, COSTUME, ADs times (often earlier than unit call)
-- Meal times: BREAKFAST, LUNCH with times
-- Wrap estimates: "EST. WRAP" or "CAMERA WRAP"
-- Weather: Temperature, conditions, sunrise/sunset
-- Scene schedules: Usually in table format with scene numbers, INT/EXT, location, D/N, pages, cast numbers
-- Cast information: Actor names, characters, call times, H&MU times, on-set times
+- Unit call time: "UNIT CALL" or "UNIT CALL TIME" followed by time
+- Pre-calls: HMU, COSTUME, ADs, LIGHTING, CAMERA times (often earlier than unit call)
+  - May include location like "07:45 @ UB" (at Unit Base)
+- Meal times: BREAKFAST, LUNCH with times and possibly locations (HOTBOX, IN HAND, etc.)
+- Wrap estimates: "EST. WRAP", "CAMERA WRAP", "WRAP"
+- Weather: Temperature (High/Low), conditions, sunrise/sunset times
+- Locations: UNIT BASE, LOCATION, LOC 1, LOC 2, CREW PARKING with addresses and What3Words (///word.word.word)
+- Scene schedules: Usually in table format with scene numbers, INT/EXT, location, D/N, pages, cast numbers, timings
+- Cast information: Actor names, characters, call times, H&MU times, costume times, travel, on-set times
 
-Time formats vary: "0730", "07:30", "7:30 AM", "7.30"
+Time formats vary: "0730", "07:30", "7:30 AM", "7.30", "08:00 AM"
 
 Return ONLY valid JSON with no additional text or markdown.`;
 
-  const prompt = `Parse this call sheet text and extract all available information.
+  const prompt = `Parse this call sheet text and extract ALL available information including locations, weather, and timing details.
 
 CALL SHEET TEXT:
 ---
@@ -63,51 +65,78 @@ Return a JSON object with this structure (include only fields that have data in 
   "date": "YYYY-MM-DD format",
   "productionDay": number,
   "totalProductionDays": number or null,
-  "dayType": "e.g., 10 HRS CONTINUOUS WORKING DAY",
+  "dayType": "e.g., 10 HRS CONTINUOUS WORKING DAY, STANDARD WORKING DAY, SEMI-CONTINUOUS",
   "unitCallTime": "HH:MM 24-hour format",
-  "rehearsalsTime": "HH:MM or null",
-  "firstShotTime": "HH:MM or null",
+  "rehearsalsTime": "HH:MM or null (REHEARSALS ON SET FOR)",
+  "firstShotTime": "HH:MM or null (TO SHOOT FOR)",
   "preCalls": {
     "ads": "HH:MM or null",
     "hmu": "HH:MM or null",
     "costume": "HH:MM or null",
-    "production": "HH:MM or null"
+    "production": "HH:MM or null",
+    "lighting": "HH:MM or null",
+    "camera": "HH:MM or null",
+    "location": "where pre-calls happen e.g., 'Unit Base', 'UB', 'On Set'"
   },
-  "breakfastTime": "HH:MM - HH:MM or null",
-  "lunchTime": "HH:MM or description",
-  "lunchLocation": "location or null",
-  "cameraWrapEstimate": "HH:MM or null",
-  "wrapEstimate": "HH:MM or null",
+  "breakfastTime": "HH:MM or HH:MM - HH:MM",
+  "breakfastLocation": "location description or null",
+  "lunchTime": "HH:MM or HH:MM - HH:MM",
+  "lunchLocation": "HOTBOX, IN HAND, location name, etc.",
+  "cameraWrapEstimate": "HH:MM",
+  "wrapEstimate": "HH:MM",
   "weather": {
-    "conditions": "Sunny, Cloudy, Rain, etc.",
+    "conditions": "Overcast, Sunny, Showers, Mostly Cloudy, Scattered Showers, etc.",
     "tempHigh": number in Celsius,
     "tempLow": number in Celsius,
     "sunrise": "HH:MM",
     "sunset": "HH:MM"
   },
-  "unitNotes": ["array of important notes"],
+  "unitBase": {
+    "name": "Location name",
+    "address": "Full street address",
+    "what3words": "///word.word.word format if present"
+  },
+  "shootLocations": [
+    {
+      "id": "LOC 1 or LOC1 or main",
+      "name": "Location name",
+      "address": "Full street address",
+      "what3words": "///word.word.word format if present"
+    }
+  ],
+  "crewParking": {
+    "name": "Parking location name",
+    "address": "Address if different from unit base",
+    "notes": "Any parking instructions"
+  },
+  "unitNotes": ["array of important notes from UNIT NOTES section"],
   "scenes": [
     {
       "sceneNumber": "1" or "1A" (string, exactly as shown),
+      "locationId": "LOC 1, LOC 2, etc. if shown",
       "setDescription": "INT. LOCATION - DESCRIPTION or EXT. etc",
-      "dayNight": "D" or "N" or "D/N" or "D1" etc,
-      "pages": "1/8" or "2" etc,
+      "dayNight": "D" or "N" or "D/N" or "D1" or "D2" etc,
+      "pages": "1/8" or "2" or "1 5/8" etc,
       "cast": ["1", "2", "4"] (cast numbers as strings),
-      "estimatedTime": "08:20 - 09:00 or null",
-      "notes": "any HMU, AV, or other notes for this scene"
+      "estimatedTime": "08:20 - 09:00 or 09:20 - 10:30",
+      "notes": "any HMU notes, SFX notes, AV notes, PROP notes for this scene"
     }
   ],
   "castCalls": [
     {
-      "id": "1" (cast number),
+      "id": "1" (cast number from ID column),
       "name": "ACTOR NAME",
-      "character": "CHARACTER NAME",
+      "character": "CHARACTER NAME or ROLE",
       "status": "SW" or "SWF" or "W" or "WF" etc,
       "pickup": "HH:MM or null",
-      "callTime": "HH:MM",
-      "hmuCall": "HH:MM or null",
-      "costumeCall": "HH:MM or null",
-      "onSetTime": "HH:MM or null"
+      "driver": "RW, LW, MINIBUS, etc. or null",
+      "callTime": "HH:MM (CALL column)",
+      "breakfastTime": "HH:MM (B/FAST column) or null",
+      "costumeCall": "HH:MM (COSTUME column) or null",
+      "hmuCall": "HH:MM (H&MU column) or null",
+      "travelTime": "HH:MM (TRAVEL column) or null",
+      "onSetTime": "HH:MM (ON SET column) or null",
+      "notes": "any notes for this cast member"
     }
   ],
   "supportingArtists": [
@@ -121,11 +150,13 @@ Return a JSON object with this structure (include only fields that have data in 
 }
 
 IMPORTANT:
-- All times should be in 24-hour HH:MM format (convert AM/PM or other formats)
-- Scene numbers should be extracted exactly as shown (may be numeric or alphanumeric like "4A")
-- Cast numbers in scenes should match the IDs in castCalls
-- Include weather data if present
-- Extract pre-call times especially for HMU (Hair & Makeup) department
+- All times should be in 24-hour HH:MM format (convert "0730" to "07:30", "8:00 AM" to "08:00")
+- Scene numbers should be extracted exactly as shown (may be numeric or alphanumeric like "4A", "18B")
+- Extract What3Words addresses - they look like "///word.word.word" or "W3W - ///word.word.word"
+- Look for LOCATION: and UNIT BASE: lines for address information
+- Camera wrap and estimated wrap are often separate times
+- Pre-calls may be listed as "PRE-CALLS" or "PRE CALLS" with department times
+- Extract weather including conditions like "Overcast with Scattered Showers"
 - If a field has no data, omit it or use null`;
 
   try {
@@ -143,7 +174,7 @@ IMPORTANT:
     // Build the CallSheet object with defaults for missing fields
     const scenes: CallSheetScene[] = (parsed.scenes || []).map((s: any, index: number) => ({
       sceneNumber: String(s.sceneNumber || index + 1),
-      location: s.location || undefined,
+      location: s.locationId || s.location || undefined,
       setDescription: s.setDescription || 'Unknown Scene',
       action: s.action || undefined,
       dayNight: s.dayNight || 'D',
@@ -165,7 +196,7 @@ IMPORTANT:
       pickup: c.pickup || undefined,
       driver: c.driver || undefined,
       callTime: c.callTime || '',
-      makeupCall: c.makeupCall || undefined,
+      makeupCall: c.makeupCall || c.breakfastTime || undefined,
       costumeCall: c.costumeCall || undefined,
       hmuCall: c.hmuCall || undefined,
       travelTime: c.travelTime || undefined,
@@ -196,13 +227,56 @@ IMPORTANT:
       sunset: parsed.weather.sunset || undefined,
     } : undefined;
 
-    // Build preCalls if present
+    // Build preCalls if present (including lighting and camera)
     const preCalls = parsed.preCalls ? {
       ads: parsed.preCalls.ads || undefined,
       hmu: parsed.preCalls.hmu || undefined,
       costume: parsed.preCalls.costume || undefined,
       production: parsed.preCalls.production || undefined,
+      lighting: parsed.preCalls.lighting || undefined,
+      camera: parsed.preCalls.camera || undefined,
       location: parsed.preCalls.location || undefined,
+    } : undefined;
+
+    // Build unitBase location if present
+    const unitBase = parsed.unitBase ? {
+      name: parsed.unitBase.name || '',
+      address: parsed.unitBase.address || undefined,
+      what3words: parsed.unitBase.what3words || undefined,
+      notes: parsed.unitBase.notes || undefined,
+    } : undefined;
+
+    // Build shootLocation from first shoot location or dedicated field
+    // Handle both single shootLocation and array of shootLocations
+    let shootLocation;
+    if (parsed.shootLocation) {
+      shootLocation = {
+        name: parsed.shootLocation.name || '',
+        address: parsed.shootLocation.address || undefined,
+        what3words: parsed.shootLocation.what3words || undefined,
+        notes: parsed.shootLocation.notes || undefined,
+      };
+    } else if (parsed.shootLocations && parsed.shootLocations.length > 0) {
+      // Use first shoot location, combine others into notes
+      const firstLoc = parsed.shootLocations[0];
+      const otherLocs = parsed.shootLocations.slice(1);
+      const otherLocsNotes = otherLocs.length > 0
+        ? otherLocs.map((l: any) => `${l.id || ''}: ${l.name || ''} ${l.address || ''}`).join('; ')
+        : undefined;
+      shootLocation = {
+        name: firstLoc.name || firstLoc.id || '',
+        address: firstLoc.address || undefined,
+        what3words: firstLoc.what3words || undefined,
+        notes: otherLocsNotes || firstLoc.notes || undefined,
+      };
+    }
+
+    // Build crewParking location if present
+    const crewParking = parsed.crewParking ? {
+      name: parsed.crewParking.name || 'Crew Parking',
+      address: parsed.crewParking.address || undefined,
+      what3words: parsed.crewParking.what3words || undefined,
+      notes: parsed.crewParking.notes || undefined,
     } : undefined;
 
     return {
@@ -217,10 +291,13 @@ IMPORTANT:
       preCalls,
       breakfastTime: parsed.breakfastTime || undefined,
       lunchTime: parsed.lunchTime || undefined,
-      lunchLocation: parsed.lunchLocation || undefined,
+      lunchLocation: parsed.lunchLocation || parsed.breakfastLocation || undefined,
       cameraWrapEstimate: parsed.cameraWrapEstimate || undefined,
       wrapEstimate: parsed.wrapEstimate || undefined,
       weather,
+      unitBase,
+      shootLocation,
+      crewParking,
       unitNotes: Array.isArray(parsed.unitNotes) ? parsed.unitNotes : undefined,
       scenes,
       castCalls,
@@ -241,6 +318,14 @@ IMPORTANT:
  * Extracts basic information that we can reasonably parse with patterns
  */
 function fallbackParseCallSheetText(text: string, pdfUri?: string): CallSheet {
+  // Helper to extract time in HH:MM format
+  const extractTime = (match: RegExpMatchArray | null): string | undefined => {
+    if (!match) return undefined;
+    const hours = match[1].padStart(2, '0');
+    const minutes = match[2] || '00';
+    return `${hours}:${minutes}`;
+  };
+
   // Extract production day and date
   const dayMatch = text.match(/DAY\s*(\d+)\s*(?:OF\s*(\d+))?/i);
   let productionDay = 1;
@@ -249,6 +334,13 @@ function fallbackParseCallSheetText(text: string, pdfUri?: string): CallSheet {
   if (dayMatch) {
     productionDay = parseInt(dayMatch[1], 10);
     totalProductionDays = dayMatch[2] ? parseInt(dayMatch[2], 10) : undefined;
+  }
+
+  // Also try "CALL SHEET X OF Y" pattern
+  const callSheetMatch = text.match(/CALL\s*SHEET\s*(\d+)\s*OF\s*(\d+)/i);
+  if (callSheetMatch && !dayMatch) {
+    productionDay = parseInt(callSheetMatch[1], 10);
+    totalProductionDays = parseInt(callSheetMatch[2], 10);
   }
 
   // Try to extract date
@@ -267,14 +359,72 @@ function fallbackParseCallSheetText(text: string, pdfUri?: string): CallSheet {
   }
 
   // Extract unit call time
-  const unitCallMatch = text.match(/UNIT\s*CALL[:\s]*(\d{1,2})[:\.]?(\d{2})/i);
-  const unitCallTime = unitCallMatch
-    ? `${unitCallMatch[1].padStart(2, '0')}:${unitCallMatch[2]}`
-    : '06:00';
+  const unitCallMatch = text.match(/UNIT\s*CALL[:\s]*TIME?[:\s]*(\d{1,2})[:\.]?(\d{2})/i);
+  const unitCallTime = extractTime(unitCallMatch) || '06:00';
+
+  // Extract wrap estimates
+  const wrapMatch = text.match(/(?:EST\.?\s*)?WRAP[:\s]*(\d{1,2})[:\.]?(\d{2})/i);
+  const wrapEstimate = extractTime(wrapMatch);
+
+  const cameraWrapMatch = text.match(/CAMERA\s*WRAP[:\s]*(\d{1,2})[:\.]?(\d{2})/i);
+  const cameraWrapEstimate = extractTime(cameraWrapMatch);
+
+  // Extract breakfast time
+  const breakfastMatch = text.match(/BREAKFAST[:\s]*(\d{1,2})[:\.]?(\d{2})/i);
+  const breakfastTime = extractTime(breakfastMatch);
+
+  // Extract lunch time
+  const lunchMatch = text.match(/(?:EST\.?\s*)?LUNCH[:\s]*(\d{1,2})[:\.]?(\d{2})/i);
+  const lunchTime = extractTime(lunchMatch);
+
+  // Extract weather info
+  let weather;
+  const tempHighMatch = text.match(/(?:HIGH|TEMP)[:\s]*(\d+)\s*[°]?/i);
+  const tempLowMatch = text.match(/LOW[:\s]*(\d+)\s*[°]?/i);
+  const sunriseMatch = text.match(/(?:SUN\s*)?RISE[S]?[:\s]*(\d{1,2})[:\.]?(\d{2})/i);
+  const sunsetMatch = text.match(/(?:SUN\s*)?SET[S]?[:\s]*(\d{1,2})[:\.]?(\d{2})/i);
+  const conditionsMatch = text.match(/WEATHER[:\s]*([A-Za-z\s,]+?)(?:\s*(?:TEMP|HIGH|LOW|\d))/i);
+
+  if (tempHighMatch || tempLowMatch || sunriseMatch || sunsetMatch) {
+    weather = {
+      conditions: conditionsMatch ? conditionsMatch[1].trim() : undefined,
+      tempHigh: tempHighMatch ? parseInt(tempHighMatch[1], 10) : undefined,
+      tempLow: tempLowMatch ? parseInt(tempLowMatch[1], 10) : undefined,
+      sunrise: extractTime(sunriseMatch),
+      sunset: extractTime(sunsetMatch),
+    };
+  }
+
+  // Extract pre-calls
+  let preCalls;
+  const hmuPreCallMatch = text.match(/HMU[:\s]*(\d{1,2})[:\.]?(\d{2})/i);
+  const costumePreCallMatch = text.match(/COSTUME[:\s]*(\d{1,2})[:\.]?(\d{2})/i);
+  const adsPreCallMatch = text.match(/ADs?[:\s]*(\d{1,2})[:\.]?(\d{2})/i);
+
+  if (hmuPreCallMatch || costumePreCallMatch || adsPreCallMatch) {
+    preCalls = {
+      hmu: extractTime(hmuPreCallMatch),
+      costume: extractTime(costumePreCallMatch),
+      ads: extractTime(adsPreCallMatch),
+    };
+  }
+
+  // Extract location info
+  let unitBase;
+  const locationMatch = text.match(/(?:LOCATION|UNIT\s*BASE)[:\s]*([^,\n]+(?:,[^,\n]+)*)/i);
+  const what3wordsMatch = text.match(/(?:W3W|what3words)[:\s-]*\/\/\/([a-z]+\.[a-z]+\.[a-z]+)/i);
+
+  if (locationMatch) {
+    unitBase = {
+      name: locationMatch[1].trim().split(',')[0],
+      address: locationMatch[1].trim(),
+      what3words: what3wordsMatch ? `///${what3wordsMatch[1]}` : undefined,
+    };
+  }
 
   // Extract scenes with a simple pattern
   const scenes: CallSheetScene[] = [];
-  const scenePattern = /(?:SC|SCENE)?\s*(\d+[A-Z]?)\s+((?:INT|EXT)[.\s][^D\d]*?)\s*(D\d?|N\d?|D\/N)/gi;
+  const scenePattern = /(?:SC|SCENE)?\s*(\d+[A-Z]?)\s+((?:INT|EXT)[.\s/][^D\d]*?)\s*(D\d?|N\d?|D\/N)/gi;
   let sceneMatch;
   let shootOrder = 1;
 
@@ -294,6 +444,13 @@ function fallbackParseCallSheetText(text: string, pdfUri?: string): CallSheet {
     productionDay,
     totalProductionDays,
     unitCallTime,
+    breakfastTime,
+    lunchTime,
+    cameraWrapEstimate,
+    wrapEstimate,
+    weather,
+    preCalls,
+    unitBase,
     scenes,
     castCalls: [],
     supportingArtists: [],
