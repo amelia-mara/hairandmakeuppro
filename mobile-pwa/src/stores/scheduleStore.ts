@@ -7,6 +7,11 @@ import type {
   Scene,
 } from '@/types';
 import { parseSchedulePDF } from '@/utils/scheduleParser';
+import {
+  getBaseSceneNumber,
+  sceneExistsInSet,
+  findMatchingSceneData,
+} from '@/utils/helpers';
 
 interface ScheduleState {
   // The uploaded production schedule
@@ -145,8 +150,9 @@ export const useScheduleStore = create<ScheduleState>()(
         }
 
         // Check for scenes in schedule but not in breakdown
+        // Uses fuzzy matching: schedule scene "4A" matches breakdown scene "4"
         for (const sceneNum of scheduleSceneNumbers) {
-          if (!breakdownSceneNumbers.has(sceneNum)) {
+          if (!sceneExistsInSet(breakdownSceneNumbers, sceneNum)) {
             discrepancies.push({
               sceneNumber: sceneNum,
               type: 'scene_not_in_breakdown',
@@ -158,8 +164,9 @@ export const useScheduleStore = create<ScheduleState>()(
         }
 
         // Check for scenes in breakdown but not in schedule
+        // Uses fuzzy matching: breakdown scene "4" matches schedule scenes "4A", "4B"
         for (const sceneNum of breakdownSceneNumbers) {
-          if (!scheduleSceneNumbers.has(sceneNum)) {
+          if (!sceneExistsInSet(scheduleSceneNumbers, sceneNum)) {
             discrepancies.push({
               sceneNumber: sceneNum,
               type: 'scene_not_in_schedule',
@@ -171,8 +178,9 @@ export const useScheduleStore = create<ScheduleState>()(
         }
 
         // Check for character and INT/EXT mismatches in common scenes
+        // Uses fuzzy matching to find schedule data for breakdown scenes
         for (const breakdownScene of breakdownScenes) {
-          const scheduleScene = scheduleSceneMap.get(breakdownScene.sceneNumber);
+          const scheduleScene = findMatchingSceneData(scheduleSceneMap, breakdownScene.sceneNumber);
           if (!scheduleScene) continue;
 
           // Check INT/EXT mismatch
@@ -232,9 +240,18 @@ export const useScheduleStore = create<ScheduleState>()(
         const schedule = get().schedule;
         if (!schedule) return null;
 
+        const baseScene = getBaseSceneNumber(sceneNumber);
+
         for (const day of schedule.days) {
-          const found = day.scenes.find(s => s.sceneNumber === sceneNumber);
-          if (found) return day.dayNumber;
+          // First try exact match
+          const exactFound = day.scenes.find(s => s.sceneNumber === sceneNumber);
+          if (exactFound) return day.dayNumber;
+
+          // Then try matching by base scene number (handles all variants)
+          const variantFound = day.scenes.find(s =>
+            getBaseSceneNumber(s.sceneNumber) === baseScene
+          );
+          if (variantFound) return day.dayNumber;
         }
         return null;
       },
