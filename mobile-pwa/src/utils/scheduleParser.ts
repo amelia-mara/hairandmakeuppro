@@ -12,7 +12,8 @@ import { callAI } from '@/services/aiService';
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 /**
- * Extract text content from a PDF file
+ * Extract text content from a PDF file, preserving some structure
+ * by adding newlines between text items that are vertically separated
  */
 async function extractTextFromPDF(file: File): Promise<string> {
   const arrayBuffer = await file.arrayBuffer();
@@ -23,10 +24,35 @@ async function extractTextFromPDF(file: File): Promise<string> {
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
     const textContent = await page.getTextContent();
-    const pageText = textContent.items
-      .map((item: any) => item.str)
-      .join(' ');
-    fullText += `\n--- PAGE ${i} ---\n` + pageText;
+
+    // Sort items by Y position (top to bottom) then X position (left to right)
+    const items = textContent.items as any[];
+    items.sort((a, b) => {
+      const yDiff = b.transform[5] - a.transform[5]; // Y is inverted in PDF
+      if (Math.abs(yDiff) > 5) return yDiff; // Different lines
+      return a.transform[4] - b.transform[4]; // Same line, sort by X
+    });
+
+    let lastY = null;
+    let pageText = '';
+
+    for (const item of items) {
+      const y = Math.round(item.transform[5]);
+      const text = item.str;
+
+      if (lastY !== null && Math.abs(y - lastY) > 5) {
+        // New line detected
+        pageText += '\n';
+      } else if (pageText.length > 0 && !pageText.endsWith(' ') && !pageText.endsWith('\n')) {
+        // Same line, add space between items
+        pageText += ' ';
+      }
+
+      pageText += text;
+      lastY = y;
+    }
+
+    fullText += `\n\n=== PAGE ${i} ===\n\n` + pageText;
   }
 
   return fullText;
@@ -34,199 +60,23 @@ async function extractTextFromPDF(file: File): Promise<string> {
 
 /**
  * Parse extracted text into a structured ProductionSchedule object using AI
- * This handles varying schedule formats from different ADs/productions
+ * For long schedules, process in chunks to avoid token limits
  */
 async function parseScheduleText(text: string, pdfUri?: string): Promise<ProductionSchedule> {
-  const systemPrompt = `You are an expert at parsing film/TV production shooting schedules. Your job is to extract structured data from schedule text that has been extracted from a PDF.
+  // First, try to extract cast list from the beginning of the text
+  const castList = await extractCastList(text);
 
-IMPORTANT: Shooting schedules vary between productions. The text extraction may lose table structure, so look for patterns and context clues.
+  // Then parse all days and their scenes
+  const days = await parseAllDays(text);
 
-Key elements to extract:
-
-1. CAST LIST (usually on first page):
-   - Format like "1.PETER", "2.GWEN", "3.EINAR", etc.
-   - Number is the cast reference number used throughout
-   - Name may be actor name or character name
-
-2. SHOOTING DAYS:
-   - Headers like "DAY 1 - Farmhouse", "DAY 2 - Location Name"
-   - Hours like "HOURS: 0600 - 1600 --- (CWD)"
-   - Sunrise/Sunset like "SR: 0827 / SS: 1554"
-
-3. SCENES PER DAY:
-   - Table format with: Pages | Scene Number | INT/EXT | D/N | Location/Set | Description | Cast Numbers | Est. Time
-   - Scene numbers can be alphanumeric: "4A", "18B", "162 p1", "162 p2"
-   - Cast shown as numbers like "1, 2" or "1, 2, 4, 7"
-   - Pages shown as fractions: "1/8", "3/8", "1 2/8", "1 6/8"
-
-Return ONLY valid JSON with no additional text or markdown.`;
-
-  const prompt = `Parse this production schedule and extract all available information.
-
-SCHEDULE TEXT:
----
-${text.slice(0, 30000)}
----
-
-Return a JSON object with this structure:
-{
-  "productionName": "Name of production if found",
-  "scriptVersion": "Script version date/color if found",
-  "scheduleVersion": "Schedule version date if found",
-  "castList": [
-    {
-      "number": 1,
-      "name": "PETER",
-      "character": "Character name if different from name"
-    }
-  ],
-  "days": [
-    {
-      "dayNumber": 1,
-      "date": "2025-11-24 or null",
-      "dayOfWeek": "Monday",
-      "location": "Main location for the day",
-      "hours": "0600 - 1600",
-      "dayType": "CWD or SWD",
-      "sunrise": "08:27",
-      "sunset": "15:54",
-      "notes": ["Drone Day", "UNIT MOVE", etc.],
-      "scenes": [
-        {
-          "sceneNumber": "4A",
-          "pages": "1/8",
-          "intExt": "INT" or "EXT",
-          "dayNight": "Day" or "Night" or "Morning",
-          "setLocation": "FARMHOUSE - DRIVEWAY",
-          "description": "Brief action description",
-          "castNumbers": [1, 2, 4, 7],
-          "estimatedTime": ":30" or "1:30"
-        }
-      ],
-      "totalPages": "4 5/8"
-    }
-  ],
-  "totalDays": 20
-}
-
-IMPORTANT:
-- Extract ALL cast members from the cast list with their numbers
-- Scene numbers should be extracted EXACTLY as shown (may be "4A", "18B", "162 p1", etc.)
-- Cast numbers in scenes are integers that reference the castList
-- INT/EXT must be exactly "INT" or "EXT"
-- Include all shooting days found
-- Notes like "Drone Day", "UNIT MOVE" should be captured
-- If dates are found (like "Monday, 24 November 2025"), include them`;
-
-  try {
-    const response = await callAI(prompt, { system: systemPrompt, maxTokens: 8000 });
-
-    // Parse the JSON response
-    const jsonMatch = response.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      console.error('No JSON found in AI response:', response);
-      throw new Error('Failed to parse schedule - invalid AI response');
-    }
-
-    const parsed = JSON.parse(jsonMatch[0]);
-
-    // Build the ProductionSchedule object
-    const castList: ScheduleCastMember[] = (parsed.castList || []).map((c: any) => ({
-      number: typeof c.number === 'number' ? c.number : parseInt(c.number, 10) || 0,
-      name: c.name || '',
-      character: c.character || undefined,
-    }));
-
-    const days: ScheduleDay[] = (parsed.days || []).map((d: any) => {
-      const scenes: ScheduleSceneEntry[] = (d.scenes || []).map((s: any, idx: number) => ({
-        sceneNumber: String(s.sceneNumber || ''),
-        pages: s.pages || undefined,
-        intExt: s.intExt === 'EXT' ? 'EXT' : 'INT',
-        dayNight: s.dayNight || 'Day',
-        setLocation: s.setLocation || '',
-        description: s.description || undefined,
-        castNumbers: Array.isArray(s.castNumbers)
-          ? s.castNumbers.map((n: any) => typeof n === 'number' ? n : parseInt(n, 10) || 0)
-          : [],
-        estimatedTime: s.estimatedTime || undefined,
-        shootOrder: idx + 1,
-      }));
-
-      return {
-        dayNumber: typeof d.dayNumber === 'number' ? d.dayNumber : parseInt(d.dayNumber, 10) || 0,
-        date: d.date || undefined,
-        dayOfWeek: d.dayOfWeek || undefined,
-        location: d.location || '',
-        hours: d.hours || undefined,
-        dayType: d.dayType || undefined,
-        sunrise: d.sunrise || undefined,
-        sunset: d.sunset || undefined,
-        notes: Array.isArray(d.notes) ? d.notes : undefined,
-        scenes,
-        totalPages: d.totalPages || undefined,
-      };
-    });
-
-    return {
-      id: uuidv4(),
-      productionName: parsed.productionName || undefined,
-      scriptVersion: parsed.scriptVersion || undefined,
-      scheduleVersion: parsed.scheduleVersion || undefined,
-      castList,
-      days,
-      totalDays: parsed.totalDays || days.length,
-      uploadedAt: new Date(),
-      pdfUri,
-      rawText: text,
-    };
-  } catch (error) {
-    console.error('AI schedule parsing failed:', error);
-    // Fall back to basic regex parsing
-    return fallbackParseScheduleText(text, pdfUri);
-  }
-}
-
-/**
- * Fallback regex-based parser for when AI parsing fails
- * Extracts basic information that we can reasonably parse with patterns
- */
-function fallbackParseScheduleText(text: string, pdfUri?: string): ProductionSchedule {
-  const castList: ScheduleCastMember[] = [];
-  const days: ScheduleDay[] = [];
-
-  // Try to extract cast list (format: "1.NAME" or "1. NAME")
-  const castPattern = /(\d+)\s*\.\s*([A-Z][A-Z\s\/]+)/g;
-  let castMatch;
-  while ((castMatch = castPattern.exec(text)) !== null) {
-    const num = parseInt(castMatch[1], 10);
-    const name = castMatch[2].trim();
-    if (num > 0 && num <= 100 && name.length > 1) {
-      // Avoid duplicates
-      if (!castList.find(c => c.number === num)) {
-        castList.push({ number: num, name });
-      }
-    }
-  }
-
-  // Try to extract days (format: "DAY X" or "DAY X -")
-  const dayPattern = /DAY\s*(\d+)\s*[-–]?\s*([A-Za-z\s]+)?/gi;
-  let dayMatch;
-  while ((dayMatch = dayPattern.exec(text)) !== null) {
-    const dayNum = parseInt(dayMatch[1], 10);
-    const location = dayMatch[2]?.trim() || '';
-
-    // Avoid duplicates
-    if (!days.find(d => d.dayNumber === dayNum)) {
-      days.push({
-        dayNumber: dayNum,
-        location,
-        scenes: [],
-      });
-    }
-  }
+  // Extract production metadata
+  const metadata = extractMetadata(text);
 
   return {
     id: uuidv4(),
+    productionName: metadata.productionName,
+    scriptVersion: metadata.scriptVersion,
+    scheduleVersion: metadata.scheduleVersion,
     castList,
     days,
     totalDays: days.length,
@@ -234,6 +84,356 @@ function fallbackParseScheduleText(text: string, pdfUri?: string): ProductionSch
     pdfUri,
     rawText: text,
   };
+}
+
+/**
+ * Extract cast list from schedule text
+ */
+async function extractCastList(text: string): Promise<ScheduleCastMember[]> {
+  // Look for cast list section - usually at the start
+  const castSection = text.slice(0, 5000); // Cast list is typically on first page
+
+  const castList: ScheduleCastMember[] = [];
+
+  // Pattern: "1.PETER" or "1. PETER" or "1 PETER" with the number being 1-99
+  const castPattern = /\b(\d{1,2})\s*\.?\s*([A-Z][A-Z'\-\s]{1,30}?)(?=\s*\d{1,2}\s*\.?\s*[A-Z]|\s*$|\n)/g;
+  let match;
+
+  while ((match = castPattern.exec(castSection)) !== null) {
+    const num = parseInt(match[1], 10);
+    const name = match[2].trim();
+
+    // Validate: number should be reasonable, name should be a name not a location
+    if (num > 0 && num <= 50 && name.length >= 2 && name.length <= 25) {
+      // Skip if it looks like a location or time
+      if (!/^(INT|EXT|DAY|NIGHT|MORNING|HOURS|PAGE|SCENE)/i.test(name)) {
+        if (!castList.find(c => c.number === num)) {
+          castList.push({ number: num, name });
+        }
+      }
+    }
+  }
+
+  // If we didn't find enough cast, try AI extraction
+  if (castList.length < 3) {
+    try {
+      const aiCast = await extractCastWithAI(castSection);
+      if (aiCast.length > castList.length) {
+        return aiCast;
+      }
+    } catch (e) {
+      console.warn('AI cast extraction failed:', e);
+    }
+  }
+
+  return castList;
+}
+
+/**
+ * Extract cast list using AI
+ */
+async function extractCastWithAI(text: string): Promise<ScheduleCastMember[]> {
+  const prompt = `Extract the cast list from this production schedule. The cast list shows numbered cast members like "1.PETER", "2.GWEN", etc.
+
+TEXT:
+${text.slice(0, 3000)}
+
+Return ONLY a JSON array of cast members:
+[{"number": 1, "name": "PETER"}, {"number": 2, "name": "GWEN"}]`;
+
+  const response = await callAI(prompt, { maxTokens: 1000 });
+  const jsonMatch = response.match(/\[[\s\S]*\]/);
+  if (jsonMatch) {
+    const parsed = JSON.parse(jsonMatch[0]);
+    return parsed.map((c: any) => ({
+      number: parseInt(c.number, 10) || 0,
+      name: String(c.name || '').trim(),
+    })).filter((c: ScheduleCastMember) => c.number > 0 && c.name.length > 0);
+  }
+  return [];
+}
+
+/**
+ * Parse all shooting days and their scenes from the schedule text
+ */
+async function parseAllDays(text: string): Promise<ScheduleDay[]> {
+  const days: ScheduleDay[] = [];
+
+  // Find all day headers: "DAY 1 - Location" or "DAY 1" patterns
+  const dayHeaderPattern = /DAY\s+(\d+)\s*[-–]?\s*([A-Za-z\s\-\']+)?(?:\n|$)/gi;
+
+  // Find all day start positions
+  const dayPositions: { dayNum: number; location: string; startPos: number }[] = [];
+  let match;
+
+  while ((match = dayHeaderPattern.exec(text)) !== null) {
+    const dayNum = parseInt(match[1], 10);
+    const location = (match[2] || '').trim();
+
+    // Avoid duplicates at similar positions
+    const existing = dayPositions.find(d => d.dayNum === dayNum);
+    if (!existing) {
+      dayPositions.push({ dayNum, location, startPos: match.index });
+    }
+  }
+
+  // Sort by position in text
+  dayPositions.sort((a, b) => a.startPos - b.startPos);
+
+  // Extract each day's content and parse scenes
+  for (let i = 0; i < dayPositions.length; i++) {
+    const current = dayPositions[i];
+    const nextPos = dayPositions[i + 1]?.startPos || text.length;
+    const dayText = text.slice(current.startPos, nextPos);
+
+    // Parse this day's details and scenes
+    const day = await parseDaySection(current.dayNum, current.location, dayText);
+    days.push(day);
+  }
+
+  // Sort days by day number
+  days.sort((a, b) => a.dayNumber - b.dayNumber);
+
+  return days;
+}
+
+/**
+ * Parse a single day section to extract details and scenes
+ */
+async function parseDaySection(dayNum: number, location: string, dayText: string): Promise<ScheduleDay> {
+  // Extract hours (format: "HOURS: 0600 - 1600" or "0700 - 1700")
+  const hoursMatch = dayText.match(/HOURS?[:\s]*(\d{4})\s*[-–]\s*(\d{4})/i);
+  const hours = hoursMatch ? `${hoursMatch[1]} - ${hoursMatch[2]}` : undefined;
+
+  // Extract day type (CWD, SWD, etc.)
+  const dayTypeMatch = dayText.match(/\(([A-Z]{2,4})\)/);
+  const dayType = dayTypeMatch ? dayTypeMatch[1] : undefined;
+
+  // Extract sunrise/sunset
+  const srssMatch = dayText.match(/SR[:\s]*(\d{4})\s*[\/]\s*SS[:\s]*(\d{4})/i);
+  const sunrise = srssMatch ? formatTime(srssMatch[1]) : undefined;
+  const sunset = srssMatch ? formatTime(srssMatch[2]) : undefined;
+
+  // Extract date if present
+  const dateMatch = dayText.match(/(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)[,\s]+(\d{1,2})\s+(\w+)\s+(\d{4})/i);
+  let date: string | undefined;
+  let dayOfWeek: string | undefined;
+  if (dateMatch) {
+    dayOfWeek = dayText.match(/(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)/i)?.[1];
+    const day = dateMatch[1].padStart(2, '0');
+    const month = monthToNumber(dateMatch[2]);
+    const year = dateMatch[3];
+    if (month) {
+      date = `${year}-${month}-${day}`;
+    }
+  }
+
+  // Extract notes like "UNIT MOVE", "Drone Day"
+  const notes: string[] = [];
+  if (/UNIT\s+MOVE/i.test(dayText)) notes.push('UNIT MOVE');
+  if (/Drone\s+Day/i.test(dayText)) notes.push('Drone Day');
+  if (/WRAP/i.test(dayText)) notes.push('WRAP');
+
+  // Extract total pages
+  const totalPagesMatch = dayText.match(/(\d+\s*\d*\/?\d*)\s*Pages?/i);
+  const totalPages = totalPagesMatch ? totalPagesMatch[1].trim() : undefined;
+
+  // Parse scenes using pattern matching first
+  let scenes = parseSceneEntries(dayText);
+
+  // If pattern matching found few scenes, try AI
+  if (scenes.length < 2 && dayText.length > 200) {
+    try {
+      const aiScenes = await parseScenesWithAI(dayText, dayNum);
+      if (aiScenes.length > scenes.length) {
+        scenes = aiScenes;
+      }
+    } catch (e) {
+      console.warn(`AI scene parsing failed for day ${dayNum}:`, e);
+    }
+  }
+
+  return {
+    dayNumber: dayNum,
+    date,
+    dayOfWeek,
+    location,
+    hours,
+    dayType,
+    sunrise,
+    sunset,
+    notes: notes.length > 0 ? notes : undefined,
+    scenes,
+    totalPages,
+  };
+}
+
+/**
+ * Parse scene entries using regex patterns
+ * Handles formats like:
+ * - "1/8 pgs Scenes: 154A EXT Day SHORELINE Description 2 Est. Time"
+ * - "2/8 pgs | Scenes: 3 | EXT | Day | ROAD | Description | 1, 2 | Est. Time"
+ */
+function parseSceneEntries(dayText: string): ScheduleSceneEntry[] {
+  const scenes: ScheduleSceneEntry[] = [];
+
+  // Split by lines for easier parsing
+  const lines = dayText.split('\n');
+
+  for (const line of lines) {
+    // Skip headers, notes, and empty lines
+    if (!line.trim() || /^(DAY|HOURS|SR:|End of|UNIT MOVE|WRAP|===)/i.test(line.trim())) {
+      continue;
+    }
+
+    // Look for scene patterns
+    // Pattern 1: "X/8 pgs" followed by "Scenes:" or scene number
+    const sceneMatch = line.match(
+      /(\d+\s*\d*\/\d+)\s*pgs?\s*(?:Scenes?:?)?\s*(\d+[A-Za-z]?\d*(?:\s*p\d+)?)\s+(INT|EXT)\s+(Day|Night|Morning|D\/N|D\d*|N\d*)/i
+    );
+
+    if (sceneMatch) {
+      const pages = sceneMatch[1].trim();
+      const sceneNumber = sceneMatch[2].trim();
+      const intExt = sceneMatch[3].toUpperCase() as 'INT' | 'EXT';
+      const dayNight = sceneMatch[4];
+
+      // Extract location and description (after D/N marker)
+      const afterDN = line.slice(line.indexOf(sceneMatch[4]) + sceneMatch[4].length);
+      const locationMatch = afterDN.match(/^\s*([A-Z][A-Z\s\-\/]+?)(?:\s+[a-z]|\s+\d|$)/);
+      const setLocation = locationMatch ? locationMatch[1].trim() : '';
+
+      // Extract cast numbers (look for patterns like "1, 2" or "1, 2, 3")
+      const castMatch = line.match(/\b(\d{1,2}(?:\s*,\s*\d{1,2})*)\s*(?:Est\.?\s*Time|$)/i);
+      const castNumbers = castMatch
+        ? castMatch[1].split(',').map(n => parseInt(n.trim(), 10)).filter(n => n > 0 && n < 50)
+        : [];
+
+      // Extract description (between location and cast)
+      let description = '';
+      if (setLocation) {
+        const locEnd = afterDN.indexOf(setLocation) + setLocation.length;
+        const descPart = afterDN.slice(locEnd);
+        const descMatch = descPart.match(/^\s*(.+?)(?=\s+\d{1,2}\s*,|\s+\d{1,2}\s+Est|\s+Est\.?\s*Time|$)/);
+        if (descMatch) {
+          description = descMatch[1].trim();
+        }
+      }
+
+      // Avoid duplicates
+      if (!scenes.find(s => s.sceneNumber === sceneNumber)) {
+        scenes.push({
+          sceneNumber,
+          pages,
+          intExt,
+          dayNight,
+          setLocation,
+          description: description || undefined,
+          castNumbers,
+          shootOrder: scenes.length + 1,
+        });
+      }
+    }
+  }
+
+  return scenes;
+}
+
+/**
+ * Parse scenes using AI for complex formats
+ */
+async function parseScenesWithAI(dayText: string, dayNum: number): Promise<ScheduleSceneEntry[]> {
+  const prompt = `Extract ALL scenes from this Day ${dayNum} shooting schedule section.
+
+TEXT:
+${dayText.slice(0, 6000)}
+
+Each scene entry typically has:
+- Pages (like "1/8 pgs", "2/8 pgs")
+- Scene number (like "154A", "3", "162 p1")
+- INT or EXT
+- Day/Night/Morning
+- Location (like "ROAD", "DOCK", "TAXI - ISLAND")
+- Description of the action
+- Cast numbers (like "1, 2" or "1, 2, 8")
+
+Return ONLY a JSON array of scenes found:
+[{
+  "sceneNumber": "154A",
+  "pages": "1/8",
+  "intExt": "EXT",
+  "dayNight": "Day",
+  "setLocation": "SHORELINE",
+  "description": "PETER stands at the waters edge",
+  "castNumbers": [2]
+}]
+
+IMPORTANT: Extract EVERY scene entry you can find. Do not skip any.`;
+
+  const response = await callAI(prompt, { maxTokens: 4000 });
+  const jsonMatch = response.match(/\[[\s\S]*\]/);
+
+  if (jsonMatch) {
+    const parsed = JSON.parse(jsonMatch[0]);
+    return parsed.map((s: any, idx: number) => ({
+      sceneNumber: String(s.sceneNumber || ''),
+      pages: s.pages || undefined,
+      intExt: s.intExt === 'EXT' ? 'EXT' : 'INT',
+      dayNight: s.dayNight || 'Day',
+      setLocation: s.setLocation || '',
+      description: s.description || undefined,
+      castNumbers: Array.isArray(s.castNumbers)
+        ? s.castNumbers.map((n: any) => parseInt(n, 10) || 0).filter((n: number) => n > 0)
+        : [],
+      shootOrder: idx + 1,
+    })).filter((s: ScheduleSceneEntry) => s.sceneNumber.length > 0);
+  }
+
+  return [];
+}
+
+/**
+ * Extract production metadata from text
+ */
+function extractMetadata(text: string): { productionName?: string; scriptVersion?: string; scheduleVersion?: string } {
+  const firstPage = text.slice(0, 2000);
+
+  // Try to find production name (often in caps at the top)
+  const prodMatch = firstPage.match(/^[A-Z][A-Z\s\-\']+(?=\s*\n)/m);
+
+  // Try to find script version
+  const scriptMatch = firstPage.match(/(?:Script|Draft)[:\s]*([A-Za-z]+\s*\d*)/i);
+
+  // Try to find schedule version/date
+  const scheduleMatch = firstPage.match(/(?:Schedule|Version)[:\s]*([A-Za-z0-9\s\-\/]+)/i);
+
+  return {
+    productionName: prodMatch ? prodMatch[0].trim() : undefined,
+    scriptVersion: scriptMatch ? scriptMatch[1].trim() : undefined,
+    scheduleVersion: scheduleMatch ? scheduleMatch[1].trim() : undefined,
+  };
+}
+
+/**
+ * Helper to format time from "0827" to "08:27"
+ */
+function formatTime(time: string): string {
+  if (time.length === 4) {
+    return `${time.slice(0, 2)}:${time.slice(2)}`;
+  }
+  return time;
+}
+
+/**
+ * Helper to convert month name to number
+ */
+function monthToNumber(month: string): string | null {
+  const months: Record<string, string> = {
+    january: '01', february: '02', march: '03', april: '04',
+    may: '05', june: '06', july: '07', august: '08',
+    september: '09', october: '10', november: '11', december: '12',
+  };
+  return months[month.toLowerCase()] || null;
 }
 
 /**
@@ -247,9 +447,12 @@ export async function parseSchedulePDF(file: File): Promise<ProductionSchedule> 
     reader.readAsDataURL(file);
   });
 
-  // Extract text from PDF
+  // Extract text from PDF with better structure preservation
   const text = await extractTextFromPDF(file);
 
-  // Parse the text into structured data using AI
+  console.log('Extracted schedule text length:', text.length);
+  console.log('First 1000 chars:', text.slice(0, 1000));
+
+  // Parse the text into structured data
   return parseScheduleText(text, pdfUri);
 }
