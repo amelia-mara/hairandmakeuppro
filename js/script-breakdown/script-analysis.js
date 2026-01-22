@@ -1052,10 +1052,10 @@ async function extractSceneStructure(scriptText, scenes) {
  * Build the scene extraction prompt (PROMPT 1)
  */
 function buildSceneExtractionPrompt(scriptChunk, scenes, chunkIndex, totalChunks) {
-    return `You are analyzing a film screenplay to extract structural information.
+    return `You are analyzing a film screenplay to extract structural information with PRECISE character detection.
 
 YOUR TASK:
-Parse this script section and identify ALL scenes with their metadata.
+Parse this script section and identify ALL scenes with their metadata, with special focus on accurate character identification.
 
 ${totalChunks > 1 ? `NOTE: This is chunk ${chunkIndex + 1} of ${totalChunks}. Process only the scenes in this portion.` : ''}
 
@@ -1077,14 +1077,29 @@ SCENE IDENTIFICATION RULES:
    - Before or after the scene header
    - Sometimes missing entirely
 
+CHARACTER DETECTION - CRITICAL PRIORITY:
+For each scene, identify ALL characters who are PHYSICALLY PRESENT. Look for:
+1. CHARACTER NAMES IN DIALOGUE CUES (centered, ALL CAPS before dialogue)
+   - e.g., "JOHN" or "MARY (V.O.)" - include V.O. characters only if they're also physically in scene
+2. CHARACTERS MENTIONED IN ACTION LINES
+   - e.g., "Sarah enters the room" or "John watches from the corner"
+3. CHARACTERS IN PARENTHETICALS
+   - e.g., "(to Mary)" indicates Mary is present
+4. CHARACTERS LISTED IN SCENE HEADERS
+   - e.g., "INT. CAR (MOVING) - DAY - JOHN AND MARY"
+
+DO NOT include characters who are:
+- Only mentioned in dialogue but not physically present
+- On phone/radio (unless physically shown)
+- In flashbacks within the scene (unless indicated)
+
 EXTRACT FOR EACH SCENE:
 - scene_number: The scene number (string, e.g., "47" or "12A")
 - location: The location name (e.g., "FERRY", "FARMHOUSE - KITCHEN")
 - setting: INT, EXT, or INT./EXT.
 - time_of_day: DAY, NIGHT, MORNING, etc.
 - story_day: If mentioned (e.g., "DAY 1", "D4") - extract the number
-- characters_present: Array of character names found in this scene
-- synopsis: Brief 1-sentence description of scene action
+- characters_present: Array of ALL character names physically present in this scene
 
 SCRIPT SECTION:
 ${scriptChunk}
@@ -1097,13 +1112,14 @@ Return a JSON array of all scenes found:
     "location": "FERRY",
     "time_of_day": "DAY",
     "story_day": 1,
-    "characters_present": ["GWEN LAWSON", "PETER LAWSON"],
-    "synopsis": "Gwen and Peter arrive on the ferry, looking somber"
+    "characters_present": ["GWEN LAWSON", "PETER LAWSON"]
   }
 ]
 
-IMPORTANT:
+IMPORTANT - ACCURACY IS CRITICAL:
 - Process ALL scenes in this script section
+- CHARACTER ACCURACY: Double-check each character is actually in that scene, not just mentioned in dialogue
+- Use consistent character names (prefer full names like "JOHN SMITH" over just "JOHN")
 - If you cannot determine a field, use null
 - Do not skip scenes
 - Maintain scene order
@@ -1868,8 +1884,8 @@ function mergeSceneData(existingScenes, aiSceneData) {
                 ...scene,
                 aiData: aiScene,
                 characters_present: aiScene.characters_present || [],
-                story_day: aiScene.story_day || scene.storyDay,
-                synopsis: aiScene.synopsis || scene.synopsis
+                story_day: aiScene.story_day || scene.storyDay
+                // Note: synopsis is intentionally NOT merged here - it's generated separately per-scene on demand
             };
         }
         return scene;
