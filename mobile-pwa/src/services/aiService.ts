@@ -252,8 +252,7 @@ Return a JSON object with this exact structure:
       "intExt": "INT",
       "location": "COFFEE SHOP",
       "timeOfDay": "DAY",
-      "characters": ["JOHN", "MARY"],
-      "synopsis": "Brief 10-15 word synopsis of what happens"
+      "characters": ["JOHN", "MARY"]
     }
   ],
   "characters": [
@@ -290,6 +289,7 @@ IMPORTANT:
     const parsed = JSON.parse(jsonMatch[0]);
 
     // Validate and clean up the response
+    // Note: synopsis is intentionally NOT extracted here - it's generated on-demand per-scene
     const scenes: AIExtractedScene[] = (parsed.scenes || []).map((s: any) => ({
       sceneNumber: String(s.sceneNumber || ''),
       slugline: s.slugline || '',
@@ -297,7 +297,7 @@ IMPORTANT:
       location: s.location || '',
       timeOfDay: s.timeOfDay || 'DAY',
       characters: Array.isArray(s.characters) ? s.characters : [],
-      synopsis: s.synopsis || '',
+      synopsis: '', // Generated on-demand via generateSceneSynopsis()
       content: '', // Will be filled in later if needed
     }));
 
