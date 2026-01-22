@@ -20,6 +20,9 @@ export function Today({ onSceneSelect }: TodayProps) {
   const callSheets = useCallSheetStore(state => state.callSheets);
   const activeCallSheetId = useCallSheetStore(state => state.activeCallSheetId);
   const getCallSheetByDate = useCallSheetStore(state => state.getCallSheetByDate);
+  const uploadCallSheet = useCallSheetStore(state => state.uploadCallSheet);
+  const isUploading = useCallSheetStore(state => state.isUploading);
+  const uploadError = useCallSheetStore(state => state.uploadError);
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isReorderMode, setIsReorderMode] = useState(false);
@@ -80,6 +83,23 @@ export function Today({ onSceneSelect }: TodayProps) {
 
   // State for scene script modal
   const [scriptModalScene, setScriptModalScene] = useState<Scene | null>(null);
+
+  // File upload ref and handler
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type === 'application/pdf') {
+      try {
+        await uploadCallSheet(file);
+      } catch (err) {
+        console.error('Failed to upload call sheet:', err);
+      }
+    }
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
   // Navigate days - now properly loads call sheet for that date
   const navigateDay = (direction: -1 | 1) => {
@@ -212,6 +232,15 @@ export function Today({ onSceneSelect }: TodayProps) {
 
   return (
     <div className="min-h-screen bg-background pb-safe-bottom">
+      {/* Hidden file input for call sheet upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf"
+        onChange={handleFileSelect}
+        className="hidden"
+      />
+
       {/* Header */}
       <div className="sticky top-0 z-30 bg-card border-b border-border safe-top">
         <div className="mobile-container">
@@ -237,8 +266,26 @@ export function Today({ onSceneSelect }: TodayProps) {
               </button>
             </div>
 
-            {/* Reorder button and Production day badge */}
+            {/* Upload button, Reorder button, and Production day badge */}
             <div className="flex items-center gap-2">
+              {/* Upload call sheet button */}
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="p-2 text-gold active:opacity-70 transition-opacity touch-manipulation"
+                disabled={isUploading}
+                title="Upload call sheet"
+              >
+                {isUploading ? (
+                  <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                  </svg>
+                )}
+              </button>
               {callSheet && (
                 <>
                   <button
@@ -285,6 +332,13 @@ export function Today({ onSceneSelect }: TodayProps) {
       </div>
 
       <div className="mobile-container px-4 py-4 space-y-4">
+        {/* Upload error message */}
+        {uploadError && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm text-red-600">{uploadError}</p>
+          </div>
+        )}
+
         {callSheet ? (
           <>
             {/* Call Sheet Summary Card */}
@@ -371,7 +425,11 @@ export function Today({ onSceneSelect }: TodayProps) {
           </>
         ) : (
           /* Empty State - shown when no call sheet is uploaded */
-          <EmptyState hasAnyCallSheets={callSheets.length > 0} />
+          <EmptyState
+            hasAnyCallSheets={callSheets.length > 0}
+            onUploadClick={() => fileInputRef.current?.click()}
+            isUploading={isUploading}
+          />
         )}
       </div>
 
@@ -938,9 +996,11 @@ function TodaySceneCard({
 // Empty State Component
 interface EmptyStateProps {
   hasAnyCallSheets: boolean;
+  onUploadClick: () => void;
+  isUploading: boolean;
 }
 
-function EmptyState({ hasAnyCallSheets }: EmptyStateProps) {
+function EmptyState({ hasAnyCallSheets, onUploadClick, isUploading }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center py-16 px-6">
       <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mb-4">
@@ -971,9 +1031,13 @@ function EmptyState({ hasAnyCallSheets }: EmptyStateProps) {
           </p>
         </>
       )}
-      <p className="text-xs text-text-light text-center">
-        Go to the Call Sheet tab to upload a PDF
-      </p>
+      <button
+        onClick={onUploadClick}
+        disabled={isUploading}
+        className="px-6 py-2.5 rounded-button gold-gradient text-white text-sm font-medium active:scale-95 transition-transform disabled:opacity-50"
+      >
+        {isUploading ? 'Uploading...' : 'Upload Call Sheet PDF'}
+      </button>
     </div>
   );
 }
