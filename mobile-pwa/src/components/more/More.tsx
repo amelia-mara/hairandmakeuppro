@@ -1711,198 +1711,90 @@ function CallSheetArchive({ onBack }: ViewerProps) {
         )}
       </div>
 
-      {/* Call Sheet Detail Modal */}
+      {/* Call Sheet PDF Viewer Modal */}
       {selectedCallSheet && (
         <div
-          className="fixed inset-0 z-50 bg-black/50 flex items-end justify-center"
+          className="fixed inset-0 z-50 bg-black/90 flex flex-col"
           onClick={() => setSelectedSheet(null)}
         >
+          {/* Header */}
           <div
-            className="w-full max-w-lg bg-card rounded-t-2xl max-h-[85vh] overflow-hidden animate-slideUp"
+            className="flex-shrink-0 bg-card border-b border-border px-4 py-3 flex items-center justify-between safe-top"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="sticky top-0 bg-card border-b border-border px-4 py-3 flex items-center justify-between">
-              <div>
-                <h2 className="text-base font-semibold text-text-primary">
-                  Day {selectedCallSheet.productionDay} Call Sheet
-                </h2>
-                <p className="text-xs text-text-muted">{formatShortDate(selectedCallSheet.date)}</p>
-              </div>
+            <div>
+              <h2 className="text-base font-semibold text-text-primary">
+                Day {selectedCallSheet.productionDay} Call Sheet
+              </h2>
+              <p className="text-xs text-text-muted">{formatShortDate(selectedCallSheet.date)}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              {/* Delete button */}
+              {showDeleteConfirm === selectedCallSheet.id ? (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowDeleteConfirm(null)}
+                    className="px-3 py-1.5 text-xs text-text-muted"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleDelete(selectedCallSheet.id);
+                      setSelectedSheet(null);
+                    }}
+                    className="px-3 py-1.5 text-xs bg-red-500 text-white rounded-lg"
+                  >
+                    Delete
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowDeleteConfirm(selectedCallSheet.id)}
+                  className="p-2 text-red-400 hover:text-red-500"
+                  title="Delete call sheet"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                  </svg>
+                </button>
+              )}
+              {/* Close button */}
               <button
                 onClick={() => setSelectedSheet(null)}
-                className="p-1 text-text-muted hover:text-text-primary"
+                className="p-2 text-text-muted hover:text-text-primary"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
+          </div>
 
-            <div className="overflow-y-auto p-4 space-y-4" style={{ maxHeight: 'calc(85vh - 120px)' }}>
-              {/* Call Times */}
-              <div className="card">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-text-light mb-3">Call Times</h3>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <span className="text-text-muted">Unit Call:</span>
-                    <span className="ml-2 font-semibold text-text-primary">{selectedCallSheet.unitCallTime}</span>
-                  </div>
-                  {selectedCallSheet.rehearsalsTime && (
-                    <div>
-                      <span className="text-text-muted">Rehearsals:</span>
-                      <span className="ml-2 font-semibold text-text-primary">{selectedCallSheet.rehearsalsTime}</span>
-                    </div>
-                  )}
-                  {selectedCallSheet.firstShotTime && (
-                    <div>
-                      <span className="text-text-muted">First Shot:</span>
-                      <span className="ml-2 font-semibold text-text-primary">{selectedCallSheet.firstShotTime}</span>
-                    </div>
-                  )}
-                  {selectedCallSheet.wrapEstimate && (
-                    <div>
-                      <span className="text-text-muted">Est. Wrap:</span>
-                      <span className="ml-2 font-semibold text-text-primary">{selectedCallSheet.wrapEstimate}</span>
-                    </div>
-                  )}
+          {/* PDF Viewer */}
+          <div className="flex-1 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            {selectedCallSheet.pdfUri ? (
+              <iframe
+                src={selectedCallSheet.pdfUri}
+                className="w-full h-full border-0"
+                title={`Day ${selectedCallSheet.productionDay} Call Sheet`}
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full text-center px-6">
+                <div className="w-16 h-16 rounded-full bg-gray-800 flex items-center justify-center mb-4">
+                  <svg className="w-8 h-8 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                  </svg>
                 </div>
+                <h3 className="text-lg font-semibold text-white mb-2">PDF Not Available</h3>
+                <p className="text-sm text-gray-400 mb-4">
+                  The original PDF for this call sheet was not saved.
+                </p>
+                <p className="text-xs text-gray-500">
+                  Day {selectedCallSheet.productionDay} • {selectedCallSheet.scenes.length} scenes • Unit call {selectedCallSheet.unitCallTime}
+                </p>
               </div>
-
-              {/* Pre-calls */}
-              {selectedCallSheet.preCalls && (
-                <div className="card">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-text-light mb-3">Pre-Calls</h3>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    {selectedCallSheet.preCalls.hmu && (
-                      <div>
-                        <span className="text-text-muted">H&MU:</span>
-                        <span className="ml-2 font-semibold text-gold">{selectedCallSheet.preCalls.hmu}</span>
-                      </div>
-                    )}
-                    {selectedCallSheet.preCalls.costume && (
-                      <div>
-                        <span className="text-text-muted">Costume:</span>
-                        <span className="ml-2 font-semibold text-text-primary">{selectedCallSheet.preCalls.costume}</span>
-                      </div>
-                    )}
-                    {selectedCallSheet.preCalls.ads && (
-                      <div>
-                        <span className="text-text-muted">ADs:</span>
-                        <span className="ml-2 font-semibold text-text-primary">{selectedCallSheet.preCalls.ads}</span>
-                      </div>
-                    )}
-                    {selectedCallSheet.preCalls.production && (
-                      <div>
-                        <span className="text-text-muted">Production:</span>
-                        <span className="ml-2 font-semibold text-text-primary">{selectedCallSheet.preCalls.production}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Scenes */}
-              <div className="card">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-text-light mb-3">
-                  Scenes ({selectedCallSheet.scenes.length})
-                </h3>
-                <div className="space-y-2">
-                  {selectedCallSheet.scenes.map((scene, idx) => (
-                    <div key={idx} className="flex items-start gap-3 py-2 border-b border-border last:border-0">
-                      <span className="w-8 text-sm font-bold text-text-primary">{scene.sceneNumber}</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-text-secondary truncate">{scene.setDescription}</p>
-                        {scene.estimatedTime && (
-                          <p className="text-xs text-text-muted">{scene.estimatedTime}</p>
-                        )}
-                        {scene.notes && (
-                          <p className="text-xs text-amber-600 mt-1">{scene.notes}</p>
-                        )}
-                      </div>
-                      <span className="text-xs text-text-light">{scene.dayNight}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Cast Calls */}
-              {selectedCallSheet.castCalls && selectedCallSheet.castCalls.length > 0 && (
-                <div className="card">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-text-light mb-3">
-                    Cast Calls ({selectedCallSheet.castCalls.length})
-                  </h3>
-                  <div className="space-y-2">
-                    {selectedCallSheet.castCalls.map((cast, idx) => (
-                      <div key={idx} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-                        <div>
-                          <p className="text-sm font-medium text-text-primary">{cast.name}</p>
-                          <p className="text-xs text-text-muted">{cast.character}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-semibold text-text-primary">{cast.callTime}</p>
-                          {cast.hmuCall && (
-                            <p className="text-xs text-gold">HMU: {cast.hmuCall}</p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Weather */}
-              {selectedCallSheet.weather && (
-                <div className="card">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-text-light mb-3">Weather</h3>
-                  <div className="flex items-center gap-4 text-sm">
-                    {selectedCallSheet.weather.conditions && (
-                      <span className="text-text-primary">{selectedCallSheet.weather.conditions}</span>
-                    )}
-                    {(selectedCallSheet.weather.tempHigh || selectedCallSheet.weather.tempLow) && (
-                      <span className="text-text-muted">
-                        {selectedCallSheet.weather.tempHigh && `${selectedCallSheet.weather.tempHigh}°`}
-                        {selectedCallSheet.weather.tempLow && ` / ${selectedCallSheet.weather.tempLow}°`}
-                      </span>
-                    )}
-                    {selectedCallSheet.weather.sunrise && (
-                      <span className="text-text-muted text-xs">
-                        Sunrise: {selectedCallSheet.weather.sunrise}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Delete Button */}
-              <div className="pt-4 border-t border-border">
-                {showDeleteConfirm === selectedCallSheet.id ? (
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => setShowDeleteConfirm(null)}
-                      className="flex-1 py-2.5 rounded-button border border-border text-text-muted text-sm font-medium"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={() => {
-                        handleDelete(selectedCallSheet.id);
-                        setSelectedSheet(null);
-                      }}
-                      className="flex-1 py-2.5 rounded-button bg-red-500 text-white text-sm font-medium"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setShowDeleteConfirm(selectedCallSheet.id)}
-                    className="w-full py-2.5 rounded-button border border-red-200 text-red-500 text-sm font-medium"
-                  >
-                    Delete Call Sheet
-                  </button>
-                )}
-              </div>
-            </div>
+            )}
           </div>
         </div>
       )}
