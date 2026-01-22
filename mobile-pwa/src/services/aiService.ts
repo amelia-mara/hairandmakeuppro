@@ -50,6 +50,7 @@ export async function callAI(
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error?.message || errorData.error || '';
 
         // Handle rate limiting with exponential backoff
         if (response.status === 429) {
@@ -57,6 +58,16 @@ export async function callAI(
           console.log(`Rate limited, waiting ${waitTime}ms before retry...`);
           await new Promise(resolve => setTimeout(resolve, waitTime));
           continue;
+        }
+
+        // Handle credit/billing errors (non-retryable)
+        if (response.status === 400 && (errorMessage.includes('credit balance') || errorMessage.includes('purchase credits'))) {
+          throw new Error('Insufficient API credits. Please add credits at console.anthropic.com');
+        }
+
+        // Handle auth errors (non-retryable)
+        if (response.status === 401 || response.status === 403) {
+          throw new Error('Invalid API key. Please check your configuration.');
         }
 
         throw new Error(errorData.error || `API error: ${response.status}`);
