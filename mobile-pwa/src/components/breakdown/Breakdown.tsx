@@ -477,12 +477,36 @@ function BreakdownListView({
               </svg>
             </button>
 
+            {/* Scene heading and synopsis - always visible */}
+            <div className="px-3 pb-3 pt-1 border-t border-border/50">
+              {/* Full slugline */}
+              <p className="text-sm font-medium text-text-primary">{scene.slugline}</p>
+
+              {/* Synopsis - clickable to view full scene */}
+              {scene.synopsis && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSynopsisClick(scene.id);
+                  }}
+                  className="w-full text-left group mt-1.5"
+                >
+                  <p className="text-xs text-text-muted italic line-clamp-2 group-hover:text-gold transition-colors">
+                    {scene.synopsis}
+                  </p>
+                  <span className="text-[10px] text-gold flex items-center gap-1 mt-1">
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Tap to view full scene
+                  </span>
+                </button>
+              )}
+            </div>
+
             {/* Expanded content */}
             {isExpanded && (
               <div className="border-t border-border px-3 pb-3 pt-3 space-y-3">
-                {/* Full slugline */}
-                <p className="text-sm font-medium text-text-primary">{scene.slugline}</p>
-
                 {/* Schedule discrepancy warning */}
                 {discrepancy && (
                   <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2">
@@ -502,75 +526,53 @@ function BreakdownListView({
                   </div>
                 )}
 
-                {/* Synopsis - clickable to view full scene */}
-                {scene.synopsis ? (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onSynopsisClick(scene.id);
-                    }}
-                    className="w-full text-left group"
-                  >
-                    <p className="text-xs text-text-muted italic group-hover:text-gold transition-colors">
-                      {scene.synopsis}
-                    </p>
-                    <span className="text-[10px] text-gold flex items-center gap-1 mt-1">
+                {/* Generate Synopsis / View script - only shown if no synopsis */}
+                {!scene.synopsis && scene.scriptContent && (
+                  <div className="flex items-center gap-2">
+                    {/* Generate Synopsis Button */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onGenerateSynopsis(scene);
+                      }}
+                      disabled={generatingSynopsisId === scene.id}
+                      className={clsx(
+                        'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all',
+                        generatingSynopsisId === scene.id
+                          ? 'bg-gray-100 text-text-muted cursor-wait'
+                          : 'bg-gold-100 text-gold hover:bg-gold-200 active:scale-95'
+                      )}
+                    >
+                      {generatingSynopsisId === scene.id ? (
+                        <>
+                          <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          </svg>
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" />
+                          </svg>
+                          Generate Synopsis
+                        </>
+                      )}
+                    </button>
+                    {/* View full scene link */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSynopsisClick(scene.id);
+                      }}
+                      className="text-xs text-text-muted flex items-center gap-1 hover:text-gold transition-colors"
+                    >
                       <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
-                      Tap to view full scene
-                    </span>
-                  </button>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    {/* Generate Synopsis Button */}
-                    {scene.scriptContent && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onGenerateSynopsis(scene);
-                        }}
-                        disabled={generatingSynopsisId === scene.id}
-                        className={clsx(
-                          'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all',
-                          generatingSynopsisId === scene.id
-                            ? 'bg-gray-100 text-text-muted cursor-wait'
-                            : 'bg-gold-100 text-gold hover:bg-gold-200 active:scale-95'
-                        )}
-                      >
-                        {generatingSynopsisId === scene.id ? (
-                          <>
-                            <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                            </svg>
-                            Generating...
-                          </>
-                        ) : (
-                          <>
-                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" />
-                            </svg>
-                            Generate Synopsis
-                          </>
-                        )}
-                      </button>
-                    )}
-                    {/* View full scene link */}
-                    {scene.scriptContent && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onSynopsisClick(scene.id);
-                        }}
-                        className="text-xs text-text-muted flex items-center gap-1 hover:text-gold transition-colors"
-                      >
-                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        View script
-                      </button>
-                    )}
+                      View script
+                    </button>
                   </div>
                 )}
 
