@@ -274,7 +274,9 @@ export interface CallSheet {
     hmu?: string; // Hair & Makeup
     costume?: string;
     production?: string;
-    location?: string;
+    lighting?: string;
+    camera?: string;
+    location?: string; // Where pre-calls happen (e.g., "Unit Base", "On Set")
   };
 
   // Meal times
