@@ -7,7 +7,6 @@ import { useScheduleStore } from '@/stores/scheduleStore';
 import { useChatStore } from '@/stores/chatStore';
 import { useTimesheetStore } from '@/stores/timesheetStore';
 import { clearAllData as clearIndexedDBData } from '@/db';
-import { RateCardSettings } from '@/components/timesheet';
 import { NavIcon } from '@/components/navigation/BottomNav';
 import { formatShortDate } from '@/utils/helpers';
 import type { NavTab, SceneDiscrepancy, ScheduleDay } from '@/types';
@@ -2084,13 +2083,6 @@ function Settings({ onBack, onStartNewProject, onNavigateToExport, onNavigateToA
                 <span className="text-xs text-text-muted">Delete all photos and captured data</span>
               </div>
             </button>
-          </div>
-        </section>
-
-        <section className="mb-6">
-          <h2 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-3">RATE CARD</h2>
-          <div className="card">
-            <RateCardSettings />
           </div>
         </section>
 

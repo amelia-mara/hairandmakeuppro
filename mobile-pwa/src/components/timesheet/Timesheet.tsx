@@ -4,6 +4,7 @@ import { WeekView } from './WeekView';
 import { MonthView } from './MonthView';
 import { SummaryCard } from './SummaryCard';
 import { ExportModal } from './ExportModal';
+import { RateCardSettings } from './RateCardSettings';
 
 export function Timesheet() {
   const {
@@ -154,16 +155,10 @@ export function Timesheet() {
               </div>
             </div>
 
-            {/* Rate Card Content - Expandable */}
+            {/* Rate Card Content - Expandable & Editable */}
             {rateCardExpanded && (
-              <div className="px-4 py-3 space-y-2" style={{ borderTop: '1px solid var(--color-border)' }}>
-                <RateRow label="Daily Rate" value={`£${rateCard.dailyRate.toFixed(2)}`} />
-                <RateRow label="Base Day" value={`${rateCard.baseDayHours} hrs + 1hr lunch`} />
-                <RateRow label="Pre-Call Rate" value={`x${rateCard.preCallMultiplier}`} />
-                <RateRow label="Overtime Rate" value={`x${rateCard.otMultiplier}`} />
-                <RateRow label="6th Day" value={`x${rateCard.sixthDayMultiplier} (whole day)`} />
-                <RateRow label="7th Day" value={`x${rateCard.seventhDayMultiplier} (whole day)`} />
-                <RateRow label="Kit / Box Rental" value={`£${rateCard.kitRental.toFixed(2)}/day`} />
+              <div className="px-4 py-3" style={{ borderTop: '1px solid var(--color-border)' }}>
+                <RateCardSettings />
               </div>
             )}
           </div>
@@ -198,19 +193,6 @@ export function Timesheet() {
         weekSummary={weekSummary}
         weekStartDate={currentWeekStart}
       />
-    </div>
-  );
-}
-
-// Rate row component for collapsed rate card
-function RateRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div
-      className="flex justify-between items-center py-2 text-[13px]"
-      style={{ borderBottom: '1px solid var(--color-border)' }}
-    >
-      <span style={{ color: 'var(--color-text-muted)' }}>{label}</span>
-      <span className="font-medium" style={{ color: 'var(--color-text-primary)' }}>{value}</span>
     </div>
   );
 }
