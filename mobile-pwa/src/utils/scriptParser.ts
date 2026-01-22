@@ -226,6 +226,109 @@ function normalizeCharacterName(name: string): string {
 }
 
 /**
+ * Extract character names mentioned in action/description lines
+ * These are characters physically present in a scene but not speaking
+ * Looks for names in ALL CAPS or Title Case within action text
+ *
+ * Examples:
+ *   "a handsome LOCAL MAN in his late 30s" -> ["LOCAL MAN"]
+ *   "Gwen and Peter approach a simple TAXI STAND" -> ["GWEN", "PETER"]
+ *   "Jon unfolding it, gesturing for Peter to sit" -> ["JON", "PETER"]
+ */
+function extractCharactersFromActionLine(line: string): string[] {
+  const characters: string[] = [];
+  const trimmed = line.trim();
+
+  // Skip scene headings, transitions, and very short lines
+  if (trimmed.length < 5) return characters;
+  if (/^(INT\.|EXT\.|INT\/EXT|CUT TO|FADE|DISSOLVE|CONTINUED)/i.test(trimmed)) return characters;
+
+  // Pattern 1: ALL CAPS names (2-3 words max) within the line
+  // Matches: "LOCAL MAN", "YOUNG WOMAN", "TAXI DRIVER", "DR. SMITH"
+  const allCapsPattern = /\b([A-Z][A-Z.'-]+(?:\s+[A-Z][A-Z.'-]+){0,2})\b/g;
+  let match;
+
+  while ((match = allCapsPattern.exec(trimmed)) !== null) {
+    const potential = match[1].trim();
+
+    // Skip if it's a common non-character all-caps word
+    const nonCharacterWords = new Set([
+      'INT', 'EXT', 'DAY', 'NIGHT', 'MORNING', 'EVENING', 'CONTINUOUS',
+      'LATER', 'SAME', 'CONT', 'CONTINUED', 'CUT', 'FADE', 'DISSOLVE',
+      'THE', 'AND', 'BUT', 'FOR', 'NOT', 'YOU', 'ALL', 'CAN', 'HER',
+      'HIS', 'HIM', 'SHE', 'HAS', 'HAD', 'WAS', 'ARE', 'BEEN', 'HAVE',
+      'THEIR', 'WHAT', 'WHEN', 'WHERE', 'WHICH', 'WHO', 'THIS', 'THAT',
+      'WITH', 'FROM', 'INTO', 'ONTO', 'UPON', 'BACK', 'OVER', 'UNDER',
+      'CLOSE', 'WIDE', 'ANGLE', 'VIEW', 'SHOT', 'POV', 'INSERT',
+      'FLASHBACK', 'DREAM', 'TITLE', 'SUPER', 'CHYRON', 'SUBTITLE',
+      'TV', 'DVD', 'VHS', 'USA', 'NYC', 'NYPD', 'FBI', 'CIA', 'NSA',
+      'TAXI', 'STAND', 'TAXI STAND', 'CAR', 'DOOR', 'ROOM', 'HOUSE',
+      'YELLOW', 'PARKA', 'YELLOW PARKA', 'WHEELCHAIR'
+    ]);
+
+    // Skip single words that are common non-character terms
+    if (potential.split(/\s+/).length === 1 && nonCharacterWords.has(potential)) {
+      continue;
+    }
+
+    // Skip multi-word terms that are objects/props
+    if (nonCharacterWords.has(potential)) {
+      continue;
+    }
+
+    // Skip if it looks like an object description (contains common object words)
+    const objectWords = /\b(TAXI|CAR|DOOR|ROOM|HOUSE|BOAT|PHONE|GUN|KNIFE|TABLE|CHAIR|STAND|PARKA|WHEELCHAIR|VEHICLE)\b/i;
+    if (objectWords.test(potential)) {
+      continue;
+    }
+
+    // Valid character indicators: contains MAN, WOMAN, PERSON, DRIVER, etc.
+    const characterIndicators = /\b(MAN|WOMAN|PERSON|DRIVER|OFFICER|DOCTOR|NURSE|GUARD|SOLDIER|WORKER|GIRL|BOY|LADY|GUY|KID|CHILD|TEENAGER|ELDERLY|YOUNG|OLD|LOCAL|HANDSOME|BEAUTIFUL)\b/i;
+
+    // If it's 2+ words and contains a character indicator, it's likely a character
+    if (potential.split(/\s+/).length >= 2 && characterIndicators.test(potential)) {
+      characters.push(potential);
+      continue;
+    }
+
+    // If it's a single capitalized word that's 3+ chars and not a common word, could be a name
+    if (potential.length >= 3 && potential.length <= 15 && !nonCharacterWords.has(potential)) {
+      // Check context: is it followed by action verbs or preceded by articles suggesting it's a name?
+      const beforeMatch = trimmed.slice(0, match.index);
+      const afterMatch = trimmed.slice(match.index + potential.length);
+
+      // Strong indicators it's a character name
+      const nameContext = /(^|\s)(a |an |the |young |old |handsome |beautiful )?$/i.test(beforeMatch) ||
+                          /^(\s+)(enters|exits|walks|runs|stands|sits|looks|turns|moves|says|speaks|watches|stares|smiles|nods|shakes|reaches|grabs|holds|opens|closes)/i.test(afterMatch) ||
+                          /^('s\s|'s$|\s+and\s+[A-Z])/i.test(afterMatch);
+
+      if (nameContext) {
+        characters.push(potential);
+      }
+    }
+  }
+
+  // Pattern 2: Title Case names at start of sentence or after comma
+  // Matches: "Gwen and Peter approach", "Jon unfolding it"
+  const titleCasePattern = /(?:^|[,;]\s*|\.\s+)([A-Z][a-z]+(?:\s+(?:and|&)\s+[A-Z][a-z]+)*)\s+(?:and\s+)?[a-z]/g;
+
+  while ((match = titleCasePattern.exec(trimmed)) !== null) {
+    const names = match[1].split(/\s+(?:and|&)\s+/i);
+    for (const name of names) {
+      const upperName = name.trim().toUpperCase();
+      // Skip common non-name words
+      if (upperName.length >= 2 && upperName.length <= 20 &&
+          !['THE', 'AND', 'BUT', 'FOR', 'NOT', 'THIS', 'THAT', 'WHEN', 'WHERE', 'WHILE'].includes(upperName)) {
+        characters.push(upperName);
+      }
+    }
+  }
+
+  // Deduplicate
+  return [...new Set(characters)];
+}
+
+/**
  * Check if a line is a character cue (character name before dialogue)
  * Improved to better filter out false positives from action lines
  */
@@ -523,6 +626,42 @@ export function parseScriptText(text: string): ParsedScript {
       }
     } else {
       lastLineWasCharacter = false;
+
+      // Also check for characters mentioned in action/description lines
+      // This catches characters who are physically present but not speaking
+      if (currentScene && trimmed.length > 10) {
+        const actionCharacters = extractCharactersFromActionLine(trimmed);
+        for (const charName of actionCharacters) {
+          const normalized = normalizeCharacterName(charName);
+
+          if (normalized.length >= 2) {
+            // Add to scene's characters
+            if (!currentScene.characters.includes(normalized)) {
+              currentScene.characters.push(normalized);
+            }
+
+            // Add to character map (mark as non-speaking/action appearance)
+            if (!characterMap.has(normalized)) {
+              characterMap.set(normalized, {
+                name: normalized,
+                normalizedName: normalized,
+                sceneCount: 0,
+                dialogueCount: 0,
+                scenes: [],
+                variants: [],
+              });
+            }
+
+            const char = characterMap.get(normalized)!;
+
+            // Track scenes
+            if (!char.scenes.includes(currentScene.sceneNumber)) {
+              char.scenes.push(currentScene.sceneNumber);
+              char.sceneCount++;
+            }
+          }
+        }
+      }
     }
   }
 

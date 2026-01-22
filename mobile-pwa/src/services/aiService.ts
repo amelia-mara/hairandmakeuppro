@@ -172,12 +172,10 @@ export async function parseScriptWithAI(
 /**
  * Pre-extract character names from script using pattern matching
  * This runs BEFORE AI analysis to build a complete cast reference
+ * Now includes characters from both dialogue cues AND action/description lines
  */
 function extractCharacterNamesFromScript(scriptText: string): string[] {
   const characters = new Set<string>();
-
-  // Pattern for dialogue cues: CHARACTER NAME (possibly with extension) on its own line
-  const dialoguePattern = /^([A-Z][A-Z\s.'-]{1,30})\s*(?:\([^)]*\))?\s*$/gm;
 
   // Exclusion list for non-character uppercase text
   const exclusions = new Set([
@@ -187,6 +185,9 @@ function extractCharacterNamesFromScript(scriptText: string): string[] {
     'NIGHT', 'DAY', 'DAWN', 'DUSK', 'MOMENTS', 'THE NEXT', 'MORE',
     'ANGLE ON', 'CLOSE ON', 'WIDE ON', 'POV', 'INTERCUT', 'MONTAGE'
   ]);
+
+  // Pattern 1: Dialogue cues - CHARACTER NAME (possibly with extension) on its own line
+  const dialoguePattern = /^([A-Z][A-Z\s.'-]{1,30})\s*(?:\([^)]*\))?\s*$/gm;
 
   let match;
   while ((match = dialoguePattern.exec(scriptText)) !== null) {
@@ -201,12 +202,44 @@ function extractCharacterNamesFromScript(scriptText: string): string[] {
     }
   }
 
+  // Pattern 2: Character descriptors in action lines (e.g., "LOCAL MAN", "YOUNG WOMAN")
+  // These are characters who may be physically present but not speaking
+  const characterDescriptorPattern = /\b((?:LOCAL|YOUNG|OLD|HANDSOME|BEAUTIFUL|ELDERLY|MYSTERIOUS|TALL|SHORT|OLDER|YOUNGER)\s+(?:MAN|WOMAN|PERSON|GUY|LADY|GIRL|BOY|KID|CHILD|STRANGER|FIGURE))\b/gi;
+
+  while ((match = characterDescriptorPattern.exec(scriptText)) !== null) {
+    const charDesc = match[1].trim().toUpperCase();
+    if (!exclusions.has(charDesc)) {
+      characters.add(charDesc);
+    }
+  }
+
+  // Pattern 3: Role-based characters (e.g., "TAXI DRIVER", "POLICE OFFICER")
+  const rolePattern = /\b((?:TAXI|BUS|TRUCK|AMBULANCE|POLICE|SECURITY|HOTEL|SHOP|STORE|BAR|CAFE)\s+(?:DRIVER|OFFICER|GUARD|WORKER|CLERK|OWNER|MANAGER|ATTENDANT|MAN|WOMAN))\b/gi;
+
+  while ((match = rolePattern.exec(scriptText)) !== null) {
+    const role = match[1].trim().toUpperCase();
+    if (!exclusions.has(role)) {
+      characters.add(role);
+    }
+  }
+
+  // Pattern 4: Generic character types often appearing in action
+  const genericCharPattern = /\b((?:DR\.|MR\.|MRS\.|MS\.|MISS|DETECTIVE|OFFICER|SERGEANT|CAPTAIN|DOCTOR|NURSE|PROFESSOR|FATHER|MOTHER|SISTER|BROTHER)\s+[A-Z][A-Z'-]+)\b/g;
+
+  while ((match = genericCharPattern.exec(scriptText)) !== null) {
+    const charName = match[1].trim().toUpperCase();
+    if (!exclusions.has(charName) && charName.length <= 30) {
+      characters.add(charName);
+    }
+  }
+
   return Array.from(characters).slice(0, 100); // Limit to 100 characters
 }
 
 /**
  * Cross-validate characters in scenes after AI analysis
  * Checks for characters that might have been missed due to chunk boundaries
+ * Now also checks for characters mentioned in action/description lines
  */
 function crossValidateSceneCharacters(
   scenes: AIExtractedScene[],
@@ -220,7 +253,7 @@ function crossValidateSceneCharacters(
 
     knownCharacters.forEach((charName) => {
       if (!currentChars.has(charName.toUpperCase())) {
-        // Check if this character has dialogue in this scene by looking at the scene content
+        // Check if this character appears in this scene
         // We can use the slugline to find the scene in the full script
         const sluglinePattern = new RegExp(
           scene.slugline.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
@@ -243,7 +276,14 @@ function crossValidateSceneCharacters(
             'im'
           );
 
-          if (charDialoguePattern.test(sceneContent)) {
+          // Also check for character mentioned in action/description lines
+          // This handles characters who are physically present but not speaking
+          const charActionPattern = new RegExp(
+            `\\b${charName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`,
+            'i'
+          );
+
+          if (charDialoguePattern.test(sceneContent) || charActionPattern.test(sceneContent)) {
             scene.characters.push(charName);
             console.log(`Cross-validation: Added missing character "${charName}" to scene ${scene.sceneNumber}`);
           }
@@ -347,7 +387,11 @@ IMPORTANT RULES:
 4. Character names may have extensions like (V.O.), (O.S.), (CONT'D) - these should be stripped from the normalized name
 5. Scene numbers may appear before the INT/EXT (e.g., "15 INT. OFFICE - DAY" or "4A EXT. PARK - NIGHT")
 6. Ignore transitions like CUT TO:, FADE IN:, FADE OUT, DISSOLVE TO:, etc.
-7. Action/description lines are not character names even if they're uppercase
+7. IMPORTANT: Also extract characters who are PHYSICALLY PRESENT in scenes but do NOT have dialogue
+   - These appear in action/description lines, often in ALL CAPS (e.g., "a handsome LOCAL MAN", "the TAXI DRIVER")
+   - Or as named characters mentioned in action (e.g., "Gwen and Peter approach", "Jon unfolding it")
+   - Include character descriptors like "LOCAL MAN", "YOUNG WOMAN", "TAXI DRIVER" as characters
+8. A character should be included in a scene's character list if they are PHYSICALLY PRESENT in that scene, even if they have no dialogue
 
 Return ONLY valid JSON with no additional text or markdown.`;
 
@@ -387,9 +431,11 @@ Return a JSON object with this exact structure:
 
 IMPORTANT:
 - Extract ALL scenes, even if there are many
-- Include ALL speaking characters
+- Include ALL characters who are PHYSICALLY PRESENT in each scene, not just speaking characters
+- Characters mentioned in action/description lines count as present (e.g., "a handsome LOCAL MAN", "Gwen approaches")
+- Character descriptors like "LOCAL MAN", "YOUNG WOMAN", "TAXI DRIVER" should be included as characters
 - Scene numbers should match what's in the script, or be sequential if not numbered
-- Characters list should include everyone who speaks, with accurate scene counts
+- Characters list should include everyone physically in the scene, with accurate scene counts
 - For intExt, use only "INT" or "EXT"
 - For timeOfDay, standardize to: DAY, NIGHT, MORNING, EVENING, CONTINUOUS, or DAWN/DUSK`;
 
