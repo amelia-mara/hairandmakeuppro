@@ -360,6 +360,12 @@ async function callAIWithRetry(prompt, maxTokens, sceneNumber, maxRetries = 3) {
                               error.message.includes('authentication') ||
                               error.message.includes('Invalid API key');
 
+            // Check for credit/billing errors (non-retryable)
+            const isCreditError = error.message.includes('credit balance') ||
+                                 error.message.includes('insufficient credits') ||
+                                 error.message.includes('billing') ||
+                                 error.message.includes('purchase credits');
+
             // Log the error
             apiUsageTracker.logError();
 
@@ -379,6 +385,13 @@ async function callAIWithRetry(prompt, maxTokens, sceneNumber, maxRetries = 3) {
             if (isAuthError) {
                 console.error('🔑 AUTHENTICATION FAILED');
                 showErrorNotification('Invalid API key. Check AI Settings.');
+                throw error; // Don't retry
+            }
+
+            // If credit/billing error, don't retry
+            if (isCreditError) {
+                console.error('💳 INSUFFICIENT API CREDITS');
+                showErrorNotification('API credit balance is too low. Please add credits at console.anthropic.com/settings/plans');
                 throw error; // Don't retry
             }
 
@@ -442,6 +455,12 @@ async function callAIInternal(prompt, maxTokens, sceneNumber) {
                     throw new Error(`Invalid API key. Status: ${response.status}`);
                 }
 
+                // Check for credit balance errors (400 with specific message)
+                if (response.status === 400 && (errorText.includes('credit balance') || errorText.includes('purchase credits'))) {
+                    console.error('💳 INSUFFICIENT API CREDITS');
+                    throw new Error(`Insufficient API credits. Please add credits at console.anthropic.com`);
+                }
+
                 throw new Error(`API Error: ${response.status} - ${errorText}`);
             }
 
@@ -503,6 +522,12 @@ async function callAIInternal(prompt, maxTokens, sceneNumber) {
             if (response.status === 401) {
                 console.error('🔑 AUTHENTICATION FAILED');
                 throw new Error(`Invalid API key. Status: 401`);
+            }
+
+            // Check for credit balance errors (400 with specific message)
+            if (response.status === 400 && (errorText.includes('credit balance') || errorText.includes('purchase credits'))) {
+                console.error('💳 INSUFFICIENT API CREDITS');
+                throw new Error(`Insufficient API credits. Please add credits at console.anthropic.com`);
             }
 
             throw new Error(`Anthropic API Error: ${response.status} - ${errorText}`);
