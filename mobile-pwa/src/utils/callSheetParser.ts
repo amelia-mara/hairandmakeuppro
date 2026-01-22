@@ -157,7 +157,8 @@ IMPORTANT:
 - Camera wrap and estimated wrap are often separate times
 - Pre-calls may be listed as "PRE-CALLS" or "PRE CALLS" with department times
 - Extract weather including conditions like "Overcast with Scattered Showers"
-- If a field has no data, omit it or use null`;
+- If a field has no data, omit it or use null
+- CRITICAL: Only extract scenes for the CURRENT shooting day. Do NOT include scenes from "ADVANCE SCHEDULE", "ADVANCE", "NEXT DAYS", or any section showing future production days. These appear at the end of call sheets and show upcoming days - ignore them completely.`;
 
   try {
     const response = await callAI(prompt, { system: systemPrompt, maxTokens: 4000 });
@@ -172,7 +173,25 @@ IMPORTANT:
     const parsed = JSON.parse(jsonMatch[0]);
 
     // Build the CallSheet object with defaults for missing fields
-    const scenes: CallSheetScene[] = (parsed.scenes || []).map((s: any, index: number) => ({
+    // Filter out any "Advance Schedule" scenes that may have been extracted
+    const filteredScenes = (parsed.scenes || []).filter((s: any) => {
+      // Check if this scene is from an advance schedule section
+      const notes = (s.notes || '').toLowerCase();
+
+      // Skip scenes that appear to be from advance schedule sections
+      if (notes.includes('advance schedule') || notes.includes('advance day')) {
+        return false;
+      }
+
+      // Check if scene has a different production day marker (e.g., "DAY 12" when we're on DAY 6)
+      if (s.productionDay && parsed.productionDay && s.productionDay !== parsed.productionDay) {
+        return false;
+      }
+
+      return true;
+    });
+
+    const scenes: CallSheetScene[] = filteredScenes.map((s: any, index: number) => ({
       sceneNumber: String(s.sceneNumber || index + 1),
       location: s.locationId || s.location || undefined,
       setDescription: s.setDescription || 'Unknown Scene',
@@ -423,12 +442,16 @@ function fallbackParseCallSheetText(text: string, pdfUri?: string): CallSheet {
   }
 
   // Extract scenes with a simple pattern
+  // First, remove any "ADVANCE SCHEDULE" sections from the text to avoid extracting future days
+  const advanceScheduleIndex = text.search(/ADVANCE\s*SCHEDULE/i);
+  const textWithoutAdvance = advanceScheduleIndex > 0 ? text.slice(0, advanceScheduleIndex) : text;
+
   const scenes: CallSheetScene[] = [];
   const scenePattern = /(?:SC|SCENE)?\s*(\d+[A-Z]?)\s+((?:INT|EXT)[.\s/][^D\d]*?)\s*(D\d?|N\d?|D\/N)/gi;
   let sceneMatch;
   let shootOrder = 1;
 
-  while ((sceneMatch = scenePattern.exec(text)) !== null) {
+  while ((sceneMatch = scenePattern.exec(textWithoutAdvance)) !== null) {
     scenes.push({
       sceneNumber: sceneMatch[1],
       setDescription: sceneMatch[2].trim(),
