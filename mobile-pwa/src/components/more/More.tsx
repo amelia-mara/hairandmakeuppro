@@ -3,10 +3,11 @@ import { useProjectStore } from '@/stores/projectStore';
 import { useNavigationStore, MAX_BOTTOM_NAV_ITEMS } from '@/stores/navigationStore';
 import { useThemeStore, type Theme } from '@/stores/themeStore';
 import { useCallSheetStore } from '@/stores/callSheetStore';
+import { useScheduleStore } from '@/stores/scheduleStore';
 import { RateCardSettings } from '@/components/timesheet';
 import { NavIcon } from '@/components/navigation/BottomNav';
 import { formatShortDate } from '@/utils/helpers';
-import type { NavTab } from '@/types';
+import type { NavTab, SceneDiscrepancy, ScheduleDay } from '@/types';
 import { ALL_NAV_ITEMS, PROJECT_RETENTION_DAYS } from '@/types';
 import { ProjectExportScreen } from './ProjectExportScreen';
 
@@ -980,82 +981,569 @@ function ScriptViewer({ onBack }: ViewerProps) {
 
 // Schedule Viewer Component
 function ScheduleViewer({ onBack }: ViewerProps) {
-  const demoSchedule = [
-    { dayNumber: 1, date: '2025-01-13', scenes: [1, 2, 3], location: 'COFFEE SHOP' },
-    { dayNumber: 2, date: '2025-01-14', scenes: [4, 5, 6, 7], location: 'APARTMENT' },
-    { dayNumber: 3, date: '2025-01-15', scenes: [8, 9], location: 'PARK' },
-    { dayNumber: 4, date: '2025-01-18', scenes: [12, 15, 16, 8, 23], location: 'VARIOUS' },
-    { dayNumber: 5, date: '2025-01-19', scenes: [10, 11], location: 'OFFICE' },
-  ];
+  const {
+    schedule,
+    discrepancies,
+    isUploading,
+    uploadError,
+    showDiscrepancyModal,
+    uploadSchedule,
+    clearSchedule,
+    crossReferenceWithBreakdown,
+    getCastNamesForNumbers,
+    setShowDiscrepancyModal,
+  } = useScheduleStore();
+  const { currentProject, updateSceneShootingDays } = useProjectStore();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [expandedDay, setExpandedDay] = useState<number | null>(null);
+  const [showCastList, setShowCastList] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const today = new Date().toISOString().split('T')[0];
 
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type === 'application/pdf') {
+      try {
+        const parsedSchedule = await uploadSchedule(file);
+
+        // Cross-reference with breakdown if we have scenes
+        if (currentProject?.scenes && currentProject.scenes.length > 0) {
+          const foundDiscrepancies = crossReferenceWithBreakdown(currentProject.scenes);
+
+          // Update shooting days on scenes
+          if (parsedSchedule && updateSceneShootingDays) {
+            const shootingDayMap: Record<string, number> = {};
+            for (const day of parsedSchedule.days) {
+              for (const scene of day.scenes) {
+                shootingDayMap[scene.sceneNumber] = day.dayNumber;
+              }
+            }
+            updateSceneShootingDays(shootingDayMap, foundDiscrepancies);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to upload schedule:', err);
+      }
+    }
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDelete = () => {
+    clearSchedule();
+    setShowDeleteConfirm(false);
+  };
+
+  const getDiscrepancyCountForDay = (day: ScheduleDay): number => {
+    return day.scenes.filter(s =>
+      discrepancies.some(d => d.sceneNumber === s.sceneNumber)
+    ).length;
+  };
+
   return (
     <>
+      {/* Header */}
       <div className="sticky top-0 z-30 bg-card border-b border-border safe-top">
         <div className="mobile-container">
-          <div className="h-14 px-4 flex items-center gap-3">
-            <button
-              onClick={onBack}
-              className="p-2 -ml-2 text-text-muted active:text-gold transition-colors touch-manipulation"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-            <h1 className="text-lg font-semibold text-text-primary">Schedule</h1>
+          <div className="h-14 px-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={onBack}
+                className="p-2 -ml-2 text-text-muted active:text-gold transition-colors touch-manipulation"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <h1 className="text-lg font-semibold text-text-primary">Schedule</h1>
+            </div>
+            {schedule ? (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="p-2 text-red-500 active:opacity-70 transition-opacity touch-manipulation"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="p-2 text-gold active:opacity-70 transition-opacity touch-manipulation"
+                  disabled={isUploading}
+                >
+                  {isUploading ? (
+                    <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="p-2 text-gold active:opacity-70 transition-opacity touch-manipulation"
+                disabled={isUploading}
+              >
+                {isUploading ? (
+                  <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                  </svg>
+                )}
+              </button>
+            )}
           </div>
         </div>
       </div>
 
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf"
+        onChange={handleFileSelect}
+        className="hidden"
+      />
+
       <div className="mobile-container px-4 py-4">
-        <div className="space-y-2.5">
-          {demoSchedule.map((day) => {
-            const isToday = day.date === today;
-            return (
-              <div
-                key={day.dayNumber}
-                className={`card ${isToday ? 'border-2 border-gold' : ''}`}
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-base font-bold text-text-primary">Day {day.dayNumber}</span>
-                      {isToday && (
-                        <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-gold text-white">
-                          TODAY
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-sm text-text-muted">{formatShortDate(day.date)}</span>
-                  </div>
-                  <span className="text-xs text-text-light">{day.scenes.length} scenes</span>
-                </div>
+        {uploadError && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm text-red-600">{uploadError}</p>
+          </div>
+        )}
 
-                <div className="flex items-center gap-2 mt-3">
-                  <svg className="w-4 h-4 text-text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+        {!schedule ? (
+          /* Empty state - No schedule uploaded */
+          <div className="flex flex-col items-center justify-center py-12">
+            <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+              <NavIcon name="schedule" className="w-8 h-8 text-gray-300" />
+            </div>
+            <h3 className="text-base font-semibold text-text-primary mb-1">No Schedule Uploaded</h3>
+            <p className="text-sm text-text-muted text-center mb-6 max-w-xs">
+              Upload your production schedule PDF to see shooting days and cross-reference with your breakdown
+            </p>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+              className="px-6 py-2.5 rounded-button gold-gradient text-white text-sm font-medium active:scale-95 transition-transform disabled:opacity-50"
+            >
+              {isUploading ? 'Uploading...' : 'Upload Schedule PDF'}
+            </button>
+          </div>
+        ) : (
+          /* Schedule content */
+          <div className="space-y-4">
+            {/* Schedule header info */}
+            <div className="card">
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-base font-bold text-text-primary">
+                  {schedule.productionName || 'Production Schedule'}
+                </h2>
+                <span className="text-xs text-text-muted">
+                  {schedule.totalDays} days
+                </span>
+              </div>
+              {schedule.scriptVersion && (
+                <p className="text-xs text-text-muted">Script: {schedule.scriptVersion}</p>
+              )}
+              {schedule.scheduleVersion && (
+                <p className="text-xs text-text-muted">Schedule: {schedule.scheduleVersion}</p>
+              )}
+
+              {/* Discrepancy summary */}
+              {discrepancies.length > 0 && (
+                <button
+                  onClick={() => setShowDiscrepancyModal(true)}
+                  className="mt-3 w-full p-2.5 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-2"
+                >
+                  <svg className="w-5 h-5 text-amber-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
-                  <span className="text-sm text-text-secondary">{day.location}</span>
-                </div>
+                  <span className="text-sm text-amber-700 font-medium">
+                    {discrepancies.length} discrepanc{discrepancies.length === 1 ? 'y' : 'ies'} found
+                  </span>
+                  <svg className="w-4 h-4 text-amber-500 ml-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              )}
+            </div>
 
-                <div className="flex flex-wrap gap-1 mt-2">
-                  {day.scenes.map((sceneNum) => (
-                    <span
-                      key={sceneNum}
-                      className="px-2 py-0.5 text-xs font-medium rounded bg-gray-100 text-text-muted"
-                    >
-                      {sceneNum}
+            {/* Cast List Toggle */}
+            {schedule.castList.length > 0 && (
+              <div className="card">
+                <button
+                  onClick={() => setShowCastList(!showCastList)}
+                  className="w-full flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-2">
+                    <svg className="w-5 h-5 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+                    </svg>
+                    <span className="text-sm font-semibold text-text-primary">
+                      Cast List ({schedule.castList.length})
                     </span>
-                  ))}
+                  </div>
+                  <svg
+                    className={`w-5 h-5 text-text-muted transition-transform ${showCastList ? 'rotate-180' : ''}`}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {showCastList && (
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    {schedule.castList.map((cast) => (
+                      <div
+                        key={cast.number}
+                        className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg"
+                      >
+                        <span className="w-6 h-6 flex items-center justify-center text-xs font-bold rounded-full bg-gold-100 text-gold">
+                          {cast.number}
+                        </span>
+                        <span className="text-xs text-text-primary truncate">
+                          {cast.character || cast.name}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Shooting Days */}
+            <div className="space-y-2.5">
+              {schedule.days.map((day) => {
+                const isToday = day.date === today;
+                const isExpanded = expandedDay === day.dayNumber;
+                const discrepancyCount = getDiscrepancyCountForDay(day);
+
+                return (
+                  <div
+                    key={day.dayNumber}
+                    className={`card ${isToday ? 'border-2 border-gold' : ''}`}
+                  >
+                    <button
+                      onClick={() => setExpandedDay(isExpanded ? null : day.dayNumber)}
+                      className="w-full text-left"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-base font-bold text-text-primary">Day {day.dayNumber}</span>
+                            {isToday && (
+                              <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-gold text-white">
+                                TODAY
+                              </span>
+                            )}
+                            {discrepancyCount > 0 && (
+                              <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-amber-100 text-amber-600">
+                                {discrepancyCount} issue{discrepancyCount !== 1 ? 's' : ''}
+                              </span>
+                            )}
+                          </div>
+                          {day.date && (
+                            <span className="text-sm text-text-muted">
+                              {day.dayOfWeek ? `${day.dayOfWeek}, ` : ''}{formatShortDate(day.date)}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-text-light">{day.scenes.length} scenes</span>
+                          <svg
+                            className={`w-5 h-5 text-text-muted transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={2}
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-4 mt-2 text-xs text-text-muted">
+                        {day.location && (
+                          <div className="flex items-center gap-1">
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+                            </svg>
+                            <span>{day.location}</span>
+                          </div>
+                        )}
+                        {day.hours && (
+                          <div className="flex items-center gap-1">
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span>{day.hours}</span>
+                          </div>
+                        )}
+                        {day.totalPages && (
+                          <span>{day.totalPages} pgs</span>
+                        )}
+                      </div>
+                    </button>
+
+                    {/* Collapsed scene badges */}
+                    {!isExpanded && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {day.scenes.slice(0, 8).map((scene) => {
+                          const hasDiscrepancy = discrepancies.some(d => d.sceneNumber === scene.sceneNumber);
+                          return (
+                            <span
+                              key={scene.sceneNumber}
+                              className={`px-2 py-0.5 text-xs font-medium rounded ${
+                                hasDiscrepancy
+                                  ? 'bg-amber-100 text-amber-700'
+                                  : 'bg-gray-100 text-text-muted'
+                              }`}
+                            >
+                              {scene.sceneNumber}
+                            </span>
+                          );
+                        })}
+                        {day.scenes.length > 8 && (
+                          <span className="px-2 py-0.5 text-xs font-medium rounded bg-gray-100 text-text-muted">
+                            +{day.scenes.length - 8} more
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Expanded scene details */}
+                    {isExpanded && (
+                      <div className="mt-3 pt-3 border-t border-border space-y-2">
+                        {day.notes && day.notes.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mb-2">
+                            {day.notes.map((note, idx) => (
+                              <span
+                                key={idx}
+                                className="px-2 py-0.5 text-[10px] font-medium rounded bg-blue-100 text-blue-600"
+                              >
+                                {note}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        {day.scenes.map((scene) => {
+                          const hasDiscrepancy = discrepancies.some(d => d.sceneNumber === scene.sceneNumber);
+                          const sceneDiscrepancy = discrepancies.find(d => d.sceneNumber === scene.sceneNumber);
+                          const castNames = getCastNamesForNumbers(scene.castNumbers);
+
+                          return (
+                            <div
+                              key={scene.sceneNumber}
+                              className={`p-2.5 rounded-lg ${
+                                hasDiscrepancy ? 'bg-amber-50 border border-amber-200' : 'bg-gray-50'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between mb-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-semibold text-sm text-text-primary">
+                                    Sc {scene.sceneNumber}
+                                  </span>
+                                  {hasDiscrepancy && (
+                                    <svg className="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                    </svg>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 text-xs text-text-muted">
+                                  <span className={scene.intExt === 'EXT' ? 'text-blue-500' : 'text-amber-500'}>
+                                    {scene.intExt}
+                                  </span>
+                                  <span>{scene.dayNight}</span>
+                                  {scene.pages && <span>{scene.pages}</span>}
+                                </div>
+                              </div>
+                              <p className="text-xs text-text-secondary mb-1">{scene.setLocation}</p>
+                              {scene.description && (
+                                <p className="text-xs text-text-muted italic mb-1">{scene.description}</p>
+                              )}
+                              {castNames.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-1.5">
+                                  {castNames.map((name, idx) => (
+                                    <span
+                                      key={idx}
+                                      className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-white text-text-muted border"
+                                    >
+                                      {name}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                              {sceneDiscrepancy && (
+                                <p className="mt-2 text-xs text-amber-600">{sceneDiscrepancy.message}</p>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Discrepancy Modal */}
+      {showDiscrepancyModal && discrepancies.length > 0 && (
+        <DiscrepancyModal
+          discrepancies={discrepancies}
+          onClose={() => setShowDiscrepancyModal(false)}
+        />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-card rounded-xl p-4 max-w-sm w-full">
+            <h3 className="text-base font-semibold text-text-primary mb-2">Delete Schedule?</h3>
+            <p className="text-sm text-text-muted mb-4">
+              This will remove the schedule and all cross-reference data. You can upload a new schedule at any time.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 px-4 py-2.5 rounded-button text-sm font-medium text-text-primary bg-gray-100 active:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                className="flex-1 px-4 py-2.5 rounded-button text-sm font-medium text-white bg-red-500 active:bg-red-600 transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+// Discrepancy Modal Component
+function DiscrepancyModal({
+  discrepancies,
+  onClose,
+}: {
+  discrepancies: SceneDiscrepancy[];
+  onClose: () => void;
+}) {
+  const getDiscrepancyIcon = (type: SceneDiscrepancy['type']) => {
+    switch (type) {
+      case 'scene_not_in_breakdown':
+        return (
+          <svg className="w-4 h-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        );
+      case 'scene_not_in_schedule':
+        return (
+          <svg className="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        );
+      case 'character_mismatch':
+        return (
+          <svg className="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+          </svg>
+        );
+      default:
+        return (
+          <svg className="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        );
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-4 safe-bottom">
+      <div className="bg-card rounded-xl w-full max-w-lg max-h-[80vh] flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-border">
+          <div className="flex items-center gap-2">
+            <svg className="w-5 h-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <h3 className="text-base font-semibold text-text-primary">
+              Schedule Discrepancies
+            </h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 text-text-muted active:text-text-primary transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+          <p className="text-sm text-text-muted mb-3">
+            The following scenes don&apos;t match between the schedule and your breakdown.
+            Please check these scenes in the Breakdown page.
+          </p>
+          {discrepancies.map((d, idx) => (
+            <div
+              key={idx}
+              className="p-3 rounded-lg bg-gray-50 border border-gray-100"
+            >
+              <div className="flex items-start gap-2">
+                {getDiscrepancyIcon(d.type)}
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-semibold text-sm text-text-primary">Scene {d.sceneNumber}</span>
+                    <span className={`px-2 py-0.5 text-[10px] font-medium rounded ${
+                      d.type === 'scene_not_in_breakdown' ? 'bg-red-100 text-red-600' :
+                      d.type === 'scene_not_in_schedule' ? 'bg-blue-100 text-blue-600' :
+                      'bg-amber-100 text-amber-600'
+                    }`}>
+                      {d.type.replace(/_/g, ' ')}
+                    </span>
+                  </div>
+                  <p className="text-xs text-text-muted">{d.message}</p>
                 </div>
               </div>
-            );
-          })}
+            </div>
+          ))}
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 border-t border-border">
+          <button
+            onClick={onClose}
+            className="w-full px-4 py-2.5 rounded-button gold-gradient text-white text-sm font-medium active:scale-95 transition-transform"
+          >
+            Understood
+          </button>
         </div>
       </div>
-    </>
+    </div>
   );
 }
 

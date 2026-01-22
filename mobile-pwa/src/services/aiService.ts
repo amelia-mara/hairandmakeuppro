@@ -86,6 +86,7 @@ export async function callAI(
 
 /**
  * Parse script text using AI to extract scenes and characters
+ * Includes cross-chunk character validation for long scripts
  */
 export async function parseScriptWithAI(
   scriptText: string,
@@ -95,6 +96,12 @@ export async function parseScriptWithAI(
   characters: AIExtractedCharacter[];
 }> {
   onProgress?.('Analyzing script structure with AI...');
+
+  // STEP 1: Pre-extract ALL character names from entire script BEFORE chunking
+  // This ensures we have a complete cast list to reference across all chunks
+  onProgress?.('Pre-extracting character names...');
+  const preExtractedCharacters = extractCharacterNamesFromScript(scriptText);
+  console.log(`Pre-extracted ${preExtractedCharacters.length} character names for cross-chunk reference`);
 
   // For very long scripts, we need to process in chunks
   const MAX_CHUNK_SIZE = 30000; // Characters per chunk
@@ -106,7 +113,8 @@ export async function parseScriptWithAI(
   for (let i = 0; i < chunks.length; i++) {
     onProgress?.(`Analyzing script section ${i + 1} of ${chunks.length}...`);
 
-    const chunkResult = await analyzeScriptChunk(chunks[i], i, chunks.length);
+    // Pass the pre-extracted character list to each chunk
+    const chunkResult = await analyzeScriptChunk(chunks[i], i, chunks.length, preExtractedCharacters);
 
     // Merge scenes with offset for scene numbers
     const sceneOffset = allScenes.length;
@@ -137,6 +145,10 @@ export async function parseScriptWithAI(
     }
   }
 
+  // STEP 2: Cross-validate characters across scenes
+  onProgress?.('Cross-validating characters...');
+  crossValidateSceneCharacters(allScenes, preExtractedCharacters, scriptText, chunks);
+
   // Sort characters by scene count
   const characters = Array.from(characterMap.values())
     .sort((a, b) => b.sceneCount - a.sceneCount);
@@ -144,6 +156,93 @@ export async function parseScriptWithAI(
   onProgress?.('Script analysis complete');
 
   return { scenes: allScenes, characters };
+}
+
+/**
+ * Pre-extract character names from script using pattern matching
+ * This runs BEFORE AI analysis to build a complete cast reference
+ */
+function extractCharacterNamesFromScript(scriptText: string): string[] {
+  const characters = new Set<string>();
+
+  // Pattern for dialogue cues: CHARACTER NAME (possibly with extension) on its own line
+  const dialoguePattern = /^([A-Z][A-Z\s.'-]{1,30})\s*(?:\([^)]*\))?\s*$/gm;
+
+  // Exclusion list for non-character uppercase text
+  const exclusions = new Set([
+    'INT', 'EXT', 'FADE', 'CUT', 'DISSOLVE', 'CONTINUED', 'THE END',
+    'TITLE', 'SUPER', 'INSERT', 'BACK TO', 'FLASHBACK', 'END FLASHBACK',
+    'LATER', 'CONTINUOUS', 'SAME', 'MORNING', 'AFTERNOON', 'EVENING',
+    'NIGHT', 'DAY', 'DAWN', 'DUSK', 'MOMENTS', 'THE NEXT', 'MORE',
+    'ANGLE ON', 'CLOSE ON', 'WIDE ON', 'POV', 'INTERCUT', 'MONTAGE'
+  ]);
+
+  let match;
+  while ((match = dialoguePattern.exec(scriptText)) !== null) {
+    const name = match[1].trim();
+    // Validate: not too short, not too long, not in exclusions
+    if (name.length >= 2 && name.length <= 35 && !exclusions.has(name.toUpperCase())) {
+      // Remove common extensions
+      const cleanName = name.replace(/\s*\(.*\)\s*$/, '').trim();
+      if (cleanName.length >= 2) {
+        characters.add(cleanName.toUpperCase());
+      }
+    }
+  }
+
+  return Array.from(characters).slice(0, 100); // Limit to 100 characters
+}
+
+/**
+ * Cross-validate characters in scenes after AI analysis
+ * Checks for characters that might have been missed due to chunk boundaries
+ */
+function crossValidateSceneCharacters(
+  scenes: AIExtractedScene[],
+  knownCharacters: string[],
+  fullScript: string,
+  _chunks: string[] // Keep for potential future use
+): void {
+  scenes.forEach((scene) => {
+    // For each scene, check if any known characters are missing
+    const currentChars = new Set(scene.characters.map(c => c.toUpperCase()));
+
+    knownCharacters.forEach((charName) => {
+      if (!currentChars.has(charName.toUpperCase())) {
+        // Check if this character has dialogue in this scene by looking at the scene content
+        // We can use the slugline to find the scene in the full script
+        const sluglinePattern = new RegExp(
+          scene.slugline.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
+          'i'
+        );
+        const sluglineMatch = fullScript.match(sluglinePattern);
+
+        if (sluglineMatch && sluglineMatch.index !== undefined) {
+          // Find scene content (from slugline to next scene heading)
+          const sceneStart = sluglineMatch.index;
+          const nextScenePattern = /\n\s*(?:\d+[A-Z]?\s+)?(?:INT|EXT)\./gi;
+          nextScenePattern.lastIndex = sceneStart + 1;
+          const nextMatch = nextScenePattern.exec(fullScript);
+          const sceneEnd = nextMatch ? nextMatch.index : Math.min(sceneStart + 5000, fullScript.length);
+          const sceneContent = fullScript.slice(sceneStart, sceneEnd);
+
+          // Check for character's dialogue cue in this scene
+          const charDialoguePattern = new RegExp(
+            `^\\s*${charName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*(?:\\([^)]*\\))?\\s*$`,
+            'im'
+          );
+
+          if (charDialoguePattern.test(sceneContent)) {
+            scene.characters.push(charName);
+            console.log(`Cross-validation: Added missing character "${charName}" to scene ${scene.sceneNumber}`);
+          }
+        }
+      }
+    });
+
+    // Remove duplicates
+    scene.characters = [...new Set(scene.characters.map(c => c.toUpperCase()))];
+  });
 }
 
 export interface AIExtractedScene {
@@ -215,12 +314,19 @@ function splitScriptIntoChunks(text: string, maxSize: number): string[] {
 
 /**
  * Analyze a chunk of script text using AI
+ * Now includes pre-extracted character list for cross-chunk consistency
  */
 async function analyzeScriptChunk(
   chunk: string,
   chunkIndex: number,
-  totalChunks: number
+  totalChunks: number,
+  knownCharacters: string[] = []
 ): Promise<{ scenes: AIExtractedScene[]; characters: AIExtractedCharacter[] }> {
+  // Build character reference section if we have pre-extracted names
+  const characterReference = knownCharacters.length > 0
+    ? `\nKNOWN CHARACTERS IN THIS SCRIPT (use these exact names when found):\n${knownCharacters.join(', ')}\n\nWhen you encounter any of these characters in a scene, use the EXACT name from this list.\n`
+    : '';
+
   const systemPrompt = `You are an expert screenplay parser. Your job is to analyze screenplay text and extract structured data about scenes and characters.
 
 IMPORTANT RULES:
@@ -235,7 +341,7 @@ IMPORTANT RULES:
 Return ONLY valid JSON with no additional text or markdown.`;
 
   const prompt = `Analyze this screenplay text and extract all scenes and characters.
-
+${characterReference}
 ${totalChunks > 1 ? `This is chunk ${chunkIndex + 1} of ${totalChunks}.` : ''}
 
 SCREENPLAY TEXT:
@@ -252,8 +358,7 @@ Return a JSON object with this exact structure:
       "intExt": "INT",
       "location": "COFFEE SHOP",
       "timeOfDay": "DAY",
-      "characters": ["JOHN", "MARY"],
-      "synopsis": "Brief 10-15 word synopsis of what happens"
+      "characters": ["JOHN", "MARY"]
     }
   ],
   "characters": [
@@ -290,6 +395,7 @@ IMPORTANT:
     const parsed = JSON.parse(jsonMatch[0]);
 
     // Validate and clean up the response
+    // Note: synopsis is intentionally NOT extracted here - it's generated on-demand per-scene
     const scenes: AIExtractedScene[] = (parsed.scenes || []).map((s: any) => ({
       sceneNumber: String(s.sceneNumber || ''),
       slugline: s.slugline || '',
@@ -297,7 +403,7 @@ IMPORTANT:
       location: s.location || '',
       timeOfDay: s.timeOfDay || 'DAY',
       characters: Array.isArray(s.characters) ? s.characters : [],
-      synopsis: s.synopsis || '',
+      synopsis: '', // Generated on-demand via generateSceneSynopsis()
       content: '', // Will be filled in later if needed
     }));
 
