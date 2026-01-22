@@ -674,13 +674,14 @@ export type TimesheetView = 'week' | 'month';
 export interface RateCard {
   dailyRate: number;
   baseDayHours: BaseDayHours;
+  dayType: DayType; // Working day type - determines lunch duration
   otMultiplier: number; // 1.5x after base hours
   lateNightMultiplier: number; // 2x after 23:00
   preCallMultiplier: number; // 1.5x for pre-call hours
   sixthDayMultiplier: number; // 1.5x
   seventhDayMultiplier: number; // 2x for 7th consecutive day
   kitRental: number;
-  lunchDuration: number; // in minutes (typically 60)
+  lunchDuration: number; // in minutes - derived from dayType: SWD=60, CWD/SCWD=30
 }
 
 export interface TimesheetEntry {
@@ -750,9 +751,30 @@ export const BASE_DAY_OPTIONS: { value: BaseDayHours; label: string }[] = [
   { value: 12, label: '12+1 (12 hours + 1hr unpaid lunch)' },
 ];
 
+// Day type options for rate card dropdown
+export const DAY_TYPE_OPTIONS: { value: DayType; label: string; lunchMinutes: number }[] = [
+  { value: 'SWD', label: 'SWD (Standard Working Day - 1hr lunch)', lunchMinutes: 60 },
+  { value: 'CWD', label: 'CWD (Continuous - 30min lunch in hand)', lunchMinutes: 30 },
+  { value: 'SCWD', label: 'SCWD (Short Continuous - 30min lunch)', lunchMinutes: 30 },
+];
+
+// Get lunch duration in minutes based on day type
+export const getLunchDurationForDayType = (dayType: DayType): number => {
+  switch (dayType) {
+    case 'SWD':
+      return 60; // 1 hour
+    case 'CWD':
+    case 'SCWD':
+      return 30; // 30 minutes
+    default:
+      return 60;
+  }
+};
+
 export const createDefaultRateCard = (): RateCard => ({
   dailyRate: 0,
   baseDayHours: 11,
+  dayType: 'SWD',
   otMultiplier: 1.5,
   lateNightMultiplier: 2.0,
   preCallMultiplier: 1.5,
