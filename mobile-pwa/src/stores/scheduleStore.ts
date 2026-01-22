@@ -8,36 +8,29 @@ import type {
 } from '@/types';
 import { parseSchedulePDF } from '@/utils/scheduleParser';
 
-// Helper to extract base scene number (e.g., "4A" -> "4", "18B" -> "18")
+// Helper to extract base scene number from any scene format
+// Examples: "4" -> "4", "4A" -> "4", "4B" -> "4", "18B" -> "18",
+// "4 PT1" -> "4", "4PT1" -> "4", "4-A" -> "4", "4.1" -> "4"
 const getBaseSceneNumber = (sceneNumber: string): string => {
-  const match = sceneNumber.match(/^(\d+)/);
-  return match ? match[1] : sceneNumber;
+  // Trim and extract leading digits
+  const trimmed = sceneNumber.trim();
+  const match = trimmed.match(/^(\d+)/);
+  return match ? match[1] : trimmed;
 };
 
-// Helper to check if a scene has a letter suffix (e.g., "4A", "18B")
-const hasLetterSuffix = (sceneNumber: string): boolean => {
-  return /^\d+[A-Za-z]+$/.test(sceneNumber);
-};
-
-// Helper to check if a scene exists in a set, considering variants
-// E.g., breakdown scene "4" should match schedule scenes "4A", "4B"
+// Helper to check if a scene exists in a set, considering all variants
+// Scenes with the same base number are considered matching
+// E.g., "4" matches "4A", "4B"; "4A" matches "4", "4B"; "18B" matches "18"
 const sceneExistsInSet = (sceneSet: Set<string>, sceneNumber: string): boolean => {
   // First check exact match
   if (sceneSet.has(sceneNumber)) return true;
 
-  // For base scenes (no suffix like "4"), check if any variant exists ("4A", "4B", etc.)
-  if (!hasLetterSuffix(sceneNumber)) {
-    for (const s of sceneSet) {
-      if (getBaseSceneNumber(s) === sceneNumber) {
-        return true;
-      }
-    }
-  }
+  // Get base scene number for comparison
+  const baseScene = getBaseSceneNumber(sceneNumber);
 
-  // For scenes with suffix ("4A"), check if base scene exists in the set
-  if (hasLetterSuffix(sceneNumber)) {
-    const base = getBaseSceneNumber(sceneNumber);
-    if (sceneSet.has(base)) {
+  // Check if any scene in the set has the same base number
+  for (const s of sceneSet) {
+    if (getBaseSceneNumber(s) === baseScene) {
       return true;
     }
   }
@@ -46,6 +39,7 @@ const sceneExistsInSet = (sceneSet: Set<string>, sceneNumber: string): boolean =
 };
 
 // Helper to find matching scene data from a map, considering variants
+// Prioritizes exact match, then any variant with same base number
 const findMatchingSceneData = <T>(
   sceneMap: Map<string, T>,
   sceneNumber: string
@@ -55,20 +49,13 @@ const findMatchingSceneData = <T>(
     return sceneMap.get(sceneNumber);
   }
 
-  // For base scenes (no suffix), find first variant
-  if (!hasLetterSuffix(sceneNumber)) {
-    for (const [key, value] of sceneMap) {
-      if (getBaseSceneNumber(key) === sceneNumber) {
-        return value;
-      }
-    }
-  }
+  // Get base scene number for comparison
+  const baseScene = getBaseSceneNumber(sceneNumber);
 
-  // For scenes with suffix, check if base scene exists
-  if (hasLetterSuffix(sceneNumber)) {
-    const base = getBaseSceneNumber(sceneNumber);
-    if (sceneMap.has(base)) {
-      return sceneMap.get(base);
+  // Find any scene with the same base number
+  for (const [key, value] of sceneMap) {
+    if (getBaseSceneNumber(key) === baseScene) {
+      return value;
     }
   }
 
@@ -303,26 +290,17 @@ export const useScheduleStore = create<ScheduleState>()(
         if (!schedule) return null;
 
         const baseScene = getBaseSceneNumber(sceneNumber);
-        const sceneHasSuffix = hasLetterSuffix(sceneNumber);
 
         for (const day of schedule.days) {
           // First try exact match
           const exactFound = day.scenes.find(s => s.sceneNumber === sceneNumber);
           if (exactFound) return day.dayNumber;
 
-          // For base scenes (no suffix), find any variant
-          if (!sceneHasSuffix) {
-            const variantFound = day.scenes.find(s =>
-              getBaseSceneNumber(s.sceneNumber) === sceneNumber
-            );
-            if (variantFound) return day.dayNumber;
-          }
-
-          // For scenes with suffix, check if base scene exists
-          if (sceneHasSuffix) {
-            const baseFound = day.scenes.find(s => s.sceneNumber === baseScene);
-            if (baseFound) return day.dayNumber;
-          }
+          // Then try matching by base scene number (handles all variants)
+          const variantFound = day.scenes.find(s =>
+            getBaseSceneNumber(s.sceneNumber) === baseScene
+          );
+          if (variantFound) return day.dayNumber;
         }
         return null;
       },
