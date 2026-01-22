@@ -4,7 +4,7 @@ import { useScheduleStore } from '@/stores/scheduleStore';
 import { CharacterAvatar } from '@/components/characters/CharacterAvatar';
 import { SceneScriptModal } from '@/components/scenes/SceneScriptModal';
 import { generateSceneSynopsis } from '@/services/aiService';
-import type { Scene, Character, BreakdownViewMode, BreakdownFilters, SceneFilmingStatus } from '@/types';
+import type { Scene, Character, Look, SceneCapture, BreakdownViewMode, BreakdownFilters, SceneFilmingStatus } from '@/types';
 import { SCENE_FILMING_STATUS_CONFIG } from '@/types';
 import { clsx } from 'clsx';
 
@@ -304,8 +304,8 @@ interface BreakdownListViewProps {
   onGenerateSynopsis: (scene: Scene) => void;
   generatingSynopsisId: string | null;
   getCharactersForScene: (scene: Scene) => Character[];
-  getLookForCharacter: (characterId: string, sceneNumber: string) => any;
-  getCapture: (sceneId: string, characterId: string) => any;
+  getLookForCharacter: (characterId: string, sceneNumber: string) => Look | null | undefined;
+  getCapture: (sceneId: string, characterId: string) => SceneCapture | null | undefined;
   getSceneProgress: (scene: Scene) => { captured: number; total: number };
   getDiscrepancy: (sceneNumber: string) => { message: string } | null;
 }
@@ -878,7 +878,7 @@ interface FilterDrawerProps {
   filters: BreakdownFilters;
   characters: Character[];
   locations: string[];
-  looks: any[];
+  looks: Look[];
   onFiltersChange: (filters: BreakdownFilters) => void;
   onClose: () => void;
   onClear: () => void;
