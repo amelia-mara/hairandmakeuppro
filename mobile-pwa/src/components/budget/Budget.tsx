@@ -1,5 +1,12 @@
 import { useState, useRef } from 'react';
 import { formatShortDate } from '@/utils/helpers';
+import {
+  CURRENCIES,
+  DEFAULT_CURRENCY,
+  formatCurrency,
+  getCurrencyByCode,
+  type CurrencyCode,
+} from '@/types';
 
 // Budget expense category types
 export type ExpenseCategory = 'Kit Supplies' | 'Consumables' | 'Transportation' | 'Equipment' | 'Other';
@@ -80,7 +87,12 @@ export function Budget() {
   const [summary] = useState<BudgetSummary>(demoBudgetSummary);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [showAddReceipt, setShowAddReceipt] = useState(false);
+  const [currency, setCurrency] = useState<CurrencyCode>(DEFAULT_CURRENCY);
+  const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Get current currency info
+  const currentCurrency = getCurrencyByCode(currency);
 
   const remainingBudget = summary.totalBudget - summary.totalSpent;
   const percentUsed = (summary.totalSpent / summary.totalBudget) * 100;
@@ -119,7 +131,20 @@ export function Budget() {
       <div className="sticky top-0 z-30 bg-card border-b border-border safe-top">
         <div className="mobile-container">
           <div className="h-14 px-4 flex items-center justify-between">
-            <h1 className="text-lg font-semibold text-text-primary">Budget</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg font-semibold text-text-primary">Budget</h1>
+              {/* Currency Selector */}
+              <button
+                onClick={() => setShowCurrencyPicker(true)}
+                className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-text-muted bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                <span>{currentCurrency.symbol}</span>
+                <span>{currency}</span>
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+            </div>
             <button
               onClick={handleScanReceipt}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gold active:opacity-70 transition-opacity"
@@ -165,7 +190,7 @@ export function Budget() {
           <div className="flex justify-between items-end">
             <div>
               <span className="text-2xl font-bold text-text-primary">
-                ${summary.totalSpent.toFixed(2)}
+                {formatCurrency(summary.totalSpent, currency)}
               </span>
               <span className="text-sm text-text-muted ml-1">spent</span>
             </div>
@@ -173,9 +198,9 @@ export function Budget() {
               <span className={`text-lg font-semibold ${
                 remainingBudget < 0 ? 'text-error' : 'text-green-600'
               }`}>
-                ${remainingBudget.toFixed(2)}
+                {formatCurrency(remainingBudget, currency)}
               </span>
-              <span className="text-xs text-text-muted block">remaining of ${summary.totalBudget.toFixed(2)}</span>
+              <span className="text-xs text-text-muted block">remaining of {formatCurrency(summary.totalBudget, currency)}</span>
             </div>
           </div>
         </div>
@@ -192,7 +217,7 @@ export function Budget() {
                   <div className="flex-1">
                     <div className="flex justify-between text-sm mb-1">
                       <span className="text-text-primary">{category}</span>
-                      <span className="text-text-muted">${amount.toFixed(2)}</span>
+                      <span className="text-text-muted">{formatCurrency(amount, currency)}</span>
                     </div>
                     <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
                       <div
@@ -240,7 +265,7 @@ export function Budget() {
                     </div>
                   </div>
                   <span className="text-base font-bold text-text-primary ml-3">
-                    ${receipt.amount.toFixed(2)}
+                    {formatCurrency(receipt.amount, currency)}
                   </span>
                 </div>
               </div>
@@ -267,10 +292,23 @@ export function Budget() {
         </div>
       </div>
 
+      {/* Currency Picker Modal */}
+      {showCurrencyPicker && (
+        <CurrencyPickerModal
+          currentCurrency={currency}
+          onSelect={(code) => {
+            setCurrency(code);
+            setShowCurrencyPicker(false);
+          }}
+          onClose={() => setShowCurrencyPicker(false)}
+        />
+      )}
+
       {/* Add Receipt Modal */}
       {showAddReceipt && (
         <AddReceiptModal
           imageUri={capturedImage}
+          currencySymbol={currentCurrency.symbol}
           onAdd={handleAddReceipt}
           onClose={() => {
             setShowAddReceipt(false);
@@ -282,14 +320,69 @@ export function Budget() {
   );
 }
 
+// Currency Picker Modal
+interface CurrencyPickerModalProps {
+  currentCurrency: CurrencyCode;
+  onSelect: (code: CurrencyCode) => void;
+  onClose: () => void;
+}
+
+function CurrencyPickerModal({ currentCurrency, onSelect, onClose }: CurrencyPickerModalProps) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50" onClick={onClose}>
+      <div
+        className="bg-card rounded-t-2xl w-full max-w-lg"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="px-4 py-3 border-b border-border">
+          <h2 className="text-lg font-semibold text-text-primary text-center">Select Currency</h2>
+        </div>
+        <div className="p-2 max-h-[60vh] overflow-y-auto">
+          {CURRENCIES.map((curr) => (
+            <button
+              key={curr.code}
+              onClick={() => onSelect(curr.code)}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                currentCurrency === curr.code
+                  ? 'bg-gold/10'
+                  : 'hover:bg-gray-50'
+              }`}
+            >
+              <span className="text-xl font-medium text-text-primary w-8">{curr.symbol}</span>
+              <div className="flex-1 text-left">
+                <span className="text-sm font-medium text-text-primary">{curr.code}</span>
+                <span className="text-xs text-text-muted ml-2">{curr.name}</span>
+              </div>
+              {currentCurrency === curr.code && (
+                <svg className="w-5 h-5 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+            </button>
+          ))}
+        </div>
+        <div className="p-4 border-t border-border">
+          <button
+            onClick={onClose}
+            className="w-full px-4 py-3 rounded-button bg-gray-100 text-text-primary font-medium"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Add Receipt Modal
 interface AddReceiptModalProps {
   imageUri: string | null;
+  currencySymbol: string;
   onAdd: (receipt: Omit<Receipt, 'id' | 'synced'>) => void;
   onClose: () => void;
 }
 
-function AddReceiptModal({ imageUri, onAdd, onClose }: AddReceiptModalProps) {
+function AddReceiptModal({ imageUri, currencySymbol, onAdd, onClose }: AddReceiptModalProps) {
   const [vendor, setVendor] = useState('');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState<ExpenseCategory>('Kit Supplies');
@@ -354,7 +447,7 @@ function AddReceiptModal({ imageUri, onAdd, onClose }: AddReceiptModalProps) {
           <div>
             <label className="field-label block mb-1.5">Amount</label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted">$</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted">{currencySymbol}</span>
               <input
                 type="number"
                 step="0.01"

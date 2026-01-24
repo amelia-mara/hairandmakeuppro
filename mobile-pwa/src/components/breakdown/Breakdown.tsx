@@ -1,19 +1,215 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
 import { CharacterAvatar } from '@/components/characters/CharacterAvatar';
 import { SceneScriptModal } from '@/components/scenes/SceneScriptModal';
+import {
+  SceneCharacterConfirmation,
+  SceneCharacterStatus,
+  CharacterConfirmationProgress,
+} from '@/components/breakdown/SceneCharacterConfirmation';
 import { generateSceneSynopsis } from '@/services/aiService';
 import type { Scene, Character, Look, SceneCapture, BreakdownViewMode, BreakdownFilters, SceneFilmingStatus } from '@/types';
 import { SCENE_FILMING_STATUS_CONFIG } from '@/types';
 import { clsx } from 'clsx';
+
+// Filming Status Dropdown Component - allows changing status directly from Breakdown
+interface FilmingStatusDropdownProps {
+  scene: Scene;
+  onStatusChange: (sceneNumber: string, status: SceneFilmingStatus, notes?: string) => void;
+  onNotesModalOpen: (sceneNumber: string, status: 'partial' | 'not-filmed') => void;
+}
+
+function FilmingStatusDropdown({ scene, onStatusChange, onNotesModalOpen }: FilmingStatusDropdownProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isOpen]);
+
+  const currentConfig = scene.filmingStatus
+    ? SCENE_FILMING_STATUS_CONFIG[scene.filmingStatus]
+    : null;
+
+  const handleStatusSelect = (status: SceneFilmingStatus) => {
+    setIsOpen(false);
+    if (status === 'complete') {
+      // Complete doesn't need notes
+      onStatusChange(scene.sceneNumber, status);
+    } else {
+      // Partial and not-filmed need notes modal
+      onNotesModalOpen(scene.sceneNumber, status);
+    }
+  };
+
+  return (
+    <div ref={dropdownRef} className="relative">
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          setIsOpen(!isOpen);
+        }}
+        className={clsx(
+          'flex items-center gap-1.5 px-2 py-1 text-[10px] font-semibold rounded-lg flex-shrink-0 border transition-colors',
+          currentConfig ? [
+            currentConfig.bgClass,
+            currentConfig.textClass,
+            scene.filmingStatus === 'complete' && 'border-green-200',
+            scene.filmingStatus === 'partial' && 'border-amber-200',
+            scene.filmingStatus === 'not-filmed' && 'border-red-200'
+          ] : 'bg-gray-100 text-text-muted border-gray-200 hover:border-gray-300'
+        )}
+      >
+        {currentConfig ? (
+          <>
+            <span className={clsx(
+              'w-2 h-2 rounded-full',
+              scene.filmingStatus === 'complete' && 'bg-green-500',
+              scene.filmingStatus === 'partial' && 'bg-amber-500',
+              scene.filmingStatus === 'not-filmed' && 'bg-red-500'
+            )} />
+            {currentConfig.shortLabel}
+          </>
+        ) : (
+          <>
+            <span className="w-2 h-2 rounded-full bg-gray-400" />
+            Set Status
+          </>
+        )}
+        <svg className={clsx('w-3 h-3 transition-transform', isOpen && 'rotate-180')} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {/* Dropdown menu */}
+      {isOpen && (
+        <div className="absolute right-0 top-full mt-1 z-50 bg-white rounded-lg shadow-lg border border-border overflow-hidden min-w-[140px]">
+          {(['complete', 'partial', 'not-filmed'] as SceneFilmingStatus[]).map((status) => {
+            const config = SCENE_FILMING_STATUS_CONFIG[status];
+            const isSelected = scene.filmingStatus === status;
+            return (
+              <button
+                key={status}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleStatusSelect(status);
+                }}
+                className={clsx(
+                  'w-full flex items-center gap-2 px-3 py-2 text-xs font-medium transition-colors text-left',
+                  isSelected ? `${config.bgClass} ${config.textClass}` : 'hover:bg-gray-50 text-text-primary'
+                )}
+              >
+                <span
+                  className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: config.color }}
+                />
+                {config.label}
+                {isSelected && (
+                  <svg className="w-3.5 h-3.5 ml-auto text-current" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Filming Notes Modal - for adding notes when marking partial or incomplete
+interface FilmingNotesModalProps {
+  sceneNumber: string;
+  status: 'partial' | 'not-filmed';
+  onConfirm: (notes: string) => void;
+  onClose: () => void;
+}
+
+function FilmingNotesModal({ sceneNumber, status, onConfirm, onClose }: FilmingNotesModalProps) {
+  const [notes, setNotes] = useState('');
+  const config = SCENE_FILMING_STATUS_CONFIG[status];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50" onClick={onClose}>
+      <div
+        className="bg-card rounded-t-2xl w-full max-w-lg max-h-[80vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="sticky top-0 bg-card border-b border-border px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span
+              className="w-3 h-3 rounded-full"
+              style={{ backgroundColor: config.color }}
+            />
+            <h2 className="text-lg font-semibold text-text-primary">
+              Scene {sceneNumber} - {config.label}
+            </h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 -mr-2 text-text-muted hover:text-text-primary transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="p-4 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-text-primary mb-2">
+              {status === 'partial' ? 'What still needs to be filmed?' : 'Why wasn\'t this scene filmed?'}
+            </label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="e.g., Ran out of time, weather issues, actor unavailable..."
+              className="w-full px-3 py-2.5 text-sm border border-border rounded-lg bg-card text-text-primary resize-none focus:outline-none focus:ring-2 focus:ring-gold/50 focus:border-gold"
+              rows={4}
+              autoFocus
+            />
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              className="flex-1 py-2.5 rounded-button border border-border text-text-muted text-sm font-medium"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => onConfirm(notes)}
+              className={clsx(
+                'flex-1 py-2.5 rounded-button text-white text-sm font-medium',
+                status === 'partial' ? 'bg-amber-500' : 'bg-red-500'
+              )}
+            >
+              Mark as {config.label}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 interface BreakdownProps {
   onSceneSelect: (sceneId: string) => void;
 }
 
 export function Breakdown({ onSceneSelect }: BreakdownProps) {
-  const { currentProject, sceneCaptures, updateSceneSynopsis } = useProjectStore();
+  const { currentProject, sceneCaptures, updateSceneSynopsis, updateSceneFilmingStatus } = useProjectStore();
   const { getDiscrepancyForScene } = useScheduleStore();
   const [viewMode, setViewMode] = useState<BreakdownViewMode>('list');
   const [showFilters, setShowFilters] = useState(false);
@@ -28,6 +224,31 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
   const [expandedSceneId, setExpandedSceneId] = useState<string | null>(null);
   const [scriptModalSceneId, setScriptModalSceneId] = useState<string | null>(null);
   const [generatingSynopsisId, setGeneratingSynopsisId] = useState<string | null>(null);
+  const [characterConfirmSceneId, setCharacterConfirmSceneId] = useState<string | null>(null);
+
+  // Filming status notes modal state
+  const [notesModalState, setNotesModalState] = useState<{
+    sceneNumber: string;
+    status: 'partial' | 'not-filmed';
+  } | null>(null);
+
+  // Handle filming status change
+  const handleFilmingStatusChange = (sceneNumber: string, status: SceneFilmingStatus, notes?: string) => {
+    updateSceneFilmingStatus(sceneNumber, status, notes);
+  };
+
+  // Open notes modal for partial/incomplete status
+  const handleNotesModalOpen = (sceneNumber: string, status: 'partial' | 'not-filmed') => {
+    setNotesModalState({ sceneNumber, status });
+  };
+
+  // Confirm status with notes
+  const handleNotesConfirm = (notes: string) => {
+    if (notesModalState) {
+      updateSceneFilmingStatus(notesModalState.sceneNumber, notesModalState.status, notes);
+      setNotesModalState(null);
+    }
+  };
 
   // Handle generating synopsis for a scene
   const handleGenerateSynopsis = async (scene: Scene) => {
@@ -54,6 +275,22 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
     if (!scriptModalSceneId || !currentProject) return null;
     return currentProject.scenes.find(s => s.id === scriptModalSceneId) || null;
   }, [scriptModalSceneId, currentProject]);
+
+  // Get scene for character confirmation modal
+  const characterConfirmScene = useMemo(() => {
+    if (!characterConfirmSceneId || !currentProject) return null;
+    return currentProject.scenes.find(s => s.id === characterConfirmSceneId) || null;
+  }, [characterConfirmSceneId, currentProject]);
+
+  // Character confirmation progress
+  const confirmationProgress = useMemo(() => {
+    if (!currentProject) return { total: 0, confirmed: 0 };
+    const total = currentProject.scenes.length;
+    const confirmed = currentProject.scenes.filter(
+      s => s.characterConfirmationStatus === 'confirmed'
+    ).length;
+    return { total, confirmed };
+  }, [currentProject]);
 
   // Get unique locations from scenes
   const locations = useMemo(() => {
@@ -233,6 +470,16 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
         </span>
       </div>
 
+      {/* Character confirmation progress */}
+      {confirmationProgress.total > 0 && confirmationProgress.confirmed < confirmationProgress.total && (
+        <div className="mobile-container">
+          <CharacterConfirmationProgress
+            totalScenes={confirmationProgress.total}
+            confirmedScenes={confirmationProgress.confirmed}
+          />
+        </div>
+      )}
+
       {/* Content */}
       <div className="mobile-container px-4 pb-4">
         {filteredScenes.length === 0 ? (
@@ -259,6 +506,10 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
             getCapture={getCapture}
             getSceneProgress={getSceneProgress}
             getDiscrepancy={getDiscrepancyForScene}
+            onCharacterConfirm={(sceneId) => setCharacterConfirmSceneId(sceneId)}
+            allCharacters={currentProject?.characters || []}
+            onFilmingStatusChange={handleFilmingStatusChange}
+            onNotesModalOpen={handleNotesModalOpen}
           />
         ) : (
           <BreakdownGridView
@@ -266,6 +517,8 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
             onSceneSelect={onSceneSelect}
             getCharactersForScene={getCharactersForScene}
             getSceneProgress={getSceneProgress}
+            onFilmingStatusChange={handleFilmingStatusChange}
+            onNotesModalOpen={handleNotesModalOpen}
           />
         )}
       </div>
@@ -290,6 +543,25 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
           onClose={() => setScriptModalSceneId(null)}
         />
       )}
+
+      {/* Character Confirmation Modal */}
+      {characterConfirmScene && (
+        <SceneCharacterConfirmation
+          scene={characterConfirmScene}
+          onClose={() => setCharacterConfirmSceneId(null)}
+          onConfirm={() => setCharacterConfirmSceneId(null)}
+        />
+      )}
+
+      {/* Filming Notes Modal */}
+      {notesModalState && (
+        <FilmingNotesModal
+          sceneNumber={notesModalState.sceneNumber}
+          status={notesModalState.status}
+          onConfirm={handleNotesConfirm}
+          onClose={() => setNotesModalState(null)}
+        />
+      )}
     </div>
   );
 }
@@ -308,6 +580,10 @@ interface BreakdownListViewProps {
   getCapture: (sceneId: string, characterId: string) => SceneCapture | null | undefined;
   getSceneProgress: (scene: Scene) => { captured: number; total: number };
   getDiscrepancy: (sceneNumber: string) => { message: string } | null;
+  onCharacterConfirm: (sceneId: string) => void;
+  allCharacters: Character[];
+  onFilmingStatusChange: (sceneNumber: string, status: SceneFilmingStatus, notes?: string) => void;
+  onNotesModalOpen: (sceneNumber: string, status: 'partial' | 'not-filmed') => void;
 }
 
 // Get glass overlay class based on filming status
@@ -338,6 +614,10 @@ function BreakdownListView({
   getCapture,
   getSceneProgress,
   getDiscrepancy,
+  onCharacterConfirm,
+  allCharacters,
+  onFilmingStatusChange,
+  onNotesModalOpen,
 }: BreakdownListViewProps) {
   return (
     <div className="space-y-2">
@@ -428,25 +708,12 @@ function BreakdownListView({
                 )}
               </span>
 
-              {/* Filming status badge - styled like Today page */}
-              {scene.filmingStatus && (
-                <span className={clsx(
-                  'flex items-center gap-1.5 px-2 py-1 text-[10px] font-semibold rounded-lg flex-shrink-0 border',
-                  filmingStatusConfig?.bgClass,
-                  filmingStatusConfig?.textClass,
-                  scene.filmingStatus === 'complete' && 'border-green-200',
-                  scene.filmingStatus === 'partial' && 'border-amber-200',
-                  scene.filmingStatus === 'not-filmed' && 'border-red-200'
-                )}>
-                  <span className={clsx(
-                    'w-2 h-2 rounded-full',
-                    scene.filmingStatus === 'complete' && 'bg-green-500',
-                    scene.filmingStatus === 'partial' && 'bg-amber-500',
-                    scene.filmingStatus === 'not-filmed' && 'bg-red-500'
-                  )} />
-                  {filmingStatusConfig?.shortLabel}
-                </span>
-              )}
+              {/* Filming status dropdown - allows changing status */}
+              <FilmingStatusDropdown
+                scene={scene}
+                onStatusChange={onFilmingStatusChange}
+                onNotesModalOpen={onNotesModalOpen}
+              />
 
               {/* Checkmark icon when complete - like Today page */}
               {isComplete && (
@@ -507,6 +774,17 @@ function BreakdownListView({
                     </span>
                   )}
                 </button>
+              )}
+
+              {/* Character confirmation status - show when not all confirmed or when showing status is useful */}
+              {(scene.characterConfirmationStatus !== 'confirmed' || characters.length === 0) && (
+                <div className="mt-2 pt-2 border-t border-border/30">
+                  <SceneCharacterStatus
+                    scene={scene}
+                    characters={allCharacters}
+                    onConfirmClick={() => onCharacterConfirm(scene.id)}
+                  />
+                </div>
               )}
             </div>
 
@@ -747,6 +1025,8 @@ interface BreakdownGridViewProps {
   onSceneSelect: (id: string) => void;
   getCharactersForScene: (scene: Scene) => Character[];
   getSceneProgress: (scene: Scene) => { captured: number; total: number };
+  onFilmingStatusChange: (sceneNumber: string, status: SceneFilmingStatus, notes?: string) => void;
+  onNotesModalOpen: (sceneNumber: string, status: 'partial' | 'not-filmed') => void;
 }
 
 function BreakdownGridView({
@@ -754,6 +1034,8 @@ function BreakdownGridView({
   onSceneSelect,
   getCharactersForScene,
   getSceneProgress,
+  onFilmingStatusChange,
+  onNotesModalOpen,
 }: BreakdownGridViewProps) {
   return (
     <div className="grid grid-cols-2 gap-2.5">
@@ -762,11 +1044,6 @@ function BreakdownGridView({
         const progress = getSceneProgress(scene);
         const progressPercent = progress.total > 0 ? (progress.captured / progress.total) * 100 : 0;
         const isComplete = progress.total > 0 && progress.captured === progress.total;
-
-        // Get filming status styling
-        const filmingStatusConfig = scene.filmingStatus
-          ? SCENE_FILMING_STATUS_CONFIG[scene.filmingStatus]
-          : null;
 
         const glassOverlayClass = getGlassOverlayClass(scene.filmingStatus);
 
@@ -787,12 +1064,15 @@ function BreakdownGridView({
             {glassOverlayClass && (
               <div className={clsx('scene-glass-overlay', glassOverlayClass)} />
             )}
-            <button
-              onClick={() => onSceneSelect(scene.id)}
-              className="card text-left active:scale-[0.98] transition-transform w-full relative z-10 overflow-hidden"
-            >
+            <div className="card text-left w-full relative z-10 overflow-hidden">
             {/* Left accent bar */}
             <div className={clsx('absolute left-0 top-0 bottom-0 w-1', getAccentBarClass())} />
+
+            {/* Main clickable area */}
+            <button
+              onClick={() => onSceneSelect(scene.id)}
+              className="w-full text-left active:scale-[0.98] transition-transform"
+            >
 
             {/* Scene number and INT/EXT */}
             <div className="flex items-center justify-between mb-1.5">
@@ -808,24 +1088,6 @@ function BreakdownGridView({
                 )}
               </div>
               <div className="flex items-center gap-1">
-                {scene.filmingStatus && (
-                  <span className={clsx(
-                    'flex items-center gap-1 px-1.5 py-0.5 text-[8px] font-semibold rounded-lg border',
-                    filmingStatusConfig?.bgClass,
-                    filmingStatusConfig?.textClass,
-                    scene.filmingStatus === 'complete' && 'border-green-200',
-                    scene.filmingStatus === 'partial' && 'border-amber-200',
-                    scene.filmingStatus === 'not-filmed' && 'border-red-200'
-                  )}>
-                    <span className={clsx(
-                      'w-1.5 h-1.5 rounded-full',
-                      scene.filmingStatus === 'complete' && 'bg-green-500',
-                      scene.filmingStatus === 'partial' && 'bg-amber-500',
-                      scene.filmingStatus === 'not-filmed' && 'bg-red-500'
-                    )} />
-                    {filmingStatusConfig?.shortLabel}
-                  </span>
-                )}
                 <span className={clsx(
                   'px-1.5 py-0.5 text-[9px] font-bold rounded',
                   scene.intExt === 'INT' ? 'bg-slate-100 text-slate-600' : 'bg-stone-100 text-stone-600'
@@ -874,6 +1136,16 @@ function BreakdownGridView({
               {progress.captured}/{progress.total} captured
             </span>
             </button>
+
+            {/* Filming status dropdown - outside button to avoid nesting */}
+            <div className="mt-2 pt-2 border-t border-border/50">
+              <FilmingStatusDropdown
+                scene={scene}
+                onStatusChange={onFilmingStatusChange}
+                onNotesModalOpen={onNotesModalOpen}
+              />
+            </div>
+            </div>
           </div>
         );
       })}
