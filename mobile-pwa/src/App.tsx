@@ -28,6 +28,8 @@ export default function App() {
   // Track if we're showing the home/setup screen
   const [showHome, setShowHome] = useState(!currentProject);
   const [showExport, setShowExport] = useState(false);
+  // Key to force More component to reset when clicking the same tab
+  const [tabResetKey, setTabResetKey] = useState(0);
 
   // Check for wrap triggers on mount and when scenes change
   useEffect(() => {
@@ -68,13 +70,15 @@ export default function App() {
 
   // Handle tab change
   const handleTabChange = (tab: NavTab) => {
-    if (tab !== activeTab) {
-      setActiveTab(tab);
-      // Clear scene view when switching tabs
-      if (currentSceneId) {
-        setCurrentScene(null);
-        setCurrentCharacter(null);
-      }
+    // If clicking the same tab, increment reset key to force sub-views to reset
+    if (tab === activeTab) {
+      setTabResetKey(k => k + 1);
+    }
+    setActiveTab(tab);
+    // Clear scene view when switching tabs or re-clicking current tab
+    if (currentSceneId) {
+      setCurrentScene(null);
+      setCurrentCharacter(null);
     }
   };
 
@@ -129,7 +133,7 @@ export default function App() {
       case 'callsheets':
       case 'settings':
       case 'more':
-        return <More onNavigateToTab={handleNavigateToTab} onStartNewProject={handleStartNewProject} initialView={activeTab} />;
+        return <More onNavigateToTab={handleNavigateToTab} onStartNewProject={handleStartNewProject} initialView={activeTab} resetKey={tabResetKey} />;
       default:
         return <Today onSceneSelect={handleSceneSelect} />;
     }
