@@ -817,6 +817,38 @@ export const createEmptyTimesheetEntry = (date: string): TimesheetEntry => ({
 });
 
 // ============================================
+// CURRENCY TYPES
+// ============================================
+
+export type CurrencyCode = 'GBP' | 'USD' | 'EUR' | 'CAD' | 'AUD';
+
+export interface Currency {
+  code: CurrencyCode;
+  symbol: string;
+  name: string;
+  locale: string;
+}
+
+export const CURRENCIES: Currency[] = [
+  { code: 'GBP', symbol: '£', name: 'British Pound', locale: 'en-GB' },
+  { code: 'USD', symbol: '$', name: 'US Dollar', locale: 'en-US' },
+  { code: 'EUR', symbol: '€', name: 'Euro', locale: 'de-DE' },
+  { code: 'CAD', symbol: 'C$', name: 'Canadian Dollar', locale: 'en-CA' },
+  { code: 'AUD', symbol: 'A$', name: 'Australian Dollar', locale: 'en-AU' },
+];
+
+export const DEFAULT_CURRENCY: CurrencyCode = 'GBP';
+
+export const getCurrencyByCode = (code: CurrencyCode): Currency => {
+  return CURRENCIES.find(c => c.code === code) || CURRENCIES[0];
+};
+
+export const formatCurrency = (amount: number, currencyCode: CurrencyCode = DEFAULT_CURRENCY): string => {
+  const currency = getCurrencyByCode(currencyCode);
+  return `${currency.symbol}${amount.toFixed(2)}`;
+};
+
+// ============================================
 // PROJECT LIFECYCLE & EXPORT TYPES
 // ============================================
 
