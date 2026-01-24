@@ -288,8 +288,7 @@ export function Home({ onProjectReady }: HomeProps) {
       // Extract project name from filename
       const name = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
       setProjectName(name);
-      setView('processing');
-      processScript(file, uploadedScheduleFile);
+      // Don't auto-process - let user click Continue after uploading all files
     }
   };
 
@@ -528,7 +527,7 @@ function WelcomeScreen({ onUploadScript, onLoadDemo }: WelcomeScreenProps) {
           onClick={onUploadScript}
           className="w-full py-4 rounded-button gold-gradient text-white font-semibold text-base shadow-lg active:scale-[0.98] transition-transform"
         >
-          Upload Script
+          Upload Files
         </button>
         <button
           onClick={onLoadDemo}
@@ -701,7 +700,7 @@ function UploadScreen({
           disabled={!uploadedFile}
           className="w-full py-4 rounded-button gold-gradient text-white font-semibold text-base shadow-lg active:scale-[0.98] transition-transform disabled:opacity-50 disabled:active:scale-100"
         >
-          {uploadedFile ? 'Continue' : 'Upload a script to continue'}
+          {uploadedFile ? 'Start Processing' : 'Upload a script to continue'}
         </button>
         <button
           onClick={onSkip}
