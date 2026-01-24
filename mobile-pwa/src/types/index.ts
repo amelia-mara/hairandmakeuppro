@@ -736,6 +736,7 @@ export interface TimesheetCalculation {
   seventhDayBonus: number;
   kitRental: number;
   totalEarnings: number;
+  brokenLunch?: boolean; // True if lunch was taken less than 6hrs from unit call (SWD/SCWD)
 }
 
 export interface WeekSummary {
