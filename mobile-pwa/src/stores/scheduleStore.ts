@@ -28,6 +28,7 @@ interface ScheduleState {
   showDiscrepancyModal: boolean;
 
   // Actions
+  setSchedule: (schedule: ProductionSchedule) => void;
   uploadSchedule: (file: File) => Promise<ProductionSchedule>;
   clearSchedule: () => void;
 
@@ -57,6 +58,10 @@ export const useScheduleStore = create<ScheduleState>()(
       isUploading: false,
       uploadError: null,
       showDiscrepancyModal: false,
+
+      setSchedule: (schedule: ProductionSchedule) => {
+        set({ schedule, isUploading: false, uploadError: null });
+      },
 
       uploadSchedule: async (file: File) => {
         set({ isUploading: true, uploadError: null });
