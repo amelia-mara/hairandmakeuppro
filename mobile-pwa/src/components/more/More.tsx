@@ -19,9 +19,10 @@ interface MoreProps {
   onNavigateToTab?: (tab: NavTab) => void;
   onStartNewProject?: () => void;
   initialView?: NavTab;
+  resetKey?: number;
 }
 
-export function More({ onNavigateToTab, onStartNewProject, initialView }: MoreProps) {
+export function More({ onNavigateToTab, onStartNewProject, initialView, resetKey }: MoreProps) {
   // Determine initial view based on the tab that was navigated to
   const getInitialView = (): MoreView => {
     if (initialView && ['script', 'schedule', 'callsheets', 'settings'].includes(initialView)) {
@@ -33,14 +34,14 @@ export function More({ onNavigateToTab, onStartNewProject, initialView }: MorePr
   const [currentView, setCurrentView] = useState<MoreView>(getInitialView);
   const { isEditMenuOpen, closeEditMenu, openEditMenu } = useNavigationStore();
 
-  // Update view when initialView prop changes (e.g., user taps different tab)
+  // Update view when initialView prop changes or resetKey changes (e.g., user taps same tab again)
   useEffect(() => {
     if (initialView && ['script', 'schedule', 'callsheets', 'settings'].includes(initialView)) {
       setCurrentView(initialView as MoreView);
     } else if (initialView === 'more') {
       setCurrentView('menu');
     }
-  }, [initialView]);
+  }, [initialView, resetKey]);
 
   // If edit menu is open via store, show it
   const effectiveView = isEditMenuOpen ? 'editMenu' : currentView;
