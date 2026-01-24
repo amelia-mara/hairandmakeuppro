@@ -90,19 +90,6 @@ export function SceneCharacterConfirmation({
     });
   };
 
-  // Handle toggling an existing project character
-  const handleToggleExisting = (char: Character) => {
-    setSelectedCharacterIds(prev => {
-      const next = new Set(prev);
-      if (next.has(char.id)) {
-        next.delete(char.id);
-      } else {
-        next.add(char.id);
-      }
-      return next;
-    });
-  };
-
   // Handle adding a new character
   const handleAddNewCharacter = () => {
     const trimmedName = newCharacterName.trim().toUpperCase();
@@ -199,7 +186,7 @@ export function SceneCharacterConfirmation({
                 SUGGESTED CHARACTERS
               </h4>
               <div className="space-y-2">
-                {suggestedWithExisting.map(({ name, existingCharacter, isInProject }) => {
+                {suggestedWithExisting.map(({ name, existingCharacter }) => {
                   const isSelected = selectedSuggestedNames.has(name);
                   return (
                     <button
