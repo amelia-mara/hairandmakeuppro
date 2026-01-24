@@ -40,7 +40,7 @@ export function Home({ onProjectReady }: HomeProps) {
   const [mergeMap, setMergeMap] = useState<Map<string, string>>(new Map()); // maps merged -> primary
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scheduleInputRef = useRef<HTMLInputElement>(null);
-  const { setProject } = useProjectStore();
+  const { setProject, setScriptPdf } = useProjectStore();
   const { setSchedule } = useScheduleStore();
 
   // Progressive workflow: Fast scene parsing then background character detection
@@ -139,6 +139,16 @@ export function Home({ onProjectReady }: HomeProps) {
       // Set the project and proceed
       setProject(project);
 
+      // Save the original PDF for viewing if it's a PDF file
+      if (file.type === 'application/pdf') {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const base64 = reader.result as string;
+          setScriptPdf(base64);
+        };
+        reader.readAsDataURL(file);
+      }
+
       // If no schedule was provided, start background character detection
       // Otherwise, we already have characters from the schedule
       if (!schedule) {
@@ -154,7 +164,7 @@ export function Home({ onProjectReady }: HomeProps) {
       alert(error instanceof Error ? error.message : 'Failed to parse script');
       setView('upload');
     }
-  }, [projectName, setProject, setSchedule, onProjectReady]);
+  }, [projectName, setProject, setScriptPdf, setSchedule, onProjectReady]);
 
   // Background character detection (runs after project is created)
   const startBackgroundCharacterDetection = useCallback(async (project: Project, rawText: string) => {
@@ -288,8 +298,7 @@ export function Home({ onProjectReady }: HomeProps) {
       // Extract project name from filename
       const name = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
       setProjectName(name);
-      setView('processing');
-      processScript(file, uploadedScheduleFile);
+      // Don't auto-process - let user click Continue after uploading all files
     }
   };
 
@@ -528,7 +537,7 @@ function WelcomeScreen({ onUploadScript, onLoadDemo }: WelcomeScreenProps) {
           onClick={onUploadScript}
           className="w-full py-4 rounded-button gold-gradient text-white font-semibold text-base shadow-lg active:scale-[0.98] transition-transform"
         >
-          Upload Script
+          Upload Files
         </button>
         <button
           onClick={onLoadDemo}
@@ -701,7 +710,7 @@ function UploadScreen({
           disabled={!uploadedFile}
           className="w-full py-4 rounded-button gold-gradient text-white font-semibold text-base shadow-lg active:scale-[0.98] transition-transform disabled:opacity-50 disabled:active:scale-100"
         >
-          {uploadedFile ? 'Continue' : 'Upload a script to continue'}
+          {uploadedFile ? 'Start Processing' : 'Upload a script to continue'}
         </button>
         <button
           onClick={onSkip}

@@ -16,6 +16,9 @@ export interface Project {
   // Track overall character confirmation progress (for progressive workflow)
   characterDetectionStatus?: CharacterDetectionStatus;
   scenesConfirmed?: number; // Count of scenes with confirmed characters
+
+  // Original script PDF stored as base64 for viewing
+  scriptPdfData?: string;
 }
 
 // Character confirmation status for progressive scene-by-scene workflow
