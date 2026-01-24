@@ -1,15 +1,9 @@
 import { useTimesheetStore } from '@/stores/timesheetStore';
-import type { BaseDayHours, DayType } from '@/types';
-import { BASE_DAY_OPTIONS, DAY_TYPE_OPTIONS, getLunchDurationForDayType } from '@/types';
+import type { BaseDayHours } from '@/types';
+import { BASE_DAY_OPTIONS } from '@/types';
 
 export function RateCardSettings() {
   const { rateCard, updateRateCard } = useTimesheetStore();
-
-  // Handle day type change - auto-update lunch duration
-  const handleDayTypeChange = (newDayType: DayType) => {
-    const lunchDuration = getLunchDurationForDayType(newDayType);
-    updateRateCard({ dayType: newDayType, lunchDuration });
-  };
 
   return (
     <div className="space-y-4">
@@ -50,26 +44,7 @@ export function RateCardSettings() {
           ))}
         </select>
         <p className="text-xs text-text-muted mt-1">
-          Standard working hours before overtime kicks in
-        </p>
-      </div>
-
-      {/* Working Day Type - determines lunch duration */}
-      <div>
-        <label className="field-label block mb-2">WORKING DAY TYPE</label>
-        <select
-          value={rateCard.dayType || 'SWD'}
-          onChange={(e) => handleDayTypeChange(e.target.value as DayType)}
-          className="input-field w-full"
-        >
-          {DAY_TYPE_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-        <p className="text-xs text-text-muted mt-1">
-          Determines lunch break: SWD = 1hr, CWD/SCWD = 30min
+          Standard working hours before overtime kicks in (e.g., 10+1, 11+1)
         </p>
       </div>
 

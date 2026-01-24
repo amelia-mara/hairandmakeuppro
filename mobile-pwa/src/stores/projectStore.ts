@@ -15,6 +15,8 @@ import type {
   ProjectLifecycleState,
   ArchivedProjectSummary,
   SceneFilmingStatus,
+  CharacterConfirmationStatus,
+  CharacterDetectionStatus,
 } from '@/types';
 import {
   createEmptyContinuityFlags,
@@ -24,6 +26,8 @@ import {
   shouldTriggerWrap,
   PROJECT_RETENTION_DAYS,
   REMINDER_INTERVAL_DAYS,
+  createEmptyMakeupDetails,
+  createEmptyHairDetails,
 } from '@/types';
 import type { SFXDetails } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
@@ -98,6 +102,16 @@ interface ProjectState {
 
   // Actions - Look Updates
   updateLook: (lookId: string, updates: Partial<Look>) => void;
+
+  // Actions - Character Confirmation (for progressive scene-by-scene workflow)
+  startCharacterDetection: () => void;
+  setCharacterDetectionStatus: (status: CharacterDetectionStatus) => void;
+  updateSceneSuggestedCharacters: (sceneId: string, characters: string[]) => void;
+  updateSceneConfirmationStatus: (sceneId: string, status: CharacterConfirmationStatus) => void;
+  confirmSceneCharacters: (sceneId: string, confirmedCharacterIds: string[]) => void;
+  addCharacterFromScene: (sceneId: string, characterName: string) => Character;
+  getUnconfirmedScenesCount: () => number;
+  getConfirmedScenesCount: () => number;
 
   // Actions - Lifecycle
   updateActivity: () => void;
@@ -585,6 +599,197 @@ export const useProjectStore = create<ProjectState>()(
             },
           };
         });
+      },
+
+      // Character confirmation actions (for progressive scene-by-scene workflow)
+      startCharacterDetection: () => {
+        set((state) => {
+          if (!state.currentProject) return state;
+
+          return {
+            currentProject: {
+              ...state.currentProject,
+              characterDetectionStatus: 'running',
+              scenes: state.currentProject.scenes.map((s) => ({
+                ...s,
+                characterConfirmationStatus: s.characterConfirmationStatus === 'confirmed'
+                  ? 'confirmed'
+                  : 'detecting',
+              })),
+            },
+          };
+        });
+      },
+
+      setCharacterDetectionStatus: (status) => {
+        set((state) => {
+          if (!state.currentProject) return state;
+
+          return {
+            currentProject: {
+              ...state.currentProject,
+              characterDetectionStatus: status,
+            },
+          };
+        });
+      },
+
+      updateSceneSuggestedCharacters: (sceneId, characters) => {
+        set((state) => {
+          if (!state.currentProject) return state;
+
+          return {
+            currentProject: {
+              ...state.currentProject,
+              scenes: state.currentProject.scenes.map((s) =>
+                s.id === sceneId
+                  ? {
+                      ...s,
+                      suggestedCharacters: characters,
+                      characterConfirmationStatus: s.characterConfirmationStatus === 'confirmed'
+                        ? 'confirmed'
+                        : 'ready',
+                    }
+                  : s
+              ),
+            },
+          };
+        });
+      },
+
+      updateSceneConfirmationStatus: (sceneId, status) => {
+        set((state) => {
+          if (!state.currentProject) return state;
+
+          return {
+            currentProject: {
+              ...state.currentProject,
+              scenes: state.currentProject.scenes.map((s) =>
+                s.id === sceneId ? { ...s, characterConfirmationStatus: status } : s
+              ),
+            },
+          };
+        });
+      },
+
+      confirmSceneCharacters: (sceneId, confirmedCharacterIds) => {
+        set((state) => {
+          if (!state.currentProject) return state;
+
+          const updatedScenes = state.currentProject.scenes.map((s) =>
+            s.id === sceneId
+              ? {
+                  ...s,
+                  characters: confirmedCharacterIds,
+                  characterConfirmationStatus: 'confirmed' as CharacterConfirmationStatus,
+                  suggestedCharacters: undefined, // Clear suggestions after confirmation
+                }
+              : s
+          );
+
+          // Count confirmed scenes
+          const scenesConfirmed = updatedScenes.filter(
+            (s) => s.characterConfirmationStatus === 'confirmed'
+          ).length;
+
+          // Update looks to include the confirmed characters in this scene
+          const scene = updatedScenes.find((s) => s.id === sceneId);
+          const updatedLooks = state.currentProject.looks.map((look) => {
+            if (scene && confirmedCharacterIds.includes(look.characterId)) {
+              // Add this scene to the character's look if not already there
+              if (!look.scenes.includes(scene.sceneNumber)) {
+                return {
+                  ...look,
+                  scenes: [...look.scenes, scene.sceneNumber].sort((a, b) =>
+                    a.localeCompare(b, undefined, { numeric: true })
+                  ),
+                };
+              }
+            }
+            return look;
+          });
+
+          return {
+            currentProject: {
+              ...state.currentProject,
+              scenes: updatedScenes,
+              looks: updatedLooks,
+              scenesConfirmed,
+            },
+          };
+        });
+      },
+
+      addCharacterFromScene: (sceneId, characterName) => {
+        const state = get();
+        if (!state.currentProject) {
+          throw new Error('No project loaded');
+        }
+
+        // Generate a new character
+        const id = `char-${uuidv4().slice(0, 8)}`;
+        const initials = characterName
+          .split(' ')
+          .map((w) => w[0])
+          .join('')
+          .slice(0, 2);
+
+        // Assign color based on existing character count
+        const colors = ['#C9A961', '#8B5CF6', '#EC4899', '#10B981', '#F59E0B', '#EF4444', '#3B82F6', '#6366F1'];
+        const avatarColour = colors[state.currentProject.characters.length % colors.length];
+
+        const newCharacter: Character = {
+          id,
+          name: characterName,
+          initials,
+          avatarColour,
+        };
+
+        // Find the scene to get its sceneNumber
+        const scene = state.currentProject.scenes.find((s) => s.id === sceneId);
+
+        set((state) => {
+          if (!state.currentProject) return state;
+
+          // Create a new look for this character
+          const newLook: Look = {
+            id: `look-${newCharacter.id}`,
+            characterId: newCharacter.id,
+            name: 'Look 1',
+            scenes: scene ? [scene.sceneNumber] : [],
+            estimatedTime: 30,
+            makeup: createEmptyMakeupDetails(),
+            hair: createEmptyHairDetails(),
+          };
+
+          return {
+            currentProject: {
+              ...state.currentProject,
+              characters: [...state.currentProject.characters, newCharacter],
+              looks: [...state.currentProject.looks, newLook],
+            },
+          };
+        });
+
+        return newCharacter;
+      },
+
+      getUnconfirmedScenesCount: () => {
+        const state = get();
+        if (!state.currentProject) return 0;
+
+        return state.currentProject.scenes.filter(
+          (s) => s.characterConfirmationStatus !== 'confirmed'
+        ).length;
+      },
+
+      getConfirmedScenesCount: () => {
+        const state = get();
+        if (!state.currentProject) return 0;
+
+        return state.currentProject.scenes.filter(
+          (s) => s.characterConfirmationStatus === 'confirmed'
+        ).length;
       },
 
       // Getters

@@ -1,5 +1,8 @@
 // Core Data Types for Hair & Makeup Pro Mobile PWA
 
+// Character detection status for background processing
+export type CharacterDetectionStatus = 'idle' | 'running' | 'complete';
+
 export interface Project {
   id: string;
   name: string;
@@ -9,7 +12,14 @@ export interface Project {
   scenes: Scene[];
   characters: Character[];
   looks: Look[];
+
+  // Track overall character confirmation progress (for progressive workflow)
+  characterDetectionStatus?: CharacterDetectionStatus;
+  scenesConfirmed?: number; // Count of scenes with confirmed characters
 }
+
+// Character confirmation status for progressive scene-by-scene workflow
+export type CharacterConfirmationStatus = 'pending' | 'detecting' | 'ready' | 'confirmed';
 
 export interface Scene {
   id: string;
@@ -19,13 +29,17 @@ export interface Scene {
   timeOfDay: 'DAY' | 'NIGHT' | 'MORNING' | 'EVENING' | 'CONTINUOUS';
   synopsis?: string;
   scriptContent?: string;
-  characters: string[];
+  characters: string[]; // Confirmed character IDs (empty until confirmed)
   isComplete: boolean;
   completedAt?: Date;
   filmingStatus?: SceneFilmingStatus; // Tracks actual filming outcome
   filmingNotes?: string; // Reason for not filmed/partial
   shootingDay?: number; // Which production day this scene is scheduled
   hasScheduleDiscrepancy?: boolean; // Flag if schedule doesn't match breakdown
+
+  // Character confirmation state (for progressive workflow)
+  characterConfirmationStatus?: CharacterConfirmationStatus;
+  suggestedCharacters?: string[]; // AI/regex suggested character names before confirmation
 }
 
 export interface Character {
@@ -722,6 +736,7 @@ export interface TimesheetCalculation {
   seventhDayBonus: number;
   kitRental: number;
   totalEarnings: number;
+  brokenLunch?: boolean; // True if lunch was taken less than 6hrs from unit call (SWD/SCWD)
 }
 
 export interface WeekSummary {
@@ -800,6 +815,38 @@ export const createEmptyTimesheetEntry = (date: string): TimesheetEntry => ({
   notes: '',
   status: 'draft',
 });
+
+// ============================================
+// CURRENCY TYPES
+// ============================================
+
+export type CurrencyCode = 'GBP' | 'USD' | 'EUR' | 'CAD' | 'AUD';
+
+export interface Currency {
+  code: CurrencyCode;
+  symbol: string;
+  name: string;
+  locale: string;
+}
+
+export const CURRENCIES: Currency[] = [
+  { code: 'GBP', symbol: '£', name: 'British Pound', locale: 'en-GB' },
+  { code: 'USD', symbol: '$', name: 'US Dollar', locale: 'en-US' },
+  { code: 'EUR', symbol: '€', name: 'Euro', locale: 'de-DE' },
+  { code: 'CAD', symbol: 'C$', name: 'Canadian Dollar', locale: 'en-CA' },
+  { code: 'AUD', symbol: 'A$', name: 'Australian Dollar', locale: 'en-AU' },
+];
+
+export const DEFAULT_CURRENCY: CurrencyCode = 'GBP';
+
+export const getCurrencyByCode = (code: CurrencyCode): Currency => {
+  return CURRENCIES.find(c => c.code === code) || CURRENCIES[0];
+};
+
+export const formatCurrency = (amount: number, currencyCode: CurrencyCode = DEFAULT_CURRENCY): string => {
+  const currency = getCurrencyByCode(currencyCode);
+  return `${currency.symbol}${amount.toFixed(2)}`;
+};
 
 // ============================================
 // PROJECT LIFECYCLE & EXPORT TYPES

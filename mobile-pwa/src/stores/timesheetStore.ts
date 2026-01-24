@@ -24,26 +24,74 @@ function parseDayTypeFromCallSheet(dayTypeStr?: string): DayType {
  * Calculate the OT threshold (working hours before overtime kicks in) based on day type
  *
  * UK Film Industry working day rules:
- * - SWD (Standard Working Day): baseDayHours working + 1hr unpaid lunch
- *   OT starts after baseDayHours (e.g., 11hrs for 11+1)
- * - SCWD (Short Continuous Working Day): baseDayHours - 0.5 working + 30min paid lunch
- *   OT starts after baseDayHours - 0.5 (e.g., 10.5hrs for 11+1)
- * - CWD (Continuous Working Day): baseDayHours - 1 working + 30min lunch in hand
- *   OT starts after baseDayHours - 1 (e.g., 10hrs for 11+1)
+ *
+ * SWD (Standard Working Day):
+ * - 10hrs or 11hrs working + 1hr unpaid lunch
+ * - OT starts after baseDayHours (e.g., 10hrs for 10+1, 11hrs for 11+1)
+ * - Lunch must happen minimum 6hrs from unit call, otherwise it's a "broken lunch"
+ *
+ * SCWD (Short Continuous Working Day):
+ * - 9.5hr work day (from 10+1) or 10.5hrs (from 11+1)
+ * - 30 mins lunch - minimum 6 hours from unit call
+ * - OT starts after baseDayHours - 0.5 (e.g., 9.5hrs for 10+1, 10.5hrs for 11+1)
+ *
+ * CWD (Continuous Working Day):
+ * - 9 hours straight working (from 10+1) or 10 hours (from 11+1)
+ * - Working lunch "in hand" (30 min paid)
+ * - OT starts after baseDayHours - 1 (e.g., 9hrs for 10+1, 10hrs for 11+1)
  */
 function getOTThresholdForDayType(dayType: DayType, baseDayHours: number): number {
   switch (dayType) {
     case 'SWD':
       // Standard: full baseDayHours working before OT
+      // e.g., 10+1 = 10hrs working, 11+1 = 11hrs working
       return baseDayHours;
     case 'SCWD':
-      // Short Continuous: 30min less working time
+      // Short Continuous: 30min less working time due to shorter lunch
+      // e.g., 10+1 becomes 9.5hrs working, 11+1 becomes 10.5hrs working
       return baseDayHours - 0.5;
     case 'CWD':
-      // Continuous: 1hr less working time (working lunch)
+      // Continuous: 1hr less working time (working lunch in hand)
+      // e.g., 10+1 becomes 9hrs working, 11+1 becomes 10hrs working
       return baseDayHours - 1;
     default:
       return baseDayHours;
+  }
+}
+
+/**
+ * Check if lunch is "broken" (taken less than 6 hours from unit call)
+ * This applies to SWD and SCWD day types
+ */
+function isLunchBroken(unitCall: string, lunchTime: string | undefined): boolean {
+  if (!lunchTime) return false;
+
+  const unitCallTime = parseTime(unitCall);
+  const lunchStartTime = parseTime(lunchTime);
+
+  if (unitCallTime === null || lunchStartTime === null) return false;
+
+  // Calculate hours between unit call and lunch
+  let hoursToLunch = lunchStartTime - unitCallTime;
+  if (hoursToLunch < 0) hoursToLunch += 24; // Handle overnight
+
+  // Lunch must be minimum 6 hours from unit call
+  return hoursToLunch < 6;
+}
+
+/**
+ * Get the lunch deduction in hours based on day type
+ */
+function getLunchDeductionHours(dayType: DayType): number {
+  switch (dayType) {
+    case 'SWD':
+      return 1; // 1 hour unpaid lunch
+    case 'SCWD':
+      return 0.5; // 30 min lunch (deducted from working time)
+    case 'CWD':
+      return 0; // Working lunch in hand - no deduction
+    default:
+      return 1;
   }
 }
 
@@ -239,9 +287,19 @@ export const useTimesheetStore = create<TimesheetState>()(
         const preCallEarnings = preCallHours * hourlyRate * rateCard.preCallMultiplier;
 
         // 2. Working time = wrapOut - unitCall - lunch break
-        const lunchDeduction = (entry.lunchTaken ?? rateCard.lunchDuration) / 60;
+        // Use day-type-specific lunch deduction:
+        // - SWD: 1hr unpaid lunch deducted
+        // - SCWD: 30min lunch deducted
+        // - CWD: No deduction (working lunch in hand)
+        const lunchDeductionHours = getLunchDeductionHours(entry.dayType);
         const rawWorkingHours = getHoursDiff(entry.unitCall, entry.wrapOut);
-        const workingHours = Math.max(0, rawWorkingHours - lunchDeduction);
+        const workingHours = Math.max(0, rawWorkingHours - lunchDeductionHours);
+
+        // Check for broken lunch (lunch taken less than 6hrs from unit call)
+        // This applies to SWD and SCWD day types
+        const brokenLunch = (entry.dayType === 'SWD' || entry.dayType === 'SCWD')
+          ? isLunchBroken(entry.unitCall, entry.callSheetLunch)
+          : false;
 
         // 3. Calculate late night hours (after 23:00)
         const wrapTime = parseTime(entry.wrapOut);
@@ -313,6 +371,7 @@ export const useTimesheetStore = create<TimesheetState>()(
           seventhDayBonus: Math.round(seventhDayBonus * 100) / 100,
           kitRental,
           totalEarnings: Math.round(totalEarnings * 100) / 100,
+          brokenLunch,
         };
       },
 

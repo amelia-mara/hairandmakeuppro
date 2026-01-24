@@ -1,12 +1,21 @@
 import { useState, useRef, useCallback } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { demoProject } from '@/stores/demoData';
-import { parseScriptFile, convertParsedScriptToProject, suggestCharacterMerges } from '@/utils/scriptParser';
-import type { ParsedScript } from '@/utils/scriptParser';
-import type { Project } from '@/types';
+import {
+  parseScriptFile,
+  parseScenesFast,
+  convertParsedScriptToProject,
+  suggestCharacterMerges,
+  detectCharactersForScenesBatch,
+} from '@/utils/scriptParser';
+import type { ParsedScript, FastParsedScript } from '@/utils/scriptParser';
+import type { Project, Scene } from '@/types';
 import { createEmptyMakeupDetails, createEmptyHairDetails } from '@/types';
 
 type HomeView = 'welcome' | 'upload' | 'processing' | 'characters' | 'setup';
+
+// Enable the new progressive workflow
+const USE_PROGRESSIVE_WORKFLOW = true;
 
 interface HomeProps {
   onProjectReady: () => void;
@@ -24,7 +33,129 @@ export function Home({ onProjectReady }: HomeProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { setProject } = useProjectStore();
 
+  // Progressive workflow: Fast scene parsing then background character detection
+  const processScriptFast = useCallback(async (file: File) => {
+    try {
+      setProcessingProgress(10);
+      setProcessingStatus('Reading document...');
+
+      // Small delay to show initial state
+      await new Promise(r => setTimeout(r, 200));
+
+      setProcessingProgress(30);
+      setProcessingStatus('Detecting scenes...');
+
+      // Fast parse - only extracts scene structure
+      const fastParsed = await parseScenesFast(file);
+
+      setProcessingProgress(70);
+      setProcessingStatus('Creating project...');
+      await new Promise(r => setTimeout(r, 200));
+
+      // Create project immediately with scenes but no characters
+      const scenes: Scene[] = fastParsed.scenes.map((fs) => ({
+        id: `scene-${fs.sceneNumber}`,
+        sceneNumber: fs.sceneNumber,
+        slugline: fs.slugline,
+        intExt: fs.intExt,
+        timeOfDay: fs.timeOfDay,
+        scriptContent: fs.scriptContent,
+        characters: [], // Empty until confirmed
+        isComplete: false,
+        characterConfirmationStatus: 'pending' as const,
+        suggestedCharacters: undefined,
+      }));
+
+      const project: Project = {
+        id: `project-${Date.now()}`,
+        name: projectName || fastParsed.title || file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ') || 'Untitled Project',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        scenes,
+        characters: [],
+        looks: [],
+        characterDetectionStatus: 'idle',
+        scenesConfirmed: 0,
+      };
+
+      setProcessingProgress(90);
+      setProcessingStatus('Almost done...');
+      await new Promise(r => setTimeout(r, 200));
+
+      setProcessingProgress(100);
+      setProcessingStatus('Complete!');
+
+      // Store the raw text for background character detection
+      (project as any)._rawText = fastParsed.rawText;
+
+      // Set the project and proceed
+      setProject(project);
+
+      // Start background character detection after a short delay
+      setTimeout(() => {
+        startBackgroundCharacterDetection(project, fastParsed.rawText);
+      }, 500);
+
+      // Go directly to app
+      setTimeout(() => onProjectReady(), 500);
+    } catch (error) {
+      console.error('Script parsing error:', error);
+      alert(error instanceof Error ? error.message : 'Failed to parse script');
+      setView('upload');
+    }
+  }, [projectName, setProject, onProjectReady]);
+
+  // Background character detection (runs after project is created)
+  const startBackgroundCharacterDetection = useCallback(async (project: Project, rawText: string) => {
+    try {
+      // Mark detection as running
+      useProjectStore.getState().startCharacterDetection();
+
+      // Prepare scenes for batch detection
+      const scenesToDetect = project.scenes.map((s) => ({
+        sceneNumber: s.sceneNumber,
+        scriptContent: s.scriptContent || '',
+      }));
+
+      // Detect characters in batches
+      const results = await detectCharactersForScenesBatch(
+        scenesToDetect,
+        rawText,
+        {
+          useAI: false, // Use regex only for fast initial detection
+          onProgress: (completed, total) => {
+            // Could update a progress indicator here
+            console.log(`Character detection: ${completed}/${total}`);
+          },
+        }
+      );
+
+      // Update each scene with suggested characters
+      const store = useProjectStore.getState();
+      results.forEach((characters, sceneNumber) => {
+        const scene = project.scenes.find((s) => s.sceneNumber === sceneNumber);
+        if (scene) {
+          store.updateSceneSuggestedCharacters(scene.id, characters);
+        }
+      });
+
+      // Mark detection as complete
+      store.setCharacterDetectionStatus('complete');
+    } catch (error) {
+      console.error('Background character detection failed:', error);
+      // Still mark as complete so user can manually add characters
+      useProjectStore.getState().setCharacterDetectionStatus('complete');
+    }
+  }, []);
+
+  // Original workflow: Full AI parsing then character selection
   const processScript = useCallback(async (file: File) => {
+    // Use progressive workflow if enabled
+    if (USE_PROGRESSIVE_WORKFLOW) {
+      return processScriptFast(file);
+    }
+
+    // Legacy flow
     try {
       setProcessingProgress(10);
       setProcessingStatus('Reading document...');
@@ -97,7 +228,7 @@ export function Home({ onProjectReady }: HomeProps) {
       alert(error instanceof Error ? error.message : 'Failed to parse script');
       setView('upload');
     }
-  }, []);
+  }, [processScriptFast]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -413,6 +544,8 @@ interface ProcessingScreenProps {
 }
 
 function ProcessingScreen({ fileName, progress, status }: ProcessingScreenProps) {
+  const isProgressiveWorkflow = USE_PROGRESSIVE_WORKFLOW;
+
   return (
     <div className="flex flex-col min-h-screen items-center justify-center px-6">
       <div className="w-20 h-20 rounded-full bg-gold/10 flex items-center justify-center mb-6">
@@ -436,9 +569,11 @@ function ProcessingScreen({ fileName, progress, status }: ProcessingScreenProps)
           {status}
         </p>
 
-        {/* Informative note - directly under progress */}
+        {/* Informative note - adjusted for progressive workflow */}
         <p className="text-sm text-text-muted text-center leading-relaxed">
-          This may take a few minutes. We're carefully analyzing your script to accurately capture all scenes and characters.
+          {isProgressiveWorkflow
+            ? "Detecting scenes in your script. You'll be able to confirm characters scene-by-scene."
+            : "This may take a few minutes. We're carefully analyzing your script to accurately capture all scenes and characters."}
         </p>
       </div>
     </div>
