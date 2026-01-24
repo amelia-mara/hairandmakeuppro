@@ -8,6 +8,11 @@ import type {
 } from '@/types';
 import { parseSchedulePDF } from '@/utils/scheduleParser';
 import {
+  parseScheduleWithAI,
+  shouldUseAIProcessing,
+  type AIScheduleProcessingStatus,
+} from '@/services/scheduleAIService';
+import {
   getBaseSceneNumber,
   sceneExistsInSet,
   findMatchingSceneData,
@@ -24,6 +29,10 @@ interface ScheduleState {
   isUploading: boolean;
   uploadError: string | null;
 
+  // AI processing state
+  aiProcessingStatus: AIScheduleProcessingStatus;
+  isAIProcessing: boolean;
+
   // Show discrepancy modal
   showDiscrepancyModal: boolean;
 
@@ -31,6 +40,10 @@ interface ScheduleState {
   setSchedule: (schedule: ProductionSchedule) => void;
   uploadSchedule: (file: File) => Promise<ProductionSchedule>;
   clearSchedule: () => void;
+
+  // AI processing actions
+  startAIProcessing: () => Promise<void>;
+  setAIProcessingStatus: (status: AIScheduleProcessingStatus) => void;
 
   // Cast list helpers
   getCastMemberByNumber: (num: number) => ScheduleCastMember | null;
@@ -58,9 +71,71 @@ export const useScheduleStore = create<ScheduleState>()(
       isUploading: false,
       uploadError: null,
       showDiscrepancyModal: false,
+      aiProcessingStatus: {
+        status: 'idle',
+        progress: 0,
+        message: '',
+      },
+      isAIProcessing: false,
 
       setSchedule: (schedule: ProductionSchedule) => {
         set({ schedule, isUploading: false, uploadError: null });
+      },
+
+      setAIProcessingStatus: (status: AIScheduleProcessingStatus) => {
+        set({
+          aiProcessingStatus: status,
+          isAIProcessing: status.status === 'processing',
+        });
+      },
+
+      startAIProcessing: async () => {
+        const { schedule, setAIProcessingStatus, setSchedule } = get();
+        if (!schedule || !schedule.rawText) {
+          console.log('No schedule or raw text available for AI processing');
+          return;
+        }
+
+        // Check if AI processing would be beneficial
+        if (!shouldUseAIProcessing(schedule)) {
+          console.log('AI processing not needed - regex parsing was sufficient');
+          setAIProcessingStatus({
+            status: 'complete',
+            progress: 100,
+            message: 'Schedule parsed successfully with regex',
+          });
+          return;
+        }
+
+        set({ isAIProcessing: true });
+
+        try {
+          const aiSchedule = await parseScheduleWithAI(
+            schedule.rawText,
+            schedule,
+            (status) => setAIProcessingStatus(status)
+          );
+
+          // Update schedule with AI-parsed data
+          setSchedule(aiSchedule);
+
+          setAIProcessingStatus({
+            status: 'complete',
+            progress: 100,
+            message: `Successfully identified ${aiSchedule.days.reduce((sum, d) => sum + d.scenes.length, 0)} scenes`,
+          });
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          console.error('AI schedule processing failed:', error);
+          setAIProcessingStatus({
+            status: 'error',
+            progress: 0,
+            message: 'AI processing failed',
+            error: errorMessage,
+          });
+        } finally {
+          set({ isAIProcessing: false });
+        }
       },
 
       uploadSchedule: async (file: File) => {
@@ -72,7 +147,18 @@ export const useScheduleStore = create<ScheduleState>()(
           set({
             schedule,
             isUploading: false,
+            aiProcessingStatus: {
+              status: 'idle',
+              progress: 0,
+              message: 'Initial parsing complete. Starting AI analysis...',
+            },
           });
+
+          // Start AI processing in the background
+          // Use setTimeout to allow the UI to update first
+          setTimeout(() => {
+            get().startAIProcessing();
+          }, 100);
 
           return schedule;
         } catch (error) {
@@ -83,7 +169,16 @@ export const useScheduleStore = create<ScheduleState>()(
       },
 
       clearSchedule: () => {
-        set({ schedule: null, discrepancies: [] });
+        set({
+          schedule: null,
+          discrepancies: [],
+          aiProcessingStatus: {
+            status: 'idle',
+            progress: 0,
+            message: '',
+          },
+          isAIProcessing: false,
+        });
       },
 
       getCastMemberByNumber: (num: number) => {
