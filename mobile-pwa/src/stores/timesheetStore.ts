@@ -20,6 +20,33 @@ function parseDayTypeFromCallSheet(dayTypeStr?: string): DayType {
   return 'SWD';
 }
 
+/**
+ * Calculate the OT threshold (working hours before overtime kicks in) based on day type
+ *
+ * UK Film Industry working day rules:
+ * - SWD (Standard Working Day): baseDayHours working + 1hr unpaid lunch
+ *   OT starts after baseDayHours (e.g., 11hrs for 11+1)
+ * - SCWD (Short Continuous Working Day): baseDayHours - 0.5 working + 30min paid lunch
+ *   OT starts after baseDayHours - 0.5 (e.g., 10.5hrs for 11+1)
+ * - CWD (Continuous Working Day): baseDayHours - 1 working + 30min lunch in hand
+ *   OT starts after baseDayHours - 1 (e.g., 10hrs for 11+1)
+ */
+function getOTThresholdForDayType(dayType: DayType, baseDayHours: number): number {
+  switch (dayType) {
+    case 'SWD':
+      // Standard: full baseDayHours working before OT
+      return baseDayHours;
+    case 'SCWD':
+      // Short Continuous: 30min less working time
+      return baseDayHours - 0.5;
+    case 'CWD':
+      // Continuous: 1hr less working time (working lunch)
+      return baseDayHours - 1;
+    default:
+      return baseDayHours;
+  }
+}
+
 interface TimesheetState {
   // Data
   rateCard: RateCard;
@@ -232,36 +259,40 @@ export const useTimesheetStore = create<TimesheetState>()(
         // 4. Total hours
         const totalHours = preCallHours + workingHours;
 
-        // 5. Base hours (capped at base day hours)
-        const baseHours = Math.min(workingHours, rateCard.baseDayHours);
+        // 5. Calculate OT threshold based on day type
+        // Use entry's dayType (from individual entry) to determine when OT kicks in
+        const otThreshold = getOTThresholdForDayType(entry.dayType, rateCard.baseDayHours);
 
-        // 6. OT hours (beyond base, excluding late night)
-        const otHours = Math.max(0, workingHours - rateCard.baseDayHours - lateNightHours);
+        // 6. Base hours (capped at OT threshold for the day type)
+        const baseHours = Math.min(workingHours, otThreshold);
 
-        // 7. Daily earnings (base hours at standard rate)
+        // 7. OT hours (beyond OT threshold, excluding late night)
+        const otHours = Math.max(0, workingHours - otThreshold - lateNightHours);
+
+        // 8. Daily earnings (base hours at standard rate)
         const dailyEarnings = baseHours * hourlyRate;
 
-        // 8. OT earnings (at 1.5x)
+        // 9. OT earnings (at 1.5x)
         const otEarnings = otHours * hourlyRate * rateCard.otMultiplier;
 
-        // 9. Late night earnings (at 2x)
+        // 10. Late night earnings (at 2x)
         const lateNightEarnings = lateNightHours * hourlyRate * rateCard.lateNightMultiplier;
 
-        // 10. Sixth day bonus (1.5x)
+        // 11. Sixth day bonus (1.5x)
         let sixthDayBonus = 0;
         if (entry.isSixthDay && !entry.isSeventhDay) {
           const baseEarnings = dailyEarnings + otEarnings + lateNightEarnings + preCallEarnings;
           sixthDayBonus = baseEarnings * (rateCard.sixthDayMultiplier - 1);
         }
 
-        // 11. Seventh day bonus (2x)
+        // 12. Seventh day bonus (2x)
         let seventhDayBonus = 0;
         if (entry.isSeventhDay) {
           const baseEarnings = dailyEarnings + otEarnings + lateNightEarnings + preCallEarnings;
           seventhDayBonus = baseEarnings * (rateCard.seventhDayMultiplier - 1);
         }
 
-        // 12. Kit rental
+        // 13. Kit rental
         const kitRental = rateCard.kitRental;
 
         // Total earnings
