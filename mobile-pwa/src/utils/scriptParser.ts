@@ -747,37 +747,114 @@ export async function parseScriptFile(
 
 /**
  * Extract scene content from raw script text using slugline matching
+ * Handles various script formats including scene numbers before/after INT/EXT
  */
 function extractSceneContent(slugline: string, text: string): string {
-  // Escape special regex characters in the slugline
-  const escapedSlugline = slugline.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // Normalize dashes in both slugline and text for matching
+  // Convert en-dash and em-dash to regular hyphen for comparison
+  const normalizedSlugline = slugline.replace(/[–—]/g, '-');
+  const normalizedText = text.replace(/[–—]/g, '-');
 
-  // Try to find the slugline in the text (allow for some flexibility with whitespace)
-  const sluglinePattern = new RegExp(escapedSlugline.replace(/\s+/g, '\\s+'), 'im');
-  const sluglineMatch = text.match(sluglinePattern);
+  // Extract the key parts from the slugline
+  const intExtMatch = normalizedSlugline.match(/^(INT|EXT)\.?\/?(?:INT|EXT)?\.?\s*/i);
+  const intExt = intExtMatch ? intExtMatch[1].toUpperCase() : 'INT';
 
-  if (!sluglineMatch || sluglineMatch.index === undefined) {
-    // Try a more flexible match - just the INT/EXT and location
-    const flexPattern = new RegExp(`(INT|EXT)\\.?\\s+${slugline.replace(/^(INT|EXT)\\.?\s*/i, '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+')}`, 'im');
-    const flexMatch = text.match(flexPattern);
-    if (!flexMatch || flexMatch.index === undefined) {
-      return '';
-    }
-    const sceneStart = flexMatch.index;
-    return extractContentFromPosition(text, sceneStart);
+  // Get the location and time part (everything after INT./EXT.)
+  const locationPart = normalizedSlugline.replace(/^(?:INT|EXT)\.?\/?(?:INT|EXT)?\.?\s*/i, '').trim();
+
+  // Escape special regex characters in location part
+  const escapedLocation = locationPart
+    .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    .replace(/\s+/g, '\\s+')
+    .replace(/-/g, '[-–—]'); // Match any dash type
+
+  // Strategy 1: Try exact slugline match (with flexible whitespace)
+  const escapedSlugline = normalizedSlugline
+    .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    .replace(/\s+/g, '\\s+')
+    .replace(/-/g, '[-–—]');
+  const exactPattern = new RegExp(escapedSlugline, 'im');
+  let match = normalizedText.match(exactPattern);
+
+  if (match && match.index !== undefined) {
+    return extractContentFromPosition(text, match.index);
   }
 
-  const sceneStart = sluglineMatch.index;
-  return extractContentFromPosition(text, sceneStart);
+  // Strategy 2: Match with optional scene numbers before INT/EXT
+  // Pattern handles: "4 INT. LOCATION", "4A INT. LOCATION", "INT. LOCATION"
+  const sceneNumPattern = new RegExp(
+    `(?:\\d+[A-Z]?\\s+)?(?:${intExt}|INT|EXT)[\\.\\s/]*(?:INT|EXT)?[\\./]?\\s*${escapedLocation}`,
+    'im'
+  );
+  match = normalizedText.match(sceneNumPattern);
+
+  if (match && match.index !== undefined) {
+    return extractContentFromPosition(text, match.index);
+  }
+
+  // Strategy 3: Just match INT/EXT followed by the location name (most flexible)
+  // Extract just the location name without time of day for fuzzy matching
+  const locationOnly = locationPart.replace(/\s*[-–—]\s*(DAY|NIGHT|MORNING|EVENING|CONTINUOUS|CONT|LATER|SAME|DAWN|DUSK|SUNSET|SUNRISE).*$/i, '').trim();
+  if (locationOnly.length > 3) {
+    const escapedLocationOnly = locationOnly
+      .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      .replace(/\s+/g, '\\s+');
+    const locationOnlyPattern = new RegExp(
+      `(?:\\d+[A-Z]?\\s+)?(?:INT|EXT)[\\./\\s]*(?:INT|EXT)?[\\./]?\\s*${escapedLocationOnly}`,
+      'im'
+    );
+    match = normalizedText.match(locationOnlyPattern);
+
+    if (match && match.index !== undefined) {
+      return extractContentFromPosition(text, match.index);
+    }
+  }
+
+  // Strategy 4: Search for any line starting with the INT/EXT and containing keywords from location
+  // Split location into words and search for a line containing most of them
+  const locationWords = locationOnly.split(/\s+/).filter(w => w.length > 2);
+  if (locationWords.length > 0) {
+    const lines = normalizedText.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      // Check if line looks like a scene heading with INT/EXT
+      if (/^(?:\d+[A-Z]?\s+)?(?:INT|EXT)/i.test(line)) {
+        // Count how many location words are in this line
+        const matchingWords = locationWords.filter(word =>
+          line.toUpperCase().includes(word.toUpperCase())
+        );
+        // If at least half the words match, this is likely our scene
+        if (matchingWords.length >= Math.ceil(locationWords.length / 2)) {
+          // Find the position of this line in the original text
+          const lineIndex = text.indexOf(lines[i]);
+          if (lineIndex !== -1) {
+            return extractContentFromPosition(text, lineIndex);
+          }
+        }
+      }
+    }
+  }
+
+  return '';
 }
 
 /**
  * Extract content from a position until the next scene heading
+ * Handles various scene heading formats with or without periods
  */
 function extractContentFromPosition(text: string, startIndex: number): string {
   // Find the next scene heading pattern
-  const nextScenePattern = /\n\s*(?:\d+[A-Z]?\s+)?(?:INT|EXT)\./gi;
+  // More flexible pattern: handles INT., INT, INT/, EXT., EXT, EXT/, etc.
+  // Also handles scene numbers before INT/EXT like "4 INT." or "12A EXT."
+  const nextScenePattern = /\n\s*(?:\d+[A-Z]?\s+)?(?:INT|EXT)[\s./]/gi;
   nextScenePattern.lastIndex = startIndex + 1;
+
+  // Skip past the current scene heading line to avoid matching it
+  const firstNewline = text.indexOf('\n', startIndex);
+  if (firstNewline !== -1) {
+    nextScenePattern.lastIndex = firstNewline + 1;
+  }
+
   const nextMatch = nextScenePattern.exec(text);
 
   const endIndex = nextMatch ? nextMatch.index : text.length;
