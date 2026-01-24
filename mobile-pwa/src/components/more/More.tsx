@@ -676,7 +676,7 @@ interface ViewerProps {
 function ScriptViewer({ onBack }: ViewerProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedScene, setSelectedScene] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'full' | 'scenes'>('full');
+  const [viewMode, setViewMode] = useState<'full' | 'pdf'>('full');
   const { currentProject } = useProjectStore();
   const sceneRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
@@ -748,43 +748,6 @@ function ScriptViewer({ onBack }: ViewerProps) {
 
           {hasScriptContent && (
             <>
-              <div className="px-4 pb-2 flex gap-2">
-                <div className="flex-1 relative">
-                  <svg className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                  <input
-                    type="text"
-                    placeholder="Search script..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 text-sm border border-border rounded-lg bg-card text-text-primary"
-                  />
-                  {searchQuery && (
-                    <button
-                      onClick={() => setSearchQuery('')}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-text-light hover:text-text-muted"
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  )}
-                </div>
-                <select
-                  value={selectedScene || ''}
-                  onChange={(e) => setSelectedScene(e.target.value || null)}
-                  className="px-3 py-2 text-sm border border-border rounded-lg bg-card text-text-primary min-w-[100px]"
-                >
-                  <option value="">Jump to...</option>
-                  {sortedScenes.map((scene) => (
-                    <option key={scene.sceneNumber} value={scene.sceneNumber}>
-                      Scene {scene.sceneNumber}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
               {/* View mode toggle */}
               <div className="px-4 pb-3 flex gap-2">
                 <button
@@ -798,24 +761,67 @@ function ScriptViewer({ onBack }: ViewerProps) {
                   Full Script
                 </button>
                 <button
-                  onClick={() => setViewMode('scenes')}
+                  onClick={() => setViewMode('pdf')}
+                  disabled={!currentProject?.scriptPdfData}
                   className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                    viewMode === 'scenes'
+                    viewMode === 'pdf'
                       ? 'bg-gold text-white'
                       : 'bg-gray-100 text-text-muted'
-                  }`}
+                  } ${!currentProject?.scriptPdfData ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
-                  Scene Cards
+                  PDF Script
                 </button>
               </div>
 
-              {/* Search results count */}
-              {searchQuery && (
-                <div className="px-4 pb-2">
-                  <span className="text-xs text-text-muted">
-                    {filteredScenes.length} scene{filteredScenes.length !== 1 ? 's' : ''} found
-                  </span>
-                </div>
+              {/* Search and jump controls - only show in Full Script mode */}
+              {viewMode === 'full' && (
+                <>
+                  <div className="px-4 pb-2 flex gap-2">
+                    <div className="flex-1 relative">
+                      <svg className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                      <input
+                        type="text"
+                        placeholder="Search script..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 text-sm border border-border rounded-lg bg-card text-text-primary"
+                      />
+                      {searchQuery && (
+                        <button
+                          onClick={() => setSearchQuery('')}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-text-light hover:text-text-muted"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                    <select
+                      value={selectedScene || ''}
+                      onChange={(e) => setSelectedScene(e.target.value || null)}
+                      className="px-3 py-2 text-sm border border-border rounded-lg bg-card text-text-primary min-w-[100px]"
+                    >
+                      <option value="">Jump to...</option>
+                      {sortedScenes.map((scene) => (
+                        <option key={scene.sceneNumber} value={scene.sceneNumber}>
+                          Scene {scene.sceneNumber}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Search results count */}
+                  {searchQuery && (
+                    <div className="px-4 pb-2">
+                      <span className="text-xs text-text-muted">
+                        {filteredScenes.length} scene{filteredScenes.length !== 1 ? 's' : ''} found
+                      </span>
+                    </div>
+                  )}
+                </>
               )}
             </>
           )}
@@ -891,90 +897,27 @@ function ScriptViewer({ onBack }: ViewerProps) {
             ))}
           </div>
         ) : (
-          /* Scene Cards View */
-          <div className="px-4 py-4 space-y-3">
-            {filteredScenes.map((scene) => (
-              <div
-                key={scene.id}
-                ref={(el) => {
-                  if (el) sceneRefs.current.set(scene.sceneNumber, el);
-                }}
-                className="card"
-              >
-                {/* Scene header */}
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-sm font-bold text-gold">
-                    {scene.sceneNumber}
-                  </span>
-                  <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded ${
-                    scene.intExt === 'INT' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
-                  }`}>
-                    {scene.intExt}
-                  </span>
-                  <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-gray-100 text-text-muted">
-                    {scene.timeOfDay}
-                  </span>
-                  {scene.filmingStatus && (
-                    <span className={`ml-auto px-1.5 py-0.5 text-[10px] font-medium rounded ${
-                      scene.filmingStatus === 'complete' ? 'bg-green-100 text-green-700' :
-                      scene.filmingStatus === 'partial' ? 'bg-amber-100 text-amber-700' :
-                      'bg-red-100 text-red-700'
-                    }`}>
-                      {scene.filmingStatus === 'complete' ? 'Complete' :
-                       scene.filmingStatus === 'partial' ? 'Partial' : 'Incomplete'}
-                    </span>
-                  )}
+          /* PDF Script View */
+          <div className="h-[calc(100vh-180px)]">
+            {currentProject?.scriptPdfData ? (
+              <iframe
+                src={currentProject.scriptPdfData}
+                className="w-full h-full border-0"
+                title="Script PDF"
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full px-4">
+                <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+                  <svg className="w-8 h-8 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                  </svg>
                 </div>
-
-                {/* Slugline */}
-                <p className="text-sm font-medium text-text-primary mb-1">
-                  {highlightText(scene.slugline, searchQuery)}
+                <h3 className="text-base font-semibold text-text-primary mb-1">No PDF Available</h3>
+                <p className="text-sm text-text-muted text-center">
+                  Upload a PDF script to view the original document here
                 </p>
-
-                {/* Synopsis */}
-                {scene.synopsis && (
-                  <p className="text-xs text-text-muted italic mb-3">
-                    {highlightText(scene.synopsis, searchQuery)}
-                  </p>
-                )}
-
-                {/* Script content preview */}
-                {scene.scriptContent && (
-                  <details className="group">
-                    <summary className="text-xs text-gold cursor-pointer flex items-center gap-1 select-none">
-                      <svg className="w-3 h-3 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                      </svg>
-                      View full scene ({scene.scriptContent.split('\n').length} lines)
-                    </summary>
-                    <pre className="whitespace-pre-wrap font-mono text-xs text-text-secondary leading-relaxed mt-2 p-3 bg-gray-50 rounded-lg max-h-96 overflow-y-auto">
-                      {searchQuery
-                        ? highlightText(scene.scriptContent, searchQuery)
-                        : scene.scriptContent}
-                    </pre>
-                  </details>
-                )}
-
-                {/* Characters in scene */}
-                {scene.characters.length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-border">
-                    <span className="text-[10px] font-bold tracking-wider uppercase text-text-light">
-                      Characters ({scene.characters.length})
-                    </span>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {scene.characters.map((charId) => {
-                        const char = currentProject?.characters.find(c => c.id === charId);
-                        return char ? (
-                          <span key={charId} className="px-2 py-0.5 text-[10px] rounded-full bg-gray-100 text-text-muted">
-                            {char.name}
-                          </span>
-                        ) : null;
-                      })}
-                    </div>
-                  </div>
-                )}
               </div>
-            ))}
+            )}
           </div>
         )}
       </div>
