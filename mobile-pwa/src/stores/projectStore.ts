@@ -58,6 +58,7 @@ interface ProjectState {
 
   // Actions - Project
   setProject: (project: Project) => void;
+  setScriptPdf: (pdfData: string) => void;
   clearProject: () => void;
 
   // Actions - Navigation
@@ -160,6 +161,11 @@ export const useProjectStore = create<ProjectState>()(
         showWrapPopup: false,
         wrapTriggerReason: null,
       }),
+      setScriptPdf: (pdfData) => set((state) => ({
+        currentProject: state.currentProject
+          ? { ...state.currentProject, scriptPdfData: pdfData }
+          : null,
+      })),
       clearProject: () => set({
         currentProject: null,
         currentSceneId: null,
