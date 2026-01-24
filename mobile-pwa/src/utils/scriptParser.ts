@@ -248,9 +248,13 @@ function normalizeCharacterName(name: string): string {
  * These are characters physically present in a scene but not speaking
  * Looks for names in ALL CAPS or Title Case within action text
  *
+ * IMPORTANT: This function is conservative to avoid false positives.
+ * We only want to detect actual people's names and descriptions of people,
+ * NOT adjectives, verbs, locations, or scene elements.
+ *
  * Examples:
  *   "a handsome LOCAL MAN in his late 30s" -> ["LOCAL MAN"]
- *   "Gwen and Peter approach a simple TAXI STAND" -> ["GWEN", "PETER"]
+ *   "Gwen and Peter approach" -> ["GWEN", "PETER"]
  *   "Jon unfolding it, gesturing for Peter to sit" -> ["JON", "PETER"]
  */
 function extractCharactersFromActionLine(line: string): string[] {
@@ -261,6 +265,53 @@ function extractCharactersFromActionLine(line: string): string[] {
   if (trimmed.length < 5) return characters;
   if (/^(INT\.|EXT\.|INT\/EXT|CUT TO|FADE|DISSOLVE|CONTINUED)/i.test(trimmed)) return characters;
 
+  // Comprehensive set of non-character words to filter out
+  const nonCharacterWords = new Set([
+    // Scene heading fragments
+    'INT', 'EXT', 'ROAD', 'STREET', 'AVENUE', 'HIGHWAY', 'PATH', 'TRAIL', 'LANE',
+    // Time of day
+    'DAY', 'NIGHT', 'MORNING', 'EVENING', 'CONTINUOUS', 'LATER', 'SAME', 'CONT', 'DAWN', 'DUSK',
+    // Transitions
+    'CONTINUED', 'CUT', 'FADE', 'DISSOLVE', 'SMASH', 'MATCH', 'WIPE',
+    // Common words and articles
+    'THE', 'AND', 'BUT', 'FOR', 'NOT', 'YOU', 'ALL', 'CAN', 'HER', 'HIS', 'HIM', 'SHE', 'HAS', 'HAD',
+    'WAS', 'ARE', 'BEEN', 'HAVE', 'THEIR', 'WHAT', 'WHEN', 'WHERE', 'WHICH', 'WHO', 'THIS', 'THAT',
+    'WITH', 'FROM', 'INTO', 'ONTO', 'UPON', 'BACK', 'OVER', 'UNDER', 'VERY', 'MUCH', 'MORE', 'MOST',
+    'JUST', 'ONLY', 'ALSO', 'EVEN', 'STILL', 'WELL', 'SUCH', 'SOME', 'MANY', 'BOTH', 'EACH', 'OTHER',
+    // Camera/shot terminology
+    'CLOSE', 'WIDE', 'ANGLE', 'VIEW', 'SHOT', 'POV', 'INSERT', 'FLASHBACK', 'DREAM',
+    'TITLE', 'SUPER', 'CHYRON', 'SUBTITLE',
+    // Acronyms
+    'TV', 'DVD', 'VHS', 'USA', 'NYC', 'NYPD', 'FBI', 'CIA', 'NSA',
+    // Objects and props
+    'TAXI', 'STAND', 'CAR', 'DOOR', 'ROOM', 'HOUSE', 'BOAT', 'PHONE', 'GUN', 'KNIFE', 'TABLE', 'CHAIR',
+    'PARKA', 'WHEELCHAIR', 'VEHICLE', 'WINDOW', 'WALL', 'FLOOR', 'CEILING', 'BED', 'DESK', 'LAMP',
+    // Nature and scenery
+    'MOUNTAINS', 'MOUNTAIN', 'HILLS', 'HILLSIDES', 'VALLEY', 'RIVER', 'RIVERS', 'STREAM', 'STREAMS',
+    'LAKE', 'OCEAN', 'SEA', 'BEACH', 'FOREST', 'WOODS', 'TREE', 'TREES', 'SKY', 'SUN', 'MOON',
+    'CLOUDS', 'RAIN', 'SNOW', 'WIND', 'WATER', 'MELTWATER', 'WILDFLOWER', 'FLOWERS', 'GRASS',
+    // Common adjectives (often appear in caps in action lines)
+    'EDENIC', 'VERDANT', 'LONELY', 'QUIET', 'LOUD', 'DARK', 'BRIGHT', 'SMALL', 'LARGE', 'BIG',
+    'TALL', 'SHORT', 'LONG', 'WIDE', 'NARROW', 'THICK', 'THIN', 'HEAVY', 'LIGHT', 'HARD', 'SOFT',
+    'HOT', 'COLD', 'WARM', 'COOL', 'WET', 'DRY', 'CLEAN', 'DIRTY', 'NEW', 'OLD', 'FRESH', 'STALE',
+    'GOOD', 'BAD', 'GREAT', 'POOR', 'RICH', 'SIMPLE', 'COMPLEX', 'EASY', 'DIFFICULT', 'FAST', 'SLOW',
+    'HIGH', 'LOW', 'NEAR', 'FAR', 'CLOSE', 'DISTANT', 'OPEN', 'CLOSED', 'EMPTY', 'FULL',
+    'BEAUTIFUL', 'GORGEOUS', 'STUNNING', 'SERENE', 'PEACEFUL', 'CALM', 'WILD', 'FIERCE',
+    // Colors
+    'RED', 'BLUE', 'GREEN', 'YELLOW', 'ORANGE', 'PURPLE', 'PINK', 'BLACK', 'WHITE', 'GREY', 'GRAY',
+    'BROWN', 'GOLDEN', 'SILVER',
+    // Numbers/quantities
+    'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE', 'TEN',
+    'FIRST', 'SECOND', 'THIRD', 'LAST', 'NEXT', 'ANOTHER', 'FEW', 'SEVERAL',
+  ]);
+
+  // Patterns for words that are unlikely to be character names
+  // Words ending in these suffixes are typically adjectives, verbs, or other non-names
+  const nonNameSuffixes = /^[A-Z]+(ING|ED|LY|TION|SION|NESS|MENT|ABLE|IBLE|ICAL|IOUS|EOUS|ULAR|TERN|ERN|WARD|WARDS|LIKE|LESS|FUL|IC|AL|ARY|ORY|IVE|OUS|ANT|ENT)$/;
+
+  // Scene heading patterns that might appear mid-text
+  const sceneHeadingPattern = /^(INT|EXT)\s*[.\/]/;
+
   // Pattern 1: ALL CAPS names (2-3 words max) within the line
   // Matches: "LOCAL MAN", "YOUNG WOMAN", "TAXI DRIVER", "DR. SMITH"
   const allCapsPattern = /\b([A-Z][A-Z.'-]+(?:\s+[A-Z][A-Z.'-]+){0,2})\b/g;
@@ -269,58 +320,52 @@ function extractCharactersFromActionLine(line: string): string[] {
   while ((match = allCapsPattern.exec(trimmed)) !== null) {
     const potential = match[1].trim();
 
-    // Skip if it's a common non-character all-caps word
-    const nonCharacterWords = new Set([
-      'INT', 'EXT', 'DAY', 'NIGHT', 'MORNING', 'EVENING', 'CONTINUOUS',
-      'LATER', 'SAME', 'CONT', 'CONTINUED', 'CUT', 'FADE', 'DISSOLVE',
-      'THE', 'AND', 'BUT', 'FOR', 'NOT', 'YOU', 'ALL', 'CAN', 'HER',
-      'HIS', 'HIM', 'SHE', 'HAS', 'HAD', 'WAS', 'ARE', 'BEEN', 'HAVE',
-      'THEIR', 'WHAT', 'WHEN', 'WHERE', 'WHICH', 'WHO', 'THIS', 'THAT',
-      'WITH', 'FROM', 'INTO', 'ONTO', 'UPON', 'BACK', 'OVER', 'UNDER',
-      'CLOSE', 'WIDE', 'ANGLE', 'VIEW', 'SHOT', 'POV', 'INSERT',
-      'FLASHBACK', 'DREAM', 'TITLE', 'SUPER', 'CHYRON', 'SUBTITLE',
-      'TV', 'DVD', 'VHS', 'USA', 'NYC', 'NYPD', 'FBI', 'CIA', 'NSA',
-      'TAXI', 'STAND', 'TAXI STAND', 'CAR', 'DOOR', 'ROOM', 'HOUSE',
-      'YELLOW', 'PARKA', 'YELLOW PARKA', 'WHEELCHAIR'
-    ]);
+    // Skip scene heading fragments
+    if (sceneHeadingPattern.test(potential)) continue;
 
-    // Skip single words that are common non-character terms
-    if (potential.split(/\s+/).length === 1 && nonCharacterWords.has(potential)) {
-      continue;
-    }
+    // Skip single words in the non-character set
+    if (potential.split(/\s+/).length === 1 && nonCharacterWords.has(potential)) continue;
 
-    // Skip multi-word terms that are objects/props
-    if (nonCharacterWords.has(potential)) {
-      continue;
-    }
+    // Skip multi-word terms in the non-character set
+    if (nonCharacterWords.has(potential)) continue;
 
-    // Skip if it looks like an object description (contains common object words)
-    const objectWords = /\b(TAXI|CAR|DOOR|ROOM|HOUSE|BOAT|PHONE|GUN|KNIFE|TABLE|CHAIR|STAND|PARKA|WHEELCHAIR|VEHICLE)\b/i;
-    if (objectWords.test(potential)) {
-      continue;
-    }
+    // Skip words with non-name suffixes (adjectives, verbs, etc.)
+    if (nonNameSuffixes.test(potential)) continue;
 
-    // Valid character indicators: contains MAN, WOMAN, PERSON, DRIVER, etc.
-    const characterIndicators = /\b(MAN|WOMAN|PERSON|DRIVER|OFFICER|DOCTOR|NURSE|GUARD|SOLDIER|WORKER|GIRL|BOY|LADY|GUY|KID|CHILD|TEENAGER|ELDERLY|YOUNG|OLD|LOCAL|HANDSOME|BEAUTIFUL)\b/i;
+    // Skip words that end with common non-name suffixes even if multi-word
+    const words = potential.split(/\s+/);
+    const hasNonNameWord = words.some(word =>
+      nonNameSuffixes.test(word) || nonCharacterWords.has(word)
+    );
+    if (hasNonNameWord) continue;
+
+    // Skip if it looks like an object description
+    const objectWords = /\b(TAXI|CAR|DOOR|ROOM|HOUSE|BOAT|PHONE|GUN|KNIFE|TABLE|CHAIR|STAND|PARKA|WHEELCHAIR|VEHICLE|ROAD|STREET|MOUNTAIN|RIVER|TREE)\b/i;
+    if (objectWords.test(potential)) continue;
+
+    // Valid character indicators: contains role descriptions
+    const characterIndicators = /\b(MAN|WOMAN|PERSON|DRIVER|OFFICER|DOCTOR|NURSE|GUARD|SOLDIER|WORKER|GIRL|BOY|LADY|GUY|KID|CHILD|TEEN|TEENAGER|CLERK|WAITER|WAITRESS|COP|DETECTIVE|AGENT|STRANGER|FIGURE)\b/i;
 
     // If it's 2+ words and contains a character indicator, it's likely a character
-    if (potential.split(/\s+/).length >= 2 && characterIndicators.test(potential)) {
+    if (words.length >= 2 && characterIndicators.test(potential)) {
       characters.push(potential);
       continue;
     }
 
-    // If it's a single capitalized word that's 3+ chars and not a common word, could be a name
-    if (potential.length >= 3 && potential.length <= 15 && !nonCharacterWords.has(potential)) {
-      // Check context: is it followed by action verbs or preceded by articles suggesting it's a name?
-      const beforeMatch = trimmed.slice(0, match.index);
+    // For single words, require strong contextual evidence
+    if (words.length === 1 && potential.length >= 3 && potential.length <= 15) {
       const afterMatch = trimmed.slice(match.index + potential.length);
 
-      // Strong indicators it's a character name
-      const nameContext = /(^|\s)(a |an |the |young |old |handsome |beautiful )?$/i.test(beforeMatch) ||
-                          /^(\s+)(enters|exits|walks|runs|stands|sits|looks|turns|moves|says|speaks|watches|stares|smiles|nods|shakes|reaches|grabs|holds|opens|closes)/i.test(afterMatch) ||
-                          /^('s\s|'s$|\s+and\s+[A-Z])/i.test(afterMatch);
+      // Must be followed by action verb to be considered a character name
+      const followedByAction = /^\s*(enters|exits|walks|runs|stands|sits|looks|turns|moves|says|speaks|watches|stares|smiles|nods|shakes|reaches|grabs|holds|opens|closes|steps|crosses|approaches|leaves|arrives|appears|disappears|rises|falls|jumps|climbs|crawls|lies|kneels|bends|leans|waves|points|gestures|signals|calls|shouts|whispers|laughs|cries|sighs|groans|screams|freezes|pauses|stops|starts|continues|begins|finishes|waits|hesitates)/i.test(afterMatch);
 
-      if (nameContext) {
+      // Or possessive form
+      const isPossessive = /^('s\s|'s$)/i.test(afterMatch);
+
+      // Or followed by "and" + another name
+      const followedByAnd = /^\s+and\s+[A-Z][a-z]/i.test(afterMatch);
+
+      if (followedByAction || isPossessive || followedByAnd) {
         characters.push(potential);
       }
     }
@@ -328,15 +373,18 @@ function extractCharactersFromActionLine(line: string): string[] {
 
   // Pattern 2: Title Case names at start of sentence or after comma
   // Matches: "Gwen and Peter approach", "Jon unfolding it"
-  const titleCasePattern = /(?:^|[,;]\s*|\.\s+)([A-Z][a-z]+(?:\s+(?:and|&)\s+[A-Z][a-z]+)*)\s+(?:and\s+)?[a-z]/g;
+  // Be more conservative here - require action verb after the name
+  const titleCasePattern = /(?:^|[,;]\s*|\.\s+)([A-Z][a-z]+(?:\s+(?:and|&)\s+[A-Z][a-z]+)*)\s+(and\s+)?(?=enters|exits|walks|runs|stands|sits|looks|turns|moves|says|speaks|watches|stares|smiles|nods|shakes|reaches|grabs|holds|opens|closes|steps|crosses|approaches|leaves|arrives|appears|disappears|rises|falls|jumps|climbs|crawls|lies|kneels|bends|leans|waves|points|gestures|signals|calls|shouts|whispers|laughs|cries|sighs|groans|screams|freezes|pauses|stops|starts|continues|begins|finishes|waits|hesitates|[a-z])/gi;
 
   while ((match = titleCasePattern.exec(trimmed)) !== null) {
     const names = match[1].split(/\s+(?:and|&)\s+/i);
     for (const name of names) {
       const upperName = name.trim().toUpperCase();
-      // Skip common non-name words
-      if (upperName.length >= 2 && upperName.length <= 20 &&
-          !['THE', 'AND', 'BUT', 'FOR', 'NOT', 'THIS', 'THAT', 'WHEN', 'WHERE', 'WHILE'].includes(upperName)) {
+      // Skip common non-name words and short words
+      if (upperName.length >= 3 && upperName.length <= 20 &&
+          !nonCharacterWords.has(upperName) &&
+          !nonNameSuffixes.test(upperName) &&
+          !['THE', 'AND', 'BUT', 'FOR', 'NOT', 'THIS', 'THAT', 'WHEN', 'WHERE', 'WHILE', 'THEN', 'THERE', 'HERE'].includes(upperName)) {
         characters.push(upperName);
       }
     }
@@ -349,6 +397,9 @@ function extractCharactersFromActionLine(line: string): string[] {
 /**
  * Check if a line is a character cue (character name before dialogue)
  * Improved to better filter out false positives from action lines
+ *
+ * Character cues are names that appear alone on a line before dialogue.
+ * They are typically centered and in ALL CAPS.
  */
 function isCharacterCue(line: string): boolean {
   const trimmed = line.trim();
@@ -403,6 +454,36 @@ function isCharacterCue(line: string): boolean {
   // Character names should be reasonably short (1-4 words typically)
   const wordCount = nameWithoutParen.split(/\s+/).length;
   if (wordCount > 4) return false;
+
+  // Single word checks - filter out words that are NOT character names
+  if (wordCount === 1) {
+    // Filter out words ending in common adjective/verb suffixes
+    const nonNameSuffixes = /^[A-Z]+(ING|ED|LY|TION|SION|NESS|MENT|ABLE|IBLE|ICAL|IOUS|EOUS|ULAR|TERN|ERN|WARD|WARDS|LIKE|LESS|FUL|IC|AL|ARY|ORY|IVE|OUS|ANT|ENT)$/;
+    if (nonNameSuffixes.test(nameWithoutParen)) return false;
+
+    // Filter out common non-character single words
+    const nonCharacterSingleWords = new Set([
+      // Scene elements
+      'INT', 'EXT', 'ROAD', 'STREET', 'HOUSE', 'ROOM', 'OFFICE', 'BUILDING',
+      // Time
+      'DAY', 'NIGHT', 'MORNING', 'EVENING', 'DAWN', 'DUSK', 'LATER', 'CONTINUOUS',
+      // Adjectives commonly written in caps
+      'EDENIC', 'VERDANT', 'TOWERING', 'LONELY', 'BEAUTIFUL', 'GORGEOUS', 'STUNNING',
+      'SERENE', 'PEACEFUL', 'WILD', 'FIERCE', 'ANCIENT', 'MODERN', 'RUSTIC',
+      // Nature/scenery words
+      'MOUNTAINS', 'MOUNTAIN', 'HILLS', 'VALLEY', 'RIVER', 'STREAM', 'LAKE', 'OCEAN',
+      'FOREST', 'WOODS', 'TREE', 'TREES', 'SKY', 'SUN', 'MOON', 'MELTWATER',
+      // Colors
+      'RED', 'BLUE', 'GREEN', 'YELLOW', 'ORANGE', 'PURPLE', 'BLACK', 'WHITE', 'GOLDEN',
+      // Common words
+      'VERY', 'MUCH', 'MORE', 'MOST', 'JUST', 'ONLY', 'ALSO', 'EVEN', 'STILL', 'WELL',
+      'ONE', 'TWO', 'THREE', 'FIRST', 'SECOND', 'THIRD', 'LAST', 'NEXT', 'ANOTHER',
+      // Screenplay terms
+      'CONTINUED', 'FADE', 'CUT', 'DISSOLVE', 'ANGLE', 'SHOT', 'VIEW', 'CLOSE', 'WIDE',
+    ]);
+
+    if (nonCharacterSingleWords.has(nameWithoutParen)) return false;
+  }
 
   // Character names should be reasonably short
   return nameWithoutParen.length >= 2 && nameWithoutParen.length <= 35;

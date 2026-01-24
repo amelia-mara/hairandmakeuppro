@@ -167,12 +167,11 @@ export function SceneCharacterConfirmation({
           </button>
         </div>
 
-        {/* Script content preview */}
+        {/* Script content preview - scrollable to read full scene */}
         {scene.scriptContent && (
-          <div className="px-4 py-3 bg-gray-50 border-b border-border max-h-32 overflow-y-auto shrink-0">
-            <p className="text-xs text-text-secondary font-mono whitespace-pre-wrap line-clamp-6">
-              {scene.scriptContent.slice(0, 500)}
-              {scene.scriptContent.length > 500 && '...'}
+          <div className="px-4 py-3 bg-gray-50 border-b border-border max-h-48 overflow-y-auto shrink-0">
+            <p className="text-xs text-text-secondary font-mono whitespace-pre-wrap">
+              {scene.scriptContent}
             </p>
           </div>
         )}
