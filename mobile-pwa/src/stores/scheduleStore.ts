@@ -61,6 +61,9 @@ interface ScheduleState {
 
   // Get shooting day for a scene
   getShootingDayForScene: (sceneNumber: string) => number | null;
+
+  // Get shooting info (day and order) for a scene
+  getShootingInfoForScene: (sceneNumber: string) => { dayNumber: number; shootOrder: number } | null;
 }
 
 export const useScheduleStore = create<ScheduleState>()(
@@ -352,6 +355,30 @@ export const useScheduleStore = create<ScheduleState>()(
             getBaseSceneNumber(s.sceneNumber) === baseScene
           );
           if (variantFound) return day.dayNumber;
+        }
+        return null;
+      },
+
+      getShootingInfoForScene: (sceneNumber: string) => {
+        const schedule = get().schedule;
+        if (!schedule) return null;
+
+        const baseScene = getBaseSceneNumber(sceneNumber);
+
+        for (const day of schedule.days) {
+          // First try exact match
+          const exactFound = day.scenes.find(s => s.sceneNumber === sceneNumber);
+          if (exactFound) {
+            return { dayNumber: day.dayNumber, shootOrder: exactFound.shootOrder };
+          }
+
+          // Then try matching by base scene number (handles all variants)
+          const variantFound = day.scenes.find(s =>
+            getBaseSceneNumber(s.sceneNumber) === baseScene
+          );
+          if (variantFound) {
+            return { dayNumber: day.dayNumber, shootOrder: variantFound.shootOrder };
+          }
         }
         return null;
       },
