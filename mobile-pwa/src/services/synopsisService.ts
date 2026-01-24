@@ -1,13 +1,180 @@
 /**
  * Synopsis Sync Service
  * Handles syncing scene synopses from desktop and generating them via AI if unavailable
+ * Also integrates character identification when generating synopses
  */
 
-import type { Scene } from '@/types';
+import type { Scene, ScheduleCastMember } from '@/types';
 import { generateSceneSynopsis, checkAIAvailability } from './aiService';
 
 // Storage key for desktop-synced synopsis data
 const DESKTOP_SYNOPSIS_KEY = 'desktop-synopsis-sync';
+
+/**
+ * Result of processing a scene (synopsis + characters)
+ */
+export interface SceneProcessingResult {
+  synopsis: string | null;
+  detectedCharacters: string[];
+}
+
+/**
+ * Identify characters in a scene using the schedule cast list as reference
+ * This is much more accurate than regex-only detection because we know the exact character names
+ */
+export function identifyCharactersInScene(
+  scriptContent: string,
+  castList: ScheduleCastMember[]
+): string[] {
+  if (!scriptContent || castList.length === 0) {
+    return [];
+  }
+
+  const detectedCharacters: string[] = [];
+  const contentUpper = scriptContent.toUpperCase();
+
+  // Check each cast member's name against the scene content
+  for (const member of castList) {
+    const characterName = member.character || member.name;
+    const nameUpper = characterName.toUpperCase().trim();
+
+    // Skip very short names (could match accidentally)
+    if (nameUpper.length < 2) continue;
+
+    // Check for character name in dialogue cues (ALL CAPS on its own line)
+    // Pattern: name followed by dialogue or (V.O.) or (O.S.)
+    const dialogueCuePattern = new RegExp(
+      `(?:^|\\n)\\s*${escapeRegExp(nameUpper)}(?:\\s*\\([^)]+\\))?\\s*(?:\\n|$)`,
+      'i'
+    );
+
+    // Check for character name mentioned in action lines
+    // Look for the name as a whole word
+    const actionMentionPattern = new RegExp(
+      `\\b${escapeRegExp(nameUpper)}\\b`,
+      'i'
+    );
+
+    if (dialogueCuePattern.test(contentUpper) || actionMentionPattern.test(contentUpper)) {
+      // Avoid duplicates
+      if (!detectedCharacters.includes(characterName)) {
+        detectedCharacters.push(characterName);
+      }
+    }
+  }
+
+  return detectedCharacters;
+}
+
+/**
+ * Escape special regex characters in a string
+ */
+function escapeRegExp(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Generate synopsis and identify characters for a single scene
+ * This combines synopsis generation with character identification
+ */
+export async function processSceneForSynopsisAndCharacters(
+  scene: Scene,
+  castList: ScheduleCastMember[]
+): Promise<SceneProcessingResult> {
+  const result: SceneProcessingResult = {
+    synopsis: null,
+    detectedCharacters: [],
+  };
+
+  if (!scene.scriptContent) {
+    return result;
+  }
+
+  // Identify characters using the cast list
+  if (castList.length > 0) {
+    result.detectedCharacters = identifyCharactersInScene(scene.scriptContent, castList);
+  }
+
+  // Generate synopsis via AI
+  try {
+    const aiAvailable = await checkAIAvailability();
+    if (aiAvailable) {
+      result.synopsis = await generateSceneSynopsis(scene.slugline, scene.scriptContent);
+    }
+  } catch (error) {
+    console.error(`Failed to generate synopsis for scene ${scene.sceneNumber}:`, error);
+  }
+
+  return result;
+}
+
+/**
+ * Batch process scenes for synopsis and character identification
+ * More efficient when processing multiple scenes
+ */
+export async function processScenesBatchForSynopsisAndCharacters(
+  scenes: Scene[],
+  castList: ScheduleCastMember[],
+  onProgress?: (status: string, progress: number, sceneNumber?: string) => void
+): Promise<Map<string, SceneProcessingResult>> {
+  const results = new Map<string, SceneProcessingResult>();
+
+  const scenesWithContent = scenes.filter(s => s.scriptContent);
+  const total = scenesWithContent.length;
+
+  if (total === 0) {
+    onProgress?.('No scenes with content to process', 100);
+    return results;
+  }
+
+  // First pass: Identify characters (fast, no AI)
+  onProgress?.('Identifying characters in scenes...', 5);
+  for (const scene of scenesWithContent) {
+    const detectedCharacters = castList.length > 0
+      ? identifyCharactersInScene(scene.scriptContent!, castList)
+      : [];
+
+    results.set(scene.id, {
+      synopsis: null,
+      detectedCharacters,
+    });
+  }
+
+  // Check if AI is available for synopsis generation
+  const aiAvailable = await checkAIAvailability();
+  if (!aiAvailable) {
+    onProgress?.('Character identification complete (AI unavailable for synopses)', 100);
+    return results;
+  }
+
+  // Second pass: Generate synopses (requires AI)
+  let processed = 0;
+  for (const scene of scenesWithContent) {
+    try {
+      const progress = 10 + Math.round((processed / total) * 85);
+      onProgress?.(`Processing Scene ${scene.sceneNumber}...`, progress, scene.sceneNumber);
+
+      const synopsis = await generateSceneSynopsis(scene.slugline, scene.scriptContent!);
+
+      const existing = results.get(scene.id);
+      if (existing) {
+        existing.synopsis = synopsis;
+      }
+
+      processed++;
+    } catch (error) {
+      console.error(`Failed to process scene ${scene.sceneNumber}:`, error);
+    }
+
+    // Rate limiting delay
+    if (processed < total) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+  }
+
+  onProgress?.(`Processed ${processed} scenes`, 100);
+  return results;
+}
 
 interface DesktopSynopsisData {
   projectId: string;

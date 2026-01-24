@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
+import { useScheduleStore } from '@/stores/scheduleStore';
 import { demoProject } from '@/stores/demoData';
 import {
   parseScriptFile,
@@ -8,8 +9,12 @@ import {
   suggestCharacterMerges,
   detectCharactersForScenesBatch,
 } from '@/utils/scriptParser';
+import {
+  parseSchedulePDF,
+  matchScheduleToScript,
+} from '@/utils/scheduleParser';
 import type { ParsedScript } from '@/utils/scriptParser';
-import type { Project, Scene } from '@/types';
+import type { Project, Scene, ProductionSchedule } from '@/types';
 import { createEmptyMakeupDetails, createEmptyHairDetails } from '@/types';
 
 type HomeView = 'welcome' | 'upload' | 'processing' | 'characters' | 'setup';
@@ -25,22 +30,42 @@ export function Home({ onProjectReady }: HomeProps) {
   const [view, setView] = useState<HomeView>('welcome');
   const [projectName, setProjectName] = useState('');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [uploadedScheduleFile, setUploadedScheduleFile] = useState<File | null>(null);
+  // parsedSchedule stored for potential future use in setup screen
+  const [, setParsedSchedule] = useState<ProductionSchedule | null>(null);
   const [processingProgress, setProcessingProgress] = useState(0);
   const [processingStatus, setProcessingStatus] = useState('Reading document...');
   const [parsedScript, setParsedScript] = useState<ParsedScript | null>(null);
   const [selectedCharacters, setSelectedCharacters] = useState<Set<string>>(new Set());
   const [mergeMap, setMergeMap] = useState<Map<string, string>>(new Map()); // maps merged -> primary
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const scheduleInputRef = useRef<HTMLInputElement>(null);
   const { setProject } = useProjectStore();
+  const { setSchedule } = useScheduleStore();
 
   // Progressive workflow: Fast scene parsing then background character detection
-  const processScriptFast = useCallback(async (file: File) => {
+  const processScriptFast = useCallback(async (file: File, scheduleFile?: File | null) => {
     try {
       setProcessingProgress(10);
-      setProcessingStatus('Reading document...');
+      setProcessingStatus('Reading script...');
 
       // Small delay to show initial state
       await new Promise(r => setTimeout(r, 200));
+
+      // Parse schedule if provided (fast, no AI)
+      let schedule: ProductionSchedule | null = null;
+      if (scheduleFile) {
+        setProcessingProgress(15);
+        setProcessingStatus('Processing schedule...');
+        try {
+          schedule = await parseSchedulePDF(scheduleFile);
+          setParsedSchedule(schedule);
+          setSchedule(schedule);
+          console.log(`Schedule parsed: ${schedule.castList.length} cast, ${schedule.days.length} days`);
+        } catch (e) {
+          console.warn('Schedule parsing failed, continuing without:', e);
+        }
+      }
 
       setProcessingProgress(30);
       setProcessingStatus('Detecting scenes...');
@@ -48,23 +73,42 @@ export function Home({ onProjectReady }: HomeProps) {
       // Fast parse - only extracts scene structure
       const fastParsed = await parseScenesFast(file);
 
+      setProcessingProgress(60);
+      setProcessingStatus('Matching schedule to scenes...');
+      await new Promise(r => setTimeout(r, 100));
+
+      // Match schedule scenes to script scenes for character info
+      let scheduleMatch: Map<string, { sceneId: string; characterNames: string[]; shootingDay: number }> | null = null;
+      if (schedule) {
+        const scriptScenesForMatch = fastParsed.scenes.map(s => ({
+          sceneNumber: s.sceneNumber,
+          id: `scene-${s.sceneNumber}`,
+        }));
+        scheduleMatch = matchScheduleToScript(schedule, scriptScenesForMatch);
+      }
+
       setProcessingProgress(70);
       setProcessingStatus('Creating project...');
-      await new Promise(r => setTimeout(r, 200));
+      await new Promise(r => setTimeout(r, 100));
 
-      // Create project immediately with scenes but no characters
-      const scenes: Scene[] = fastParsed.scenes.map((fs) => ({
-        id: `scene-${fs.sceneNumber}`,
-        sceneNumber: fs.sceneNumber,
-        slugline: fs.slugline,
-        intExt: fs.intExt,
-        timeOfDay: fs.timeOfDay,
-        scriptContent: fs.scriptContent,
-        characters: [], // Empty until confirmed
-        isComplete: false,
-        characterConfirmationStatus: 'pending' as const,
-        suggestedCharacters: undefined,
-      }));
+      // Create project immediately with scenes
+      // Pre-populate suggestedCharacters from schedule if available
+      const scenes: Scene[] = fastParsed.scenes.map((fs) => {
+        const scheduleInfo = scheduleMatch?.get(fs.sceneNumber);
+        return {
+          id: `scene-${fs.sceneNumber}`,
+          sceneNumber: fs.sceneNumber,
+          slugline: fs.slugline,
+          intExt: fs.intExt,
+          timeOfDay: fs.timeOfDay,
+          scriptContent: fs.scriptContent,
+          characters: [], // Empty until confirmed
+          isComplete: false,
+          characterConfirmationStatus: scheduleInfo?.characterNames.length ? 'ready' as const : 'pending' as const,
+          suggestedCharacters: scheduleInfo?.characterNames || undefined,
+          shootingDay: scheduleInfo?.shootingDay,
+        };
+      });
 
       const project: Project = {
         id: `project-${Date.now()}`,
@@ -74,7 +118,7 @@ export function Home({ onProjectReady }: HomeProps) {
         scenes,
         characters: [],
         looks: [],
-        characterDetectionStatus: 'idle',
+        characterDetectionStatus: schedule ? 'complete' : 'idle',
         scenesConfirmed: 0,
       };
 
@@ -87,14 +131,21 @@ export function Home({ onProjectReady }: HomeProps) {
 
       // Store the raw text for background character detection
       (project as any)._rawText = fastParsed.rawText;
+      // Store schedule cast list for reference
+      if (schedule) {
+        (project as any)._scheduleCastList = schedule.castList;
+      }
 
       // Set the project and proceed
       setProject(project);
 
-      // Start background character detection after a short delay
-      setTimeout(() => {
-        startBackgroundCharacterDetection(project, fastParsed.rawText);
-      }, 500);
+      // If no schedule was provided, start background character detection
+      // Otherwise, we already have characters from the schedule
+      if (!schedule) {
+        setTimeout(() => {
+          startBackgroundCharacterDetection(project, fastParsed.rawText);
+        }, 500);
+      }
 
       // Go directly to app
       setTimeout(() => onProjectReady(), 500);
@@ -103,7 +154,7 @@ export function Home({ onProjectReady }: HomeProps) {
       alert(error instanceof Error ? error.message : 'Failed to parse script');
       setView('upload');
     }
-  }, [projectName, setProject, onProjectReady]);
+  }, [projectName, setProject, setSchedule, onProjectReady]);
 
   // Background character detection (runs after project is created)
   const startBackgroundCharacterDetection = useCallback(async (project: Project, rawText: string) => {
@@ -149,10 +200,10 @@ export function Home({ onProjectReady }: HomeProps) {
   }, []);
 
   // Original workflow: Full AI parsing then character selection
-  const processScript = useCallback(async (file: File) => {
+  const processScript = useCallback(async (file: File, scheduleFile?: File | null) => {
     // Use progressive workflow if enabled
     if (USE_PROGRESSIVE_WORKFLOW) {
-      return processScriptFast(file);
+      return processScriptFast(file, scheduleFile);
     }
 
     // Legacy flow
@@ -238,7 +289,21 @@ export function Home({ onProjectReady }: HomeProps) {
       const name = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
       setProjectName(name);
       setView('processing');
-      processScript(file);
+      processScript(file, uploadedScheduleFile);
+    }
+  };
+
+  const handleScheduleSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setUploadedScheduleFile(file);
+    }
+  };
+
+  const handleStartWithFiles = () => {
+    if (uploadedFile) {
+      setView('processing');
+      processScript(uploadedFile, uploadedScheduleFile);
     }
   };
 
@@ -346,8 +411,12 @@ export function Home({ onProjectReady }: HomeProps) {
       {view === 'upload' && (
         <UploadScreen
           fileInputRef={fileInputRef}
+          scheduleInputRef={scheduleInputRef}
+          uploadedFile={uploadedFile}
+          uploadedScheduleFile={uploadedScheduleFile}
           onBack={() => setView('welcome')}
           onSkip={handleSkipToSetup}
+          onStartWithFiles={handleStartWithFiles}
         />
       )}
 
@@ -382,12 +451,19 @@ export function Home({ onProjectReady }: HomeProps) {
         />
       )}
 
-      {/* Hidden file input */}
+      {/* Hidden file inputs */}
       <input
         ref={fileInputRef}
         type="file"
         accept=".pdf,.fdx,.fountain,.txt"
         onChange={handleFileSelect}
+        className="hidden"
+      />
+      <input
+        ref={scheduleInputRef}
+        type="file"
+        accept=".pdf"
+        onChange={handleScheduleSelect}
         className="hidden"
       />
     </div>
@@ -477,11 +553,23 @@ function FeatureItem({ icon, text }: { icon: React.ReactNode; text: string }) {
 // Upload Screen
 interface UploadScreenProps {
   fileInputRef: React.RefObject<HTMLInputElement>;
+  scheduleInputRef: React.RefObject<HTMLInputElement>;
+  uploadedFile: File | null;
+  uploadedScheduleFile: File | null;
   onBack: () => void;
   onSkip: () => void;
+  onStartWithFiles: () => void;
 }
 
-function UploadScreen({ fileInputRef, onBack, onSkip }: UploadScreenProps) {
+function UploadScreen({
+  fileInputRef,
+  scheduleInputRef,
+  uploadedFile,
+  uploadedScheduleFile,
+  onBack,
+  onSkip,
+  onStartWithFiles,
+}: UploadScreenProps) {
   return (
     <div className="flex flex-col min-h-screen">
       {/* Header */}
@@ -494,37 +582,127 @@ function UploadScreen({ fileInputRef, onBack, onSkip }: UploadScreenProps) {
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h1 className="text-lg font-semibold text-text-primary">Upload Script</h1>
+        <h1 className="text-lg font-semibold text-text-primary">Upload Files</h1>
       </div>
 
       {/* Content */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6">
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className="w-full max-w-sm aspect-[4/3] rounded-2xl border-2 border-dashed border-gold/40 bg-gold/5 flex flex-col items-center justify-center gap-4 active:bg-gold/10 transition-colors"
-        >
-          <div className="w-16 h-16 rounded-full bg-gold/10 flex items-center justify-center">
-            <svg className="w-8 h-8 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-            </svg>
+      <div className="flex-1 overflow-y-auto px-6 py-6">
+        {/* Script Upload (Required) */}
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-sm font-medium text-text-primary">Script</span>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-gold/10 text-gold">Required</span>
           </div>
-          <div className="text-center">
-            <p className="text-base font-semibold text-text-primary mb-1">
-              Tap to upload script
-            </p>
-            <p className="text-sm text-text-muted">
-              PDF, Final Draft, or Fountain
-            </p>
-          </div>
-        </button>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className={`w-full rounded-2xl border-2 border-dashed transition-colors p-6 ${
+              uploadedFile
+                ? 'border-green-400 bg-green-50'
+                : 'border-gold/40 bg-gold/5 active:bg-gold/10'
+            }`}
+          >
+            <div className="flex items-center gap-4">
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                uploadedFile ? 'bg-green-100' : 'bg-gold/10'
+              }`}>
+                {uploadedFile ? (
+                  <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : (
+                  <svg className="w-6 h-6 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                  </svg>
+                )}
+              </div>
+              <div className="flex-1 text-left">
+                {uploadedFile ? (
+                  <>
+                    <p className="text-sm font-medium text-green-700 truncate">{uploadedFile.name}</p>
+                    <p className="text-xs text-green-600">Tap to change</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm font-medium text-text-primary">Tap to upload script</p>
+                    <p className="text-xs text-text-muted">PDF, Final Draft, or Fountain</p>
+                  </>
+                )}
+              </div>
+            </div>
+          </button>
+        </div>
 
-        <p className="text-xs text-text-light mt-6 text-center max-w-xs">
-          We'll automatically detect scenes and characters from your script
-        </p>
+        {/* Schedule Upload (Optional) */}
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-sm font-medium text-text-primary">Production Schedule</span>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-text-muted">Optional</span>
+          </div>
+          <button
+            onClick={() => scheduleInputRef.current?.click()}
+            className={`w-full rounded-2xl border-2 border-dashed transition-colors p-6 ${
+              uploadedScheduleFile
+                ? 'border-green-400 bg-green-50'
+                : 'border-gray-300 bg-gray-50 active:bg-gray-100'
+            }`}
+          >
+            <div className="flex items-center gap-4">
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                uploadedScheduleFile ? 'bg-green-100' : 'bg-gray-100'
+              }`}>
+                {uploadedScheduleFile ? (
+                  <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : (
+                  <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+                  </svg>
+                )}
+              </div>
+              <div className="flex-1 text-left">
+                {uploadedScheduleFile ? (
+                  <>
+                    <p className="text-sm font-medium text-green-700 truncate">{uploadedScheduleFile.name}</p>
+                    <p className="text-xs text-green-600">Tap to change</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm font-medium text-text-secondary">Tap to upload schedule</p>
+                    <p className="text-xs text-text-muted">PDF (strips, one-liner)</p>
+                  </>
+                )}
+              </div>
+            </div>
+          </button>
+          <p className="text-xs text-text-light mt-2 px-2">
+            Uploading a schedule gives you accurate character assignments per scene and shooting day info
+          </p>
+        </div>
+
+        {/* Info */}
+        <div className="rounded-xl bg-blue-50 border border-blue-100 p-4">
+          <div className="flex gap-3">
+            <svg className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+            </svg>
+            <div className="text-xs text-blue-700">
+              <p className="font-medium mb-1">Faster with Schedule</p>
+              <p>The schedule contains the official cast list with character numbers. This allows instant, accurate character detection per scene without AI processing.</p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Skip option */}
-      <div className="px-6 pb-8">
+      {/* Bottom actions */}
+      <div className="px-6 pb-8 pt-4 border-t border-border space-y-3">
+        <button
+          onClick={onStartWithFiles}
+          disabled={!uploadedFile}
+          className="w-full py-4 rounded-button gold-gradient text-white font-semibold text-base shadow-lg active:scale-[0.98] transition-transform disabled:opacity-50 disabled:active:scale-100"
+        >
+          {uploadedFile ? 'Continue' : 'Upload a script to continue'}
+        </button>
         <button
           onClick={onSkip}
           className="w-full py-3 text-sm text-text-muted font-medium active:text-gold transition-colors"
