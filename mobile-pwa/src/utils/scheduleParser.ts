@@ -353,11 +353,23 @@ function parseDaySectionFast(
  * Handles formats like:
  * - "Scene 21 | 2 pgs | INT Day | MARGOT'S BEDROOM - PLUMHILL MANOR | 1 | Est. Time 3:00 | D5"
  * - Table rows with scene number, pages, INT/EXT, location, cast numbers, time, day marker
+ * - Two-row table format where "Scene" and scene number are on separate lines (stacked cells)
  */
 function parseSceneEntriesFast(dayText: string): ScheduleSceneEntry[] {
   const scenes: ScheduleSceneEntry[] = [];
   const lines = dayText.split('\n');
 
+  // First, try to detect and handle two-row table format
+  // In this format, "Scene" is on one line and the scene number is on the next line
+  // Example:
+  //   Line 1: Scene  2     INT   MARGOT'S BEDROOM...      1    Est. Time   Day:
+  //   Line 2: 21     pgs   Day   Margot wakes to a call...     3:00        D5
+  const twoRowScenes = parseTwoRowTableFormat(lines);
+  if (twoRowScenes.length > 0) {
+    return twoRowScenes;
+  }
+
+  // Fall back to single-line format parsing
   // Combine related lines (scene header + description often on separate lines)
   const combinedLines: string[] = [];
   let currentLine = '';
@@ -407,6 +419,185 @@ function parseSceneEntriesFast(dayText: string): ScheduleSceneEntry[] {
   }
 
   return scenes;
+}
+
+/**
+ * Parse two-row table format where scene data is split across two lines
+ * Row 1: "Scene", page count top part, "INT/EXT", location, cast#, "Est. Time", "Day:", "Remarks:"
+ * Row 2: scene number, "pgs", "Day/Night", description, time value, day marker, remarks text
+ */
+function parseTwoRowTableFormat(lines: string[]): ScheduleSceneEntry[] {
+  const scenes: ScheduleSceneEntry[] = [];
+
+  // Look for lines that start with "Scene" followed by tab/spaces but NO number immediately after
+  // This indicates the two-row format where the scene number is on the next line
+  for (let i = 0; i < lines.length - 1; i++) {
+    const line1 = lines[i].trim();
+    const line2 = lines[i + 1]?.trim() || '';
+
+    // Detect "Scene" header row pattern:
+    // - Starts with "Scene" (possibly followed by whitespace/tab)
+    // - Does NOT have a digit immediately after "Scene"
+    // - Contains INT or EXT somewhere in the line
+    // - Next line starts with a scene number (digits, possibly with letter suffix)
+    const isSceneHeaderRow = /^Scene(?:\s|\t|$)/i.test(line1) &&
+                              !/^Scene\s*\d/i.test(line1) &&
+                              /\b(INT|EXT)\b/i.test(line1);
+
+    const nextLineHasSceneNum = /^(\d+[A-Za-z]?)(?:\s|\t|$)/.test(line2);
+
+    if (isSceneHeaderRow && nextLineHasSceneNum) {
+      // This is a two-row scene entry - combine the rows
+      const combinedScene = combineSceneRows(line1, line2);
+      if (combinedScene && !scenes.find(s => s.sceneNumber === combinedScene.sceneNumber)) {
+        combinedScene.shootOrder = scenes.length + 1;
+        scenes.push(combinedScene);
+      }
+      // Skip the next line since we've processed it
+      i++;
+    }
+  }
+
+  return scenes;
+}
+
+/**
+ * Combine two rows of scene data into a single scene entry
+ * Handles tab-separated columns where data is vertically stacked
+ */
+function combineSceneRows(headerRow: string, dataRow: string): ScheduleSceneEntry | null {
+  // Split both rows by tabs (primary delimiter) and multiple spaces (secondary delimiter)
+  const splitRow = (row: string): string[] => {
+    // First split by tabs
+    const tabSplit = row.split('\t');
+    // If we got meaningful splits, use them
+    if (tabSplit.length > 3) {
+      return tabSplit.map(s => s.trim());
+    }
+    // Otherwise try splitting by 2+ spaces
+    return row.split(/\s{2,}/).map(s => s.trim());
+  };
+
+  const headerCols = splitRow(headerRow);
+  const dataCols = splitRow(dataRow);
+
+  // Extract scene number from data row (first column)
+  const sceneNumMatch = dataCols[0]?.match(/^(\d+[A-Za-z]?(?:pt)?)/i);
+  if (!sceneNumMatch) return null;
+  const sceneNumber = sceneNumMatch[1].replace(/pt$/i, '');
+
+  // Combine columns to extract data
+  // Header: [Scene, pageTop, INT, LOCATION..., castNum, Est. Time, Day:, Remarks:]
+  // Data:   [sceneNum, pgs, Day, description..., timeVal, dayMarker, remarks...]
+
+  // Extract pages - look for "pgs" in data row and combine with number from header
+  let pages: string | undefined;
+  const pgsIndex = dataCols.findIndex(c => /pgs?$/i.test(c));
+  if (pgsIndex > 0 && headerCols[pgsIndex]) {
+    const pageNum = headerCols[pgsIndex].match(/(\d+\s*(?:\d\/\d)?)/);
+    if (pageNum) {
+      pages = pageNum[1].trim();
+    }
+  }
+  // Also check if pages are in same cell like "2/8 pgs"
+  if (!pages) {
+    for (const col of [...headerCols, ...dataCols]) {
+      const pagesMatch = col.match(/(\d+\s*(?:\d\/\d)?)\s*pgs?/i);
+      if (pagesMatch) {
+        pages = pagesMatch[1].trim();
+        break;
+      }
+    }
+  }
+
+  // Extract INT/EXT from header row
+  const intExtMatch = headerRow.match(/\b(INT|EXT)(?:\/(?:INT|EXT))?\b/i);
+  const intExt = intExtMatch ? (intExtMatch[1].toUpperCase() as 'INT' | 'EXT') : 'INT';
+
+  // Extract time of day from data row (Day, Night, Morning, etc.)
+  const timeMatch = dataRow.match(/\b(Day|Night|Morning|Evening|Dawn|Dusk)\b/i);
+  const timeOfDay = timeMatch ? timeMatch[1] : 'Day';
+
+  // Extract day marker (D5, N8, etc.) from data row
+  const dayMarkerMatch = dataRow.match(/\b([DN]\d+[DN]?)\b/i);
+  const dayNight = dayMarkerMatch ? dayMarkerMatch[1].toUpperCase() : timeOfDay;
+
+  // Extract location from header row - typically ALL CAPS after INT/EXT
+  let setLocation = '';
+  const locationMatch = headerRow.match(/\b(?:INT|EXT)(?:\/(?:INT|EXT))?\s+([A-Z][A-Z\s\-\'\/,\.]+?)(?:\t|\s{2,}|\d{1,2}(?:\s*,|\s+Est)|$)/);
+  if (locationMatch) {
+    setLocation = locationMatch[1].trim()
+      .replace(/\s+/g, ' ')
+      .replace(/[-–]\s*$/, '')
+      .trim();
+  }
+
+  // Extract description from data row - mixed case text describing the scene action
+  let description = '';
+  // Find the description after Day/Night marker and before numbers/time
+  const descMatch = dataRow.match(/\b(?:Day|Night|Morning)\s+([A-Z][a-z][^0-9\t]{5,}?)(?:\d|\t|$)/i);
+  if (descMatch) {
+    description = descMatch[1].trim().replace(/\s+/g, ' ');
+  } else {
+    // Try to find any mixed case text that looks like a description
+    for (const col of dataCols) {
+      if (/^[A-Z][a-z]/.test(col) && col.length > 10 && !/pgs?$/i.test(col)) {
+        description = col.trim();
+        break;
+      }
+    }
+  }
+
+  // Extract cast numbers - look for single digits or comma-separated numbers
+  const castNumbers: number[] = [];
+
+  // Check header row for cast numbers (typically after location)
+  const headerCastMatch = headerRow.match(/(?:MANOR|HOUSE|ROOM|GARDEN|HALL|KITCHEN|BEDROOM|PARLOUR|HALLWAY|STREETS|BRIDGE|DOOR|FOYER)\s+(\d{1,2}(?:\s*,\s*\d{1,2})*)/i);
+  if (headerCastMatch) {
+    const nums = headerCastMatch[1].match(/\d{1,2}/g);
+    if (nums) {
+      for (const n of nums) {
+        const num = parseInt(n, 10);
+        if (num > 0 && num <= 50 && !castNumbers.includes(num)) {
+          castNumbers.push(num);
+        }
+      }
+    }
+  }
+
+  // Also look for cast numbers in both rows using column-based detection
+  for (const col of [...headerCols, ...dataCols]) {
+    // Skip if it looks like time, pages, or day marker
+    if (/pgs?$/i.test(col) || /^\d+:\d+$/.test(col) || /^[DN]\d+/i.test(col) || /^:\d+$/.test(col)) continue;
+    // Check for single cast number or comma-separated list
+    if (/^\d{1,2}(?:\s*,\s*\d{1,2})*$/.test(col.trim())) {
+      const nums = col.match(/\d{1,2}/g);
+      if (nums) {
+        for (const n of nums) {
+          const num = parseInt(n, 10);
+          if (num > 0 && num <= 50 && !castNumbers.includes(num)) {
+            castNumbers.push(num);
+          }
+        }
+      }
+    }
+  }
+
+  // Extract estimated time from data row (format: "3:00", "1:30", ":30")
+  const estTimeMatch = dataRow.match(/\b(\d{1,2}:\d{2}|:\d{2})\b/);
+  const estimatedTime = estTimeMatch ? estTimeMatch[1] : undefined;
+
+  return {
+    sceneNumber,
+    pages,
+    intExt,
+    dayNight,
+    setLocation,
+    description: description || undefined,
+    castNumbers,
+    estimatedTime,
+    shootOrder: 0,
+  };
 }
 
 /**
