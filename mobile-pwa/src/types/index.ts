@@ -1,5 +1,8 @@
 // Core Data Types for Hair & Makeup Pro Mobile PWA
 
+// Character detection status for background processing
+export type CharacterDetectionStatus = 'idle' | 'running' | 'complete';
+
 export interface Project {
   id: string;
   name: string;
@@ -9,7 +12,14 @@ export interface Project {
   scenes: Scene[];
   characters: Character[];
   looks: Look[];
+
+  // Track overall character confirmation progress (for progressive workflow)
+  characterDetectionStatus?: CharacterDetectionStatus;
+  scenesConfirmed?: number; // Count of scenes with confirmed characters
 }
+
+// Character confirmation status for progressive scene-by-scene workflow
+export type CharacterConfirmationStatus = 'pending' | 'detecting' | 'ready' | 'confirmed';
 
 export interface Scene {
   id: string;
@@ -19,13 +29,17 @@ export interface Scene {
   timeOfDay: 'DAY' | 'NIGHT' | 'MORNING' | 'EVENING' | 'CONTINUOUS';
   synopsis?: string;
   scriptContent?: string;
-  characters: string[];
+  characters: string[]; // Confirmed character IDs (empty until confirmed)
   isComplete: boolean;
   completedAt?: Date;
   filmingStatus?: SceneFilmingStatus; // Tracks actual filming outcome
   filmingNotes?: string; // Reason for not filmed/partial
   shootingDay?: number; // Which production day this scene is scheduled
   hasScheduleDiscrepancy?: boolean; // Flag if schedule doesn't match breakdown
+
+  // Character confirmation state (for progressive workflow)
+  characterConfirmationStatus?: CharacterConfirmationStatus;
+  suggestedCharacters?: string[]; // AI/regex suggested character names before confirmation
 }
 
 export interface Character {

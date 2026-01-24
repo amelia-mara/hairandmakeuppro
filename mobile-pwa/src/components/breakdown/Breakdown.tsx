@@ -3,6 +3,11 @@ import { useProjectStore } from '@/stores/projectStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
 import { CharacterAvatar } from '@/components/characters/CharacterAvatar';
 import { SceneScriptModal } from '@/components/scenes/SceneScriptModal';
+import {
+  SceneCharacterConfirmation,
+  SceneCharacterStatus,
+  CharacterConfirmationProgress,
+} from '@/components/breakdown/SceneCharacterConfirmation';
 import { generateSceneSynopsis } from '@/services/aiService';
 import type { Scene, Character, Look, SceneCapture, BreakdownViewMode, BreakdownFilters, SceneFilmingStatus } from '@/types';
 import { SCENE_FILMING_STATUS_CONFIG } from '@/types';
@@ -28,6 +33,7 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
   const [expandedSceneId, setExpandedSceneId] = useState<string | null>(null);
   const [scriptModalSceneId, setScriptModalSceneId] = useState<string | null>(null);
   const [generatingSynopsisId, setGeneratingSynopsisId] = useState<string | null>(null);
+  const [characterConfirmSceneId, setCharacterConfirmSceneId] = useState<string | null>(null);
 
   // Handle generating synopsis for a scene
   const handleGenerateSynopsis = async (scene: Scene) => {
@@ -54,6 +60,22 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
     if (!scriptModalSceneId || !currentProject) return null;
     return currentProject.scenes.find(s => s.id === scriptModalSceneId) || null;
   }, [scriptModalSceneId, currentProject]);
+
+  // Get scene for character confirmation modal
+  const characterConfirmScene = useMemo(() => {
+    if (!characterConfirmSceneId || !currentProject) return null;
+    return currentProject.scenes.find(s => s.id === characterConfirmSceneId) || null;
+  }, [characterConfirmSceneId, currentProject]);
+
+  // Character confirmation progress
+  const confirmationProgress = useMemo(() => {
+    if (!currentProject) return { total: 0, confirmed: 0 };
+    const total = currentProject.scenes.length;
+    const confirmed = currentProject.scenes.filter(
+      s => s.characterConfirmationStatus === 'confirmed'
+    ).length;
+    return { total, confirmed };
+  }, [currentProject]);
 
   // Get unique locations from scenes
   const locations = useMemo(() => {
@@ -233,6 +255,16 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
         </span>
       </div>
 
+      {/* Character confirmation progress */}
+      {confirmationProgress.total > 0 && confirmationProgress.confirmed < confirmationProgress.total && (
+        <div className="mobile-container">
+          <CharacterConfirmationProgress
+            totalScenes={confirmationProgress.total}
+            confirmedScenes={confirmationProgress.confirmed}
+          />
+        </div>
+      )}
+
       {/* Content */}
       <div className="mobile-container px-4 pb-4">
         {filteredScenes.length === 0 ? (
@@ -259,6 +291,8 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
             getCapture={getCapture}
             getSceneProgress={getSceneProgress}
             getDiscrepancy={getDiscrepancyForScene}
+            onCharacterConfirm={(sceneId) => setCharacterConfirmSceneId(sceneId)}
+            allCharacters={currentProject?.characters || []}
           />
         ) : (
           <BreakdownGridView
@@ -290,6 +324,15 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
           onClose={() => setScriptModalSceneId(null)}
         />
       )}
+
+      {/* Character Confirmation Modal */}
+      {characterConfirmScene && (
+        <SceneCharacterConfirmation
+          scene={characterConfirmScene}
+          onClose={() => setCharacterConfirmSceneId(null)}
+          onConfirm={() => setCharacterConfirmSceneId(null)}
+        />
+      )}
     </div>
   );
 }
@@ -308,6 +351,8 @@ interface BreakdownListViewProps {
   getCapture: (sceneId: string, characterId: string) => SceneCapture | null | undefined;
   getSceneProgress: (scene: Scene) => { captured: number; total: number };
   getDiscrepancy: (sceneNumber: string) => { message: string } | null;
+  onCharacterConfirm: (sceneId: string) => void;
+  allCharacters: Character[];
 }
 
 // Get glass overlay class based on filming status
@@ -338,6 +383,8 @@ function BreakdownListView({
   getCapture,
   getSceneProgress,
   getDiscrepancy,
+  onCharacterConfirm,
+  allCharacters,
 }: BreakdownListViewProps) {
   return (
     <div className="space-y-2">
@@ -507,6 +554,17 @@ function BreakdownListView({
                     </span>
                   )}
                 </button>
+              )}
+
+              {/* Character confirmation status - show when not all confirmed or when showing status is useful */}
+              {(scene.characterConfirmationStatus !== 'confirmed' || characters.length === 0) && (
+                <div className="mt-2 pt-2 border-t border-border/30">
+                  <SceneCharacterStatus
+                    scene={scene}
+                    characters={allCharacters}
+                    onConfirmClick={() => onCharacterConfirm(scene.id)}
+                  />
+                </div>
               )}
             </div>
 

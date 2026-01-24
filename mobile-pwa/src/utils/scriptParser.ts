@@ -34,6 +34,24 @@ export interface ParsedCharacter {
   description?: string;
 }
 
+// Fast-parsed scene interface (no characters, just scene structure)
+export interface FastParsedScene {
+  sceneNumber: string;
+  slugline: string;
+  intExt: 'INT' | 'EXT';
+  location: string;
+  timeOfDay: 'DAY' | 'NIGHT' | 'MORNING' | 'EVENING' | 'CONTINUOUS';
+  scriptContent: string;
+  // Characters NOT included - detected later
+}
+
+// Result of fast scene parsing
+export interface FastParsedScript {
+  title: string;
+  scenes: FastParsedScene[];
+  rawText: string;
+}
+
 interface TextItem {
   str: string;
   transform: number[];
@@ -1021,4 +1039,253 @@ export function suggestCharacterMerges(characters: ParsedCharacter[]): Array<{
   }
 
   return suggestions;
+}
+
+/**
+ * Fast scene parsing - extracts ONLY scene structure without character detection
+ * This is designed to complete in under 30 seconds for any script size
+ * Uses regex only (no AI) for maximum speed
+ */
+export async function parseScenesFast(file: File): Promise<FastParsedScript> {
+  const fileName = file.name.toLowerCase();
+  let text: string;
+
+  // Extract text based on file type
+  if (fileName.endsWith('.pdf')) {
+    text = await extractTextFromPDF(file);
+  } else if (fileName.endsWith('.fdx')) {
+    const xmlContent = await file.text();
+    text = extractTextFromFDX(xmlContent);
+  } else {
+    text = await file.text();
+  }
+
+  // Parse scenes using regex only (fast path)
+  const lines = text.split('\n');
+  const scenes: FastParsedScene[] = [];
+
+  let currentScene: FastParsedScene | null = null;
+  let fallbackSceneNumber = 0;
+  let currentSceneContent = '';
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    // Check for scene heading using the existing robust parser
+    const parsedHeading = parseSceneHeadingLine(trimmed);
+
+    if (parsedHeading.isValid) {
+      // Save previous scene
+      if (currentScene) {
+        currentScene.scriptContent = currentSceneContent.trim();
+        scenes.push(currentScene);
+      }
+
+      // Use scene number from script, or fall back to sequential
+      fallbackSceneNumber++;
+      const sceneNum = parsedHeading.sceneNumber || String(fallbackSceneNumber);
+
+      // Normalize time of day to our expected types
+      const normalizedTime = normalizeTimeOfDayForScene(parsedHeading.timeOfDay);
+
+      currentScene = {
+        sceneNumber: sceneNum,
+        slugline: trimmed,
+        intExt: parsedHeading.intExt,
+        location: parsedHeading.location,
+        timeOfDay: normalizedTime,
+        scriptContent: '',
+      };
+      currentSceneContent = trimmed + '\n';
+      continue;
+    }
+
+    // Add to current scene content
+    if (currentScene) {
+      currentSceneContent += line + '\n';
+    }
+  }
+
+  // Save last scene
+  if (currentScene) {
+    currentScene.scriptContent = currentSceneContent.trim();
+    scenes.push(currentScene);
+  }
+
+  // Try to extract title from the beginning of the script
+  const titleMatch = text.slice(0, 1000).match(/^(?:title[:\s]*)?([A-Z][A-Z\s\d\-\'\"]+)(?:\n|by)/im);
+  const title = titleMatch ? titleMatch[1].trim() : 'Untitled Script';
+
+  return {
+    title,
+    scenes,
+    rawText: text,
+  };
+}
+
+/**
+ * Detect characters for a single scene or batch of scenes
+ * Can use AI for better accuracy or fall back to regex
+ * @param sceneContent - The script content for the scene
+ * @param rawText - The full raw script text (for context)
+ * @param options - Optional settings
+ * @returns Array of character names detected in this scene
+ */
+export async function detectCharactersForScene(
+  sceneContent: string,
+  rawText: string,
+  options?: { useAI?: boolean }
+): Promise<string[]> {
+  const useAI = options?.useAI ?? false;
+  const characters: string[] = [];
+  const characterSet = new Set<string>();
+
+  // Always try regex detection first (fast, reliable for dialogue cues)
+  const lines = sceneContent.split('\n');
+  let lastLineWasCharacter = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    // Check for character cue
+    if (isCharacterCue(trimmed)) {
+      const normalized = normalizeCharacterName(trimmed);
+
+      if (normalized.length >= 2 && !characterSet.has(normalized)) {
+        characterSet.add(normalized);
+        characters.push(normalized);
+      }
+      lastLineWasCharacter = true;
+    } else if (lastLineWasCharacter && trimmed.length > 0) {
+      // This is dialogue following a character cue
+      // Keep lastLineWasCharacter true for multi-line dialogue
+    } else {
+      lastLineWasCharacter = false;
+
+      // Also check for characters mentioned in action/description lines
+      if (trimmed.length > 10) {
+        const actionCharacters = extractCharactersFromActionLine(trimmed);
+        for (const charName of actionCharacters) {
+          const normalized = normalizeCharacterName(charName);
+          if (normalized.length >= 2 && !characterSet.has(normalized)) {
+            characterSet.add(normalized);
+            characters.push(normalized);
+          }
+        }
+      }
+    }
+  }
+
+  // If AI is requested and available, use it to enhance detection
+  if (useAI) {
+    try {
+      const aiAvailable = await checkAIAvailability();
+      if (aiAvailable) {
+        const aiCharacters = await detectCharactersWithAI(sceneContent);
+        // Merge AI results with regex results, avoiding duplicates
+        for (const char of aiCharacters) {
+          const normalized = normalizeCharacterName(char);
+          if (normalized.length >= 2 && !characterSet.has(normalized)) {
+            characterSet.add(normalized);
+            characters.push(normalized);
+          }
+        }
+      }
+    } catch (error) {
+      console.warn('AI character detection failed, using regex results only:', error);
+    }
+  }
+
+  return characters;
+}
+
+/**
+ * Detect characters in a scene using AI
+ * This is called by detectCharactersForScene when AI is enabled
+ */
+async function detectCharactersWithAI(sceneContent: string): Promise<string[]> {
+  // Import the AI service dynamically to avoid circular dependencies
+  const { callAI } = await import('@/services/aiService');
+
+  const prompt = `You are a screenplay analyzer. Identify ALL characters who appear in this scene.
+
+Rules:
+1. Include characters who speak (have dialogue)
+2. Include characters who are physically present but don't speak
+3. Include characters referenced by role (e.g., "TAXI DRIVER", "YOUNG WOMAN")
+4. Exclude location names, objects, and directions
+5. Return ONLY character names, one per line
+6. Use the name as it appears in the script (e.g., "JOHN", "MARY SMITH", "COP #1")
+
+Scene content:
+${sceneContent}
+
+Return only character names, one per line:`;
+
+  try {
+    const response = await callAI(prompt);
+    if (!response) return [];
+
+    // Parse the response - expect one character name per line
+    const lines = response.split('\n');
+    const characters: string[] = [];
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      // Skip empty lines and lines that look like explanations
+      if (!trimmed || trimmed.length > 30 || trimmed.includes(':')) continue;
+      // Remove common prefixes like "- " or "* " or numbers
+      const cleaned = trimmed.replace(/^[-*\d.)\s]+/, '').trim();
+      if (cleaned.length >= 2 && cleaned.length <= 25) {
+        characters.push(cleaned.toUpperCase());
+      }
+    }
+
+    return characters;
+  } catch (error) {
+    console.warn('AI character detection failed:', error);
+    return [];
+  }
+}
+
+/**
+ * Batch detect characters for multiple scenes
+ * More efficient than calling detectCharactersForScene individually
+ */
+export async function detectCharactersForScenesBatch(
+  scenes: Array<{ sceneNumber: string; scriptContent: string }>,
+  rawText: string,
+  options?: { useAI?: boolean; onProgress?: (completed: number, total: number) => void }
+): Promise<Map<string, string[]>> {
+  const results = new Map<string, string[]>();
+  const total = scenes.length;
+  let completed = 0;
+
+  // Process scenes in parallel batches of 5 for better performance
+  const batchSize = 5;
+
+  for (let i = 0; i < scenes.length; i += batchSize) {
+    const batch = scenes.slice(i, i + batchSize);
+
+    const batchResults = await Promise.all(
+      batch.map(async (scene) => {
+        const characters = await detectCharactersForScene(
+          scene.scriptContent,
+          rawText,
+          options
+        );
+        return { sceneNumber: scene.sceneNumber, characters };
+      })
+    );
+
+    for (const result of batchResults) {
+      results.set(result.sceneNumber, result.characters);
+      completed++;
+      options?.onProgress?.(completed, total);
+    }
+  }
+
+  return results;
 }
