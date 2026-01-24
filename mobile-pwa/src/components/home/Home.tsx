@@ -8,7 +8,7 @@ import {
   suggestCharacterMerges,
   detectCharactersForScenesBatch,
 } from '@/utils/scriptParser';
-import type { ParsedScript, FastParsedScript } from '@/utils/scriptParser';
+import type { ParsedScript } from '@/utils/scriptParser';
 import type { Project, Scene } from '@/types';
 import { createEmptyMakeupDetails, createEmptyHairDetails } from '@/types';
 

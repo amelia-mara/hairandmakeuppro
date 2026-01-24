@@ -1134,7 +1134,7 @@ export async function parseScenesFast(file: File): Promise<FastParsedScript> {
  */
 export async function detectCharactersForScene(
   sceneContent: string,
-  rawText: string,
+  _rawText: string,
   options?: { useAI?: boolean }
 ): Promise<string[]> {
   const useAI = options?.useAI ?? false;
