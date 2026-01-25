@@ -337,8 +337,8 @@ export const useAuthStore = create<AuthState>()(
             subscription: updatedSubscription,
             hasSelectedPlan: true,
             hasCompletedOnboarding: true,
-            // If user has no projects, take them to create one; otherwise hub
-            currentScreen: get().projectMemberships.length === 0 ? 'create-project' : 'hub',
+            // Always go to hub (dashboard) after plan selection - user can create/join from there
+            currentScreen: 'hub',
             isLoading: false,
             error: null,
           });
