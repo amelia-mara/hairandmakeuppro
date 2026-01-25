@@ -171,9 +171,19 @@ export default function App() {
     }
   }
 
+  // Handle back from Home screen
+  const handleBackFromHome = () => {
+    setShowHome(false);
+    if (isAuthenticated) {
+      setScreen('hub');
+    } else {
+      setScreen('welcome');
+    }
+  };
+
   // Show Home screen if no project or explicitly requested
   if (showHome || !currentProject) {
-    return <Home onProjectReady={handleProjectReady} />;
+    return <Home onProjectReady={handleProjectReady} onBack={handleBackFromHome} />;
   }
 
   // Show Export screen
