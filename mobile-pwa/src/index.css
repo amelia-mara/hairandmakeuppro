@@ -430,6 +430,34 @@
 }
 
 @layer utilities {
+  /* Premium entrance animations */
+  .animate-fadeIn {
+    animation: fadeIn 0.6s ease-out forwards;
+  }
+
+  .animate-slideUp {
+    animation: slideUp 0.5s ease-out forwards;
+  }
+
+  .animate-fadeInUp {
+    animation: fadeInUp 0.6s ease-out forwards;
+  }
+
+  .animate-scaleIn {
+    animation: scaleIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+
+  /* Staggered animation delays for feature cards */
+  .stagger-1 { animation-delay: 0.1s; opacity: 0; }
+  .stagger-2 { animation-delay: 0.2s; opacity: 0; }
+  .stagger-3 { animation-delay: 0.3s; opacity: 0; }
+  .stagger-4 { animation-delay: 0.4s; opacity: 0; }
+
+  /* Subtle pulse for premium elements */
+  .animate-pulse-subtle {
+    animation: pulseSoft 3s ease-in-out infinite;
+  }
+
   /* Touch action utilities */
   .touch-manipulation {
     touch-action: manipulation;
@@ -479,5 +507,38 @@
   }
   to {
     transform: translateY(0);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pulseSoft {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(1.1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.15);
   }
 }
