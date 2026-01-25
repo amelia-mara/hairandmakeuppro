@@ -5,165 +5,166 @@ export function WelcomeScreen() {
   const { setScreen } = useAuthStore();
 
   return (
-    <div className="min-h-screen bg-background flex flex-col overflow-hidden relative">
-      {/* Ambient background effects */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-32 -right-32 w-80 h-80 bg-gold/5 rounded-full blur-3xl animate-pulse-subtle" />
-        <div className="absolute -bottom-48 -left-32 w-96 h-96 bg-gold/5 rounded-full blur-3xl animate-pulse-subtle" style={{ animationDelay: '1.5s' }} />
-      </div>
-
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Main content area */}
-      <div className="flex-1 flex flex-col items-center justify-center px-8 pb-6 relative z-10">
-        {/* Logo and branding */}
-        <div className="flex flex-col items-center mb-14">
-          {/* Premium logo mark */}
-          <div className="relative mb-8 animate-scaleIn" style={{ animationDelay: '0.1s', opacity: 0, animationFillMode: 'forwards' }}>
-            <div className="absolute inset-0 gold-gradient rounded-[28px] blur-xl opacity-40 scale-110 animate-pulse-subtle" />
-            <div className="relative w-28 h-28 gold-gradient rounded-[28px] flex items-center justify-center shadow-2xl ring-1 ring-white/20">
-              <svg
-                className="w-16 h-16 text-white drop-shadow-md"
-                viewBox="0 0 24 24"
+      <div className="flex-1 flex flex-col items-center justify-center px-8">
+        {/* Logo - Elegant checkmark */}
+        <div
+          className="mb-6 animate-scaleIn"
+          style={{ animationDelay: '0.1s', opacity: 0, animationFillMode: 'forwards' }}
+        >
+          <div className="w-24 h-24 flex items-center justify-center">
+            <svg
+              className="w-20 h-20"
+              viewBox="0 0 80 80"
+              fill="none"
+            >
+              {/* Circle outline for light mode, hidden in dark */}
+              <circle
+                cx="40"
+                cy="40"
+                r="38"
+                className="stroke-gold/30 dark:stroke-transparent"
+                strokeWidth="1.5"
                 fill="none"
-                stroke="currentColor"
-                strokeWidth="1.2"
+              />
+              {/* Gold gradient checkmark */}
+              <defs>
+                <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#D4BC7D" />
+                  <stop offset="50%" stopColor="#C9A962" />
+                  <stop offset="100%" stopColor="#B8962E" />
+                </linearGradient>
+              </defs>
+              <path
+                d="M24 42L35 53L56 28"
+                stroke="url(#goldGradient)"
+                strokeWidth="5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-              >
-                {/* Refined brush icon */}
-                <path d="M18.5 2.5L21.5 5.5" />
-                <path d="M15 6L18.5 2.5" />
-                <ellipse cx="9.5" cy="15" rx="5.5" ry="7" />
-                <path d="M15 6L10 12" />
-                <path d="M6.5 11.5C6.5 11.5 7.5 13.5 9.5 15" />
-                <path d="M12.5 11.5C12.5 11.5 11.5 13.5 9.5 15" />
-              </svg>
-            </div>
+                fill="none"
+              />
+            </svg>
           </div>
-
-          {/* App name with refined typography */}
-          <h1
-            className="text-[2.5rem] font-bold text-text-primary tracking-tight mb-2 animate-fadeInUp"
-            style={{ animationDelay: '0.2s', opacity: 0, animationFillMode: 'forwards' }}
-          >
-            Checks Happy
-          </h1>
-
-          {/* Elegant tagline */}
-          <p
-            className="text-lg text-text-secondary font-light tracking-wide animate-fadeInUp"
-            style={{ animationDelay: '0.25s', opacity: 0, animationFillMode: 'forwards' }}
-          >
-            Your onset assistant
-          </p>
         </div>
 
-        {/* Feature cards - Premium glass style */}
-        <div className="w-full max-w-sm space-y-3 mb-8">
-          <FeatureCard
+        {/* App name - Luxury spaced typography */}
+        <h1
+          className="text-2xl font-semibold tracking-[0.3em] text-text-primary mb-3 animate-fadeInUp"
+          style={{ animationDelay: '0.2s', opacity: 0, animationFillMode: 'forwards' }}
+        >
+          CHECKS HAPPY
+        </h1>
+
+        {/* Tagline */}
+        <p
+          className="text-sm text-text-secondary tracking-wide mb-12 animate-fadeInUp"
+          style={{ animationDelay: '0.25s', opacity: 0, animationFillMode: 'forwards' }}
+        >
+          Hair & Makeup Continuity Simplified
+        </p>
+
+        {/* Feature icons - Horizontal row */}
+        <div
+          className="flex items-center justify-center gap-0 mb-12 animate-fadeInUp"
+          style={{ animationDelay: '0.3s', opacity: 0, animationFillMode: 'forwards' }}
+        >
+          <FeatureIcon
             icon={
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-                <rect x="3" y="3" width="18" height="18" rx="2" />
-                <path d="M3 9h18" />
-                <path d="M9 21V9" />
-              </svg>
-            }
-            title="Continuity Tracking"
-            description="Scene-by-scene consistency"
-            delay={1}
-          />
-          <FeatureCard
-            icon={
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+              <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <rect x="3" y="3" width="18" height="18" rx="2" />
                 <circle cx="8.5" cy="8.5" r="1.5" />
                 <path d="M21 15l-5-5L5 21" />
               </svg>
             }
-            title="Reference Photos"
-            description="Capture every detail"
-            delay={2}
+            label="Capture"
           />
-          <FeatureCard
+          <div className="w-px h-12 bg-border mx-6" />
+          <FeatureIcon
             icon={
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+              <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M12 2v4" />
+                <path d="M12 18v4" />
+                <path d="M4.93 4.93l2.83 2.83" />
+                <path d="M16.24 16.24l2.83 2.83" />
+                <path d="M2 12h4" />
+                <path d="M18 12h4" />
+                <path d="M4.93 19.07l2.83-2.83" />
+                <path d="M16.24 7.76l2.83-2.83" />
+              </svg>
+            }
+            label="Track"
+          />
+          <div className="w-px h-12 bg-border mx-6" />
+          <FeatureIcon
+            icon={
+              <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
                 <circle cx="9" cy="7" r="4" />
                 <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
                 <path d="M16 3.13a4 4 0 0 1 0 7.75" />
               </svg>
             }
-            title="Team Collaboration"
-            description="Work together seamlessly"
-            delay={3}
+            label="Collaborate"
           />
         </div>
       </div>
 
-      {/* Bottom action buttons - Premium styling */}
-      <div className="px-8 pb-safe-bottom space-y-3 relative z-10 animate-fadeInUp" style={{ animationDelay: '0.4s', opacity: 0, animationFillMode: 'forwards' }}>
-        {/* Subtle divider */}
-        <div className="flex items-center justify-center mb-4">
-          <div className="h-px w-16 bg-gradient-to-r from-transparent via-gold/30 to-transparent" />
-        </div>
-
-        <Button
-          fullWidth
-          size="lg"
+      {/* Bottom action buttons */}
+      <div
+        className="px-8 pb-12 space-y-3 animate-fadeInUp"
+        style={{ animationDelay: '0.4s', opacity: 0, animationFillMode: 'forwards' }}
+      >
+        {/* Sign In - Gold gradient in dark mode, dark in light mode */}
+        <button
           onClick={() => setScreen('signin')}
-          className="!h-14 !text-base !font-semibold shadow-lg shadow-gold/20 hover:shadow-xl hover:shadow-gold/30 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
+          className="w-full h-14 rounded-lg font-semibold text-base transition-all duration-200
+            bg-text-primary text-background hover:opacity-90 active:scale-[0.98]
+            dark:gold-gradient dark:text-white dark:shadow-lg dark:shadow-gold/20"
         >
           Sign In
-        </Button>
+        </button>
 
-        <Button
-          fullWidth
-          size="lg"
-          variant="outline"
+        {/* Create Account - Outlined */}
+        <button
           onClick={() => setScreen('signup')}
-          className="!h-14 !text-base !font-semibold !border-2 hover:bg-gold/5 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
+          className="w-full h-14 rounded-lg font-semibold text-base transition-all duration-200
+            border-2 border-text-primary text-text-primary hover:bg-text-primary/5 active:scale-[0.98]
+            dark:border-gold dark:text-gold dark:hover:bg-gold/10"
         >
           Create Account
-        </Button>
-
-        <button
-          className="w-full py-4 text-gold font-medium hover:text-gold-dark active:scale-[0.98] transition-all duration-200"
-          onClick={() => setScreen('join')}
-        >
-          Join a Team
         </button>
+
+        {/* Forgot Password link */}
+        <div className="pt-6 text-center">
+          <button
+            className="text-sm text-text-muted hover:text-text-secondary transition-colors"
+            onClick={() => setScreen('signin')}
+          >
+            Forgot Password?
+          </button>
+        </div>
       </div>
     </div>
   );
 }
 
-// Premium feature card component
-function FeatureCard({
+// Feature icon component
+function FeatureIcon({
   icon,
-  title,
-  description,
-  delay = 0
+  label
 }: {
   icon: React.ReactNode;
-  title: string;
-  description: string;
-  delay?: number;
+  label: string;
 }) {
   return (
-    <div
-      className="flex items-center gap-4 p-4 rounded-2xl bg-card border border-border/50 shadow-sm hover:shadow-md hover:border-gold/20 transition-all duration-300 animate-fadeInUp"
-      style={{ animationDelay: `${delay * 0.1}s`, opacity: 0, animationFillMode: 'forwards' }}
-    >
-      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-gold/10 to-gold/5 flex items-center justify-center text-gold flex-shrink-0 ring-1 ring-gold/10">
+    <div className="flex flex-col items-center gap-2">
+      <div className="text-gold">
         {icon}
       </div>
-      <div className="flex-1 min-w-0">
-        <h3 className="font-semibold text-text-primary text-[15px] leading-tight">
-          {title}
-        </h3>
-        <p className="text-sm text-text-muted mt-0.5">
-          {description}
-        </p>
-      </div>
+      <span className="text-xs text-text-secondary tracking-wide">
+        {label}
+      </span>
     </div>
   );
 }
