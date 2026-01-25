@@ -424,6 +424,7 @@ export const useAuthStore = create<AuthState>()(
         // Only persist these fields
         isAuthenticated: state.isAuthenticated,
         user: state.user,
+        currentScreen: state.currentScreen, // Persist current screen to prevent blank page on reload
         hasCompletedOnboarding: state.hasCompletedOnboarding,
         hasSelectedPlan: state.hasSelectedPlan,
         subscription: state.subscription,
