@@ -108,10 +108,18 @@ export function ProjectHubScreen() {
 
   const handleProjectOpen = (membership: ProjectMembership) => {
     updateLastAccessed(membership.projectId);
-    // Create a project from the membership and set it as current
+
+    // First try to restore saved project data (preserves scenes, characters, etc.)
+    const store = useProjectStore.getState();
+    if (store.hasSavedProject(membership.projectId)) {
+      store.restoreSavedProject(membership.projectId);
+      return;
+    }
+
+    // Fallback: Create a project from the membership
     // In production, this would fetch the full project data from the server
     const project = createProjectFromMembership(membership);
-    useProjectStore.getState().setProject(project);
+    store.setProjectNeedsSetup(project);
   };
 
   const handleCreateClick = () => {
