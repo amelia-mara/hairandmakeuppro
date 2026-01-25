@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { clsx } from 'clsx';
-import type { ContinuityEvent, ContinuityEventType } from '@/types';
+import type { ContinuityEvent, ContinuityEventType, Photo } from '@/types';
 import { CONTINUITY_EVENT_TYPES, STAGE_SUGGESTIONS } from '@/types';
 import { BottomSheet, Button, Input, Textarea } from '../ui';
+import { createPhotoFromBlob } from '@/utils/imageUtils';
 
 interface AddEventModalProps {
   isOpen: boolean;
@@ -18,6 +19,9 @@ export function AddEventModal({ isOpen, onClose, onAdd }: AddEventModalProps) {
   const [sceneRange, setSceneRange] = useState('');
   const [products, setProducts] = useState('');
   const [showStageSuggestions, setShowStageSuggestions] = useState(false);
+  const [referencePhotos, setReferencePhotos] = useState<Photo[]>([]);
+  const [isCapturing, setIsCapturing] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const resetForm = () => {
     setType('Wound');
@@ -26,6 +30,7 @@ export function AddEventModal({ isOpen, onClose, onAdd }: AddEventModalProps) {
     setStage('');
     setSceneRange('');
     setProducts('');
+    setReferencePhotos([]);
   };
 
   const handleSubmit = () => {
@@ -38,7 +43,7 @@ export function AddEventModal({ isOpen, onClose, onAdd }: AddEventModalProps) {
       stage: stage.trim(),
       sceneRange: sceneRange.trim(),
       products: products.trim(),
-      referencePhotos: [],
+      referencePhotos,
     });
 
     resetForm();
@@ -49,6 +54,33 @@ export function AddEventModal({ isOpen, onClose, onAdd }: AddEventModalProps) {
     onClose();
   };
 
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setIsCapturing(true);
+      try {
+        const photo = await createPhotoFromBlob(file, 'additional');
+        setReferencePhotos((prev) => [...prev, photo]);
+      } catch (err) {
+        console.error('Failed to process photo:', err);
+      } finally {
+        setIsCapturing(false);
+      }
+    }
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleAddPhoto = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleRemovePhoto = (photoId: string) => {
+    setReferencePhotos((prev) => prev.filter((p) => p.id !== photoId));
+  };
+
   return (
     <BottomSheet
       isOpen={isOpen}
@@ -56,6 +88,15 @@ export function AddEventModal({ isOpen, onClose, onAdd }: AddEventModalProps) {
       title="Add Continuity Event"
       height="auto"
     >
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFileSelect}
+        className="hidden"
+      />
+
       <div className="space-y-4">
         {/* Event Type Selector */}
         <div>
@@ -143,14 +184,59 @@ export function AddEventModal({ isOpen, onClose, onAdd }: AddEventModalProps) {
           rows={2}
         />
 
-        {/* TODO: Add reference photo button */}
-        <Button variant="outline" size="sm" fullWidth disabled>
-          <svg className="w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-          Add Reference Photo (Coming Soon)
-        </Button>
+        {/* Reference Photos */}
+        <div>
+          <label className="field-label block mb-2">REFERENCE PHOTOS</label>
+
+          {/* Photo grid */}
+          {referencePhotos.length > 0 && (
+            <div className="grid grid-cols-4 gap-2 mb-3">
+              {referencePhotos.map((photo) => (
+                <div key={photo.id} className="relative aspect-square rounded-lg overflow-hidden bg-gray-100">
+                  <img
+                    src={photo.thumbnail || photo.uri}
+                    alt="Reference"
+                    className="w-full h-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleRemovePhoto(photo.id)}
+                    className="absolute top-1 right-1 w-5 h-5 bg-black/60 rounded-full flex items-center justify-center"
+                    aria-label="Remove photo"
+                  >
+                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Add photo button */}
+          <Button
+            variant="outline"
+            size="sm"
+            fullWidth
+            onClick={handleAddPhoto}
+            disabled={isCapturing}
+          >
+            {isCapturing ? (
+              <>
+                <div className="w-4 h-4 mr-1.5 border-2 border-gold border-t-transparent rounded-full animate-spin" />
+                Processing...
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                {referencePhotos.length > 0 ? 'Add Another Photo' : 'Add Reference Photo'}
+              </>
+            )}
+          </Button>
+        </div>
 
         {/* Action buttons */}
         <div className="flex gap-3 pt-2">

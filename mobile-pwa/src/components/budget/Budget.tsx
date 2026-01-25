@@ -54,19 +54,31 @@ export function Budget() {
   const [summary] = useState<BudgetSummary>(isDemoProject ? demoBudgetSummary : emptyBudgetSummary);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [showAddReceipt, setShowAddReceipt] = useState(false);
+  const [showScanOptions, setShowScanOptions] = useState(false);
   const [currency, setCurrency] = useState<CurrencyCode>(DEFAULT_CURRENCY);
   const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
 
   // Get current currency info
   const currentCurrency = getCurrencyByCode(currency);
 
   const remainingBudget = summary.totalBudget - summary.totalSpent;
-  const percentUsed = (summary.totalSpent / summary.totalBudget) * 100;
+  const percentUsed = summary.totalBudget > 0 ? (summary.totalSpent / summary.totalBudget) * 100 : 0;
 
   // Handle receipt image capture
   const handleScanReceipt = () => {
-    fileInputRef.current?.click();
+    setShowScanOptions(true);
+  };
+
+  const handleTakePhoto = () => {
+    setShowScanOptions(false);
+    cameraInputRef.current?.click();
+  };
+
+  const handleChooseFromLibrary = () => {
+    setShowScanOptions(false);
+    galleryInputRef.current?.click();
   };
 
   const handleFileCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -79,6 +91,8 @@ export function Budget() {
       };
       reader.readAsDataURL(file);
     }
+    // Reset input so the same file can be selected again
+    e.target.value = '';
   };
 
   const handleAddReceipt = (receipt: Omit<Receipt, 'id' | 'synced'>) => {
@@ -90,6 +104,12 @@ export function Budget() {
     setReceipts([newReceipt, ...receipts]);
     setShowAddReceipt(false);
     setCapturedImage(null);
+  };
+
+  const handleManualEntry = () => {
+    setShowScanOptions(false);
+    setCapturedImage(null);
+    setShowAddReceipt(true);
   };
 
   return (
@@ -126,12 +146,19 @@ export function Budget() {
         </div>
       </div>
 
-      {/* Hidden file input for camera/gallery */}
+      {/* Hidden file inputs for camera and gallery */}
       <input
-        ref={fileInputRef}
+        ref={cameraInputRef}
         type="file"
         accept="image/*"
         capture="environment"
+        onChange={handleFileCapture}
+        className="hidden"
+      />
+      <input
+        ref={galleryInputRef}
+        type="file"
+        accept="image/*"
         onChange={handleFileCapture}
         className="hidden"
       />
@@ -295,6 +322,16 @@ export function Budget() {
           }}
         />
       )}
+
+      {/* Scan Options Modal */}
+      {showScanOptions && (
+        <ScanOptionsModal
+          onTakePhoto={handleTakePhoto}
+          onChooseFromLibrary={handleChooseFromLibrary}
+          onManualEntry={handleManualEntry}
+          onClose={() => setShowScanOptions(false)}
+        />
+      )}
     </div>
   );
 }
@@ -359,6 +396,89 @@ interface AddReceiptModalProps {
   currencySymbol: string;
   onAdd: (receipt: Omit<Receipt, 'id' | 'synced'>) => void;
   onClose: () => void;
+}
+
+// Scan Options Modal
+interface ScanOptionsModalProps {
+  onTakePhoto: () => void;
+  onChooseFromLibrary: () => void;
+  onManualEntry: () => void;
+  onClose: () => void;
+}
+
+function ScanOptionsModal({ onTakePhoto, onChooseFromLibrary, onManualEntry, onClose }: ScanOptionsModalProps) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50" onClick={onClose}>
+      <div
+        className="bg-card rounded-t-2xl w-full max-w-lg animate-slideUp"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="px-4 py-4 border-b border-border">
+          <h2 className="text-lg font-semibold text-text-primary text-center">Add Receipt</h2>
+        </div>
+
+        <div className="p-4 space-y-3">
+          {/* Take Photo */}
+          <button
+            onClick={onTakePhoto}
+            className="w-full flex items-center gap-4 px-4 py-4 rounded-xl bg-gold/10 hover:bg-gold/20 transition-colors"
+          >
+            <div className="w-12 h-12 rounded-full bg-gold/20 flex items-center justify-center">
+              <svg className="w-6 h-6 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
+              </svg>
+            </div>
+            <div className="flex-1 text-left">
+              <span className="text-base font-semibold text-text-primary block">Take Photo</span>
+              <span className="text-sm text-text-muted">Capture receipt with camera</span>
+            </div>
+          </button>
+
+          {/* Choose from Library */}
+          <button
+            onClick={onChooseFromLibrary}
+            className="w-full flex items-center gap-4 px-4 py-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
+          >
+            <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
+              <svg className="w-6 h-6 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+              </svg>
+            </div>
+            <div className="flex-1 text-left">
+              <span className="text-base font-semibold text-text-primary block">Choose from Library</span>
+              <span className="text-sm text-text-muted">Select existing photo</span>
+            </div>
+          </button>
+
+          {/* Manual Entry */}
+          <button
+            onClick={onManualEntry}
+            className="w-full flex items-center gap-4 px-4 py-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
+          >
+            <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
+              <svg className="w-6 h-6 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+              </svg>
+            </div>
+            <div className="flex-1 text-left">
+              <span className="text-base font-semibold text-text-primary block">Manual Entry</span>
+              <span className="text-sm text-text-muted">Enter details without photo</span>
+            </div>
+          </button>
+        </div>
+
+        <div className="p-4 border-t border-border">
+          <button
+            onClick={onClose}
+            className="w-full px-4 py-3 rounded-button bg-gray-100 text-text-primary font-medium"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function AddReceiptModal({ imageUri, currencySymbol, onAdd, onClose }: AddReceiptModalProps) {

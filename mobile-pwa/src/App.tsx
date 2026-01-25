@@ -57,6 +57,15 @@ export default function App() {
   // SubView for direct navigation to team, invite, stats, or project settings
   const [moreSubView, setMoreSubView] = useState<'team' | 'invite' | 'projectStats' | 'projectSettings' | undefined>(undefined);
 
+  // Validate state on mount - fix inconsistent persisted state that causes blank screens
+  useEffect(() => {
+    // If user completed onboarding but isn't authenticated and has no project,
+    // they should be sent to the project hub to sign in or join a project
+    if (hasCompletedOnboarding && !isAuthenticated && !currentProject && !guestProjectCode) {
+      setScreen('hub');
+    }
+  }, []);
+
   // Check for wrap triggers on mount and when scenes change
   useEffect(() => {
     if (currentProject) {
@@ -80,8 +89,8 @@ export default function App() {
 
   // Handle switching to a different project (from Project Menu)
   const handleSwitchProject = () => {
-    // Clear current project and go to project hub
-    useProjectStore.getState().clearProject();
+    // Save current project data before clearing (so it can be restored later)
+    useProjectStore.getState().saveAndClearProject();
     setShowHome(false);
     setScreen('hub');
   };
@@ -192,6 +201,12 @@ export default function App() {
       default:
         return <ProjectHubScreen />;
     }
+  }
+
+  // Safety fallback: If user has completed onboarding but isn't authenticated
+  // and has no project, show project hub (they can sign in or join from there)
+  if (hasCompletedOnboarding && !isAuthenticated && !currentProject && !guestProjectCode) {
+    return <ProjectHubScreen />;
   }
 
   // Handle back from Home screen
