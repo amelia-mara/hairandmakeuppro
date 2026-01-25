@@ -1,5 +1,4 @@
 import { useAuthStore } from '@/stores/authStore';
-import { Button } from '@/components/ui';
 
 export function WelcomeScreen() {
   const { setScreen } = useAuthStore();
