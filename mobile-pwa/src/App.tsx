@@ -19,7 +19,8 @@ import {
   ProjectHubScreen,
   CreateProjectScreen,
 } from '@/components/auth';
-import type { NavTab } from '@/types';
+import { SelectPlanScreen } from '@/components/subscription';
+import type { NavTab, SubscriptionTier, BillingPeriod } from '@/types';
 
 export default function App() {
   const {
@@ -39,6 +40,9 @@ export default function App() {
     hasCompletedOnboarding,
     currentScreen,
     guestProjectCode,
+    selectTier,
+    setScreen,
+    user,
   } = useAuthStore();
 
   // Track if we're showing the home/setup screen
@@ -103,6 +107,16 @@ export default function App() {
     handleTabChange(tab);
   };
 
+  // Handler for tier selection
+  const handleSelectTier = async (tier: SubscriptionTier, billingPeriod: BillingPeriod) => {
+    await selectTier(tier, billingPeriod);
+  };
+
+  // Handler for skipping plan selection (continue with free)
+  const handleSkipPlanSelection = async () => {
+    await selectTier('trainee', 'monthly');
+  };
+
   // Auth flow - show auth screens for new users or logged out users
   // Skip if user has a guest project code (they joined without account)
   if (!hasCompletedOnboarding && !guestProjectCode) {
@@ -119,6 +133,16 @@ export default function App() {
         return <ProjectHubScreen />;
       case 'create-project':
         return <CreateProjectScreen />;
+      case 'select-plan':
+        return (
+          <SelectPlanScreen
+            isOnboarding={true}
+            currentTier={user?.tier as SubscriptionTier | undefined}
+            onSelectTier={handleSelectTier}
+            onSkip={handleSkipPlanSelection}
+            onBack={() => setScreen('signup')}
+          />
+        );
       default:
         return <WelcomeScreen />;
     }
@@ -133,6 +157,15 @@ export default function App() {
         return <JoinProjectScreen />;
       case 'create-project':
         return <CreateProjectScreen />;
+      case 'select-plan':
+        return (
+          <SelectPlanScreen
+            isOnboarding={false}
+            currentTier={user?.tier as SubscriptionTier | undefined}
+            onSelectTier={handleSelectTier}
+            onBack={() => setScreen('hub')}
+          />
+        );
       default:
         return <ProjectHubScreen />;
     }

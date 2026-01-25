@@ -1005,8 +1005,11 @@ export const calculateDaysUntilDeletion = (wrappedAt: Date): number => {
 // Authentication & User Types
 // ============================================
 
-// User subscription tiers
-export type UserTier = 'free' | 'artist' | 'supervisor' | 'designer';
+// User subscription tiers - 'trainee' is the free tier (renamed from 'free')
+export type UserTier = 'trainee' | 'artist' | 'supervisor' | 'designer';
+
+// Re-export subscription types
+export * from './subscription';
 
 // User account
 export interface User {
@@ -1046,7 +1049,7 @@ export interface ProjectMembership {
 }
 
 // Auth screen types for navigation
-export type AuthScreen = 'welcome' | 'signin' | 'signup' | 'join' | 'hub' | 'create-project';
+export type AuthScreen = 'welcome' | 'signin' | 'signup' | 'join' | 'hub' | 'create-project' | 'select-plan';
 
 // Auth state
 export interface AuthState {
@@ -1088,10 +1091,10 @@ export const formatProjectCode = (input: string): string => {
   return cleaned.slice(0, 3) + '-' + cleaned.slice(3, 7);
 };
 
-// Tier feature limits
+// Tier feature limits (basic version - see subscription.ts for full feature details)
 export const TIER_LIMITS: Record<UserTier, { maxProjects: number; maxArchivedProjects: number; canCreateProjects: boolean }> = {
-  free: { maxProjects: 3, maxArchivedProjects: 1, canCreateProjects: false },
-  artist: { maxProjects: 10, maxArchivedProjects: 5, canCreateProjects: false },
+  trainee: { maxProjects: 3, maxArchivedProjects: 1, canCreateProjects: false },
+  artist: { maxProjects: 10, maxArchivedProjects: -1, canCreateProjects: false },
   supervisor: { maxProjects: 25, maxArchivedProjects: 15, canCreateProjects: true },
   designer: { maxProjects: -1, maxArchivedProjects: -1, canCreateProjects: true }, // -1 = unlimited
 };
