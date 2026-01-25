@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
+import { useAuthStore } from '@/stores/authStore';
 import { BottomNav } from '@/components/navigation';
 import { SceneView } from '@/components/scenes';
 import { Today } from '@/components/today';
@@ -10,6 +11,14 @@ import { Budget } from '@/components/budget';
 import { More, WrapPopupModal, LifecycleBanner, ProjectExportScreen } from '@/components/more';
 import { Home } from '@/components/home';
 import { ChatAssistant } from '@/components/chat/ChatAssistant';
+import {
+  WelcomeScreen,
+  SignInScreen,
+  SignUpScreen,
+  JoinProjectScreen,
+  ProjectHubScreen,
+  CreateProjectScreen,
+} from '@/components/auth';
 import type { NavTab } from '@/types';
 
 export default function App() {
@@ -24,6 +33,13 @@ export default function App() {
     lifecycle,
     updateActivity,
   } = useProjectStore();
+
+  const {
+    isAuthenticated,
+    hasCompletedOnboarding,
+    currentScreen,
+    guestProjectCode,
+  } = useAuthStore();
 
   // Track if we're showing the home/setup screen
   const [showHome, setShowHome] = useState(!currentProject);
@@ -86,6 +102,41 @@ export default function App() {
   const handleNavigateToTab = (tab: NavTab) => {
     handleTabChange(tab);
   };
+
+  // Auth flow - show auth screens for new users or logged out users
+  // Skip if user has a guest project code (they joined without account)
+  if (!hasCompletedOnboarding && !guestProjectCode) {
+    switch (currentScreen) {
+      case 'welcome':
+        return <WelcomeScreen />;
+      case 'signin':
+        return <SignInScreen />;
+      case 'signup':
+        return <SignUpScreen />;
+      case 'join':
+        return <JoinProjectScreen />;
+      case 'hub':
+        return <ProjectHubScreen />;
+      case 'create-project':
+        return <CreateProjectScreen />;
+      default:
+        return <WelcomeScreen />;
+    }
+  }
+
+  // Show auth screens for authenticated users who need to manage projects
+  if (isAuthenticated && !currentProject && !showHome) {
+    switch (currentScreen) {
+      case 'hub':
+        return <ProjectHubScreen />;
+      case 'join':
+        return <JoinProjectScreen />;
+      case 'create-project':
+        return <CreateProjectScreen />;
+      default:
+        return <ProjectHubScreen />;
+    }
+  }
 
   // Show Home screen if no project or explicitly requested
   if (showHome || !currentProject) {
