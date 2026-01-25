@@ -30,11 +30,16 @@ interface MoreProps {
   onStartNewProject?: () => void;
   initialView?: NavTab;
   resetKey?: number;
+  subView?: 'team' | 'invite' | 'projectStats' | 'projectSettings'; // Direct navigation to sub-views
 }
 
-export function More({ onNavigateToTab, onStartNewProject, initialView, resetKey }: MoreProps) {
+export function More({ onNavigateToTab, onStartNewProject, initialView, resetKey, subView }: MoreProps) {
   // Determine initial view based on the tab that was navigated to
   const getInitialView = (): MoreView => {
+    // If a subView is specified, use it directly
+    if (subView) {
+      return subView as MoreView;
+    }
     if (initialView && ['script', 'schedule', 'callsheets', 'settings'].includes(initialView)) {
       return initialView as MoreView;
     }
@@ -56,12 +61,15 @@ export function More({ onNavigateToTab, onStartNewProject, initialView, resetKey
 
   // Update view when initialView prop changes or resetKey changes (e.g., user taps same tab again)
   useEffect(() => {
-    if (initialView && ['script', 'schedule', 'callsheets', 'settings'].includes(initialView)) {
+    // If a subView is specified, use it directly
+    if (subView) {
+      setCurrentView(subView as MoreView);
+    } else if (initialView && ['script', 'schedule', 'callsheets', 'settings'].includes(initialView)) {
       setCurrentView(initialView as MoreView);
     } else if (initialView === 'more') {
       setCurrentView('menu');
     }
-  }, [initialView, resetKey]);
+  }, [initialView, resetKey, subView]);
 
   // If edit menu is open via store, show it
   const effectiveView = isEditMenuOpen ? 'editMenu' : currentView;
