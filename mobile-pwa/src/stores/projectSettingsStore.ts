@@ -56,9 +56,9 @@ const generateMockTeamMembers = (projectId: string): TeamMember[] => {
     { name: 'Mike Torres', role: 'supervisor' as TeamMemberRole, isOwner: false },
     { name: 'Emma Wright', role: 'key' as TeamMemberRole, isOwner: false },
     { name: 'David Park', role: 'key' as TeamMemberRole, isOwner: false },
-    { name: 'Lucy Hammond', role: 'floor' as TeamMemberRole, isOwner: false },
-    { name: 'Alex Rivera', role: 'floor' as TeamMemberRole, isOwner: false },
-    { name: 'Jordan Lee', role: 'floor' as TeamMemberRole, isOwner: false },
+    { name: 'Lucy Hammond', role: 'hair' as TeamMemberRole, isOwner: false },
+    { name: 'Alex Rivera', role: 'makeup' as TeamMemberRole, isOwner: false },
+    { name: 'Jordan Lee', role: 'sfx' as TeamMemberRole, isOwner: false },
     { name: 'James Cole', role: 'daily' as TeamMemberRole, isOwner: false },
   ];
 

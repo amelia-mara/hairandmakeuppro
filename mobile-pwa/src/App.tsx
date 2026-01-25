@@ -44,6 +44,7 @@ export default function App() {
     guestProjectCode,
     selectTier,
     setScreen,
+    goBack,
     user,
   } = useAuthStore();
 
@@ -162,7 +163,7 @@ export default function App() {
             currentTier={user?.tier as SubscriptionTier | undefined}
             onSelectTier={handleSelectTier}
             onSkip={handleSkipPlanSelection}
-            onBack={() => setScreen('signup')}
+            onBack={goBack}
           />
         );
       default:
@@ -185,7 +186,7 @@ export default function App() {
             isOnboarding={false}
             currentTier={user?.tier as SubscriptionTier | undefined}
             onSelectTier={handleSelectTier}
-            onBack={() => setScreen('hub')}
+            onBack={goBack}
           />
         );
       default:
@@ -197,11 +198,7 @@ export default function App() {
   const handleBackFromHome = () => {
     setShowHome(false);
     clearNeedsSetup();
-    if (isAuthenticated) {
-      setScreen('hub');
-    } else {
-      setScreen('welcome');
-    }
+    goBack();
   };
 
   // Show Home screen if no project, explicitly requested, or new project needs setup

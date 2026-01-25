@@ -7,6 +7,65 @@ import type { ProjectMembership, Project } from '@/types';
 import { getTierById } from '@/types/subscription';
 import type { SubscriptionTier } from '@/types/subscription';
 
+// Sync Project Modal component
+function SyncProjectModal({
+  isOpen,
+  onClose,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+
+      {/* Modal */}
+      <div className="relative bg-card rounded-2xl p-6 max-w-sm w-full shadow-xl">
+        <h3 className="text-lg font-bold text-text-primary mb-2">
+          Sync with Desktop
+        </h3>
+        <p className="text-text-secondary text-sm mb-6">
+          Connect to your desktop project to sync data between devices. This feature is coming soon.
+        </p>
+
+        <div className="p-4 bg-gold-50 border border-gold-200 rounded-xl mb-6">
+          <div className="flex gap-3">
+            <div className="w-8 h-8 rounded-full bg-gold-100 flex items-center justify-center flex-shrink-0">
+              <svg
+                className="w-4 h-4 text-gold"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 16v-4" />
+                <path d="M12 8h.01" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm text-gold-800">
+                To sync, you'll need to be logged into the same account on the desktop app.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <Button
+          fullWidth
+          variant="primary"
+          onClick={onClose}
+        >
+          Got it
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 // Helper to create a mock project from membership data
 // In production, this would fetch the full project from the server
 function createProjectFromMembership(membership: ProjectMembership): Project {
@@ -25,6 +84,7 @@ export function ProjectHubScreen() {
   const {
     user,
     setScreen,
+    goBack,
     signOut,
     projectMemberships,
     canCreateProjects,
@@ -33,6 +93,7 @@ export function ProjectHubScreen() {
   } = useAuthStore();
 
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showSyncModal, setShowSyncModal] = useState(false);
 
   // Sort projects by last accessed (most recent first)
   const sortedProjects = [...projectMemberships].sort(
@@ -85,7 +146,7 @@ export function ProjectHubScreen() {
             {/* Back button - shown when user hasn't completed onboarding */}
             {!hasCompletedOnboarding && (
               <button
-                onClick={() => setScreen('welcome')}
+                onClick={goBack}
                 className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 -ml-2"
                 aria-label="Go back"
               >
@@ -146,27 +207,51 @@ export function ProjectHubScreen() {
             canCreate={canCreateProjects()}
             onJoinClick={() => setScreen('join')}
             onCreateClick={handleCreateClick}
+            onSyncClick={() => setShowSyncModal(true)}
           />
         ) : (
           // Project list
           <div className="space-y-4">
             {/* Primary actions */}
-            <div className="flex gap-3 mb-6">
+            <div className="space-y-3 mb-6">
+              <div className="flex gap-3">
+                <Button
+                  fullWidth
+                  size="md"
+                  variant="primary"
+                  onClick={handleCreateClick}
+                >
+                  Create Project
+                </Button>
+                <Button
+                  fullWidth
+                  size="md"
+                  variant="outline"
+                  onClick={() => setScreen('join')}
+                >
+                  Join Team
+                </Button>
+              </div>
+              {/* Sync Project button */}
               <Button
                 fullWidth
                 size="md"
-                variant="primary"
-                onClick={handleCreateClick}
+                variant="ghost"
+                onClick={() => setShowSyncModal(true)}
+                className="text-gold"
               >
-                Create Project
-              </Button>
-              <Button
-                fullWidth
-                size="md"
-                variant="outline"
-                onClick={() => setScreen('join')}
-              >
-                Join Project
+                <svg
+                  className="w-4 h-4 mr-2"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9H3m9 9a9 9 0 0 1-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9" />
+                </svg>
+                Sync Project from Desktop
               </Button>
             </div>
 
@@ -206,6 +291,12 @@ export function ProjectHubScreen() {
         isOpen={showUpgradeModal}
         onClose={() => setShowUpgradeModal(false)}
         onUpgrade={handleUpgrade}
+      />
+
+      {/* Sync Project modal */}
+      <SyncProjectModal
+        isOpen={showSyncModal}
+        onClose={() => setShowSyncModal(false)}
       />
     </div>
   );

@@ -7,7 +7,7 @@ export interface DemoTeamMember {
   userId: string;
   name: string;
   email: string;
-  role: 'designer' | 'supervisor' | 'key' | 'floor' | 'daily';
+  role: 'designer' | 'supervisor' | 'key' | 'hair' | 'makeup' | 'sfx' | 'daily' | 'trainee';
   isOwner: boolean;
   joinedAt: Date;
   lastActiveAt: Date;
@@ -19,9 +19,9 @@ export const demoTeamMembers: DemoTeamMember[] = [
   { userId: 'user-2', name: 'Mike Torres', email: 'mike.torres@example.com', role: 'supervisor', isOwner: false, joinedAt: new Date(Date.now() - 28 * 24 * 60 * 60 * 1000), lastActiveAt: new Date(Date.now() - 2 * 60 * 60 * 1000), editCount: 256 },
   { userId: 'user-3', name: 'Emma Wright', email: 'emma.wright@example.com', role: 'key', isOwner: false, joinedAt: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000), lastActiveAt: new Date(Date.now() - 3 * 60 * 60 * 1000), editCount: 189 },
   { userId: 'user-4', name: 'David Park', email: 'david.park@example.com', role: 'key', isOwner: false, joinedAt: new Date(Date.now() - 22 * 24 * 60 * 60 * 1000), lastActiveAt: new Date(Date.now() - 5 * 60 * 60 * 1000), editCount: 134 },
-  { userId: 'user-5', name: 'Lucy Hammond', email: 'lucy.hammond@example.com', role: 'floor', isOwner: false, joinedAt: new Date(Date.now() - 18 * 24 * 60 * 60 * 1000), lastActiveAt: new Date(Date.now() - 8 * 60 * 60 * 1000), editCount: 87 },
-  { userId: 'user-6', name: 'Alex Rivera', email: 'alex.rivera@example.com', role: 'floor', isOwner: false, joinedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000), lastActiveAt: new Date(Date.now() - 12 * 60 * 60 * 1000), editCount: 65 },
-  { userId: 'user-7', name: 'Jordan Lee', email: 'jordan.lee@example.com', role: 'floor', isOwner: false, joinedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), lastActiveAt: new Date(Date.now() - 24 * 60 * 60 * 1000), editCount: 42 },
+  { userId: 'user-5', name: 'Lucy Hammond', email: 'lucy.hammond@example.com', role: 'hair', isOwner: false, joinedAt: new Date(Date.now() - 18 * 24 * 60 * 60 * 1000), lastActiveAt: new Date(Date.now() - 8 * 60 * 60 * 1000), editCount: 87 },
+  { userId: 'user-6', name: 'Alex Rivera', email: 'alex.rivera@example.com', role: 'makeup', isOwner: false, joinedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000), lastActiveAt: new Date(Date.now() - 12 * 60 * 60 * 1000), editCount: 65 },
+  { userId: 'user-7', name: 'Jordan Lee', email: 'jordan.lee@example.com', role: 'sfx', isOwner: false, joinedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), lastActiveAt: new Date(Date.now() - 24 * 60 * 60 * 1000), editCount: 42 },
   { userId: 'user-8', name: 'James Cole', email: 'james.cole@example.com', role: 'daily', isOwner: false, joinedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), lastActiveAt: new Date(Date.now() - 48 * 60 * 60 * 1000), editCount: 18 },
 ];
 
