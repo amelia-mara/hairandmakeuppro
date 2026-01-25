@@ -33,6 +33,7 @@ export function CreateProjectScreen() {
     const membership = projectMemberships.find(p => p.projectCode === createdCode);
     if (membership) {
       // Create a project from the membership and set it as current
+      // Use setProjectNeedsSetup to trigger the upload flow
       const project: Project = {
         id: membership.projectId,
         name: membership.projectName,
@@ -42,7 +43,7 @@ export function CreateProjectScreen() {
         characters: [],
         looks: [],
       };
-      useProjectStore.getState().setProject(project);
+      useProjectStore.getState().setProjectNeedsSetup(project);
     }
   };
 

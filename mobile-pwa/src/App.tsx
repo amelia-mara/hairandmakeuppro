@@ -33,6 +33,8 @@ export default function App() {
     checkWrapTrigger,
     lifecycle,
     updateActivity,
+    needsSetup,
+    clearNeedsSetup,
   } = useProjectStore();
 
   const {
@@ -70,6 +72,7 @@ export default function App() {
   // Handle project ready (from Home component)
   const handleProjectReady = () => {
     setShowHome(false);
+    clearNeedsSetup();
     setActiveTab('today');
   };
 
@@ -192,6 +195,7 @@ export default function App() {
   // Handle back from Home screen
   const handleBackFromHome = () => {
     setShowHome(false);
+    clearNeedsSetup();
     if (isAuthenticated) {
       setScreen('hub');
     } else {
@@ -199,8 +203,8 @@ export default function App() {
     }
   };
 
-  // Show Home screen if no project or explicitly requested
-  if (showHome || !currentProject) {
+  // Show Home screen if no project, explicitly requested, or new project needs setup
+  if (showHome || !currentProject || needsSetup) {
     return <Home onProjectReady={handleProjectReady} onBack={handleBackFromHome} />;
   }
 

@@ -41,6 +41,9 @@ interface ProjectState {
   sceneFilter: SceneFilter;
   searchQuery: string;
 
+  // Flag to indicate project needs setup (show upload flow)
+  needsSetup: boolean;
+
   // Scene captures (working data during shooting)
   sceneCaptures: Record<string, SceneCapture>;
 
@@ -58,6 +61,8 @@ interface ProjectState {
 
   // Actions - Project
   setProject: (project: Project) => void;
+  setProjectNeedsSetup: (project: Project) => void;
+  clearNeedsSetup: () => void;
   setScriptPdf: (pdfData: string) => void;
   clearProject: () => void;
 
@@ -146,6 +151,7 @@ export const useProjectStore = create<ProjectState>()(
       activeTab: 'today',
       sceneFilter: 'all',
       searchQuery: '',
+      needsSetup: false,
       sceneCaptures: {},
 
       // Lifecycle initial state
@@ -157,10 +163,19 @@ export const useProjectStore = create<ProjectState>()(
       // Project actions
       setProject: (project) => set({
         currentProject: project,
+        needsSetup: false,
         lifecycle: createDefaultLifecycle(),
         showWrapPopup: false,
         wrapTriggerReason: null,
       }),
+      setProjectNeedsSetup: (project) => set({
+        currentProject: project,
+        needsSetup: true,
+        lifecycle: createDefaultLifecycle(),
+        showWrapPopup: false,
+        wrapTriggerReason: null,
+      }),
+      clearNeedsSetup: () => set({ needsSetup: false }),
       setScriptPdf: (pdfData) => set((state) => ({
         currentProject: state.currentProject
           ? { ...state.currentProject, scriptPdfData: pdfData }
@@ -170,6 +185,7 @@ export const useProjectStore = create<ProjectState>()(
         currentProject: null,
         currentSceneId: null,
         currentCharacterId: null,
+        needsSetup: false,
         sceneCaptures: {},
         lifecycle: createDefaultLifecycle(),
         showWrapPopup: false,
