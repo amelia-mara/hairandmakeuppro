@@ -73,7 +73,15 @@ export default function App() {
     setActiveTab('today');
   };
 
-  // Handle starting a new project (from Settings)
+  // Handle switching to a different project (from Project Menu)
+  const handleSwitchProject = () => {
+    // Clear current project and go to project hub
+    useProjectStore.getState().clearProject();
+    setShowHome(false);
+    setScreen('hub');
+  };
+
+  // Handle starting a new project (from Settings or Home)
   const handleStartNewProject = () => {
     setShowHome(true);
   };
@@ -258,7 +266,7 @@ export default function App() {
         <ProjectHeader
           onNavigateToTab={handleNavigateToTab}
           onNavigateToSubView={handleNavigateToSubView}
-          onSwitchProject={handleStartNewProject}
+          onSwitchProject={handleSwitchProject}
         />
       )}
 
