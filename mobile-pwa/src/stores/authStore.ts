@@ -7,8 +7,10 @@ import type {
   ProjectMembership,
   ProductionType,
   ProjectRole,
+  SubscriptionData,
+  BillingPeriod,
 } from '@/types';
-import { generateProjectCode, TIER_LIMITS } from '@/types';
+import { generateProjectCode, TIER_LIMITS, createDefaultSubscription, SubscriptionTier } from '@/types';
 
 interface AuthState {
   // Auth state
@@ -20,6 +22,10 @@ interface AuthState {
   // Navigation
   currentScreen: AuthScreen;
   hasCompletedOnboarding: boolean;
+  hasSelectedPlan: boolean; // Tracks if user has selected a plan (even if free)
+
+  // Subscription data
+  subscription: SubscriptionData;
 
   // Projects (for logged-in users)
   projectMemberships: ProjectMembership[];
@@ -38,6 +44,9 @@ interface AuthState {
   setHasCompletedOnboarding: (value: boolean) => void;
   canCreateProjects: () => boolean;
   updateLastAccessed: (projectId: string) => void;
+  // Subscription actions
+  selectTier: (tier: SubscriptionTier, billingPeriod: BillingPeriod) => Promise<boolean>;
+  updateSubscription: (subscription: Partial<SubscriptionData>) => void;
 }
 
 // Mock delay to simulate API calls
@@ -56,6 +65,8 @@ export const useAuthStore = create<AuthState>()(
       error: null,
       currentScreen: 'welcome',
       hasCompletedOnboarding: false,
+      hasSelectedPlan: false,
+      subscription: createDefaultSubscription(),
       projectMemberships: [],
       guestProjectCode: null,
 
@@ -115,12 +126,12 @@ export const useAuthStore = create<AuthState>()(
             return false;
           }
 
-          // Create new user
+          // Create new user (starts on trainee tier, will select plan after signup)
           const newUser: User = {
             id: crypto.randomUUID(),
             email: emailLower,
             name,
-            tier: 'free' as UserTier,
+            tier: 'trainee' as UserTier,
             createdAt: new Date(),
           };
 
@@ -132,8 +143,10 @@ export const useAuthStore = create<AuthState>()(
             user: newUser,
             isLoading: false,
             error: null,
-            currentScreen: 'hub',
-            hasCompletedOnboarding: true,
+            currentScreen: 'select-plan', // Go to plan selection after signup
+            hasCompletedOnboarding: false, // Not complete until plan is selected
+            hasSelectedPlan: false,
+            subscription: createDefaultSubscription(),
             projectMemberships: [],
           });
 
@@ -150,6 +163,9 @@ export const useAuthStore = create<AuthState>()(
           isAuthenticated: false,
           user: null,
           currentScreen: 'welcome',
+          hasCompletedOnboarding: false,
+          hasSelectedPlan: false,
+          subscription: createDefaultSubscription(),
           projectMemberships: [],
           guestProjectCode: null,
         });
@@ -188,7 +204,9 @@ export const useAuthStore = create<AuthState>()(
               joinedAt: new Date(),
               lastAccessedAt: new Date(),
               teamMemberCount: Math.floor(Math.random() * 10) + 2,
+              sceneCount: Math.floor(Math.random() * 100) + 20, // Mock scene count
               projectCode: upperCode,
+              status: 'active',
             };
 
             set({
@@ -235,7 +253,9 @@ export const useAuthStore = create<AuthState>()(
             joinedAt: new Date(),
             lastAccessedAt: new Date(),
             teamMemberCount: 1,
+            sceneCount: 0, // New project starts with 0 scenes
             projectCode: code,
+            status: 'active',
           };
 
           set({
@@ -277,6 +297,86 @@ export const useAuthStore = create<AuthState>()(
         );
         set({ projectMemberships: updated });
       },
+
+      // Select subscription tier (after signup or from settings)
+      selectTier: async (tier, billingPeriod) => {
+        const { user } = get();
+        if (!user) return false;
+
+        set({ isLoading: true, error: null });
+
+        try {
+          await mockDelay(600);
+
+          // Update user tier
+          const updatedUser: User = {
+            ...user,
+            tier: tier as UserTier,
+          };
+
+          // Update subscription data
+          const updatedSubscription: SubscriptionData = {
+            tier,
+            status: tier === 'trainee' ? null : 'active',
+            billingPeriod: tier === 'trainee' ? null : billingPeriod,
+            subscriptionStartedAt: tier !== 'trainee' ? new Date() : undefined,
+            // Mock: set period end to 30 days from now for monthly, 365 for yearly
+            currentPeriodEndsAt: tier !== 'trainee'
+              ? new Date(Date.now() + (billingPeriod === 'yearly' ? 365 : 30) * 24 * 60 * 60 * 1000)
+              : undefined,
+          };
+
+          // In production, this would:
+          // 1. Redirect to Stripe Checkout for paid tiers
+          // 2. Create/update Stripe subscription
+          // 3. Store stripe_customer_id and subscription_id
+          // 4. Handle webhook for payment success
+
+          set({
+            user: updatedUser,
+            subscription: updatedSubscription,
+            hasSelectedPlan: true,
+            hasCompletedOnboarding: true,
+            currentScreen: 'hub',
+            isLoading: false,
+            error: null,
+          });
+
+          // Update mock database
+          const userData = mockUsers.get(user.email);
+          if (userData) {
+            mockUsers.set(user.email, { ...userData, user: updatedUser });
+          }
+
+          return true;
+        } catch {
+          set({ isLoading: false, error: 'Failed to update subscription. Please try again.' });
+          return false;
+        }
+      },
+
+      // Update subscription data (e.g., from webhook or settings)
+      updateSubscription: (subscriptionUpdate) => {
+        const { subscription, user } = get();
+        const updatedSubscription = { ...subscription, ...subscriptionUpdate };
+
+        // If tier changed, also update user
+        if (subscriptionUpdate.tier && user) {
+          const updatedUser = { ...user, tier: subscriptionUpdate.tier as UserTier };
+          set({
+            subscription: updatedSubscription,
+            user: updatedUser,
+          });
+
+          // Update mock database
+          const userData = mockUsers.get(user.email);
+          if (userData) {
+            mockUsers.set(user.email, { ...userData, user: updatedUser });
+          }
+        } else {
+          set({ subscription: updatedSubscription });
+        }
+      },
     }),
     {
       name: 'checks-happy-auth-storage',
@@ -286,6 +386,8 @@ export const useAuthStore = create<AuthState>()(
         isAuthenticated: state.isAuthenticated,
         user: state.user,
         hasCompletedOnboarding: state.hasCompletedOnboarding,
+        hasSelectedPlan: state.hasSelectedPlan,
+        subscription: state.subscription,
         projectMemberships: state.projectMemberships,
         guestProjectCode: state.guestProjectCode,
       }),

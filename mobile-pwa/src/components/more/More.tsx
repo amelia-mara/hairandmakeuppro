@@ -6,12 +6,14 @@ import { useCallSheetStore } from '@/stores/callSheetStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
 import { useChatStore } from '@/stores/chatStore';
 import { useTimesheetStore } from '@/stores/timesheetStore';
+import { useAuthStore } from '@/stores/authStore';
 import { clearAllData as clearIndexedDBData } from '@/db';
 import { NavIcon } from '@/components/navigation/BottomNav';
 import { formatShortDate } from '@/utils/helpers';
 import type { NavTab, SceneDiscrepancy, ScheduleDay } from '@/types';
 import { ALL_NAV_ITEMS, PROJECT_RETENTION_DAYS } from '@/types';
 import { ProjectExportScreen } from './ProjectExportScreen';
+import { SubscriptionSection } from '@/components/subscription';
 
 type MoreView = 'menu' | 'script' | 'schedule' | 'callsheets' | 'settings' | 'editMenu' | 'export' | 'archivedProjects';
 
@@ -1874,12 +1876,18 @@ function Settings({ onBack, onStartNewProject, onNavigateToExport, onNavigateToA
   const { clearSchedule } = useScheduleStore();
   const { clearMessages: clearChat } = useChatStore();
   const { clearAll: clearTimesheet } = useTimesheetStore();
+  const { setScreen, isAuthenticated } = useAuthStore();
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showNewProjectConfirm, setShowNewProjectConfirm] = useState(false);
   const [showWrapConfirm, setShowWrapConfirm] = useState(false);
 
   const archivedProjects = getArchivedProjects();
   const daysUntilDeletion = getDaysUntilDeletion();
+
+  // Navigate to plan selection screen
+  const handleChangePlan = () => {
+    setScreen('select-plan');
+  };
 
   // Theme options
   const themeOptions: { value: Theme; label: string; icon: JSX.Element }[] = [
@@ -1982,6 +1990,11 @@ function Settings({ onBack, onStartNewProject, onNavigateToExport, onNavigateToA
             )}
           </div>
         </section>
+
+        {/* Subscription Section - only show for authenticated users */}
+        {isAuthenticated && (
+          <SubscriptionSection onChangePlan={handleChangePlan} />
+        )}
 
         {/* Export Section */}
         {currentProject && (
