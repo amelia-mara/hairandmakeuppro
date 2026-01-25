@@ -204,7 +204,9 @@ export const useAuthStore = create<AuthState>()(
               joinedAt: new Date(),
               lastAccessedAt: new Date(),
               teamMemberCount: Math.floor(Math.random() * 10) + 2,
+              sceneCount: Math.floor(Math.random() * 100) + 20, // Mock scene count
               projectCode: upperCode,
+              status: 'active',
             };
 
             set({
@@ -251,7 +253,9 @@ export const useAuthStore = create<AuthState>()(
             joinedAt: new Date(),
             lastAccessedAt: new Date(),
             teamMemberCount: 1,
+            sceneCount: 0, // New project starts with 0 scenes
             projectCode: code,
+            status: 'active',
           };
 
           set({
