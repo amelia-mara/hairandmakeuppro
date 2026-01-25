@@ -14,6 +14,7 @@ export function ProjectHubScreen() {
     projectMemberships,
     canCreateProjects,
     updateLastAccessed,
+    hasCompletedOnboarding,
   } = useAuthStore();
 
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -63,18 +64,41 @@ export function ProjectHubScreen() {
       {/* Header */}
       <header className="px-4 py-4 safe-top border-b border-border bg-card">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-text-primary">Your Projects</h1>
-            {tierInfo && (
-              <div className="flex items-center gap-2 mt-1">
-                <Badge
-                  variant={tierInfo.isPremium ? 'gold' : 'default'}
-                  size="sm"
+          <div className="flex items-center gap-3">
+            {/* Back button - shown when user hasn't completed onboarding */}
+            {!hasCompletedOnboarding && (
+              <button
+                onClick={() => setScreen('welcome')}
+                className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 -ml-2"
+                aria-label="Go back"
+              >
+                <svg
+                  className="w-6 h-6 text-text-primary"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                 >
-                  {tierInfo.displayName}
-                </Badge>
-              </div>
+                  <path d="M19 12H5" />
+                  <path d="M12 19l-7-7 7-7" />
+                </svg>
+              </button>
             )}
+            <div>
+              <h1 className="text-xl font-bold text-text-primary">Your Projects</h1>
+              {tierInfo && (
+                <div className="flex items-center gap-2 mt-1">
+                  <Badge
+                    variant={tierInfo.isPremium ? 'gold' : 'default'}
+                    size="sm"
+                  >
+                    {tierInfo.displayName}
+                  </Badge>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* User avatar */}

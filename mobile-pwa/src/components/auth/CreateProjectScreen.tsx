@@ -64,13 +64,29 @@ export function CreateProjectScreen() {
   if (createdCode) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
-        {/* Header */}
+        {/* Header with back button */}
         <header className="flex items-center px-4 py-3 safe-top">
-          <div className="w-10" /> {/* Spacer for centering */}
-          <h1 className="flex-1 text-center text-lg font-semibold text-text-primary">
+          <button
+            onClick={() => setScreen('hub')}
+            className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 -ml-2"
+            aria-label="Go back"
+          >
+            <svg
+              className="w-6 h-6 text-text-primary"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M19 12H5" />
+              <path d="M12 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <h1 className="flex-1 text-center text-lg font-semibold text-text-primary pr-10">
             Project Created
           </h1>
-          <div className="w-10" />
         </header>
 
         {/* Main content */}
