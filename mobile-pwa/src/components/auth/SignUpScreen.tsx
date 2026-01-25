@@ -3,7 +3,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { Button, Input } from '@/components/ui';
 
 export function SignUpScreen() {
-  const { setScreen, signUp, isLoading, error, clearError } = useAuthStore();
+  const { setScreen, goBack, signUp, isLoading, error, clearError } = useAuthStore();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -63,7 +63,7 @@ export function SignUpScreen() {
       {/* Header with back button */}
       <header className="flex items-center px-4 py-3 safe-top">
         <button
-          onClick={() => setScreen('welcome')}
+          onClick={goBack}
           className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 -ml-2"
           aria-label="Go back"
         >
