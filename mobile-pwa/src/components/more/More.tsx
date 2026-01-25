@@ -56,7 +56,7 @@ export function More({ onNavigateToTab, onStartNewProject, initialView, resetKey
   const isOwner = currentProjectMembership?.role === 'owner';
   const canManage = currentProjectMembership && user ? canManageProject(user.tier, {
     isOwner,
-    role: isOwner ? 'designer' : currentProjectMembership.role === 'supervisor' ? 'supervisor' : 'floor',
+    role: isOwner ? 'designer' : currentProjectMembership.role === 'supervisor' ? 'supervisor' : 'trainee',
   }) : false;
 
   // Update view when initialView prop changes or resetKey changes (e.g., user taps same tab again)

@@ -1137,15 +1137,16 @@ export const shouldTriggerWrap = (
 // ============================================
 
 // Team member roles (more granular than ProjectRole)
-export type TeamMemberRole = 'designer' | 'hod' | 'supervisor' | 'key' | 'floor' | 'daily' | 'trainee';
+export type TeamMemberRole = 'designer' | 'supervisor' | 'key' | 'hair' | 'makeup' | 'sfx' | 'daily' | 'trainee';
 
 // Role display names and hierarchy
 export const TEAM_MEMBER_ROLES: { value: TeamMemberRole; label: string; level: number }[] = [
-  { value: 'designer', label: 'Designer', level: 7 },
-  { value: 'hod', label: 'HOD', level: 6 },
-  { value: 'supervisor', label: 'Supervisor', level: 5 },
-  { value: 'key', label: 'Key Artist', level: 4 },
-  { value: 'floor', label: 'Floor Artist', level: 3 },
+  { value: 'designer', label: 'Designer (HoD)', level: 8 },
+  { value: 'supervisor', label: 'Supervisor', level: 7 },
+  { value: 'key', label: 'Key Artist', level: 6 },
+  { value: 'hair', label: 'Hair Artist', level: 5 },
+  { value: 'makeup', label: 'Makeup Artist', level: 4 },
+  { value: 'sfx', label: 'Special Effects Artist', level: 3 },
   { value: 'daily', label: 'Daily', level: 2 },
   { value: 'trainee', label: 'Trainee', level: 1 },
 ];
@@ -1271,7 +1272,7 @@ export const groupTeamMembersByRole = (members: TeamMember[]): TeamRoleGroup[] =
     .filter(role => (groups.get(role.value)?.length || 0) > 0)
     .map(role => ({
       role: role.value,
-      label: role.label + (role.value === 'key' ? 's' : role.value === 'floor' ? 's' : 's'),
+      label: role.label + 's',
       members: groups.get(role.value) || [],
     }));
 };
@@ -1285,7 +1286,7 @@ export const canManageProject = (
   if (membership.isOwner) return true;
 
   // Supervisors and above can manage if they're supervisor tier or higher
-  const supervisorRoles: TeamMemberRole[] = ['designer', 'hod', 'supervisor'];
+  const supervisorRoles: TeamMemberRole[] = ['designer', 'supervisor'];
   const canManageTiers: UserTier[] = ['supervisor', 'designer'];
 
   return canManageTiers.includes(userTier) && supervisorRoles.includes(membership.role);

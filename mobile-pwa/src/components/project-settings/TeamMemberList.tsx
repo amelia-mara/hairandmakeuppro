@@ -41,15 +41,17 @@ export function TeamMemberList({
     const count = group.members.length;
     switch (group.role) {
       case 'designer':
-        return `DESIGNERS (${count})`;
-      case 'hod':
-        return `HEADS OF DEPARTMENT (${count})`;
+        return `DESIGNERS (HOD) (${count})`;
       case 'supervisor':
         return `SUPERVISORS (${count})`;
       case 'key':
         return `KEY ARTISTS (${count})`;
-      case 'floor':
-        return `FLOOR ARTISTS (${count})`;
+      case 'hair':
+        return `HAIR ARTISTS (${count})`;
+      case 'makeup':
+        return `MAKEUP ARTISTS (${count})`;
+      case 'sfx':
+        return `SPECIAL EFFECTS ARTISTS (${count})`;
       case 'daily':
         return `DAILIES (${count})`;
       case 'trainee':
