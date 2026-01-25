@@ -1131,3 +1131,223 @@ export const shouldTriggerWrap = (
 
   return { trigger: false };
 };
+
+// ============================================
+// PROJECT SETTINGS & TEAM MANAGEMENT TYPES
+// ============================================
+
+// Team member roles (more granular than ProjectRole)
+export type TeamMemberRole = 'designer' | 'hod' | 'supervisor' | 'key' | 'floor' | 'daily' | 'trainee';
+
+// Role display names and hierarchy
+export const TEAM_MEMBER_ROLES: { value: TeamMemberRole; label: string; level: number }[] = [
+  { value: 'designer', label: 'Designer', level: 7 },
+  { value: 'hod', label: 'HOD', level: 6 },
+  { value: 'supervisor', label: 'Supervisor', level: 5 },
+  { value: 'key', label: 'Key Artist', level: 4 },
+  { value: 'floor', label: 'Floor Artist', level: 3 },
+  { value: 'daily', label: 'Daily', level: 2 },
+  { value: 'trainee', label: 'Trainee', level: 1 },
+];
+
+// Get display label for a role
+export const getTeamMemberRoleLabel = (role: TeamMemberRole): string => {
+  return TEAM_MEMBER_ROLES.find(r => r.value === role)?.label || role;
+};
+
+// Get role level for sorting
+export const getTeamMemberRoleLevel = (role: TeamMemberRole): number => {
+  return TEAM_MEMBER_ROLES.find(r => r.value === role)?.level || 0;
+};
+
+// Team member with full details
+export interface TeamMember {
+  userId: string;
+  projectId: string;
+  name: string;
+  email: string;
+  avatarUrl?: string;
+  role: TeamMemberRole;
+  isOwner: boolean;
+  joinedAt: Date;
+  lastActiveAt: Date;
+  editCount: number;
+}
+
+// Permission levels for project settings
+export type PermissionLevel = 'all' | 'key_plus' | 'supervisor_plus';
+
+// Permission level display names
+export const PERMISSION_LEVELS: { value: PermissionLevel; label: string }[] = [
+  { value: 'all', label: 'All team members' },
+  { value: 'key_plus', label: 'Key artists and above' },
+  { value: 'supervisor_plus', label: 'Supervisors only' },
+];
+
+// Project permissions settings
+export interface ProjectPermissions {
+  addPhotos: PermissionLevel;
+  editNotes: PermissionLevel;
+  markComplete: PermissionLevel;
+}
+
+// Extended project settings
+export interface ProjectSettings {
+  id: string;
+  name: string;
+  type: ProductionType;
+  status: 'prep' | 'shooting' | 'wrapped' | 'archived';
+  inviteCode: string;
+  ownerId: string;
+  permissions: ProjectPermissions;
+  createdAt: Date;
+  archivedAt: Date | null;
+}
+
+// Project status options
+export const PROJECT_STATUS_OPTIONS: { value: ProjectSettings['status']; label: string }[] = [
+  { value: 'prep', label: 'Prep' },
+  { value: 'shooting', label: 'Shooting' },
+  { value: 'wrapped', label: 'Wrapped' },
+  { value: 'archived', label: 'Archived' },
+];
+
+// Shooting day entry for manual schedule
+export interface ManualShootingDay {
+  id: string;
+  projectId: string;
+  dayNumber: number;
+  date: Date;
+  sceneIds: string[];
+  createdBy: string;
+  createdAt: Date;
+}
+
+// Project stats summary
+export interface ProjectStats {
+  sceneCount: number;
+  storyDays: number;
+  characterCount: number;
+  completedScenes: number;
+  completionPercentage: number;
+  photoCount: number;
+  storageUsed: number; // in bytes
+  teamMemberCount: number;
+  lastActivity: Date | null;
+  mostActiveUser: { name: string; editCount: number } | null;
+}
+
+// Role group for team list display
+export interface TeamRoleGroup {
+  role: TeamMemberRole;
+  label: string;
+  members: TeamMember[];
+}
+
+// Group team members by role
+export const groupTeamMembersByRole = (members: TeamMember[]): TeamRoleGroup[] => {
+  const groups: Map<TeamMemberRole, TeamMember[]> = new Map();
+
+  // Initialize groups in order
+  TEAM_MEMBER_ROLES.forEach(role => {
+    groups.set(role.value, []);
+  });
+
+  // Add members to groups
+  members.forEach(member => {
+    const group = groups.get(member.role);
+    if (group) {
+      group.push(member);
+    }
+  });
+
+  // Sort members within each group alphabetically
+  groups.forEach(memberList => {
+    memberList.sort((a, b) => a.name.localeCompare(b.name));
+  });
+
+  // Convert to array, filter out empty groups
+  return TEAM_MEMBER_ROLES
+    .filter(role => (groups.get(role.value)?.length || 0) > 0)
+    .map(role => ({
+      role: role.value,
+      label: role.label + (role.value === 'key' ? 's' : role.value === 'floor' ? 's' : 's'),
+      members: groups.get(role.value) || [],
+    }));
+};
+
+// Helper to check if user can manage project
+export const canManageProject = (
+  userTier: UserTier,
+  membership: { isOwner: boolean; role: TeamMemberRole } | null
+): boolean => {
+  if (!membership) return false;
+  if (membership.isOwner) return true;
+
+  // Supervisors and above can manage if they're supervisor tier or higher
+  const supervisorRoles: TeamMemberRole[] = ['designer', 'hod', 'supervisor'];
+  const canManageTiers: UserTier[] = ['supervisor', 'designer'];
+
+  return canManageTiers.includes(userTier) && supervisorRoles.includes(membership.role);
+};
+
+// Helper to check if user can edit settings (owner only)
+export const canEditProjectSettings = (
+  membership: { isOwner: boolean } | null
+): boolean => {
+  return membership?.isOwner === true;
+};
+
+// Helper to check if user has permission for an action
+export const hasPermission = (
+  role: TeamMemberRole,
+  requiredLevel: PermissionLevel
+): boolean => {
+  const roleLevel = getTeamMemberRoleLevel(role);
+
+  switch (requiredLevel) {
+    case 'all':
+      return true;
+    case 'key_plus':
+      return roleLevel >= 4; // Key artist and above
+    case 'supervisor_plus':
+      return roleLevel >= 5; // Supervisor and above
+    default:
+      return false;
+  }
+};
+
+// Create default project permissions
+export const createDefaultProjectPermissions = (): ProjectPermissions => ({
+  addPhotos: 'all',
+  editNotes: 'all',
+  markComplete: 'key_plus',
+});
+
+// Create default project settings
+export const createDefaultProjectSettings = (
+  id: string,
+  name: string,
+  type: ProductionType,
+  ownerId: string,
+  inviteCode: string
+): ProjectSettings => ({
+  id,
+  name,
+  type,
+  status: 'prep',
+  inviteCode,
+  ownerId,
+  permissions: createDefaultProjectPermissions(),
+  createdAt: new Date(),
+  archivedAt: null,
+});
+
+// Format storage size for display
+export const formatStorageSize = (bytes: number): string => {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+};

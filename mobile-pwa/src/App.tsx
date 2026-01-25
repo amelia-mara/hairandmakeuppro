@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { useAuthStore } from '@/stores/authStore';
-import { BottomNav } from '@/components/navigation';
+import { BottomNav, ProjectHeader } from '@/components/navigation';
 import { SceneView } from '@/components/scenes';
 import { Today } from '@/components/today';
 import { Breakdown } from '@/components/breakdown';
@@ -50,6 +50,8 @@ export default function App() {
   const [showExport, setShowExport] = useState(false);
   // Key to force More component to reset when clicking the same tab
   const [tabResetKey, setTabResetKey] = useState(0);
+  // SubView for direct navigation to team, invite, stats, or project settings
+  const [moreSubView, setMoreSubView] = useState<'team' | 'invite' | 'projectStats' | 'projectSettings' | undefined>(undefined);
 
   // Check for wrap triggers on mount and when scenes change
   useEffect(() => {
@@ -95,11 +97,19 @@ export default function App() {
       setTabResetKey(k => k + 1);
     }
     setActiveTab(tab);
+    // Clear subView when changing tabs (unless it's being set deliberately)
+    setMoreSubView(undefined);
     // Clear scene view when switching tabs or re-clicking current tab
     if (currentSceneId) {
       setCurrentScene(null);
       setCurrentCharacter(null);
     }
+  };
+
+  // Handle navigation to a specific sub-view in More
+  const handleNavigateToSubView = (subView: 'team' | 'invite' | 'projectStats' | 'projectSettings') => {
+    setMoreSubView(subView);
+    setActiveTab('settings');
   };
 
   // Handle navigation from More menu to a specific tab
@@ -227,17 +237,29 @@ export default function App() {
       case 'callsheets':
       case 'settings':
       case 'more':
-        return <More onNavigateToTab={handleNavigateToTab} onStartNewProject={handleStartNewProject} initialView={activeTab} resetKey={tabResetKey} />;
+        return <More onNavigateToTab={handleNavigateToTab} onStartNewProject={handleStartNewProject} initialView={activeTab} resetKey={tabResetKey} subView={moreSubView} />;
       default:
         return <Today onSceneSelect={handleSceneSelect} />;
     }
   };
+
+  // Show project header on main content tabs (not on More, not when viewing a scene)
+  const showProjectHeader = !currentSceneId && !['more', 'settings', 'script', 'schedule', 'callsheets'].includes(activeTab);
 
   return (
     <div className="min-h-screen bg-background">
       {/* Lifecycle Banner (shows when project is wrapped/archived) */}
       {lifecycle.state !== 'active' && (
         <LifecycleBanner onExport={() => setShowExport(true)} />
+      )}
+
+      {/* Project Header (tap to open menu) */}
+      {showProjectHeader && (
+        <ProjectHeader
+          onNavigateToTab={handleNavigateToTab}
+          onNavigateToSubView={handleNavigateToSubView}
+          onSwitchProject={handleStartNewProject}
+        />
       )}
 
       {renderContent()}
