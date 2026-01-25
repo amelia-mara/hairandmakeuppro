@@ -15,10 +15,24 @@ export function ProjectHeader({ onNavigateToSubView, onSwitchProject }: ProjectH
   const { currentProject } = useProjectStore();
   const { user, projectMemberships } = useAuthStore();
 
-  // Get current project membership
-  const currentMembership = projectMemberships.length > 0 ? projectMemberships[0] : null;
-
   if (!currentProject) return null;
+
+  // Get current project membership - find the one matching the current project
+  // If not found in memberships, create a fallback from current project data
+  const currentMembership = projectMemberships.find(m => m.projectId === currentProject.id)
+    || projectMemberships[0]
+    || {
+      projectId: currentProject.id,
+      projectName: currentProject.name,
+      productionType: 'film' as const,
+      role: 'owner' as const,
+      joinedAt: currentProject.createdAt,
+      lastAccessedAt: currentProject.updatedAt,
+      teamMemberCount: 1,
+      sceneCount: currentProject.scenes.length,
+      projectCode: '',
+      status: 'active' as const,
+    };
 
   // Get production type label
   const getProductionTypeLabel = () => {
