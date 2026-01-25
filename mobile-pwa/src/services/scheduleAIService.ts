@@ -17,6 +17,15 @@ export interface AIScheduleProcessingStatus {
   error?: string;
 }
 
+// Enable verbose logging for debugging
+const DEBUG_AI_PARSING = true;
+
+function debugLog(...args: any[]) {
+  if (DEBUG_AI_PARSING) {
+    console.log('[ScheduleAI]', ...args);
+  }
+}
+
 /**
  * Sanitize and repair common JSON issues from AI responses
  * Handles: trailing commas, unclosed brackets, markdown formatting, etc.
@@ -24,8 +33,16 @@ export interface AIScheduleProcessingStatus {
 function sanitizeAIJSON(jsonStr: string): string {
   let sanitized = jsonStr;
 
-  // Remove markdown code block markers if present
-  sanitized = sanitized.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+  // Remove markdown code block markers if present (including variations)
+  sanitized = sanitized.replace(/^[\s\n]*```(?:json)?[\s\n]*/i, '');
+  sanitized = sanitized.replace(/[\s\n]*```[\s\n]*$/i, '');
+
+  // Remove any text before the first { and after the last }
+  const firstBrace = sanitized.indexOf('{');
+  const lastBrace = sanitized.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    sanitized = sanitized.substring(firstBrace, lastBrace + 1);
+  }
 
   // Remove any leading/trailing whitespace
   sanitized = sanitized.trim();
@@ -49,6 +66,13 @@ function sanitizeAIJSON(jsonStr: string): string {
   sanitized = sanitized.replace(/(\d)(\s+)(\d)/g, '$1,$2$3');
   sanitized = sanitized.replace(/(true|false|null)(\s+)(true|false|null|\d|"|\{|\[)/gi, '$1,$2$3');
 
+  // Fix unescaped quotes in string values (common issue)
+  // This is a simple fix for common cases - not perfect but helps
+  sanitized = sanitized.replace(/: "([^"]*)"([^,}\]"]*)"([^,}\]]*)",/g, ': "$1\\"$2\\"$3",');
+
+  // Fix "null" strings that should be null
+  sanitized = sanitized.replace(/: "null"/g, ': null');
+
   // Try to fix truncated JSON by closing unclosed brackets
   const openBraces = (sanitized.match(/\{/g) || []).length;
   const closeBraces = (sanitized.match(/\}/g) || []).length;
@@ -57,6 +81,8 @@ function sanitizeAIJSON(jsonStr: string): string {
 
   // If JSON appears truncated, try to close it
   if (openBraces > closeBraces || openBrackets > closeBrackets) {
+    debugLog('Detected truncated JSON, attempting to repair...');
+
     // Remove any incomplete trailing content (partial string, etc.)
     // Look for the last complete value
     const lastCompleteMatch = sanitized.match(/^([\s\S]*(?:[\]\}\"\d]|true|false|null))\s*,?\s*[^\]\}\"\d]*$/);
@@ -83,27 +109,59 @@ function sanitizeAIJSON(jsonStr: string): string {
  * Safely parse JSON from AI response with sanitization and helpful error messages
  */
 function parseAIJSON(response: string, context: string = 'AI response'): any {
-  // Extract JSON from response
-  const jsonMatch = response.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
+  debugLog(`parseAIJSON called for ${context}, response length: ${response?.length || 0}`);
+
+  if (!response || response.trim().length === 0) {
+    debugLog('ERROR: Empty response');
+    throw new Error('Empty AI response');
+  }
+
+  // Extract JSON from response - find the outermost { }
+  const firstBrace = response.indexOf('{');
+  const lastBrace = response.lastIndexOf('}');
+
+  if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
+    debugLog(`ERROR: No JSON object found in ${context}`);
     console.error(`No JSON found in ${context}:`, response.substring(0, 500));
     throw new Error('Failed to parse schedule - no valid JSON in AI response');
   }
 
-  const rawJSON = jsonMatch[0];
+  const rawJSON = response.substring(firstBrace, lastBrace + 1);
+  debugLog(`Extracted JSON, length: ${rawJSON.length}`);
 
   // First try parsing as-is
   try {
-    return JSON.parse(rawJSON);
+    const result = JSON.parse(rawJSON);
+    debugLog('JSON parsed successfully on first try');
+    return result;
   } catch (firstError) {
+    debugLog('First JSON parse failed, attempting sanitization...');
+
     // Try with sanitization
     const sanitized = sanitizeAIJSON(rawJSON);
     try {
-      console.log('JSON required sanitization, retrying...');
-      return JSON.parse(sanitized);
+      debugLog('Retrying with sanitized JSON...');
+      const result = JSON.parse(sanitized);
+      debugLog('JSON parsed successfully after sanitization');
+      return result;
     } catch (secondError) {
+      // Try one more approach: extract just the days array
+      debugLog('Second parse failed, trying to extract days array...');
+      try {
+        const daysMatch = rawJSON.match(/"days"\s*:\s*\[[\s\S]*?\]/);
+        if (daysMatch) {
+          const wrappedJSON = `{${daysMatch[0]}}`;
+          const result = JSON.parse(wrappedJSON);
+          debugLog('JSON parsed by extracting days array');
+          return result;
+        }
+      } catch {
+        // Fall through to error
+      }
+
       // Provide helpful error message with context
       const errorMsg = secondError instanceof Error ? secondError.message : 'Unknown parse error';
+      debugLog(`ERROR: JSON parse failed for ${context}: ${errorMsg}`);
       console.error(`JSON parse failed for ${context}:`);
       console.error('Original error:', firstError);
       console.error('After sanitization:', secondError);
@@ -126,6 +184,23 @@ export async function parseScheduleWithAI(
   existingSchedule: ProductionSchedule,
   onProgress?: AIScheduleProgressCallback
 ): Promise<ProductionSchedule> {
+  debugLog('Starting AI schedule parsing');
+  debugLog('Raw text length:', rawText?.length || 0);
+  debugLog('Existing schedule days:', existingSchedule.days.length);
+  debugLog('Existing cast list:', existingSchedule.castList.length);
+
+  // Validate input
+  if (!rawText || rawText.length === 0) {
+    debugLog('ERROR: No raw text provided for AI parsing');
+    onProgress?.({
+      status: 'error',
+      progress: 0,
+      message: 'No schedule text available for AI analysis',
+      error: 'Raw text is empty',
+    });
+    return existingSchedule;
+  }
+
   onProgress?.({
     status: 'processing',
     progress: 10,
@@ -138,6 +213,8 @@ export async function parseScheduleWithAI(
       ? `\nCAST LIST (use these numbers to identify characters):\n${existingSchedule.castList.map(c => `${c.number}. ${c.character || c.name}`).join('\n')}\n`
       : '';
 
+    debugLog('Cast reference built:', castReference.length > 0 ? 'yes' : 'no');
+
     onProgress?.({
       status: 'processing',
       progress: 20,
@@ -148,25 +225,33 @@ export async function parseScheduleWithAI(
     // But first, try processing the whole thing if it's not too large
     const maxChunkSize = 25000; // characters
 
+    debugLog('Processing mode:', rawText.length <= maxChunkSize ? 'full' : 'chunked');
+
     if (rawText.length <= maxChunkSize) {
       // Process entire schedule at once
+      debugLog('Calling analyzeFullSchedule...');
       const result = await analyzeFullSchedule(rawText, castReference);
+      debugLog('analyzeFullSchedule result:', result.days.length, 'days');
+
+      const totalScenes = result.days.reduce((sum, d) => sum + d.scenes.length, 0);
+      debugLog('Total scenes found by AI:', totalScenes);
 
       onProgress?.({
         status: 'complete',
         progress: 100,
-        message: `Successfully identified ${result.days.reduce((sum, d) => sum + d.scenes.length, 0)} scenes across ${result.days.length} days`,
+        message: `Successfully identified ${totalScenes} scenes across ${result.days.length} days`,
       });
 
       return {
         ...existingSchedule,
-        days: result.days,
-        totalDays: result.days.length,
+        days: result.days.length > 0 ? result.days : existingSchedule.days,
+        totalDays: result.days.length > 0 ? result.days.length : existingSchedule.totalDays,
       };
     }
 
     // For larger schedules, process by shooting day
     const chunks = splitScheduleByDays(rawText);
+    debugLog('Split into', chunks.length, 'day chunks');
 
     onProgress?.({
       status: 'processing',
@@ -180,6 +265,8 @@ export async function parseScheduleWithAI(
       const chunk = chunks[i];
       const progress = 30 + Math.round((i / chunks.length) * 60);
 
+      debugLog(`Processing chunk ${i + 1}/${chunks.length}, day ${chunk.dayNumber}`);
+
       onProgress?.({
         status: 'processing',
         progress,
@@ -189,9 +276,13 @@ export async function parseScheduleWithAI(
       try {
         const dayResult = await analyzeDayChunk(chunk.text, chunk.dayNumber, castReference);
         if (dayResult && dayResult.scenes.length > 0) {
+          debugLog(`Day ${chunk.dayNumber}: found ${dayResult.scenes.length} scenes`);
           allDays.push(dayResult);
+        } else {
+          debugLog(`Day ${chunk.dayNumber}: no scenes found`);
         }
       } catch (error) {
+        debugLog(`ERROR: Failed to analyze day ${i + 1}:`, error);
         console.error(`Failed to analyze day ${i + 1}:`, error);
         // Continue with other days
       }
@@ -207,6 +298,7 @@ export async function parseScheduleWithAI(
     allDays.sort((a, b) => a.dayNumber - b.dayNumber);
 
     const totalScenes = allDays.reduce((sum, d) => sum + d.scenes.length, 0);
+    debugLog('Total scenes found across all chunks:', totalScenes);
 
     onProgress?.({
       status: 'complete',
@@ -221,13 +313,18 @@ export async function parseScheduleWithAI(
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    debugLog('ERROR: AI schedule parsing failed:', errorMessage);
+    console.error('AI schedule parsing failed:', error);
+
     onProgress?.({
       status: 'error',
       progress: 0,
       message: 'Failed to analyze schedule with AI',
       error: errorMessage,
     });
-    throw error;
+
+    // Return existing schedule on error rather than throwing
+    return existingSchedule;
   }
 }
 
@@ -238,6 +335,8 @@ async function analyzeFullSchedule(
   text: string,
   castReference: string
 ): Promise<{ days: ScheduleDay[] }> {
+  debugLog('analyzeFullSchedule called, text length:', text.length);
+
   const systemPrompt = `You are an expert at parsing film production shooting schedules. Your job is to extract ALL scenes from a schedule PDF that has been converted to text.
 
 CRITICAL: The schedule uses a TABLE FORMAT where each scene has these columns:
@@ -259,8 +358,9 @@ IMPORTANT PATTERNS:
 - Cast numbers reference the cast list and appear as single digits or lists
 - Locations are typically ALL CAPS
 - Scene descriptions/synopses are typically mixed case
+- The schedule may have TWO-ROW format where "Scene" is on one line and scene number on next line
 
-Return ONLY valid JSON with no additional text.`;
+Return ONLY valid JSON with no additional text, no markdown code blocks.`;
 
   const prompt = `Extract ALL scenes from this shooting schedule, organized by shooting day.
 ${castReference}
@@ -303,33 +403,72 @@ CRITICAL INSTRUCTIONS:
 6. Group scenes by shooting day based on "End of Shooting Day X" markers
 7. For intExt, use only "INT" or "EXT"
 8. Look for patterns like "Scene 21" or "Sc 21" to identify scene entries
-9. Extract the date from patterns like "Tuesday, 21 May 2024"`;
+9. Extract the date from patterns like "Tuesday, 21 May 2024"
+10. Return ONLY the JSON object, no explanation, no markdown`;
 
-  const response = await callAI(prompt, { system: systemPrompt, maxTokens: 8000 });
+  try {
+    debugLog('Calling AI for full schedule analysis...');
+    const response = await callAI(prompt, { system: systemPrompt, maxTokens: 8000 });
+    debugLog('AI response received, length:', response?.length || 0);
 
-  // Parse the JSON response with sanitization for common AI mistakes
-  const parsed = parseAIJSON(response, 'full schedule analysis');
+    if (!response) {
+      debugLog('ERROR: Empty AI response');
+      return { days: [] };
+    }
 
-  // Convert to proper format
-  const days: ScheduleDay[] = (parsed.days || []).map((day: any) => ({
-    dayNumber: day.dayNumber || 1,
-    date: day.date || undefined,
-    dayOfWeek: day.dayOfWeek || undefined,
-    location: day.location || '',
-    scenes: (day.scenes || []).map((s: any, idx: number) => ({
-      sceneNumber: String(s.sceneNumber || ''),
-      pages: s.pages || undefined,
-      intExt: (s.intExt?.toUpperCase() === 'EXT' ? 'EXT' : 'INT') as 'INT' | 'EXT',
-      dayNight: s.dayNight || 'Day',
-      setLocation: s.setLocation || '',
-      description: s.description || undefined,
-      castNumbers: Array.isArray(s.castNumbers) ? s.castNumbers.filter((n: any) => typeof n === 'number') : [],
-      estimatedTime: s.estimatedTime || undefined,
-      shootOrder: s.shootOrder || idx + 1,
-    })).filter((s: ScheduleSceneEntry) => s.sceneNumber),
-  })).filter((d: ScheduleDay) => d.scenes.length > 0);
+    // Log a snippet of the response for debugging
+    debugLog('Response preview:', response.substring(0, 500));
 
-  return { days };
+    // Parse the JSON response with sanitization for common AI mistakes
+    let parsed;
+    try {
+      parsed = parseAIJSON(response, 'full schedule analysis');
+      debugLog('JSON parsed successfully');
+    } catch (parseError) {
+      debugLog('ERROR: JSON parsing failed:', parseError);
+      console.error('JSON parsing failed:', parseError);
+      return { days: [] };
+    }
+
+    if (!parsed || !parsed.days) {
+      debugLog('ERROR: Parsed response missing days array');
+      return { days: [] };
+    }
+
+    debugLog('Parsed days count:', parsed.days.length);
+
+    // Convert to proper format
+    const days: ScheduleDay[] = (parsed.days || []).map((day: any, dayIdx: number) => {
+      const scenes = (day.scenes || []).map((s: any, idx: number) => ({
+        sceneNumber: String(s.sceneNumber || ''),
+        pages: s.pages || undefined,
+        intExt: (s.intExt?.toUpperCase() === 'EXT' ? 'EXT' : 'INT') as 'INT' | 'EXT',
+        dayNight: s.dayNight || 'Day',
+        setLocation: s.setLocation || '',
+        description: s.description || undefined,
+        castNumbers: Array.isArray(s.castNumbers) ? s.castNumbers.filter((n: any) => typeof n === 'number') : [],
+        estimatedTime: s.estimatedTime || undefined,
+        shootOrder: s.shootOrder || idx + 1,
+      })).filter((s: ScheduleSceneEntry) => s.sceneNumber);
+
+      debugLog(`Day ${dayIdx + 1}: ${scenes.length} valid scenes`);
+
+      return {
+        dayNumber: day.dayNumber || dayIdx + 1,
+        date: day.date || undefined,
+        dayOfWeek: day.dayOfWeek || undefined,
+        location: day.location || '',
+        scenes,
+      };
+    }).filter((d: ScheduleDay) => d.scenes.length > 0);
+
+    debugLog('Final days with scenes:', days.length);
+    return { days };
+  } catch (error) {
+    debugLog('ERROR: analyzeFullSchedule failed:', error);
+    console.error('analyzeFullSchedule error:', error);
+    return { days: [] };
+  }
 }
 
 /**
@@ -378,6 +517,8 @@ async function analyzeDayChunk(
   dayNumber: number,
   castReference: string
 ): Promise<ScheduleDay | null> {
+  debugLog(`analyzeDayChunk called for day ${dayNumber}, text length: ${chunkText.length}`);
+
   const systemPrompt = `You are an expert at parsing film production shooting schedules. Extract all scenes from this portion of a schedule.
 
 The schedule uses a TABLE FORMAT with columns for:
@@ -389,8 +530,9 @@ Look for:
 - Cast numbers as single digits or comma-separated lists
 - Locations in ALL CAPS
 - Descriptions in mixed case
+- The schedule may have TWO-ROW format where "Scene" is on one line and scene number on next line
 
-Return ONLY valid JSON.`;
+Return ONLY valid JSON, no markdown code blocks.`;
 
   const prompt = `Extract ALL scenes from this shooting day.
 ${castReference}
@@ -419,16 +561,26 @@ Return JSON:
   ]
 }
 
-Extract EVERY scene. Scene numbers exactly as shown. dayNight = story day marker (D5, N8, etc).`;
+Extract EVERY scene. Scene numbers exactly as shown. dayNight = story day marker (D5, N8, etc).
+Return ONLY the JSON object, no explanation, no markdown.`;
 
   try {
+    debugLog(`Calling AI for day ${dayNumber}...`);
     const response = await callAI(prompt, { system: systemPrompt, maxTokens: 4000 });
+    debugLog(`Day ${dayNumber} AI response length:`, response?.length || 0);
+
+    if (!response) {
+      debugLog(`ERROR: Empty AI response for day ${dayNumber}`);
+      return null;
+    }
 
     // Parse the JSON response with sanitization for common AI mistakes
     let parsed;
     try {
       parsed = parseAIJSON(response, `day ${dayNumber} analysis`);
+      debugLog(`Day ${dayNumber} JSON parsed successfully`);
     } catch (parseError) {
+      debugLog(`ERROR: No valid JSON in AI response for day ${dayNumber}:`, parseError);
       console.error('No valid JSON in AI response for day', dayNumber, parseError);
       return null;
     }
