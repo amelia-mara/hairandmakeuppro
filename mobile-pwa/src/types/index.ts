@@ -1036,6 +1036,9 @@ export const PRODUCTION_TYPES: { value: ProductionType; label: string }[] = [
   { value: 'other', label: 'Other' },
 ];
 
+// Project status
+export type ProjectStatus = 'active' | 'archived';
+
 // Project membership entry (user's relationship to a project)
 export interface ProjectMembership {
   projectId: string;
@@ -1045,7 +1048,9 @@ export interface ProjectMembership {
   joinedAt: Date;
   lastAccessedAt: Date;
   teamMemberCount: number;
+  sceneCount: number;
   projectCode: string;
+  status: ProjectStatus;
 }
 
 // Auth screen types for navigation
