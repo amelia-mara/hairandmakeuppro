@@ -94,48 +94,89 @@ export const useScheduleStore = create<ScheduleState>()(
 
       startAIProcessing: async () => {
         const { schedule, setAIProcessingStatus, setSchedule } = get();
+        console.log('[ScheduleStore] startAIProcessing called');
+        console.log('[ScheduleStore] Has schedule:', !!schedule);
+        console.log('[ScheduleStore] Has rawText:', !!schedule?.rawText);
+        console.log('[ScheduleStore] rawText length:', schedule?.rawText?.length || 0);
+
         if (!schedule || !schedule.rawText) {
-          console.log('No schedule or raw text available for AI processing');
+          console.log('[ScheduleStore] No schedule or raw text available for AI processing');
+          setAIProcessingStatus({
+            status: 'complete',
+            progress: 100,
+            message: 'Using initial parsing results',
+          });
           return;
         }
 
         // Check if AI processing would be beneficial
         if (!shouldUseAIProcessing(schedule)) {
-          console.log('AI processing not needed - regex parsing was sufficient');
+          console.log('[ScheduleStore] AI processing not needed - regex parsing was sufficient');
+          const totalScenes = schedule.days.reduce((sum, d) => sum + d.scenes.length, 0);
           setAIProcessingStatus({
             status: 'complete',
             progress: 100,
-            message: 'Schedule parsed successfully with regex',
+            message: `Schedule parsed: ${totalScenes} scenes across ${schedule.days.length} days`,
           });
           return;
         }
 
+        console.log('[ScheduleStore] Starting AI processing...');
         set({ isAIProcessing: true });
 
         try {
           const aiSchedule = await parseScheduleWithAI(
             schedule.rawText,
             schedule,
-            (status) => setAIProcessingStatus(status)
+            (status) => {
+              console.log('[ScheduleStore] AI progress:', status.progress, status.message);
+              setAIProcessingStatus(status);
+            }
           );
 
-          // Update schedule with AI-parsed data
-          setSchedule(aiSchedule);
+          // Only update schedule if AI found more/different data
+          const aiSceneCount = aiSchedule.days.reduce((sum, d) => sum + d.scenes.length, 0);
+          const originalSceneCount = schedule.days.reduce((sum, d) => sum + d.scenes.length, 0);
 
-          setAIProcessingStatus({
-            status: 'complete',
-            progress: 100,
-            message: `Successfully identified ${aiSchedule.days.reduce((sum, d) => sum + d.scenes.length, 0)} scenes`,
-          });
+          console.log('[ScheduleStore] AI found', aiSceneCount, 'scenes, original had', originalSceneCount);
+
+          // Update schedule with AI-parsed data if it found scenes
+          if (aiSceneCount > 0) {
+            setSchedule(aiSchedule);
+            setAIProcessingStatus({
+              status: 'complete',
+              progress: 100,
+              message: `Successfully identified ${aiSceneCount} scenes across ${aiSchedule.days.length} days`,
+            });
+          } else {
+            // AI didn't find anything, keep original
+            console.log('[ScheduleStore] AI found no scenes, keeping original results');
+            setAIProcessingStatus({
+              status: 'complete',
+              progress: 100,
+              message: `Using initial parsing: ${originalSceneCount} scenes across ${schedule.days.length} days`,
+            });
+          }
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          console.error('AI schedule processing failed:', error);
-          setAIProcessingStatus({
-            status: 'error',
-            progress: 0,
-            message: 'AI processing failed',
-            error: errorMessage,
-          });
+          console.error('[ScheduleStore] AI schedule processing failed:', error);
+
+          // Don't show error status if we have regex results - just note that AI enhancement failed
+          const originalSceneCount = schedule.days.reduce((sum, d) => sum + d.scenes.length, 0);
+          if (originalSceneCount > 0) {
+            setAIProcessingStatus({
+              status: 'complete',
+              progress: 100,
+              message: `Using initial parsing: ${originalSceneCount} scenes (AI enhancement unavailable)`,
+            });
+          } else {
+            setAIProcessingStatus({
+              status: 'error',
+              progress: 0,
+              message: 'Schedule parsing failed',
+              error: errorMessage,
+            });
+          }
         } finally {
           set({ isAIProcessing: false });
         }

@@ -33,6 +33,8 @@ export default function App() {
     checkWrapTrigger,
     lifecycle,
     updateActivity,
+    needsSetup,
+    clearNeedsSetup,
   } = useProjectStore();
 
   const {
@@ -46,7 +48,8 @@ export default function App() {
   } = useAuthStore();
 
   // Track if we're showing the home/setup screen
-  const [showHome, setShowHome] = useState(!currentProject);
+  // Start as false - will be set true explicitly when needed
+  const [showHome, setShowHome] = useState(false);
   const [showExport, setShowExport] = useState(false);
   // Key to force More component to reset when clicking the same tab
   const [tabResetKey, setTabResetKey] = useState(0);
@@ -70,10 +73,19 @@ export default function App() {
   // Handle project ready (from Home component)
   const handleProjectReady = () => {
     setShowHome(false);
+    clearNeedsSetup();
     setActiveTab('today');
   };
 
-  // Handle starting a new project (from Settings)
+  // Handle switching to a different project (from Project Menu)
+  const handleSwitchProject = () => {
+    // Clear current project and go to project hub
+    useProjectStore.getState().clearProject();
+    setShowHome(false);
+    setScreen('hub');
+  };
+
+  // Handle starting a new project (from Settings or Home)
   const handleStartNewProject = () => {
     setShowHome(true);
   };
@@ -184,6 +196,7 @@ export default function App() {
   // Handle back from Home screen
   const handleBackFromHome = () => {
     setShowHome(false);
+    clearNeedsSetup();
     if (isAuthenticated) {
       setScreen('hub');
     } else {
@@ -191,8 +204,8 @@ export default function App() {
     }
   };
 
-  // Show Home screen if no project or explicitly requested
-  if (showHome || !currentProject) {
+  // Show Home screen if no project, explicitly requested, or new project needs setup
+  if (showHome || !currentProject || needsSetup) {
     return <Home onProjectReady={handleProjectReady} onBack={handleBackFromHome} />;
   }
 
@@ -258,7 +271,7 @@ export default function App() {
         <ProjectHeader
           onNavigateToTab={handleNavigateToTab}
           onNavigateToSubView={handleNavigateToSubView}
-          onSwitchProject={handleStartNewProject}
+          onSwitchProject={handleSwitchProject}
         />
       )}
 

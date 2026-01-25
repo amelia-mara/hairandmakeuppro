@@ -1,5 +1,7 @@
 import { useState, useRef } from 'react';
 import { formatShortDate } from '@/utils/helpers';
+import { useProjectStore } from '@/stores/projectStore';
+import { demoReceipts, demoBudgetSummary } from '@/stores/demoData';
 import {
   CURRENCIES,
   DEFAULT_CURRENCY,
@@ -28,53 +30,14 @@ export interface BudgetSummary {
   byCategory: Record<ExpenseCategory, number>;
 }
 
-// Demo data for development
-const demoReceipts: Receipt[] = [
-  {
-    id: 'r1',
-    date: '2025-01-18',
-    vendor: 'Camera Ready Cosmetics',
-    amount: 245.00,
-    category: 'Kit Supplies',
-    description: 'Foundation restocks, setting spray',
-    synced: true,
-  },
-  {
-    id: 'r2',
-    date: '2025-01-17',
-    vendor: 'Uber',
-    amount: 32.50,
-    category: 'Transportation',
-    description: 'To set - Day 3',
-    synced: true,
-  },
-  {
-    id: 'r3',
-    date: '2025-01-15',
-    vendor: 'Kryolan',
-    amount: 189.99,
-    category: 'Kit Supplies',
-    description: 'Blood products, prosthetic adhesive',
-    synced: false,
-  },
-  {
-    id: 'r4',
-    date: '2025-01-14',
-    vendor: 'Costco',
-    amount: 67.25,
-    category: 'Consumables',
-    description: 'Tissues, cotton rounds, alcohol',
-    synced: true,
-  },
-];
-
-const demoBudgetSummary: BudgetSummary = {
-  totalBudget: 2500.00,
-  totalSpent: 534.74,
+// Empty initial state for real projects
+const emptyBudgetSummary: BudgetSummary = {
+  totalBudget: 0,
+  totalSpent: 0,
   byCategory: {
-    'Kit Supplies': 434.99,
-    'Consumables': 67.25,
-    'Transportation': 32.50,
+    'Kit Supplies': 0,
+    'Consumables': 0,
+    'Transportation': 0,
     'Equipment': 0,
     'Other': 0,
   },
@@ -83,8 +46,12 @@ const demoBudgetSummary: BudgetSummary = {
 const CATEGORIES: ExpenseCategory[] = ['Kit Supplies', 'Consumables', 'Transportation', 'Equipment', 'Other'];
 
 export function Budget() {
-  const [receipts, setReceipts] = useState<Receipt[]>(demoReceipts);
-  const [summary] = useState<BudgetSummary>(demoBudgetSummary);
+  const { currentProject } = useProjectStore();
+  const isDemoProject = currentProject?.isDemoProject === true;
+
+  // Only use demo data if this is a demo project
+  const [receipts, setReceipts] = useState<Receipt[]>(isDemoProject ? demoReceipts : []);
+  const [summary] = useState<BudgetSummary>(isDemoProject ? demoBudgetSummary : emptyBudgetSummary);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [showAddReceipt, setShowAddReceipt] = useState(false);
   const [currency, setCurrency] = useState<CurrencyCode>(DEFAULT_CURRENCY);
@@ -239,38 +206,50 @@ export function Budget() {
             <span className="text-xs text-text-muted">{receipts.length} total</span>
           </div>
 
-          <div className="space-y-2">
-            {receipts.map((receipt) => (
-              <div key={receipt.id} className="card">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-semibold text-text-primary truncate">
-                        {receipt.vendor}
-                      </h3>
-                      {!receipt.synced && (
-                        <span className="px-1.5 py-0.5 text-[9px] font-medium rounded bg-amber-100 text-amber-700">
-                          Pending
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-text-muted mt-0.5">{receipt.description}</p>
-                    <div className="flex items-center gap-2 mt-1.5">
-                      <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-gray-100 text-text-muted">
-                        {receipt.category}
-                      </span>
-                      <span className="text-[11px] text-text-light">
-                        {formatShortDate(receipt.date)}
-                      </span>
-                    </div>
-                  </div>
-                  <span className="text-base font-bold text-text-primary ml-3">
-                    {formatCurrency(receipt.amount, currency)}
-                  </span>
-                </div>
+          {receipts.length === 0 ? (
+            <div className="card text-center py-8">
+              <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-gray-100 flex items-center justify-center">
+                <svg className="w-6 h-6 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
+                </svg>
               </div>
-            ))}
-          </div>
+              <p className="text-sm text-text-muted mb-1">No receipts yet</p>
+              <p className="text-xs text-text-light">Scan or add receipts to track expenses</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {receipts.map((receipt) => (
+                <div key={receipt.id} className="card">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-semibold text-text-primary truncate">
+                          {receipt.vendor}
+                        </h3>
+                        {!receipt.synced && (
+                          <span className="px-1.5 py-0.5 text-[9px] font-medium rounded bg-amber-100 text-amber-700">
+                            Pending
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-text-muted mt-0.5">{receipt.description}</p>
+                      <div className="flex items-center gap-2 mt-1.5">
+                        <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-gray-100 text-text-muted">
+                          {receipt.category}
+                        </span>
+                        <span className="text-[11px] text-text-light">
+                          {formatShortDate(receipt.date)}
+                        </span>
+                      </div>
+                    </div>
+                    <span className="text-base font-bold text-text-primary ml-3">
+                      {formatCurrency(receipt.amount, currency)}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Quick Scan Button (mobile-optimized) */}

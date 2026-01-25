@@ -1,5 +1,84 @@
 import type { Project, Scene, Character, Look, CallSheet } from '@/types';
 import { createEmptyMakeupDetails, createEmptyHairDetails } from '@/types';
+import type { Receipt, BudgetSummary } from '@/components/budget/Budget';
+
+// Demo team members for team management features
+export interface DemoTeamMember {
+  userId: string;
+  name: string;
+  email: string;
+  role: 'designer' | 'supervisor' | 'key' | 'floor' | 'daily';
+  isOwner: boolean;
+  joinedAt: Date;
+  lastActiveAt: Date;
+  editCount: number;
+}
+
+export const demoTeamMembers: DemoTeamMember[] = [
+  { userId: 'user-1', name: 'Sarah Chen', email: 'sarah.chen@example.com', role: 'designer', isOwner: true, joinedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), lastActiveAt: new Date(Date.now() - 1 * 60 * 60 * 1000), editCount: 342 },
+  { userId: 'user-2', name: 'Mike Torres', email: 'mike.torres@example.com', role: 'supervisor', isOwner: false, joinedAt: new Date(Date.now() - 28 * 24 * 60 * 60 * 1000), lastActiveAt: new Date(Date.now() - 2 * 60 * 60 * 1000), editCount: 256 },
+  { userId: 'user-3', name: 'Emma Wright', email: 'emma.wright@example.com', role: 'key', isOwner: false, joinedAt: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000), lastActiveAt: new Date(Date.now() - 3 * 60 * 60 * 1000), editCount: 189 },
+  { userId: 'user-4', name: 'David Park', email: 'david.park@example.com', role: 'key', isOwner: false, joinedAt: new Date(Date.now() - 22 * 24 * 60 * 60 * 1000), lastActiveAt: new Date(Date.now() - 5 * 60 * 60 * 1000), editCount: 134 },
+  { userId: 'user-5', name: 'Lucy Hammond', email: 'lucy.hammond@example.com', role: 'floor', isOwner: false, joinedAt: new Date(Date.now() - 18 * 24 * 60 * 60 * 1000), lastActiveAt: new Date(Date.now() - 8 * 60 * 60 * 1000), editCount: 87 },
+  { userId: 'user-6', name: 'Alex Rivera', email: 'alex.rivera@example.com', role: 'floor', isOwner: false, joinedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000), lastActiveAt: new Date(Date.now() - 12 * 60 * 60 * 1000), editCount: 65 },
+  { userId: 'user-7', name: 'Jordan Lee', email: 'jordan.lee@example.com', role: 'floor', isOwner: false, joinedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), lastActiveAt: new Date(Date.now() - 24 * 60 * 60 * 1000), editCount: 42 },
+  { userId: 'user-8', name: 'James Cole', email: 'james.cole@example.com', role: 'daily', isOwner: false, joinedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), lastActiveAt: new Date(Date.now() - 48 * 60 * 60 * 1000), editCount: 18 },
+];
+
+// Demo project code for sharing
+export const demoProjectCode = 'DEMO42';
+
+// Demo budget data
+export const demoReceipts: Receipt[] = [
+  {
+    id: 'r1',
+    date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    vendor: 'Camera Ready Cosmetics',
+    amount: 245.00,
+    category: 'Kit Supplies',
+    description: 'Foundation restocks, setting spray',
+    synced: true,
+  },
+  {
+    id: 'r2',
+    date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    vendor: 'Uber',
+    amount: 32.50,
+    category: 'Transportation',
+    description: 'To set - Day 3',
+    synced: true,
+  },
+  {
+    id: 'r3',
+    date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    vendor: 'Kryolan',
+    amount: 189.99,
+    category: 'Kit Supplies',
+    description: 'Blood products, prosthetic adhesive',
+    synced: false,
+  },
+  {
+    id: 'r4',
+    date: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    vendor: 'Costco',
+    amount: 67.25,
+    category: 'Consumables',
+    description: 'Tissues, cotton rounds, alcohol',
+    synced: true,
+  },
+];
+
+export const demoBudgetSummary: BudgetSummary = {
+  totalBudget: 2500.00,
+  totalSpent: 534.74,
+  byCategory: {
+    'Kit Supplies': 434.99,
+    'Consumables': 67.25,
+    'Transportation': 32.50,
+    'Equipment': 0,
+    'Other': 0,
+  },
+};
 
 // Generate demo scenes (42 total)
 function generateDemoScenes(): Scene[] {
@@ -309,17 +388,52 @@ const demoLooks: Look[] = [
   },
 ];
 
-// Create demo continuity events
-export const demoContinuityEvent = {
-  id: 'event-1',
-  type: 'Wound' as const,
-  name: 'Forehead Cut',
-  description: 'Small laceration above left eyebrow, 2cm length',
-  stage: 'Fresh bleeding',
-  sceneRange: '12-18',
-  products: 'Skin Illustrator FX Palette, Fresh Scab, KD-151 Blood',
-  referencePhotos: [],
-};
+// Create demo continuity events (multiple types to showcase the feature)
+export const demoContinuityEvents = [
+  {
+    id: 'event-1',
+    type: 'Wound' as const,
+    name: 'Forehead Cut',
+    description: 'Small laceration above left eyebrow, 2cm length',
+    stage: 'Fresh bleeding',
+    sceneRange: '12-18',
+    products: 'Skin Illustrator FX Palette, Fresh Scab, KD-151 Blood',
+    referencePhotos: [],
+  },
+  {
+    id: 'event-2',
+    type: 'Bruise' as const,
+    name: 'Cheek Bruise',
+    description: 'Bruising on right cheekbone from altercation in Scene 3',
+    stage: 'Day 2 - Purple/blue discoloration',
+    sceneRange: '4-15',
+    products: 'Skin Illustrator Bruise Wheel, alcohol activated',
+    referencePhotos: [],
+  },
+  {
+    id: 'event-3',
+    type: 'Makeup Change' as const,
+    name: 'Crying Scene Transition',
+    description: 'Mascara runs, smudged eyeliner, reddened nose',
+    stage: 'Post-crying',
+    sceneRange: '8-9',
+    products: 'Waterproof mascara partially removed, glycerin tears',
+    referencePhotos: [],
+  },
+  {
+    id: 'event-4',
+    type: 'Hair Change' as const,
+    name: 'Hair Down Transition',
+    description: 'Hair released from ponytail, slightly disheveled',
+    stage: 'Natural release',
+    sceneRange: '15-18',
+    products: 'Texture spray for lived-in look',
+    referencePhotos: [],
+  },
+];
+
+// Keep single event export for backwards compatibility
+export const demoContinuityEvent = demoContinuityEvents[0];
 
 // Export the complete demo project
 export const demoProject: Project = {

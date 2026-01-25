@@ -42,7 +42,7 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scheduleInputRef = useRef<HTMLInputElement>(null);
   const { setProject, setScriptPdf } = useProjectStore();
-  const { setSchedule } = useScheduleStore();
+  const { setSchedule, startAIProcessing, setAIProcessingStatus } = useScheduleStore();
 
   // Progressive workflow: Fast scene parsing then background character detection
   const processScriptFast = useCallback(async (file: File, scheduleFile?: File | null) => {
@@ -63,6 +63,18 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
           setParsedSchedule(schedule);
           setSchedule(schedule);
           console.log(`Schedule parsed: ${schedule.castList.length} cast, ${schedule.days.length} days`);
+
+          // Set initial AI processing status and trigger background AI analysis
+          // This allows the progress bar to show on the Schedule page
+          setAIProcessingStatus({
+            status: 'idle',
+            progress: 0,
+            message: 'Initial parsing complete. Starting AI analysis...',
+          });
+          // Start AI processing in background after a small delay
+          setTimeout(() => {
+            startAIProcessing();
+          }, 500);
         } catch (e) {
           console.warn('Schedule parsing failed, continuing without:', e);
         }
