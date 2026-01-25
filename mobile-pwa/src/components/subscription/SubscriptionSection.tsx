@@ -3,7 +3,6 @@ import { Badge } from '@/components/ui';
 import {
   getTierById,
   formatPrice,
-  SUBSCRIPTION_TIERS,
 } from '@/types/subscription';
 import type { SubscriptionTier } from '@/types/subscription';
 

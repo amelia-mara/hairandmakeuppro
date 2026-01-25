@@ -1,6 +1,6 @@
 import { BottomSheet } from '@/components/ui';
 import { clsx } from 'clsx';
-import { SUBSCRIPTION_TIERS, TIER_FEATURES } from '@/types/subscription';
+import { SUBSCRIPTION_TIERS } from '@/types/subscription';
 import type { SubscriptionTier } from '@/types/subscription';
 
 export interface ComparisonModalProps {
