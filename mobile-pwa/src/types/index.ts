@@ -1001,6 +1001,101 @@ export const calculateDaysUntilDeletion = (wrappedAt: Date): number => {
   return Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
 };
 
+// ============================================
+// Authentication & User Types
+// ============================================
+
+// User subscription tiers
+export type UserTier = 'free' | 'artist' | 'supervisor' | 'designer';
+
+// User account
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  tier: UserTier;
+  createdAt: Date;
+  avatarUrl?: string;
+}
+
+// Project membership role
+export type ProjectRole = 'owner' | 'supervisor' | 'artist' | 'viewer';
+
+// Production types for new projects
+export type ProductionType = 'film' | 'tv_series' | 'short_film' | 'commercial' | 'music_video' | 'other';
+
+export const PRODUCTION_TYPES: { value: ProductionType; label: string }[] = [
+  { value: 'film', label: 'Film' },
+  { value: 'tv_series', label: 'TV Series' },
+  { value: 'short_film', label: 'Short Film' },
+  { value: 'commercial', label: 'Commercial' },
+  { value: 'music_video', label: 'Music Video' },
+  { value: 'other', label: 'Other' },
+];
+
+// Project membership entry (user's relationship to a project)
+export interface ProjectMembership {
+  projectId: string;
+  projectName: string;
+  productionType: ProductionType;
+  role: ProjectRole;
+  joinedAt: Date;
+  lastAccessedAt: Date;
+  teamMemberCount: number;
+  projectCode: string;
+}
+
+// Auth screen types for navigation
+export type AuthScreen = 'welcome' | 'signin' | 'signup' | 'join' | 'hub' | 'create-project';
+
+// Auth state
+export interface AuthState {
+  isAuthenticated: boolean;
+  user: User | null;
+  isLoading: boolean;
+  error: string | null;
+}
+
+// Project code format: ABC-1234 (no ambiguous characters)
+// Excluded: 0, O, 1, l, I
+export const PROJECT_CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+
+// Generate a project code in ABC-1234 format
+export const generateProjectCode = (): string => {
+  let code = '';
+  // First 3 letters
+  for (let i = 0; i < 3; i++) {
+    code += PROJECT_CODE_CHARS.charAt(Math.floor(Math.random() * 23)); // Letters only (first 23 chars)
+  }
+  code += '-';
+  // Last 4 alphanumeric
+  for (let i = 0; i < 4; i++) {
+    code += PROJECT_CODE_CHARS.charAt(Math.floor(Math.random() * PROJECT_CODE_CHARS.length));
+  }
+  return code;
+};
+
+// Validate project code format
+export const isValidProjectCode = (code: string): boolean => {
+  const pattern = /^[ABCDEFGHJKMNPQRSTUVWXYZ]{3}-[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{4}$/;
+  return pattern.test(code.toUpperCase());
+};
+
+// Format project code as user types (add dash after 3 chars)
+export const formatProjectCode = (input: string): string => {
+  const cleaned = input.toUpperCase().replace(/[^ABCDEFGHJKMNPQRSTUVWXYZ23456789]/g, '');
+  if (cleaned.length <= 3) return cleaned;
+  return cleaned.slice(0, 3) + '-' + cleaned.slice(3, 7);
+};
+
+// Tier feature limits
+export const TIER_LIMITS: Record<UserTier, { maxProjects: number; maxArchivedProjects: number; canCreateProjects: boolean }> = {
+  free: { maxProjects: 3, maxArchivedProjects: 1, canCreateProjects: false },
+  artist: { maxProjects: 10, maxArchivedProjects: 5, canCreateProjects: false },
+  supervisor: { maxProjects: 25, maxArchivedProjects: 15, canCreateProjects: true },
+  designer: { maxProjects: -1, maxArchivedProjects: -1, canCreateProjects: true }, // -1 = unlimited
+};
+
 // Helper to check if project should trigger wrap
 export const shouldTriggerWrap = (
   project: Project,

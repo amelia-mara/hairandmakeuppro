@@ -17,6 +17,104 @@ export interface AIScheduleProcessingStatus {
   error?: string;
 }
 
+/**
+ * Sanitize and repair common JSON issues from AI responses
+ * Handles: trailing commas, unclosed brackets, markdown formatting, etc.
+ */
+function sanitizeAIJSON(jsonStr: string): string {
+  let sanitized = jsonStr;
+
+  // Remove markdown code block markers if present
+  sanitized = sanitized.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+
+  // Remove any leading/trailing whitespace
+  sanitized = sanitized.trim();
+
+  // Fix trailing commas before closing brackets (common AI mistake)
+  // This regex handles nested structures by repeatedly applying the fix
+  let prevLength = 0;
+  while (prevLength !== sanitized.length) {
+    prevLength = sanitized.length;
+    sanitized = sanitized.replace(/,(\s*[\]\}])/g, '$1');
+  }
+
+  // Fix missing commas between array elements (e.g., "} {" should be "}, {")
+  sanitized = sanitized.replace(/\}(\s*)\{/g, '},$1{');
+
+  // Fix missing commas between string values and objects in arrays
+  sanitized = sanitized.replace(/"(\s*)\{/g, '",$1{');
+  sanitized = sanitized.replace(/\}(\s*)"/g, '},$1"');
+
+  // Fix missing commas between array elements that are numbers/booleans
+  sanitized = sanitized.replace(/(\d)(\s+)(\d)/g, '$1,$2$3');
+  sanitized = sanitized.replace(/(true|false|null)(\s+)(true|false|null|\d|"|\{|\[)/gi, '$1,$2$3');
+
+  // Try to fix truncated JSON by closing unclosed brackets
+  const openBraces = (sanitized.match(/\{/g) || []).length;
+  const closeBraces = (sanitized.match(/\}/g) || []).length;
+  const openBrackets = (sanitized.match(/\[/g) || []).length;
+  const closeBrackets = (sanitized.match(/\]/g) || []).length;
+
+  // If JSON appears truncated, try to close it
+  if (openBraces > closeBraces || openBrackets > closeBrackets) {
+    // Remove any incomplete trailing content (partial string, etc.)
+    // Look for the last complete value
+    const lastCompleteMatch = sanitized.match(/^([\s\S]*(?:[\]\}\"\d]|true|false|null))\s*,?\s*[^\]\}\"\d]*$/);
+    if (lastCompleteMatch) {
+      sanitized = lastCompleteMatch[1];
+    }
+
+    // Add missing closing brackets
+    for (let i = 0; i < openBrackets - closeBrackets; i++) {
+      sanitized += ']';
+    }
+    for (let i = 0; i < openBraces - closeBraces; i++) {
+      sanitized += '}';
+    }
+
+    // Clean up any trailing commas we may have introduced
+    sanitized = sanitized.replace(/,(\s*[\]\}])/g, '$1');
+  }
+
+  return sanitized;
+}
+
+/**
+ * Safely parse JSON from AI response with sanitization and helpful error messages
+ */
+function parseAIJSON(response: string, context: string = 'AI response'): any {
+  // Extract JSON from response
+  const jsonMatch = response.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    console.error(`No JSON found in ${context}:`, response.substring(0, 500));
+    throw new Error('Failed to parse schedule - no valid JSON in AI response');
+  }
+
+  const rawJSON = jsonMatch[0];
+
+  // First try parsing as-is
+  try {
+    return JSON.parse(rawJSON);
+  } catch (firstError) {
+    // Try with sanitization
+    const sanitized = sanitizeAIJSON(rawJSON);
+    try {
+      console.log('JSON required sanitization, retrying...');
+      return JSON.parse(sanitized);
+    } catch (secondError) {
+      // Provide helpful error message with context
+      const errorMsg = secondError instanceof Error ? secondError.message : 'Unknown parse error';
+      console.error(`JSON parse failed for ${context}:`);
+      console.error('Original error:', firstError);
+      console.error('After sanitization:', secondError);
+      console.error('Raw JSON (first 1000 chars):', rawJSON.substring(0, 1000));
+      console.error('Sanitized JSON (first 1000 chars):', sanitized.substring(0, 1000));
+
+      throw new Error(`Failed to parse AI response: ${errorMsg}. The AI may have returned incomplete or malformed data.`);
+    }
+  }
+}
+
 export type AIScheduleProgressCallback = (status: AIScheduleProcessingStatus) => void;
 
 /**
@@ -209,14 +307,8 @@ CRITICAL INSTRUCTIONS:
 
   const response = await callAI(prompt, { system: systemPrompt, maxTokens: 8000 });
 
-  // Parse the JSON response
-  const jsonMatch = response.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    console.error('No JSON found in AI response:', response.substring(0, 500));
-    throw new Error('Failed to parse schedule - invalid AI response');
-  }
-
-  const parsed = JSON.parse(jsonMatch[0]);
+  // Parse the JSON response with sanitization for common AI mistakes
+  const parsed = parseAIJSON(response, 'full schedule analysis');
 
   // Convert to proper format
   const days: ScheduleDay[] = (parsed.days || []).map((day: any) => ({
@@ -332,13 +424,14 @@ Extract EVERY scene. Scene numbers exactly as shown. dayNight = story day marker
   try {
     const response = await callAI(prompt, { system: systemPrompt, maxTokens: 4000 });
 
-    const jsonMatch = response.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      console.error('No JSON in AI response for day', dayNumber);
+    // Parse the JSON response with sanitization for common AI mistakes
+    let parsed;
+    try {
+      parsed = parseAIJSON(response, `day ${dayNumber} analysis`);
+    } catch (parseError) {
+      console.error('No valid JSON in AI response for day', dayNumber, parseError);
       return null;
     }
-
-    const parsed = JSON.parse(jsonMatch[0]);
 
     // Extract metadata from text
     const dateMatch = chunkText.match(/(\w+day)[,\s]+(\d{1,2})\s+(\w+)\s+(\d{4})/i);
