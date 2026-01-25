@@ -13,6 +13,15 @@ interface AIResponse {
   usage?: { input_tokens: number; output_tokens: number };
 }
 
+// Enable verbose logging for debugging
+const DEBUG_AI_SERVICE = true;
+
+function aiDebugLog(...args: any[]) {
+  if (DEBUG_AI_SERVICE) {
+    console.log('[AIService]', ...args);
+  }
+}
+
 /**
  * Call the AI API with retry logic and exponential backoff
  */
@@ -26,12 +35,16 @@ export async function callAI(
 ): Promise<string> {
   const { system, maxTokens = 4000, maxRetries = 3 } = options;
 
+  aiDebugLog('callAI started, maxTokens:', maxTokens, 'prompt length:', prompt.length);
+
   const messages: AIMessage[] = [{ role: 'user', content: prompt }];
 
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
+      aiDebugLog(`Attempt ${attempt + 1}/${maxRetries}...`);
+
       // Use relative URL for Vercel deployment, falls back to local for dev
       const apiUrl = '/api/ai';
 
@@ -48,14 +61,26 @@ export async function callAI(
         }),
       });
 
+      aiDebugLog('Response status:', response.status);
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         const errorMessage = errorData.error?.message || errorData.error || '';
 
+        aiDebugLog('API error:', response.status, errorMessage);
+
         // Handle rate limiting with exponential backoff
         if (response.status === 429) {
           const waitTime = Math.pow(2, attempt + 1) * 1000; // 2s, 4s, 8s
-          console.log(`Rate limited, waiting ${waitTime}ms before retry...`);
+          aiDebugLog(`Rate limited, waiting ${waitTime}ms before retry...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+          continue;
+        }
+
+        // Handle server overloaded (529)
+        if (response.status === 529) {
+          const waitTime = Math.pow(2, attempt + 1) * 1000;
+          aiDebugLog(`Server overloaded, waiting ${waitTime}ms before retry...`);
           await new Promise(resolve => setTimeout(resolve, waitTime));
           continue;
         }
@@ -70,28 +95,51 @@ export async function callAI(
           throw new Error('Invalid API key. Please check your configuration.');
         }
 
+        // Handle 500-level server errors with retry
+        if (response.status >= 500) {
+          const waitTime = Math.pow(2, attempt + 1) * 1000;
+          aiDebugLog(`Server error ${response.status}, waiting ${waitTime}ms before retry...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+          continue;
+        }
+
         throw new Error(errorData.error || `API error: ${response.status}`);
       }
 
       const data: AIResponse = await response.json();
 
       if (data.content && data.content.length > 0) {
-        return data.content[0].text;
+        const result = data.content[0].text;
+        aiDebugLog('AI call successful, response length:', result.length);
+        if (data.usage) {
+          aiDebugLog('Token usage:', data.usage);
+        }
+        return result;
       }
 
       throw new Error('Empty response from AI');
     } catch (error) {
       lastError = error as Error;
+      aiDebugLog(`AI call attempt ${attempt + 1} failed:`, error);
       console.error(`AI call attempt ${attempt + 1} failed:`, error);
+
+      // Don't retry for certain errors
+      const errorMsg = lastError.message || '';
+      if (errorMsg.includes('Insufficient API credits') ||
+          errorMsg.includes('Invalid API key')) {
+        throw lastError;
+      }
 
       // Wait before retry (exponential backoff)
       if (attempt < maxRetries - 1) {
         const waitTime = Math.pow(2, attempt + 1) * 1000;
+        aiDebugLog(`Waiting ${waitTime}ms before retry...`);
         await new Promise(resolve => setTimeout(resolve, waitTime));
       }
     }
   }
 
+  aiDebugLog('All retries failed, throwing error');
   throw lastError || new Error('AI call failed after retries');
 }
 
