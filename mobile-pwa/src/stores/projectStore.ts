@@ -32,6 +32,14 @@ import {
 import type { SFXDetails } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 
+// Saved project data (indexed by project ID)
+interface SavedProjectData {
+  project: Project;
+  sceneCaptures: Record<string, SceneCapture>;
+  lifecycle: ProjectLifecycle;
+  needsSetup: boolean;
+}
+
 interface ProjectState {
   // Current state
   currentProject: Project | null;
@@ -52,6 +60,9 @@ interface ProjectState {
   showWrapPopup: boolean;
   wrapTriggerReason: ProjectLifecycle['wrapReason'] | null;
 
+  // Saved projects (persisted by project ID for multi-project support)
+  savedProjects: Record<string, SavedProjectData>;
+
   // Archived projects
   archivedProjects: Array<{
     project: Project;
@@ -65,6 +76,9 @@ interface ProjectState {
   clearNeedsSetup: () => void;
   setScriptPdf: (pdfData: string) => void;
   clearProject: () => void;
+  saveAndClearProject: () => void;
+  restoreSavedProject: (projectId: string) => boolean;
+  hasSavedProject: (projectId: string) => boolean;
 
   // Actions - Navigation
   setActiveTab: (tab: NavTab) => void;
@@ -158,6 +172,7 @@ export const useProjectStore = create<ProjectState>()(
       lifecycle: createDefaultLifecycle(),
       showWrapPopup: false,
       wrapTriggerReason: null,
+      savedProjects: {},
       archivedProjects: [],
 
       // Project actions
@@ -191,6 +206,73 @@ export const useProjectStore = create<ProjectState>()(
         showWrapPopup: false,
         wrapTriggerReason: null,
       }),
+
+      // Save current project data before clearing (preserves data for later restoration)
+      saveAndClearProject: () => {
+        const state = get();
+        if (state.currentProject) {
+          const projectId = state.currentProject.id;
+          set((s) => ({
+            savedProjects: {
+              ...s.savedProjects,
+              [projectId]: {
+                project: s.currentProject!,
+                sceneCaptures: s.sceneCaptures,
+                lifecycle: s.lifecycle,
+                needsSetup: s.needsSetup,
+              },
+            },
+            currentProject: null,
+            currentSceneId: null,
+            currentCharacterId: null,
+            needsSetup: false,
+            sceneCaptures: {},
+            lifecycle: createDefaultLifecycle(),
+            showWrapPopup: false,
+            wrapTriggerReason: null,
+          }));
+        } else {
+          set({
+            currentProject: null,
+            currentSceneId: null,
+            currentCharacterId: null,
+            needsSetup: false,
+            sceneCaptures: {},
+            lifecycle: createDefaultLifecycle(),
+            showWrapPopup: false,
+            wrapTriggerReason: null,
+          });
+        }
+      },
+
+      // Restore a previously saved project
+      restoreSavedProject: (projectId: string) => {
+        const state = get();
+        const savedData = state.savedProjects[projectId];
+        if (!savedData) return false;
+
+        // Remove from saved and set as current
+        const newSavedProjects = { ...state.savedProjects };
+        delete newSavedProjects[projectId];
+
+        set({
+          currentProject: savedData.project,
+          sceneCaptures: savedData.sceneCaptures,
+          lifecycle: savedData.lifecycle,
+          needsSetup: savedData.needsSetup,
+          savedProjects: newSavedProjects,
+          currentSceneId: null,
+          currentCharacterId: null,
+          showWrapPopup: false,
+          wrapTriggerReason: null,
+        });
+        return true;
+      },
+
+      // Check if a project has saved data
+      hasSavedProject: (projectId: string) => {
+        return !!get().savedProjects[projectId];
+      },
 
       // Navigation actions
       setActiveTab: (tab) => set({ activeTab: tab }),
@@ -1077,6 +1159,7 @@ export const useProjectStore = create<ProjectState>()(
         currentProject: state.currentProject,
         sceneCaptures: state.sceneCaptures,
         lifecycle: state.lifecycle,
+        savedProjects: state.savedProjects,
         archivedProjects: state.archivedProjects,
       }),
     }
