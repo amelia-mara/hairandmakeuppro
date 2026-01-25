@@ -37,7 +37,7 @@ export function ProjectMenu({
   const isOwner = project.role === 'owner';
   const canManage = canManageProject(userTier, {
     isOwner,
-    role: project.role === 'owner' ? 'designer' : project.role === 'supervisor' ? 'supervisor' : 'floor',
+    role: project.role === 'owner' ? 'designer' : project.role === 'supervisor' ? 'supervisor' : 'trainee',
   });
 
   const handleLeaveProject = () => {

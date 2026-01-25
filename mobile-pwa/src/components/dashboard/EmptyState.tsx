@@ -4,9 +4,10 @@ export interface EmptyStateProps {
   canCreate: boolean;
   onJoinClick: () => void;
   onCreateClick: () => void;
+  onSyncClick?: () => void;
 }
 
-export function EmptyState({ canCreate, onJoinClick, onCreateClick }: EmptyStateProps) {
+export function EmptyState({ canCreate, onJoinClick, onCreateClick, onSyncClick }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center text-center py-12 px-6">
       {/* Illustration - Folder with plus icon */}
@@ -33,33 +34,17 @@ export function EmptyState({ canCreate, onJoinClick, onCreateClick }: EmptyState
 
       {/* Description */}
       <p className="text-text-secondary mb-8 max-w-xs">
-        Join a project with a code from your supervisor, or create your own.
+        Create a new project, join your team, or sync from desktop.
       </p>
 
-      {/* Join Project button (primary) */}
+      {/* Action buttons */}
       <div className="w-full max-w-xs space-y-4">
-        <Button
-          fullWidth
-          size="lg"
-          variant="primary"
-          onClick={onJoinClick}
-        >
-          Join Project
-        </Button>
-
-        {/* Divider */}
-        <div className="flex items-center gap-4">
-          <div className="flex-1 h-px bg-border" />
-          <span className="text-sm text-text-muted">or</span>
-          <div className="flex-1 h-px bg-border" />
-        </div>
-
-        {/* Create section */}
+        {/* Create Project button (primary) */}
         {canCreate ? (
           <Button
             fullWidth
             size="lg"
-            variant="outline"
+            variant="primary"
             onClick={onCreateClick}
           >
             Create Project
@@ -72,13 +57,42 @@ export function EmptyState({ canCreate, onJoinClick, onCreateClick }: EmptyState
             <Button
               fullWidth
               size="lg"
-              variant="outline"
+              variant="primary"
               onClick={onCreateClick}
             >
               Create Project
             </Button>
           </div>
         )}
+
+        {/* Divider */}
+        <div className="flex items-center gap-4">
+          <div className="flex-1 h-px bg-border" />
+          <span className="text-sm text-text-muted">or</span>
+          <div className="flex-1 h-px bg-border" />
+        </div>
+
+        {/* Secondary actions */}
+        <div className="flex gap-3">
+          <Button
+            fullWidth
+            size="lg"
+            variant="outline"
+            onClick={onJoinClick}
+          >
+            Join Team
+          </Button>
+          {onSyncClick && (
+            <Button
+              fullWidth
+              size="lg"
+              variant="outline"
+              onClick={onSyncClick}
+            >
+              Sync
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );

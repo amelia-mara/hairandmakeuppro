@@ -306,9 +306,9 @@ export function ChatAssistant() {
             )}
           </div>
 
-          {/* Input Area */}
+          {/* Input Area - extra bottom padding to sit above BottomNav */}
           <div
-            className="px-4 py-3 safe-bottom"
+            className="px-4 pt-3 pb-24"
             style={{
               backgroundColor: 'var(--color-card)',
               borderTop: '1px solid var(--color-border)',

@@ -103,7 +103,7 @@ export function WelcomeScreen() {
           className="w-full py-3 text-gold font-medium hover:underline"
           onClick={() => setScreen('join')}
         >
-          Join a Project
+          Join a Team
         </button>
       </div>
     </div>
