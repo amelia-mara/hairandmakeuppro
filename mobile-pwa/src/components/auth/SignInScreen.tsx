@@ -3,7 +3,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { Button, Input } from '@/components/ui';
 
 export function SignInScreen() {
-  const { setScreen, signIn, isLoading, error, clearError } = useAuthStore();
+  const { setScreen, goBack, signIn, isLoading, error, clearError } = useAuthStore();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -26,7 +26,7 @@ export function SignInScreen() {
       {/* Header with back button */}
       <header className="flex items-center px-4 py-3 safe-top">
         <button
-          onClick={() => setScreen('welcome')}
+          onClick={goBack}
           className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 -ml-2"
           aria-label="Go back"
         >

@@ -84,6 +84,7 @@ export function ProjectHubScreen() {
   const {
     user,
     setScreen,
+    goBack,
     signOut,
     projectMemberships,
     canCreateProjects,
@@ -145,7 +146,7 @@ export function ProjectHubScreen() {
             {/* Back button - shown when user hasn't completed onboarding */}
             {!hasCompletedOnboarding && (
               <button
-                onClick={() => setScreen('welcome')}
+                onClick={goBack}
                 className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 -ml-2"
                 aria-label="Go back"
               >

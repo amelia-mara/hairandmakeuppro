@@ -6,7 +6,7 @@ import type { ProductionType, Project } from '@/types';
 import { PRODUCTION_TYPES } from '@/types';
 
 export function CreateProjectScreen() {
-  const { setScreen, createProject, isLoading, error, clearError } = useAuthStore();
+  const { goBack, createProject, isLoading, error, clearError } = useAuthStore();
 
   const [name, setName] = useState('');
   const [productionType, setProductionType] = useState<ProductionType>('film');
@@ -46,7 +46,7 @@ export function CreateProjectScreen() {
       {/* Header with back button */}
       <header className="flex items-center px-4 py-3 safe-top">
         <button
-          onClick={() => setScreen('hub')}
+          onClick={goBack}
           className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 -ml-2"
           aria-label="Go back"
         >

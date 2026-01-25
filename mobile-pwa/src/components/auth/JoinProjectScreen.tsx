@@ -4,7 +4,7 @@ import { Button, Input } from '@/components/ui';
 import { formatProjectCode, isValidProjectCode } from '@/types';
 
 export function JoinProjectScreen() {
-  const { setScreen, joinProject, isLoading, error, clearError, isAuthenticated } = useAuthStore();
+  const { setScreen, goBack, joinProject, isLoading, error, clearError, isAuthenticated } = useAuthStore();
 
   const [code, setCode] = useState('');
   const [success, setSuccess] = useState<{ projectName: string } | null>(null);
@@ -39,7 +39,7 @@ export function JoinProjectScreen() {
       {/* Header with back button */}
       <header className="flex items-center px-4 py-3 safe-top">
         <button
-          onClick={() => setScreen(isAuthenticated ? 'hub' : 'welcome')}
+          onClick={goBack}
           className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 -ml-2"
           aria-label="Go back"
         >

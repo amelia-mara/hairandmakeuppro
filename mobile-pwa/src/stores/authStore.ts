@@ -21,6 +21,7 @@ interface AuthState {
 
   // Navigation
   currentScreen: AuthScreen;
+  screenHistory: AuthScreen[]; // Navigation history stack
   hasCompletedOnboarding: boolean;
   hasSelectedPlan: boolean; // Tracks if user has selected a plan (even if free)
 
@@ -34,7 +35,8 @@ interface AuthState {
   guestProjectCode: string | null;
 
   // Actions
-  setScreen: (screen: AuthScreen) => void;
+  setScreen: (screen: AuthScreen, addToHistory?: boolean) => void;
+  goBack: () => void; // Navigate to previous screen in history
   signIn: (email: string, password: string) => Promise<boolean>;
   signUp: (name: string, email: string, password: string) => Promise<boolean>;
   signOut: () => void;
@@ -64,15 +66,50 @@ export const useAuthStore = create<AuthState>()(
       isLoading: false,
       error: null,
       currentScreen: 'welcome',
+      screenHistory: [],
       hasCompletedOnboarding: false,
       hasSelectedPlan: false,
       subscription: createDefaultSubscription(),
       projectMemberships: [],
       guestProjectCode: null,
 
-      // Set current auth screen
-      setScreen: (screen) => {
-        set({ currentScreen: screen, error: null });
+      // Set current auth screen (optionally adds current screen to history)
+      setScreen: (screen, addToHistory = true) => {
+        const { currentScreen, screenHistory } = get();
+        // Don't add to history if navigating to the same screen
+        if (screen === currentScreen) return;
+
+        if (addToHistory) {
+          // Add current screen to history before navigating
+          set({
+            currentScreen: screen,
+            screenHistory: [...screenHistory, currentScreen],
+            error: null,
+          });
+        } else {
+          // Navigate without adding to history (used for redirects after actions)
+          set({ currentScreen: screen, error: null });
+        }
+      },
+
+      // Navigate back to previous screen in history
+      goBack: () => {
+        const { screenHistory, isAuthenticated } = get();
+        if (screenHistory.length > 0) {
+          const newHistory = [...screenHistory];
+          const previousScreen = newHistory.pop()!;
+          set({
+            currentScreen: previousScreen,
+            screenHistory: newHistory,
+            error: null,
+          });
+        } else {
+          // Fallback: go to appropriate default screen
+          set({
+            currentScreen: isAuthenticated ? 'hub' : 'welcome',
+            error: null,
+          });
+        }
       },
 
       // Sign in with email/password
@@ -163,6 +200,7 @@ export const useAuthStore = create<AuthState>()(
           isAuthenticated: false,
           user: null,
           currentScreen: 'welcome',
+          screenHistory: [], // Clear navigation history on sign out
           hasCompletedOnboarding: false,
           hasSelectedPlan: false,
           subscription: createDefaultSubscription(),
