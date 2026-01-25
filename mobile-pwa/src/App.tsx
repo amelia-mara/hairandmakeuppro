@@ -48,7 +48,8 @@ export default function App() {
   } = useAuthStore();
 
   // Track if we're showing the home/setup screen
-  const [showHome, setShowHome] = useState(!currentProject);
+  // Start as false - will be set true explicitly when needed
+  const [showHome, setShowHome] = useState(false);
   const [showExport, setShowExport] = useState(false);
   // Key to force More component to reset when clicking the same tab
   const [tabResetKey, setTabResetKey] = useState(0);
