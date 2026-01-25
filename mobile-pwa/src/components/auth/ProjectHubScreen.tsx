@@ -1,10 +1,25 @@
 import { useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
+import { useProjectStore } from '@/stores/projectStore';
 import { Button, Badge } from '@/components/ui';
 import { ProjectCard, EmptyState, UpgradeModal, QuickAccessBar } from '@/components/dashboard';
-import type { ProjectMembership } from '@/types';
+import type { ProjectMembership, Project } from '@/types';
 import { getTierById } from '@/types/subscription';
 import type { SubscriptionTier } from '@/types/subscription';
+
+// Helper to create a mock project from membership data
+// In production, this would fetch the full project from the server
+function createProjectFromMembership(membership: ProjectMembership): Project {
+  return {
+    id: membership.projectId,
+    name: membership.projectName,
+    createdAt: membership.joinedAt,
+    updatedAt: membership.lastAccessedAt,
+    scenes: [], // Would be loaded from server
+    characters: [],
+    looks: [],
+  };
+}
 
 export function ProjectHubScreen() {
   const {
@@ -30,10 +45,12 @@ export function ProjectHubScreen() {
   // Get user's tier info
   const tierInfo = user ? getTierById(user.tier as SubscriptionTier) : null;
 
-  const handleProjectOpen = (project: ProjectMembership) => {
-    updateLastAccessed(project.projectId);
-    // In a real app, this would navigate to the project
-    // For now, just update last accessed
+  const handleProjectOpen = (membership: ProjectMembership) => {
+    updateLastAccessed(membership.projectId);
+    // Create a project from the membership and set it as current
+    // In production, this would fetch the full project data from the server
+    const project = createProjectFromMembership(membership);
+    useProjectStore.getState().setProject(project);
   };
 
   const handleCreateClick = () => {

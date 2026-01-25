@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
+import { useProjectStore } from '@/stores/projectStore';
 import { Button, Input } from '@/components/ui';
-import type { ProductionType } from '@/types';
+import type { ProductionType, Project } from '@/types';
 import { PRODUCTION_TYPES } from '@/types';
 
 export function CreateProjectScreen() {
@@ -22,6 +23,27 @@ export function CreateProjectScreen() {
 
     if (result.success && result.code) {
       setCreatedCode(result.code);
+    }
+  };
+
+  const handleOpenProject = () => {
+    // Get latest project memberships from store (after async create completed)
+    const { projectMemberships } = useAuthStore.getState();
+    // Find the created project membership and open it
+    const membership = projectMemberships.find(p => p.projectCode === createdCode);
+    if (membership) {
+      // Create a project from the membership and set it as current
+      // Use setProjectNeedsSetup to trigger the upload flow
+      const project: Project = {
+        id: membership.projectId,
+        name: membership.projectName,
+        createdAt: membership.joinedAt,
+        updatedAt: membership.lastAccessedAt,
+        scenes: [],
+        characters: [],
+        looks: [],
+      };
+      useProjectStore.getState().setProjectNeedsSetup(project);
     }
   };
 
@@ -166,11 +188,19 @@ export function CreateProjectScreen() {
           </p>
         </div>
 
-        {/* Bottom action */}
-        <div className="px-6 py-4 pb-safe-bottom">
+        {/* Bottom actions */}
+        <div className="px-6 py-4 pb-safe-bottom space-y-3">
           <Button
             fullWidth
             size="lg"
+            onClick={handleOpenProject}
+          >
+            Open Project
+          </Button>
+          <Button
+            fullWidth
+            size="lg"
+            variant="outline"
             onClick={() => setScreen('hub')}
           >
             Go to Projects
