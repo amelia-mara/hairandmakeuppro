@@ -673,3 +673,27 @@ export function shouldUseAIProcessing(schedule: ProductionSchedule): boolean {
   // Always use AI for better accuracy
   return true;
 }
+
+/**
+ * Parse a single day's text with AI (exported for Stage 2 processing)
+ * This is the main entry point for day-by-day background processing
+ */
+export async function parseSingleDayWithAI(
+  dayNumber: number,
+  dayText: string,
+  castReference: string
+): Promise<ScheduleDay | null> {
+  debugLog(`parseSingleDayWithAI called for day ${dayNumber}`);
+
+  if (!dayText || dayText.length < 50) {
+    debugLog(`Day ${dayNumber}: Text too short, skipping`);
+    return null;
+  }
+
+  // Format cast reference for AI
+  const castContext = castReference
+    ? `\nCAST LIST (use these numbers):\n${castReference}\n`
+    : '';
+
+  return analyzeDayChunk(dayText, dayNumber, castContext);
+}

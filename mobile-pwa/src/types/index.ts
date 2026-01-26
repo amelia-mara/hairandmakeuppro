@@ -421,6 +421,16 @@ export interface ShootingDay {
 // PRODUCTION SCHEDULE TYPES (PDF Upload)
 // ============================================
 
+// Schedule processing status
+export type ScheduleStatus = 'pending' | 'processing' | 'complete' | 'partial';
+
+// Processing progress tracking
+export interface ScheduleProcessingProgress {
+  current: number; // Current day being processed
+  total: number; // Total days to process
+  message?: string; // Status message
+}
+
 // Cast member from schedule (name-to-number mapping)
 export interface ScheduleCastMember {
   number: number; // The cast number (1, 2, 3, etc.)
@@ -435,19 +445,24 @@ export interface ProductionSchedule {
   scriptVersion?: string;
   scheduleVersion?: string;
 
-  // Cast list extracted from first page
+  // Processing status (two-stage parsing)
+  status: ScheduleStatus;
+  processingProgress?: ScheduleProcessingProgress;
+  processingError?: string;
+
+  // Cast list extracted from first page (Stage 1)
   castList: ScheduleCastMember[];
 
-  // All shooting days
+  // All shooting days (populated in Stage 2)
   days: ScheduleDay[];
 
-  // Total shooting days
+  // Total shooting days (extracted in Stage 1)
   totalDays: number;
 
   // Metadata
   uploadedAt: Date;
   pdfUri?: string;
-  rawText?: string;
+  rawText?: string; // Full PDF text for Stage 2 processing
 }
 
 // A single shooting day in the schedule
