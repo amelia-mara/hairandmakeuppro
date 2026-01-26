@@ -686,7 +686,7 @@ export type BaseDayHours = 10 | 11 | 12;
 export type BaseContract = '10+1' | '11+1';
 export type DayType = 'SWD' | 'CWD' | 'SCWD';
 export type EntryStatus = 'draft' | 'pending' | 'approved';
-export type TimesheetView = 'week' | 'month';
+export type TimesheetView = 'week' | 'sheet' | 'month';
 
 export interface RateCard {
   dailyRate: number;
