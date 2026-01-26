@@ -1,7 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
-import { demoProject } from '@/stores/demoData';
 import {
   parseScriptFile,
   parseScenesFast,
@@ -381,11 +380,6 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
     onProjectReady();
   };
 
-  const handleLoadDemo = () => {
-    setProject(demoProject);
-    onProjectReady();
-  };
-
   const handleSkipToSetup = () => {
     setParsedScript(null);
     setSelectedCharacters(new Set());
@@ -431,7 +425,6 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
           uploadedFile={uploadedFile}
           uploadedScheduleFile={uploadedScheduleFile}
           onBack={onBack}
-          onLoadDemo={handleLoadDemo}
           onSkip={handleSkipToSetup}
           onStartWithFiles={handleStartWithFiles}
         />
@@ -494,7 +487,6 @@ interface UploadScreenProps {
   uploadedFile: File | null;
   uploadedScheduleFile: File | null;
   onBack?: () => void;
-  onLoadDemo: () => void;
   onSkip: () => void;
   onStartWithFiles: () => void;
 }
@@ -505,7 +497,6 @@ function UploadScreen({
   uploadedFile,
   uploadedScheduleFile,
   onBack,
-  onLoadDemo,
   onSkip,
   onStartWithFiles,
 }: UploadScreenProps) {
@@ -644,21 +635,12 @@ function UploadScreen({
         >
           {uploadedFile ? 'Start Processing' : 'Upload a script to continue'}
         </button>
-        <div className="flex items-center justify-center gap-4">
-          <button
-            onClick={onSkip}
-            className="py-3 text-sm text-text-muted font-medium active:text-gold transition-colors"
-          >
-            Skip - add manually
-          </button>
-          <span className="text-text-light">|</span>
-          <button
-            onClick={onLoadDemo}
-            className="py-3 text-sm text-text-muted font-medium active:text-gold transition-colors"
-          >
-            Try demo project
-          </button>
-        </div>
+        <button
+          onClick={onSkip}
+          className="py-3 text-sm text-text-muted font-medium active:text-gold transition-colors"
+        >
+          Skip - add manually
+        </button>
       </div>
     </div>
   );
