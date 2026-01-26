@@ -398,3 +398,111 @@ export async function saveSceneCharacters(
     return { error: error as Error };
   }
 }
+
+// Delete a project (owner only)
+// This deletes the project and all related data
+export async function deleteProject(
+  projectId: string,
+  userId: string
+): Promise<{ error: Error | null }> {
+  try {
+    // First verify the user is the owner
+    const { data: membership, error: memberError } = await supabase
+      .from('project_members')
+      .select('is_owner')
+      .eq('project_id', projectId)
+      .eq('user_id', userId)
+      .single();
+
+    if (memberError) throw new Error('Failed to verify project ownership');
+    if (!membership?.is_owner) throw new Error('Only project owners can delete projects');
+
+    // Delete in order to respect foreign key constraints:
+    // 1. Delete scene_characters (references scenes and characters)
+    // 2. Delete look_scenes (references looks)
+    // 3. Delete looks (references characters)
+    // 4. Delete characters
+    // 5. Delete scenes
+    // 6. Delete project_members
+    // 7. Delete the project
+
+    // Get all scene IDs for this project
+    const { data: scenes } = await supabase
+      .from('scenes')
+      .select('id')
+      .eq('project_id', projectId);
+    const sceneIds = scenes?.map(s => s.id) || [];
+
+    // Get all look IDs for this project
+    const { data: looks } = await supabase
+      .from('looks')
+      .select('id')
+      .eq('project_id', projectId);
+    const lookIds = looks?.map(l => l.id) || [];
+
+    // Delete scene_characters
+    if (sceneIds.length > 0) {
+      await supabase.from('scene_characters').delete().in('scene_id', sceneIds);
+    }
+
+    // Delete look_scenes
+    if (lookIds.length > 0) {
+      await supabase.from('look_scenes').delete().in('look_id', lookIds);
+    }
+
+    // Delete looks
+    await supabase.from('looks').delete().eq('project_id', projectId);
+
+    // Delete characters
+    await supabase.from('characters').delete().eq('project_id', projectId);
+
+    // Delete scenes
+    await supabase.from('scenes').delete().eq('project_id', projectId);
+
+    // Delete project members
+    await supabase.from('project_members').delete().eq('project_id', projectId);
+
+    // Finally delete the project
+    const { error: deleteError } = await supabase
+      .from('projects')
+      .delete()
+      .eq('id', projectId);
+
+    if (deleteError) throw deleteError;
+
+    return { error: null };
+  } catch (error) {
+    return { error: error as Error };
+  }
+}
+
+// Leave a project (for non-owners)
+export async function leaveProject(
+  projectId: string,
+  userId: string
+): Promise<{ error: Error | null }> {
+  try {
+    // Verify user is not the owner
+    const { data: membership, error: memberError } = await supabase
+      .from('project_members')
+      .select('is_owner')
+      .eq('project_id', projectId)
+      .eq('user_id', userId)
+      .single();
+
+    if (memberError) throw new Error('Failed to verify membership');
+    if (membership?.is_owner) throw new Error('Owners cannot leave their own project. Transfer ownership or delete the project instead.');
+
+    // Remove the membership
+    const { error } = await supabase
+      .from('project_members')
+      .delete()
+      .eq('project_id', projectId)
+      .eq('user_id', userId);
+
+    if (error) throw error;
+    return { error: null };
+  } catch (error) {
+    return { error: error as Error };
+  }
+}
