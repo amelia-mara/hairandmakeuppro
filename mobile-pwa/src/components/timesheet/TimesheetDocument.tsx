@@ -1,6 +1,5 @@
 import { useTimesheetStore, addDays } from '@/stores/timesheetStore';
 import { formatCurrency } from '@/types';
-import type { TimesheetEntry, TimesheetCalculation } from '@/types';
 
 interface TimesheetDocumentProps {
   weekStartDate: string;
@@ -10,7 +9,7 @@ interface TimesheetDocumentProps {
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 export function TimesheetDocument({ weekStartDate, onNavigate }: TimesheetDocumentProps) {
-  const { entries, calculateEntry, getWeekSummary, rateCard, getPreviousWrapOut } = useTimesheetStore();
+  const { entries, calculateEntry, getWeekSummary, getPreviousWrapOut } = useTimesheetStore();
 
   const weekSummary = getWeekSummary(weekStartDate);
 

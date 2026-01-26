@@ -1,6 +1,5 @@
 import { useState, useRef } from 'react';
 import { formatShortDate } from '@/utils/helpers';
-import { useProjectStore } from '@/stores/projectStore';
 import {
   CURRENCIES,
   DEFAULT_CURRENCY,
