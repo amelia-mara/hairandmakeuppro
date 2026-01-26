@@ -288,17 +288,6 @@
     transform: scale(0.98) translateY(0);
   }
 
-  /* Dark button for light mode */
-  .btn-dark {
-    background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    transition: all 0.3s ease;
-  }
-
-  .btn-dark:hover {
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
-  }
-
   /* Outlined gold button */
   .btn-outline-gold {
     border: 1.5px solid var(--gold-primary);
@@ -309,18 +298,7 @@
 
   .btn-outline-gold:hover {
     background: rgba(201, 169, 98, 0.1);
-  }
-
-  /* Outlined dark button for light mode */
-  .btn-outline-dark {
-    border: 1.5px solid var(--color-text-primary);
-    color: var(--color-text-primary);
-    background: transparent;
-    transition: all 0.3s ease;
-  }
-
-  .btn-outline-dark:hover {
-    background: rgba(0, 0, 0, 0.05);
+    border-color: var(--gold-light);
   }
 
   /* Gold gradient text */

@@ -128,22 +128,20 @@ export function WelcomeScreen() {
         className="px-8 pb-12 space-y-3 animate-fadeInUp"
         style={{ animationDelay: '0.4s', opacity: 0, animationFillMode: 'forwards' }}
       >
-        {/* Sign In - Dark in light mode, Gold gradient in dark mode */}
+        {/* Sign In - Gold gradient in both modes */}
         <button
           onClick={() => setScreen('signin')}
-          className="w-full h-14 rounded-xl font-semibold text-base transition-all duration-200
-            btn-dark text-white active:scale-[0.98]
-            dark:btn-gold dark:text-white"
+          className="w-full h-14 rounded-lg font-semibold text-base transition-all duration-200
+            btn-gold text-white active:scale-[0.98]"
         >
           Sign In
         </button>
 
-        {/* Create Account - Outlined */}
+        {/* Create Account - Outlined gold */}
         <button
           onClick={() => setScreen('signup')}
-          className="w-full h-14 rounded-xl font-semibold text-base transition-all duration-200
-            btn-outline-dark active:scale-[0.98]
-            dark:btn-outline-gold"
+          className="w-full h-14 rounded-lg font-semibold text-base transition-all duration-200
+            btn-outline-gold active:scale-[0.98]"
         >
           Create Account
         </button>
