@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect, memo } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { useCallSheetStore } from '@/stores/callSheetStore';
 import { demoCallSheet } from '@/stores/demoData';
@@ -24,8 +24,8 @@ export function Today({ onSceneSelect }: TodayProps) {
   const isUploading = useCallSheetStore(state => state.isUploading);
   const uploadError = useCallSheetStore(state => state.uploadError);
   // Get persistent update methods from callSheetStore
+  // Note: filmingStatus is stored in projectStore only (single source of truth)
   const persistSceneStatus = useCallSheetStore(state => state.updateSceneStatus);
-  const persistSceneFilmingStatus = useCallSheetStore(state => state.updateSceneFilmingStatus);
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isReorderMode, setIsReorderMode] = useState(false);
@@ -210,23 +210,25 @@ export function Today({ onSceneSelect }: TodayProps) {
     persistSceneStatus(baseCallSheet.id, sceneNumber, status);
   };
 
-  // Update scene filming status - persists to callSheetStore and syncs to project store for Breakdown view
+  // Update scene filming status - stored in projectStore as single source of truth
+  // Also marks scene as 'wrapped' in the call sheet (day-specific shooting status)
   const updateSceneFilmingStatus = (
     sceneNumber: string,
     filmingStatus: SceneFilmingStatus,
     filmingNotes?: string
   ) => {
     if (!baseCallSheet) return;
-    // Update local overrides for immediate UI feedback (also set status to wrapped)
+    // Update local overrides for immediate UI feedback - only shooting status (day-specific)
+    // filmingStatus is read from projectStore, not stored in local overrides
     setLocalSceneOverrides(prev => {
       const next = new Map(prev);
       const existing = next.get(sceneNumber) || {};
-      next.set(sceneNumber, { ...existing, filmingStatus, filmingNotes, status: 'wrapped' as ShootingSceneStatus });
+      next.set(sceneNumber, { ...existing, status: 'wrapped' as ShootingSceneStatus });
       return next;
     });
-    // Persist to callSheetStore so changes survive navigation
-    persistSceneFilmingStatus(baseCallSheet.id, sceneNumber, filmingStatus, filmingNotes);
-    // Sync to project store for Breakdown view
+    // Persist shooting status to callSheetStore (wrapped status is day-specific)
+    persistSceneStatus(baseCallSheet.id, sceneNumber, 'wrapped');
+    // Update filming status in project store (single source of truth)
     syncFilmingStatus(sceneNumber, filmingStatus, filmingNotes);
   };
 
@@ -504,7 +506,7 @@ export function Today({ onSceneSelect }: TodayProps) {
   );
 }
 
-// Scene Card Component
+// Scene Card Component - memoized to prevent unnecessary re-renders in list
 interface TodaySceneCardProps {
   shootingScene: CallSheetScene;
   scene?: Scene;
@@ -523,7 +525,7 @@ interface TodaySceneCardProps {
   onMoveDown?: () => void;
 }
 
-function TodaySceneCard({
+const TodaySceneCard = memo(function TodaySceneCard({
   shootingScene,
   scene,
   characters,
@@ -542,7 +544,7 @@ function TodaySceneCard({
   const [showActions, setShowActions] = useState(false);
   const [showFilmingStatusModal, setShowFilmingStatusModal] = useState(false);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
-  const [filmingNotes, setFilmingNotes] = useState(shootingScene.filmingNotes || '');
+  const [notesInput, setNotesInput] = useState(scene?.filmingNotes || '');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown when clicking outside
@@ -571,10 +573,13 @@ function TodaySceneCard({
     };
   }, [scene, shootingScene.setDescription]);
 
-  // Get the glass overlay class based on filming status
+  // Get the glass overlay class based on filming status (from project scene - single source of truth)
+  const filmingStatus = scene?.filmingStatus;
+  const filmingNotes = scene?.filmingNotes;
+
   const getGlassOverlayClass = () => {
-    if (!shootingScene.filmingStatus) return null;
-    switch (shootingScene.filmingStatus) {
+    if (!filmingStatus) return null;
+    switch (filmingStatus) {
       case 'complete':
         return 'scene-glass-complete';
       case 'partial':
@@ -594,10 +599,10 @@ function TodaySceneCard({
     'wrapped': 'Wrapped',
   };
 
-  // Get status badge styling
+  // Get status badge styling - uses filming status from project scene (single source of truth)
   const getStatusBadge = () => {
-    if (shootingScene.filmingStatus) {
-      const config = SCENE_FILMING_STATUS_CONFIG[shootingScene.filmingStatus];
+    if (filmingStatus) {
+      const config = SCENE_FILMING_STATUS_CONFIG[filmingStatus];
       return {
         bg: config.bgClass,
         text: config.textClass,
@@ -634,7 +639,7 @@ function TodaySceneCard({
 
   // Handle filming status selection with notes
   const handleFilmingStatusSelect = (status: SceneFilmingStatus) => {
-    onFilmingStatusChange(status, filmingNotes);
+    onFilmingStatusChange(status, notesInput);
     setShowFilmingStatusModal(false);
     setShowActions(false);
   };
@@ -707,11 +712,11 @@ function TodaySceneCard({
               background: shootingScene.status === 'in-progress'
                 ? 'linear-gradient(180deg, #d4a853 0%, #c9a962 100%)' // Gold gradient
                 : shootingScene.status === 'wrapped'
-                  ? shootingScene.filmingStatus === 'complete'
+                  ? filmingStatus === 'complete'
                     ? 'linear-gradient(180deg, #10b981 0%, #059669 100%)' // Emerald gradient
-                    : shootingScene.filmingStatus === 'partial'
+                    : filmingStatus === 'partial'
                       ? 'linear-gradient(180deg, #d4a853 0%, #c9a962 100%)' // Warm gold gradient
-                      : shootingScene.filmingStatus === 'not-filmed'
+                      : filmingStatus === 'not-filmed'
                         ? 'linear-gradient(180deg, #f87171 0%, #ef4444 100%)' // Soft red gradient
                         : 'linear-gradient(180deg, #d1d5db 0%, #9ca3af 100%)' // Gray gradient
                   : 'transparent' // No bar for upcoming
@@ -763,7 +768,7 @@ function TodaySceneCard({
                       setShowStatusDropdown(!showStatusDropdown);
                     }}
                     className="status-dropdown-btn touch-manipulation"
-                    style={{ borderColor: shootingScene.filmingStatus ? statusBadge.color : undefined }}
+                    style={{ borderColor: filmingStatus ? statusBadge.color : undefined }}
                   >
                     <span
                       className="w-2.5 h-2.5 rounded-full"
@@ -779,7 +784,7 @@ function TodaySceneCard({
                     <div className="absolute right-0 top-full mt-1 w-44 bg-card border border-border rounded-lg shadow-lg z-50 overflow-hidden animate-fadeIn">
                       {(['complete', 'partial', 'not-filmed'] as SceneFilmingStatus[]).map((status) => {
                         const config = SCENE_FILMING_STATUS_CONFIG[status];
-                        const isSelected = shootingScene.filmingStatus === status;
+                        const isSelected = filmingStatus === status;
                         return (
                           <button
                             key={status}
@@ -857,13 +862,13 @@ function TodaySceneCard({
               </div>
             )}
 
-            {/* Filming notes if partial or incomplete */}
-            {shootingScene.filmingStatus && shootingScene.filmingStatus !== 'complete' && shootingScene.filmingNotes && (
+            {/* Filming notes if partial or incomplete - read from project scene (single source of truth) */}
+            {filmingStatus && filmingStatus !== 'complete' && filmingNotes && (
               <div className={clsx(
                 'mb-3 px-2 py-1.5 rounded text-xs',
-                shootingScene.filmingStatus === 'partial' ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'
+                filmingStatus === 'partial' ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'
               )}>
-                <span className="font-medium">Note:</span> {shootingScene.filmingNotes}
+                <span className="font-medium">Note:</span> {filmingNotes}
               </div>
             )}
 
@@ -1019,8 +1024,8 @@ function TodaySceneCard({
             </div>
             <div className="p-4">
               <textarea
-                value={filmingNotes}
-                onChange={(e) => setFilmingNotes(e.target.value)}
+                value={notesInput}
+                onChange={(e) => setNotesInput(e.target.value)}
                 placeholder="e.g., Ran out of time, weather issues, actor unavailable..."
                 rows={3}
                 className="w-full p-3 border border-border rounded-lg text-sm bg-input-bg text-text-primary resize-none"
@@ -1051,16 +1056,16 @@ function TodaySceneCard({
       )}
     </>
   );
-}
+});
 
-// Empty State Component
+// Empty State Component - memoized to prevent unnecessary re-renders
 interface EmptyStateProps {
   hasAnyCallSheets: boolean;
   onUploadClick: () => void;
   isUploading: boolean;
 }
 
-function EmptyState({ hasAnyCallSheets, onUploadClick, isUploading }: EmptyStateProps) {
+const EmptyState = memo(function EmptyState({ hasAnyCallSheets, onUploadClick, isUploading }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center py-16 px-6">
       <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mb-4">
@@ -1100,4 +1105,4 @@ function EmptyState({ hasAnyCallSheets, onUploadClick, isUploading }: EmptyState
       </button>
     </div>
   );
-}
+});
