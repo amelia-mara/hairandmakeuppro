@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
+import { persist } from 'zustand/middleware';
+import { createHybridStorage } from '@/db/zustandStorage';
 import type {
   RateCard,
   TimesheetEntry,
@@ -457,7 +458,7 @@ export const useTimesheetStore = create<TimesheetState>()(
     }),
     {
       name: 'hair-makeup-timesheet-storage',
-      storage: createJSONStorage(() => localStorage),
+      storage: createHybridStorage('hair-makeup-timesheet-storage'),
     }
   )
 );

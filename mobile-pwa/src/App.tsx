@@ -1,6 +1,7 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { useAuthStore } from '@/stores/authStore';
+import { migrateToIndexedDB, flushPendingWrites } from '@/db/zustandStorage';
 import { BottomNav, ProjectHeader } from '@/components/navigation';
 import { SceneView } from '@/components/scenes';
 import { Today } from '@/components/today';
@@ -53,6 +54,33 @@ function AppContent() {
   // Start as false - will be set true explicitly when needed
   const [showHome, setShowHome] = useState(false);
   const [showExport, setShowExport] = useState(false);
+
+  // Track if migration has been attempted
+  const migrationAttempted = useRef(false);
+
+  // Initialize IndexedDB and migrate from localStorage on first mount
+  useEffect(() => {
+    if (migrationAttempted.current) return;
+    migrationAttempted.current = true;
+
+    migrateToIndexedDB().then(({ migrated, errors }) => {
+      if (migrated.length > 0) {
+        console.log('[Storage] Migrated to IndexedDB:', migrated);
+      }
+      if (errors.length > 0) {
+        console.warn('[Storage] Migration errors:', errors);
+      }
+    }).catch((error) => {
+      console.error('[Storage] Migration failed:', error);
+    });
+
+    // Flush pending writes before page unload
+    const handleBeforeUnload = () => {
+      flushPendingWrites();
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
   // Key to force More component to reset when clicking the same tab
   const [tabResetKey, setTabResetKey] = useState(0);
   // SubView for direct navigation to team, invite, stats, or project settings
