@@ -69,7 +69,7 @@ export default {
       borderRadius: {
         'card': '12px',
         'input': '8px',
-        'button': '12px',
+        'button': '8px',
         'pill': '25px',
       },
       spacing: {

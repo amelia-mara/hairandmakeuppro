@@ -2,7 +2,7 @@ import { forwardRef, type ButtonHTMLAttributes } from 'react';
 import { clsx } from 'clsx';
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
   size?: 'sm' | 'md' | 'lg';
   fullWidth?: boolean;
 }
@@ -13,23 +13,29 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       <button
         ref={ref}
         className={clsx(
-          'inline-flex items-center justify-center font-medium transition-all duration-200 touch-manipulation tap-target',
+          'inline-flex items-center justify-center font-semibold transition-all duration-200 touch-manipulation tap-target',
           'focus:outline-none focus:ring-2 focus:ring-gold/50 focus:ring-offset-2',
           'disabled:opacity-50 disabled:cursor-not-allowed',
           {
-            // Variants
-            'gold-gradient text-white shadow-md hover:shadow-lg active:scale-[0.98]':
+            // Primary: Gold gradient in both light and dark mode
+            'btn-gold text-white active:scale-[0.98]':
               variant === 'primary',
-            'bg-gray-100 text-text-primary hover:bg-gray-200 active:bg-gray-300':
+            // Secondary: Subtle background
+            'bg-input-bg text-text-primary border border-border hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-[0.98]':
               variant === 'secondary',
-            'border-2 border-gold text-gold hover:bg-gold-50 active:bg-gold-100':
+            // Outline: Gold outline in both modes
+            'btn-outline-gold active:scale-[0.98]':
               variant === 'outline',
-            'text-gold hover:bg-gold-50 active:bg-gold-100':
+            // Ghost: Text only
+            'text-gold hover:bg-gold/10 active:scale-[0.98]':
               variant === 'ghost',
-            // Sizes
+            // Danger: Red styling
+            'bg-red-500 text-white hover:bg-red-600 active:scale-[0.98]':
+              variant === 'danger',
+            // Sizes - consistent slight rounding (rounded-lg = 8px)
             'px-3 py-1.5 text-sm rounded-lg': size === 'sm',
-            'px-4 py-2.5 text-base rounded-button': size === 'md',
-            'px-6 py-3 text-lg rounded-button': size === 'lg',
+            'px-4 py-2.5 text-base rounded-lg': size === 'md',
+            'px-6 py-3.5 text-lg rounded-lg': size === 'lg',
             // Full width
             'w-full': fullWidth,
           },

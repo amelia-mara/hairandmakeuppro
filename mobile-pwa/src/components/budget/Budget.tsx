@@ -1,7 +1,5 @@
 import { useState, useRef } from 'react';
 import { formatShortDate } from '@/utils/helpers';
-import { useProjectStore } from '@/stores/projectStore';
-import { demoReceipts, demoBudgetSummary } from '@/stores/demoData';
 import {
   CURRENCIES,
   DEFAULT_CURRENCY,
@@ -46,12 +44,8 @@ const emptyBudgetSummary: BudgetSummary = {
 const CATEGORIES: ExpenseCategory[] = ['Kit Supplies', 'Consumables', 'Transportation', 'Equipment', 'Other'];
 
 export function Budget() {
-  const { currentProject } = useProjectStore();
-  const isDemoProject = currentProject?.isDemoProject === true;
-
-  // Only use demo data if this is a demo project
-  const [receipts, setReceipts] = useState<Receipt[]>(isDemoProject ? demoReceipts : []);
-  const [summary] = useState<BudgetSummary>(isDemoProject ? demoBudgetSummary : emptyBudgetSummary);
+  const [receipts, setReceipts] = useState<Receipt[]>([]);
+  const [summary] = useState<BudgetSummary>(emptyBudgetSummary);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [showAddReceipt, setShowAddReceipt] = useState(false);
   const [showScanOptions, setShowScanOptions] = useState(false);

@@ -312,12 +312,11 @@ function AppContent() {
         <LifecycleBanner onExport={() => setShowExport(true)} />
       )}
 
-      {/* Project Header (tap to open menu) */}
+      {/* Project Header - simplified with account icon */}
       {showProjectHeader && (
         <ProjectHeader
-          onNavigateToTab={handleNavigateToTab}
-          onNavigateToSubView={handleNavigateToSubView}
           onSwitchProject={handleSwitchProject}
+          onNavigateToAccount={() => handleNavigateToSubView('projectSettings')}
         />
       )}
 

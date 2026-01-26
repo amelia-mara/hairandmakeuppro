@@ -210,6 +210,7 @@ interface MoreMenuProps {
 
 function MoreMenu({ onNavigate, onNavigateToTab }: MoreMenuProps) {
   const { getMoreMenuItems } = useNavigationStore();
+  const { currentProject } = useProjectStore();
   const moreMenuItems = getMoreMenuItems();
 
   // Get full config for items in the more menu
@@ -242,6 +243,51 @@ function MoreMenu({ onNavigate, onNavigateToTab }: MoreMenuProps) {
     }
   };
 
+  // Project-related menu items
+  const projectMenuItems = [
+    {
+      id: 'team',
+      label: 'Team',
+      description: 'View and manage team members',
+      icon: (
+        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+        </svg>
+      ),
+    },
+    {
+      id: 'invite',
+      label: 'Invite to Project',
+      description: 'Share invite code with team',
+      icon: (
+        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
+        </svg>
+      ),
+    },
+    {
+      id: 'projectStats',
+      label: 'Project Stats',
+      description: 'Progress and completion overview',
+      icon: (
+        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+        </svg>
+      ),
+    },
+    {
+      id: 'projectSettings',
+      label: 'Project Settings',
+      description: 'Name, type, and preferences',
+      icon: (
+        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      ),
+    },
+  ];
+
   return (
     <>
       <div className="sticky top-0 z-30 bg-card border-b border-border safe-top">
@@ -272,6 +318,31 @@ function MoreMenu({ onNavigate, onNavigateToTab }: MoreMenuProps) {
               </svg>
             </button>
           ))}
+
+          {/* Project Section */}
+          {currentProject && (
+            <div className="pt-4 border-t border-border mt-4">
+              <p className="text-xs font-medium text-text-muted uppercase tracking-wider mb-3 px-1">Project</p>
+              {projectMenuItems.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => onNavigate(item.id as MoreView)}
+                  className="w-full card flex items-center gap-4 active:scale-[0.98] transition-transform mb-2"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-text-muted">
+                    {item.icon}
+                  </div>
+                  <div className="flex-1 text-left">
+                    <h3 className="text-sm font-semibold text-text-primary">{item.label}</h3>
+                    <p className="text-xs text-text-muted">{item.description}</p>
+                  </div>
+                  <svg className="w-5 h-5 text-text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Edit Menu button at the bottom */}
           <div className="pt-4 border-t border-border mt-4">
@@ -1041,14 +1112,14 @@ function ScheduleViewer({ onBack }: ViewerProps) {
     isUploading,
     uploadError,
     showDiscrepancyModal,
-    uploadSchedule,
+    uploadScheduleStage1,
     clearSchedule,
     crossReferenceWithBreakdown,
     getCastNamesForNumbers,
     setShowDiscrepancyModal,
-    aiProcessingStatus,
-    isAIProcessing,
-    startAIProcessing,
+    isProcessingStage2,
+    stage2Progress,
+    startStage2Processing,
   } = useScheduleStore();
   const { currentProject, updateSceneShootingDays } = useProjectStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1063,23 +1134,9 @@ function ScheduleViewer({ onBack }: ViewerProps) {
     const file = e.target.files?.[0];
     if (file && file.type === 'application/pdf') {
       try {
-        const parsedSchedule = await uploadSchedule(file);
-
-        // Cross-reference with breakdown if we have scenes
-        if (currentProject?.scenes && currentProject.scenes.length > 0) {
-          const foundDiscrepancies = crossReferenceWithBreakdown(currentProject.scenes);
-
-          // Update shooting days on scenes
-          if (parsedSchedule && updateSceneShootingDays) {
-            const shootingDayMap: Record<string, number> = {};
-            for (const day of parsedSchedule.days) {
-              for (const scene of day.scenes) {
-                shootingDayMap[scene.sceneNumber] = day.dayNumber;
-              }
-            }
-            updateSceneShootingDays(shootingDayMap, foundDiscrepancies);
-          }
-        }
+        // Stage 1: Instant parse - cast list, day count, production name
+        // Stage 2 will start automatically in the background
+        await uploadScheduleStage1(file);
       } catch (err) {
         console.error('Failed to upload schedule:', err);
       }
@@ -1089,6 +1146,28 @@ function ScheduleViewer({ onBack }: ViewerProps) {
       fileInputRef.current.value = '';
     }
   };
+
+  // Cross-reference with breakdown when schedule days are available
+  const scheduleHasScenes = schedule?.days && schedule.days.length > 0 &&
+    schedule.days.some(d => d.scenes.length > 0);
+
+  // Run cross-reference when schedule becomes complete or partial
+  useEffect(() => {
+    if (scheduleHasScenes && currentProject?.scenes && currentProject.scenes.length > 0) {
+      const foundDiscrepancies = crossReferenceWithBreakdown(currentProject.scenes);
+
+      // Update shooting days on scenes
+      if (schedule && updateSceneShootingDays) {
+        const shootingDayMap: Record<string, number> = {};
+        for (const day of schedule.days) {
+          for (const scene of day.scenes) {
+            shootingDayMap[scene.sceneNumber] = day.dayNumber;
+          }
+        }
+        updateSceneShootingDays(shootingDayMap, foundDiscrepancies);
+      }
+    }
+  }, [scheduleHasScenes, schedule?.days.length]);
 
   const handleDelete = () => {
     clearSchedule();
@@ -1226,20 +1305,20 @@ function ScheduleViewer({ onBack }: ViewerProps) {
                 </button>
               </div>
 
-              {/* AI Processing Status */}
-              {(isAIProcessing || aiProcessingStatus.status === 'processing') && (
+              {/* Processing Status Indicator */}
+              {isProcessingStage2 && (
                 <div className="flex items-center gap-2 text-xs text-text-muted">
                   <svg className="w-4 h-4 animate-spin text-gold" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
-                  <span>AI analyzing...</span>
+                  <span>Extracting scenes...</span>
                 </div>
               )}
             </div>
 
-            {/* AI Processing Status Banner */}
-            {aiProcessingStatus.status === 'processing' && (
+            {/* Stage 2 Processing Progress Banner */}
+            {isProcessingStage2 && stage2Progress.total > 0 && (
               <div className="card bg-blue-50 border-blue-200">
                 <div className="flex items-center gap-3">
                   <svg className="w-5 h-5 text-blue-500 animate-spin flex-shrink-0" fill="none" viewBox="0 0 24 24">
@@ -1247,36 +1326,62 @@ function ScheduleViewer({ onBack }: ViewerProps) {
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                   </svg>
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-blue-700">Analyzing with AI</p>
-                    <p className="text-xs text-blue-600">{aiProcessingStatus.message}</p>
+                    <p className="text-sm font-medium text-blue-700">Extracting schedule...</p>
+                    <p className="text-xs text-blue-600">Day {Math.min(stage2Progress.current + 1, stage2Progress.total)} of {stage2Progress.total}</p>
                   </div>
-                  <span className="text-xs font-semibold text-blue-600">{aiProcessingStatus.progress}%</span>
+                  <span className="text-xs font-semibold text-blue-600">
+                    {Math.round((stage2Progress.current / stage2Progress.total) * 100)}%
+                  </span>
                 </div>
                 <div className="mt-2 h-1.5 bg-blue-100 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-blue-500 rounded-full transition-all duration-300"
-                    style={{ width: `${aiProcessingStatus.progress}%` }}
+                    style={{ width: `${(stage2Progress.current / stage2Progress.total) * 100}%` }}
                   />
+                </div>
+                <p className="mt-2 text-[10px] text-blue-500">
+                  You can navigate away — processing continues in the background
+                </p>
+              </div>
+            )}
+
+            {/* Partial Processing Status */}
+            {schedule?.status === 'partial' && !isProcessingStage2 && (
+              <div className="card bg-amber-50 border-amber-200">
+                <div className="flex items-center gap-3">
+                  <svg className="w-5 h-5 text-amber-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-amber-700">Partial Schedule</p>
+                    <p className="text-xs text-amber-600">{schedule.processingError || 'Some days could not be parsed'}</p>
+                  </div>
+                  <button
+                    onClick={() => startStage2Processing()}
+                    className="px-3 py-1 text-xs font-medium text-amber-600 bg-amber-100 rounded-lg hover:bg-amber-200 transition-colors"
+                  >
+                    Retry
+                  </button>
                 </div>
               </div>
             )}
 
-            {/* AI Processing Error */}
-            {aiProcessingStatus.status === 'error' && (
-              <div className="card bg-red-50 border-red-200">
+            {/* Schedule Pending - waiting to process */}
+            {schedule?.status === 'pending' && !isProcessingStage2 && (
+              <div className="card bg-gray-50 border-gray-200">
                 <div className="flex items-center gap-3">
-                  <svg className="w-5 h-5 text-red-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  <svg className="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-red-700">AI Analysis Failed</p>
-                    <p className="text-xs text-red-600">{aiProcessingStatus.error || 'Unknown error'}</p>
+                    <p className="text-sm font-medium text-gray-700">Schedule Ready</p>
+                    <p className="text-xs text-gray-500">Cast list loaded. Tap to extract scenes.</p>
                   </div>
                   <button
-                    onClick={() => startAIProcessing()}
-                    className="px-3 py-1 text-xs font-medium text-red-600 bg-red-100 rounded-lg hover:bg-red-200 transition-colors"
+                    onClick={() => startStage2Processing()}
+                    className="px-3 py-1 text-xs font-medium text-gold bg-gold-100 rounded-lg hover:bg-gold-200 transition-colors"
                   >
-                    Retry
+                    Extract
                   </button>
                 </div>
               </div>
