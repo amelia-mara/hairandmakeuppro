@@ -7,6 +7,7 @@ export interface ProjectCardProps {
   isActive?: boolean;
   onOpen: () => void;
   onSettings?: () => void;
+  onDelete?: () => void;
 }
 
 // Format relative time (e.g., "2h ago", "Yesterday")
@@ -56,7 +57,7 @@ const getProductionTypeLabel = (type: string): string => {
   return labels[type] || 'Production';
 };
 
-export function ProjectCard({ project, isActive = false, onOpen, onSettings }: ProjectCardProps) {
+export function ProjectCard({ project, isActive = false, onOpen, onSettings, onDelete }: ProjectCardProps) {
   const {
     projectName,
     productionType,
@@ -200,6 +201,33 @@ export function ProjectCard({ project, isActive = false, onOpen, onSettings }: P
             >
               <circle cx="12" cy="12" r="3" />
               <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+          </button>
+        )}
+
+        {/* Delete/Leave button */}
+        {onDelete && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+            className="p-2.5 rounded-lg border border-border bg-card hover:bg-red-50 hover:border-red-200 transition-colors"
+            aria-label={isOwner ? 'Delete project' : 'Leave project'}
+          >
+            <svg
+              className="w-5 h-5 text-text-muted hover:text-red-500"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="3 6 5 6 21 6" />
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              <line x1="10" y1="11" x2="10" y2="17" />
+              <line x1="14" y1="11" x2="14" y2="17" />
             </svg>
           </button>
         )}
