@@ -8,6 +8,17 @@ interface HoursBreakdownCardProps {
   previousWrapOut?: string;
 }
 
+// Helper to add hours to time string and return formatted time
+function addHoursToTime(time: string, hours: number): string {
+  if (!time) return '';
+  const [h, m] = time.split(':').map(Number);
+  if (isNaN(h) || isNaN(m)) return '';
+  const totalMins = h * 60 + m + hours * 60;
+  const newH = Math.floor((totalMins % (24 * 60)) / 60);
+  const newM = totalMins % 60;
+  return `${newH.toString().padStart(2, '0')}:${newM.toString().padStart(2, '0')}`;
+}
+
 export function HoursBreakdownCard({ calculation, entry, previousWrapOut }: HoursBreakdownCardProps) {
   const { rateCard } = useTimesheetStore();
   const hasData = calculation.totalHours > 0;
@@ -53,6 +64,10 @@ export function HoursBreakdownCard({ calculation, entry, previousWrapOut }: Hour
   const hasBrokenLunch = calculation.hasBrokenLunch || calculation.brokenLunch;
   const hasBrokenTurnaround = calculation.hasBrokenTurnaround || calculation.brokenTurnaround;
 
+  // Calculate lunch deadline for broken lunch warning
+  const lunchDeadline = entry.unitCall ? addHoursToTime(entry.unitCall, 6) : '';
+  const actualLunchTime = entry.lunchStart || '';
+
   return (
     <div className="card overflow-hidden">
       {/* Header - Total Earnings prominent display */}
@@ -77,10 +92,12 @@ export function HoursBreakdownCard({ calculation, entry, previousWrapOut }: Hour
       {(hasBrokenLunch || hasBrokenTurnaround) && (
         <div className="space-y-2 mb-4">
           {hasBrokenLunch && (
-            <WarningBanner
-              icon="clock"
-              title="Broken Lunch"
-              message={`Lunch taken ${calculation.brokenLunchHours?.toFixed(1) || '?'}hrs late (+${formatCurrency(calculation.brokenLunchPay || 0)})`}
+            <BrokenLunchWarning
+              brokenHours={calculation.brokenLunchHours || 0}
+              brokenPay={calculation.brokenLunchPay || 0}
+              unitCall={entry.unitCall}
+              lunchDeadline={lunchDeadline}
+              actualLunch={actualLunchTime}
             />
           )}
           {hasBrokenTurnaround && (
@@ -165,14 +182,16 @@ export function HoursBreakdownCard({ calculation, entry, previousWrapOut }: Hour
           />
         )}
 
-        {/* Lunch deducted */}
+        {/* Lunch deducted - show different text for CWD */}
         <div
           className="flex justify-between items-center py-2 px-3 rounded-lg text-sm"
           style={{ backgroundColor: 'var(--color-input-bg)' }}
         >
-          <span style={{ color: 'var(--color-text-muted)' }}>Lunch Deducted</span>
           <span style={{ color: 'var(--color-text-muted)' }}>
-            -{(entry.lunchTaken / 60).toFixed(1)} hrs
+            {entry.dayType === 'CWD' ? 'Lunch (Working in hand)' : 'Lunch Deducted'}
+          </span>
+          <span style={{ color: 'var(--color-text-muted)' }}>
+            {entry.dayType === 'CWD' ? 'None' : `-${(entry.lunchTaken / 60).toFixed(1)} hrs`}
           </span>
         </div>
 
@@ -215,6 +234,52 @@ export function HoursBreakdownCard({ calculation, entry, previousWrapOut }: Hour
             </span>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// Broken Lunch Warning with detailed timing info
+interface BrokenLunchWarningProps {
+  brokenHours: number;
+  brokenPay: number;
+  unitCall: string;
+  lunchDeadline: string;
+  actualLunch: string;
+}
+
+function BrokenLunchWarning({ brokenHours, brokenPay, unitCall, lunchDeadline, actualLunch }: BrokenLunchWarningProps) {
+  return (
+    <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-3">
+      <div className="flex items-start gap-2">
+        <div className="text-amber-500 flex-shrink-0 mt-0.5">
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </div>
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-amber-700 dark:text-amber-400">⚠️ Broken Lunch</span>
+            <span className="text-xs font-semibold text-amber-600 dark:text-amber-300 bg-amber-100 dark:bg-amber-800/50 px-1.5 py-0.5 rounded">
+              {brokenHours.toFixed(1)} hrs at OT rate
+            </span>
+          </div>
+          <div className="text-xs text-amber-600 dark:text-amber-300 mt-1">
+            Lunch must be taken within 6 hours of unit call
+          </div>
+          <div className="mt-2 text-[10px] text-amber-500 dark:text-amber-400 space-y-0.5">
+            <div className="flex gap-4">
+              <span>Unit call: <strong>{unitCall || '-'}</strong></span>
+              <span>6-hour deadline: <strong>{lunchDeadline || '-'}</strong></span>
+            </div>
+            {actualLunch && (
+              <div>Actual lunch: <strong>{actualLunch}</strong></div>
+            )}
+          </div>
+          <div className="mt-2 text-xs font-semibold text-amber-700 dark:text-amber-400">
+            +{formatCurrency(brokenPay)} added to pay
+          </div>
+        </div>
       </div>
     </div>
   );

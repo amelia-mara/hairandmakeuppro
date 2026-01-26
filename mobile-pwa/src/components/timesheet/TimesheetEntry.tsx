@@ -250,18 +250,26 @@ export function TimesheetEntry({ onBack }: TimesheetEntryProps) {
         <div className="card">
           <h3 className="field-label mb-3">WRAP TIMES</h3>
           <div className="grid grid-cols-2 gap-3">
-            <TimeInput
-              label="LUNCH START"
-              value={entry.lunchStart || ''}
-              onChange={(v) => updateField('lunchStart', v)}
-              placeholder="13:00"
-            />
-            <TimeInput
-              label="LUNCH END"
-              value={entry.lunchEnd || ''}
-              onChange={(v) => updateField('lunchEnd', v)}
-              placeholder="14:00"
-            />
+            {entry.dayType !== 'CWD' ? (
+              <>
+                <TimeInput
+                  label="LUNCH START"
+                  value={entry.lunchStart || ''}
+                  onChange={(v) => updateField('lunchStart', v)}
+                  placeholder="13:00"
+                />
+                <TimeInput
+                  label="LUNCH END"
+                  value={entry.lunchEnd || ''}
+                  onChange={(v) => updateField('lunchEnd', v)}
+                  placeholder="14:00"
+                />
+              </>
+            ) : (
+              <div className="col-span-2 py-2 px-3 rounded-lg text-sm text-center" style={{ backgroundColor: 'var(--color-input-bg)' }}>
+                <span style={{ color: 'var(--color-text-muted)' }}>No lunch break on Continuous Working Day</span>
+              </div>
+            )}
             <TimeInput
               label="OUT OF CHAIR"
               value={entry.outOfChair}
@@ -282,19 +290,34 @@ export function TimesheetEntry({ onBack }: TimesheetEntryProps) {
         {/* Lunch & Day multipliers */}
         <div className="card">
           <div className="flex flex-wrap items-center gap-4">
-            {/* Lunch duration */}
+            {/* Lunch duration - disabled for CWD */}
             <div className="flex items-center gap-2">
               <label className="text-sm" style={{ color: 'var(--color-text-muted)' }}>Lunch</label>
-              <select
-                value={entry.lunchTaken}
-                onChange={(e) => updateField('lunchTaken', parseInt(e.target.value))}
-                className="input-field text-sm py-1.5 px-2"
-              >
-                <option value={30}>30 min</option>
-                <option value={45}>45 min</option>
-                <option value={60}>1 hour</option>
-                <option value={0}>None</option>
-              </select>
+              {entry.dayType === 'CWD' ? (
+                <span className="input-field text-sm py-1.5 px-2 bg-gray-100 dark:bg-gray-800 text-text-muted cursor-not-allowed">
+                  Working in hand
+                </span>
+              ) : (
+                <select
+                  value={entry.lunchTaken}
+                  onChange={(e) => updateField('lunchTaken', parseInt(e.target.value))}
+                  className="input-field text-sm py-1.5 px-2"
+                >
+                  {entry.dayType === 'SWD' ? (
+                    <>
+                      <option value={60}>1 hour</option>
+                      <option value={45}>45 min</option>
+                      <option value={30}>30 min</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value={30}>30 min</option>
+                      <option value={45}>45 min</option>
+                      <option value={60}>1 hour</option>
+                    </>
+                  )}
+                </select>
+              )}
             </div>
 
             <div className="flex-1" />
