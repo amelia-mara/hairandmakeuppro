@@ -111,8 +111,8 @@ function AppContent() {
   }, []);
   // Key to force More component to reset when clicking the same tab
   const [tabResetKey, setTabResetKey] = useState(0);
-  // SubView for direct navigation to team, invite, stats, or project settings
-  const [moreSubView, setMoreSubView] = useState<'team' | 'invite' | 'projectStats' | 'projectSettings' | undefined>(undefined);
+  // SubView for direct navigation to team, invite, stats, project settings, or user profile
+  const [moreSubView, setMoreSubView] = useState<'team' | 'invite' | 'projectStats' | 'projectSettings' | 'userProfile' | undefined>(undefined);
 
   // Validate state on mount - fix inconsistent persisted state that causes blank screens
   useEffect(() => {
@@ -191,7 +191,7 @@ function AppContent() {
   };
 
   // Handle navigation to a specific sub-view in More
-  const handleNavigateToSubView = (subView: 'team' | 'invite' | 'projectStats' | 'projectSettings') => {
+  const handleNavigateToSubView = (subView: 'team' | 'invite' | 'projectStats' | 'projectSettings' | 'userProfile') => {
     setMoreSubView(subView);
     setActiveTab('settings');
   };
@@ -344,7 +344,7 @@ function AppContent() {
       {showProjectHeader && (
         <ProjectHeader
           onSwitchProject={handleSwitchProject}
-          onNavigateToAccount={() => handleNavigateToSubView('projectSettings')}
+          onNavigateToProfile={() => handleNavigateToSubView('userProfile')}
         />
       )}
 
