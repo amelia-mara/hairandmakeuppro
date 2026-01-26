@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
+import { persist } from 'zustand/middleware';
+import { createHybridStorage } from '@/db/zustandStorage';
 import type {
   Project,
   Scene,
@@ -211,15 +212,21 @@ export const useProjectStore = create<ProjectState>()(
       saveAndClearProject: () => {
         const state = get();
         if (state.currentProject) {
+          // Capture references before set() to avoid stale closure issues
           const projectId = state.currentProject.id;
+          const projectToSave = state.currentProject;
+          const capturesToSave = state.sceneCaptures;
+          const lifecycleToSave = state.lifecycle;
+          const needsSetupToSave = state.needsSetup;
+
           set((s) => ({
             savedProjects: {
               ...s.savedProjects,
               [projectId]: {
-                project: s.currentProject!,
-                sceneCaptures: s.sceneCaptures,
-                lifecycle: s.lifecycle,
-                needsSetup: s.needsSetup,
+                project: projectToSave,
+                sceneCaptures: capturesToSave,
+                lifecycle: lifecycleToSave,
+                needsSetup: needsSetupToSave,
               },
             },
             currentProject: null,
@@ -1154,7 +1161,8 @@ export const useProjectStore = create<ProjectState>()(
     }),
     {
       name: 'hair-makeup-pro-storage',
-      storage: createJSONStorage(() => localStorage),
+      // Use IndexedDB with debounced writes for large project data
+      storage: createHybridStorage('hair-makeup-pro-storage'),
       partialize: (state) => ({
         currentProject: state.currentProject,
         sceneCaptures: state.sceneCaptures,

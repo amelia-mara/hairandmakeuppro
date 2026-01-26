@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { useAuthStore } from '@/stores/authStore';
+import { migrateToIndexedDB, flushPendingWrites } from '@/db/zustandStorage';
 import { BottomNav, ProjectHeader } from '@/components/navigation';
 import { SceneView } from '@/components/scenes';
 import { Today } from '@/components/today';
@@ -11,6 +12,7 @@ import { Budget } from '@/components/budget';
 import { More, WrapPopupModal, LifecycleBanner, ProjectExportScreen } from '@/components/more';
 import { Home } from '@/components/home';
 import { ChatAssistant } from '@/components/chat/ChatAssistant';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import {
   WelcomeScreen,
   SignInScreen,
@@ -22,7 +24,7 @@ import {
 import { SelectPlanScreen } from '@/components/subscription';
 import type { NavTab, SubscriptionTier, BillingPeriod } from '@/types';
 
-export default function App() {
+function AppContent() {
   const {
     currentProject,
     activeTab,
@@ -52,6 +54,33 @@ export default function App() {
   // Start as false - will be set true explicitly when needed
   const [showHome, setShowHome] = useState(false);
   const [showExport, setShowExport] = useState(false);
+
+  // Track if migration has been attempted
+  const migrationAttempted = useRef(false);
+
+  // Initialize IndexedDB and migrate from localStorage on first mount
+  useEffect(() => {
+    if (migrationAttempted.current) return;
+    migrationAttempted.current = true;
+
+    migrateToIndexedDB().then(({ migrated, errors }) => {
+      if (migrated.length > 0) {
+        console.log('[Storage] Migrated to IndexedDB:', migrated);
+      }
+      if (errors.length > 0) {
+        console.warn('[Storage] Migration errors:', errors);
+      }
+    }).catch((error) => {
+      console.error('[Storage] Migration failed:', error);
+    });
+
+    // Flush pending writes before page unload
+    const handleBeforeUnload = () => {
+      flushPendingWrites();
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
   // Key to force More component to reset when clicking the same tab
   const [tabResetKey, setTabResetKey] = useState(0);
   // SubView for direct navigation to team, invite, stats, or project settings
@@ -64,21 +93,26 @@ export default function App() {
     if (hasCompletedOnboarding && !isAuthenticated && !currentProject && !guestProjectCode) {
       setScreen('hub');
     }
-  }, []);
+  }, [hasCompletedOnboarding, isAuthenticated, currentProject, guestProjectCode, setScreen]);
+
+  // Memoize the count of complete scenes to avoid creating new array on every render
+  const completeScenesCount = useMemo(() => {
+    return currentProject?.scenes.filter(s => s.isComplete).length ?? 0;
+  }, [currentProject?.scenes]);
 
   // Check for wrap triggers on mount and when scenes change
   useEffect(() => {
     if (currentProject) {
       checkWrapTrigger();
     }
-  }, [currentProject?.scenes.filter(s => s.isComplete).length]);
+  }, [currentProject, completeScenesCount, checkWrapTrigger]);
 
   // Update activity timestamp periodically
   useEffect(() => {
     if (currentProject) {
       updateActivity();
     }
-  }, [currentSceneId, activeTab]);
+  }, [currentProject, currentSceneId, activeTab, updateActivity]);
 
   // Handle project ready (from Home component)
   const handleProjectReady = () => {
@@ -300,5 +334,14 @@ export default function App() {
       {/* Wrap Popup Modal (shows when project completion is triggered) */}
       <WrapPopupModal onExport={() => setShowExport(true)} />
     </div>
+  );
+}
+
+// Wrap the app with ErrorBoundary to catch and display errors gracefully
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <AppContent />
+    </ErrorBoundary>
   );
 }

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
+import { persist } from 'zustand/middleware';
+import { createHybridStorage } from '@/db/zustandStorage';
 import type {
   ProductionSchedule,
   ScheduleCastMember,
@@ -426,7 +427,7 @@ export const useScheduleStore = create<ScheduleState>()(
     }),
     {
       name: 'hair-makeup-schedule',
-      storage: createJSONStorage(() => localStorage),
+      storage: createHybridStorage('hair-makeup-schedule'),
       partialize: (state) => ({
         schedule: state.schedule,
         discrepancies: state.discrepancies,

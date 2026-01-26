@@ -1,9 +1,23 @@
 import { useTimesheetStore } from '@/stores/timesheetStore';
-import type { BaseDayHours } from '@/types';
-import { BASE_DAY_OPTIONS } from '@/types';
+import type { BaseDayHours, BaseContract } from '@/types';
+
+// BECTU Base Contract Options
+const BASE_CONTRACT_OPTIONS: { value: BaseContract; label: string; hours: number }[] = [
+  { value: '10+1', label: '10+1 (10 hours work + 1hr lunch)', hours: 10 },
+  { value: '11+1', label: '11+1 (11 hours work + 1hr lunch)', hours: 11 },
+];
 
 export function RateCardSettings() {
   const { rateCard, updateRateCard } = useTimesheetStore();
+
+  // Handle base contract change - sync both baseContract and baseDayHours
+  const handleBaseContractChange = (contract: BaseContract) => {
+    const option = BASE_CONTRACT_OPTIONS.find(o => o.value === contract);
+    updateRateCard({
+      baseContract: contract,
+      baseDayHours: (option?.hours || 11) as BaseDayHours,
+    });
+  };
 
   return (
     <div className="space-y-4">
@@ -24,27 +38,25 @@ export function RateCardSettings() {
             className="input-field flex-1"
           />
         </div>
-        <p className="text-xs text-text-muted mt-1">Your agreed daily rate before overtime</p>
+        <p className="text-xs text-text-muted mt-1">Your agreed daily rate (BECTU minimum guarantee)</p>
       </div>
 
-      {/* Base Day Hours */}
+      {/* Base Contract - BECTU Standard */}
       <div>
-        <label className="field-label block mb-2">BASE DAY</label>
+        <label className="field-label block mb-2">BASE CONTRACT (BECTU)</label>
         <select
-          value={rateCard.baseDayHours}
-          onChange={(e) =>
-            updateRateCard({ baseDayHours: parseInt(e.target.value, 10) as BaseDayHours })
-          }
+          value={rateCard.baseContract || '11+1'}
+          onChange={(e) => handleBaseContractChange(e.target.value as BaseContract)}
           className="input-field w-full"
         >
-          {BASE_DAY_OPTIONS.map((option) => (
+          {BASE_CONTRACT_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
             </option>
           ))}
         </select>
         <p className="text-xs text-text-muted mt-1">
-          Standard working hours before overtime kicks in (e.g., 10+1, 11+1)
+          Standard UK film industry contract. Hours worked beyond this trigger overtime.
         </p>
       </div>
 
@@ -132,6 +144,27 @@ export function RateCardSettings() {
             </div>
           </div>
           <p className="text-[11px] text-text-light mt-1">Applied to entire day's earnings</p>
+        </div>
+
+        <div>
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-text-muted">7th Day</span>
+            <div className="flex items-center gap-1">
+              <span className="text-sm text-text-muted">x</span>
+              <input
+                type="number"
+                value={rateCard.seventhDayMultiplier}
+                onChange={(e) =>
+                  updateRateCard({ seventhDayMultiplier: parseFloat(e.target.value) || 2.0 })
+                }
+                min="1"
+                max="5"
+                step="0.1"
+                className="input-field w-16 text-center text-orange-500 font-medium"
+              />
+            </div>
+          </div>
+          <p className="text-[11px] text-text-light mt-1">7th consecutive day worked</p>
         </div>
       </div>
 

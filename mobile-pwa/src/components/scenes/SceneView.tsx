@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { clsx } from 'clsx';
 import { useProjectStore } from '@/stores/projectStore';
 import { Header } from '../navigation';
@@ -42,9 +42,12 @@ export function SceneView({ sceneId, onBack }: SceneViewProps) {
     );
   }
 
-  const sceneCharacters = scene.characters
-    .map(id => getCharacter(id))
-    .filter(Boolean);
+  // Memoize character lookups to avoid recalculating on every render
+  const sceneCharacters = useMemo(() => {
+    return scene.characters
+      .map(id => getCharacter(id))
+      .filter(Boolean);
+  }, [scene.characters, getCharacter]);
 
   return (
     <div className="min-h-screen bg-background pb-safe-bottom">

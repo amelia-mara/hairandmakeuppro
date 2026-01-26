@@ -17,7 +17,7 @@ import type { ParsedScript } from '@/utils/scriptParser';
 import type { Project, Scene, ProductionSchedule } from '@/types';
 import { createEmptyMakeupDetails, createEmptyHairDetails } from '@/types';
 
-type HomeView = 'welcome' | 'upload' | 'processing' | 'characters' | 'setup';
+type HomeView = 'upload' | 'processing' | 'characters' | 'setup';
 
 // Enable the new progressive workflow
 const USE_PROGRESSIVE_WORKFLOW = true;
@@ -28,7 +28,8 @@ interface HomeProps {
 }
 
 export function Home({ onProjectReady, onBack }: HomeProps) {
-  const [view, setView] = useState<HomeView>('welcome');
+  // Skip welcome screen and go directly to upload
+  const [view, setView] = useState<HomeView>('upload');
   const [projectName, setProjectName] = useState('');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploadedScheduleFile, setUploadedScheduleFile] = useState<File | null>(null);
@@ -423,21 +424,14 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
 
   return (
     <div className="min-h-screen bg-background safe-top safe-bottom">
-      {view === 'welcome' && (
-        <WelcomeScreen
-          onUploadScript={() => setView('upload')}
-          onLoadDemo={handleLoadDemo}
-          onBack={onBack}
-        />
-      )}
-
       {view === 'upload' && (
         <UploadScreen
           fileInputRef={fileInputRef}
           scheduleInputRef={scheduleInputRef}
           uploadedFile={uploadedFile}
           uploadedScheduleFile={uploadedScheduleFile}
-          onBack={() => setView('welcome')}
+          onBack={onBack}
+          onLoadDemo={handleLoadDemo}
           onSkip={handleSkipToSetup}
           onStartWithFiles={handleStartWithFiles}
         />
@@ -493,117 +487,14 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
   );
 }
 
-// Welcome Screen
-interface WelcomeScreenProps {
-  onUploadScript: () => void;
-  onLoadDemo: () => void;
-  onBack?: () => void;
-}
-
-function WelcomeScreen({ onUploadScript, onLoadDemo, onBack }: WelcomeScreenProps) {
-  return (
-    <div className="flex flex-col min-h-screen">
-      {/* Header with back button */}
-      {onBack && (
-        <header className="flex items-center px-4 py-3">
-          <button
-            onClick={onBack}
-            className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 -ml-2"
-            aria-label="Go back"
-          >
-            <svg
-              className="w-6 h-6 text-text-primary"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M19 12H5" />
-              <path d="M12 19l-7-7 7-7" />
-            </svg>
-          </button>
-        </header>
-      )}
-      {/* Logo/Header */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
-        <div className="w-20 h-20 rounded-2xl gold-gradient flex items-center justify-center mb-6 shadow-lg">
-          <svg className="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9.53 16.122a3 3 0 00-5.78 1.128 2.25 2.25 0 01-2.4 2.245 4.5 4.5 0 008.4-2.245c0-.399-.078-.78-.22-1.128zm0 0a15.998 15.998 0 003.388-1.62m-5.043-.025a15.994 15.994 0 011.622-3.395m3.42 3.42a15.995 15.995 0 004.764-4.648l3.876-5.814a1.151 1.151 0 00-1.597-1.597L14.146 6.32a15.996 15.996 0 00-4.649 4.763m3.42 3.42a6.776 6.776 0 00-3.42-3.42" />
-          </svg>
-        </div>
-
-        <h1 className="text-2xl font-bold text-text-primary mb-2">Hair & Makeup Pro</h1>
-        <p className="text-text-muted text-center max-w-xs mb-8">
-          Your mobile companion for on-set continuity tracking keeping checks happy
-        </p>
-
-        {/* Features list */}
-        <div className="w-full max-w-sm space-y-3 mb-8">
-          <FeatureItem
-            icon={
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-              </svg>
-            }
-            text="Import your script to auto-detect scenes & characters"
-          />
-          <FeatureItem
-            icon={
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
-              </svg>
-            }
-            text="Capture and organize continuity photos"
-          />
-          <FeatureItem
-            icon={
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            }
-            text="Track your hours and manage timesheets"
-          />
-        </div>
-      </div>
-
-      {/* Bottom actions */}
-      <div className="px-6 pb-8 space-y-3">
-        <button
-          onClick={onUploadScript}
-          className="w-full py-4 rounded-button gold-gradient text-white font-semibold text-base shadow-lg active:scale-[0.98] transition-transform"
-        >
-          Upload Files
-        </button>
-        <button
-          onClick={onLoadDemo}
-          className="w-full py-3 rounded-button bg-gray-100 text-text-secondary font-medium text-sm active:scale-[0.98] transition-transform"
-        >
-          Try with Demo Project
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function FeatureItem({ icon, text }: { icon: React.ReactNode; text: string }) {
-  return (
-    <div className="flex items-center gap-3 px-4 py-3 bg-card rounded-xl border border-border">
-      <div className="text-gold">{icon}</div>
-      <span className="text-sm text-text-secondary">{text}</span>
-    </div>
-  );
-}
-
 // Upload Screen
 interface UploadScreenProps {
   fileInputRef: React.RefObject<HTMLInputElement>;
   scheduleInputRef: React.RefObject<HTMLInputElement>;
   uploadedFile: File | null;
   uploadedScheduleFile: File | null;
-  onBack: () => void;
+  onBack?: () => void;
+  onLoadDemo: () => void;
   onSkip: () => void;
   onStartWithFiles: () => void;
 }
@@ -614,6 +505,7 @@ function UploadScreen({
   uploadedFile,
   uploadedScheduleFile,
   onBack,
+  onLoadDemo,
   onSkip,
   onStartWithFiles,
 }: UploadScreenProps) {
@@ -621,14 +513,16 @@ function UploadScreen({
     <div className="flex flex-col min-h-screen">
       {/* Header */}
       <div className="px-4 py-3 flex items-center gap-3 border-b border-border">
-        <button
-          onClick={onBack}
-          className="p-2 -ml-2 text-text-muted active:text-gold transition-colors"
-        >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="p-2 -ml-2 text-text-muted active:text-gold transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+        )}
         <h1 className="text-lg font-semibold text-text-primary">Upload Files</h1>
       </div>
 
@@ -750,12 +644,21 @@ function UploadScreen({
         >
           {uploadedFile ? 'Start Processing' : 'Upload a script to continue'}
         </button>
-        <button
-          onClick={onSkip}
-          className="w-full py-3 text-sm text-text-muted font-medium active:text-gold transition-colors"
-        >
-          Skip - I'll add scenes manually
-        </button>
+        <div className="flex items-center justify-center gap-4">
+          <button
+            onClick={onSkip}
+            className="py-3 text-sm text-text-muted font-medium active:text-gold transition-colors"
+          >
+            Skip - add manually
+          </button>
+          <span className="text-text-light">|</span>
+          <button
+            onClick={onLoadDemo}
+            className="py-3 text-sm text-text-muted font-medium active:text-gold transition-colors"
+          >
+            Try demo project
+          </button>
+        </div>
       </div>
     </div>
   );

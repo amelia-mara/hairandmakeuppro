@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTimesheetStore } from '@/stores/timesheetStore';
 import type { DayType, TimesheetEntry as TimesheetEntryType } from '@/types';
-import { DAY_TYPE_LABELS, createEmptyTimesheetEntry } from '@/types';
+import { DAY_TYPE_LABELS, createEmptyTimesheetEntry, getLunchDurationForDayType } from '@/types';
 import { HoursBreakdownCard } from './HoursBreakdownCard';
 
 // Debounce helper with flush capability
@@ -49,6 +49,7 @@ export function TimesheetEntry({ onBack }: TimesheetEntryProps) {
     getEntry,
     saveEntry,
     calculateEntry,
+    getPreviousWrapOut,
   } = useTimesheetStore();
 
   const [entry, setEntry] = useState<TimesheetEntryType>(() =>
@@ -88,8 +89,11 @@ export function TimesheetEntry({ onBack }: TimesheetEntryProps) {
     };
   }, [flushSave]);
 
-  // Calculate values
-  const calculation = calculateEntry(entry);
+  // Get previous wrap time for turnaround calculation
+  const previousWrapOut = getPreviousWrapOut(selectedDate);
+
+  // Calculate values with BECTU logic
+  const calculation = calculateEntry(entry, previousWrapOut);
 
   // Format date for display
   const formatDate = () => {
@@ -103,12 +107,22 @@ export function TimesheetEntry({ onBack }: TimesheetEntryProps) {
 
   const { dayName, formatted } = formatDate();
 
-  // Handle field updates
+  // Handle field updates - auto-update lunch duration when day type changes
   const updateField = <K extends keyof TimesheetEntryType>(
     field: K,
     value: TimesheetEntryType[K]
   ) => {
-    setEntry((prev) => ({ ...prev, [field]: value }));
+    setEntry((prev) => {
+      const updates: Partial<TimesheetEntryType> = { [field]: value };
+
+      // Auto-update lunch duration when day type changes (BECTU standard)
+      if (field === 'dayType') {
+        const newDayType = value as DayType;
+        updates.lunchTaken = getLunchDurationForDayType(newDayType);
+      }
+
+      return { ...prev, ...updates };
+    });
   };
 
   // Handle save button - flush any pending auto-save and navigate back
@@ -236,18 +250,26 @@ export function TimesheetEntry({ onBack }: TimesheetEntryProps) {
         <div className="card">
           <h3 className="field-label mb-3">WRAP TIMES</h3>
           <div className="grid grid-cols-2 gap-3">
-            <TimeInput
-              label="LUNCH START"
-              value={entry.lunchStart || ''}
-              onChange={(v) => updateField('lunchStart', v)}
-              placeholder="13:00"
-            />
-            <TimeInput
-              label="LUNCH END"
-              value={entry.lunchEnd || ''}
-              onChange={(v) => updateField('lunchEnd', v)}
-              placeholder="14:00"
-            />
+            {entry.dayType !== 'CWD' ? (
+              <>
+                <TimeInput
+                  label="LUNCH START"
+                  value={entry.lunchStart || ''}
+                  onChange={(v) => updateField('lunchStart', v)}
+                  placeholder="13:00"
+                />
+                <TimeInput
+                  label="LUNCH END"
+                  value={entry.lunchEnd || ''}
+                  onChange={(v) => updateField('lunchEnd', v)}
+                  placeholder="14:00"
+                />
+              </>
+            ) : (
+              <div className="col-span-2 py-2 px-3 rounded-lg text-sm text-center" style={{ backgroundColor: 'var(--color-input-bg)' }}>
+                <span style={{ color: 'var(--color-text-muted)' }}>No lunch break on Continuous Working Day</span>
+              </div>
+            )}
             <TimeInput
               label="OUT OF CHAIR"
               value={entry.outOfChair}
@@ -268,19 +290,34 @@ export function TimesheetEntry({ onBack }: TimesheetEntryProps) {
         {/* Lunch & Day multipliers */}
         <div className="card">
           <div className="flex flex-wrap items-center gap-4">
-            {/* Lunch duration */}
+            {/* Lunch duration - disabled for CWD */}
             <div className="flex items-center gap-2">
               <label className="text-sm" style={{ color: 'var(--color-text-muted)' }}>Lunch</label>
-              <select
-                value={entry.lunchTaken}
-                onChange={(e) => updateField('lunchTaken', parseInt(e.target.value))}
-                className="input-field text-sm py-1.5 px-2"
-              >
-                <option value={30}>30 min</option>
-                <option value={45}>45 min</option>
-                <option value={60}>1 hour</option>
-                <option value={0}>None</option>
-              </select>
+              {entry.dayType === 'CWD' ? (
+                <span className="input-field text-sm py-1.5 px-2 bg-gray-100 dark:bg-gray-800 text-text-muted cursor-not-allowed">
+                  Working in hand
+                </span>
+              ) : (
+                <select
+                  value={entry.lunchTaken}
+                  onChange={(e) => updateField('lunchTaken', parseInt(e.target.value))}
+                  className="input-field text-sm py-1.5 px-2"
+                >
+                  {entry.dayType === 'SWD' ? (
+                    <>
+                      <option value={60}>1 hour</option>
+                      <option value={45}>45 min</option>
+                      <option value={30}>30 min</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value={30}>30 min</option>
+                      <option value={45}>45 min</option>
+                      <option value={60}>1 hour</option>
+                    </>
+                  )}
+                </select>
+              )}
             </div>
 
             <div className="flex-1" />
@@ -317,8 +354,8 @@ export function TimesheetEntry({ onBack }: TimesheetEntryProps) {
           </div>
         </div>
 
-        {/* Hours Breakdown Card - Production Accountability Focus */}
-        <HoursBreakdownCard calculation={calculation} entry={entry} />
+        {/* Hours Breakdown Card - BECTU Calculations */}
+        <HoursBreakdownCard calculation={calculation} entry={entry} previousWrapOut={previousWrapOut} />
 
         {/* Notes - OT justification for production */}
         <div className="card">
