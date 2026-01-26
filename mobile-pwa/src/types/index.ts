@@ -892,6 +892,94 @@ export const formatCurrency = (amount: number, currencyCode: CurrencyCode = DEFA
 };
 
 // ============================================
+// BILLING DETAILS TYPES
+// ============================================
+
+// Bank details for payment
+export interface BankDetails {
+  accountName: string;
+  sortCode: string;
+  accountNumber: string;
+}
+
+// VAT/Tax settings
+export interface VATSettings {
+  isVATRegistered: boolean;
+  vatNumber: string;
+  vatRate: number; // Default 20% in UK
+}
+
+// Personal/Business billing details (tied to user, not project)
+export interface BillingDetails {
+  // Personal/Business Information
+  fullName: string;
+  businessName: string; // Optional - for freelancers trading under a name
+  address: string; // Multi-line address
+  phone: string;
+  email: string;
+
+  // Bank details for payment
+  bankDetails: BankDetails;
+
+  // Payment terms
+  paymentTerms: string; // e.g., "Payment within 30 days"
+
+  // VAT/Tax settings
+  vatSettings: VATSettings;
+
+  // Metadata
+  lastUpdated?: Date;
+}
+
+// Default billing details for new users
+export const createEmptyBillingDetails = (): BillingDetails => ({
+  fullName: '',
+  businessName: '',
+  address: '',
+  phone: '',
+  email: '',
+  bankDetails: {
+    accountName: '',
+    sortCode: '',
+    accountNumber: '',
+  },
+  paymentTerms: 'Payment within 30 days',
+  vatSettings: {
+    isVATRegistered: false,
+    vatNumber: '',
+    vatRate: 20, // UK standard VAT rate
+  },
+});
+
+// Invoice calculation with VAT
+export interface InvoiceCalculation {
+  subtotal: number; // Before VAT
+  vatAmount: number; // VAT if applicable
+  total: number; // Including VAT
+  isVATApplicable: boolean;
+  vatRate: number;
+}
+
+// Calculate invoice totals with VAT
+export const calculateInvoiceWithVAT = (
+  subtotal: number,
+  vatSettings: VATSettings
+): InvoiceCalculation => {
+  const isVATApplicable = vatSettings.isVATRegistered;
+  const vatRate = vatSettings.vatRate;
+  const vatAmount = isVATApplicable ? subtotal * (vatRate / 100) : 0;
+  const total = subtotal + vatAmount;
+
+  return {
+    subtotal,
+    vatAmount,
+    total,
+    isVATApplicable,
+    vatRate,
+  };
+};
+
+// ============================================
 // PROJECT LIFECYCLE & EXPORT TYPES
 // ============================================
 
