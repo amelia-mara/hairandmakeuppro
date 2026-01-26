@@ -524,10 +524,15 @@ async function analyzeDayChunk(
 The schedule uses a TABLE FORMAT with columns for:
 - Scene number, Page count, INT/EXT, Time of day, Location, Description, Cast numbers, Est. time, Story day marker
 
+IMPORTANT: Distinguish between SCENE NUMBERS and CAST NUMBERS:
+- SCENE NUMBERS: Appear with "Scene" prefix OR standalone like "4A", "7", "18B", "106A p1" with page counts and INT/EXT
+- CAST NUMBERS: Appear as comma-separated lists like "1, 2, 4, 7" in a cast column - these are NOT scenes!
+
 Look for:
 - "Scene X" patterns to identify scene entries
+- Scene numbers can have letter suffixes (4A, 18B) or part indicators (106A p1)
 - Story day markers like D5, N8 (Day 5, Night 8 in the story)
-- Cast numbers as single digits or comma-separated lists
+- Cast numbers as single digits or comma-separated lists in the CAST COLUMN (not scene numbers!)
 - Locations in ALL CAPS
 - Descriptions in mixed case
 - The schedule may have TWO-ROW format where "Scene" is on one line and scene number on next line
@@ -561,7 +566,8 @@ Return JSON:
   ]
 }
 
-Extract EVERY scene. Scene numbers exactly as shown. dayNight = story day marker (D5, N8, etc).
+Extract EVERY scene. Scene numbers exactly as shown (e.g., "4A", "18B", "106A p1"). dayNight = story day marker (D5, N8, etc).
+IMPORTANT: DO NOT confuse cast number lists (like "1, 2, 4, 7") with scene numbers!
 Return ONLY the JSON object, no explanation, no markdown.`;
 
   try {

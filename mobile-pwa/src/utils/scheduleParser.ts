@@ -510,9 +510,12 @@ function parseSceneEntriesFast(dayText: string): ScheduleSceneEntry[] {
     }
 
     // Check if this is a new scene line (starts with "Scene" or has scene pattern)
-    const isSceneLine = /^Scene\s*\d+/i.test(trimmed) ||
+    // IMPORTANT: Exclude cast number lists (comma-separated numbers like "1, 2, 4, 7")
+    const isCastList = /^\d{1,2}\s*,\s*\d/.test(trimmed);
+    const isSceneLine = !isCastList && (
+                        /^Scene\s*\d+/i.test(trimmed) ||
                         /^\d+[A-Za-z]?\s+\d+\s*\/?8?\s*pgs?/i.test(trimmed) ||
-                        /^\d+[A-Za-z]?(?:pt)?\s+(?:\d+\s*)?(?:\d\/\d)?\s*pgs?\s+(?:INT|EXT)/i.test(trimmed);
+                        /^\d+[A-Za-z]?(?:\s*p\d+)?(?:pt)?\s+(?:\d+\s*)?(?:\d\/\d)?\s*pgs?\s+(?:INT|EXT)/i.test(trimmed));
 
     if (isSceneLine && currentLine) {
       combinedLines.push(currentLine);
@@ -563,7 +566,10 @@ function parseTwoRowTableFormat(lines: string[]): ScheduleSceneEntry[] {
                               !/^Scene\s*\d/i.test(line1) &&
                               /\b(INT|EXT)\b/i.test(line1);
 
-    const nextLineHasSceneNum = /^(\d+[A-Za-z]?)(?:\s|\t|$)/.test(line2);
+    // Scene numbers can be "7", "4A", "18B", "106A p1" etc.
+    // But NOT cast lists like "1, 2, 4, 7"
+    const nextLineHasSceneNum = /^(\d+[A-Za-z]?(?:\s*p\d+)?)(?:\s|\t|$)/.test(line2) &&
+                                 !/^\d+\s*,/.test(line2);
 
     if (isSceneHeaderRow && nextLineHasSceneNum) {
       // This is a two-row scene entry - combine the rows
@@ -601,9 +607,10 @@ function combineSceneRows(headerRow: string, dataRow: string): ScheduleSceneEntr
   const dataCols = splitRow(dataRow);
 
   // Extract scene number from data row (first column)
-  const sceneNumMatch = dataCols[0]?.match(/^(\d+[A-Za-z]?(?:pt)?)/i);
+  // Handle formats like "7", "4A", "18B", "106A p1", "106Apt"
+  const sceneNumMatch = dataCols[0]?.match(/^(\d+[A-Za-z]?(?:\s*p\d+)?(?:pt)?)/i);
   if (!sceneNumMatch) return null;
-  const sceneNumber = sceneNumMatch[1].replace(/pt$/i, '');
+  const sceneNumber = sceneNumMatch[1].replace(/pt$/i, '').trim();
 
   // Combine columns to extract data
   // Header: [Scene, pageTop, INT, LOCATION..., castNum, Est. Time, Day:, Remarks:]
@@ -729,11 +736,26 @@ function parseSceneLine(line: string): ScheduleSceneEntry | null {
   // Pattern 2: "21 | 2 pgs | INT Day | LOCATION description | 1 | Est. Time 3:00 | Day: D5"
   // Pattern 3: "Scene 21 2 pgs INT Day LOCATION description 1, 2, 3 Est. Time 3:00 Day: D5"
 
+  // IMPORTANT: Reject lines that look like cast number lists (comma-separated numbers only)
+  // Cast lists look like: "1, 2, 4, 7" or "1,2,4,7" - just numbers with commas
+  // Scene lines have additional data like "pgs", "INT/EXT", locations, etc.
+  const trimmed = line.trim();
+
+  // If line starts with a number followed by comma and more numbers, it's a cast list
+  if (/^(\d{1,2}\s*,\s*)+\d{1,2}\s*$/.test(trimmed)) {
+    return null; // This is a cast list, not a scene
+  }
+
+  // If line starts with number, comma, number - it's likely a cast list
+  if (/^\d{1,2}\s*,\s*\d/.test(trimmed) && !/pgs?/i.test(trimmed) && !/\b(INT|EXT)\b/i.test(trimmed)) {
+    return null; // Cast list without scene data
+  }
+
   // Extract scene number (at start, with optional "Scene" prefix)
-  const sceneNumMatch = line.match(/^(?:Scene\s*)?(\d+[A-Za-z]?(?:pt)?)/i);
+  const sceneNumMatch = line.match(/^(?:Scene\s*)?(\d+[A-Za-z]?(?:\s*p\d+)?(?:pt)?)/i);
   if (!sceneNumMatch) return null;
 
-  const sceneNumber = sceneNumMatch[1].replace(/pt$/i, '');
+  const sceneNumber = sceneNumMatch[1].replace(/pt$/i, '').trim();
 
   // Extract pages (like "2 pgs", "1 4/8 pgs", "2/8 pgs")
   const pagesMatch = line.match(/(\d+\s*(?:\d\/\d)?)\s*pgs?/i);
