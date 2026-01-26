@@ -1179,6 +1179,7 @@ export const useProjectStore = create<ProjectState>()(
         lifecycle: state.lifecycle,
         savedProjects: state.savedProjects,
         archivedProjects: state.archivedProjects,
+        needsSetup: state.needsSetup,
       }),
     }
   )

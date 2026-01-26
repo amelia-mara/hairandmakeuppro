@@ -122,12 +122,26 @@ export function ProjectHubScreen() {
       return;
     }
 
-    // Fallback: Create a project from the membership
-    // Use setProject (not setProjectNeedsSetup) to avoid forcing setup screen
-    // for projects that may have been worked on previously
-    // The Home component will check if setup is actually needed
+    // Check if currentProject has actual data (scenes uploaded) - don't overwrite it!
+    // This handles the case where user uploaded a script but project IDs don't match
+    // (e.g., local project vs server project with different IDs)
+    if (store.currentProject && store.currentProject.scenes.length > 0) {
+      // Current project has data - preserve it, don't replace with empty shell
+      // Just update the project ID and name to match the membership
+      const updatedProject: Project = {
+        ...store.currentProject,
+        id: membership.projectId,
+        name: membership.projectName,
+      };
+      store.setProject(updatedProject);
+      return;
+    }
+
+    // Fallback: Create a project that needs setup
+    // Use setProjectNeedsSetup to prompt user to upload their script
+    // This is safer than creating an empty project which would lose data
     const project = createProjectFromMembership(membership);
-    store.setProject(project);
+    store.setProjectNeedsSetup(project);
   };
 
   const handleCreateClick = () => {
