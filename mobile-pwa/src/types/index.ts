@@ -1165,8 +1165,8 @@ export interface User {
   avatarUrl?: string;
 }
 
-// Project membership role
-export type ProjectRole = 'owner' | 'supervisor' | 'artist' | 'viewer';
+// Project membership role (matches Supabase database roles)
+export type ProjectRole = 'owner' | 'designer' | 'hod' | 'supervisor' | 'key' | 'floor' | 'daily' | 'trainee' | 'artist' | 'viewer';
 
 // Production types for new projects
 export type ProductionType = 'film' | 'tv_series' | 'short_film' | 'commercial' | 'music_video' | 'other';
@@ -1180,8 +1180,8 @@ export const PRODUCTION_TYPES: { value: ProductionType; label: string }[] = [
   { value: 'other', label: 'Other' },
 ];
 
-// Project status
-export type ProjectStatus = 'active' | 'archived';
+// Project status (matches Supabase database status)
+export type ProjectStatus = 'active' | 'archived' | 'wrapped' | 'prep' | 'shooting';
 
 // Project membership entry (user's relationship to a project)
 export interface ProjectMembership {
