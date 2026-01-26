@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { supabase } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import * as supabaseAuth from '@/services/supabaseAuth';
 import * as supabaseProjects from '@/services/supabaseProjects';
 import type {
@@ -554,17 +554,19 @@ export const useAuthStore = create<AuthState>()(
   )
 );
 
-// Set up auth state listener
-supabase.auth.onAuthStateChange(async (event, session) => {
-  if (event === 'SIGNED_IN' && session?.user) {
-    // User signed in - refresh state
-    useAuthStore.getState().initializeAuth();
-  } else if (event === 'SIGNED_OUT') {
-    // User signed out - clear state
-    useAuthStore.setState({
-      isAuthenticated: false,
-      user: null,
-      projectMemberships: [],
-    });
-  }
-});
+// Set up auth state listener only if Supabase is configured
+if (isSupabaseConfigured) {
+  supabase.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN' && session?.user) {
+      // User signed in - refresh state
+      useAuthStore.getState().initializeAuth();
+    } else if (event === 'SIGNED_OUT') {
+      // User signed out - clear state
+      useAuthStore.setState({
+        isAuthenticated: false,
+        user: null,
+        projectMemberships: [],
+      });
+    }
+  });
+}

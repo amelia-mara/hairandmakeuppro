@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { useAuthStore } from '@/stores/authStore';
+import { isSupabaseConfigured } from '@/lib/supabase';
 import { migrateToIndexedDB, flushPendingWrites } from '@/db/zustandStorage';
 import { BottomNav, ProjectHeader } from '@/components/navigation';
 import { SceneView } from '@/components/scenes';
@@ -24,7 +25,34 @@ import {
 import { SelectPlanScreen } from '@/components/subscription';
 import type { NavTab, SubscriptionTier, BillingPeriod } from '@/types';
 
+// Configuration error screen shown when Supabase environment variables are missing
+function ConfigurationError() {
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center p-6">
+      <div className="max-w-md text-center space-y-4">
+        <div className="text-6xl">⚠️</div>
+        <h1 className="text-xl font-semibold text-foreground">Configuration Required</h1>
+        <p className="text-muted-foreground">
+          The application is missing required environment variables. Please ensure
+          <code className="mx-1 px-1.5 py-0.5 bg-muted rounded text-sm">VITE_SUPABASE_URL</code>
+          and
+          <code className="mx-1 px-1.5 py-0.5 bg-muted rounded text-sm">VITE_SUPABASE_ANON_KEY</code>
+          are configured in your deployment environment.
+        </p>
+        <p className="text-sm text-muted-foreground/70">
+          If you're the administrator, check your Vercel environment variables or .env file.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function AppContent() {
+  // Show configuration error if Supabase is not properly configured
+  if (!isSupabaseConfigured) {
+    return <ConfigurationError />;
+  }
+
   const {
     currentProject,
     activeTab,
