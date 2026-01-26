@@ -29,9 +29,15 @@ const formatRelativeTime = (date: Date): string => {
 // Get role display label
 const getRoleLabel = (role: ProjectRole): string => {
   const labels: Record<ProjectRole, string> = {
-    owner: 'HOD',
-    supervisor: 'Makeup Supervisor',
-    artist: 'Floor Artist',
+    owner: 'Owner',
+    designer: 'Designer',
+    hod: 'HOD',
+    supervisor: 'Supervisor',
+    key: 'Key Artist',
+    floor: 'Floor Artist',
+    daily: 'Daily',
+    trainee: 'Trainee',
+    artist: 'Artist',
     viewer: 'Viewer',
   };
   return labels[role] || role;

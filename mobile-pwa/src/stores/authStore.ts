@@ -1,5 +1,8 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { supabase } from '@/lib/supabase';
+import * as supabaseAuth from '@/services/supabaseAuth';
+import * as supabaseProjects from '@/services/supabaseProjects';
 import type {
   User,
   UserTier,
@@ -10,7 +13,7 @@ import type {
   SubscriptionData,
   BillingPeriod,
 } from '@/types';
-import { generateProjectCode, TIER_LIMITS, createDefaultSubscription, SubscriptionTier } from '@/types';
+import { TIER_LIMITS, createDefaultSubscription, SubscriptionTier } from '@/types';
 
 interface AuthState {
   // Auth state
@@ -21,9 +24,9 @@ interface AuthState {
 
   // Navigation
   currentScreen: AuthScreen;
-  screenHistory: AuthScreen[]; // Navigation history stack
+  screenHistory: AuthScreen[];
   hasCompletedOnboarding: boolean;
-  hasSelectedPlan: boolean; // Tracks if user has selected a plan (even if free)
+  hasSelectedPlan: boolean;
 
   // Subscription data
   subscription: SubscriptionData;
@@ -36,7 +39,7 @@ interface AuthState {
 
   // Actions
   setScreen: (screen: AuthScreen, addToHistory?: boolean) => void;
-  goBack: () => void; // Navigate to previous screen in history
+  goBack: () => void;
   signIn: (email: string, password: string) => Promise<boolean>;
   signUp: (name: string, email: string, password: string) => Promise<boolean>;
   signOut: () => void;
@@ -46,16 +49,41 @@ interface AuthState {
   setHasCompletedOnboarding: (value: boolean) => void;
   canCreateProjects: () => boolean;
   updateLastAccessed: (projectId: string) => void;
-  // Subscription actions
   selectTier: (tier: SubscriptionTier, billingPeriod: BillingPeriod) => Promise<boolean>;
   updateSubscription: (subscription: Partial<SubscriptionData>) => void;
+  // New Supabase-specific actions
+  initializeAuth: () => Promise<void>;
+  refreshUserProjects: () => Promise<void>;
 }
 
-// Mock delay to simulate API calls
-const mockDelay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+// Convert Supabase user profile to app User type
+function toAppUser(profile: supabaseAuth.UserProfile): User {
+  return {
+    id: profile.id,
+    email: profile.email,
+    name: profile.name,
+    tier: profile.tier as UserTier,
+    createdAt: new Date(profile.created_at),
+  };
+}
 
-// Mock user database (would be Supabase in production)
-const mockUsers: Map<string, { user: User; password: string }> = new Map();
+// Convert Supabase project to ProjectMembership
+function toProjectMembership(
+  project: supabaseProjects.ProjectWithRole
+): ProjectMembership {
+  return {
+    projectId: project.id,
+    projectName: project.name,
+    productionType: project.production_type as ProductionType,
+    role: project.is_owner ? 'owner' : (project.role as ProjectRole),
+    joinedAt: new Date(project.created_at),
+    lastAccessedAt: new Date(),
+    teamMemberCount: 0, // Will be fetched separately if needed
+    sceneCount: 0, // Will be fetched separately if needed
+    projectCode: project.invite_code,
+    status: project.status === 'wrapped' ? 'wrapped' : 'active',
+  };
+}
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -73,26 +101,68 @@ export const useAuthStore = create<AuthState>()(
       projectMemberships: [],
       guestProjectCode: null,
 
-      // Set current auth screen (optionally adds current screen to history)
+      // Initialize auth state from Supabase session
+      initializeAuth: async () => {
+        try {
+          const session = await supabaseAuth.getSession();
+
+          if (session?.user) {
+            // Get user profile from database
+            const { profile, error } = await supabaseAuth.getUserProfile(session.user.id);
+
+            if (profile && !error) {
+              const appUser = toAppUser(profile);
+
+              // Get user's projects
+              const { projects } = await supabaseProjects.getUserProjects(session.user.id);
+              const memberships = projects.map(toProjectMembership);
+
+              set({
+                isAuthenticated: true,
+                user: appUser,
+                projectMemberships: memberships,
+                hasCompletedOnboarding: true,
+                hasSelectedPlan: true,
+                currentScreen: 'hub',
+              });
+            }
+          }
+        } catch (error) {
+          console.error('Error initializing auth:', error);
+        }
+      },
+
+      // Refresh user's projects from Supabase
+      refreshUserProjects: async () => {
+        const { user } = get();
+        if (!user) return;
+
+        try {
+          const { projects } = await supabaseProjects.getUserProjects(user.id);
+          const memberships = projects.map(toProjectMembership);
+          set({ projectMemberships: memberships });
+        } catch (error) {
+          console.error('Error refreshing projects:', error);
+        }
+      },
+
+      // Set current auth screen
       setScreen: (screen, addToHistory = true) => {
         const { currentScreen, screenHistory } = get();
-        // Don't add to history if navigating to the same screen
         if (screen === currentScreen) return;
 
         if (addToHistory) {
-          // Add current screen to history before navigating
           set({
             currentScreen: screen,
             screenHistory: [...screenHistory, currentScreen],
             error: null,
           });
         } else {
-          // Navigate without adding to history (used for redirects after actions)
           set({ currentScreen: screen, error: null });
         }
       },
 
-      // Navigate back to previous screen in history
+      // Navigate back
       goBack: () => {
         const { screenHistory, isAuthenticated } = get();
         if (screenHistory.length > 0) {
@@ -104,7 +174,6 @@ export const useAuthStore = create<AuthState>()(
             error: null,
           });
         } else {
-          // Fallback: go to appropriate default screen
           set({
             currentScreen: isAuthenticated ? 'hub' : 'welcome',
             error: null,
@@ -112,95 +181,150 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      // Sign in with email/password
+      // Sign in with Supabase
       signIn: async (email, password) => {
         set({ isLoading: true, error: null });
 
         try {
-          await mockDelay(800);
-
-          // Check mock database
-          const userData = mockUsers.get(email.toLowerCase());
-
-          if (!userData) {
-            set({ isLoading: false, error: 'No account found with this email' });
-            return false;
-          }
-
-          if (userData.password !== password) {
-            set({ isLoading: false, error: 'Incorrect password' });
-            return false;
-          }
-
-          set({
-            isAuthenticated: true,
-            user: userData.user,
-            isLoading: false,
-            error: null,
-            currentScreen: 'hub',
-            hasCompletedOnboarding: true,
+          const { user: authUser, error: authError } = await supabaseAuth.signIn({
+            email,
+            password,
           });
 
+          if (authError) {
+            const errorMessage = authError.message.includes('Invalid login')
+              ? 'Invalid email or password'
+              : authError.message;
+            set({ isLoading: false, error: errorMessage });
+            return false;
+          }
+
+          if (!authUser) {
+            set({ isLoading: false, error: 'Sign in failed. Please try again.' });
+            return false;
+          }
+
+          // Get user profile
+          const { profile, error: profileError } = await supabaseAuth.getUserProfile(authUser.id);
+
+          if (profileError || !profile) {
+            // Profile might not exist yet, create one
+            await supabase.from('users').insert({
+              id: authUser.id,
+              email: authUser.email!,
+              name: authUser.user_metadata?.name || email.split('@')[0],
+              tier: 'trainee',
+            });
+
+            const appUser: User = {
+              id: authUser.id,
+              email: authUser.email!,
+              name: authUser.user_metadata?.name || email.split('@')[0],
+              tier: 'trainee',
+              createdAt: new Date(),
+            };
+
+            set({
+              isAuthenticated: true,
+              user: appUser,
+              isLoading: false,
+              error: null,
+              currentScreen: 'hub',
+              hasCompletedOnboarding: true,
+              hasSelectedPlan: true,
+            });
+          } else {
+            const appUser = toAppUser(profile);
+
+            // Get user's projects
+            const { projects } = await supabaseProjects.getUserProjects(authUser.id);
+            const memberships = projects.map(toProjectMembership);
+
+            set({
+              isAuthenticated: true,
+              user: appUser,
+              projectMemberships: memberships,
+              isLoading: false,
+              error: null,
+              currentScreen: 'hub',
+              hasCompletedOnboarding: true,
+              hasSelectedPlan: true,
+            });
+          }
+
           return true;
-        } catch {
+        } catch (error) {
+          console.error('Sign in error:', error);
           set({ isLoading: false, error: 'An error occurred. Please try again.' });
           return false;
         }
       },
 
-      // Sign up with email/password
+      // Sign up with Supabase
       signUp: async (name, email, password) => {
         set({ isLoading: true, error: null });
 
         try {
-          await mockDelay(800);
+          const { user: authUser, error: authError } = await supabaseAuth.signUp({
+            email,
+            password,
+            name,
+          });
 
-          const emailLower = email.toLowerCase();
-
-          // Check if user already exists
-          if (mockUsers.has(emailLower)) {
-            set({ isLoading: false, error: 'An account with this email already exists' });
+          if (authError) {
+            const errorMessage = authError.message.includes('already registered')
+              ? 'An account with this email already exists'
+              : authError.message;
+            set({ isLoading: false, error: errorMessage });
             return false;
           }
 
-          // Create new user (starts on trainee tier, will select plan after signup)
-          const newUser: User = {
-            id: crypto.randomUUID(),
-            email: emailLower,
+          if (!authUser) {
+            set({ isLoading: false, error: 'Sign up failed. Please try again.' });
+            return false;
+          }
+
+          const appUser: User = {
+            id: authUser.id,
+            email: authUser.email!,
             name,
-            tier: 'trainee' as UserTier,
+            tier: 'trainee',
             createdAt: new Date(),
           };
 
-          // Store in mock database
-          mockUsers.set(emailLower, { user: newUser, password });
-
           set({
             isAuthenticated: true,
-            user: newUser,
+            user: appUser,
             isLoading: false,
             error: null,
-            currentScreen: 'select-plan', // Go to plan selection after signup
-            hasCompletedOnboarding: false, // Not complete until plan is selected
+            currentScreen: 'select-plan',
+            hasCompletedOnboarding: false,
             hasSelectedPlan: false,
             subscription: createDefaultSubscription(),
             projectMemberships: [],
           });
 
           return true;
-        } catch {
+        } catch (error) {
+          console.error('Sign up error:', error);
           set({ isLoading: false, error: 'An error occurred. Please try again.' });
           return false;
         }
       },
 
       // Sign out
-      signOut: () => {
+      signOut: async () => {
+        try {
+          await supabaseAuth.signOut();
+        } catch (error) {
+          console.error('Sign out error:', error);
+        }
+
         set({
           isAuthenticated: false,
           user: null,
           currentScreen: 'welcome',
-          screenHistory: [], // Clear navigation history on sign out
+          screenHistory: [],
           hasCompletedOnboarding: false,
           hasSelectedPlan: false,
           subscription: createDefaultSubscription(),
@@ -209,65 +333,64 @@ export const useAuthStore = create<AuthState>()(
         });
       },
 
-      // Join a project with code
+      // Join a project with invite code
       joinProject: async (code) => {
+        const { user, projectMemberships, isAuthenticated } = get();
+
         set({ isLoading: true, error: null });
 
         try {
-          await mockDelay(600);
-
-          const upperCode = code.toUpperCase();
-
-          // Mock validation - in production this would check Supabase
-          // For demo purposes, accept any valid format code
-          const isValid = /^[A-Z]{3}-[A-Z0-9]{4}$/.test(upperCode);
-
-          if (!isValid) {
-            set({ isLoading: false, error: 'Invalid project code format' });
-            return { success: false, error: 'Invalid project code format' };
-          }
-
-          // Mock project name based on code
-          const mockProjectName = `Production ${upperCode.slice(0, 3)}`;
-
-          const { isAuthenticated, projectMemberships } = get();
-
-          if (isAuthenticated) {
-            // Add to user's projects
-            const newMembership: ProjectMembership = {
-              projectId: crypto.randomUUID(),
-              projectName: mockProjectName,
-              productionType: 'film',
-              role: 'artist' as ProjectRole,
-              joinedAt: new Date(),
-              lastAccessedAt: new Date(),
-              teamMemberCount: Math.floor(Math.random() * 10) + 2,
-              sceneCount: Math.floor(Math.random() * 100) + 20, // Mock scene count
-              projectCode: upperCode,
-              status: 'active',
-            };
-
-            set({
-              isLoading: false,
-              projectMemberships: [...projectMemberships, newMembership],
-              currentScreen: 'hub',
-            });
-          } else {
+          if (!isAuthenticated || !user) {
             // Guest mode - store code and enter project directly
             set({
               isLoading: false,
-              guestProjectCode: upperCode,
+              guestProjectCode: code.toUpperCase(),
             });
+            return { success: true, projectName: 'Project' };
           }
 
-          return { success: true, projectName: mockProjectName };
-        } catch {
+          // Join project via Supabase
+          const { project, error } = await supabaseProjects.joinProject(code, user.id);
+
+          if (error) {
+            set({ isLoading: false, error: error.message });
+            return { success: false, error: error.message };
+          }
+
+          if (!project) {
+            set({ isLoading: false, error: 'Failed to join project' });
+            return { success: false, error: 'Failed to join project' };
+          }
+
+          // Add to local state
+          const newMembership: ProjectMembership = {
+            projectId: project.id,
+            projectName: project.name,
+            productionType: project.production_type as ProductionType,
+            role: 'floor',
+            joinedAt: new Date(),
+            lastAccessedAt: new Date(),
+            teamMemberCount: 1,
+            sceneCount: 0,
+            projectCode: project.invite_code,
+            status: 'active',
+          };
+
+          set({
+            isLoading: false,
+            projectMemberships: [...projectMemberships, newMembership],
+            currentScreen: 'hub',
+          });
+
+          return { success: true, projectName: project.name };
+        } catch (error) {
+          console.error('Join project error:', error);
           set({ isLoading: false, error: 'Failed to join project. Please try again.' });
           return { success: false, error: 'Failed to join project' };
         }
       },
 
-      // Create a new project (Supervisor+ only)
+      // Create a new project
       createProject: async (name, type) => {
         const { user, projectMemberships } = get();
 
@@ -279,20 +402,27 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
 
         try {
-          await mockDelay(600);
+          const { project, inviteCode, error } = await supabaseProjects.createProject(
+            name,
+            type,
+            user.id
+          );
 
-          const code = generateProjectCode();
+          if (error || !project || !inviteCode) {
+            set({ isLoading: false, error: error?.message || 'Failed to create project' });
+            return { success: false, error: error?.message || 'Failed to create project' };
+          }
 
           const newMembership: ProjectMembership = {
-            projectId: crypto.randomUUID(),
-            projectName: name,
+            projectId: project.id,
+            projectName: project.name,
             productionType: type,
-            role: 'owner' as ProjectRole,
+            role: 'owner',
             joinedAt: new Date(),
             lastAccessedAt: new Date(),
             teamMemberCount: 1,
-            sceneCount: 0, // New project starts with 0 scenes
-            projectCode: code,
+            sceneCount: 0,
+            projectCode: inviteCode,
             status: 'active',
           };
 
@@ -301,8 +431,9 @@ export const useAuthStore = create<AuthState>()(
             projectMemberships: [...projectMemberships, newMembership],
           });
 
-          return { success: true, code };
-        } catch {
+          return { success: true, code: inviteCode };
+        } catch (error) {
+          console.error('Create project error:', error);
           set({ isLoading: false, error: 'Failed to create project. Please try again.' });
           return { success: false, error: 'Failed to create project' };
         }
@@ -336,7 +467,7 @@ export const useAuthStore = create<AuthState>()(
         set({ projectMemberships: updated });
       },
 
-      // Select subscription tier (after signup or from settings)
+      // Select subscription tier
       selectTier: async (tier, billingPeriod) => {
         const { user } = get();
         if (!user) return false;
@@ -344,74 +475,63 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
 
         try {
-          await mockDelay(600);
+          // Update tier in Supabase
+          const { error } = await supabaseAuth.updateUserTier(user.id, tier);
 
-          // Update user tier
+          if (error) {
+            set({ isLoading: false, error: error.message });
+            return false;
+          }
+
+          // Update local state
           const updatedUser: User = {
             ...user,
             tier: tier as UserTier,
           };
 
-          // Update subscription data
           const updatedSubscription: SubscriptionData = {
             tier,
             status: tier === 'trainee' ? null : 'active',
             billingPeriod: tier === 'trainee' ? null : billingPeriod,
             subscriptionStartedAt: tier !== 'trainee' ? new Date() : undefined,
-            // Mock: set period end to 30 days from now for monthly, 365 for yearly
             currentPeriodEndsAt: tier !== 'trainee'
               ? new Date(Date.now() + (billingPeriod === 'yearly' ? 365 : 30) * 24 * 60 * 60 * 1000)
               : undefined,
           };
-
-          // In production, this would:
-          // 1. Redirect to Stripe Checkout for paid tiers
-          // 2. Create/update Stripe subscription
-          // 3. Store stripe_customer_id and subscription_id
-          // 4. Handle webhook for payment success
 
           set({
             user: updatedUser,
             subscription: updatedSubscription,
             hasSelectedPlan: true,
             hasCompletedOnboarding: true,
-            // Always go to hub (dashboard) after plan selection - user can create/join from there
             currentScreen: 'hub',
             isLoading: false,
             error: null,
           });
 
-          // Update mock database
-          const userData = mockUsers.get(user.email);
-          if (userData) {
-            mockUsers.set(user.email, { ...userData, user: updatedUser });
-          }
-
           return true;
-        } catch {
+        } catch (error) {
+          console.error('Select tier error:', error);
           set({ isLoading: false, error: 'Failed to update subscription. Please try again.' });
           return false;
         }
       },
 
-      // Update subscription data (e.g., from webhook or settings)
+      // Update subscription data
       updateSubscription: (subscriptionUpdate) => {
         const { subscription, user } = get();
         const updatedSubscription = { ...subscription, ...subscriptionUpdate };
 
-        // If tier changed, also update user
         if (subscriptionUpdate.tier && user) {
           const updatedUser = { ...user, tier: subscriptionUpdate.tier as UserTier };
+
+          // Also update in Supabase
+          supabaseAuth.updateUserTier(user.id, subscriptionUpdate.tier).catch(console.error);
+
           set({
             subscription: updatedSubscription,
             user: updatedUser,
           });
-
-          // Update mock database
-          const userData = mockUsers.get(user.email);
-          if (userData) {
-            mockUsers.set(user.email, { ...userData, user: updatedUser });
-          }
         } else {
           set({ subscription: updatedSubscription });
         }
@@ -421,10 +541,9 @@ export const useAuthStore = create<AuthState>()(
       name: 'checks-happy-auth-storage',
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
-        // Only persist these fields
         isAuthenticated: state.isAuthenticated,
         user: state.user,
-        currentScreen: state.currentScreen, // Persist current screen to prevent blank page on reload
+        currentScreen: state.currentScreen,
         hasCompletedOnboarding: state.hasCompletedOnboarding,
         hasSelectedPlan: state.hasSelectedPlan,
         subscription: state.subscription,
@@ -434,3 +553,18 @@ export const useAuthStore = create<AuthState>()(
     }
   )
 );
+
+// Set up auth state listener
+supabase.auth.onAuthStateChange(async (event, session) => {
+  if (event === 'SIGNED_IN' && session?.user) {
+    // User signed in - refresh state
+    useAuthStore.getState().initializeAuth();
+  } else if (event === 'SIGNED_OUT') {
+    // User signed out - clear state
+    useAuthStore.setState({
+      isAuthenticated: false,
+      user: null,
+      projectMemberships: [],
+    });
+  }
+});
