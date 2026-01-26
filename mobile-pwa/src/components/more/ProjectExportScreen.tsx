@@ -1,23 +1,37 @@
 import { useState } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
+import { useBillingStore } from '@/stores/billingStore';
+import { useAuthStore } from '@/stores/authStore';
 import type {
   ExportDocument,
   ExportDocumentType,
   ExportProgress,
   ExportDeliveryMethod,
+  UserTier,
 } from '@/types';
 import { EXPORT_DOCUMENTS } from '@/types';
 
 interface ProjectExportScreenProps {
   onBack: () => void;
   onExportComplete?: () => void;
+  onNavigateToBilling?: () => void;
 }
 
-export function ProjectExportScreen({ onBack, onExportComplete }: ProjectExportScreenProps) {
+// Tiers that can generate invoices
+const INVOICE_TIERS: UserTier[] = ['supervisor', 'designer'];
+
+export function ProjectExportScreen({ onBack, onExportComplete, onNavigateToBilling }: ProjectExportScreenProps) {
   const { currentProject, lifecycle, sceneCaptures } = useProjectStore();
+  const { isBillingComplete } = useBillingStore();
+  const { user } = useAuthStore();
   const [documents, setDocuments] = useState<ExportDocument[]>(
     EXPORT_DOCUMENTS.map(doc => ({ ...doc }))
   );
+
+  // Check if user can generate invoices
+  const canGenerateInvoice = user && INVOICE_TIERS.includes(user.tier);
+  const invoiceSelected = documents.find(d => d.id === 'invoice_summary')?.selected;
+  const billingComplete = isBillingComplete();
   const [deliveryMethod, setDeliveryMethod] = useState<ExportDeliveryMethod>('download');
   const [exportProgress, setExportProgress] = useState<ExportProgress>({
     status: 'idle',
@@ -307,6 +321,68 @@ export function ProjectExportScreen({ onBack, onExportComplete }: ProjectExportS
             </button>
           ))}
         </div>
+
+        {/* Billing Details Prompt - shown when invoice is selected */}
+        {invoiceSelected && canGenerateInvoice && onNavigateToBilling && (
+          <div className={`mb-6 p-4 rounded-xl border ${
+            billingComplete
+              ? 'bg-green-50 border-green-200'
+              : 'bg-amber-50 border-amber-200'
+          }`}>
+            <div className="flex items-start gap-3">
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                billingComplete ? 'bg-green-100' : 'bg-amber-100'
+              }`}>
+                {billingComplete ? (
+                  <svg className="w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                )}
+              </div>
+              <div className="flex-1">
+                <p className={`text-sm font-medium ${billingComplete ? 'text-green-700' : 'text-amber-700'}`}>
+                  {billingComplete ? 'Billing details complete' : 'Billing details incomplete'}
+                </p>
+                <p className={`text-xs mt-0.5 ${billingComplete ? 'text-green-600' : 'text-amber-600'}`}>
+                  {billingComplete
+                    ? 'Your personal info, bank details, and VAT settings will appear on the invoice.'
+                    : 'Complete your billing details to generate professional invoices.'}
+                </p>
+                <button
+                  onClick={onNavigateToBilling}
+                  className={`mt-2 text-xs font-medium ${billingComplete ? 'text-green-700' : 'text-amber-700'} underline`}
+                >
+                  {billingComplete ? 'Edit billing details' : 'Complete billing details'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Invoice Tier Restriction - shown when invoice selected but user doesn't have access */}
+        {invoiceSelected && !canGenerateInvoice && (
+          <div className="mb-6 p-4 rounded-xl border bg-gray-50 border-gray-200">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-gold/10">
+                <svg className="w-4 h-4 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-text-primary">
+                  Supervisor Feature
+                </p>
+                <p className="text-xs text-text-muted mt-0.5">
+                  Upgrade to Supervisor or Designer to generate professional invoices with your billing details.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Delivery Method */}
         <div className="mb-6">
