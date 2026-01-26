@@ -3,21 +3,27 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
-}
+// Flag to check if Supabase is properly configured
+export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
 
-// Create Supabase client
+// Create Supabase client only if configured, otherwise create a placeholder
 // Note: Using 'any' for database type until schema is deployed and types are generated
-export const supabase: SupabaseClient<any> = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true,
-    storage: localStorage,
-    storageKey: 'checks-happy-auth',
-  },
-});
+export const supabase: SupabaseClient<any> = isSupabaseConfigured
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true,
+        storage: localStorage,
+        storageKey: 'checks-happy-auth',
+      },
+    })
+  : createClient('https://placeholder.supabase.co', 'placeholder-key', {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
 
 // Helper to get current user
 export const getCurrentUser = async () => {
