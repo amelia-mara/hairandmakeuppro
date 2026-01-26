@@ -799,7 +799,7 @@ export interface WeekSummary {
 export const DAY_TYPE_LABELS: Record<DayType, string> = {
   SWD: 'Standard Working Day',
   CWD: 'Continuous Working Day',
-  SCWD: 'Short Continuous Working Day',
+  SCWD: 'Semi-Continuous Working Day',
 };
 
 export const BASE_DAY_OPTIONS: { value: BaseDayHours; label: string }[] = [
@@ -811,18 +811,20 @@ export const BASE_DAY_OPTIONS: { value: BaseDayHours; label: string }[] = [
 // Day type options for rate card dropdown
 export const DAY_TYPE_OPTIONS: { value: DayType; label: string; lunchMinutes: number }[] = [
   { value: 'SWD', label: 'SWD (Standard Working Day - 1hr lunch)', lunchMinutes: 60 },
-  { value: 'CWD', label: 'CWD (Continuous - 30min lunch in hand)', lunchMinutes: 30 },
-  { value: 'SCWD', label: 'SCWD (Short Continuous - 30min lunch)', lunchMinutes: 30 },
+  { value: 'SCWD', label: 'SCWD (Semi-Continuous - 30min lunch)', lunchMinutes: 30 },
+  { value: 'CWD', label: 'CWD (Continuous - no lunch, working in hand)', lunchMinutes: 0 },
 ];
 
 // Get lunch duration in minutes based on day type
+// SWD = 1 hour, SCWD = 30 minutes, CWD = 0 (no lunch - working in hand)
 export const getLunchDurationForDayType = (dayType: DayType): number => {
   switch (dayType) {
     case 'SWD':
-      return 60; // 1 hour
-    case 'CWD':
+      return 60; // 1 hour lunch
     case 'SCWD':
-      return 30; // 30 minutes
+      return 30; // 30 minutes lunch
+    case 'CWD':
+      return 0; // No lunch - continuous working day
     default:
       return 60;
   }
