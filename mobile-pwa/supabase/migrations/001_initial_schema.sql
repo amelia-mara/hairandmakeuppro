@@ -1,5 +1,15 @@
 -- Checks Happy Database Schema
--- Run this in the Supabase SQL Editor
+-- ==============================================================================
+-- SETUP INSTRUCTIONS:
+-- 1. Go to your Supabase project dashboard
+-- 2. Navigate to SQL Editor
+-- 3. Run this file FIRST (001_initial_schema.sql)
+-- 4. Then run 002_rls_policies.sql
+-- 5. Finally run 003_storage_bucket.sql
+--
+-- Note: If you've already run these, you may need to drop existing objects first
+-- or use IF NOT EXISTS / ON CONFLICT clauses (already included where applicable)
+-- ==============================================================================
 
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -210,6 +220,32 @@ CREATE TABLE IF NOT EXISTS timesheets (
 CREATE INDEX IF NOT EXISTS idx_timesheets_project_user ON timesheets(project_id, user_id);
 
 -- ============================================
+-- TRIGGER: Auto-create user profile on auth.users insert
+-- ============================================
+-- This ensures a user profile is always created when someone signs up,
+-- which is required for foreign key constraints (e.g., projects.created_by)
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.users (id, email, name, tier)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'name', split_part(NEW.email, '@', 1)),
+    'trainee'
+  )
+  ON CONFLICT (id) DO NOTHING;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Note: This trigger must be created after the users table exists
+-- Run this AFTER creating the tables, or it will be created when auth.users gets an insert
+CREATE OR REPLACE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- ============================================
 -- HELPER FUNCTION: Generate Invite Code
 -- ============================================
 CREATE OR REPLACE FUNCTION generate_invite_code()
@@ -248,6 +284,28 @@ CREATE TRIGGER trigger_set_invite_code
   BEFORE INSERT ON projects
   FOR EACH ROW
   EXECUTE FUNCTION set_invite_code();
+
+-- ============================================
+-- TRIGGER: Auto-set created_by to auth.uid()
+-- ============================================
+-- This ensures created_by is always set to the authenticated user,
+-- even if the frontend passes a different value or no value.
+CREATE OR REPLACE FUNCTION set_created_by()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Always set created_by to the authenticated user's ID
+  -- This prevents any mismatch between frontend userId and auth.uid()
+  IF auth.uid() IS NOT NULL THEN
+    NEW.created_by := auth.uid();
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER trigger_set_created_by
+  BEFORE INSERT ON projects
+  FOR EACH ROW
+  EXECUTE FUNCTION set_created_by();
 
 -- ============================================
 -- TRIGGER: Update timesheets.updated_at

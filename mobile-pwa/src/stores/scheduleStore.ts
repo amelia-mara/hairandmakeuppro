@@ -22,6 +22,11 @@ import {
   findMatchingSceneData,
 } from '@/utils/helpers';
 
+interface SavedScheduleData {
+  schedule: ProductionSchedule | null;
+  discrepancies: SceneDiscrepancy[];
+}
+
 interface ScheduleState {
   // The uploaded production schedule
   schedule: ProductionSchedule | null;
@@ -31,6 +36,9 @@ interface ScheduleState {
 
   // Discrepancies found when cross-referencing with breakdown
   discrepancies: SceneDiscrepancy[];
+
+  // Saved schedules by project ID (for multi-project support)
+  savedSchedules: Record<string, SavedScheduleData>;
 
   // Loading state
   isUploading: boolean;
@@ -81,6 +89,12 @@ interface ScheduleState {
 
   // Get shooting info (day and order) for a scene
   getShootingInfoForScene: (sceneNumber: string) => { dayNumber: number; shootOrder: number } | null;
+
+  // Multi-project support: save/restore schedule data
+  saveScheduleForProject: (projectId: string) => void;
+  restoreScheduleForProject: (projectId: string) => boolean;
+  hasSavedSchedule: (projectId: string) => boolean;
+  clearScheduleForProject: () => void;
 }
 
 export const useScheduleStore = create<ScheduleState>()(
@@ -89,6 +103,7 @@ export const useScheduleStore = create<ScheduleState>()(
       schedule: null,
       stage1Result: null,
       discrepancies: [],
+      savedSchedules: {},
       isUploading: false,
       uploadError: null,
       showDiscrepancyModal: false,
@@ -619,6 +634,77 @@ export const useScheduleStore = create<ScheduleState>()(
         }
         return null;
       },
+
+      // Save current schedule data for a project (before switching projects)
+      saveScheduleForProject: (projectId: string) => {
+        const state = get();
+        if (state.schedule || state.discrepancies.length > 0) {
+          set((s) => ({
+            savedSchedules: {
+              ...s.savedSchedules,
+              [projectId]: {
+                schedule: s.schedule,
+                discrepancies: s.discrepancies,
+              },
+            },
+            // Clear current schedule after saving
+            schedule: null,
+            discrepancies: [],
+            stage1Result: null,
+            isUploading: false,
+            uploadError: null,
+            isProcessingStage2: false,
+            stage2Progress: { current: 0, total: 0, message: '' },
+            aiProcessingStatus: { status: 'idle', progress: 0, message: '' },
+            isAIProcessing: false,
+          }));
+        }
+      },
+
+      // Restore schedule data for a project (when returning to a project)
+      restoreScheduleForProject: (projectId: string) => {
+        const state = get();
+        const savedData = state.savedSchedules[projectId];
+        if (!savedData) return false;
+
+        // Remove from saved and set as current
+        const newSavedSchedules = { ...state.savedSchedules };
+        delete newSavedSchedules[projectId];
+
+        set({
+          schedule: savedData.schedule,
+          discrepancies: savedData.discrepancies,
+          savedSchedules: newSavedSchedules,
+          stage1Result: null,
+          isUploading: false,
+          uploadError: null,
+          isProcessingStage2: false,
+          stage2Progress: { current: 0, total: 0, message: '' },
+          aiProcessingStatus: { status: 'idle', progress: 0, message: '' },
+          isAIProcessing: false,
+        });
+        return true;
+      },
+
+      // Check if a project has saved schedule data
+      hasSavedSchedule: (projectId: string) => {
+        return !!get().savedSchedules[projectId];
+      },
+
+      // Clear current schedule without saving (for switching to a new project)
+      clearScheduleForProject: () => {
+        set({
+          schedule: null,
+          discrepancies: [],
+          stage1Result: null,
+          isUploading: false,
+          uploadError: null,
+          isProcessingStage2: false,
+          stage2Progress: { current: 0, total: 0, message: '' },
+          aiProcessingStatus: { status: 'idle', progress: 0, message: '' },
+          isAIProcessing: false,
+        });
+      },
     }),
     {
       name: 'hair-makeup-schedule',
@@ -626,6 +712,7 @@ export const useScheduleStore = create<ScheduleState>()(
       partialize: (state) => ({
         schedule: state.schedule,
         discrepancies: state.discrepancies,
+        savedSchedules: state.savedSchedules,
       }),
     }
   )

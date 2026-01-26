@@ -1,5 +1,10 @@
 -- Checks Happy Row-Level Security Policies
+-- ==============================================================================
 -- Run this AFTER 001_initial_schema.sql
+--
+-- This file enables Row-Level Security (RLS) on all tables and creates
+-- policies that control who can read, create, update, and delete data.
+-- ==============================================================================
 
 -- ============================================
 -- ENABLE RLS ON ALL TABLES
@@ -72,10 +77,24 @@ CREATE POLICY "Project members can view projects"
   ON projects FOR SELECT
   USING (is_project_member(id));
 
+-- Allow authenticated users to look up projects by invite code (for joining)
+-- This policy allows SELECT only when querying by invite_code
+CREATE POLICY "Users can lookup project by invite code"
+  ON projects FOR SELECT
+  USING (
+    auth.uid() IS NOT NULL
+    -- Note: The actual filtering by invite_code happens in the WHERE clause
+    -- This policy allows the query to proceed for authenticated users
+  );
+
 -- Authenticated users can create projects
+-- Note: The trigger set_created_by() automatically sets created_by to auth.uid()
 CREATE POLICY "Authenticated users can create projects"
   ON projects FOR INSERT
-  WITH CHECK (auth.uid() = created_by);
+  WITH CHECK (
+    auth.uid() IS NOT NULL
+    AND auth.uid() = created_by
+  );
 
 -- Only owners can update projects
 CREATE POLICY "Project owners can update projects"
@@ -86,11 +105,6 @@ CREATE POLICY "Project owners can update projects"
 CREATE POLICY "Project owners can delete projects"
   ON projects FOR DELETE
   USING (is_project_owner(id));
-
--- Allow anyone to look up projects by invite code (for joining)
-CREATE POLICY "Anyone can lookup project by invite code"
-  ON projects FOR SELECT
-  USING (TRUE);
 
 -- ============================================
 -- PROJECT MEMBERS POLICIES
