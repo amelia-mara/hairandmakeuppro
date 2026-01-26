@@ -36,7 +36,6 @@ export function SceneList({ onSceneSelect }: SceneListProps) {
     <div className="min-h-screen bg-background pb-safe-bottom">
       <Header
         title={currentProject?.name ?? 'Project'}
-        showDemo={currentProject?.isDemoProject === true}
         showSearch
         onSearch={() => setIsSearchOpen(!isSearchOpen)}
       />
