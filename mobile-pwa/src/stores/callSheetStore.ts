@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
+import { persist } from 'zustand/middleware';
+import { createHybridStorage } from '@/db/zustandStorage';
 import type { CallSheet, CallSheetScene, ShootingSceneStatus, SceneFilmingStatus } from '@/types';
 import { parseCallSheetPDF } from '@/utils/callSheetParser';
 
@@ -180,7 +181,7 @@ export const useCallSheetStore = create<CallSheetState>()(
     {
       name: 'hair-makeup-callsheets',
       version: STORE_VERSION,
-      storage: createJSONStorage(() => localStorage),
+      storage: createHybridStorage('hair-makeup-callsheets'),
       partialize: (state) => ({
         callSheets: state.callSheets,
         activeCallSheetId: state.activeCallSheetId,

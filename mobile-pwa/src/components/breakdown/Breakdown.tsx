@@ -376,39 +376,71 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
     return scenes.sort((a, b) => a.sceneNumber.localeCompare(b.sceneNumber, undefined, { numeric: true }));
   }, [currentProject, filters, sortMode, getShootingInfoForScene]);
 
-  // Get scene completion progress
-  const getSceneProgress = (scene: Scene) => {
-    if (!currentProject) return { captured: 0, total: 0 };
-    const total = scene.characters.length;
-    let captured = 0;
+  // Pre-compute data maps for efficient lookups (avoids repeated .find() calls in render loops)
 
-    scene.characters.forEach(charId => {
-      const captureKey = `${scene.id}-${charId}`;
-      const capture = sceneCaptures[captureKey];
-      if (capture && Object.keys(capture.photos).length > 0) {
-        captured++;
+  // Map: characterId -> Character
+  const characterMap = useMemo(() => {
+    if (!currentProject) return new Map<string, Character>();
+    return new Map(currentProject.characters.map(c => [c.id, c]));
+  }, [currentProject?.characters]);
+
+  // Map: sceneId -> Character[] (pre-computed character list for each scene)
+  const sceneCharactersMap = useMemo(() => {
+    if (!currentProject) return new Map<string, Character[]>();
+    const map = new Map<string, Character[]>();
+    for (const scene of currentProject.scenes) {
+      const characters = scene.characters
+        .map(charId => characterMap.get(charId))
+        .filter((c): c is Character => c !== undefined);
+      map.set(scene.id, characters);
+    }
+    return map;
+  }, [currentProject?.scenes, characterMap]);
+
+  // Map: sceneId -> { captured: number, total: number } (pre-computed progress)
+  const sceneProgressMap = useMemo(() => {
+    if (!currentProject) return new Map<string, { captured: number; total: number }>();
+    const map = new Map<string, { captured: number; total: number }>();
+    for (const scene of currentProject.scenes) {
+      const total = scene.characters.length;
+      let captured = 0;
+      scene.characters.forEach(charId => {
+        const captureKey = `${scene.id}-${charId}`;
+        const capture = sceneCaptures[captureKey];
+        if (capture && Object.keys(capture.photos).length > 0) {
+          captured++;
+        }
+      });
+      map.set(scene.id, { captured, total });
+    }
+    return map;
+  }, [currentProject?.scenes, sceneCaptures]);
+
+  // Map: "characterId-sceneNumber" -> Look (pre-computed look assignments)
+  const characterLookMap = useMemo(() => {
+    if (!currentProject) return new Map<string, Look>();
+    const map = new Map<string, Look>();
+    for (const look of currentProject.looks) {
+      for (const sceneNum of look.scenes) {
+        map.set(`${look.characterId}-${sceneNum}`, look);
       }
-    });
+    }
+    return map;
+  }, [currentProject?.looks]);
 
-    return { captured, total };
+  // Fast lookup functions using pre-computed maps
+  const getSceneProgress = (scene: Scene) => {
+    return sceneProgressMap.get(scene.id) || { captured: 0, total: 0 };
   };
 
-  // Get characters for a scene
   const getCharactersForScene = (scene: Scene): Character[] => {
-    if (!currentProject) return [];
-    return scene.characters
-      .map(charId => currentProject.characters.find(c => c.id === charId))
-      .filter((c): c is Character => c !== undefined);
+    return sceneCharactersMap.get(scene.id) || [];
   };
 
-  // Get look for character in scene
   const getLookForCharacter = (characterId: string, sceneNumber: string) => {
-    return currentProject?.looks.find(
-      l => l.characterId === characterId && l.scenes.includes(sceneNumber)
-    );
+    return characterLookMap.get(`${characterId}-${sceneNumber}`);
   };
 
-  // Get capture for character in scene
   const getCapture = (sceneId: string, characterId: string) => {
     return sceneCaptures[`${sceneId}-${characterId}`];
   };

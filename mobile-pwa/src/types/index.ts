@@ -684,6 +684,7 @@ export const countSFXFields = (sfx: SFXDetails): number => {
 // ============================================
 
 export type BaseDayHours = 10 | 11 | 12;
+export type BaseContract = '10+1' | '11+1';
 export type DayType = 'SWD' | 'CWD' | 'SCWD';
 export type EntryStatus = 'draft' | 'pending' | 'approved';
 export type TimesheetView = 'week' | 'month';
@@ -691,6 +692,7 @@ export type TimesheetView = 'week' | 'month';
 export interface RateCard {
   dailyRate: number;
   baseDayHours: BaseDayHours;
+  baseContract: BaseContract; // BECTU base contract (10+1 or 11+1)
   dayType: DayType; // Working day type - determines lunch duration
   otMultiplier: number; // 1.5x after base hours
   lateNightMultiplier: number; // 2x after 23:00
@@ -711,12 +713,14 @@ export interface TimesheetEntry {
   lunchEnd?: string; // "14:00" format - lunch end time
   outOfChair: string; // "17:00" format - talent leaves chair
   wrapOut: string; // "18:00" format - leave building
-  lunchTaken: number; // actual lunch in minutes
+  lunchTaken: number; // actual lunch in minutes (auto-set from dayType)
   isSixthDay: boolean;
   isSeventhDay: boolean; // 7th consecutive day (2x multiplier)
   notes: string; // OT justification notes for production accounting
   status: EntryStatus;
   productionDay?: number;
+  // BECTU turnaround tracking
+  previousWrapOut?: string; // previous day's wrap out time for turnaround calculation
   // Call sheet auto-fill tracking
   autoFilledFrom?: string; // call sheet ID if auto-filled
   callSheetUnitCall?: string; // original call sheet value for comparison
@@ -725,21 +729,47 @@ export interface TimesheetEntry {
 }
 
 export interface TimesheetCalculation {
+  // Rates (BECTU)
+  contractedHours: number; // Hours before OT kicks in (based on contract + day type)
+  hourlyRate: number; // Day rate / contracted hours
+  otRate: number; // Hourly rate * OT multiplier
+
+  // Hours breakdown
   preCallHours: number;
-  preCallEarnings: number;
-  workingHours: number;
-  baseHours: number;
-  otHours: number;
+  workingHours: number; // Alias for actualWorkHours
+  actualWorkHours: number; // Total work hours including pre-call
+  baseHours: number; // Hours at standard rate (up to contracted hours)
+  otHours: number; // Hours beyond contracted
+  brokenLunchHours: number; // Hours of broken lunch penalty
+  brokenTurnaroundHours: number; // Hours of broken turnaround penalty
   lateNightHours: number;
   totalHours: number;
-  dailyEarnings: number;
+
+  // Earnings breakdown
+  preCallEarnings: number;
+  dailyEarnings: number; // Base pay (day rate guarantee)
+  basePay: number; // Alias for dailyEarnings
   otEarnings: number;
+  overtimePay: number; // Alias for otEarnings
+  brokenLunchPay: number;
+  brokenTurnaroundPay: number;
   lateNightEarnings: number;
+  lateNightPay: number; // Alias for lateNightEarnings
   sixthDayBonus: number;
   seventhDayBonus: number;
+  dayMultiplier: number; // 1, 1.5 (6th day), or 2 (7th day)
+  subtotal: number; // Before day multiplier
   kitRental: number;
   totalEarnings: number;
-  brokenLunch?: boolean; // True if lunch was taken less than 6hrs from unit call (SWD/SCWD)
+  totalPay: number; // Alias for totalEarnings
+
+  // Warning flags
+  brokenLunch: boolean; // True if lunch was taken more than 6hrs from unit call
+  hasBrokenLunch: boolean; // Alias
+  brokenTurnaround: boolean; // True if turnaround was less than 11 hours
+  hasBrokenTurnaround: boolean; // Alias
+  hasLateNight: boolean;
+  hasOvertime: boolean;
 }
 
 export interface WeekSummary {
@@ -752,15 +782,24 @@ export interface WeekSummary {
   sixthDayHours: number;
   seventhDayHours: number;
   lateNightHours: number;
+  brokenLunchHours: number;
+  brokenTurnaroundHours: number;
   kitRentalTotal: number;
   totalEarnings: number;
   entries: TimesheetEntry[];
+  // Breakdown totals
+  basePay: number;
+  overtimePay: number;
+  preCallPay: number;
+  brokenLunchPay: number;
+  brokenTurnaroundPay: number;
+  lateNightPay: number;
 }
 
 export const DAY_TYPE_LABELS: Record<DayType, string> = {
   SWD: 'Standard Working Day',
   CWD: 'Continuous Working Day',
-  SCWD: 'Short Continuous Working Day',
+  SCWD: 'Semi-Continuous Working Day',
 };
 
 export const BASE_DAY_OPTIONS: { value: BaseDayHours; label: string }[] = [
@@ -772,18 +811,20 @@ export const BASE_DAY_OPTIONS: { value: BaseDayHours; label: string }[] = [
 // Day type options for rate card dropdown
 export const DAY_TYPE_OPTIONS: { value: DayType; label: string; lunchMinutes: number }[] = [
   { value: 'SWD', label: 'SWD (Standard Working Day - 1hr lunch)', lunchMinutes: 60 },
-  { value: 'CWD', label: 'CWD (Continuous - 30min lunch in hand)', lunchMinutes: 30 },
-  { value: 'SCWD', label: 'SCWD (Short Continuous - 30min lunch)', lunchMinutes: 30 },
+  { value: 'SCWD', label: 'SCWD (Semi-Continuous - 30min lunch)', lunchMinutes: 30 },
+  { value: 'CWD', label: 'CWD (Continuous - no lunch, working in hand)', lunchMinutes: 0 },
 ];
 
 // Get lunch duration in minutes based on day type
+// SWD = 1 hour, SCWD = 30 minutes, CWD = 0 (no lunch - working in hand)
 export const getLunchDurationForDayType = (dayType: DayType): number => {
   switch (dayType) {
     case 'SWD':
-      return 60; // 1 hour
-    case 'CWD':
+      return 60; // 1 hour lunch
     case 'SCWD':
-      return 30; // 30 minutes
+      return 30; // 30 minutes lunch
+    case 'CWD':
+      return 0; // No lunch - continuous working day
     default:
       return 60;
   }
@@ -792,6 +833,7 @@ export const getLunchDurationForDayType = (dayType: DayType): number => {
 export const createDefaultRateCard = (): RateCard => ({
   dailyRate: 0,
   baseDayHours: 11,
+  baseContract: '11+1',
   dayType: 'SWD',
   otMultiplier: 1.5,
   lateNightMultiplier: 2.0,
@@ -849,6 +891,94 @@ export const getCurrencyByCode = (code: CurrencyCode): Currency => {
 export const formatCurrency = (amount: number, currencyCode: CurrencyCode = DEFAULT_CURRENCY): string => {
   const currency = getCurrencyByCode(currencyCode);
   return `${currency.symbol}${amount.toFixed(2)}`;
+};
+
+// ============================================
+// BILLING DETAILS TYPES
+// ============================================
+
+// Bank details for payment
+export interface BankDetails {
+  accountName: string;
+  sortCode: string;
+  accountNumber: string;
+}
+
+// VAT/Tax settings
+export interface VATSettings {
+  isVATRegistered: boolean;
+  vatNumber: string;
+  vatRate: number; // Default 20% in UK
+}
+
+// Personal/Business billing details (tied to user, not project)
+export interface BillingDetails {
+  // Personal/Business Information
+  fullName: string;
+  businessName: string; // Optional - for freelancers trading under a name
+  address: string; // Multi-line address
+  phone: string;
+  email: string;
+
+  // Bank details for payment
+  bankDetails: BankDetails;
+
+  // Payment terms
+  paymentTerms: string; // e.g., "Payment within 30 days"
+
+  // VAT/Tax settings
+  vatSettings: VATSettings;
+
+  // Metadata
+  lastUpdated?: Date;
+}
+
+// Default billing details for new users
+export const createEmptyBillingDetails = (): BillingDetails => ({
+  fullName: '',
+  businessName: '',
+  address: '',
+  phone: '',
+  email: '',
+  bankDetails: {
+    accountName: '',
+    sortCode: '',
+    accountNumber: '',
+  },
+  paymentTerms: 'Payment within 30 days',
+  vatSettings: {
+    isVATRegistered: false,
+    vatNumber: '',
+    vatRate: 20, // UK standard VAT rate
+  },
+});
+
+// Invoice calculation with VAT
+export interface InvoiceCalculation {
+  subtotal: number; // Before VAT
+  vatAmount: number; // VAT if applicable
+  total: number; // Including VAT
+  isVATApplicable: boolean;
+  vatRate: number;
+}
+
+// Calculate invoice totals with VAT
+export const calculateInvoiceWithVAT = (
+  subtotal: number,
+  vatSettings: VATSettings
+): InvoiceCalculation => {
+  const isVATApplicable = vatSettings.isVATRegistered;
+  const vatRate = vatSettings.vatRate;
+  const vatAmount = isVATApplicable ? subtotal * (vatRate / 100) : 0;
+  const total = subtotal + vatAmount;
+
+  return {
+    subtotal,
+    vatAmount,
+    total,
+    isVATApplicable,
+    vatRate,
+  };
 };
 
 // ============================================

@@ -42,13 +42,7 @@ export function useCamera(options: UseCameraOptions = {}): UseCameraReturn {
     };
   }, []);
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      stopCamera();
-    };
-  }, []);
-
+  // Stop camera helper - releases all media tracks
   const stopCamera = useCallback(() => {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
@@ -58,6 +52,21 @@ export function useCamera(options: UseCameraOptions = {}): UseCameraReturn {
       videoRef.current.srcObject = null;
     }
     setIsReady(false);
+  }, []);
+
+  // Cleanup on unmount - ensures camera is released when component unmounts
+  useEffect(() => {
+    // Return cleanup function that uses refs directly (not callbacks)
+    // to avoid stale closure issues
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+    };
   }, []);
 
   const startCamera = useCallback(async () => {
@@ -208,6 +217,14 @@ export function useCameraPermissions() {
   const [permission, setPermission] = useState<'granted' | 'denied' | 'prompt' | 'unknown'>('unknown');
 
   useEffect(() => {
+    let permissionStatus: PermissionStatus | null = null;
+
+    const handleChange = () => {
+      if (permissionStatus) {
+        setPermission(permissionStatus.state);
+      }
+    };
+
     const checkPermission = async () => {
       try {
         if (!navigator.permissions) {
@@ -216,17 +233,24 @@ export function useCameraPermissions() {
         }
 
         const result = await navigator.permissions.query({ name: 'camera' as PermissionName });
+        permissionStatus = result;
         setPermission(result.state);
 
-        result.addEventListener('change', () => {
-          setPermission(result.state);
-        });
+        // Add listener with proper cleanup reference
+        result.addEventListener('change', handleChange);
       } catch {
         setPermission('unknown');
       }
     };
 
     checkPermission();
+
+    // Cleanup: remove event listener when component unmounts
+    return () => {
+      if (permissionStatus) {
+        permissionStatus.removeEventListener('change', handleChange);
+      }
+    };
   }, []);
 
   return permission;
