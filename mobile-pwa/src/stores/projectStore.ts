@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { createHybridStorage } from '@/db/zustandStorage';
+import { useScheduleStore } from './scheduleStore';
 import type {
   Project,
   Scene,
@@ -219,6 +220,9 @@ export const useProjectStore = create<ProjectState>()(
           const lifecycleToSave = state.lifecycle;
           const needsSetupToSave = state.needsSetup;
 
+          // Also save the schedule data for this project
+          useScheduleStore.getState().saveScheduleForProject(projectId);
+
           set((s) => ({
             savedProjects: {
               ...s.savedProjects,
@@ -239,6 +243,9 @@ export const useProjectStore = create<ProjectState>()(
             wrapTriggerReason: null,
           }));
         } else {
+          // Clear schedule data when clearing project without saving
+          useScheduleStore.getState().clearScheduleForProject();
+
           set({
             currentProject: null,
             currentSceneId: null,
@@ -261,6 +268,9 @@ export const useProjectStore = create<ProjectState>()(
         // Remove from saved and set as current
         const newSavedProjects = { ...state.savedProjects };
         delete newSavedProjects[projectId];
+
+        // Also restore the schedule data for this project
+        useScheduleStore.getState().restoreScheduleForProject(projectId);
 
         set({
           currentProject: savedData.project,
