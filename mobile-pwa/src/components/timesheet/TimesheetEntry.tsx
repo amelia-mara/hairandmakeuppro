@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTimesheetStore } from '@/stores/timesheetStore';
 import type { DayType, TimesheetEntry as TimesheetEntryType } from '@/types';
-import { DAY_TYPE_LABELS, createEmptyTimesheetEntry } from '@/types';
+import { DAY_TYPE_LABELS, createEmptyTimesheetEntry, getLunchDurationForDayType } from '@/types';
 import { HoursBreakdownCard } from './HoursBreakdownCard';
 
 // Debounce helper with flush capability
@@ -49,6 +49,7 @@ export function TimesheetEntry({ onBack }: TimesheetEntryProps) {
     getEntry,
     saveEntry,
     calculateEntry,
+    getPreviousWrapOut,
   } = useTimesheetStore();
 
   const [entry, setEntry] = useState<TimesheetEntryType>(() =>
@@ -88,8 +89,11 @@ export function TimesheetEntry({ onBack }: TimesheetEntryProps) {
     };
   }, [flushSave]);
 
-  // Calculate values
-  const calculation = calculateEntry(entry);
+  // Get previous wrap time for turnaround calculation
+  const previousWrapOut = getPreviousWrapOut(selectedDate);
+
+  // Calculate values with BECTU logic
+  const calculation = calculateEntry(entry, previousWrapOut);
 
   // Format date for display
   const formatDate = () => {
@@ -103,12 +107,22 @@ export function TimesheetEntry({ onBack }: TimesheetEntryProps) {
 
   const { dayName, formatted } = formatDate();
 
-  // Handle field updates
+  // Handle field updates - auto-update lunch duration when day type changes
   const updateField = <K extends keyof TimesheetEntryType>(
     field: K,
     value: TimesheetEntryType[K]
   ) => {
-    setEntry((prev) => ({ ...prev, [field]: value }));
+    setEntry((prev) => {
+      const updates: Partial<TimesheetEntryType> = { [field]: value };
+
+      // Auto-update lunch duration when day type changes (BECTU standard)
+      if (field === 'dayType') {
+        const newDayType = value as DayType;
+        updates.lunchTaken = getLunchDurationForDayType(newDayType);
+      }
+
+      return { ...prev, ...updates };
+    });
   };
 
   // Handle save button - flush any pending auto-save and navigate back
@@ -317,8 +331,8 @@ export function TimesheetEntry({ onBack }: TimesheetEntryProps) {
           </div>
         </div>
 
-        {/* Hours Breakdown Card - Production Accountability Focus */}
-        <HoursBreakdownCard calculation={calculation} entry={entry} />
+        {/* Hours Breakdown Card - BECTU Calculations */}
+        <HoursBreakdownCard calculation={calculation} entry={entry} previousWrapOut={previousWrapOut} />
 
         {/* Notes - OT justification for production */}
         <div className="card">
