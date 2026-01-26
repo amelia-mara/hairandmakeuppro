@@ -726,7 +726,9 @@ const TodaySceneCard = memo(function TodaySceneCard({
             handleLongPress();
           }}
           className={clsx(
-            'w-full text-left card transition-all relative overflow-hidden',
+            'w-full text-left card transition-all relative',
+            // Only apply overflow-hidden when dropdown is closed to prevent clipping
+            !showStatusDropdown && 'overflow-hidden',
             isReorderMode ? 'pr-16' : 'active:scale-[0.98] cursor-pointer'
           )}
         >
