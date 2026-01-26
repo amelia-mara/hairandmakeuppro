@@ -8,8 +8,16 @@ import type {
   TimesheetView,
   CallSheet,
   DayType,
+  BaseContract,
 } from '@/types';
 import { createDefaultRateCard, createEmptyTimesheetEntry, getLunchDurationForDayType } from '@/types';
+import {
+  calculateBECTUTimesheet,
+  getLunchDuration,
+  baseDayHoursToContract,
+  type BECTUTimesheetEntry,
+  type BECTUDayType,
+} from '@/utils/bectuCalculations';
 
 // Parse call sheet dayType string to determine DayType
 function parseDayTypeFromCallSheet(dayTypeStr?: string): DayType {
@@ -21,78 +29,73 @@ function parseDayTypeFromCallSheet(dayTypeStr?: string): DayType {
 }
 
 /**
- * Calculate the OT threshold (working hours before overtime kicks in) based on day type
- *
- * UK Film Industry working day rules:
- *
- * SWD (Standard Working Day):
- * - 10hrs or 11hrs working + 1hr unpaid lunch
- * - OT starts after baseDayHours (e.g., 10hrs for 10+1, 11hrs for 11+1)
- * - Lunch must happen minimum 6hrs from unit call, otherwise it's a "broken lunch"
- *
- * SCWD (Short Continuous Working Day):
- * - 9.5hr work day (from 10+1) or 10.5hrs (from 11+1)
- * - 30 mins lunch - minimum 6 hours from unit call
- * - OT starts after baseDayHours - 0.5 (e.g., 9.5hrs for 10+1, 10.5hrs for 11+1)
- *
- * CWD (Continuous Working Day):
- * - 9 hours straight working (from 10+1) or 10 hours (from 11+1)
- * - Working lunch "in hand" (30 min paid)
- * - OT starts after baseDayHours - 1 (e.g., 9hrs for 10+1, 10hrs for 11+1)
+ * Create empty calculation result for incomplete entries
  */
-function getOTThresholdForDayType(dayType: DayType, baseDayHours: number): number {
-  switch (dayType) {
-    case 'SWD':
-      // Standard: full baseDayHours working before OT
-      // e.g., 10+1 = 10hrs working, 11+1 = 11hrs working
-      return baseDayHours;
-    case 'SCWD':
-      // Short Continuous: 30min less working time due to shorter lunch
-      // e.g., 10+1 becomes 9.5hrs working, 11+1 becomes 10.5hrs working
-      return baseDayHours - 0.5;
-    case 'CWD':
-      // Continuous: 1hr less working time (working lunch in hand)
-      // e.g., 10+1 becomes 9hrs working, 11+1 becomes 10hrs working
-      return baseDayHours - 1;
-    default:
-      return baseDayHours;
-  }
+function createEmptyCalculation(): TimesheetCalculation {
+  return {
+    contractedHours: 0,
+    hourlyRate: 0,
+    otRate: 0,
+    preCallHours: 0,
+    preCallEarnings: 0,
+    workingHours: 0,
+    actualWorkHours: 0,
+    baseHours: 0,
+    otHours: 0,
+    brokenLunchHours: 0,
+    brokenTurnaroundHours: 0,
+    lateNightHours: 0,
+    totalHours: 0,
+    dailyEarnings: 0,
+    basePay: 0,
+    otEarnings: 0,
+    overtimePay: 0,
+    brokenLunchPay: 0,
+    brokenTurnaroundPay: 0,
+    lateNightEarnings: 0,
+    lateNightPay: 0,
+    sixthDayBonus: 0,
+    seventhDayBonus: 0,
+    dayMultiplier: 1,
+    subtotal: 0,
+    kitRental: 0,
+    totalEarnings: 0,
+    totalPay: 0,
+    brokenLunch: false,
+    hasBrokenLunch: false,
+    brokenTurnaround: false,
+    hasBrokenTurnaround: false,
+    hasLateNight: false,
+    hasOvertime: false,
+  };
 }
 
 /**
- * Check if lunch is "broken" (taken less than 6 hours from unit call)
- * This applies to SWD and SCWD day types
+ * Convert TimesheetEntry + RateCard to BECTUTimesheetEntry format for calculation
  */
-function isLunchBroken(unitCall: string, lunchTime: string | undefined): boolean {
-  if (!lunchTime) return false;
+function toBECTUEntry(entry: TimesheetEntry, rateCard: RateCard, previousWrapOut?: string): BECTUTimesheetEntry {
+  // Get base contract from rate card (use baseContract if available, otherwise derive from baseDayHours)
+  const baseContract: BaseContract = rateCard.baseContract || baseDayHoursToContract(rateCard.baseDayHours);
 
-  const unitCallTime = parseTime(unitCall);
-  const lunchStartTime = parseTime(lunchTime);
-
-  if (unitCallTime === null || lunchStartTime === null) return false;
-
-  // Calculate hours between unit call and lunch
-  let hoursToLunch = lunchStartTime - unitCallTime;
-  if (hoursToLunch < 0) hoursToLunch += 24; // Handle overnight
-
-  // Lunch must be minimum 6 hours from unit call
-  return hoursToLunch < 6;
-}
-
-/**
- * Get the lunch deduction in hours based on day type
- */
-function getLunchDeductionHours(dayType: DayType): number {
-  switch (dayType) {
-    case 'SWD':
-      return 1; // 1 hour unpaid lunch
-    case 'SCWD':
-      return 0.5; // 30 min lunch (deducted from working time)
-    case 'CWD':
-      return 0; // Working lunch in hand - no deduction
-    default:
-      return 1;
-  }
+  return {
+    date: entry.date,
+    dayRate: rateCard.dailyRate,
+    baseContract: baseContract,
+    dayType: entry.dayType as BECTUDayType,
+    preCallTime: entry.preCall || null,
+    unitCallTime: entry.unitCall,
+    lunchTime: entry.lunchStart || entry.callSheetLunch || null,
+    lunchDuration: entry.lunchTaken || getLunchDuration(entry.dayType as BECTUDayType),
+    wrapOutTime: entry.wrapOut,
+    is6thDay: entry.isSixthDay,
+    is7thDay: entry.isSeventhDay,
+    previousWrapOut: entry.previousWrapOut || previousWrapOut || null,
+    preCallMultiplier: rateCard.preCallMultiplier,
+    otMultiplier: rateCard.otMultiplier,
+    lateNightMultiplier: rateCard.lateNightMultiplier,
+    sixthDayMultiplier: rateCard.sixthDayMultiplier,
+    seventhDayMultiplier: rateCard.seventhDayMultiplier,
+  };
 }
 
 interface TimesheetState {
@@ -122,7 +125,8 @@ interface TimesheetState {
   navigateDay: (direction: 'prev' | 'next') => void;
 
   // Calculations
-  calculateEntry: (entry: TimesheetEntry) => TimesheetCalculation;
+  calculateEntry: (entry: TimesheetEntry, previousWrapOut?: string) => TimesheetCalculation;
+  getPreviousWrapOut: (date: string) => string | undefined;
   getWeekSummary: (weekStartDate: string) => WeekSummary;
   getMonthEntries: (year: number, month: number) => TimesheetEntry[];
 }
@@ -255,124 +259,84 @@ export const useTimesheetStore = create<TimesheetState>()(
         return autoFilledEntry;
       },
 
-      // Calculations
-      calculateEntry: (entry) => {
+      // Calculations - BECTU UK Film Industry Standards
+      calculateEntry: (entry, previousWrapOut?: string) => {
         const { rateCard } = get();
 
-        // Empty entry check
+        // Empty entry check - return empty calculation
         if (!entry.unitCall || !entry.wrapOut) {
-          return {
-            preCallHours: 0,
-            preCallEarnings: 0,
-            workingHours: 0,
-            baseHours: 0,
-            otHours: 0,
-            lateNightHours: 0,
-            totalHours: 0,
-            dailyEarnings: 0,
-            otEarnings: 0,
-            lateNightEarnings: 0,
-            sixthDayBonus: 0,
-            seventhDayBonus: 0,
-            kitRental: 0,
-            totalEarnings: 0,
-          };
+          return createEmptyCalculation();
         }
 
-        // Calculate hourly rate
-        const hourlyRate = rateCard.dailyRate / rateCard.baseDayHours;
+        // Convert to BECTU format and calculate
+        const bectuEntry = toBECTUEntry(entry, rateCard, previousWrapOut);
+        const bectuCalc = calculateBECTUTimesheet(bectuEntry);
 
-        // 1. Pre-call hours (before unit call) - paid at pre-call multiplier
-        const preCallHours = entry.preCall ? getHoursDiff(entry.preCall, entry.unitCall) : 0;
-        const preCallEarnings = preCallHours * hourlyRate * rateCard.preCallMultiplier;
-
-        // 2. Working time = wrapOut - unitCall - lunch break
-        // Use day-type-specific lunch deduction:
-        // - SWD: 1hr unpaid lunch deducted
-        // - SCWD: 30min lunch deducted
-        // - CWD: No deduction (working lunch in hand)
-        const lunchDeductionHours = getLunchDeductionHours(entry.dayType);
-        const rawWorkingHours = getHoursDiff(entry.unitCall, entry.wrapOut);
-        const workingHours = Math.max(0, rawWorkingHours - lunchDeductionHours);
-
-        // Check for broken lunch (lunch taken less than 6hrs from unit call)
-        // This applies to SWD and SCWD day types
-        const brokenLunch = (entry.dayType === 'SWD' || entry.dayType === 'SCWD')
-          ? isLunchBroken(entry.unitCall, entry.callSheetLunch)
-          : false;
-
-        // 3. Calculate late night hours (after 23:00)
-        const wrapTime = parseTime(entry.wrapOut);
-        const lateNightThreshold = 23; // 11 PM
-        let lateNightHours = 0;
-
-        if (wrapTime !== null) {
-          // If wrap is after midnight (0-6), treat as next day (add 24)
-          const adjustedWrap = wrapTime < 6 ? wrapTime + 24 : wrapTime;
-          if (adjustedWrap > lateNightThreshold) {
-            lateNightHours = adjustedWrap - lateNightThreshold;
-          }
-        }
-
-        // 4. Total hours
-        const totalHours = preCallHours + workingHours;
-
-        // 5. Calculate OT threshold based on day type
-        // Use entry's dayType (from individual entry) to determine when OT kicks in
-        const otThreshold = getOTThresholdForDayType(entry.dayType, rateCard.baseDayHours);
-
-        // 6. Base hours (capped at OT threshold for the day type)
-        const baseHours = Math.min(workingHours, otThreshold);
-
-        // 7. OT hours (beyond OT threshold, excluding late night)
-        const otHours = Math.max(0, workingHours - otThreshold - lateNightHours);
-
-        // 8. Daily earnings (base hours at standard rate)
-        const dailyEarnings = baseHours * hourlyRate;
-
-        // 9. OT earnings (at 1.5x)
-        const otEarnings = otHours * hourlyRate * rateCard.otMultiplier;
-
-        // 10. Late night earnings (at 2x)
-        const lateNightEarnings = lateNightHours * hourlyRate * rateCard.lateNightMultiplier;
-
-        // 11. Sixth day bonus (1.5x)
+        // Calculate 6th/7th day bonuses for display
+        // (These are included in totalPay via dayMultiplier, but we break them out for UI)
         let sixthDayBonus = 0;
-        if (entry.isSixthDay && !entry.isSeventhDay) {
-          const baseEarnings = dailyEarnings + otEarnings + lateNightEarnings + preCallEarnings;
-          sixthDayBonus = baseEarnings * (rateCard.sixthDayMultiplier - 1);
-        }
-
-        // 12. Seventh day bonus (2x)
         let seventhDayBonus = 0;
         if (entry.isSeventhDay) {
-          const baseEarnings = dailyEarnings + otEarnings + lateNightEarnings + preCallEarnings;
-          seventhDayBonus = baseEarnings * (rateCard.seventhDayMultiplier - 1);
+          seventhDayBonus = bectuCalc.subtotal * (rateCard.seventhDayMultiplier - 1);
+        } else if (entry.isSixthDay) {
+          sixthDayBonus = bectuCalc.subtotal * (rateCard.sixthDayMultiplier - 1);
         }
 
-        // 13. Kit rental
+        // Add kit rental to total
         const kitRental = rateCard.kitRental;
+        const totalEarnings = bectuCalc.totalPay + kitRental;
 
-        // Total earnings
-        const totalEarnings = preCallEarnings + dailyEarnings + otEarnings + lateNightEarnings + sixthDayBonus + seventhDayBonus + kitRental;
-
+        // Map to TimesheetCalculation interface (with backward-compatible aliases)
         return {
-          preCallHours: Math.round(preCallHours * 100) / 100,
-          preCallEarnings: Math.round(preCallEarnings * 100) / 100,
-          workingHours: Math.round(workingHours * 100) / 100,
-          baseHours: Math.round(baseHours * 100) / 100,
-          otHours: Math.round(otHours * 100) / 100,
-          lateNightHours: Math.round(lateNightHours * 100) / 100,
-          totalHours: Math.round(totalHours * 100) / 100,
-          dailyEarnings: Math.round(dailyEarnings * 100) / 100,
-          otEarnings: Math.round(otEarnings * 100) / 100,
-          lateNightEarnings: Math.round(lateNightEarnings * 100) / 100,
+          // Rates
+          contractedHours: bectuCalc.contractedHours,
+          hourlyRate: bectuCalc.hourlyRate,
+          otRate: bectuCalc.otRate,
+
+          // Hours
+          preCallHours: bectuCalc.preCallHours,
+          workingHours: bectuCalc.actualWorkHours, // Alias
+          actualWorkHours: bectuCalc.actualWorkHours,
+          baseHours: bectuCalc.contractedHours, // Base hours is contracted hours
+          otHours: bectuCalc.overtimeHours,
+          brokenLunchHours: bectuCalc.brokenLunchHours,
+          brokenTurnaroundHours: bectuCalc.brokenTurnaroundHours,
+          lateNightHours: bectuCalc.lateNightHours,
+          totalHours: bectuCalc.actualWorkHours + bectuCalc.preCallHours,
+
+          // Earnings
+          preCallEarnings: bectuCalc.preCallPay,
+          dailyEarnings: bectuCalc.basePay, // Day rate guarantee
+          basePay: bectuCalc.basePay,
+          otEarnings: bectuCalc.overtimePay,
+          overtimePay: bectuCalc.overtimePay,
+          brokenLunchPay: bectuCalc.brokenLunchPay,
+          brokenTurnaroundPay: bectuCalc.brokenTurnaroundPay,
+          lateNightEarnings: bectuCalc.lateNightPay,
+          lateNightPay: bectuCalc.lateNightPay,
           sixthDayBonus: Math.round(sixthDayBonus * 100) / 100,
           seventhDayBonus: Math.round(seventhDayBonus * 100) / 100,
+          dayMultiplier: bectuCalc.dayMultiplier,
+          subtotal: bectuCalc.subtotal,
           kitRental,
           totalEarnings: Math.round(totalEarnings * 100) / 100,
-          brokenLunch,
+          totalPay: Math.round(totalEarnings * 100) / 100,
+
+          // Flags
+          brokenLunch: bectuCalc.hasBrokenLunch,
+          hasBrokenLunch: bectuCalc.hasBrokenLunch,
+          brokenTurnaround: bectuCalc.hasBrokenTurnaround,
+          hasBrokenTurnaround: bectuCalc.hasBrokenTurnaround,
+          hasLateNight: bectuCalc.hasLateNight,
+          hasOvertime: bectuCalc.hasOvertime,
         };
+      },
+
+      // Get previous day's wrap out time for turnaround calculation
+      getPreviousWrapOut: (date) => {
+        const prevDate = addDays(date, -1);
+        const prevEntry = get().entries[prevDate];
+        return prevEntry?.wrapOut || undefined;
       },
 
       getWeekSummary: (weekStartDate) => {
@@ -387,31 +351,59 @@ export const useTimesheetStore = create<TimesheetState>()(
           }
         }
 
-        // Calculate totals
+        // Calculate totals with BECTU fields
         let totalHours = 0;
         let preCallHours = 0;
         let baseHours = 0;
         let otHours = 0;
         let lateNightHours = 0;
+        let brokenLunchHours = 0;
+        let brokenTurnaroundHours = 0;
         let sixthDayHours = 0;
         let seventhDayHours = 0;
         let totalEarnings = 0;
         let kitRentalTotal = 0;
 
-        entries.forEach((entry) => {
-          const calc = get().calculateEntry(entry);
+        // Pay breakdown totals
+        let basePay = 0;
+        let overtimePay = 0;
+        let preCallPay = 0;
+        let brokenLunchPay = 0;
+        let brokenTurnaroundPay = 0;
+        let lateNightPay = 0;
+
+        // Sort entries by date for proper turnaround calculation
+        const sortedEntries = [...entries].sort((a, b) => a.date.localeCompare(b.date));
+
+        sortedEntries.forEach((entry, index) => {
+          // Get previous day's wrap for turnaround calculation
+          const previousWrapOut = index > 0 ? sortedEntries[index - 1].wrapOut : state.getPreviousWrapOut(entry.date);
+
+          const calc = state.calculateEntry(entry, previousWrapOut);
+
           totalHours += calc.totalHours;
           preCallHours += calc.preCallHours;
           baseHours += calc.baseHours;
           otHours += calc.otHours;
           lateNightHours += calc.lateNightHours;
+          brokenLunchHours += calc.brokenLunchHours;
+          brokenTurnaroundHours += calc.brokenTurnaroundHours;
+
           if (entry.isSixthDay && !entry.isSeventhDay) {
             sixthDayHours += calc.totalHours;
           }
           if (entry.isSeventhDay) {
             seventhDayHours += calc.totalHours;
           }
+
           totalEarnings += calc.totalEarnings;
+          basePay += calc.basePay;
+          overtimePay += calc.overtimePay;
+          preCallPay += calc.preCallEarnings;
+          brokenLunchPay += calc.brokenLunchPay;
+          brokenTurnaroundPay += calc.brokenTurnaroundPay;
+          lateNightPay += calc.lateNightPay;
+
           if (entry.unitCall && entry.wrapOut) {
             kitRentalTotal += state.rateCard.kitRental;
           }
@@ -427,9 +419,18 @@ export const useTimesheetStore = create<TimesheetState>()(
           sixthDayHours: Math.round(sixthDayHours * 10) / 10,
           seventhDayHours: Math.round(seventhDayHours * 10) / 10,
           lateNightHours: Math.round(lateNightHours * 10) / 10,
+          brokenLunchHours: Math.round(brokenLunchHours * 10) / 10,
+          brokenTurnaroundHours: Math.round(brokenTurnaroundHours * 10) / 10,
           kitRentalTotal,
           totalEarnings: Math.round(totalEarnings * 100) / 100,
           entries,
+          // Pay breakdown
+          basePay: Math.round(basePay * 100) / 100,
+          overtimePay: Math.round(overtimePay * 100) / 100,
+          preCallPay: Math.round(preCallPay * 100) / 100,
+          brokenLunchPay: Math.round(brokenLunchPay * 100) / 100,
+          brokenTurnaroundPay: Math.round(brokenTurnaroundPay * 100) / 100,
+          lateNightPay: Math.round(lateNightPay * 100) / 100,
         };
       },
 
