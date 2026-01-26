@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
+import { persist } from 'zustand/middleware';
+import { createHybridStorage } from '@/db/zustandStorage';
 import type {
   Project,
   Scene,
@@ -1160,7 +1161,8 @@ export const useProjectStore = create<ProjectState>()(
     }),
     {
       name: 'hair-makeup-pro-storage',
-      storage: createJSONStorage(() => localStorage),
+      // Use IndexedDB with debounced writes for large project data
+      storage: createHybridStorage('hair-makeup-pro-storage'),
       partialize: (state) => ({
         currentProject: state.currentProject,
         sceneCaptures: state.sceneCaptures,

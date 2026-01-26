@@ -163,38 +163,78 @@ export function Today({ onSceneSelect }: TodayProps) {
     });
   };
 
-  // Get scene data from project (sceneNumber can be "4A", "12", etc.)
-  const getSceneData = (sceneNumber: string) => {
-    return currentProject?.scenes.find(s => s.sceneNumber === sceneNumber);
-  };
+  // Pre-compute scene data maps for efficient lookups
+  // This avoids repeated .find() calls during render loops
 
-  // Get characters in scene
-  const getCharactersInScene = (sceneNumber: string): Character[] => {
-    const scene = getSceneData(sceneNumber);
-    if (!scene || !currentProject) return [];
-    return scene.characters
-      .map(charId => currentProject.characters.find(c => c.id === charId))
-      .filter((c): c is Character => c !== undefined);
-  };
+  // Map: sceneNumber -> Scene
+  const sceneDataMap = useMemo(() => {
+    if (!currentProject) return new Map<string, Scene>();
+    return new Map(currentProject.scenes.map(s => [s.sceneNumber, s]));
+  }, [currentProject?.scenes]);
 
-  // Get look for character in scene
-  const getLookForCharacter = (characterId: string, sceneNumber: string) => {
-    return currentProject?.looks.find(
-      l => l.characterId === characterId && l.scenes.includes(sceneNumber)
-    );
-  };
+  // Map: characterId -> Character (for quick lookups)
+  const characterMap = useMemo(() => {
+    if (!currentProject) return new Map<string, Character>();
+    return new Map(currentProject.characters.map(c => [c.id, c]));
+  }, [currentProject?.characters]);
 
-  // Check if all characters have continuity captured for scene
-  const isSceneContinuityCaptured = (sceneNumber: string) => {
-    const scene = getSceneData(sceneNumber);
-    if (!scene) return false;
+  // Map: sceneNumber -> Character[] (pre-computed character assignments)
+  const sceneCharactersMap = useMemo(() => {
+    if (!currentProject) return new Map<string, Character[]>();
+    const map = new Map<string, Character[]>();
+    for (const scene of currentProject.scenes) {
+      const characters = scene.characters
+        .map(charId => characterMap.get(charId))
+        .filter((c): c is Character => c !== undefined);
+      map.set(scene.sceneNumber, characters);
+    }
+    return map;
+  }, [currentProject?.scenes, characterMap]);
 
-    return scene.characters.every(charId => {
-      const captureKey = `${scene.id}-${charId}`;
-      const capture = sceneCaptures[captureKey];
-      return capture && Object.keys(capture.photos).length > 0;
-    });
-  };
+  // Map: sceneNumber -> boolean (pre-computed continuity capture status)
+  const sceneCapturedMap = useMemo(() => {
+    if (!currentProject) return new Map<string, boolean>();
+    const map = new Map<string, boolean>();
+    for (const scene of currentProject.scenes) {
+      const captured = scene.characters.every(charId => {
+        const captureKey = `${scene.id}-${charId}`;
+        const capture = sceneCaptures[captureKey];
+        return capture && Object.keys(capture.photos).length > 0;
+      });
+      map.set(scene.sceneNumber, captured);
+    }
+    return map;
+  }, [currentProject?.scenes, sceneCaptures]);
+
+  // Map: "characterId-sceneNumber" -> Look (pre-computed look assignments)
+  const characterLookMap = useMemo(() => {
+    if (!currentProject) return new Map<string, Look>();
+    const map = new Map<string, Look>();
+    for (const look of currentProject.looks) {
+      for (const sceneNum of look.scenes) {
+        map.set(`${look.characterId}-${sceneNum}`, look);
+      }
+    }
+    return map;
+  }, [currentProject?.looks]);
+
+  // Fast lookup functions using pre-computed maps
+  const getSceneData = (sceneNumber: string) => sceneDataMap.get(sceneNumber);
+  const getCharactersInScene = (sceneNumber: string): Character[] => sceneCharactersMap.get(sceneNumber) || [];
+  const getLookForCharacter = (characterId: string, sceneNumber: string) => characterLookMap.get(`${characterId}-${sceneNumber}`);
+  const isSceneContinuityCaptured = (sceneNumber: string) => sceneCapturedMap.get(sceneNumber) || false;
+
+  // Pre-compute filtered and sorted HMU calls to avoid recalculating on each render
+  const sortedHmuCalls = useMemo(() => {
+    if (!callSheet?.castCalls) return [];
+    return callSheet.castCalls
+      .filter(cast => cast.hmuCall || cast.makeupCall)
+      .sort((a, b) => {
+        const timeA = a.hmuCall || a.makeupCall || '';
+        const timeB = b.hmuCall || b.makeupCall || '';
+        return timeA.localeCompare(timeB);
+      });
+  }, [callSheet?.castCalls]);
 
   // Update scene status - persists to store and updates local state for immediate UI feedback
   const updateSceneStatus = (sceneNumber: string, status: ShootingSceneStatus) => {
@@ -395,20 +435,13 @@ export function Today({ onSceneSelect }: TodayProps) {
             </div>
 
             {/* Cast HMU Calls - show makeup call times for cast members */}
-            {callSheet.castCalls && callSheet.castCalls.length > 0 && (
+            {sortedHmuCalls.length > 0 && (
               <div className="card">
                 <h2 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-3">
                   HMU CALLS
                 </h2>
                 <div className="space-y-2">
-                  {callSheet.castCalls
-                    .filter(cast => cast.hmuCall || cast.makeupCall)
-                    .sort((a, b) => {
-                      const timeA = a.hmuCall || a.makeupCall || '';
-                      const timeB = b.hmuCall || b.makeupCall || '';
-                      return timeA.localeCompare(timeB);
-                    })
-                    .map(cast => (
+                  {sortedHmuCalls.map(cast => (
                       <div key={cast.id} className="flex items-center justify-between py-1.5 border-b border-border/30 last:border-0">
                         <div className="flex-1 min-w-0">
                           <span className="text-sm font-medium text-text-primary truncate block">
