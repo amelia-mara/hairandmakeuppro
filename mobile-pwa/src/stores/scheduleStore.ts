@@ -6,10 +6,13 @@ import type {
   ScheduleCastMember,
   SceneDiscrepancy,
   Scene,
+  ScheduleDay,
+  ScheduleStatus,
 } from '@/types';
-import { parseSchedulePDF } from '@/utils/scheduleParser';
+import { parseScheduleStage1, parseSchedulePDF, type Stage1Result } from '@/utils/scheduleParser';
 import {
   parseScheduleWithAI,
+  parseSingleDayWithAI,
   shouldUseAIProcessing,
   type AIScheduleProcessingStatus,
 } from '@/services/scheduleAIService';
@@ -23,6 +26,9 @@ interface ScheduleState {
   // The uploaded production schedule
   schedule: ProductionSchedule | null;
 
+  // Stage 1 result for Stage 2 processing
+  stage1Result: Stage1Result | null;
+
   // Discrepancies found when cross-referencing with breakdown
   discrepancies: SceneDiscrepancy[];
 
@@ -30,7 +36,11 @@ interface ScheduleState {
   isUploading: boolean;
   uploadError: string | null;
 
-  // AI processing state
+  // Stage 2 processing state
+  isProcessingStage2: boolean;
+  stage2Progress: { current: number; total: number; message: string };
+
+  // Legacy AI processing state (for backwards compatibility)
   aiProcessingStatus: AIScheduleProcessingStatus;
   isAIProcessing: boolean;
 
@@ -40,9 +50,15 @@ interface ScheduleState {
   // Actions
   setSchedule: (schedule: ProductionSchedule) => void;
   uploadSchedule: (file: File) => Promise<ProductionSchedule>;
+  uploadScheduleStage1: (file: File) => Promise<ProductionSchedule>;
   clearSchedule: () => void;
 
-  // AI processing actions
+  // Stage 2 processing (background)
+  startStage2Processing: () => Promise<void>;
+  updateDayData: (dayNumber: number, dayData: ScheduleDay) => void;
+  setScheduleStatus: (status: ScheduleStatus, error?: string) => void;
+
+  // Legacy AI processing actions (for backwards compatibility)
   startAIProcessing: () => Promise<void>;
   setAIProcessingStatus: (status: AIScheduleProcessingStatus) => void;
 
@@ -71,10 +87,13 @@ export const useScheduleStore = create<ScheduleState>()(
   persist(
     (set, get) => ({
       schedule: null,
+      stage1Result: null,
       discrepancies: [],
       isUploading: false,
       uploadError: null,
       showDiscrepancyModal: false,
+      isProcessingStage2: false,
+      stage2Progress: { current: 0, total: 0, message: '' },
       aiProcessingStatus: {
         status: 'idle',
         progress: 0,
@@ -86,6 +105,56 @@ export const useScheduleStore = create<ScheduleState>()(
         set({ schedule, isUploading: false, uploadError: null });
       },
 
+      setScheduleStatus: (status: ScheduleStatus, error?: string) => {
+        const schedule = get().schedule;
+        if (schedule) {
+          set({
+            schedule: {
+              ...schedule,
+              status,
+              processingError: error,
+            },
+          });
+        }
+      },
+
+      updateDayData: (dayNumber: number, dayData: ScheduleDay) => {
+        const schedule = get().schedule;
+        if (!schedule) return;
+
+        // Check if day already exists
+        const existingIndex = schedule.days.findIndex(d => d.dayNumber === dayNumber);
+        let newDays: ScheduleDay[];
+
+        if (existingIndex >= 0) {
+          // Update existing day
+          newDays = [...schedule.days];
+          newDays[existingIndex] = dayData;
+        } else {
+          // Add new day and sort by day number
+          newDays = [...schedule.days, dayData].sort((a, b) => a.dayNumber - b.dayNumber);
+        }
+
+        // Update progress
+        const newProgress = {
+          current: newDays.length,
+          total: schedule.totalDays,
+        };
+
+        set({
+          schedule: {
+            ...schedule,
+            days: newDays,
+            processingProgress: newProgress,
+          },
+          stage2Progress: {
+            current: newDays.length,
+            total: schedule.totalDays,
+            message: `Parsed Day ${dayNumber} of ${schedule.totalDays}`,
+          },
+        });
+      },
+
       setAIProcessingStatus: (status: AIScheduleProcessingStatus) => {
         set({
           aiProcessingStatus: status,
@@ -93,6 +162,132 @@ export const useScheduleStore = create<ScheduleState>()(
         });
       },
 
+      // NEW: Stage 1 upload (instant - cast list, day count, production name only)
+      uploadScheduleStage1: async (file: File) => {
+        set({ isUploading: true, uploadError: null });
+
+        try {
+          console.log('[ScheduleStore] Starting Stage 1 parsing...');
+          const result = await parseScheduleStage1(file);
+
+          console.log('[ScheduleStore] Stage 1 complete:', {
+            castCount: result.schedule.castList.length,
+            totalDays: result.schedule.totalDays,
+            productionName: result.schedule.productionName,
+          });
+
+          set({
+            schedule: result.schedule,
+            stage1Result: result,
+            isUploading: false,
+            stage2Progress: {
+              current: 0,
+              total: result.schedule.totalDays,
+              message: 'Ready to process scenes...',
+            },
+          });
+
+          // Start Stage 2 processing in background after short delay
+          setTimeout(() => {
+            get().startStage2Processing();
+          }, 500);
+
+          return result.schedule;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Failed to parse schedule';
+          console.error('[ScheduleStore] Stage 1 failed:', error);
+          set({ isUploading: false, uploadError: message });
+          throw error;
+        }
+      },
+
+      // NEW: Stage 2 background processing (day-by-day AI parsing)
+      startStage2Processing: async () => {
+        const { schedule, stage1Result, setScheduleStatus, updateDayData } = get();
+
+        if (!schedule || !stage1Result) {
+          console.log('[ScheduleStore] No schedule or stage1Result for Stage 2 processing');
+          return;
+        }
+
+        console.log('[ScheduleStore] Starting Stage 2 processing...');
+        set({
+          isProcessingStage2: true,
+          stage2Progress: {
+            current: 0,
+            total: schedule.totalDays,
+            message: 'Starting scene extraction...',
+          },
+        });
+
+        setScheduleStatus('processing');
+
+        const { dayTextBlocks } = stage1Result;
+        const castReference = schedule.castList.map(c => `${c.number}.${c.name}`).join(', ');
+        let successCount = 0;
+        let failCount = 0;
+
+        // Process each day
+        for (let i = 0; i < schedule.totalDays; i++) {
+          const dayNum = i + 1;
+
+          set({
+            stage2Progress: {
+              current: i,
+              total: schedule.totalDays,
+              message: `Parsing Day ${dayNum} of ${schedule.totalDays}...`,
+            },
+          });
+
+          try {
+            // Get text block for this day
+            const dayText = dayTextBlocks[i] || '';
+
+            if (dayText.length < 50) {
+              console.log(`[ScheduleStore] Day ${dayNum}: No text block, skipping`);
+              continue;
+            }
+
+            // Call AI to parse this day's scenes
+            const dayData = await parseSingleDayWithAI(dayNum, dayText, castReference);
+
+            if (dayData && dayData.scenes.length > 0) {
+              updateDayData(dayNum, dayData);
+              successCount++;
+              console.log(`[ScheduleStore] Day ${dayNum}: Parsed ${dayData.scenes.length} scenes`);
+            } else {
+              console.log(`[ScheduleStore] Day ${dayNum}: No scenes found`);
+              failCount++;
+            }
+          } catch (error) {
+            console.error(`[ScheduleStore] Day ${dayNum} failed:`, error);
+            failCount++;
+            // Continue with other days even if one fails
+          }
+        }
+
+        // Determine final status
+        const finalStatus: ScheduleStatus = failCount === 0 ? 'complete' :
+                                            successCount > 0 ? 'partial' : 'pending';
+        const errorMessage = failCount > 0 ? `${failCount} days could not be parsed` : undefined;
+
+        setScheduleStatus(finalStatus, errorMessage);
+
+        set({
+          isProcessingStage2: false,
+          stage2Progress: {
+            current: schedule.totalDays,
+            total: schedule.totalDays,
+            message: finalStatus === 'complete'
+              ? `Successfully parsed ${successCount} days`
+              : `Parsed ${successCount} days, ${failCount} incomplete`,
+          },
+        });
+
+        console.log(`[ScheduleStore] Stage 2 complete: ${successCount} success, ${failCount} failed`);
+      },
+
+      // LEGACY: Full AI processing (for backwards compatibility)
       startAIProcessing: async () => {
         const { schedule, setAIProcessingStatus, setSchedule } = get();
         console.log('[ScheduleStore] startAIProcessing called');

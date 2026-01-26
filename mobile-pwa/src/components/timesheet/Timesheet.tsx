@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTimesheetStore, getWeekStart, addDays } from '@/stores/timesheetStore';
 import { WeekView } from './WeekView';
-import { MonthView } from './MonthView';
+import { TimesheetDocument } from './TimesheetDocument';
 import { SummaryCard } from './SummaryCard';
 import { ExportModal } from './ExportModal';
 import { RateCardSettings } from './RateCardSettings';
@@ -11,16 +11,11 @@ export function Timesheet() {
     viewMode,
     setViewMode,
     selectedDate,
-    setSelectedDate,
     getWeekSummary,
     rateCard,
   } = useTimesheetStore();
 
   const [currentWeekStart, setCurrentWeekStart] = useState(() => getWeekStart(selectedDate));
-  const [currentMonth, setCurrentMonth] = useState(() => {
-    const date = new Date(selectedDate);
-    return { year: date.getFullYear(), month: date.getMonth() };
-  });
   const [showExportModal, setShowExportModal] = useState(false);
   const [rateCardExpanded, setRateCardExpanded] = useState(false);
 
@@ -28,30 +23,6 @@ export function Timesheet() {
   const navigateWeek = (direction: 'prev' | 'next') => {
     const newStart = addDays(currentWeekStart, direction === 'next' ? 7 : -7);
     setCurrentWeekStart(newStart);
-  };
-
-  // Navigate months
-  const navigateMonth = (direction: 'prev' | 'next') => {
-    setCurrentMonth((prev) => {
-      let newMonth = prev.month + (direction === 'next' ? 1 : -1);
-      let newYear = prev.year;
-      if (newMonth > 11) {
-        newMonth = 0;
-        newYear++;
-      } else if (newMonth < 0) {
-        newMonth = 11;
-        newYear--;
-      }
-      return { year: newYear, month: newMonth };
-    });
-  };
-
-  // Handle day selection (for month view)
-  const handleDaySelect = (date: string) => {
-    setSelectedDate(date);
-    // Switch to week view and navigate to that week
-    setViewMode('week');
-    setCurrentWeekStart(getWeekStart(date));
   };
 
   const weekSummary = getWeekSummary(currentWeekStart);
@@ -97,23 +68,23 @@ export function Timesheet() {
             <div className="flex bg-input-bg rounded-pill p-1 border border-border">
               <button
                 onClick={() => setViewMode('week')}
-                className={`flex-1 py-2 px-4 rounded-pill text-sm font-medium transition-all ${
+                className={`flex-1 py-2 px-3 rounded-pill text-sm font-medium transition-all ${
                   viewMode === 'week'
                     ? 'bg-card text-text-primary border-2 border-gold'
                     : 'text-text-muted'
                 }`}
               >
-                Week
+                Day
               </button>
               <button
-                onClick={() => setViewMode('month')}
-                className={`flex-1 py-2 px-4 rounded-pill text-sm font-medium transition-all ${
-                  viewMode === 'month'
+                onClick={() => setViewMode('sheet')}
+                className={`flex-1 py-2 px-3 rounded-pill text-sm font-medium transition-all ${
+                  viewMode === 'sheet'
                     ? 'bg-card text-text-primary border-2 border-gold'
                     : 'text-text-muted'
                 }`}
               >
-                Month
+                Sheet
               </button>
             </div>
           </div>
@@ -164,19 +135,17 @@ export function Timesheet() {
           </div>
         </div>
 
-        {viewMode === 'week' ? (
+        {viewMode === 'week' && (
           <WeekView
             weekStartDate={currentWeekStart}
             onNavigate={navigateWeek}
             selectedDate={selectedDate}
           />
-        ) : (
-          <MonthView
-            year={currentMonth.year}
-            month={currentMonth.month}
-            onNavigate={navigateMonth}
-            onDaySelect={handleDaySelect}
-            selectedDate={selectedDate}
+        )}
+        {viewMode === 'sheet' && (
+          <TimesheetDocument
+            weekStartDate={currentWeekStart}
+            onNavigate={navigateWeek}
           />
         )}
 

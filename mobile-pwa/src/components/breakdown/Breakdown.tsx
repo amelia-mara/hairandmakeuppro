@@ -737,15 +737,12 @@ function BreakdownListView({
         return (
           <div
             key={scene.id}
-            className="relative"
+            className="card overflow-hidden relative"
           >
-            {/* Glass overlay */}
+            {/* Glass overlay - inside card to cover entire pill */}
             {glassOverlayClass && (
               <div className={clsx('scene-glass-overlay', glassOverlayClass)} />
             )}
-            <div
-              className="card overflow-hidden relative z-10"
-            >
             {/* Left accent bar */}
             <div className={clsx('absolute left-0 top-0 bottom-0 w-1 rounded-l-card', getAccentBarClass())} />
             {/* Row header - always visible */}
@@ -1068,7 +1065,6 @@ function BreakdownListView({
                 </button>
               </div>
             )}
-            </div>
           </div>
         );
       })}
@@ -1147,12 +1143,11 @@ function BreakdownGridView({
         };
 
         return (
-          <div key={scene.id} className="relative">
-            {/* Glass overlay */}
+          <div key={scene.id} className="card text-left w-full relative overflow-hidden">
+            {/* Glass overlay - inside card to cover entire pill */}
             {glassOverlayClass && (
               <div className={clsx('scene-glass-overlay', glassOverlayClass)} />
             )}
-            <div className="card text-left w-full relative z-10 overflow-hidden">
             {/* Left accent bar */}
             <div className={clsx('absolute left-0 top-0 bottom-0 w-1', getAccentBarClass())} />
 
@@ -1232,7 +1227,6 @@ function BreakdownGridView({
                 onStatusChange={onFilmingStatusChange}
                 onNotesModalOpen={onNotesModalOpen}
               />
-            </div>
             </div>
           </div>
         );

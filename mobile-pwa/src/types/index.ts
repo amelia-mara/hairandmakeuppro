@@ -6,7 +6,6 @@ export type CharacterDetectionStatus = 'idle' | 'running' | 'complete';
 export interface Project {
   id: string;
   name: string;
-  isDemoProject?: boolean; // True only when loaded via demo button
   createdAt: Date;
   updatedAt: Date;
   scenes: Scene[];
@@ -422,6 +421,16 @@ export interface ShootingDay {
 // PRODUCTION SCHEDULE TYPES (PDF Upload)
 // ============================================
 
+// Schedule processing status
+export type ScheduleStatus = 'pending' | 'processing' | 'complete' | 'partial';
+
+// Processing progress tracking
+export interface ScheduleProcessingProgress {
+  current: number; // Current day being processed
+  total: number; // Total days to process
+  message?: string; // Status message
+}
+
 // Cast member from schedule (name-to-number mapping)
 export interface ScheduleCastMember {
   number: number; // The cast number (1, 2, 3, etc.)
@@ -436,19 +445,24 @@ export interface ProductionSchedule {
   scriptVersion?: string;
   scheduleVersion?: string;
 
-  // Cast list extracted from first page
+  // Processing status (two-stage parsing)
+  status: ScheduleStatus;
+  processingProgress?: ScheduleProcessingProgress;
+  processingError?: string;
+
+  // Cast list extracted from first page (Stage 1)
   castList: ScheduleCastMember[];
 
-  // All shooting days
+  // All shooting days (populated in Stage 2)
   days: ScheduleDay[];
 
-  // Total shooting days
+  // Total shooting days (extracted in Stage 1)
   totalDays: number;
 
   // Metadata
   uploadedAt: Date;
   pdfUri?: string;
-  rawText?: string;
+  rawText?: string; // Full PDF text for Stage 2 processing
 }
 
 // A single shooting day in the schedule
@@ -687,7 +701,7 @@ export type BaseDayHours = 10 | 11 | 12;
 export type BaseContract = '10+1' | '11+1';
 export type DayType = 'SWD' | 'CWD' | 'SCWD';
 export type EntryStatus = 'draft' | 'pending' | 'approved';
-export type TimesheetView = 'week' | 'month';
+export type TimesheetView = 'week' | 'sheet';
 
 export interface RateCard {
   dailyRate: number;
@@ -1151,8 +1165,8 @@ export interface User {
   avatarUrl?: string;
 }
 
-// Project membership role
-export type ProjectRole = 'owner' | 'supervisor' | 'artist' | 'viewer';
+// Project membership role (matches Supabase database roles)
+export type ProjectRole = 'owner' | 'designer' | 'hod' | 'supervisor' | 'key' | 'floor' | 'daily' | 'trainee' | 'artist' | 'viewer';
 
 // Production types for new projects
 export type ProductionType = 'film' | 'tv_series' | 'short_film' | 'commercial' | 'music_video' | 'other';
@@ -1166,8 +1180,8 @@ export const PRODUCTION_TYPES: { value: ProductionType; label: string }[] = [
   { value: 'other', label: 'Other' },
 ];
 
-// Project status
-export type ProjectStatus = 'active' | 'archived';
+// Project status (matches Supabase database status)
+export type ProjectStatus = 'active' | 'archived' | 'wrapped' | 'prep' | 'shooting';
 
 // Project membership entry (user's relationship to a project)
 export interface ProjectMembership {

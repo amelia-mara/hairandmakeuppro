@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTimesheetStore, addDays } from '@/stores/timesheetStore';
 import type { EntryStatus, DayType, TimesheetEntry as TimesheetEntryType, TimesheetCalculation } from '@/types';
-import { DAY_TYPE_LABELS, createEmptyTimesheetEntry } from '@/types';
+import { DAY_TYPE_LABELS, createEmptyTimesheetEntry, getLunchDurationForDayType } from '@/types';
 
 interface WeekViewProps {
   weekStartDate: string;
@@ -80,7 +80,17 @@ export function WeekView({ weekStartDate, onNavigate }: WeekViewProps) {
     value: TimesheetEntryType[K]
   ) => {
     if (!editingEntry) return;
-    const updated = { ...editingEntry, [field]: value };
+
+    // Build updates object
+    const updates: Partial<TimesheetEntryType> = { [field]: value };
+
+    // Auto-update lunch duration when day type changes (BECTU standard)
+    if (field === 'dayType') {
+      const newDayType = value as DayType;
+      updates.lunchTaken = getLunchDurationForDayType(newDayType);
+    }
+
+    const updated = { ...editingEntry, ...updates };
     setEditingEntry(updated);
     // Auto-save on each change
     saveEntry(updated);
@@ -225,14 +235,14 @@ export function WeekView({ weekStartDate, onNavigate }: WeekViewProps) {
                   )}
                 </div>
 
-                {/* Hours display */}
-                {hasEntry && (
-                  <div className="text-right ml-3">
-                    <div className="text-xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
-                      {calc?.totalHours.toFixed(calc.totalHours % 1 === 0 ? 0 : 1)}
+                {/* Hours display - show when there are calculated hours */}
+                {calc && calc.totalHours > 0 && (
+                  <div className="text-right ml-3 flex-shrink-0">
+                    <div className="text-xl font-bold text-gold">
+                      {calc.totalHours.toFixed(calc.totalHours % 1 === 0 ? 0 : 1)}
                     </div>
                     <div className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>
-                      hours
+                      hrs
                     </div>
                   </div>
                 )}

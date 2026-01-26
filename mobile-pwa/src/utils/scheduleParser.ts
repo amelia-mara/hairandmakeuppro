@@ -4,11 +4,122 @@ import type {
   ScheduleCastMember,
   ScheduleDay,
   ScheduleSceneEntry,
+  ScheduleStatus,
 } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 
 // Configure PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+
+// ============================================
+// STAGE 1: INSTANT PARSE (Blocking)
+// ============================================
+// Extracts only: cast list, total day count, production name
+// Must be fast (< 2 seconds) - no scene parsing
+// ============================================
+
+/**
+ * Stage 1 Result - minimal data for immediate use
+ */
+export interface Stage1Result {
+  schedule: ProductionSchedule;
+  rawText: string;
+  dayTextBlocks: string[]; // Text blocks for each day (for Stage 2)
+}
+
+/**
+ * STAGE 1: Fast instant parse - extracts cast list, day count, production name
+ * This runs synchronously and blocks until complete (should be < 2 seconds)
+ */
+export async function parseScheduleStage1(file: File): Promise<Stage1Result> {
+  console.time('scheduleParser:stage1');
+
+  // Store PDF as data URI for later viewing
+  const pdfUri = await new Promise<string>((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.readAsDataURL(file);
+  });
+
+  // Extract text from PDF with tabular structure preservation
+  const text = await extractTextFromPDF(file);
+  console.log('Stage 1: Extracted text length:', text.length);
+
+  // Fast extraction of cast list (regex-based)
+  const castList = extractCastListFast(text);
+  console.log('Stage 1: Found', castList.length, 'cast members');
+
+  // Count total shooting days from "End of Shooting Day X" markers
+  const { totalDays, dayTextBlocks } = extractDayCountAndBlocks(text);
+  console.log('Stage 1: Found', totalDays, 'shooting days');
+
+  // Extract production metadata
+  const metadata = extractMetadata(text);
+  console.log('Stage 1: Production name:', metadata.productionName);
+
+  const schedule: ProductionSchedule = {
+    id: uuidv4(),
+    productionName: metadata.productionName,
+    scriptVersion: metadata.scriptVersion,
+    scheduleVersion: metadata.scheduleVersion,
+    status: 'pending', // Scenes not yet parsed
+    processingProgress: { current: 0, total: totalDays },
+    castList,
+    days: [], // Empty - will be populated in Stage 2
+    totalDays,
+    uploadedAt: new Date(),
+    pdfUri,
+    rawText: text,
+  };
+
+  console.timeEnd('scheduleParser:stage1');
+
+  return { schedule, rawText: text, dayTextBlocks };
+}
+
+/**
+ * Extract total day count and text blocks for each day
+ * Used by Stage 1 (count) and Stage 2 (blocks for AI parsing)
+ */
+function extractDayCountAndBlocks(text: string): { totalDays: number; dayTextBlocks: string[] } {
+  const dayTextBlocks: string[] = [];
+
+  // Find all "End of Shooting Day X" markers
+  const endOfDayPattern = /End of Shooting Day\s+(\d+)/gi;
+  const dayMarkers: { dayNum: number; endPos: number }[] = [];
+
+  let match;
+  while ((match = endOfDayPattern.exec(text)) !== null) {
+    const dayNum = parseInt(match[1], 10);
+    if (!dayMarkers.find(d => d.dayNum === dayNum)) {
+      dayMarkers.push({ dayNum, endPos: match.index + match[0].length });
+    }
+  }
+
+  // Sort by position in text
+  dayMarkers.sort((a, b) => a.endPos - b.endPos);
+
+  // Extract text blocks for each day
+  let totalDays = 0;
+  for (let i = 0; i < dayMarkers.length; i++) {
+    const marker = dayMarkers[i];
+    const prevEndPos = i > 0 ? dayMarkers[i - 1].endPos : 0;
+    const dayText = text.slice(prevEndPos, marker.endPos + 200);
+    dayTextBlocks.push(dayText);
+    totalDays = Math.max(totalDays, marker.dayNum);
+  }
+
+  // If no markers found, try to detect days from "Day X" headers
+  if (dayMarkers.length === 0) {
+    const dayHeaderPattern = /(?:^|\n)(?:Shooting\s+)?Day\s+(\d+)/gi;
+    while ((match = dayHeaderPattern.exec(text)) !== null) {
+      const dayNum = parseInt(match[1], 10);
+      totalDays = Math.max(totalDays, dayNum);
+    }
+  }
+
+  return { totalDays, dayTextBlocks };
+}
 
 /**
  * Extract text content from a PDF file with tabular structure preservation
@@ -81,6 +192,8 @@ async function extractTextFromPDF(file: File): Promise<string> {
 /**
  * Parse extracted text into a structured ProductionSchedule object
  * Uses fast regex-based parsing without AI dependency
+ * NOTE: This is the legacy full-parse function. For two-stage parsing,
+ * use parseScheduleStage1() followed by AI-powered Stage 2.
  */
 function parseScheduleText(text: string, pdfUri?: string): ProductionSchedule {
   // First, extract cast list from the beginning of the text
@@ -92,11 +205,17 @@ function parseScheduleText(text: string, pdfUri?: string): ProductionSchedule {
   // Extract production metadata
   const metadata = extractMetadata(text);
 
+  // Determine status based on what was parsed
+  const totalScenes = days.reduce((sum, d) => sum + d.scenes.length, 0);
+  const status: ScheduleStatus = totalScenes > 0 ? 'complete' : 'pending';
+
   return {
     id: uuidv4(),
     productionName: metadata.productionName,
     scriptVersion: metadata.scriptVersion,
     scheduleVersion: metadata.scheduleVersion,
+    status,
+    processingProgress: { current: days.length, total: days.length },
     castList,
     days,
     totalDays: days.length,
@@ -391,9 +510,12 @@ function parseSceneEntriesFast(dayText: string): ScheduleSceneEntry[] {
     }
 
     // Check if this is a new scene line (starts with "Scene" or has scene pattern)
-    const isSceneLine = /^Scene\s*\d+/i.test(trimmed) ||
+    // IMPORTANT: Exclude cast number lists (comma-separated numbers like "1, 2, 4, 7")
+    const isCastList = /^\d{1,2}\s*,\s*\d/.test(trimmed);
+    const isSceneLine = !isCastList && (
+                        /^Scene\s*\d+/i.test(trimmed) ||
                         /^\d+[A-Za-z]?\s+\d+\s*\/?8?\s*pgs?/i.test(trimmed) ||
-                        /^\d+[A-Za-z]?(?:pt)?\s+(?:\d+\s*)?(?:\d\/\d)?\s*pgs?\s+(?:INT|EXT)/i.test(trimmed);
+                        /^\d+[A-Za-z]?(?:\s*p\d+)?(?:pt)?\s+(?:\d+\s*)?(?:\d\/\d)?\s*pgs?\s+(?:INT|EXT)/i.test(trimmed));
 
     if (isSceneLine && currentLine) {
       combinedLines.push(currentLine);
@@ -444,7 +566,10 @@ function parseTwoRowTableFormat(lines: string[]): ScheduleSceneEntry[] {
                               !/^Scene\s*\d/i.test(line1) &&
                               /\b(INT|EXT)\b/i.test(line1);
 
-    const nextLineHasSceneNum = /^(\d+[A-Za-z]?)(?:\s|\t|$)/.test(line2);
+    // Scene numbers can be "7", "4A", "18B", "106A p1" etc.
+    // But NOT cast lists like "1, 2, 4, 7"
+    const nextLineHasSceneNum = /^(\d+[A-Za-z]?(?:\s*p\d+)?)(?:\s|\t|$)/.test(line2) &&
+                                 !/^\d+\s*,/.test(line2);
 
     if (isSceneHeaderRow && nextLineHasSceneNum) {
       // This is a two-row scene entry - combine the rows
@@ -482,9 +607,10 @@ function combineSceneRows(headerRow: string, dataRow: string): ScheduleSceneEntr
   const dataCols = splitRow(dataRow);
 
   // Extract scene number from data row (first column)
-  const sceneNumMatch = dataCols[0]?.match(/^(\d+[A-Za-z]?(?:pt)?)/i);
+  // Handle formats like "7", "4A", "18B", "106A p1", "106Apt"
+  const sceneNumMatch = dataCols[0]?.match(/^(\d+[A-Za-z]?(?:\s*p\d+)?(?:pt)?)/i);
   if (!sceneNumMatch) return null;
-  const sceneNumber = sceneNumMatch[1].replace(/pt$/i, '');
+  const sceneNumber = sceneNumMatch[1].replace(/pt$/i, '').trim();
 
   // Combine columns to extract data
   // Header: [Scene, pageTop, INT, LOCATION..., castNum, Est. Time, Day:, Remarks:]
@@ -610,11 +736,26 @@ function parseSceneLine(line: string): ScheduleSceneEntry | null {
   // Pattern 2: "21 | 2 pgs | INT Day | LOCATION description | 1 | Est. Time 3:00 | Day: D5"
   // Pattern 3: "Scene 21 2 pgs INT Day LOCATION description 1, 2, 3 Est. Time 3:00 Day: D5"
 
+  // IMPORTANT: Reject lines that look like cast number lists (comma-separated numbers only)
+  // Cast lists look like: "1, 2, 4, 7" or "1,2,4,7" - just numbers with commas
+  // Scene lines have additional data like "pgs", "INT/EXT", locations, etc.
+  const trimmed = line.trim();
+
+  // If line starts with a number followed by comma and more numbers, it's a cast list
+  if (/^(\d{1,2}\s*,\s*)+\d{1,2}\s*$/.test(trimmed)) {
+    return null; // This is a cast list, not a scene
+  }
+
+  // If line starts with number, comma, number - it's likely a cast list
+  if (/^\d{1,2}\s*,\s*\d/.test(trimmed) && !/pgs?/i.test(trimmed) && !/\b(INT|EXT)\b/i.test(trimmed)) {
+    return null; // Cast list without scene data
+  }
+
   // Extract scene number (at start, with optional "Scene" prefix)
-  const sceneNumMatch = line.match(/^(?:Scene\s*)?(\d+[A-Za-z]?(?:pt)?)/i);
+  const sceneNumMatch = line.match(/^(?:Scene\s*)?(\d+[A-Za-z]?(?:\s*p\d+)?(?:pt)?)/i);
   if (!sceneNumMatch) return null;
 
-  const sceneNumber = sceneNumMatch[1].replace(/pt$/i, '');
+  const sceneNumber = sceneNumMatch[1].replace(/pt$/i, '').trim();
 
   // Extract pages (like "2 pgs", "1 4/8 pgs", "2/8 pgs")
   const pagesMatch = line.match(/(\d+\s*(?:\d\/\d)?)\s*pgs?/i);
@@ -748,9 +889,31 @@ function monthToNumber(month: string): string | null {
   return months[month.toLowerCase()] || null;
 }
 
+// ============================================
+// STAGE 2: SINGLE DAY PARSING (For AI Service)
+// ============================================
+
+/**
+ * Parse a single day's text block using regex (fallback for AI)
+ * Exported for use by Stage 2 AI service as fallback
+ */
+export function parseSingleDayText(dayNum: number, dayText: string): ScheduleDay {
+  return parseDaySectionFast(dayNum, '', dayText);
+}
+
+/**
+ * Extract text from PDF - exported for Stage 2 re-processing
+ */
+export { extractTextFromPDF };
+
+// ============================================
+// LEGACY FULL PARSE (For backwards compatibility)
+// ============================================
+
 /**
  * Parse a schedule PDF file and return structured data
  * Uses fast regex-based parsing (no AI dependency)
+ * NOTE: For new implementations, use parseScheduleStage1() + Stage 2 AI
  */
 export async function parseSchedulePDF(file: File): Promise<ProductionSchedule> {
   console.time('scheduleParser:total');

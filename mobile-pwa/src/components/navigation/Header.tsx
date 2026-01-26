@@ -1,5 +1,4 @@
 import { clsx } from 'clsx';
-import { Badge } from '../ui';
 
 interface HeaderProps {
   title: string;
@@ -7,7 +6,6 @@ interface HeaderProps {
   onBack?: () => void;
   showSearch?: boolean;
   onSearch?: () => void;
-  showDemo?: boolean;
   rightContent?: React.ReactNode;
   className?: string;
 }
@@ -18,7 +16,6 @@ export function Header({
   onBack,
   showSearch = false,
   onSearch,
-  showDemo = false,
   rightContent,
   className,
 }: HeaderProps) {
@@ -47,9 +44,6 @@ export function Header({
             <h1 className="text-lg font-semibold text-text-primary truncate">
               {title}
             </h1>
-            {showDemo && (
-              <Badge variant="gold" size="sm">DEMO</Badge>
-            )}
           </div>
 
           {/* Right side */}

@@ -116,10 +116,18 @@ export function ProjectHubScreen() {
       return;
     }
 
+    // Check if the current project in store already matches (user may be re-opening same project)
+    if (store.currentProject?.id === membership.projectId) {
+      // Already loaded, nothing to do
+      return;
+    }
+
     // Fallback: Create a project from the membership
-    // In production, this would fetch the full project data from the server
+    // Use setProject (not setProjectNeedsSetup) to avoid forcing setup screen
+    // for projects that may have been worked on previously
+    // The Home component will check if setup is actually needed
     const project = createProjectFromMembership(membership);
-    store.setProjectNeedsSetup(project);
+    store.setProject(project);
   };
 
   const handleCreateClick = () => {

@@ -1,7 +1,6 @@
 import { useState, useMemo, useRef, useEffect, memo } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { useCallSheetStore } from '@/stores/callSheetStore';
-import { demoCallSheet } from '@/stores/demoData';
 import { CharacterAvatar } from '@/components/characters/CharacterAvatar';
 import { SceneScriptModal } from '@/components/scenes/SceneScriptModal';
 import { formatShortDate } from '@/utils/helpers';
@@ -54,9 +53,7 @@ export function Today({ onSceneSelect }: TodayProps) {
   // Determine which call sheet to display:
   // 1. If there's a call sheet for the selected date, use that
   // 2. Otherwise use the active call sheet
-  // 3. Only use demo call sheet if in demo mode (entered via demo button)
-  const baseCallSheet = callSheetForDate || activeCallSheet ||
-    (currentProject?.isDemoProject ? demoCallSheet : null);
+  const baseCallSheet = callSheetForDate || activeCallSheet;
 
   // Apply local scene overrides to the base call sheet
   const callSheet = useMemo(() => {
@@ -729,7 +726,9 @@ const TodaySceneCard = memo(function TodaySceneCard({
             handleLongPress();
           }}
           className={clsx(
-            'w-full text-left card transition-all relative overflow-hidden',
+            'w-full text-left card transition-all relative',
+            // Only apply overflow-hidden when dropdown is closed to prevent clipping
+            !showStatusDropdown && 'overflow-hidden',
             isReorderMode ? 'pr-16' : 'active:scale-[0.98] cursor-pointer'
           )}
         >
