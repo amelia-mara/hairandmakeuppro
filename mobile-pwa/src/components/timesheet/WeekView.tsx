@@ -235,14 +235,14 @@ export function WeekView({ weekStartDate, onNavigate }: WeekViewProps) {
                   )}
                 </div>
 
-                {/* Hours display */}
-                {hasEntry && (
-                  <div className="text-right ml-3">
-                    <div className="text-xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
-                      {calc?.totalHours.toFixed(calc.totalHours % 1 === 0 ? 0 : 1)}
+                {/* Hours display - show when there are calculated hours */}
+                {calc && calc.totalHours > 0 && (
+                  <div className="text-right ml-3 flex-shrink-0">
+                    <div className="text-xl font-bold text-gold">
+                      {calc.totalHours.toFixed(calc.totalHours % 1 === 0 ? 0 : 1)}
                     </div>
                     <div className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>
-                      hours
+                      hrs
                     </div>
                   </div>
                 )}

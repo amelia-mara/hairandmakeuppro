@@ -1,6 +1,5 @@
 export { Timesheet } from './Timesheet';
 export { WeekView } from './WeekView';
-export { MonthView } from './MonthView';
 export { TimesheetDocument } from './TimesheetDocument';
 export { TimesheetEntry } from './TimesheetEntry';
 export { CalculationCard } from './CalculationCard';
