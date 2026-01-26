@@ -23,15 +23,16 @@ import {
   ProjectSettingsScreen,
 } from '@/components/project-settings';
 import { useProjectSettingsStore } from '@/stores/projectSettingsStore';
+import { UserProfileScreen } from '@/components/profile/UserProfileScreen';
 
-type MoreView = 'menu' | 'script' | 'schedule' | 'callsheets' | 'settings' | 'editMenu' | 'export' | 'archivedProjects' | 'projectSettings' | 'team' | 'invite' | 'projectStats' | 'manualSchedule' | 'billing';
+type MoreView = 'menu' | 'script' | 'schedule' | 'callsheets' | 'settings' | 'editMenu' | 'export' | 'archivedProjects' | 'projectSettings' | 'team' | 'invite' | 'projectStats' | 'manualSchedule' | 'billing' | 'userProfile';
 
 interface MoreProps {
   onNavigateToTab?: (tab: NavTab) => void;
   onStartNewProject?: () => void;
   initialView?: NavTab;
   resetKey?: number;
-  subView?: 'team' | 'invite' | 'projectStats' | 'projectSettings'; // Direct navigation to sub-views
+  subView?: 'team' | 'invite' | 'projectStats' | 'projectSettings' | 'userProfile'; // Direct navigation to sub-views
 }
 
 export function More({ onNavigateToTab, onStartNewProject, initialView, resetKey, subView }: MoreProps) {
@@ -188,6 +189,13 @@ export function More({ onNavigateToTab, onStartNewProject, initialView, resetKey
             onUpgrade={() => {
               useAuthStore.getState().setScreen('select-plan');
             }}
+          />
+        );
+      case 'userProfile':
+        return (
+          <UserProfileScreen
+            onBack={() => setCurrentView('settings')}
+            onNavigateToBilling={() => setCurrentView('billing')}
           />
         );
       default:

@@ -5,10 +5,10 @@ import { BottomSheet } from '@/components/ui/Modal';
 
 interface ProjectHeaderProps {
   onSwitchProject?: () => void;
-  onNavigateToAccount?: () => void;
+  onNavigateToProfile?: () => void;
 }
 
-export function ProjectHeader({ onSwitchProject, onNavigateToAccount }: ProjectHeaderProps) {
+export function ProjectHeader({ onSwitchProject, onNavigateToProfile }: ProjectHeaderProps) {
   const [showAccountSheet, setShowAccountSheet] = useState(false);
   const { currentProject } = useProjectStore();
   const { user, signOut } = useAuthStore();
@@ -99,7 +99,7 @@ export function ProjectHeader({ onSwitchProject, onNavigateToAccount }: ProjectH
             <button
               onClick={() => {
                 setShowAccountSheet(false);
-                onNavigateToAccount?.();
+                onNavigateToProfile?.();
               }}
               className="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-gray-50 active:bg-gray-100 transition-colors"
             >
@@ -109,26 +109,8 @@ export function ProjectHeader({ onSwitchProject, onNavigateToAccount }: ProjectH
                 </svg>
               </div>
               <div className="flex-1 text-left">
-                <p className="text-sm font-medium text-text-primary">Account Settings</p>
-                <p className="text-xs text-text-muted">Profile, subscription, preferences</p>
-              </div>
-              <svg className="w-5 h-5 text-text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-              </svg>
-            </button>
-
-            <button
-              onClick={onSwitchProject}
-              className="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-gray-50 active:bg-gray-100 transition-colors"
-            >
-              <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-text-muted">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
-                </svg>
-              </div>
-              <div className="flex-1 text-left">
-                <p className="text-sm font-medium text-text-primary">Switch Project</p>
-                <p className="text-xs text-text-muted">Change to another project</p>
+                <p className="text-sm font-medium text-text-primary">My Account</p>
+                <p className="text-xs text-text-muted">Profile, password, billing details</p>
               </div>
               <svg className="w-5 h-5 text-text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
