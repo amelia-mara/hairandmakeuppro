@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { createHybridStorage } from '@/db/zustandStorage';
 import type { CallSheet, CallSheetScene, ShootingSceneStatus, SceneFilmingStatus } from '@/types';
 import { parseCallSheetPDF } from '@/utils/callSheetParser';
+import { useTimesheetStore } from './timesheetStore';
 
 // Current version of the store schema - increment when making breaking changes
 const STORE_VERSION = 2;
@@ -77,6 +78,15 @@ export const useCallSheetStore = create<CallSheetState>()(
             cs => cs.date === cleanCallSheet.date || cs.productionDay === cleanCallSheet.productionDay
           );
 
+          // Auto-fill timesheet from call sheet data
+          const autoFillTimesheet = (cs: CallSheet) => {
+            if (cs.date) {
+              const timesheetStore = useTimesheetStore.getState();
+              const autoFilledEntry = timesheetStore.autoFillFromCallSheet(cs.date, cs);
+              timesheetStore.saveEntry(autoFilledEntry);
+            }
+          };
+
           if (existing) {
             // COMPLETELY REPLACE existing call sheet - do not merge scenes
             const replacementSheet: CallSheet = {
@@ -91,6 +101,10 @@ export const useCallSheetStore = create<CallSheetState>()(
               isUploading: false,
               activeCallSheetId: existing.id,
             }));
+
+            // Auto-fill timesheet with call times
+            autoFillTimesheet(replacementSheet);
+
             return replacementSheet;
           }
 
@@ -102,6 +116,9 @@ export const useCallSheetStore = create<CallSheetState>()(
             isUploading: false,
             activeCallSheetId: cleanCallSheet.id,
           }));
+
+          // Auto-fill timesheet with call times
+          autoFillTimesheet(cleanCallSheet);
 
           return cleanCallSheet;
         } catch (error) {

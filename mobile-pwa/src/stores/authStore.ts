@@ -37,6 +37,9 @@ interface AuthState {
   // Guest mode (joined project without account)
   guestProjectCode: string | null;
 
+  // Project settings navigation
+  settingsProjectId: string | null;
+
   // Actions
   setScreen: (screen: AuthScreen, addToHistory?: boolean) => void;
   goBack: () => void;
@@ -54,6 +57,9 @@ interface AuthState {
   // New Supabase-specific actions
   initializeAuth: () => Promise<void>;
   refreshUserProjects: () => Promise<void>;
+  deleteProject: (projectId: string) => Promise<{ success: boolean; error?: string }>;
+  leaveProject: (projectId: string) => Promise<{ success: boolean; error?: string }>;
+  setSettingsProjectId: (projectId: string | null) => void;
 }
 
 // Convert Supabase user profile to app User type
@@ -100,6 +106,7 @@ export const useAuthStore = create<AuthState>()(
       subscription: createDefaultSubscription(),
       projectMemberships: [],
       guestProjectCode: null,
+      settingsProjectId: null,
 
       // Initialize auth state from Supabase session
       initializeAuth: async () => {
@@ -535,6 +542,94 @@ export const useAuthStore = create<AuthState>()(
         } else {
           set({ subscription: updatedSubscription });
         }
+      },
+
+      // Delete a project (owner only)
+      deleteProject: async (projectId) => {
+        const { user, projectMemberships } = get();
+
+        if (!user) {
+          return { success: false, error: 'Not authenticated' };
+        }
+
+        set({ isLoading: true, error: null });
+
+        try {
+          // Check if this is a local-only project (ID starts with 'project-')
+          const isLocalProject = projectId.startsWith('project-');
+
+          if (!isLocalProject) {
+            // Delete from Supabase
+            const { error } = await supabaseProjects.deleteProject(projectId, user.id);
+            if (error) {
+              set({ isLoading: false, error: error.message });
+              return { success: false, error: error.message };
+            }
+          }
+
+          // Remove from local state
+          const updatedMemberships = projectMemberships.filter(
+            (pm) => pm.projectId !== projectId
+          );
+
+          set({
+            isLoading: false,
+            projectMemberships: updatedMemberships,
+            error: null,
+          });
+
+          return { success: true };
+        } catch (error) {
+          console.error('Delete project error:', error);
+          set({ isLoading: false, error: 'Failed to delete project. Please try again.' });
+          return { success: false, error: 'Failed to delete project' };
+        }
+      },
+
+      // Leave a project (for non-owners)
+      leaveProject: async (projectId) => {
+        const { user, projectMemberships } = get();
+
+        if (!user) {
+          return { success: false, error: 'Not authenticated' };
+        }
+
+        set({ isLoading: true, error: null });
+
+        try {
+          // Check if this is a local-only project
+          const isLocalProject = projectId.startsWith('project-');
+
+          if (!isLocalProject) {
+            // Leave project in Supabase
+            const { error } = await supabaseProjects.leaveProject(projectId, user.id);
+            if (error) {
+              set({ isLoading: false, error: error.message });
+              return { success: false, error: error.message };
+            }
+          }
+
+          // Remove from local state
+          const updatedMemberships = projectMemberships.filter(
+            (pm) => pm.projectId !== projectId
+          );
+
+          set({
+            isLoading: false,
+            projectMemberships: updatedMemberships,
+            error: null,
+          });
+
+          return { success: true };
+        } catch (error) {
+          console.error('Leave project error:', error);
+          set({ isLoading: false, error: 'Failed to leave project. Please try again.' });
+          return { success: false, error: 'Failed to leave project' };
+        }
+      },
+
+      setSettingsProjectId: (projectId) => {
+        set({ settingsProjectId: projectId });
       },
     }),
     {

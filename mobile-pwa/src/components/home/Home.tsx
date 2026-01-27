@@ -41,7 +41,7 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
   const [mergeMap, setMergeMap] = useState<Map<string, string>>(new Map()); // maps merged -> primary
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scheduleInputRef = useRef<HTMLInputElement>(null);
-  const { setProject, setScriptPdf } = useProjectStore();
+  const { setProject, setScriptPdf, currentProject } = useProjectStore();
   const { setSchedule, startAIProcessing, setAIProcessingStatus } = useScheduleStore();
 
   // Progressive workflow: Fast scene parsing then background character detection
@@ -123,14 +123,19 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
         };
       });
 
+      // Use existing project ID if available (preserves server UUID when needsSetup was true)
+      // Otherwise create a new local ID
+      const projectId = currentProject?.id || `project-${Date.now()}`;
+      const projectNameToUse = projectName || currentProject?.name || fastParsed.title || file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ') || 'Untitled Project';
+
       const project: Project = {
-        id: `project-${Date.now()}`,
-        name: projectName || fastParsed.title || file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ') || 'Untitled Project',
-        createdAt: new Date(),
+        id: projectId,
+        name: projectNameToUse,
+        createdAt: currentProject?.createdAt || new Date(),
         updatedAt: new Date(),
         scenes,
-        characters: [],
-        looks: [],
+        characters: currentProject?.characters || [],
+        looks: currentProject?.looks || [],
         characterDetectionStatus: schedule ? 'complete' : 'idle',
         scenesConfirmed: 0,
       };
@@ -177,7 +182,7 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
       alert(error instanceof Error ? error.message : 'Failed to parse script');
       setView('upload');
     }
-  }, [projectName, setProject, setScriptPdf, setSchedule, onProjectReady]);
+  }, [projectName, setProject, setScriptPdf, setSchedule, onProjectReady, currentProject]);
 
   // Background character detection (runs after project is created)
   const startBackgroundCharacterDetection = useCallback(async (project: Project, rawText: string) => {
@@ -366,10 +371,14 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
       hair: createEmptyHairDetails(),
     }));
 
+    // Use existing project ID if available (preserves server UUID when needsSetup was true)
+    const projectId = currentProject?.id || `project-${Date.now()}`;
+    const projectNameToUse = projectName || currentProject?.name || parsedScript.title || 'Untitled Project';
+
     const project: Project = {
-      id: `project-${Date.now()}`,
-      name: projectName || parsedScript.title || 'Untitled Project',
-      createdAt: new Date(),
+      id: projectId,
+      name: projectNameToUse,
+      createdAt: currentProject?.createdAt || new Date(),
       updatedAt: new Date(),
       scenes,
       characters,

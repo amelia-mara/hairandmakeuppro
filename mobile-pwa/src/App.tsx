@@ -23,6 +23,8 @@ import {
   CreateProjectScreen,
 } from '@/components/auth';
 import { SelectPlanScreen } from '@/components/subscription';
+import { UserProfileScreen } from '@/components/profile/UserProfileScreen';
+import { ProjectSettingsScreen } from '@/components/project-settings';
 import type { NavTab, SubscriptionTier, BillingPeriod } from '@/types';
 
 // Configuration error screen shown when Supabase environment variables are missing
@@ -76,6 +78,8 @@ function AppContent() {
     setScreen,
     goBack,
     user,
+    settingsProjectId,
+    setSettingsProjectId,
   } = useAuthStore();
 
   // Track if we're showing the home/setup screen
@@ -190,11 +194,8 @@ function AppContent() {
     }
   };
 
-  // Handle navigation to a specific sub-view in More
-  const handleNavigateToSubView = (subView: 'team' | 'invite' | 'projectStats' | 'projectSettings' | 'userProfile') => {
-    setMoreSubView(subView);
-    setActiveTab('settings');
-  };
+  // Handle navigation to user profile from project header (goes back to project, not menu)
+  const [showUserProfile, setShowUserProfile] = useState(false);
 
   // Handle navigation from More menu to a specific tab
   const handleNavigateToTab = (tab: NavTab) => {
@@ -237,6 +238,33 @@ function AppContent() {
             onBack={goBack}
           />
         );
+      case 'profile':
+        return (
+          <UserProfileScreen
+            onBack={goBack}
+            onNavigateToBilling={() => setScreen('select-plan')}
+          />
+        );
+      case 'project-settings':
+        return settingsProjectId ? (
+          <ProjectSettingsScreen
+            projectId={settingsProjectId}
+            onBack={() => {
+              setSettingsProjectId(null);
+              setScreen('hub');
+            }}
+            onProjectDeleted={() => {
+              setSettingsProjectId(null);
+              setScreen('hub');
+            }}
+            onProjectArchived={() => {
+              setSettingsProjectId(null);
+              setScreen('hub');
+            }}
+          />
+        ) : (
+          <ProjectHubScreen />
+        );
       default:
         return <WelcomeScreen />;
     }
@@ -259,6 +287,33 @@ function AppContent() {
             onSelectTier={handleSelectTier}
             onBack={goBack}
           />
+        );
+      case 'profile':
+        return (
+          <UserProfileScreen
+            onBack={goBack}
+            onNavigateToBilling={() => setScreen('select-plan')}
+          />
+        );
+      case 'project-settings':
+        return settingsProjectId ? (
+          <ProjectSettingsScreen
+            projectId={settingsProjectId}
+            onBack={() => {
+              setSettingsProjectId(null);
+              setScreen('hub');
+            }}
+            onProjectDeleted={() => {
+              setSettingsProjectId(null);
+              setScreen('hub');
+            }}
+            onProjectArchived={() => {
+              setSettingsProjectId(null);
+              setScreen('hub');
+            }}
+          />
+        ) : (
+          <ProjectHubScreen />
         );
       default:
         return <ProjectHubScreen />;
@@ -289,6 +344,16 @@ function AppContent() {
       <ProjectExportScreen
         onBack={() => setShowExport(false)}
         onExportComplete={() => setShowExport(false)}
+      />
+    );
+  }
+
+  // Show User Profile screen (from header avatar click)
+  if (showUserProfile) {
+    return (
+      <UserProfileScreen
+        onBack={() => setShowUserProfile(false)}
+        onNavigateToBilling={() => setScreen('select-plan')}
       />
     );
   }
@@ -344,7 +409,7 @@ function AppContent() {
       {showProjectHeader && (
         <ProjectHeader
           onSwitchProject={handleSwitchProject}
-          onNavigateToProfile={() => handleNavigateToSubView('userProfile')}
+          onNavigateToProfile={() => setShowUserProfile(true)}
         />
       )}
 
