@@ -66,6 +66,93 @@ function SyncProjectModal({
   );
 }
 
+// Delete Project Confirmation Modal
+function DeleteProjectModal({
+  isOpen,
+  onClose,
+  onConfirm,
+  projectName,
+  isOwner,
+  isLoading,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  projectName: string;
+  isOwner: boolean;
+  isLoading: boolean;
+}) {
+  if (!isOpen) return null;
+
+  const title = isOwner ? 'Delete Project' : 'Leave Project';
+  const description = isOwner
+    ? `Are you sure you want to delete "${projectName}"? This will permanently remove the project and all its data for all team members. This action cannot be undone.`
+    : `Are you sure you want to leave "${projectName}"? You will lose access to this project and will need a new invite code to rejoin.`;
+  const confirmText = isOwner ? 'Delete Project' : 'Leave Project';
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+
+      {/* Modal */}
+      <div className="relative bg-card rounded-2xl p-6 max-w-sm w-full shadow-xl">
+        <h3 className="text-lg font-bold text-text-primary mb-2">
+          {title}
+        </h3>
+        <p className="text-text-secondary text-sm mb-6">
+          {description}
+        </p>
+
+        {isOwner && (
+          <div className="p-4 bg-red-50 border border-red-200 rounded-xl mb-6">
+            <div className="flex gap-3">
+              <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                <svg
+                  className="w-4 h-4 text-red-600"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 8v4" />
+                  <path d="M12 16h.01" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm text-red-800">
+                  Warning: All scenes, characters, looks, and photos will be permanently deleted.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="flex gap-3">
+          <Button
+            fullWidth
+            variant="outline"
+            onClick={onClose}
+            disabled={isLoading}
+          >
+            Cancel
+          </Button>
+          <Button
+            fullWidth
+            variant="primary"
+            onClick={onConfirm}
+            disabled={isLoading}
+            className="bg-red-600 hover:bg-red-700"
+          >
+            {isLoading ? 'Processing...' : confirmText}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Helper to create a mock project from membership data
 // In production, this would fetch the full project from the server
 function createProjectFromMembership(membership: ProjectMembership): Project {
@@ -90,10 +177,15 @@ export function ProjectHubScreen() {
     canCreateProjects,
     updateLastAccessed,
     hasCompletedOnboarding,
+    deleteProject,
+    leaveProject,
+    isLoading,
+    setSettingsProjectId,
   } = useAuthStore();
 
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showSyncModal, setShowSyncModal] = useState(false);
+  const [deleteModalProject, setDeleteModalProject] = useState<ProjectMembership | null>(null);
 
   // Sort projects by last accessed (most recent first)
   const sortedProjects = [...projectMemberships].sort(
@@ -122,12 +214,26 @@ export function ProjectHubScreen() {
       return;
     }
 
-    // Fallback: Create a project from the membership
-    // Use setProject (not setProjectNeedsSetup) to avoid forcing setup screen
-    // for projects that may have been worked on previously
-    // The Home component will check if setup is actually needed
+    // Check if currentProject has actual data (scenes uploaded) - don't overwrite it!
+    // This handles the case where user uploaded a script but project IDs don't match
+    // (e.g., local project vs server project with different IDs)
+    if (store.currentProject && store.currentProject.scenes.length > 0) {
+      // Current project has data - preserve it, don't replace with empty shell
+      // Just update the project ID and name to match the membership
+      const updatedProject: Project = {
+        ...store.currentProject,
+        id: membership.projectId,
+        name: membership.projectName,
+      };
+      store.setProject(updatedProject);
+      return;
+    }
+
+    // Fallback: Create a project that needs setup
+    // Use setProjectNeedsSetup to prompt user to upload their script
+    // This is safer than creating an empty project which would lose data
     const project = createProjectFromMembership(membership);
-    store.setProject(project);
+    store.setProjectNeedsSetup(project);
   };
 
   const handleCreateClick = () => {
@@ -141,6 +247,32 @@ export function ProjectHubScreen() {
   const handleUpgrade = () => {
     setShowUpgradeModal(false);
     setScreen('select-plan');
+  };
+
+  const handleDeleteClick = (project: ProjectMembership) => {
+    setDeleteModalProject(project);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteModalProject) return;
+
+    const isOwner = deleteModalProject.role === 'owner';
+    const result = isOwner
+      ? await deleteProject(deleteModalProject.projectId)
+      : await leaveProject(deleteModalProject.projectId);
+
+    if (result.success) {
+      // Also clear from project store if this was the current project
+      const store = useProjectStore.getState();
+      if (store.currentProject?.id === deleteModalProject.projectId) {
+        store.clearProject();
+      }
+      // Also clear from saved projects
+      if (store.hasSavedProject(deleteModalProject.projectId)) {
+        store.removeSavedProject(deleteModalProject.projectId);
+      }
+      setDeleteModalProject(null);
+    }
   };
 
   // Generate user initials for avatar
@@ -197,7 +329,7 @@ export function ProjectHubScreen() {
 
           {/* User avatar */}
           <button
-            onClick={() => setScreen('select-plan')}
+            onClick={() => setScreen('profile')}
             className="flex items-center gap-2"
           >
             <div className="w-10 h-10 rounded-full bg-gold flex items-center justify-center text-white font-semibold text-sm">
@@ -245,7 +377,7 @@ export function ProjectHubScreen() {
                   variant="outline"
                   onClick={() => setScreen('join')}
                 >
-                  Join Team
+                  Join Production
                 </Button>
               </div>
               {/* Sync Project button */}
@@ -282,10 +414,12 @@ export function ProjectHubScreen() {
                   (project.role === 'owner' || project.role === 'supervisor')
                     ? () => {
                         // Navigate to project settings
-                        console.log('Project settings for:', project.projectId);
+                        setSettingsProjectId(project.projectId);
+                        setScreen('project-settings');
                       }
                     : undefined
                 }
+                onDelete={() => handleDeleteClick(project)}
               />
             ))}
           </div>
@@ -313,6 +447,16 @@ export function ProjectHubScreen() {
       <SyncProjectModal
         isOpen={showSyncModal}
         onClose={() => setShowSyncModal(false)}
+      />
+
+      {/* Delete/Leave Project modal */}
+      <DeleteProjectModal
+        isOpen={deleteModalProject !== null}
+        onClose={() => setDeleteModalProject(null)}
+        onConfirm={handleDeleteConfirm}
+        projectName={deleteModalProject?.projectName || ''}
+        isOwner={deleteModalProject?.role === 'owner'}
+        isLoading={isLoading}
       />
     </div>
   );

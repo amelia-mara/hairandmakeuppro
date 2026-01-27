@@ -1,20 +1,15 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { useNavigationStore, MAX_BOTTOM_NAV_ITEMS } from '@/stores/navigationStore';
-import { useThemeStore, type Theme } from '@/stores/themeStore';
 import { useCallSheetStore } from '@/stores/callSheetStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
-import { useChatStore } from '@/stores/chatStore';
-import { useTimesheetStore } from '@/stores/timesheetStore';
 import { useAuthStore } from '@/stores/authStore';
-import { clearAllData as clearIndexedDBData } from '@/db';
 import { NavIcon } from '@/components/navigation/BottomNav';
 import { formatShortDate } from '@/utils/helpers';
 import type { NavTab, SceneDiscrepancy, ScheduleDay } from '@/types';
 import { ALL_NAV_ITEMS, PROJECT_RETENTION_DAYS, canManageProject } from '@/types';
 import { ProjectExportScreen } from './ProjectExportScreen';
 import { BillingDetailsScreen } from './BillingDetailsScreen';
-import { SubscriptionSection } from '@/components/subscription';
 import {
   TeamScreen,
   InviteScreen,
@@ -25,7 +20,7 @@ import {
 import { useProjectSettingsStore } from '@/stores/projectSettingsStore';
 import { UserProfileScreen } from '@/components/profile/UserProfileScreen';
 
-type MoreView = 'menu' | 'script' | 'schedule' | 'callsheets' | 'settings' | 'editMenu' | 'export' | 'archivedProjects' | 'projectSettings' | 'team' | 'invite' | 'projectStats' | 'manualSchedule' | 'billing' | 'userProfile';
+type MoreView = 'menu' | 'script' | 'schedule' | 'callsheets' | 'editMenu' | 'export' | 'archivedProjects' | 'projectSettings' | 'team' | 'invite' | 'projectStats' | 'manualSchedule' | 'billing' | 'userProfile';
 
 interface MoreProps {
   onNavigateToTab?: (tab: NavTab) => void;
@@ -42,7 +37,7 @@ export function More({ onNavigateToTab, onStartNewProject, initialView, resetKey
     if (subView) {
       return subView as MoreView;
     }
-    if (initialView && ['script', 'schedule', 'callsheets', 'settings'].includes(initialView)) {
+    if (initialView && ['script', 'schedule', 'callsheets'].includes(initialView)) {
       return initialView as MoreView;
     }
     return 'menu';
@@ -66,7 +61,7 @@ export function More({ onNavigateToTab, onStartNewProject, initialView, resetKey
     // If a subView is specified, use it directly
     if (subView) {
       setCurrentView(subView as MoreView);
-    } else if (initialView && ['script', 'schedule', 'callsheets', 'settings'].includes(initialView)) {
+    } else if (initialView && ['script', 'schedule', 'callsheets'].includes(initialView)) {
       setCurrentView(initialView as MoreView);
     } else if (initialView === 'more') {
       setCurrentView('menu');
@@ -91,7 +86,7 @@ export function More({ onNavigateToTab, onStartNewProject, initialView, resetKey
 
   // Handle back navigation - if user came from bottom nav, go to 'today' instead of 'menu'
   const handleBack = () => {
-    if (initialView && ['script', 'schedule', 'callsheets', 'settings'].includes(initialView)) {
+    if (initialView && ['script', 'schedule', 'callsheets'].includes(initialView)) {
       // User navigated directly from bottom nav - go to Today
       onNavigateToTab?.('today');
     } else {
@@ -107,42 +102,30 @@ export function More({ onNavigateToTab, onStartNewProject, initialView, resetKey
         return <ScheduleViewer onBack={handleBack} />;
       case 'callsheets':
         return <CallSheetArchive onBack={handleBack} />;
-      case 'settings':
-        return (
-          <Settings
-            onBack={handleBack}
-            onStartNewProject={onStartNewProject}
-            onNavigateToExport={() => setCurrentView('export')}
-            onNavigateToArchived={() => setCurrentView('archivedProjects')}
-            onNavigateToProjectSettings={() => setCurrentView('projectSettings')}
-            onNavigateToTeam={() => setCurrentView('team')}
-            onNavigateToInvite={() => setCurrentView('invite')}
-            onNavigateToStats={() => setCurrentView('projectStats')}
-            onNavigateToBilling={() => setCurrentView('billing')}
-            canManage={canManage}
-          />
-        );
       case 'editMenu':
         return <EditMenuScreen onDone={handleEditMenuClose} />;
       case 'export':
         return (
           <ProjectExportScreen
-            onBack={() => setCurrentView('settings')}
-            onExportComplete={() => setCurrentView('settings')}
+            onBack={() => setCurrentView('projectSettings')}
+            onExportComplete={() => setCurrentView('projectSettings')}
             onNavigateToBilling={() => setCurrentView('billing')}
           />
         );
       case 'archivedProjects':
-        return <ArchivedProjectsScreen onBack={() => setCurrentView('settings')} />;
+        return <ArchivedProjectsScreen onBack={() => setCurrentView('menu')} />;
       case 'projectSettings':
         return (
           <ProjectSettingsScreen
             projectId={currentProjectMembership?.projectId || ''}
-            onBack={() => setCurrentView('settings')}
+            onBack={() => setCurrentView('menu')}
             onNavigateToSchedule={() => setCurrentView('manualSchedule')}
+            onNavigateToTeam={() => setCurrentView('team')}
+            onNavigateToStats={() => setCurrentView('projectStats')}
+            onNavigateToExport={() => setCurrentView('export')}
             onProjectArchived={() => {
               clearProjectSettingsState();
-              setCurrentView('settings');
+              setCurrentView('menu');
             }}
             onProjectDeleted={() => {
               clearProjectSettingsState();
@@ -156,7 +139,7 @@ export function More({ onNavigateToTab, onStartNewProject, initialView, resetKey
             projectId={currentProjectMembership?.projectId || ''}
             canManage={canManage}
             isOwner={isOwner}
-            onBack={() => setCurrentView('settings')}
+            onBack={() => setCurrentView('projectSettings')}
             onInvite={() => setCurrentView('invite')}
           />
         );
@@ -172,7 +155,7 @@ export function More({ onNavigateToTab, onStartNewProject, initialView, resetKey
         return (
           <ProjectStatsScreen
             projectId={currentProjectMembership?.projectId || ''}
-            onBack={() => setCurrentView('settings')}
+            onBack={() => setCurrentView('projectSettings')}
           />
         );
       case 'manualSchedule':
@@ -185,7 +168,7 @@ export function More({ onNavigateToTab, onStartNewProject, initialView, resetKey
       case 'billing':
         return (
           <BillingDetailsScreen
-            onBack={() => setCurrentView('settings')}
+            onBack={() => setCurrentView('menu')}
             onUpgrade={() => {
               useAuthStore.getState().setScreen('select-plan');
             }}
@@ -194,7 +177,7 @@ export function More({ onNavigateToTab, onStartNewProject, initialView, resetKey
       case 'userProfile':
         return (
           <UserProfileScreen
-            onBack={() => setCurrentView('settings')}
+            onBack={() => setCurrentView('menu')}
             onNavigateToBilling={() => setCurrentView('billing')}
           />
         );
@@ -218,7 +201,6 @@ interface MoreMenuProps {
 
 function MoreMenu({ onNavigate, onNavigateToTab }: MoreMenuProps) {
   const { getMoreMenuItems } = useNavigationStore();
-  const { currentProject } = useProjectStore();
   const moreMenuItems = getMoreMenuItems();
 
   // Get full config for items in the more menu
@@ -232,7 +214,6 @@ function MoreMenu({ onNavigate, onNavigateToTab }: MoreMenuProps) {
       case 'script': return 'View script PDF with scene search';
       case 'schedule': return 'Shooting schedule day-by-day';
       case 'callsheets': return 'Upload and manage call sheets';
-      case 'settings': return 'Rate card, sync, preferences';
       case 'today': return 'Today\'s shooting schedule';
       case 'breakdown': return 'Scene breakdown by character';
       case 'hours': return 'Timesheet and earnings';
@@ -243,7 +224,7 @@ function MoreMenu({ onNavigate, onNavigateToTab }: MoreMenuProps) {
 
   const handleItemClick = (id: NavTab) => {
     // For items that have dedicated views in More, navigate to them
-    if (['script', 'schedule', 'callsheets', 'settings'].includes(id)) {
+    if (['script', 'schedule', 'callsheets'].includes(id)) {
       onNavigate(id as MoreView);
     } else if (onNavigateToTab) {
       // For other items (looks, today, breakdown, hours), navigate to that tab
@@ -251,50 +232,8 @@ function MoreMenu({ onNavigate, onNavigateToTab }: MoreMenuProps) {
     }
   };
 
-  // Project-related menu items
-  const projectMenuItems = [
-    {
-      id: 'team',
-      label: 'Team',
-      description: 'View and manage team members',
-      icon: (
-        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
-        </svg>
-      ),
-    },
-    {
-      id: 'invite',
-      label: 'Invite to Project',
-      description: 'Share invite code with team',
-      icon: (
-        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
-        </svg>
-      ),
-    },
-    {
-      id: 'projectStats',
-      label: 'Project Stats',
-      description: 'Progress and completion overview',
-      icon: (
-        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
-        </svg>
-      ),
-    },
-    {
-      id: 'projectSettings',
-      label: 'Project Settings',
-      description: 'Name, type, and preferences',
-      icon: (
-        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
-          <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-        </svg>
-      ),
-    },
-  ];
+  // Filter out 'settings' from menu items as it's been removed
+  const filteredMenuConfigs = menuItemConfigs.filter(item => item.id !== 'settings');
 
   return (
     <>
@@ -308,7 +247,7 @@ function MoreMenu({ onNavigate, onNavigateToTab }: MoreMenuProps) {
 
       <div className="mobile-container px-4 py-4">
         <div className="space-y-2">
-          {menuItemConfigs.map((item) => (
+          {filteredMenuConfigs.map((item) => (
             <button
               key={item.id}
               onClick={() => handleItemClick(item.id)}
@@ -326,31 +265,6 @@ function MoreMenu({ onNavigate, onNavigateToTab }: MoreMenuProps) {
               </svg>
             </button>
           ))}
-
-          {/* Project Section */}
-          {currentProject && (
-            <div className="pt-4 border-t border-border mt-4">
-              <p className="text-xs font-medium text-text-muted uppercase tracking-wider mb-3 px-1">Project</p>
-              {projectMenuItems.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => onNavigate(item.id as MoreView)}
-                  className="w-full card flex items-center gap-4 active:scale-[0.98] transition-transform mb-2"
-                >
-                  <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-text-muted">
-                    {item.icon}
-                  </div>
-                  <div className="flex-1 text-left">
-                    <h3 className="text-sm font-semibold text-text-primary">{item.label}</h3>
-                    <p className="text-xs text-text-muted">{item.description}</p>
-                  </div>
-                  <svg className="w-5 h-5 text-text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              ))}
-            </div>
-          )}
 
           {/* Edit Menu button at the bottom */}
           <div className="pt-4 border-t border-border mt-4">
@@ -2064,559 +1978,6 @@ function CallSheetArchive({ onBack }: ViewerProps) {
           </div>
         </div>
       )}
-    </>
-  );
-}
-
-// Settings Component
-interface SettingsProps {
-  onBack: () => void;
-  onStartNewProject?: () => void;
-  onNavigateToExport?: () => void;
-  onNavigateToArchived?: () => void;
-  onNavigateToProjectSettings?: () => void;
-  onNavigateToTeam?: () => void;
-  onNavigateToInvite?: () => void;
-  onNavigateToStats?: () => void;
-  onNavigateToBilling?: () => void;
-  canManage?: boolean;
-}
-
-function Settings({ onBack, onStartNewProject, onNavigateToExport, onNavigateToArchived, onNavigateToProjectSettings, onNavigateToTeam, onNavigateToInvite, onNavigateToStats, onNavigateToBilling, canManage }: SettingsProps) {
-  const {
-    clearProject,
-    currentProject,
-    lifecycle,
-    wrapProject,
-    restoreProject,
-    getDaysUntilDeletion,
-    getArchivedProjects,
-  } = useProjectStore();
-  const { resetToDefaults } = useNavigationStore();
-  const { theme, setTheme } = useThemeStore();
-  const { clearAll: clearCallSheets } = useCallSheetStore();
-  const { clearSchedule } = useScheduleStore();
-  const { clearMessages: clearChat } = useChatStore();
-  const { clearAll: clearTimesheet } = useTimesheetStore();
-  const { setScreen, isAuthenticated } = useAuthStore();
-  const [showClearConfirm, setShowClearConfirm] = useState(false);
-  const [showNewProjectConfirm, setShowNewProjectConfirm] = useState(false);
-  const [showWrapConfirm, setShowWrapConfirm] = useState(false);
-
-  const archivedProjects = getArchivedProjects();
-  const daysUntilDeletion = getDaysUntilDeletion();
-
-  // Navigate to plan selection screen
-  const handleChangePlan = () => {
-    setScreen('select-plan');
-  };
-
-  // Theme options
-  const themeOptions: { value: Theme; label: string; icon: JSX.Element }[] = [
-    {
-      value: 'light',
-      label: 'Light',
-      icon: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-        </svg>
-      ),
-    },
-    {
-      value: 'dark',
-      label: 'Dark',
-      icon: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-        </svg>
-      ),
-    },
-    {
-      value: 'system',
-      label: 'System',
-      icon: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-        </svg>
-      ),
-    },
-  ];
-
-  const handleStartNewProject = async () => {
-    // Clear all stores
-    clearProject();
-    clearCallSheets();
-    clearSchedule();
-    clearChat();
-    clearTimesheet();
-    resetToDefaults();
-    // Clear IndexedDB data (photos, captures, etc.)
-    await clearIndexedDBData();
-    setShowNewProjectConfirm(false);
-    onStartNewProject?.();
-  };
-
-  return (
-    <>
-      <div className="sticky top-0 z-30 bg-card border-b border-border safe-top">
-        <div className="mobile-container">
-          <div className="h-14 px-4 flex items-center gap-3">
-            <button
-              onClick={onBack}
-              className="p-2 -ml-2 text-text-muted active:text-gold transition-colors touch-manipulation"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-            <h1 className="text-lg font-semibold text-text-primary">Settings</h1>
-          </div>
-        </div>
-      </div>
-
-      <div className="mobile-container px-4 py-4">
-        <section className="mb-6">
-          <h2 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-3">CURRENT PROJECT</h2>
-          <div className="card">
-            <div className="text-base font-semibold text-text-primary">
-              {currentProject?.name ?? 'No project loaded'}
-            </div>
-            {currentProject && (
-              <>
-                <div className="text-sm text-text-muted mt-1">
-                  {currentProject.scenes.length} scenes • {currentProject.characters.length} characters
-                </div>
-                {lifecycle.state === 'wrapped' && (
-                  <div className="mt-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-amber-800">
-                        Wrapped • {daysUntilDeletion} days until archive
-                      </span>
-                      <button
-                        onClick={() => restoreProject()}
-                        className="text-xs font-medium text-gold"
-                      >
-                        Restore
-                      </button>
-                    </div>
-                  </div>
-                )}
-                {lifecycle.state === 'archived' && (
-                  <div className="mt-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
-                    <span className="text-sm text-red-800">
-                      Archived - Read Only
-                    </span>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        </section>
-
-        {/* Project Management Section */}
-        {currentProject && (
-          <section className="mb-6">
-            <h2 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-3">PROJECT MANAGEMENT</h2>
-            <div className="space-y-2">
-              {/* Team */}
-              <button
-                onClick={onNavigateToTeam}
-                className="card w-full text-left flex items-center gap-3 hover:bg-gold/5 transition-colors"
-              >
-                <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
-                  <svg className="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <span className="text-sm font-medium text-text-primary block">Team</span>
-                  <span className="text-xs text-text-muted">View and manage team members</span>
-                </div>
-                <svg className="w-5 h-5 text-text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-
-              {/* Share Invite Code */}
-              <button
-                onClick={onNavigateToInvite}
-                className="card w-full text-left flex items-center gap-3 hover:bg-gold/5 transition-colors"
-              >
-                <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center">
-                  <svg className="w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <span className="text-sm font-medium text-text-primary block">Share Invite Code</span>
-                  <span className="text-xs text-text-muted">Invite team members to join</span>
-                </div>
-                <svg className="w-5 h-5 text-text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-
-              {/* Project Stats */}
-              <button
-                onClick={onNavigateToStats}
-                className="card w-full text-left flex items-center gap-3 hover:bg-gold/5 transition-colors"
-              >
-                <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center">
-                  <svg className="w-4 h-4 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <span className="text-sm font-medium text-text-primary block">Project Stats</span>
-                  <span className="text-xs text-text-muted">View project statistics</span>
-                </div>
-                <svg className="w-5 h-5 text-text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-
-              {/* Project Settings (Owner/Supervisor only) */}
-              {canManage && (
-                <button
-                  onClick={onNavigateToProjectSettings}
-                  className="card w-full text-left flex items-center gap-3 hover:bg-gold/5 transition-colors"
-                >
-                  <div className="w-8 h-8 rounded-lg bg-gold/10 flex items-center justify-center">
-                    <svg className="w-4 h-4 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                  </div>
-                  <div className="flex-1">
-                    <span className="text-sm font-medium text-text-primary block">Project Settings</span>
-                    <span className="text-xs text-text-muted">Configure permissions and details</span>
-                  </div>
-                  <svg className="w-5 h-5 text-text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              )}
-            </div>
-          </section>
-        )}
-
-        {/* Subscription Section - only show for authenticated users */}
-        {isAuthenticated && (
-          <SubscriptionSection onChangePlan={handleChangePlan} />
-        )}
-
-        {/* Account Settings Section - Billing Details */}
-        {isAuthenticated && (
-          <section className="mb-6">
-            <h2 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-3">ACCOUNT SETTINGS</h2>
-            <div className="space-y-2">
-              <button
-                onClick={onNavigateToBilling}
-                className="card w-full text-left flex items-center gap-3 hover:bg-gold/5 transition-colors"
-              >
-                <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
-                  <svg className="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <span className="text-sm font-medium text-text-primary block">Billing Details</span>
-                  <span className="text-xs text-text-muted">Personal info, bank details, VAT for invoices</span>
-                </div>
-                <svg className="w-5 h-5 text-text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-            </div>
-          </section>
-        )}
-
-        {/* Export Section */}
-        {currentProject && (
-          <section className="mb-6">
-            <h2 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-3">EXPORT & WRAP</h2>
-            <div className="space-y-2">
-              <button
-                onClick={onNavigateToExport}
-                className="card w-full text-left flex items-center gap-3 hover:bg-gold/5 transition-colors"
-              >
-                <div className="w-8 h-8 rounded-lg bg-gold/10 flex items-center justify-center">
-                  <svg className="w-4 h-4 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                  </svg>
-                </div>
-                <div>
-                  <span className="text-sm font-medium text-text-primary block">Export Project</span>
-                  <span className="text-xs text-text-muted">Download continuity documents</span>
-                </div>
-              </button>
-
-              {lifecycle.state === 'active' && (
-                <button
-                  onClick={() => setShowWrapConfirm(true)}
-                  className="card w-full text-left flex items-center gap-3 hover:bg-amber-50 transition-colors"
-                >
-                  <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
-                    <svg className="w-4 h-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h1.5C5.496 19.5 6 18.996 6 18.375m-3.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-1.5A1.875 1.875 0 0118 18.375M20.625 4.5H3.375m17.25 0c.621 0 1.125.504 1.125 1.125M20.625 4.5h-1.5C18.504 4.5 18 5.004 18 5.625m3.75 0v1.5c0 .621-.504 1.125-1.125 1.125M3.375 4.5c-.621 0-1.125.504-1.125 1.125M3.375 4.5h1.5C5.496 4.5 6 5.004 6 5.625m-3.75 0v1.5c0 .621.504 1.125 1.125 1.125m0 0h1.5m-1.5 0c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125m1.5-3.75C5.496 8.25 6 7.746 6 7.125v-1.5M4.875 8.25C5.496 8.25 6 8.754 6 9.375v1.5m0-5.25v5.25m0-5.25C6 5.004 6.504 4.5 7.125 4.5h9.75c.621 0 1.125.504 1.125 1.125" />
-                    </svg>
-                  </div>
-                  <div>
-                    <span className="text-sm font-medium text-amber-700 block">Mark as Wrapped</span>
-                    <span className="text-xs text-text-muted">Production complete, archive in {PROJECT_RETENTION_DAYS} days</span>
-                  </div>
-                </button>
-              )}
-            </div>
-          </section>
-        )}
-
-        {/* Archived Projects Section */}
-        {archivedProjects.length > 0 && (
-          <section className="mb-6">
-            <h2 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-3">ARCHIVED PROJECTS</h2>
-            <button
-              onClick={onNavigateToArchived}
-              className="card w-full text-left flex items-center justify-between"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center">
-                  <svg className="w-4 h-4 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-                  </svg>
-                </div>
-                <div>
-                  <span className="text-sm font-medium text-text-primary block">Archived Projects</span>
-                  <span className="text-xs text-text-muted">{archivedProjects.length} project{archivedProjects.length !== 1 ? 's' : ''}</span>
-                </div>
-              </div>
-              <svg className="w-5 h-5 text-text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          </section>
-        )}
-
-        {/* Project Retention Info */}
-        <section className="mb-6">
-          <h2 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-3">DATA RETENTION</h2>
-          <div className="card">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-text-secondary">Project Retention</span>
-              <span className="text-sm font-medium text-text-primary">{PROJECT_RETENTION_DAYS} days</span>
-            </div>
-            <p className="text-xs text-text-muted mt-2">
-              Wrapped projects are stored for {PROJECT_RETENTION_DAYS} days before being archived. Export your data to keep a permanent backup.
-            </p>
-          </div>
-        </section>
-
-        {/* Appearance / Theme Section */}
-        <section className="mb-6">
-          <h2 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-3">APPEARANCE</h2>
-          <div className="card">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-medium text-text-primary">Theme</span>
-              <span className="text-xs text-text-muted capitalize">{theme}</span>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              {themeOptions.map((option) => (
-                <button
-                  key={option.value}
-                  onClick={() => setTheme(option.value)}
-                  className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${
-                    theme === option.value
-                      ? 'border-gold bg-gold/10 text-gold'
-                      : 'border-border bg-input-bg text-text-muted hover:border-gold/30'
-                  }`}
-                >
-                  {option.icon}
-                  <span className="text-xs font-medium">{option.label}</span>
-                </button>
-              ))}
-            </div>
-            <p className="text-xs text-text-muted mt-3">
-              {theme === 'dark'
-                ? 'Dark mode matches the website aesthetic with gold accents.'
-                : theme === 'system'
-                ? 'Automatically matches your device settings.'
-                : 'Classic light mode with warm tones.'}
-            </p>
-          </div>
-        </section>
-
-        <section className="mb-6">
-          <h2 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-3">PROJECT</h2>
-          <div className="space-y-2">
-            <button
-              onClick={() => setShowNewProjectConfirm(true)}
-              className="card w-full text-left flex items-center gap-3 hover:bg-gold/5 transition-colors"
-            >
-              <div className="w-8 h-8 rounded-lg bg-gold/10 flex items-center justify-center">
-                <svg className="w-4 h-4 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                </svg>
-              </div>
-              <div>
-                <span className="text-sm font-medium text-text-primary block">Start New Project</span>
-                <span className="text-xs text-text-muted">Upload a new script and start fresh</span>
-              </div>
-            </button>
-            <button
-              onClick={() => setShowClearConfirm(true)}
-              className="card w-full text-left flex items-center gap-3 hover:bg-red-50 transition-colors"
-            >
-              <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center">
-                <svg className="w-4 h-4 text-error" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </div>
-              <div>
-                <span className="text-sm font-medium text-error block">Clear All Data</span>
-                <span className="text-xs text-text-muted">Delete all photos and captured data</span>
-              </div>
-            </button>
-          </div>
-        </section>
-
-        <section className="mb-6">
-          <h2 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-3">NAVIGATION</h2>
-          <button
-            onClick={resetToDefaults}
-            className="card w-full text-left text-text-primary hover:bg-gray-50 transition-colors"
-          >
-            Reset Menu to Defaults
-          </button>
-        </section>
-
-        <section className="mb-6">
-          <h2 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-3">SYNC STATUS</h2>
-          <div className="card">
-            <div className="flex items-center gap-3">
-              <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-sm text-text-primary">Offline Mode</span>
-            </div>
-            <p className="text-xs text-text-muted mt-2">
-              All data is stored locally on your device.
-            </p>
-            <button className="mt-3 text-sm text-gold font-medium">
-              Sync with Desktop
-            </button>
-          </div>
-        </section>
-
-        <section className="mb-6">
-          <h2 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-3">ABOUT</h2>
-          <div className="card space-y-2">
-            <div className="flex justify-between">
-              <span className="text-sm text-text-muted">Version</span>
-              <span className="text-sm text-text-primary">1.0.0</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-text-muted">Platform</span>
-              <span className="text-sm text-text-primary">Mobile PWA</span>
-            </div>
-          </div>
-        </section>
-
-        {showClearConfirm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="bg-card rounded-xl p-6 max-w-sm w-full">
-              <h3 className="text-lg font-semibold text-text-primary mb-2">Clear All Data?</h3>
-              <p className="text-sm text-text-muted mb-6">
-                This will delete all captured photos and scene data. This cannot be undone.
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowClearConfirm(false)}
-                  className="flex-1 px-4 py-2.5 rounded-button bg-gray-100 text-text-primary font-medium"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={async () => {
-                    // Clear all stores
-                    clearProject();
-                    clearCallSheets();
-                    clearSchedule();
-                    clearChat();
-                    clearTimesheet();
-                    // Clear IndexedDB data (photos, captures, etc.)
-                    await clearIndexedDBData();
-                    setShowClearConfirm(false);
-                  }}
-                  className="flex-1 px-4 py-2.5 rounded-button bg-error text-white font-medium"
-                >
-                  Clear Data
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {showNewProjectConfirm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="bg-card rounded-xl p-6 max-w-sm w-full">
-              <h3 className="text-lg font-semibold text-text-primary mb-2">Start New Project?</h3>
-              <p className="text-sm text-text-muted mb-6">
-                This will clear all current project data and take you to the setup screen. Make sure you've synced any important data first.
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowNewProjectConfirm(false)}
-                  className="flex-1 px-4 py-2.5 rounded-button bg-gray-100 text-text-primary font-medium"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleStartNewProject}
-                  className="flex-1 px-4 py-2.5 rounded-button gold-gradient text-white font-medium"
-                >
-                  Start New
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {showWrapConfirm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="bg-card rounded-xl p-6 max-w-sm w-full">
-              <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-amber-100 flex items-center justify-center">
-                <svg className="w-6 h-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h1.5C5.496 19.5 6 18.996 6 18.375m-3.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-1.5A1.875 1.875 0 0118 18.375M20.625 4.5H3.375m17.25 0c.621 0 1.125.504 1.125 1.125" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-semibold text-text-primary text-center mb-2">Wrap Project?</h3>
-              <p className="text-sm text-text-muted text-center mb-4">
-                This will mark "{currentProject?.name}" as wrapped. The project will be stored for {PROJECT_RETENTION_DAYS} days before being automatically archived.
-              </p>
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-6">
-                <p className="text-xs text-amber-800">
-                  You can still access and edit your project during this time. Export your continuity documents to keep a permanent backup.
-                </p>
-              </div>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowWrapConfirm(false)}
-                  className="flex-1 px-4 py-2.5 rounded-button bg-gray-100 text-text-primary font-medium"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => {
-                    wrapProject('manual');
-                    setShowWrapConfirm(false);
-                  }}
-                  className="flex-1 px-4 py-2.5 rounded-button bg-amber-500 text-white font-medium"
-                >
-                  Wrap Project
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
     </>
   );
 }

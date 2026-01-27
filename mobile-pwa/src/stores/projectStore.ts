@@ -81,6 +81,7 @@ interface ProjectState {
   saveAndClearProject: () => void;
   restoreSavedProject: (projectId: string) => boolean;
   hasSavedProject: (projectId: string) => boolean;
+  removeSavedProject: (projectId: string) => void;
 
   // Actions - Navigation
   setActiveTab: (tab: NavTab) => void;
@@ -289,6 +290,13 @@ export const useProjectStore = create<ProjectState>()(
       // Check if a project has saved data
       hasSavedProject: (projectId: string) => {
         return !!get().savedProjects[projectId];
+      },
+
+      // Remove a saved project from storage
+      removeSavedProject: (projectId: string) => {
+        const newSavedProjects = { ...get().savedProjects };
+        delete newSavedProjects[projectId];
+        set({ savedProjects: newSavedProjects });
       },
 
       // Navigation actions
@@ -1179,6 +1187,7 @@ export const useProjectStore = create<ProjectState>()(
         lifecycle: state.lifecycle,
         savedProjects: state.savedProjects,
         archivedProjects: state.archivedProjects,
+        needsSetup: state.needsSetup,
       }),
     }
   )
