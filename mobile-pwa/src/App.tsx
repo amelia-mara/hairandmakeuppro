@@ -194,11 +194,8 @@ function AppContent() {
     }
   };
 
-  // Handle navigation to a specific sub-view in More
-  const handleNavigateToSubView = (subView: 'team' | 'invite' | 'projectStats' | 'projectSettings' | 'userProfile') => {
-    setMoreSubView(subView);
-    setActiveTab('settings');
-  };
+  // Handle navigation to user profile from project header (goes back to project, not menu)
+  const [showUserProfile, setShowUserProfile] = useState(false);
 
   // Handle navigation from More menu to a specific tab
   const handleNavigateToTab = (tab: NavTab) => {
@@ -351,6 +348,16 @@ function AppContent() {
     );
   }
 
+  // Show User Profile screen (from header avatar click)
+  if (showUserProfile) {
+    return (
+      <UserProfileScreen
+        onBack={() => setShowUserProfile(false)}
+        onNavigateToBilling={() => setScreen('select-plan')}
+      />
+    );
+  }
+
   // Render content based on active tab and current view
   const renderContent = () => {
     // If viewing a specific scene (from Today or Breakdown tabs)
@@ -402,7 +409,7 @@ function AppContent() {
       {showProjectHeader && (
         <ProjectHeader
           onSwitchProject={handleSwitchProject}
-          onNavigateToProfile={() => handleNavigateToSubView('userProfile')}
+          onNavigateToProfile={() => setShowUserProfile(true)}
         />
       )}
 
