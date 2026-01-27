@@ -376,7 +376,7 @@ export function ProjectHubScreen() {
                   variant="outline"
                   onClick={() => setScreen('join')}
                 >
-                  Join Team
+                  Join Production
                 </Button>
               </div>
               {/* Sync Project button */}
