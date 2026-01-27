@@ -23,6 +23,7 @@ import {
   CreateProjectScreen,
 } from '@/components/auth';
 import { SelectPlanScreen } from '@/components/subscription';
+import { UserProfileScreen } from '@/components/profile/UserProfileScreen';
 import type { NavTab, SubscriptionTier, BillingPeriod } from '@/types';
 
 // Configuration error screen shown when Supabase environment variables are missing
@@ -237,6 +238,13 @@ function AppContent() {
             onBack={goBack}
           />
         );
+      case 'profile':
+        return (
+          <UserProfileScreen
+            onBack={goBack}
+            onNavigateToBilling={() => setScreen('select-plan')}
+          />
+        );
       default:
         return <WelcomeScreen />;
     }
@@ -258,6 +266,13 @@ function AppContent() {
             currentTier={user?.tier as SubscriptionTier | undefined}
             onSelectTier={handleSelectTier}
             onBack={goBack}
+          />
+        );
+      case 'profile':
+        return (
+          <UserProfileScreen
+            onBack={goBack}
+            onNavigateToBilling={() => setScreen('select-plan')}
           />
         );
       default:
