@@ -24,6 +24,7 @@ import {
 } from '@/components/auth';
 import { SelectPlanScreen } from '@/components/subscription';
 import { UserProfileScreen } from '@/components/profile/UserProfileScreen';
+import { ProjectSettingsScreen } from '@/components/project-settings';
 import type { NavTab, SubscriptionTier, BillingPeriod } from '@/types';
 
 // Configuration error screen shown when Supabase environment variables are missing
@@ -77,6 +78,8 @@ function AppContent() {
     setScreen,
     goBack,
     user,
+    settingsProjectId,
+    setSettingsProjectId,
   } = useAuthStore();
 
   // Track if we're showing the home/setup screen
@@ -245,6 +248,26 @@ function AppContent() {
             onNavigateToBilling={() => setScreen('select-plan')}
           />
         );
+      case 'project-settings':
+        return settingsProjectId ? (
+          <ProjectSettingsScreen
+            projectId={settingsProjectId}
+            onBack={() => {
+              setSettingsProjectId(null);
+              setScreen('hub');
+            }}
+            onProjectDeleted={() => {
+              setSettingsProjectId(null);
+              setScreen('hub');
+            }}
+            onProjectArchived={() => {
+              setSettingsProjectId(null);
+              setScreen('hub');
+            }}
+          />
+        ) : (
+          <ProjectHubScreen />
+        );
       default:
         return <WelcomeScreen />;
     }
@@ -274,6 +297,26 @@ function AppContent() {
             onBack={goBack}
             onNavigateToBilling={() => setScreen('select-plan')}
           />
+        );
+      case 'project-settings':
+        return settingsProjectId ? (
+          <ProjectSettingsScreen
+            projectId={settingsProjectId}
+            onBack={() => {
+              setSettingsProjectId(null);
+              setScreen('hub');
+            }}
+            onProjectDeleted={() => {
+              setSettingsProjectId(null);
+              setScreen('hub');
+            }}
+            onProjectArchived={() => {
+              setSettingsProjectId(null);
+              setScreen('hub');
+            }}
+          />
+        ) : (
+          <ProjectHubScreen />
         );
       default:
         return <ProjectHubScreen />;

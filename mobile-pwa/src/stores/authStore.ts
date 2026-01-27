@@ -37,6 +37,9 @@ interface AuthState {
   // Guest mode (joined project without account)
   guestProjectCode: string | null;
 
+  // Project settings navigation
+  settingsProjectId: string | null;
+
   // Actions
   setScreen: (screen: AuthScreen, addToHistory?: boolean) => void;
   goBack: () => void;
@@ -56,6 +59,7 @@ interface AuthState {
   refreshUserProjects: () => Promise<void>;
   deleteProject: (projectId: string) => Promise<{ success: boolean; error?: string }>;
   leaveProject: (projectId: string) => Promise<{ success: boolean; error?: string }>;
+  setSettingsProjectId: (projectId: string | null) => void;
 }
 
 // Convert Supabase user profile to app User type
@@ -102,6 +106,7 @@ export const useAuthStore = create<AuthState>()(
       subscription: createDefaultSubscription(),
       projectMemberships: [],
       guestProjectCode: null,
+      settingsProjectId: null,
 
       // Initialize auth state from Supabase session
       initializeAuth: async () => {
@@ -621,6 +626,10 @@ export const useAuthStore = create<AuthState>()(
           set({ isLoading: false, error: 'Failed to leave project. Please try again.' });
           return { success: false, error: 'Failed to leave project' };
         }
+      },
+
+      setSettingsProjectId: (projectId) => {
+        set({ settingsProjectId: projectId });
       },
     }),
     {

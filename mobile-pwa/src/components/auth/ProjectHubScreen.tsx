@@ -180,6 +180,7 @@ export function ProjectHubScreen() {
     deleteProject,
     leaveProject,
     isLoading,
+    setSettingsProjectId,
   } = useAuthStore();
 
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -413,7 +414,8 @@ export function ProjectHubScreen() {
                   (project.role === 'owner' || project.role === 'supervisor')
                     ? () => {
                         // Navigate to project settings
-                        console.log('Project settings for:', project.projectId);
+                        setSettingsProjectId(project.projectId);
+                        setScreen('project-settings');
                       }
                     : undefined
                 }
