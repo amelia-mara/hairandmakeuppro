@@ -328,7 +328,7 @@ export function ProjectHubScreen() {
 
           {/* User avatar */}
           <button
-            onClick={() => setScreen('select-plan')}
+            onClick={() => setScreen('profile')}
             className="flex items-center gap-2"
           >
             <div className="w-10 h-10 rounded-full bg-gold flex items-center justify-center text-white font-semibold text-sm">
