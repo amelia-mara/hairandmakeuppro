@@ -339,26 +339,58 @@ async function analyzeFullSchedule(
 
   const systemPrompt = `You are an expert at parsing film production shooting schedules. Your job is to extract ALL scenes from a schedule PDF that has been converted to text.
 
-CRITICAL: The schedule uses a TABLE FORMAT where each scene has these columns:
-1. Scene number (e.g., "Scene 21", "Scene 14", "Scene 49", "Scene 61A")
-2. Page count (e.g., "2 pgs", "1 4/8 pgs", "2/8 pgs")
-3. INT or EXT (interior/exterior)
-4. Time of day (Day, Night, Morning)
-5. Location in CAPS (e.g., "MARGOT'S BEDROOM - PLUMHILL MANOR", "KITCHEN - PLUMHILL MANOR")
-6. Scene description in mixed case (the action/synopsis)
-7. Cast numbers (single digits or comma-separated like "1, 3" or "1, 2, 3, 7")
-8. Estimated time (like "3:00", "1:30", ":30")
-9. Story day marker (D5, D4, D6, D8, N8, N7, etc. - this indicates which story day)
-10. Remarks (optional notes)
+CRITICAL: This schedule has a SPECIFIC FORMAT where each scene entry ends with "pgs Scenes:" as a delimiter.
+
+SCENE FORMAT PATTERN A - Scene number at START of synopsis line:
+\`\`\`
+EXT FARMHOUSE - DRIVEWAY
+Day
+1/8
+4A TAXI passes the road to the Farmhouse
+pgs Scenes:
+:30
+Est. Time
+\`\`\`
+This gives: Scene 4A, EXT, FARMHOUSE - DRIVEWAY, Day, synopsis "TAXI passes the road to the Farmhouse"
+
+SCENE FORMAT PATTERN B - Scene number on SEPARATE line after cast:
+\`\`\`
+EXT FARMHOUSE
+Day
+1 6/8
+They meet INGA & JOHN
+1, 2, 4, 7
+7
+pgs Scenes:
+1:30
+Est. Time
+\`\`\`
+This gives: Scene 7, EXT, FARMHOUSE, Day, synopsis "They meet INGA & JOHN", cast [1, 2, 4, 7]
+
+HOW TO IDENTIFY EACH FORMAT:
+- Format A: Line before "pgs Scenes:" starts with a scene number like "4A", "18B" followed by text
+- Format B: Line before "pgs Scenes:" is JUST a scene number (like "7"), and the synopsis is higher up
+
+CRITICAL DISTINCTIONS:
+- SCENE NUMBERS: Standalone like "7", "4A", "18B", "106A p1", "14pt" - NOT comma-separated
+- CAST NUMBERS: Comma-separated lists like "1, 2, 4, 7" - these are NOT scene numbers!
+- Page counts look like "1/8", "2 3/8", "1 6/8" (fractions of 8ths)
+
+STRUCTURE OF EACH SCENE ENTRY:
+1. INT/EXT + LOCATION (e.g., "EXT FARMHOUSE - DRIVEWAY" or just "EXT FARMHOUSE")
+2. Time of day (Day, Night, Morning, Evening)
+3. Page count (e.g., "1/8", "2 3/8")
+4. Synopsis/description line
+5. Cast numbers (comma-separated, if present)
+6. Scene number (either embedded in synopsis or on own line)
+7. "pgs Scenes:" delimiter
+8. Estimated time
+9. "Est. Time" label
 
 IMPORTANT PATTERNS:
-- "End of Shooting Day X" marks the end of each shooting day's scenes
-- Look for scene rows that have "Scene" followed by a number
-- Story day markers like "D5" mean "Day 5 in the story timeline", "N8" means "Night 8"
-- Cast numbers reference the cast list and appear as single digits or lists
-- Locations are typically ALL CAPS
-- Scene descriptions/synopses are typically mixed case
-- The schedule may have TWO-ROW format where "Scene" is on one line and scene number on next line
+- "End of Shooting Day X" marks the end of each shooting day
+- Look for the "pgs Scenes:" delimiter to identify scene boundaries
+- Story day markers like "D5" mean "Day 5 in the story", "N8" means "Night 8"
 
 Return ONLY valid JSON with no additional text, no markdown code blocks.`;
 
@@ -395,16 +427,17 @@ Return a JSON object with this exact structure:
 }
 
 CRITICAL INSTRUCTIONS:
-1. Extract EVERY scene you can find - don't skip any
-2. Scene numbers should be exactly as shown (21, 14, 49, 62, 71, 73, 61A, 14pt, etc.)
-3. dayNight should be the STORY DAY marker (D5, D4, N8, etc.) NOT just "Day" or "Night"
-4. castNumbers should be an array of integers (the cast ID numbers)
-5. shootOrder should be the order scenes appear within each shooting day (1, 2, 3...)
-6. Group scenes by shooting day based on "End of Shooting Day X" markers
-7. For intExt, use only "INT" or "EXT"
-8. Look for patterns like "Scene 21" or "Sc 21" to identify scene entries
-9. Extract the date from patterns like "Tuesday, 21 May 2024"
-10. Return ONLY the JSON object, no explanation, no markdown`;
+1. Extract EVERY scene - look for "pgs Scenes:" delimiters to find each scene boundary
+2. Scene numbers: exactly as shown (4A, 4B, 6, 7, 8, 9, 18B, 106A p1, 14pt, etc.)
+3. For Format A: scene number is at START of synopsis line (e.g., "4A TAXI passes..." → scene 4A)
+4. For Format B: scene number is on its OWN LINE just before "pgs Scenes:" (standalone number like "7")
+5. NEVER confuse cast lists "1, 2, 4, 7" (comma-separated) with scene numbers (standalone)
+6. dayNight: extract story day marker if present (D5, D4, N8) otherwise use "Day" or "Night"
+7. castNumbers: array of integers from comma-separated cast lists (e.g., "1, 2, 4, 7" → [1, 2, 4, 7])
+8. shootOrder: order scenes appear within each shooting day (1, 2, 3...)
+9. Group by shooting day using "End of Shooting Day X" markers
+10. For Day 1, expect scenes like: 4A, 4B, 6, 7, 8, 9 (six scenes)
+11. Return ONLY the JSON object, no explanation, no markdown`;
 
   try {
     debugLog('Calling AI for full schedule analysis...');
@@ -521,21 +554,37 @@ async function analyzeDayChunk(
 
   const systemPrompt = `You are an expert at parsing film production shooting schedules. Extract all scenes from this portion of a schedule.
 
-The schedule uses a TABLE FORMAT with columns for:
-- Scene number, Page count, INT/EXT, Time of day, Location, Description, Cast numbers, Est. time, Story day marker
+CRITICAL: Each scene entry ends with "pgs Scenes:" as a delimiter. Use this to identify scene boundaries.
 
-IMPORTANT: Distinguish between SCENE NUMBERS and CAST NUMBERS:
-- SCENE NUMBERS: Appear with "Scene" prefix OR standalone like "4A", "7", "18B", "106A p1" with page counts and INT/EXT
-- CAST NUMBERS: Appear as comma-separated lists like "1, 2, 4, 7" in a cast column - these are NOT scenes!
+SCENE FORMAT PATTERN A - Scene number at START of synopsis line:
+\`\`\`
+EXT FARMHOUSE - DRIVEWAY
+Day
+1/8
+4A TAXI passes the road to the Farmhouse
+pgs Scenes:
+\`\`\`
+Result: Scene 4A, EXT, "FARMHOUSE - DRIVEWAY", synopsis "TAXI passes the road to the Farmhouse"
 
-Look for:
-- "Scene X" patterns to identify scene entries
-- Scene numbers can have letter suffixes (4A, 18B) or part indicators (106A p1)
-- Story day markers like D5, N8 (Day 5, Night 8 in the story)
-- Cast numbers as single digits or comma-separated lists in the CAST COLUMN (not scene numbers!)
-- Locations in ALL CAPS
-- Descriptions in mixed case
-- The schedule may have TWO-ROW format where "Scene" is on one line and scene number on next line
+SCENE FORMAT PATTERN B - Scene number on SEPARATE line after cast:
+\`\`\`
+EXT FARMHOUSE
+Day
+1 6/8
+They meet INGA & JOHN
+1, 2, 4, 7
+7
+pgs Scenes:
+\`\`\`
+Result: Scene 7, EXT, "FARMHOUSE", synopsis "They meet INGA & JOHN", cast [1, 2, 4, 7]
+
+HOW TO IDENTIFY:
+- Format A: Line before "pgs Scenes:" starts with scene number + text (e.g., "4A TAXI...")
+- Format B: Line before "pgs Scenes:" is JUST a standalone number (e.g., "7")
+
+CRITICAL DISTINCTIONS:
+- SCENE NUMBERS: Standalone like "7", "4A", "18B" - NOT comma-separated
+- CAST NUMBERS: Comma-separated lists like "1, 2, 4, 7" - these are NOT scene numbers!
 
 Return ONLY valid JSON, no markdown code blocks.`;
 
@@ -566,8 +615,13 @@ Return JSON:
   ]
 }
 
-Extract EVERY scene. Scene numbers exactly as shown (e.g., "4A", "18B", "106A p1"). dayNight = story day marker (D5, N8, etc).
-IMPORTANT: DO NOT confuse cast number lists (like "1, 2, 4, 7") with scene numbers!
+CRITICAL INSTRUCTIONS:
+1. Extract EVERY scene - use "pgs Scenes:" as the delimiter between scenes
+2. For Format A: scene number is at START of line before "pgs Scenes:" (e.g., "4A TAXI..." → scene 4A)
+3. For Format B: scene number is STANDALONE on its own line just before "pgs Scenes:" (e.g., "7")
+4. NEVER confuse cast lists "1, 2, 4, 7" (comma-separated) with scene numbers (standalone)
+5. Scene numbers exactly as shown: 4A, 4B, 6, 7, 8, 9, 18B, 106A p1, etc.
+6. castNumbers: array of integers from comma-separated lists
 Return ONLY the JSON object, no explanation, no markdown.`;
 
   try {
