@@ -4,6 +4,7 @@ import { createHybridStorage } from '@/db/zustandStorage';
 import type { CallSheet, CallSheetScene, ShootingSceneStatus, SceneFilmingStatus } from '@/types';
 import { parseCallSheetPDF } from '@/utils/callSheetParser';
 import { useTimesheetStore } from './timesheetStore';
+import { useProjectStore } from './projectStore';
 
 // Current version of the store schema - increment when making breaking changes
 const STORE_VERSION = 2;
@@ -87,6 +88,28 @@ export const useCallSheetStore = create<CallSheetState>()(
             }
           };
 
+          // Sync scene log lines to breakdown synopsis
+          const syncSceneSynopsesToBreakdown = (cs: CallSheet) => {
+            const projectStore = useProjectStore.getState();
+            const project = projectStore.currentProject;
+            if (!project?.scenes) return;
+
+            // For each scene in the call sheet that has an action/log line
+            cs.scenes.forEach(callSheetScene => {
+              if (!callSheetScene.action) return;
+
+              // Find matching scene in the breakdown by scene number
+              const breakdownScene = project.scenes.find(
+                s => s.sceneNumber === callSheetScene.sceneNumber
+              );
+
+              // If found and doesn't already have a synopsis, update it
+              if (breakdownScene && !breakdownScene.synopsis) {
+                projectStore.updateSceneSynopsis(breakdownScene.id, callSheetScene.action);
+              }
+            });
+          };
+
           if (existing) {
             // COMPLETELY REPLACE existing call sheet - do not merge scenes
             const replacementSheet: CallSheet = {
@@ -105,6 +128,9 @@ export const useCallSheetStore = create<CallSheetState>()(
             // Auto-fill timesheet with call times
             autoFillTimesheet(replacementSheet);
 
+            // Sync scene log lines to breakdown
+            syncSceneSynopsesToBreakdown(replacementSheet);
+
             return replacementSheet;
           }
 
@@ -119,6 +145,9 @@ export const useCallSheetStore = create<CallSheetState>()(
 
           // Auto-fill timesheet with call times
           autoFillTimesheet(cleanCallSheet);
+
+          // Sync scene log lines to breakdown
+          syncSceneSynopsesToBreakdown(cleanCallSheet);
 
           return cleanCallSheet;
         } catch (error) {
