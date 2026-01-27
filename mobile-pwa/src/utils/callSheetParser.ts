@@ -115,6 +115,7 @@ Return a JSON object with this structure (include only fields that have data in 
       "sceneNumber": "1" or "1A" (string, exactly as shown),
       "locationId": "LOC 1, LOC 2, etc. if shown",
       "setDescription": "INT. LOCATION - DESCRIPTION or EXT. etc",
+      "action": "scene log line or brief description of what happens in the scene, if present",
       "dayNight": "D" or "N" or "D/N" or "D1" or "D2" etc,
       "pages": "1/8" or "2" or "1 5/8" etc,
       "cast": ["1", "2", "4"] (cast numbers as strings),
