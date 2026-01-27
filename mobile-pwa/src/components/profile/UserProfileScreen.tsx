@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
+import { useThemeStore, type Theme } from '@/stores/themeStore';
 import { supabase } from '@/lib/supabase';
 import { updateUserProfile } from '@/services/supabaseAuth';
 
@@ -10,11 +11,43 @@ interface UserProfileScreenProps {
 
 export function UserProfileScreen({ onBack, onNavigateToBilling }: UserProfileScreenProps) {
   const { user, signOut } = useAuthStore();
+  const { theme, setTheme } = useThemeStore();
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(user?.name || '');
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
+
+  // Theme options
+  const themeOptions: { value: Theme; label: string; icon: JSX.Element }[] = [
+    {
+      value: 'light',
+      label: 'Light',
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+      ),
+    },
+    {
+      value: 'dark',
+      label: 'Dark',
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+        </svg>
+      ),
+    },
+    {
+      value: 'system',
+      label: 'System',
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+        </svg>
+      ),
+    },
+  ];
 
   // Get user initials for avatar
   const getInitials = () => {
@@ -243,14 +276,46 @@ export function UserProfileScreen({ onBack, onNavigateToBilling }: UserProfileSc
                   {getTierDisplay()} tier
                 </p>
               </div>
-              <button className="px-4 py-2 rounded-button border border-gold text-gold text-sm font-medium active:scale-98 transition-transform">
+              <button
+                onClick={onNavigateToBilling}
+                className="px-4 py-2 rounded-button border border-gold text-gold text-sm font-medium active:scale-98 transition-transform"
+              >
                 Upgrade
               </button>
             </div>
           </div>
         </section>
 
-        {/* Danger Zone */}
+        {/* Appearance / Theme Section */}
+        <section className="mb-6">
+          <h2 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-3">
+            APPEARANCE
+          </h2>
+          <div className="card">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-medium text-text-primary">Theme</span>
+              <span className="text-xs text-text-muted capitalize">{theme}</span>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {themeOptions.map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => setTheme(option.value)}
+                  className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${
+                    theme === option.value
+                      ? 'border-gold bg-gold/10 text-gold'
+                      : 'border-border text-text-muted hover:border-gold/50'
+                  }`}
+                >
+                  {option.icon}
+                  <span className="text-xs font-medium">{option.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Sign Out */}
         <section className="mb-6">
           <h2 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-3">
             SESSION
