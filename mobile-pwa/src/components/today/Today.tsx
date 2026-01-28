@@ -363,18 +363,6 @@ export function Today({ onSceneSelect }: TodayProps) {
             </div>
           </div>
 
-          {/* Weather note */}
-          {callSheet?.weather?.conditions && (
-            <div className="px-4 pb-3 -mt-1">
-              <span className="text-xs text-text-muted flex items-center gap-1.5">
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
-                </svg>
-                {callSheet.weather.conditions}
-                {callSheet.weather.tempHigh && `, ${callSheet.weather.tempHigh}°C`}
-              </span>
-            </div>
-          )}
         </div>
       </div>
 
@@ -390,9 +378,16 @@ export function Today({ onSceneSelect }: TodayProps) {
           <>
             {/* Call Sheet Summary Card */}
             <div className="card">
-              <h2 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-3">
-                CALL TIMES
-              </h2>
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-[10px] font-bold tracking-wider uppercase text-text-light">
+                  CALL TIMES
+                </h2>
+                {callSheet.dayType && (
+                  <span className="text-[10px] font-semibold text-gold uppercase">
+                    {callSheet.dayType}
+                  </span>
+                )}
+              </div>
               <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                 <div className="flex justify-between">
                   <span className="text-sm text-text-muted">Unit Call</span>
@@ -877,6 +872,10 @@ const TodaySceneCard = memo(function TodaySceneCard({
                       View full scene
                     </span>
                   </button>
+                ) : shootingScene.action ? (
+                  <p className="text-[13px] text-[#666] italic line-clamp-2 mt-1">
+                    {shootingScene.action}
+                  </p>
                 ) : scene?.scriptContent ? (
                   <button
                     onClick={(e) => {

@@ -182,7 +182,7 @@ export function More({ onNavigateToTab, onStartNewProject, initialView, resetKey
           />
         );
       default:
-        return <MoreMenu onNavigate={handleViewChange} onNavigateToTab={onNavigateToTab} />;
+        return <MoreMenu onNavigate={handleViewChange} onNavigateToTab={onNavigateToTab} canManage={canManage} />;
     }
   };
 
@@ -197,9 +197,10 @@ export function More({ onNavigateToTab, onStartNewProject, initialView, resetKey
 interface MoreMenuProps {
   onNavigate: (view: MoreView) => void;
   onNavigateToTab?: (tab: NavTab) => void;
+  canManage?: boolean;
 }
 
-function MoreMenu({ onNavigate, onNavigateToTab }: MoreMenuProps) {
+function MoreMenu({ onNavigate, onNavigateToTab, canManage }: MoreMenuProps) {
   const { getMoreMenuItems } = useNavigationStore();
   const moreMenuItems = getMoreMenuItems();
 
@@ -265,6 +266,25 @@ function MoreMenu({ onNavigate, onNavigateToTab }: MoreMenuProps) {
               </svg>
             </button>
           ))}
+
+          {/* Settings button for owners/supervisors */}
+          {canManage && (
+            <button
+              onClick={() => onNavigate('projectSettings')}
+              className="w-full card flex items-center gap-4 active:scale-[0.98] transition-transform"
+            >
+              <div className="w-10 h-10 rounded-xl bg-gold-100/50 flex items-center justify-center text-gold">
+                <NavIcon name="cog" className="w-6 h-6" />
+              </div>
+              <div className="flex-1 text-left">
+                <h3 className="text-sm font-semibold text-text-primary">Settings</h3>
+                <p className="text-xs text-text-muted">Project settings and management</p>
+              </div>
+              <svg className="w-5 h-5 text-text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          )}
 
           {/* Edit Menu button at the bottom */}
           <div className="pt-4 border-t border-border mt-4">
