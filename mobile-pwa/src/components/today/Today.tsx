@@ -13,7 +13,7 @@ interface TodayProps {
 }
 
 export function Today({ onSceneSelect }: TodayProps) {
-  const { currentProject, sceneCaptures, updateSceneFilmingStatus: syncFilmingStatus } = useProjectStore();
+  const { currentProject, updateSceneFilmingStatus: syncFilmingStatus } = useProjectStore();
 
   // Subscribe to actual state values from call sheet store for proper reactivity
   const callSheets = useCallSheetStore(state => state.callSheets);
@@ -188,21 +188,6 @@ export function Today({ onSceneSelect }: TodayProps) {
     return map;
   }, [currentProject?.scenes, characterMap]);
 
-  // Map: sceneNumber -> boolean (pre-computed continuity capture status)
-  const sceneCapturedMap = useMemo(() => {
-    if (!currentProject) return new Map<string, boolean>();
-    const map = new Map<string, boolean>();
-    for (const scene of currentProject.scenes) {
-      const captured = scene.characters.every(charId => {
-        const captureKey = `${scene.id}-${charId}`;
-        const capture = sceneCaptures[captureKey];
-        return capture && Object.keys(capture.photos).length > 0;
-      });
-      map.set(scene.sceneNumber, captured);
-    }
-    return map;
-  }, [currentProject?.scenes, sceneCaptures]);
-
   // Map: "characterId-sceneNumber" -> Look (pre-computed look assignments)
   const characterLookMap = useMemo(() => {
     if (!currentProject) return new Map<string, Look>();
@@ -219,7 +204,6 @@ export function Today({ onSceneSelect }: TodayProps) {
   const getSceneData = (sceneNumber: string) => sceneDataMap.get(sceneNumber);
   const getCharactersInScene = (sceneNumber: string): Character[] => sceneCharactersMap.get(sceneNumber) || [];
   const getLookForCharacter = (characterId: string, sceneNumber: string) => characterLookMap.get(`${characterId}-${sceneNumber}`);
-  const isSceneContinuityCaptured = (sceneNumber: string) => sceneCapturedMap.get(sceneNumber) || false;
 
   // Pre-compute filtered and sorted HMU calls to avoid recalculating on each render
   const sortedHmuCalls = useMemo(() => {
@@ -484,7 +468,6 @@ export function Today({ onSceneSelect }: TodayProps) {
               {sortedScenes.map((shootingScene, index) => {
                 const scene = getSceneData(shootingScene.sceneNumber);
                 const characters = getCharactersInScene(shootingScene.sceneNumber);
-                const isCaptured = isSceneContinuityCaptured(shootingScene.sceneNumber);
 
                 return (
                   <TodaySceneCard
@@ -492,7 +475,6 @@ export function Today({ onSceneSelect }: TodayProps) {
                     shootingScene={shootingScene}
                     scene={scene}
                     characters={characters}
-                    isCaptured={isCaptured}
                     getLookForCharacter={getLookForCharacter}
                     onTap={() => handleSceneTap(shootingScene.sceneNumber)}
                     onSynopsisClick={(scene) => setScriptModalScene(scene)}
@@ -536,7 +518,6 @@ interface TodaySceneCardProps {
   shootingScene: CallSheetScene;
   scene?: Scene;
   characters: Character[];
-  isCaptured: boolean;
   getLookForCharacter: (characterId: string, sceneNumber: string) => Look | null | undefined;
   onTap: () => void;
   onSynopsisClick: (scene: Scene) => void;
@@ -554,7 +535,6 @@ const TodaySceneCard = memo(function TodaySceneCard({
   shootingScene,
   scene,
   characters,
-  isCaptured,
   getLookForCharacter,
   onTap,
   onSynopsisClick,
@@ -780,13 +760,6 @@ const TodaySceneCard = memo(function TodaySceneCard({
               </div>
 
               <div className="flex items-center gap-2">
-                {isCaptured && (
-                  <span className="text-green-500">
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                  </span>
-                )}
                 {/* Status Dropdown */}
                 <div ref={dropdownRef} className="relative">
                   <button
