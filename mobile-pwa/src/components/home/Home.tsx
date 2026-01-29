@@ -9,8 +9,7 @@ import {
   detectCharactersForScenesBatch,
 } from '@/utils/scriptParser';
 import {
-  parseSchedulePDF,
-  matchScheduleToScript,
+  parseScheduleStage1,
 } from '@/utils/scheduleParser';
 import type { ParsedScript } from '@/utils/scriptParser';
 import type { Project, Scene, ProductionSchedule } from '@/types';
@@ -42,7 +41,7 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scheduleInputRef = useRef<HTMLInputElement>(null);
   const { setProject, setScriptPdf, currentProject } = useProjectStore();
-  const { setSchedule, startAIProcessing, setAIProcessingStatus } = useScheduleStore();
+  const { setSchedule } = useScheduleStore();
 
   // Progressive workflow: Fast scene parsing then background character detection
   const processScriptFast = useCallback(async (file: File, scheduleFile?: File | null) => {
@@ -53,28 +52,17 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
       // Small delay to show initial state
       await new Promise(r => setTimeout(r, 200));
 
-      // Parse schedule if provided (fast, no AI)
+      // Parse schedule if provided - extracts cast list for character identification
       let schedule: ProductionSchedule | null = null;
       if (scheduleFile) {
         setProcessingProgress(15);
         setProcessingStatus('Processing schedule...');
         try {
-          schedule = await parseSchedulePDF(scheduleFile);
+          const result = await parseScheduleStage1(scheduleFile);
+          schedule = result.schedule;
           setParsedSchedule(schedule);
           setSchedule(schedule);
-          console.log(`Schedule parsed: ${schedule.castList.length} cast, ${schedule.days.length} days`);
-
-          // Set initial AI processing status and trigger background AI analysis
-          // This allows the progress bar to show on the Schedule page
-          setAIProcessingStatus({
-            status: 'idle',
-            progress: 0,
-            message: 'Initial parsing complete. Starting AI analysis...',
-          });
-          // Start AI processing in background after a small delay
-          setTimeout(() => {
-            startAIProcessing();
-          }, 500);
+          console.log(`Schedule parsed: ${schedule.castList.length} cast members identified`);
         } catch (e) {
           console.warn('Schedule parsing failed, continuing without:', e);
         }
@@ -86,28 +74,12 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
       // Fast parse - only extracts scene structure
       const fastParsed = await parseScenesFast(file);
 
-      setProcessingProgress(60);
-      setProcessingStatus('Matching schedule to scenes...');
-      await new Promise(r => setTimeout(r, 100));
-
-      // Match schedule scenes to script scenes for character info
-      let scheduleMatch: Map<string, { sceneId: string; characterNames: string[]; shootingDay: number }> | null = null;
-      if (schedule) {
-        const scriptScenesForMatch = fastParsed.scenes.map(s => ({
-          sceneNumber: s.sceneNumber,
-          id: `scene-${s.sceneNumber}`,
-        }));
-        scheduleMatch = matchScheduleToScript(schedule, scriptScenesForMatch);
-      }
-
       setProcessingProgress(70);
       setProcessingStatus('Creating project...');
       await new Promise(r => setTimeout(r, 100));
 
       // Create project immediately with scenes
-      // Pre-populate suggestedCharacters from schedule if available
       const scenes: Scene[] = fastParsed.scenes.map((fs) => {
-        const scheduleInfo = scheduleMatch?.get(fs.sceneNumber);
         return {
           id: `scene-${fs.sceneNumber}`,
           sceneNumber: fs.sceneNumber,
@@ -117,9 +89,9 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
           scriptContent: fs.scriptContent,
           characters: [], // Empty until confirmed
           isComplete: false,
-          characterConfirmationStatus: scheduleInfo?.characterNames.length ? 'ready' as const : 'pending' as const,
-          suggestedCharacters: scheduleInfo?.characterNames || undefined,
-          shootingDay: scheduleInfo?.shootingDay,
+          characterConfirmationStatus: 'pending' as const,
+          suggestedCharacters: undefined,
+          shootingDay: undefined,
         };
       });
 
