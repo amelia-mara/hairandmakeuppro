@@ -758,7 +758,7 @@ const TodaySceneCard = memo(function TodaySceneCard({
 
           {/* Card content - positioned above glass overlay */}
           <div className="relative z-10 pl-2">
-            {/* Top row: Scene number + INT/EXT + truncated location + Day type + Status */}
+            {/* Top row: Scene number + INT/EXT + Status */}
             <div className="flex items-start justify-between mb-1">
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 <span className="text-2xl font-bold text-text-primary flex-shrink-0">
@@ -774,10 +774,6 @@ const TodaySceneCard = memo(function TodaySceneCard({
                     {scene?.intExt || parsedSceneInfo?.intExt}
                   </span>
                 )}
-                {/* Truncated slugline */}
-                <span className="text-xs text-text-muted truncate">
-                  {shootingScene.setDescription?.replace(/^(INT|EXT)\.\s*/i, '').split(' - ')[0] || ''}
-                </span>
                 {/* Day/Night indicator (D11, N, etc.) */}
                 {shootingScene.dayNight && (
                   <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-amber-100 text-amber-700 flex-shrink-0">
@@ -845,11 +841,22 @@ const TodaySceneCard = memo(function TodaySceneCard({
               </div>
             </div>
 
-            {/* Full slugline with scene number and day */}
-            <p className="text-sm font-medium text-text-primary mb-1">
-              {shootingScene.sceneNumber} {shootingScene.setDescription}
-              {shootingScene.dayNight && ` - ${shootingScene.dayNight}`}
-            </p>
+            {/* Location from setDescription - cleaned up */}
+            {shootingScene.setDescription && (
+              <p className="text-sm font-medium text-text-primary mb-1">
+                {(() => {
+                  // Clean up the setDescription: remove scene numbers at start/end and INT/EXT prefix
+                  let desc = shootingScene.setDescription;
+                  // Remove scene number from start (e.g., "166 EXT." -> "EXT.")
+                  desc = desc.replace(/^\d+[A-Z]?\s+/, '');
+                  // Remove scene number from end (e.g., "- NIGHT 166" -> "- NIGHT")
+                  desc = desc.replace(/\s+\d+[A-Z]?$/, '');
+                  // Remove INT./EXT. prefix since we already show it as a badge
+                  desc = desc.replace(/^(INT|EXT)\.\s*/i, '');
+                  return desc || shootingScene.setDescription;
+                })()}
+              </p>
+            )}
 
             {/* Action/Log line - clickable to view full scene if available */}
             {(shootingScene.action || scene?.synopsis) && (
