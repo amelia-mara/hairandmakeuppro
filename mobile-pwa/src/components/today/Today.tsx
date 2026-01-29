@@ -758,8 +758,8 @@ const TodaySceneCard = memo(function TodaySceneCard({
 
           {/* Card content - positioned above glass overlay */}
           <div className="relative z-10 pl-2">
-            {/* Top row: Scene number + INT/EXT + Status */}
-            <div className="flex items-start justify-between mb-1">
+            {/* Top row: Scene number + badges + Status dropdown */}
+            <div className="flex items-start justify-between mb-2">
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 <span className="text-2xl font-bold text-text-primary flex-shrink-0">
                   {shootingScene.sceneNumber}
@@ -778,6 +778,12 @@ const TodaySceneCard = memo(function TodaySceneCard({
                 {shootingScene.dayNight && (
                   <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-amber-100 text-amber-700 flex-shrink-0">
                     {shootingScene.dayNight}
+                  </span>
+                )}
+                {/* Pages badge */}
+                {shootingScene.pages && (
+                  <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-gray-100 text-text-muted flex-shrink-0">
+                    {shootingScene.pages} pgs
                   </span>
                 )}
               </div>
@@ -841,24 +847,14 @@ const TodaySceneCard = memo(function TodaySceneCard({
               </div>
             </div>
 
-            {/* Location from setDescription - cleaned up */}
+            {/* Set description / Location - full text */}
             {shootingScene.setDescription && (
-              <p className="text-sm font-medium text-text-primary mb-1">
-                {(() => {
-                  // Clean up the setDescription: remove scene numbers at start/end and INT/EXT prefix
-                  let desc = shootingScene.setDescription;
-                  // Remove scene number from start (e.g., "166 EXT." -> "EXT.")
-                  desc = desc.replace(/^\d+[A-Z]?\s+/, '');
-                  // Remove scene number from end (e.g., "- NIGHT 166" -> "- NIGHT")
-                  desc = desc.replace(/\s+\d+[A-Z]?$/, '');
-                  // Remove INT./EXT. prefix since we already show it as a badge
-                  desc = desc.replace(/^(INT|EXT)\.\s*/i, '');
-                  return desc || shootingScene.setDescription;
-                })()}
+              <p className="text-sm font-semibold text-text-primary mb-1">
+                {shootingScene.setDescription}
               </p>
             )}
 
-            {/* Action/Log line - clickable to view full scene if available */}
+            {/* Action/Log line - what happens in the scene */}
             {(shootingScene.action || scene?.synopsis) && (
               <button
                 onClick={(e) => {
@@ -869,7 +865,7 @@ const TodaySceneCard = memo(function TodaySceneCard({
                 disabled={!scene?.scriptContent}
               >
                 <p className={clsx(
-                  'text-[13px] text-[#666] italic line-clamp-2',
+                  'text-[13px] text-text-muted italic line-clamp-2',
                   scene?.scriptContent && 'group-hover:text-gold transition-colors'
                 )}>
                   {shootingScene.action || scene?.synopsis}
@@ -885,34 +881,50 @@ const TodaySceneCard = memo(function TodaySceneCard({
               </button>
             )}
 
-            {/* Cast numbers from call sheet */}
-            {shootingScene.cast && shootingScene.cast.length > 0 && (
-              <div className="flex items-center gap-1.5 mb-2 text-xs">
-                <span className="text-text-light font-medium">Cast:</span>
-                <span className="text-text-muted">{shootingScene.cast.join(', ')}</span>
+            {/* Info row: Cast numbers + Estimated time */}
+            {((shootingScene.cast && shootingScene.cast.length > 0) || shootingScene.estimatedTime) && (
+              <div className="flex items-center gap-4 mb-2 text-xs">
+                {shootingScene.cast && shootingScene.cast.length > 0 && (
+                  <div className="flex items-center gap-1.5">
+                    <svg className="w-3.5 h-3.5 text-text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+                    </svg>
+                    <span className="text-text-muted">Cast: <span className="font-medium text-text-secondary">{shootingScene.cast.join(', ')}</span></span>
+                  </div>
+                )}
+                {shootingScene.estimatedTime && (
+                  <div className="flex items-center gap-1.5">
+                    <svg className="w-3.5 h-3.5 text-text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="text-text-muted font-medium">{shootingScene.estimatedTime}</span>
+                  </div>
+                )}
               </div>
             )}
 
-            {/* Notes (HMU, VFX, SFX, etc.) */}
+            {/* Notes (HMU, VFX, SFX, etc.) - highlighted */}
             {shootingScene.notes && (
-              <div className="mb-2 px-2 py-1.5 rounded bg-blue-50 text-xs text-blue-700">
-                {shootingScene.notes}
+              <div className="mb-2 px-2.5 py-2 rounded-lg bg-gold-50 border border-gold-100">
+                <div className="text-xs text-gold-700 font-medium whitespace-pre-line">
+                  {shootingScene.notes}
+                </div>
               </div>
             )}
 
             {/* Filming notes if partial or incomplete - read from project scene (single source of truth) */}
             {filmingStatus && filmingStatus !== 'complete' && filmingNotes && (
               <div className={clsx(
-                'mb-3 px-2 py-1.5 rounded text-xs',
-                filmingStatus === 'partial' ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'
+                'mb-2 px-2.5 py-2 rounded-lg text-xs',
+                filmingStatus === 'partial' ? 'bg-amber-50 text-amber-700 border border-amber-100' : 'bg-red-50 text-red-700 border border-red-100'
               )}>
-                <span className="font-medium">Note:</span> {filmingNotes}
+                <span className="font-semibold">Note:</span> {filmingNotes}
               </div>
             )}
 
             {/* Characters with looks */}
             {characters.length > 0 && (
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 pt-2 border-t border-border/50">
                 {characters.map((char) => {
                   const look = getLookForCharacter(char.id, shootingScene.sceneNumber);
                   return (
@@ -920,21 +932,11 @@ const TodaySceneCard = memo(function TodaySceneCard({
                       <CharacterAvatar character={char} size="xs" />
                       <span className="text-xs font-medium text-text-primary">{char.name.split(' ')[0]}</span>
                       {look && (
-                        <span className="text-[10px] text-text-muted">• {look.name}</span>
+                        <span className="text-[10px] text-gold">• {look.name}</span>
                       )}
                     </div>
                   );
                 })}
-              </div>
-            )}
-
-            {/* Estimated time */}
-            {shootingScene.estimatedTime && (
-              <div className="mt-2 pt-2 border-t border-border/50 flex items-center gap-1.5">
-                <svg className="w-3.5 h-3.5 text-text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span className="text-xs text-text-muted">Est. {shootingScene.estimatedTime}</span>
               </div>
             )}
           </div>
