@@ -1210,19 +1210,38 @@ export async function parseScenesFast(file: File): Promise<FastParsedScript> {
  * Can use AI for better accuracy or fall back to regex
  * @param sceneContent - The script content for the scene
  * @param rawText - The full raw script text (for context)
- * @param options - Optional settings
+ * @param options - Optional settings including known characters from schedule
  * @returns Array of character names detected in this scene
  */
 export async function detectCharactersForScene(
   sceneContent: string,
   _rawText: string,
-  options?: { useAI?: boolean }
+  options?: { useAI?: boolean; knownCharacters?: string[] }
 ): Promise<string[]> {
   const useAI = options?.useAI ?? false;
+  const knownCharacters = options?.knownCharacters ?? [];
   const characters: string[] = [];
   const characterSet = new Set<string>();
 
-  // Always try regex detection first (fast, reliable for dialogue cues)
+  // First, search for known characters from schedule (if provided)
+  // This is the most reliable method when a schedule is uploaded
+  if (knownCharacters.length > 0) {
+    const contentUpper = sceneContent.toUpperCase();
+    for (const charName of knownCharacters) {
+      const normalized = normalizeCharacterName(charName);
+      if (normalized.length < 2) continue;
+
+      // Check if character name appears in the scene (as character cue or in action)
+      // Use word boundary matching to avoid partial matches
+      const namePattern = new RegExp(`\\b${escapeRegExp(normalized)}\\b`, 'i');
+      if (namePattern.test(contentUpper) && !characterSet.has(normalized)) {
+        characterSet.add(normalized);
+        characters.push(normalized);
+      }
+    }
+  }
+
+  // Always try regex detection for character cues (fast, reliable for dialogue)
   const lines = sceneContent.split('\n');
   let lastLineWasCharacter = false;
 
@@ -1246,7 +1265,8 @@ export async function detectCharactersForScene(
       lastLineWasCharacter = false;
 
       // Also check for characters mentioned in action/description lines
-      if (trimmed.length > 10) {
+      // Only do this if we don't have known characters (to avoid noise)
+      if (trimmed.length > 10 && knownCharacters.length === 0) {
         const actionCharacters = extractCharactersFromActionLine(trimmed);
         for (const charName of actionCharacters) {
           const normalized = normalizeCharacterName(charName);
@@ -1280,6 +1300,13 @@ export async function detectCharactersForScene(
   }
 
   return characters;
+}
+
+/**
+ * Escape special regex characters in a string
+ */
+function escapeRegExp(string: string): string {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 /**
@@ -1334,11 +1361,18 @@ Return only character names, one per line:`;
 /**
  * Batch detect characters for multiple scenes
  * More efficient than calling detectCharactersForScene individually
+ * @param scenes - Array of scenes with their content
+ * @param rawText - Full raw script text
+ * @param options - Optional settings including known characters from schedule
  */
 export async function detectCharactersForScenesBatch(
   scenes: Array<{ sceneNumber: string; scriptContent: string }>,
   rawText: string,
-  options?: { useAI?: boolean; onProgress?: (completed: number, total: number) => void }
+  options?: {
+    useAI?: boolean;
+    knownCharacters?: string[];
+    onProgress?: (completed: number, total: number) => void;
+  }
 ): Promise<Map<string, string[]>> {
   const results = new Map<string, string[]>();
   const total = scenes.length;
@@ -1355,7 +1389,7 @@ export async function detectCharactersForScenesBatch(
         const characters = await detectCharactersForScene(
           scene.scriptContent,
           rawText,
-          options
+          { useAI: options?.useAI, knownCharacters: options?.knownCharacters }
         );
         return { sceneNumber: scene.sceneNumber, characters };
       })
