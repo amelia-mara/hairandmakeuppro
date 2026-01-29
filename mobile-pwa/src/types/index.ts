@@ -497,30 +497,11 @@ export interface ScheduleSceneEntry {
   shootOrder: number; // Order within the day
 }
 
-// Discrepancy between schedule and breakdown
-export type DiscrepancyType =
-  | 'scene_not_in_breakdown' // Scene in schedule but not in breakdown
-  | 'scene_not_in_schedule' // Scene in breakdown but not in schedule
-  | 'character_mismatch' // Different characters listed
-  | 'int_ext_mismatch' // INT/EXT doesn't match
-  | 'location_mismatch'; // Set/location doesn't match
-
-export interface SceneDiscrepancy {
-  sceneNumber: string;
-  type: DiscrepancyType;
-  message: string;
-  scheduleValue?: string; // What the schedule says
-  breakdownValue?: string; // What the breakdown says
-  scheduleCast?: string[]; // Characters from schedule
-  breakdownCast?: string[]; // Characters from breakdown
-}
-
 // Breakdown filter types
 export type BreakdownViewMode = 'list' | 'grid';
 
 export interface BreakdownFilters {
   characters: string[];
-  shootingDay: number | null;
   location: string | null;
   completionStatus: 'all' | 'complete' | 'incomplete';
   filmingStatus: SceneFilmingStatus | 'all';
