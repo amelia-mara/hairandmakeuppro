@@ -114,13 +114,13 @@ Return a JSON object with this structure (include only fields that have data in 
     {
       "sceneNumber": "1" or "1A" (string, exactly as shown),
       "locationId": "LOC 1, LOC 2, etc. if shown",
-      "setDescription": "INT. LOCATION - DESCRIPTION or EXT. etc",
-      "action": "scene log line or brief description of what happens in the scene, if present",
-      "dayNight": "D" or "N" or "D/N" or "D1" or "D2" etc,
-      "pages": "1/8" or "2" or "1 5/8" etc,
-      "cast": ["1", "2", "4"] (cast numbers as strings),
-      "estimatedTime": "08:20 - 09:00 or 09:20 - 10:30",
-      "notes": "any HMU notes, SFX notes, AV notes, PROP notes for this scene"
+      "setDescription": "The SET/LOCATION line only, e.g. 'EXT. FARMHOUSE' or 'INT. FARMHOUSE - KITCHEN' (first line of SET & DESCRIPTION column)",
+      "action": "The LOG LINE or scene description that appears BELOW the set description, e.g. 'PETER and GWEN meet the AOKI's' or 'PETER tells GWEN to go'. This is the brief description of what happens in the scene. IMPORTANT: Extract this separately from setDescription - it's usually the second line in the SET & DESCRIPTION column.",
+      "dayNight": "D" or "N" or "D/N" or "D1" or "D2" or "D11" etc (from D/N column)",
+      "pages": "1/8" or "2" or "1 5/8" or "1 2/8" etc (from PAGES column)",
+      "cast": ["1", "2", "4"] (cast ID numbers from CAST column, as strings),
+      "estimatedTime": "08:20 - 09:00 or 09:20 - 10:30 (from TIMINGS column)",
+      "notes": "CRITICAL: Extract ALL notes from the NOTES column, especially HMU (hair/makeup), VFX, SFX, STUNTS notes. Format as 'HMU: description, VFX: description, SFX: description'. These are essential for continuity tracking."
     }
   ],
   "castCalls": [
@@ -159,7 +159,16 @@ IMPORTANT:
 - Pre-calls may be listed as "PRE-CALLS" or "PRE CALLS" with department times
 - Extract weather including conditions like "Overcast with Scattered Showers"
 - If a field has no data, omit it or use null
-- CRITICAL: Only extract scenes for the CURRENT shooting day. Do NOT include scenes from "ADVANCE SCHEDULE", "ADVANCE", "NEXT DAYS", or any section showing future production days. These appear at the end of call sheets and show upcoming days - ignore them completely.`;
+- CRITICAL: Only extract scenes for the CURRENT shooting day. Do NOT include scenes from "ADVANCE SCHEDULE", "ADVANCE", "NEXT DAYS", or any section showing future production days. These appear at the end of call sheets and show upcoming days - ignore them completely.
+
+SCENE DATA EXTRACTION (VERY IMPORTANT):
+- The "SET & DESCRIPTION" column typically has TWO lines per scene:
+  1. First line = setDescription (e.g., "EXT. FARMHOUSE" or "INT. FARMHOUSE - KITCHEN")
+  2. Second line = action/log line (e.g., "PETER and GWEN meet the AOKI's")
+- ALWAYS extract the action/log line separately - this is crucial for the app
+- ALWAYS extract cast numbers from the CAST column (e.g., "1, 2, 9, 10, 14")
+- ALWAYS extract notes from NOTES column, especially HMU (hair/makeup), VFX, SFX notes
+- ALWAYS extract page counts and timings when available`;
 
   try {
     const response = await callAI(prompt, { system: systemPrompt, maxTokens: 4000 });
