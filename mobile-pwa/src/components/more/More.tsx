@@ -6,7 +6,7 @@ import { useScheduleStore } from '@/stores/scheduleStore';
 import { useAuthStore } from '@/stores/authStore';
 import { NavIcon } from '@/components/navigation/BottomNav';
 import { formatShortDate } from '@/utils/helpers';
-import type { NavTab, SceneDiscrepancy, ScheduleDay } from '@/types';
+import type { NavTab } from '@/types';
 import { ALL_NAV_ITEMS, PROJECT_RETENTION_DAYS, canManageProject } from '@/types';
 import { ProjectExportScreen } from './ProjectExportScreen';
 import { BillingDetailsScreen } from './BillingDetailsScreen';
@@ -1045,39 +1045,22 @@ function ScriptViewer({ onBack }: ViewerProps) {
 }
 
 // Schedule Viewer Component
-type ScheduleViewMode = 'parsed' | 'pdf';
-
 function ScheduleViewer({ onBack }: ViewerProps) {
   const {
     schedule,
-    discrepancies,
     isUploading,
     uploadError,
-    showDiscrepancyModal,
     uploadScheduleStage1,
     clearSchedule,
-    crossReferenceWithBreakdown,
-    getCastNamesForNumbers,
-    setShowDiscrepancyModal,
-    isProcessingStage2,
-    stage2Progress,
-    startStage2Processing,
   } = useScheduleStore();
-  const { currentProject, updateSceneShootingDays } = useProjectStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [expandedDay, setExpandedDay] = useState<number | null>(null);
-  const [showCastList, setShowCastList] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [viewMode, setViewMode] = useState<ScheduleViewMode>('parsed');
-
-  const today = new Date().toISOString().split('T')[0];
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && file.type === 'application/pdf') {
       try {
-        // Stage 1: Instant parse - cast list, day count, production name
-        // Stage 2 will start automatically in the background
+        // Stage 1: Parse cast list for character identification
         await uploadScheduleStage1(file);
       } catch (err) {
         console.error('Failed to upload schedule:', err);
@@ -1089,37 +1072,9 @@ function ScheduleViewer({ onBack }: ViewerProps) {
     }
   };
 
-  // Cross-reference with breakdown when schedule days are available
-  const scheduleHasScenes = schedule?.days && schedule.days.length > 0 &&
-    schedule.days.some(d => d.scenes.length > 0);
-
-  // Run cross-reference when schedule becomes complete or partial
-  useEffect(() => {
-    if (scheduleHasScenes && currentProject?.scenes && currentProject.scenes.length > 0) {
-      const foundDiscrepancies = crossReferenceWithBreakdown(currentProject.scenes);
-
-      // Update shooting days on scenes
-      if (schedule && updateSceneShootingDays) {
-        const shootingDayMap: Record<string, number> = {};
-        for (const day of schedule.days) {
-          for (const scene of day.scenes) {
-            shootingDayMap[scene.sceneNumber] = day.dayNumber;
-          }
-        }
-        updateSceneShootingDays(shootingDayMap, foundDiscrepancies);
-      }
-    }
-  }, [scheduleHasScenes, schedule?.days.length]);
-
   const handleDelete = () => {
     clearSchedule();
     setShowDeleteConfirm(false);
-  };
-
-  const getDiscrepancyCountForDay = (day: ScheduleDay): number => {
-    return day.scenes.filter(s =>
-      discrepancies.some(d => d.sceneNumber === s.sceneNumber)
-    ).length;
   };
 
   return (
@@ -1211,7 +1166,7 @@ function ScheduleViewer({ onBack }: ViewerProps) {
             </div>
             <h3 className="text-base font-semibold text-text-primary mb-1">No Schedule Uploaded</h3>
             <p className="text-sm text-text-muted text-center mb-6 max-w-xs">
-              Upload your production schedule PDF to see shooting days and cross-reference with your breakdown
+              Upload your production schedule PDF to view it here
             </p>
             <button
               onClick={() => fileInputRef.current?.click()}
@@ -1222,115 +1177,24 @@ function ScheduleViewer({ onBack }: ViewerProps) {
             </button>
           </div>
         ) : (
-          /* Schedule content */
+          /* Schedule PDF Viewer */
           <div className="space-y-4">
-            {/* View Mode Toggle and AI Status */}
-            <div className="flex items-center justify-between gap-2">
-              {/* View Mode Toggle */}
-              <div className="flex rounded-lg overflow-hidden border border-border">
-                <button
-                  onClick={() => setViewMode('parsed')}
-                  className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-                    viewMode === 'parsed' ? 'bg-gold text-white' : 'bg-card text-text-muted'
-                  }`}
-                >
-                  Breakdown
-                </button>
-                <button
-                  onClick={() => setViewMode('pdf')}
-                  className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-                    viewMode === 'pdf' ? 'bg-gold text-white' : 'bg-card text-text-muted'
-                  }`}
-                  disabled={!schedule.pdfUri}
-                >
-                  View PDF
-                </button>
-              </div>
-
-              {/* Processing Status Indicator */}
-              {isProcessingStage2 && (
-                <div className="flex items-center gap-2 text-xs text-text-muted">
-                  <svg className="w-4 h-4 animate-spin text-gold" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  <span>Extracting scenes...</span>
-                </div>
-              )}
-            </div>
-
-            {/* Stage 2 Processing Progress Banner */}
-            {isProcessingStage2 && stage2Progress.total > 0 && (
-              <div className="card bg-blue-50 border-blue-200">
-                <div className="flex items-center gap-3">
-                  <svg className="w-5 h-5 text-blue-500 animate-spin flex-shrink-0" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-blue-700">Extracting schedule...</p>
-                    <p className="text-xs text-blue-600">Day {Math.min(stage2Progress.current + 1, stage2Progress.total)} of {stage2Progress.total}</p>
-                  </div>
-                  <span className="text-xs font-semibold text-blue-600">
-                    {Math.round((stage2Progress.current / stage2Progress.total) * 100)}%
-                  </span>
-                </div>
-                <div className="mt-2 h-1.5 bg-blue-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-blue-500 rounded-full transition-all duration-300"
-                    style={{ width: `${(stage2Progress.current / stage2Progress.total) * 100}%` }}
-                  />
-                </div>
-                <p className="mt-2 text-[10px] text-blue-500">
-                  You can navigate away — processing continues in the background
-                </p>
+            {/* Production name header */}
+            {schedule.productionName && (
+              <div className="card">
+                <h2 className="text-base font-bold text-text-primary">
+                  {schedule.productionName}
+                </h2>
+                {schedule.castList.length > 0 && (
+                  <p className="text-xs text-text-muted mt-1">
+                    {schedule.castList.length} cast members identified
+                  </p>
+                )}
               </div>
             )}
 
-            {/* Partial Processing Status */}
-            {schedule?.status === 'partial' && !isProcessingStage2 && (
-              <div className="card bg-amber-50 border-amber-200">
-                <div className="flex items-center gap-3">
-                  <svg className="w-5 h-5 text-amber-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-amber-700">Partial Schedule</p>
-                    <p className="text-xs text-amber-600">{schedule.processingError || 'Some days could not be parsed'}</p>
-                  </div>
-                  <button
-                    onClick={() => startStage2Processing()}
-                    className="px-3 py-1 text-xs font-medium text-amber-600 bg-amber-100 rounded-lg hover:bg-amber-200 transition-colors"
-                  >
-                    Retry
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Schedule Pending - waiting to process */}
-            {schedule?.status === 'pending' && !isProcessingStage2 && (
-              <div className="card bg-gray-50 border-gray-200">
-                <div className="flex items-center gap-3">
-                  <svg className="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-700">Schedule Ready</p>
-                    <p className="text-xs text-gray-500">Cast list loaded. Tap to extract scenes.</p>
-                  </div>
-                  <button
-                    onClick={() => startStage2Processing()}
-                    className="px-3 py-1 text-xs font-medium text-gold bg-gold-100 rounded-lg hover:bg-gold-200 transition-colors"
-                  >
-                    Extract
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* PDF Viewer Mode */}
-            {viewMode === 'pdf' && schedule.pdfUri && (
+            {/* PDF Viewer */}
+            {schedule.pdfUri ? (
               <div className="card p-0 overflow-hidden">
                 <iframe
                   src={schedule.pdfUri}
@@ -1338,280 +1202,16 @@ function ScheduleViewer({ onBack }: ViewerProps) {
                   title="Schedule PDF"
                 />
               </div>
-            )}
-
-            {/* Parsed View Mode */}
-            {viewMode === 'parsed' && (
-              <>
-            {/* Schedule header info */}
-            <div className="card">
-              <div className="flex items-center justify-between mb-2">
-                <h2 className="text-base font-bold text-text-primary">
-                  {schedule.productionName || 'Production Schedule'}
-                </h2>
-                <span className="text-xs text-text-muted">
-                  {schedule.totalDays} days, {schedule.days.reduce((sum, d) => sum + d.scenes.length, 0)} scenes
-                </span>
-              </div>
-              {schedule.scriptVersion && (
-                <p className="text-xs text-text-muted">Script: {schedule.scriptVersion}</p>
-              )}
-              {schedule.scheduleVersion && (
-                <p className="text-xs text-text-muted">Schedule: {schedule.scheduleVersion}</p>
-              )}
-
-              {/* Discrepancy summary */}
-              {discrepancies.length > 0 && (
-                <button
-                  onClick={() => setShowDiscrepancyModal(true)}
-                  className="mt-3 w-full p-2.5 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-2"
-                >
-                  <svg className="w-5 h-5 text-amber-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                  <span className="text-sm text-amber-700 font-medium">
-                    {discrepancies.length} discrepanc{discrepancies.length === 1 ? 'y' : 'ies'} found
-                  </span>
-                  <svg className="w-4 h-4 text-amber-500 ml-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              )}
-            </div>
-
-            {/* Cast List Toggle */}
-            {schedule.castList.length > 0 && (
+            ) : (
               <div className="card">
-                <button
-                  onClick={() => setShowCastList(!showCastList)}
-                  className="w-full flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-2">
-                    <svg className="w-5 h-5 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
-                    </svg>
-                    <span className="text-sm font-semibold text-text-primary">
-                      Cast List ({schedule.castList.length})
-                    </span>
-                  </div>
-                  <svg
-                    className={`w-5 h-5 text-text-muted transition-transform ${showCastList ? 'rotate-180' : ''}`}
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                {showCastList && (
-                  <div className="mt-3 grid grid-cols-2 gap-2">
-                    {schedule.castList.map((cast) => (
-                      <div
-                        key={cast.number}
-                        className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg"
-                      >
-                        <span className="w-6 h-6 flex items-center justify-center text-xs font-bold rounded-full bg-gold-100 text-gold">
-                          {cast.number}
-                        </span>
-                        <span className="text-xs text-text-primary truncate">
-                          {cast.character || cast.name}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <p className="text-sm text-text-muted text-center py-4">
+                  PDF preview not available
+                </p>
               </div>
-            )}
-
-            {/* Shooting Days */}
-            <div className="space-y-2.5">
-              {schedule.days.map((day) => {
-                const isToday = day.date === today;
-                const isExpanded = expandedDay === day.dayNumber;
-                const discrepancyCount = getDiscrepancyCountForDay(day);
-
-                return (
-                  <div
-                    key={day.dayNumber}
-                    className={`card ${isToday ? 'border-2 border-gold' : ''}`}
-                  >
-                    <button
-                      onClick={() => setExpandedDay(isExpanded ? null : day.dayNumber)}
-                      className="w-full text-left"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-base font-bold text-text-primary">Day {day.dayNumber}</span>
-                            {isToday && (
-                              <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-gold text-white">
-                                TODAY
-                              </span>
-                            )}
-                            {discrepancyCount > 0 && (
-                              <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-amber-100 text-amber-600">
-                                {discrepancyCount} issue{discrepancyCount !== 1 ? 's' : ''}
-                              </span>
-                            )}
-                          </div>
-                          {day.date && (
-                            <span className="text-sm text-text-muted">
-                              {day.dayOfWeek ? `${day.dayOfWeek}, ` : ''}{formatShortDate(day.date)}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-text-light">{day.scenes.length} scenes</span>
-                          <svg
-                            className={`w-5 h-5 text-text-muted transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth={2}
-                          >
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                          </svg>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-4 mt-2 text-xs text-text-muted">
-                        {day.location && (
-                          <div className="flex items-center gap-1">
-                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
-                            </svg>
-                            <span>{day.location}</span>
-                          </div>
-                        )}
-                        {day.hours && (
-                          <div className="flex items-center gap-1">
-                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            <span>{day.hours}</span>
-                          </div>
-                        )}
-                        {day.totalPages && (
-                          <span>{day.totalPages} pgs</span>
-                        )}
-                      </div>
-                    </button>
-
-                    {/* Collapsed scene badges */}
-                    {!isExpanded && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {day.scenes.slice(0, 8).map((scene) => {
-                          const hasDiscrepancy = discrepancies.some(d => d.sceneNumber === scene.sceneNumber);
-                          return (
-                            <span
-                              key={scene.sceneNumber}
-                              className={`px-2 py-0.5 text-xs font-medium rounded ${
-                                hasDiscrepancy
-                                  ? 'bg-amber-100 text-amber-700'
-                                  : 'bg-gray-100 text-text-muted'
-                              }`}
-                            >
-                              {scene.sceneNumber}
-                            </span>
-                          );
-                        })}
-                        {day.scenes.length > 8 && (
-                          <span className="px-2 py-0.5 text-xs font-medium rounded bg-gray-100 text-text-muted">
-                            +{day.scenes.length - 8} more
-                          </span>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Expanded scene details */}
-                    {isExpanded && (
-                      <div className="mt-3 pt-3 border-t border-border space-y-2">
-                        {day.notes && day.notes.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mb-2">
-                            {day.notes.map((note, idx) => (
-                              <span
-                                key={idx}
-                                className="px-2 py-0.5 text-[10px] font-medium rounded bg-blue-100 text-blue-600"
-                              >
-                                {note}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                        {day.scenes.map((scene) => {
-                          const hasDiscrepancy = discrepancies.some(d => d.sceneNumber === scene.sceneNumber);
-                          const sceneDiscrepancy = discrepancies.find(d => d.sceneNumber === scene.sceneNumber);
-                          const castNames = getCastNamesForNumbers(scene.castNumbers);
-
-                          return (
-                            <div
-                              key={scene.sceneNumber}
-                              className={`p-2.5 rounded-lg ${
-                                hasDiscrepancy ? 'bg-amber-50 border border-amber-200' : 'bg-gray-50'
-                              }`}
-                            >
-                              <div className="flex items-start justify-between mb-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-semibold text-sm text-text-primary">
-                                    Sc {scene.sceneNumber}
-                                  </span>
-                                  {hasDiscrepancy && (
-                                    <svg className="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                    </svg>
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-2 text-xs text-text-muted">
-                                  <span className={scene.intExt === 'EXT' ? 'text-blue-500' : 'text-amber-500'}>
-                                    {scene.intExt}
-                                  </span>
-                                  <span>{scene.dayNight}</span>
-                                  {scene.pages && <span>{scene.pages}</span>}
-                                </div>
-                              </div>
-                              <p className="text-xs text-text-secondary mb-1">{scene.setLocation}</p>
-                              {scene.description && (
-                                <p className="text-xs text-text-muted italic mb-1">{scene.description}</p>
-                              )}
-                              {castNames.length > 0 && (
-                                <div className="flex flex-wrap gap-1 mt-1.5">
-                                  {castNames.map((name, idx) => (
-                                    <span
-                                      key={idx}
-                                      className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-white text-text-muted border"
-                                    >
-                                      {name}
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
-                              {sceneDiscrepancy && (
-                                <p className="mt-2 text-xs text-amber-600">{sceneDiscrepancy.message}</p>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-              </>
             )}
           </div>
         )}
       </div>
-
-      {/* Discrepancy Modal */}
-      {showDiscrepancyModal && discrepancies.length > 0 && (
-        <DiscrepancyModal
-          discrepancies={discrepancies}
-          onClose={() => setShowDiscrepancyModal(false)}
-        />
-      )}
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
@@ -1639,111 +1239,6 @@ function ScheduleViewer({ onBack }: ViewerProps) {
         </div>
       )}
     </>
-  );
-}
-
-// Discrepancy Modal Component
-function DiscrepancyModal({
-  discrepancies,
-  onClose,
-}: {
-  discrepancies: SceneDiscrepancy[];
-  onClose: () => void;
-}) {
-  const getDiscrepancyIcon = (type: SceneDiscrepancy['type']) => {
-    switch (type) {
-      case 'scene_not_in_breakdown':
-        return (
-          <svg className="w-4 h-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
-        );
-      case 'scene_not_in_schedule':
-        return (
-          <svg className="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        );
-      case 'character_mismatch':
-        return (
-          <svg className="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-          </svg>
-        );
-      default:
-        return (
-          <svg className="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
-        );
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-4 safe-bottom">
-      <div className="bg-card rounded-xl w-full max-w-lg max-h-[80vh] flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          <div className="flex items-center gap-2">
-            <svg className="w-5 h-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-            <h3 className="text-base font-semibold text-text-primary">
-              Schedule Discrepancies
-            </h3>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 text-text-muted active:text-text-primary transition-colors"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-2">
-          <p className="text-sm text-text-muted mb-3">
-            The following scenes don&apos;t match between the schedule and your breakdown.
-            Please check these scenes in the Breakdown page.
-          </p>
-          {discrepancies.map((d, idx) => (
-            <div
-              key={idx}
-              className="p-3 rounded-lg bg-gray-50 border border-gray-100"
-            >
-              <div className="flex items-start gap-2">
-                {getDiscrepancyIcon(d.type)}
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-semibold text-sm text-text-primary">Scene {d.sceneNumber}</span>
-                    <span className={`px-2 py-0.5 text-[10px] font-medium rounded ${
-                      d.type === 'scene_not_in_breakdown' ? 'bg-red-100 text-red-600' :
-                      d.type === 'scene_not_in_schedule' ? 'bg-blue-100 text-blue-600' :
-                      'bg-amber-100 text-amber-600'
-                    }`}>
-                      {d.type.replace(/_/g, ' ')}
-                    </span>
-                  </div>
-                  <p className="text-xs text-text-muted">{d.message}</p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Footer */}
-        <div className="p-4 border-t border-border">
-          <button
-            onClick={onClose}
-            className="w-full px-4 py-2.5 rounded-button gold-gradient text-white text-sm font-medium active:scale-95 transition-transform"
-          >
-            Understood
-          </button>
-        </div>
-      </div>
-    </div>
   );
 }
 
