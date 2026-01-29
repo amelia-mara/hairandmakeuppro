@@ -1179,20 +1179,6 @@ function ScheduleViewer({ onBack }: ViewerProps) {
         ) : (
           /* Schedule PDF Viewer */
           <div className="space-y-4">
-            {/* Production name header */}
-            {schedule.productionName && (
-              <div className="card">
-                <h2 className="text-base font-bold text-text-primary">
-                  {schedule.productionName}
-                </h2>
-                {schedule.castList.length > 0 && (
-                  <p className="text-xs text-text-muted mt-1">
-                    {schedule.castList.length} cast members identified
-                  </p>
-                )}
-              </div>
-            )}
-
             {/* PDF Viewer */}
             {schedule.pdfUri ? (
               <div className="card p-0 overflow-hidden">
