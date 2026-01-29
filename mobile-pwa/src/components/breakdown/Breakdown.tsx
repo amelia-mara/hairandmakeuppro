@@ -13,8 +13,6 @@ import type { Scene, Character, Look, SceneCapture, BreakdownViewMode, Breakdown
 import { SCENE_FILMING_STATUS_CONFIG } from '@/types';
 import { clsx } from 'clsx';
 
-type BreakdownSortMode = 'sceneNumber' | 'shootingOrder';
-
 // Filming Status Dropdown Component - allows changing status directly from Breakdown
 interface FilmingStatusDropdownProps {
   scene: Scene;
@@ -212,9 +210,8 @@ interface BreakdownProps {
 
 export function Breakdown({ onSceneSelect }: BreakdownProps) {
   const { currentProject, sceneCaptures, updateSceneSynopsis, updateSceneFilmingStatus } = useProjectStore();
-  const { getDiscrepancyForScene, getShootingInfoForScene, schedule } = useScheduleStore();
+  const { getDiscrepancyForScene } = useScheduleStore();
   const [viewMode, setViewMode] = useState<BreakdownViewMode>('list');
-  const [sortMode, setSortMode] = useState<BreakdownSortMode>('sceneNumber');
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<BreakdownFilters>({
     characters: [],
@@ -347,34 +344,9 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
       }
     }
 
-    // Sort scenes
-    if (sortMode === 'shootingOrder') {
-      // Sort by shooting order: first by day number, then by shoot order within each day
-      // Scenes without shooting info go to the end
-      return scenes.sort((a, b) => {
-        const infoA = getShootingInfoForScene(a.sceneNumber);
-        const infoB = getShootingInfoForScene(b.sceneNumber);
-
-        // Scenes without shooting info go to the end
-        if (!infoA && !infoB) {
-          return a.sceneNumber.localeCompare(b.sceneNumber, undefined, { numeric: true });
-        }
-        if (!infoA) return 1;
-        if (!infoB) return -1;
-
-        // Sort by day number first
-        if (infoA.dayNumber !== infoB.dayNumber) {
-          return infoA.dayNumber - infoB.dayNumber;
-        }
-
-        // Then by shoot order within the day
-        return infoA.shootOrder - infoB.shootOrder;
-      });
-    }
-
-    // Default: sort by scene number
+    // Sort by scene number
     return scenes.sort((a, b) => a.sceneNumber.localeCompare(b.sceneNumber, undefined, { numeric: true }));
-  }, [currentProject, filters, sortMode, getShootingInfoForScene]);
+  }, [currentProject, filters]);
 
   // Pre-compute data maps for efficient lookups (avoids repeated .find() calls in render loops)
 
@@ -523,39 +495,12 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
         </div>
       </div>
 
-      {/* Sort and count bar */}
-      <div className="mobile-container px-4 py-3 flex items-center justify-between">
+      {/* Scene count bar */}
+      <div className="mobile-container px-4 py-3">
         <span className="text-xs text-text-muted">
           {filteredScenes.length} scene{filteredScenes.length !== 1 ? 's' : ''}
           {hasActiveFilters && ' (filtered)'}
         </span>
-
-        {/* Sort toggle - only show if schedule is available */}
-        {schedule && schedule.days.length > 0 && (
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-text-muted">Sort:</span>
-            <div className="flex rounded-lg overflow-hidden border border-border text-xs">
-              <button
-                onClick={() => setSortMode('sceneNumber')}
-                className={clsx(
-                  'px-2 py-1 transition-colors touch-manipulation',
-                  sortMode === 'sceneNumber' ? 'bg-gold text-white' : 'bg-card text-text-muted'
-                )}
-              >
-                Scene #
-              </button>
-              <button
-                onClick={() => setSortMode('shootingOrder')}
-                className={clsx(
-                  'px-2 py-1 transition-colors touch-manipulation',
-                  sortMode === 'shootingOrder' ? 'bg-gold text-white' : 'bg-card text-text-muted'
-                )}
-              >
-                Shoot Order
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Character confirmation progress */}
