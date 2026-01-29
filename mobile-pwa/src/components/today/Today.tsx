@@ -758,30 +758,31 @@ const TodaySceneCard = memo(function TodaySceneCard({
 
           {/* Card content - positioned above glass overlay */}
           <div className="relative z-10 pl-2">
-            {/* Top row: Scene number + INT/EXT + Status */}
-            <div className="flex items-start justify-between mb-2">
-              <div className="flex items-center gap-3">
-                <span className="text-2xl font-bold text-text-primary">
+            {/* Top row: Scene number + INT/EXT + truncated location + Day type + Status */}
+            <div className="flex items-start justify-between mb-1">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <span className="text-2xl font-bold text-text-primary flex-shrink-0">
                   {shootingScene.sceneNumber}
                 </span>
-                {/* Show INT/EXT badge and time of day from scene data or parsed from setDescription */}
-                {(scene || parsedSceneInfo) && (
-                  <div className="flex items-center gap-2">
-                    {(scene?.intExt || parsedSceneInfo?.intExt) && (
-                      <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded ${
-                        (scene?.intExt || parsedSceneInfo?.intExt) === 'INT'
-                          ? 'bg-slate-100 text-slate-600'
-                          : 'bg-stone-100 text-stone-600'
-                      }`}>
-                        {scene?.intExt || parsedSceneInfo?.intExt}
-                      </span>
-                    )}
-                    {(scene?.timeOfDay || parsedSceneInfo?.timeOfDay) && (
-                      <span className="text-xs text-text-muted">
-                        {scene?.timeOfDay || parsedSceneInfo?.timeOfDay}
-                      </span>
-                    )}
-                  </div>
+                {/* INT/EXT badge */}
+                {(scene?.intExt || parsedSceneInfo?.intExt) && (
+                  <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded flex-shrink-0 ${
+                    (scene?.intExt || parsedSceneInfo?.intExt) === 'INT'
+                      ? 'bg-slate-100 text-slate-600'
+                      : 'bg-stone-100 text-stone-600'
+                  }`}>
+                    {scene?.intExt || parsedSceneInfo?.intExt}
+                  </span>
+                )}
+                {/* Truncated slugline */}
+                <span className="text-xs text-text-muted truncate">
+                  {shootingScene.setDescription?.replace(/^(INT|EXT)\.\s*/i, '').split(' - ')[0] || ''}
+                </span>
+                {/* Day/Night indicator (D11, N, etc.) */}
+                {shootingScene.dayNight && (
+                  <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-amber-100 text-amber-700 flex-shrink-0">
+                    {shootingScene.dayNight}
+                  </span>
                 )}
               </div>
 
@@ -844,51 +845,51 @@ const TodaySceneCard = memo(function TodaySceneCard({
               </div>
             </div>
 
-            {/* Location & Synopsis */}
-            {(scene || parsedSceneInfo?.location) && (
-              <div className="mb-3">
-                <p className="text-sm font-medium text-text-primary line-clamp-1">
-                  {scene
-                    ? scene.slugline.replace(/^(INT|EXT)\.\s*/, '').replace(/\s*-\s*(DAY|NIGHT|MORNING|EVENING|CONTINUOUS)$/i, '')
-                    : parsedSceneInfo?.location}
+            {/* Full slugline with scene number and day */}
+            <p className="text-sm font-medium text-text-primary mb-1">
+              {shootingScene.sceneNumber} {shootingScene.setDescription}
+              {shootingScene.dayNight && ` - ${shootingScene.dayNight}`}
+            </p>
+
+            {/* Action/Log line - clickable to view full scene if available */}
+            {(shootingScene.action || scene?.synopsis) && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (scene) onSynopsisClick(scene);
+                }}
+                className="w-full text-left group mb-2"
+                disabled={!scene?.scriptContent}
+              >
+                <p className={clsx(
+                  'text-[13px] text-[#666] italic line-clamp-2',
+                  scene?.scriptContent && 'group-hover:text-gold transition-colors'
+                )}>
+                  {shootingScene.action || scene?.synopsis}
                 </p>
-                {/* Synopsis - clickable to view full scene */}
-                {scene?.synopsis ? (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onSynopsisClick(scene);
-                    }}
-                    className="w-full text-left group mt-1"
-                  >
-                    <p className="text-[13px] text-[#666] italic line-clamp-1 group-hover:text-gold transition-colors">
-                      {scene.synopsis}
-                    </p>
-                    <span className="text-[10px] text-gold flex items-center gap-1 mt-0.5 opacity-80">
-                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      View full scene
-                    </span>
-                  </button>
-                ) : shootingScene.action ? (
-                  <p className="text-[13px] text-[#666] italic line-clamp-2 mt-1">
-                    {shootingScene.action}
-                  </p>
-                ) : scene?.scriptContent ? (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onSynopsisClick(scene);
-                    }}
-                    className="text-[10px] text-gold flex items-center gap-1 mt-1"
-                  >
+                {scene?.scriptContent && (
+                  <span className="text-[10px] text-gold flex items-center gap-1 mt-0.5 opacity-80">
                     <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                     View full scene
-                  </button>
-                ) : null}
+                  </span>
+                )}
+              </button>
+            )}
+
+            {/* Cast numbers from call sheet */}
+            {shootingScene.cast && shootingScene.cast.length > 0 && (
+              <div className="flex items-center gap-1.5 mb-2 text-xs">
+                <span className="text-text-light font-medium">Cast:</span>
+                <span className="text-text-muted">{shootingScene.cast.join(', ')}</span>
+              </div>
+            )}
+
+            {/* Notes (HMU, VFX, SFX, etc.) */}
+            {shootingScene.notes && (
+              <div className="mb-2 px-2 py-1.5 rounded bg-blue-50 text-xs text-blue-700">
+                {shootingScene.notes}
               </div>
             )}
 
