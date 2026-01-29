@@ -108,7 +108,7 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
         scenes,
         characters: currentProject?.characters || [],
         looks: currentProject?.looks || [],
-        characterDetectionStatus: schedule ? 'complete' : 'idle',
+        characterDetectionStatus: 'idle', // Will be updated when detection runs
         scenesConfirmed: 0,
       };
 
@@ -139,13 +139,13 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
         reader.readAsDataURL(file);
       }
 
-      // If no schedule was provided, start background character detection
-      // Otherwise, we already have characters from the schedule
-      if (!schedule) {
-        setTimeout(() => {
-          startBackgroundCharacterDetection(project, fastParsed.rawText);
-        }, 500);
-      }
+      // Always run character detection
+      // If schedule is provided, use cast list for accurate character identification
+      // Otherwise, use regex detection to find character names
+      const castListNames = schedule?.castList?.map(c => c.name) || [];
+      setTimeout(() => {
+        startBackgroundCharacterDetection(project, fastParsed.rawText, castListNames);
+      }, 500);
 
       // Go directly to app
       setTimeout(() => onProjectReady(), 500);
@@ -157,7 +157,12 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
   }, [projectName, setProject, setScriptPdf, setSchedule, onProjectReady, currentProject]);
 
   // Background character detection (runs after project is created)
-  const startBackgroundCharacterDetection = useCallback(async (project: Project, rawText: string) => {
+  // If knownCharacters is provided (from schedule), use it for accurate detection
+  const startBackgroundCharacterDetection = useCallback(async (
+    project: Project,
+    rawText: string,
+    knownCharacters: string[] = []
+  ) => {
     try {
       // Mark detection as running
       useProjectStore.getState().startCharacterDetection();
@@ -168,12 +173,18 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
         scriptContent: s.scriptContent || '',
       }));
 
+      console.log(`Starting character detection for ${scenesToDetect.length} scenes`);
+      if (knownCharacters.length > 0) {
+        console.log(`Using ${knownCharacters.length} known characters from schedule:`, knownCharacters);
+      }
+
       // Detect characters in batches
       const results = await detectCharactersForScenesBatch(
         scenesToDetect,
         rawText,
         {
           useAI: false, // Use regex only for fast initial detection
+          knownCharacters: knownCharacters.length > 0 ? knownCharacters : undefined,
           onProgress: (completed, total) => {
             // Could update a progress indicator here
             console.log(`Character detection: ${completed}/${total}`);
