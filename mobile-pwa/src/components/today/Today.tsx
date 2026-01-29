@@ -8,6 +8,32 @@ import type { ShootingSceneStatus, SceneFilmingStatus, CallSheetScene, Scene, Ch
 import { SCENE_FILMING_STATUS_CONFIG } from '@/types';
 import { clsx } from 'clsx';
 
+// Convert dayType string to abbreviated format (SWD, SCWD, CWD)
+function getDayTypeAbbreviation(dayType: string | undefined): string | null {
+  if (!dayType) return null;
+  const upper = dayType.toUpperCase();
+
+  // Check for semi-continuous first (before continuous to avoid false match)
+  if (upper.includes('SEMI-CONTINUOUS') || upper.includes('SEMI CONTINUOUS') || upper === 'SCWD') {
+    return 'SCWD';
+  }
+  // Check for continuous working day
+  if (upper.includes('CONTINUOUS') || upper === 'CWD') {
+    return 'CWD';
+  }
+  // Check for standard working day
+  if (upper.includes('STANDARD') || upper === 'SWD') {
+    return 'SWD';
+  }
+
+  // If already abbreviated, return as-is
+  if (['SWD', 'CWD', 'SCWD'].includes(upper)) {
+    return upper;
+  }
+
+  return null;
+}
+
 interface TodayProps {
   onSceneSelect: (sceneId: string) => void;
 }
@@ -366,9 +392,9 @@ export function Today({ onSceneSelect }: TodayProps) {
                 <h2 className="text-[10px] font-bold tracking-wider uppercase text-text-light">
                   CALL TIMES
                 </h2>
-                {callSheet.dayType && (
+                {getDayTypeAbbreviation(callSheet.dayType) && (
                   <span className="text-[10px] font-semibold text-gold uppercase">
-                    {callSheet.dayType}
+                    {getDayTypeAbbreviation(callSheet.dayType)}
                   </span>
                 )}
               </div>
