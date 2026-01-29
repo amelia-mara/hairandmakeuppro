@@ -1,6 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
-import { useScheduleStore } from '@/stores/scheduleStore';
 import { CharacterAvatar } from '@/components/characters/CharacterAvatar';
 import { SceneScriptModal } from '@/components/scenes/SceneScriptModal';
 import {
@@ -210,12 +209,10 @@ interface BreakdownProps {
 
 export function Breakdown({ onSceneSelect }: BreakdownProps) {
   const { currentProject, sceneCaptures, updateSceneSynopsis, updateSceneFilmingStatus } = useProjectStore();
-  const { getDiscrepancyForScene } = useScheduleStore();
   const [viewMode, setViewMode] = useState<BreakdownViewMode>('list');
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<BreakdownFilters>({
     characters: [],
-    shootingDay: null,
     location: null,
     completionStatus: 'all',
     filmingStatus: 'all',
@@ -421,7 +418,6 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
   const clearFilters = () => {
     setFilters({
       characters: [],
-      shootingDay: null,
       location: null,
       completionStatus: 'all',
       filmingStatus: 'all',
@@ -430,7 +426,6 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
   };
 
   const hasActiveFilters = filters.characters.length > 0 ||
-    filters.shootingDay !== null ||
     filters.location !== null ||
     filters.completionStatus !== 'all' ||
     filters.filmingStatus !== 'all' ||
@@ -538,7 +533,6 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
             getLookForCharacter={getLookForCharacter}
             getCapture={getCapture}
             getSceneProgress={getSceneProgress}
-            getDiscrepancy={getDiscrepancyForScene}
             onCharacterConfirm={(sceneId) => setCharacterConfirmSceneId(sceneId)}
             allCharacters={currentProject?.characters || []}
             onFilmingStatusChange={handleFilmingStatusChange}
@@ -612,7 +606,6 @@ interface BreakdownListViewProps {
   getLookForCharacter: (characterId: string, sceneNumber: string) => Look | null | undefined;
   getCapture: (sceneId: string, characterId: string) => SceneCapture | null | undefined;
   getSceneProgress: (scene: Scene) => { captured: number; total: number };
-  getDiscrepancy: (sceneNumber: string) => { message: string } | null;
   onCharacterConfirm: (sceneId: string) => void;
   allCharacters: Character[];
   onFilmingStatusChange: (sceneNumber: string, status: SceneFilmingStatus, notes?: string) => void;
@@ -646,7 +639,6 @@ function BreakdownListView({
   getLookForCharacter,
   getCapture,
   getSceneProgress,
-  getDiscrepancy,
   onCharacterConfirm,
   allCharacters,
   onFilmingStatusChange,
@@ -659,7 +651,6 @@ function BreakdownListView({
         const characters = getCharactersForScene(scene);
         const progress = getSceneProgress(scene);
         const isComplete = progress.total > 0 && progress.captured === progress.total;
-        const discrepancy = getDiscrepancy(scene.sceneNumber);
 
         // Get filming status styling
         const filmingStatusConfig = scene.filmingStatus
@@ -695,22 +686,11 @@ function BreakdownListView({
               onClick={() => onToggleExpand(scene.id)}
               className="w-full flex items-center gap-3 p-3 text-left touch-manipulation"
             >
-              {/* Scene number with discrepancy warning */}
-              <div className="w-10 flex items-center justify-center gap-0.5">
+              {/* Scene number */}
+              <div className="w-10 flex items-center justify-center">
                 <span className="text-lg font-bold text-text-primary">
                   {scene.sceneNumber}
                 </span>
-                {(discrepancy || scene.hasScheduleDiscrepancy) && (
-                  <svg
-                    className="w-3.5 h-3.5 text-amber-500 flex-shrink-0"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                )}
               </div>
 
               {/* INT/EXT badge */}
@@ -821,25 +801,6 @@ function BreakdownListView({
             {/* Expanded content */}
             {isExpanded && (
               <div className="border-t border-border px-3 pb-3 pt-3 space-y-3">
-                {/* Schedule discrepancy warning */}
-                {discrepancy && (
-                  <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2">
-                    <svg
-                      className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
-                    <div>
-                      <p className="text-xs font-medium text-amber-700">Schedule Discrepancy</p>
-                      <p className="text-xs text-amber-600 mt-0.5">{discrepancy.message}</p>
-                    </div>
-                  </div>
-                )}
-
                 {/* Generate Synopsis / View script - only shown if no synopsis */}
                 {!scene.synopsis && scene.scriptContent && (
                   <div className="flex items-center gap-2">

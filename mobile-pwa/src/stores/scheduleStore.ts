@@ -32,10 +32,6 @@ interface ScheduleState {
   getCastMemberByName: (name: string) => ScheduleCastMember | null;
   getCastNamesForNumbers: (numbers: number[]) => string[];
 
-  // Stub functions for backwards compatibility (scene parsing removed)
-  getDiscrepancyForScene: (sceneNumber: string) => { message: string } | null;
-  getShootingInfoForScene: (sceneNumber: string) => { dayNumber: number; shootOrder: number } | null;
-
   // Multi-project support: save/restore schedule data
   saveScheduleForProject: (projectId: string) => void;
   restoreScheduleForProject: (projectId: string) => boolean;
@@ -120,11 +116,6 @@ export const useScheduleStore = create<ScheduleState>()(
             return member ? (member.character || member.name) : `Cast #${num}`;
           });
       },
-
-      // Stub functions for backwards compatibility (scene parsing removed)
-      // These functions always return null since we no longer parse scenes from schedules
-      getDiscrepancyForScene: () => null,
-      getShootingInfoForScene: () => null,
 
       // Save current schedule data for a project (before switching projects)
       saveScheduleForProject: (projectId: string) => {
