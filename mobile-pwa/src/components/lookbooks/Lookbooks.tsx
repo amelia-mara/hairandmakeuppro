@@ -1,5 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
+import { useScheduleStore } from '@/stores/scheduleStore';
 import type { Look, Character } from '@/types';
 import { CharacterSection } from './CharacterSection';
 import { AddLookModal } from './AddLookModal';
@@ -8,28 +9,98 @@ type SyncStatus = 'synced' | 'pending' | 'offline';
 
 export function Lookbooks() {
   const { currentProject, sceneCaptures } = useProjectStore();
+  const { schedule } = useScheduleStore();
   const [addLookOpen, setAddLookOpen] = useState(false);
   const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(null);
 
   // Simulated sync status (would come from sync service in real app)
   const syncStatus: SyncStatus = 'offline';
 
-  // Group looks by character
-  const looksByCharacter = useCallback(() => {
-    if (!currentProject) return new Map<string, Look[]>();
+  // Merge characters from schedule cast list with confirmed project characters
+  // This ensures cast appears immediately when schedule is uploaded
+  const allCharacters = useMemo(() => {
+    const charactersMap = new Map<string, Character>();
 
+    // First, add all confirmed project characters (without cast numbers initially)
+    if (currentProject?.characters) {
+      currentProject.characters.forEach(char => {
+        charactersMap.set(char.id, { ...char });
+      });
+    }
+
+    // Then, process the schedule cast list
+    if (schedule?.castList) {
+      schedule.castList.forEach(castMember => {
+        const castName = (castMember.character || castMember.name).toUpperCase();
+
+        // Check if this cast member is already in the project (by matching name)
+        const existingChar = currentProject?.characters.find(
+          c => c.name.toUpperCase() === castName
+        );
+
+        if (existingChar) {
+          // Update the existing character with the cast number from schedule
+          const updated = charactersMap.get(existingChar.id);
+          if (updated) {
+            updated.actorNumber = castMember.number;
+            charactersMap.set(existingChar.id, updated);
+          }
+        } else {
+          // Create a placeholder character from the cast list
+          const name = castMember.character || castMember.name;
+          const placeholderId = `schedule-cast-${castMember.number}`;
+
+          // Generate initials
+          const words = name.split(/\s+/).filter(Boolean);
+          const initials = words.length >= 2
+            ? `${words[0][0]}${words[words.length - 1][0]}`.toUpperCase()
+            : name.substring(0, 2).toUpperCase();
+
+          // Generate a color based on cast number
+          const colors = ['#C9A962', '#8B5CF6', '#EC4899', '#14B8A6', '#F59E0B', '#6366F1', '#22C55E', '#EF4444'];
+          const avatarColour = colors[castMember.number % colors.length];
+
+          charactersMap.set(placeholderId, {
+            id: placeholderId,
+            name,
+            initials,
+            avatarColour,
+            actorNumber: castMember.number,
+          });
+        }
+      });
+    }
+
+    // Convert to array and sort by cast number (1 = lead, etc.)
+    return Array.from(charactersMap.values()).sort((a, b) => {
+      // Characters with cast numbers come first, sorted by number
+      const aNum = a.actorNumber ?? 999;
+      const bNum = b.actorNumber ?? 999;
+      if (aNum !== bNum) return aNum - bNum;
+      // Fall back to alphabetical for characters without cast numbers
+      return a.name.localeCompare(b.name);
+    });
+  }, [currentProject?.characters, schedule?.castList]);
+
+  // Group looks by character (using all characters including schedule cast)
+  const looksByCharacter = useCallback(() => {
     const grouped = new Map<string, Look[]>();
-    currentProject.characters.forEach(char => {
+
+    // Initialize with all characters (including schedule-sourced ones)
+    allCharacters.forEach(char => {
       grouped.set(char.id, []);
     });
 
-    currentProject.looks.forEach(look => {
-      const existing = grouped.get(look.characterId) || [];
-      grouped.set(look.characterId, [...existing, look]);
-    });
+    // Add looks to their respective characters
+    if (currentProject?.looks) {
+      currentProject.looks.forEach(look => {
+        const existing = grouped.get(look.characterId) || [];
+        grouped.set(look.characterId, [...existing, look]);
+      });
+    }
 
     return grouped;
-  }, [currentProject]);
+  }, [currentProject?.looks, allCharacters]);
 
   // Get capture progress for a look
   const getCaptureProgress = useCallback((look: Look): { captured: number; total: number } => {
@@ -52,9 +123,9 @@ export function Lookbooks() {
     return { captured, total };
   }, [currentProject, sceneCaptures]);
 
-  // Get character by ID
+  // Get character by ID (checks both project characters and schedule-sourced)
   const getCharacter = (charId: string): Character | undefined => {
-    return currentProject?.characters.find(c => c.id === charId);
+    return allCharacters.find(c => c.id === charId);
   };
 
   // Handle add look for character
@@ -74,8 +145,8 @@ export function Lookbooks() {
   }
 
   const grouped = looksByCharacter();
-  const hasLooks = currentProject.looks.length > 0;
-  const characterCount = currentProject.characters.length;
+  const hasCharacters = allCharacters.length > 0;
+  const characterCount = allCharacters.length;
 
   return (
     <div className="min-h-screen bg-background pb-safe-bottom">
@@ -86,14 +157,14 @@ export function Lookbooks() {
           {/* Sync Status Banner */}
           <SyncBanner status={syncStatus} />
 
-          {hasLooks ? (
+          {hasCharacters ? (
             <>
               {/* Characters count header */}
               <div className="section-header mb-3">
-                CHARACTERS ({characterCount})
+                CAST & LOOKBOOKS ({characterCount})
               </div>
 
-              {/* By Character view */}
+              {/* Unified Character view - cast profiles + lookbooks together */}
               <div className="space-y-5">
                 {Array.from(grouped.entries()).map(([charId, looks]) => {
                   const character = getCharacter(charId);

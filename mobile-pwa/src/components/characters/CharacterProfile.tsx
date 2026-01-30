@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { createPhotoFromBlob } from '@/utils/imageUtils';
 import { formatEstimatedTime, formatSceneRange, getCaptureStatus } from '@/utils/helpers';
-import type { PhotoAngle, ContinuityEvent, SFXDetails } from '@/types';
+import type { Photo, PhotoAngle, ContinuityEvent, SFXDetails } from '@/types';
 import { countFilledFields, countHairFields, countSFXFields } from '@/types';
 import { Button, Accordion } from '../ui';
 import { CharacterAvatar } from './CharacterAvatar';
-import { PhotoGrid, AdditionalPhotosGrid, MasterReference, PhotoCapture, SceneThumbnailSlot } from '../photos';
+import { PhotoGrid, AdditionalPhotosGrid, MasterReference, PhotoCapture, SceneThumbnailSlot, PhotoViewer } from '../photos';
 import { QuickFlags } from '../continuity/QuickFlags';
 import { ContinuityEvents } from '../continuity/ContinuityEvents';
 import { AddEventModal } from '../continuity/AddEventModal';
@@ -59,6 +59,12 @@ export function CharacterProfile({ sceneId, characterId }: CharacterProfileProps
 
   // Add event modal state
   const [addEventOpen, setAddEventOpen] = useState(false);
+
+  // Photo viewer state
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerPhotos, setViewerPhotos] = useState<Photo[]>([]);
+  const [viewerInitialIndex, setViewerInitialIndex] = useState(0);
+  const [viewerSource, setViewerSource] = useState<'scene' | 'additional' | 'sfx'>('scene');
 
   if (!character || !scene || !currentProject) {
     return null;
@@ -117,6 +123,60 @@ export function CharacterProfile({ sceneId, characterId }: CharacterProfileProps
     setAddEventOpen(false);
   };
 
+  // Handle viewing scene photos (front, left, right, back)
+  const handleViewScenePhoto = (_photo: Photo, angle: PhotoAngle) => {
+    // Build array of all scene photos that exist
+    const scenePhotos: Photo[] = [];
+    const angles: PhotoAngle[] = ['front', 'left', 'right', 'back'];
+    let initialIndex = 0;
+
+    angles.forEach((a) => {
+      const p = capture.photos[a as keyof typeof capture.photos];
+      if (p) {
+        if (a === angle) {
+          initialIndex = scenePhotos.length;
+        }
+        scenePhotos.push(p);
+      }
+    });
+
+    setViewerPhotos(scenePhotos);
+    setViewerInitialIndex(initialIndex);
+    setViewerSource('scene');
+    setViewerOpen(true);
+  };
+
+  // Handle viewing additional photos
+  const handleViewAdditionalPhoto = (_photo: Photo, index: number) => {
+    setViewerPhotos(capture.additionalPhotos);
+    setViewerInitialIndex(index);
+    setViewerSource('additional');
+    setViewerOpen(true);
+  };
+
+  // Handle deleting photo from viewer
+  const handleDeleteFromViewer = (photoId: string) => {
+    if (viewerSource === 'scene') {
+      // Find which angle this photo belongs to
+      const angles: PhotoAngle[] = ['front', 'left', 'right', 'back'];
+      for (const angle of angles) {
+        const p = capture.photos[angle as keyof typeof capture.photos];
+        if (p?.id === photoId) {
+          removePhotoFromCapture(captureId, angle);
+          break;
+        }
+      }
+      // Update viewer photos
+      setViewerPhotos((prev) => prev.filter((p) => p.id !== photoId));
+    } else if (viewerSource === 'additional') {
+      removePhotoFromCapture(captureId, 'additional', photoId);
+      setViewerPhotos((prev) => prev.filter((p) => p.id !== photoId));
+    } else if (viewerSource === 'sfx') {
+      removeSFXPhoto(captureId, photoId);
+      setViewerPhotos((prev) => prev.filter((p) => p.id !== photoId));
+    }
+  };
+
   // Get scenes in this look for thumbnail strip
   const lookScenes = look
     ? currentProject.scenes.filter(s => look.scenes.includes(s.sceneNumber))
@@ -153,13 +213,40 @@ export function CharacterProfile({ sceneId, characterId }: CharacterProfileProps
           </div>
         )}
 
+        {/* Active Quick Flags - shown prominently at top */}
+        {(() => {
+          const activeFlags = [
+            { key: 'sweat', label: 'Sweat' },
+            { key: 'dishevelled', label: 'Dishevelled' },
+            { key: 'blood', label: 'Blood' },
+            { key: 'dirt', label: 'Dirt' },
+            { key: 'wetHair', label: 'Wet Hair' },
+            { key: 'tears', label: 'Tears' },
+          ].filter(({ key }) => capture.continuityFlags[key as keyof typeof capture.continuityFlags]);
+
+          if (activeFlags.length === 0) return null;
+
+          return (
+            <div className="flex flex-wrap gap-2">
+              {activeFlags.map(({ key, label }) => (
+                <span
+                  key={key}
+                  className="px-3 py-1.5 text-xs font-semibold rounded-full bg-gold text-white"
+                >
+                  {label}
+                </span>
+              ))}
+            </div>
+          );
+        })()}
+
         {/* Scene Photos Section */}
         <div className="card">
           <h3 className="section-header mb-3">SCENE PHOTOS</h3>
           <PhotoGrid
             photos={capture.photos}
             onCapture={(angle) => handleOpenCapture(angle)}
-            onRemove={(angle) => removePhotoFromCapture(captureId, angle)}
+            onView={handleViewScenePhoto}
           />
         </div>
 
@@ -176,10 +263,18 @@ export function CharacterProfile({ sceneId, characterId }: CharacterProfileProps
         {lookScenes.length > 1 && (
           <div className="card">
             <h3 className="section-header mb-3">SCENES IN THIS LOOK</h3>
-            <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-1">
+            <div className="flex gap-3 overflow-x-auto hide-scrollbar p-1 -m-1">
               {lookScenes.map((lookScene) => {
                 const sceneCapture = sceneCaptures[`${lookScene.id}-${characterId}`];
                 const hasCaptured = sceneCapture ? getCaptureStatus(sceneCapture) !== 'not-started' : false;
+
+                // Get the first available thumbnail (front > left > right > back > additional)
+                let thumbnailUrl: string | undefined;
+                if (sceneCapture) {
+                  const { photos, additionalPhotos } = sceneCapture;
+                  const firstPhoto = photos.front || photos.left || photos.right || photos.back || additionalPhotos[0];
+                  thumbnailUrl = firstPhoto?.thumbnail || firstPhoto?.uri;
+                }
 
                 return (
                   <SceneThumbnailSlot
@@ -188,6 +283,7 @@ export function CharacterProfile({ sceneId, characterId }: CharacterProfileProps
                     hasCaptured={hasCaptured}
                     isActive={lookScene.id === sceneId}
                     onClick={() => setCurrentScene(lookScene.id)}
+                    thumbnailUrl={thumbnailUrl}
                   />
                 );
               })}
@@ -206,7 +302,7 @@ export function CharacterProfile({ sceneId, characterId }: CharacterProfileProps
           <AdditionalPhotosGrid
             photos={capture.additionalPhotos}
             onCapture={() => handleOpenCapture('additional')}
-            onRemove={(photoId) => removePhotoFromCapture(captureId, 'additional', photoId)}
+            onView={handleViewAdditionalPhoto}
           />
         </div>
 
@@ -323,6 +419,15 @@ export function CharacterProfile({ sceneId, characterId }: CharacterProfileProps
         isOpen={addEventOpen}
         onClose={() => setAddEventOpen(false)}
         onAdd={handleAddEvent}
+      />
+
+      {/* Photo Viewer Modal */}
+      <PhotoViewer
+        isOpen={viewerOpen}
+        photos={viewerPhotos}
+        initialIndex={viewerInitialIndex}
+        onClose={() => setViewerOpen(false)}
+        onDelete={handleDeleteFromViewer}
       />
     </div>
   );

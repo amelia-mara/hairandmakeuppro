@@ -19,6 +19,7 @@ import type {
   SceneFilmingStatus,
   CharacterConfirmationStatus,
   CharacterDetectionStatus,
+  CastProfile,
 } from '@/types';
 import {
   createEmptyContinuityFlags,
@@ -30,6 +31,7 @@ import {
   REMINDER_INTERVAL_DAYS,
   createEmptyMakeupDetails,
   createEmptyHairDetails,
+  createEmptyCastProfile,
 } from '@/types';
 import type { SFXDetails } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
@@ -119,6 +121,10 @@ interface ProjectState {
 
   // Actions - Look Updates
   updateLook: (lookId: string, updates: Partial<Look>) => void;
+
+  // Actions - Cast Profiles
+  getCastProfile: (characterId: string) => CastProfile | undefined;
+  updateCastProfile: (characterId: string, updates: Partial<CastProfile>) => void;
 
   // Actions - Character Confirmation (for progressive scene-by-scene workflow)
   startCharacterDetection: () => void;
@@ -699,6 +705,41 @@ export const useProjectStore = create<ProjectState>()(
               looks: state.currentProject.looks.map((look) =>
                 look.id === lookId ? { ...look, ...updates } : look
               ),
+            },
+          };
+        });
+      },
+
+      // Cast profile actions
+      getCastProfile: (characterId) => {
+        const state = get();
+        if (!state.currentProject) return undefined;
+        return state.currentProject.castProfiles?.find(cp => cp.characterId === characterId);
+      },
+
+      updateCastProfile: (characterId, updates) => {
+        set((state) => {
+          if (!state.currentProject) return state;
+
+          const existingProfiles = state.currentProject.castProfiles || [];
+          const existingIndex = existingProfiles.findIndex(cp => cp.characterId === characterId);
+
+          let updatedProfiles: CastProfile[];
+          if (existingIndex >= 0) {
+            // Update existing profile
+            updatedProfiles = existingProfiles.map((cp, idx) =>
+              idx === existingIndex ? { ...cp, ...updates } : cp
+            );
+          } else {
+            // Create new profile with updates
+            const newProfile = { ...createEmptyCastProfile(characterId), ...updates };
+            updatedProfiles = [...existingProfiles, newProfile];
+          }
+
+          return {
+            currentProject: {
+              ...state.currentProject,
+              castProfiles: updatedProfiles,
             },
           };
         });
