@@ -3,6 +3,7 @@ import { useProjectStore } from '@/stores/projectStore';
 import type { Look, Character } from '@/types';
 import { CharacterSection } from './CharacterSection';
 import { AddLookModal } from './AddLookModal';
+import { CastProfileCard } from './CastProfileCard';
 
 type SyncStatus = 'synced' | 'pending' | 'offline';
 
@@ -10,6 +11,8 @@ export function Lookbooks() {
   const { currentProject, sceneCaptures } = useProjectStore();
   const [addLookOpen, setAddLookOpen] = useState(false);
   const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(null);
+  const [expandedCastProfileId, setExpandedCastProfileId] = useState<string | null>(null);
+  const [showCastProfiles, setShowCastProfiles] = useState(true);
 
   // Simulated sync status (would come from sync service in real app)
   const syncStatus: SyncStatus = 'offline';
@@ -86,11 +89,49 @@ export function Lookbooks() {
           {/* Sync Status Banner */}
           <SyncBanner status={syncStatus} />
 
+          {/* Cast Profiles Section */}
+          {characterCount > 0 && (
+            <div className="mb-5">
+              <button
+                type="button"
+                onClick={() => setShowCastProfiles(!showCastProfiles)}
+                className="w-full flex items-center justify-between mb-3 touch-manipulation"
+              >
+                <span className="section-header">CAST PROFILES ({characterCount})</span>
+                <svg
+                  className={`w-5 h-5 text-text-muted transition-transform ${showCastProfiles ? 'rotate-180' : ''}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {showCastProfiles && (
+                <div className="space-y-2.5">
+                  {currentProject.characters.map((character) => (
+                    <CastProfileCard
+                      key={character.id}
+                      character={character}
+                      isExpanded={expandedCastProfileId === character.id}
+                      onToggleExpand={() =>
+                        setExpandedCastProfileId(
+                          expandedCastProfileId === character.id ? null : character.id
+                        )
+                      }
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {hasLooks ? (
             <>
               {/* Characters count header */}
               <div className="section-header mb-3">
-                CHARACTERS ({characterCount})
+                LOOKBOOKS ({characterCount})
               </div>
 
               {/* By Character view */}
