@@ -107,6 +107,7 @@ interface SceneThumbnailSlotProps {
   hasCaptured: boolean;
   isActive: boolean;
   onClick: () => void;
+  thumbnailUrl?: string;
 }
 
 export function SceneThumbnailSlot({
@@ -114,6 +115,7 @@ export function SceneThumbnailSlot({
   hasCaptured,
   isActive,
   onClick,
+  thumbnailUrl,
 }: SceneThumbnailSlotProps) {
   return (
     <button
@@ -126,15 +128,21 @@ export function SceneThumbnailSlot({
     >
       <div
         className={clsx(
-          'w-[70px] h-[70px] rounded-lg flex items-center justify-center transition-all',
+          'w-[70px] h-[70px] rounded-lg flex items-center justify-center transition-all overflow-hidden',
           {
-            'border-2 border-solid border-gold bg-gold-50': hasCaptured,
+            'border-2 border-solid border-gold': hasCaptured,
             'border-2 border-dashed border-gray-300 bg-gray-50': !hasCaptured,
             'ring-2 ring-gold ring-offset-2': isActive,
           }
         )}
       >
-        {hasCaptured ? (
+        {hasCaptured && thumbnailUrl ? (
+          <img
+            src={thumbnailUrl}
+            alt={`Scene ${sceneNumber}`}
+            className="w-full h-full object-cover"
+          />
+        ) : hasCaptured ? (
           <CheckIcon className="w-6 h-6 text-gold" />
         ) : (
           <CameraIcon className="w-5 h-5 text-gray-400" />
