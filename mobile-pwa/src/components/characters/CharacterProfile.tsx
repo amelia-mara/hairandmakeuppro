@@ -236,7 +236,7 @@ export function CharacterProfile({ sceneId, characterId }: CharacterProfileProps
         {lookScenes.length > 1 && (
           <div className="card">
             <h3 className="section-header mb-3">SCENES IN THIS LOOK</h3>
-            <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-1">
+            <div className="flex gap-3 overflow-x-auto hide-scrollbar p-1 -m-1">
               {lookScenes.map((lookScene) => {
                 const sceneCapture = sceneCaptures[`${lookScene.id}-${characterId}`];
                 const hasCaptured = sceneCapture ? getCaptureStatus(sceneCapture) !== 'not-started' : false;
