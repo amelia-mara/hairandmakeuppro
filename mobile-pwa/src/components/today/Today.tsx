@@ -740,7 +740,7 @@ const TodaySceneCard = memo(function TodaySceneCard({
             {/* Top row: Scene number + badges + Status dropdown */}
             <div className="flex items-start justify-between mb-2">
               <div className="flex items-center gap-2 flex-1 min-w-0">
-                <span className="text-2xl font-bold text-text-primary flex-shrink-0">
+                <span className="text-lg font-bold text-text-primary flex-shrink-0">
                   {shootingScene.sceneNumber}
                 </span>
                 {/* INT/EXT badge */}
@@ -828,7 +828,7 @@ const TodaySceneCard = memo(function TodaySceneCard({
 
             {/* Set description / Location - full text */}
             {shootingScene.setDescription && (
-              <p className="text-sm font-semibold text-text-primary mb-1">
+              <p className="text-sm font-medium text-text-primary">
                 {shootingScene.setDescription}
               </p>
             )}
@@ -840,21 +840,21 @@ const TodaySceneCard = memo(function TodaySceneCard({
                   e.stopPropagation();
                   if (scene) onSynopsisClick(scene);
                 }}
-                className="w-full text-left group mb-2"
+                className="w-full text-left group mt-1.5"
                 disabled={!scene?.scriptContent}
               >
                 <p className={clsx(
-                  'text-[13px] text-text-muted italic line-clamp-2',
+                  'text-xs text-text-muted italic line-clamp-2',
                   scene?.scriptContent && 'group-hover:text-gold transition-colors'
                 )}>
                   {shootingScene.action || scene?.synopsis}
                 </p>
                 {scene?.scriptContent && (
-                  <span className="text-[10px] text-gold flex items-center gap-1 mt-0.5 opacity-80">
+                  <span className="text-[10px] text-gold flex items-center gap-1 mt-1">
                     <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                    View full scene
+                    Tap to view full scene
                   </span>
                 )}
               </button>
@@ -862,7 +862,7 @@ const TodaySceneCard = memo(function TodaySceneCard({
 
             {/* Info row: Cast numbers + Estimated time */}
             {((shootingScene.cast && shootingScene.cast.length > 0) || shootingScene.estimatedTime) && (
-              <div className="flex items-center gap-4 mb-2 text-xs">
+              <div className="flex items-center gap-4 mt-2 text-xs">
                 {shootingScene.cast && shootingScene.cast.length > 0 && (
                   <div className="flex items-center gap-1.5">
                     <svg className="w-3.5 h-3.5 text-text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -884,7 +884,7 @@ const TodaySceneCard = memo(function TodaySceneCard({
 
             {/* Notes (HMU, VFX, SFX, etc.) - highlighted */}
             {shootingScene.notes && (
-              <div className="mb-2 px-2.5 py-2 rounded-lg bg-gold-50 border border-gold-100">
+              <div className="mt-2 px-2.5 py-2 rounded-lg bg-gold-50 border border-gold-100">
                 <div className="text-xs text-gold-700 font-medium whitespace-pre-line">
                   {shootingScene.notes}
                 </div>
@@ -894,16 +894,16 @@ const TodaySceneCard = memo(function TodaySceneCard({
             {/* Filming notes if partial or incomplete - read from project scene (single source of truth) */}
             {filmingStatus && filmingStatus !== 'complete' && filmingNotes && (
               <div className={clsx(
-                'mb-2 px-2.5 py-2 rounded-lg text-xs',
+                'mt-2 px-2.5 py-2 rounded-lg text-xs',
                 filmingStatus === 'partial' ? 'bg-amber-50 text-amber-700 border border-amber-100' : 'bg-red-50 text-red-700 border border-red-100'
               )}>
-                <span className="font-semibold">Note:</span> {filmingNotes}
+                <span className="font-medium">Note:</span> {filmingNotes}
               </div>
             )}
 
             {/* Characters with looks */}
             {characters.length > 0 && (
-              <div className="flex flex-wrap gap-2 pt-2 border-t border-border/50">
+              <div className="flex flex-wrap gap-2 mt-2 pt-2 border-t border-border/50">
                 {characters.map((char) => {
                   const look = getLookForCharacter(char.id, shootingScene.sceneNumber);
                   return (
