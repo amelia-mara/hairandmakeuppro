@@ -11,6 +11,7 @@ export interface Project {
   scenes: Scene[];
   characters: Character[];
   looks: Look[];
+  castProfiles?: CastProfile[]; // Actor profiles linked to characters
 
   // Track overall character confirmation progress (for progressive workflow)
   characterDetectionStatus?: CharacterDetectionStatus;
@@ -49,7 +50,41 @@ export interface Character {
   name: string;
   initials: string;
   avatarColour?: string;
+  actorNumber?: number; // Cast number from production schedule
 }
+
+// Cast Profile - stores actor-specific information linked to a character
+export interface CastProfile {
+  id: string;
+  characterId: string; // Links to Character
+  actorName: string;
+  phone: string;
+  email: string;
+  agentName: string;
+  agentPhone: string;
+  agentEmail: string;
+  allergies: string;
+  specialRequirements: string;
+  skinType: string;
+  notes: string;
+  profilePhotoUri?: string;
+}
+
+// Helper to create empty cast profile
+export const createEmptyCastProfile = (characterId: string): CastProfile => ({
+  id: `cast-${characterId}`,
+  characterId,
+  actorName: '',
+  phone: '',
+  email: '',
+  agentName: '',
+  agentPhone: '',
+  agentEmail: '',
+  allergies: '',
+  specialRequirements: '',
+  skinType: '',
+  notes: '',
+});
 
 export interface Look {
   id: string;
