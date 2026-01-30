@@ -39,19 +39,24 @@ export function CharacterSection({
         className="w-full py-3 flex items-center justify-between text-left"
       >
         <div className="flex items-center gap-3">
-          {/* Avatar */}
+          {/* Avatar with cast number */}
           <div
             className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-semibold flex-shrink-0"
             style={{
               background: `linear-gradient(135deg, ${character.avatarColour || '#C9A962'} 0%, ${adjustColor(character.avatarColour || '#C9A962', -20)} 100%)`,
             }}
           >
-            {character.initials}
+            {character.actorNumber ?? character.initials}
           </div>
 
           {/* Character info */}
           <div className="min-w-0 flex-1">
-            <h3 className="text-[17px] font-bold text-gold truncate">{character.name}</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-[17px] font-bold text-gold truncate">{character.name}</h3>
+              {character.actorNumber && (
+                <span className="text-[10px] text-text-muted font-medium">#{character.actorNumber}</span>
+              )}
+            </div>
             {profile.actorName && (
               <p className="text-xs text-text-secondary truncate">{profile.actorName}</p>
             )}
