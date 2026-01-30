@@ -6,7 +6,6 @@ interface PhotoSlotProps {
   angle: PhotoAngle;
   onCapture: () => void;
   onView?: () => void;
-  onRemove?: () => void;
   size?: 'sm' | 'md' | 'lg' | 'portrait';
   showLabel?: boolean;
   isPrimary?: boolean;
@@ -25,7 +24,6 @@ export function PhotoSlot({
   angle,
   onCapture,
   onView,
-  onRemove,
   size = 'md',
   showLabel = true,
   isPrimary = false,
@@ -99,23 +97,6 @@ export function PhotoSlot({
           </div>
         )}
       </button>
-
-      {/* Remove button for filled slots */}
-      {hasPhoto && onRemove && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onRemove();
-          }}
-          className="absolute -top-1.5 -right-1.5 w-6 h-6 bg-error text-white rounded-full flex items-center justify-center shadow-md tap-target touch-manipulation"
-          aria-label="Remove photo"
-        >
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      )}
     </div>
   );
 }
