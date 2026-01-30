@@ -1,6 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
-import { useScheduleStore } from '@/stores/scheduleStore';
 import { CharacterAvatar } from '@/components/characters/CharacterAvatar';
 import { SceneScriptModal } from '@/components/scenes/SceneScriptModal';
 import {
@@ -8,12 +7,9 @@ import {
   SceneCharacterStatus,
   CharacterConfirmationProgress,
 } from '@/components/breakdown/SceneCharacterConfirmation';
-import { generateSceneSynopsis } from '@/services/aiService';
 import type { Scene, Character, Look, SceneCapture, BreakdownViewMode, BreakdownFilters, SceneFilmingStatus } from '@/types';
 import { SCENE_FILMING_STATUS_CONFIG } from '@/types';
 import { clsx } from 'clsx';
-
-type BreakdownSortMode = 'sceneNumber' | 'shootingOrder';
 
 // Filming Status Dropdown Component - allows changing status directly from Breakdown
 interface FilmingStatusDropdownProps {
@@ -211,14 +207,11 @@ interface BreakdownProps {
 }
 
 export function Breakdown({ onSceneSelect }: BreakdownProps) {
-  const { currentProject, sceneCaptures, updateSceneSynopsis, updateSceneFilmingStatus } = useProjectStore();
-  const { getDiscrepancyForScene, getShootingInfoForScene, schedule } = useScheduleStore();
+  const { currentProject, sceneCaptures, updateSceneFilmingStatus } = useProjectStore();
   const [viewMode, setViewMode] = useState<BreakdownViewMode>('list');
-  const [sortMode, setSortMode] = useState<BreakdownSortMode>('sceneNumber');
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<BreakdownFilters>({
     characters: [],
-    shootingDay: null,
     location: null,
     completionStatus: 'all',
     filmingStatus: 'all',
@@ -226,7 +219,6 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
   });
   const [expandedSceneId, setExpandedSceneId] = useState<string | null>(null);
   const [scriptModalSceneId, setScriptModalSceneId] = useState<string | null>(null);
-  const [generatingSynopsisId, setGeneratingSynopsisId] = useState<string | null>(null);
   const [characterConfirmSceneId, setCharacterConfirmSceneId] = useState<string | null>(null);
 
   // Filming status notes modal state
@@ -250,26 +242,6 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
     if (notesModalState) {
       updateSceneFilmingStatus(notesModalState.sceneNumber, notesModalState.status, notes);
       setNotesModalState(null);
-    }
-  };
-
-  // Handle generating synopsis for a scene
-  const handleGenerateSynopsis = async (scene: Scene) => {
-    if (generatingSynopsisId) return; // Already generating
-
-    setGeneratingSynopsisId(scene.id);
-    try {
-      const synopsis = await generateSceneSynopsis(
-        scene.slugline,
-        scene.scriptContent || ''
-      );
-      if (synopsis) {
-        updateSceneSynopsis(scene.id, synopsis);
-      }
-    } catch (error) {
-      console.error('Failed to generate synopsis:', error);
-    } finally {
-      setGeneratingSynopsisId(null);
     }
   };
 
@@ -347,34 +319,9 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
       }
     }
 
-    // Sort scenes
-    if (sortMode === 'shootingOrder') {
-      // Sort by shooting order: first by day number, then by shoot order within each day
-      // Scenes without shooting info go to the end
-      return scenes.sort((a, b) => {
-        const infoA = getShootingInfoForScene(a.sceneNumber);
-        const infoB = getShootingInfoForScene(b.sceneNumber);
-
-        // Scenes without shooting info go to the end
-        if (!infoA && !infoB) {
-          return a.sceneNumber.localeCompare(b.sceneNumber, undefined, { numeric: true });
-        }
-        if (!infoA) return 1;
-        if (!infoB) return -1;
-
-        // Sort by day number first
-        if (infoA.dayNumber !== infoB.dayNumber) {
-          return infoA.dayNumber - infoB.dayNumber;
-        }
-
-        // Then by shoot order within the day
-        return infoA.shootOrder - infoB.shootOrder;
-      });
-    }
-
-    // Default: sort by scene number
+    // Sort by scene number
     return scenes.sort((a, b) => a.sceneNumber.localeCompare(b.sceneNumber, undefined, { numeric: true }));
-  }, [currentProject, filters, sortMode, getShootingInfoForScene]);
+  }, [currentProject, filters]);
 
   // Pre-compute data maps for efficient lookups (avoids repeated .find() calls in render loops)
 
@@ -449,7 +396,6 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
   const clearFilters = () => {
     setFilters({
       characters: [],
-      shootingDay: null,
       location: null,
       completionStatus: 'all',
       filmingStatus: 'all',
@@ -458,7 +404,6 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
   };
 
   const hasActiveFilters = filters.characters.length > 0 ||
-    filters.shootingDay !== null ||
     filters.location !== null ||
     filters.completionStatus !== 'all' ||
     filters.filmingStatus !== 'all' ||
@@ -523,39 +468,12 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
         </div>
       </div>
 
-      {/* Sort and count bar */}
-      <div className="mobile-container px-4 py-3 flex items-center justify-between">
+      {/* Scene count bar */}
+      <div className="mobile-container px-4 py-3">
         <span className="text-xs text-text-muted">
           {filteredScenes.length} scene{filteredScenes.length !== 1 ? 's' : ''}
           {hasActiveFilters && ' (filtered)'}
         </span>
-
-        {/* Sort toggle - only show if schedule is available */}
-        {schedule && schedule.days.length > 0 && (
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-text-muted">Sort:</span>
-            <div className="flex rounded-lg overflow-hidden border border-border text-xs">
-              <button
-                onClick={() => setSortMode('sceneNumber')}
-                className={clsx(
-                  'px-2 py-1 transition-colors touch-manipulation',
-                  sortMode === 'sceneNumber' ? 'bg-gold text-white' : 'bg-card text-text-muted'
-                )}
-              >
-                Scene #
-              </button>
-              <button
-                onClick={() => setSortMode('shootingOrder')}
-                className={clsx(
-                  'px-2 py-1 transition-colors touch-manipulation',
-                  sortMode === 'shootingOrder' ? 'bg-gold text-white' : 'bg-card text-text-muted'
-                )}
-              >
-                Shoot Order
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Character confirmation progress */}
@@ -587,13 +505,10 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
             onToggleExpand={(id) => setExpandedSceneId(expandedSceneId === id ? null : id)}
             onSceneSelect={onSceneSelect}
             onSynopsisClick={(sceneId) => setScriptModalSceneId(sceneId)}
-            onGenerateSynopsis={handleGenerateSynopsis}
-            generatingSynopsisId={generatingSynopsisId}
             getCharactersForScene={getCharactersForScene}
             getLookForCharacter={getLookForCharacter}
             getCapture={getCapture}
             getSceneProgress={getSceneProgress}
-            getDiscrepancy={getDiscrepancyForScene}
             onCharacterConfirm={(sceneId) => setCharacterConfirmSceneId(sceneId)}
             allCharacters={currentProject?.characters || []}
             onFilmingStatusChange={handleFilmingStatusChange}
@@ -661,13 +576,10 @@ interface BreakdownListViewProps {
   onToggleExpand: (id: string) => void;
   onSceneSelect: (id: string) => void;
   onSynopsisClick: (sceneId: string) => void;
-  onGenerateSynopsis: (scene: Scene) => void;
-  generatingSynopsisId: string | null;
   getCharactersForScene: (scene: Scene) => Character[];
   getLookForCharacter: (characterId: string, sceneNumber: string) => Look | null | undefined;
   getCapture: (sceneId: string, characterId: string) => SceneCapture | null | undefined;
   getSceneProgress: (scene: Scene) => { captured: number; total: number };
-  getDiscrepancy: (sceneNumber: string) => { message: string } | null;
   onCharacterConfirm: (sceneId: string) => void;
   allCharacters: Character[];
   onFilmingStatusChange: (sceneNumber: string, status: SceneFilmingStatus, notes?: string) => void;
@@ -695,13 +607,10 @@ function BreakdownListView({
   onToggleExpand,
   onSceneSelect,
   onSynopsisClick,
-  onGenerateSynopsis,
-  generatingSynopsisId,
   getCharactersForScene,
   getLookForCharacter,
   getCapture,
   getSceneProgress,
-  getDiscrepancy,
   onCharacterConfirm,
   allCharacters,
   onFilmingStatusChange,
@@ -714,7 +623,6 @@ function BreakdownListView({
         const characters = getCharactersForScene(scene);
         const progress = getSceneProgress(scene);
         const isComplete = progress.total > 0 && progress.captured === progress.total;
-        const discrepancy = getDiscrepancy(scene.sceneNumber);
 
         // Get filming status styling
         const filmingStatusConfig = scene.filmingStatus
@@ -750,22 +658,11 @@ function BreakdownListView({
               onClick={() => onToggleExpand(scene.id)}
               className="w-full flex items-center gap-3 p-3 text-left touch-manipulation"
             >
-              {/* Scene number with discrepancy warning */}
-              <div className="w-10 flex items-center justify-center gap-0.5">
+              {/* Scene number */}
+              <div className="w-10 flex items-center justify-center">
                 <span className="text-lg font-bold text-text-primary">
                   {scene.sceneNumber}
                 </span>
-                {(discrepancy || scene.hasScheduleDiscrepancy) && (
-                  <svg
-                    className="w-3.5 h-3.5 text-amber-500 flex-shrink-0"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                )}
               </div>
 
               {/* INT/EXT badge */}
@@ -876,75 +773,6 @@ function BreakdownListView({
             {/* Expanded content */}
             {isExpanded && (
               <div className="border-t border-border px-3 pb-3 pt-3 space-y-3">
-                {/* Schedule discrepancy warning */}
-                {discrepancy && (
-                  <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2">
-                    <svg
-                      className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
-                    <div>
-                      <p className="text-xs font-medium text-amber-700">Schedule Discrepancy</p>
-                      <p className="text-xs text-amber-600 mt-0.5">{discrepancy.message}</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Generate Synopsis / View script - only shown if no synopsis */}
-                {!scene.synopsis && scene.scriptContent && (
-                  <div className="flex items-center gap-2">
-                    {/* Generate Synopsis Button */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onGenerateSynopsis(scene);
-                      }}
-                      disabled={generatingSynopsisId === scene.id}
-                      className={clsx(
-                        'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all',
-                        generatingSynopsisId === scene.id
-                          ? 'bg-gray-100 text-text-muted cursor-wait'
-                          : 'bg-gold-100 text-gold hover:bg-gold-200 active:scale-95'
-                      )}
-                    >
-                      {generatingSynopsisId === scene.id ? (
-                        <>
-                          <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                          </svg>
-                          Generating...
-                        </>
-                      ) : (
-                        <>
-                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" />
-                          </svg>
-                          Generate Synopsis
-                        </>
-                      )}
-                    </button>
-                    {/* View full scene link */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onSynopsisClick(scene.id);
-                      }}
-                      className="text-xs text-text-muted flex items-center gap-1 hover:text-gold transition-colors"
-                    >
-                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      View script
-                    </button>
-                  </div>
-                )}
-
                 {/* Filming status with notes */}
                 {scene.filmingStatus && (
                   <div className={clsx(
