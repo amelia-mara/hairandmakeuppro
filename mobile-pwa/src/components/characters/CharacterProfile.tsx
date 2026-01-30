@@ -241,6 +241,14 @@ export function CharacterProfile({ sceneId, characterId }: CharacterProfileProps
                 const sceneCapture = sceneCaptures[`${lookScene.id}-${characterId}`];
                 const hasCaptured = sceneCapture ? getCaptureStatus(sceneCapture) !== 'not-started' : false;
 
+                // Get the first available thumbnail (front > left > right > back > additional)
+                let thumbnailUrl: string | undefined;
+                if (sceneCapture) {
+                  const { photos, additionalPhotos } = sceneCapture;
+                  const firstPhoto = photos.front || photos.left || photos.right || photos.back || additionalPhotos[0];
+                  thumbnailUrl = firstPhoto?.thumbnail || firstPhoto?.uri;
+                }
+
                 return (
                   <SceneThumbnailSlot
                     key={lookScene.id}
@@ -248,6 +256,7 @@ export function CharacterProfile({ sceneId, characterId }: CharacterProfileProps
                     hasCaptured={hasCaptured}
                     isActive={lookScene.id === sceneId}
                     onClick={() => setCurrentScene(lookScene.id)}
+                    thumbnailUrl={thumbnailUrl}
                   />
                 );
               })}
