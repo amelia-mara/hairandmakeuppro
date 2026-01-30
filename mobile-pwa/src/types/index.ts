@@ -50,6 +50,7 @@ export interface Character {
   name: string;
   initials: string;
   avatarColour?: string;
+  actorNumber?: number; // Cast number from production schedule
 }
 
 // Cast Profile - stores actor-specific information linked to a character
