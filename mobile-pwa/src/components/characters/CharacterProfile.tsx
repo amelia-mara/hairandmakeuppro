@@ -213,6 +213,33 @@ export function CharacterProfile({ sceneId, characterId }: CharacterProfileProps
           </div>
         )}
 
+        {/* Active Quick Flags - shown prominently at top */}
+        {(() => {
+          const activeFlags = [
+            { key: 'sweat', label: 'Sweat' },
+            { key: 'dishevelled', label: 'Dishevelled' },
+            { key: 'blood', label: 'Blood' },
+            { key: 'dirt', label: 'Dirt' },
+            { key: 'wetHair', label: 'Wet Hair' },
+            { key: 'tears', label: 'Tears' },
+          ].filter(({ key }) => capture.continuityFlags[key as keyof typeof capture.continuityFlags]);
+
+          if (activeFlags.length === 0) return null;
+
+          return (
+            <div className="flex flex-wrap gap-2">
+              {activeFlags.map(({ key, label }) => (
+                <span
+                  key={key}
+                  className="px-3 py-1.5 text-xs font-semibold rounded-full bg-gold text-white"
+                >
+                  {label}
+                </span>
+              ))}
+            </div>
+          );
+        })()}
+
         {/* Scene Photos Section */}
         <div className="card">
           <h3 className="section-header mb-3">SCENE PHOTOS</h3>
