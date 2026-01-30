@@ -4,6 +4,7 @@ import type { ContinuityEvent, ContinuityEventType, Photo } from '@/types';
 import { CONTINUITY_EVENT_TYPES, STAGE_SUGGESTIONS } from '@/types';
 import { BottomSheet, Button, Input, Textarea } from '../ui';
 import { createPhotoFromBlob } from '@/utils/imageUtils';
+import { PhotoCapture } from '../photos';
 
 interface AddEventModalProps {
   isOpen: boolean;
@@ -21,6 +22,7 @@ export function AddEventModal({ isOpen, onClose, onAdd }: AddEventModalProps) {
   const [showStageSuggestions, setShowStageSuggestions] = useState(false);
   const [referencePhotos, setReferencePhotos] = useState<Photo[]>([]);
   const [isCapturing, setIsCapturing] = useState(false);
+  const [showPhotoCapture, setShowPhotoCapture] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const resetForm = () => {
@@ -31,6 +33,7 @@ export function AddEventModal({ isOpen, onClose, onAdd }: AddEventModalProps) {
     setSceneRange('');
     setProducts('');
     setReferencePhotos([]);
+    setShowPhotoCapture(false);
   };
 
   const handleSubmit = () => {
@@ -73,29 +76,51 @@ export function AddEventModal({ isOpen, onClose, onAdd }: AddEventModalProps) {
     }
   };
 
-  const handleAddPhoto = () => {
-    fileInputRef.current?.click();
-  };
-
   const handleRemovePhoto = (photoId: string) => {
     setReferencePhotos((prev) => prev.filter((p) => p.id !== photoId));
   };
 
+  const handlePhotoCapture = async (blob: Blob) => {
+    setIsCapturing(true);
+    try {
+      const photo = await createPhotoFromBlob(blob, 'additional');
+      setReferencePhotos((prev) => [...prev, photo]);
+    } catch (err) {
+      console.error('Failed to process captured photo:', err);
+    } finally {
+      setIsCapturing(false);
+      setShowPhotoCapture(false);
+    }
+  };
+
+  const handleAddPhoto = () => {
+    setShowPhotoCapture(true);
+  };
+
   return (
-    <BottomSheet
-      isOpen={isOpen}
-      onClose={handleClose}
-      title="Add Continuity Event"
-      height="auto"
-    >
-      {/* Hidden file input */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        onChange={handleFileSelect}
-        className="hidden"
+    <>
+      {/* Photo Capture Modal */}
+      <PhotoCapture
+        isOpen={showPhotoCapture}
+        onClose={() => setShowPhotoCapture(false)}
+        onCapture={handlePhotoCapture}
+        angle="additional"
       />
+
+      <BottomSheet
+        isOpen={isOpen && !showPhotoCapture}
+        onClose={handleClose}
+        title="Add Continuity Event"
+        height="auto"
+      >
+        {/* Hidden file input - kept as fallback */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileSelect}
+          className="hidden"
+        />
 
       <div className="space-y-4">
         {/* Event Type Selector */}
@@ -254,6 +279,7 @@ export function AddEventModal({ isOpen, onClose, onAdd }: AddEventModalProps) {
           </Button>
         </div>
       </div>
-    </BottomSheet>
+      </BottomSheet>
+    </>
   );
 }
