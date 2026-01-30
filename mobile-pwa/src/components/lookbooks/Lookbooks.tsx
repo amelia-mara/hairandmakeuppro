@@ -21,23 +21,31 @@ export function Lookbooks() {
   const allCharacters = useMemo(() => {
     const charactersMap = new Map<string, Character>();
 
-    // First, add all confirmed project characters
+    // First, add all confirmed project characters (without cast numbers initially)
     if (currentProject?.characters) {
       currentProject.characters.forEach(char => {
-        charactersMap.set(char.id, char);
+        charactersMap.set(char.id, { ...char });
       });
     }
 
-    // Then, add any cast from schedule that aren't already in the project
-    // Create placeholder characters for them
+    // Then, process the schedule cast list
     if (schedule?.castList) {
       schedule.castList.forEach(castMember => {
-        // Check if this cast member is already in the project (by matching name or character)
+        const castName = (castMember.character || castMember.name).toUpperCase();
+
+        // Check if this cast member is already in the project (by matching name)
         const existingChar = currentProject?.characters.find(
-          c => c.name.toUpperCase() === (castMember.character || castMember.name).toUpperCase()
+          c => c.name.toUpperCase() === castName
         );
 
-        if (!existingChar) {
+        if (existingChar) {
+          // Update the existing character with the cast number from schedule
+          const updated = charactersMap.get(existingChar.id);
+          if (updated) {
+            updated.actorNumber = castMember.number;
+            charactersMap.set(existingChar.id, updated);
+          }
+        } else {
           // Create a placeholder character from the cast list
           const name = castMember.character || castMember.name;
           const placeholderId = `schedule-cast-${castMember.number}`;
@@ -63,12 +71,13 @@ export function Lookbooks() {
       });
     }
 
-    // Convert to array and sort by cast number (if available) then by name
+    // Convert to array and sort by cast number (1 = lead, etc.)
     return Array.from(charactersMap.values()).sort((a, b) => {
-      // Prioritize characters with cast numbers
+      // Characters with cast numbers come first, sorted by number
       const aNum = a.actorNumber ?? 999;
       const bNum = b.actorNumber ?? 999;
       if (aNum !== bNum) return aNum - bNum;
+      // Fall back to alphabetical for characters without cast numbers
       return a.name.localeCompare(b.name);
     });
   }, [currentProject?.characters, schedule?.castList]);
