@@ -8,7 +8,6 @@ import type {
   WeekSummary,
   TimesheetView,
   CallSheet,
-  DayType,
   BaseContract,
 } from '@/types';
 import { createDefaultRateCard, createEmptyTimesheetEntry, getLunchDurationForDayType, parseDayTypeFromString } from '@/types';
