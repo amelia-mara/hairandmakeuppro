@@ -43,16 +43,17 @@ export function WelcomeScreen() {
             fill="none"
           />
 
-          {/* Gold checkmark - classic tick shape, tapered from thick to thin */}
+          {/* Gold checkmark - centered by V point, thick at junction, tapers to tip */}
           <path
-            d="M 24 46
-               L 38 64
-               C 40 68, 42 68, 44 66
-               L 76 28
-               L 74 30
-               L 44 62
-               C 42 64, 40 64, 38 60
-               L 28 48
+            d="M 28 38
+               L 44 58
+               L 46 62
+               L 50 62
+               L 78 24
+               L 76 26
+               L 50 58
+               L 48 56
+               L 34 40
                Z"
             fill="url(#checkGold)"
           />
@@ -79,20 +80,18 @@ export function WelcomeScreen() {
 
         {/* Feature icons - BLACK, SOLID, BOLD */}
         <div className="flex items-center justify-center w-full max-w-md mb-12">
-          {/* Capture - Camera icon - OUTLINED */}
+          {/* Capture - Camera icon - SOLID */}
           <div className="flex flex-col items-center flex-1">
             <svg className="w-14 h-14 mb-3" viewBox="0 0 56 56" fill="none">
-              {/* Camera body - outlined/stroked */}
+              {/* Camera body - filled for solid look */}
               <path
-                d="M6 18C6 15.79 7.79 14 10 14H15L19 8H37L41 14H46C48.21 14 50 15.79 50 18V42C50 44.21 48.21 46 46 46H10C7.79 46 6 44.21 6 42V18Z"
-                stroke="#1a1a1a"
-                strokeWidth="3"
-                fill="none"
+                d="M4 18C4 15.79 5.79 14 8 14H14L18 8H38L42 14H48C50.21 14 52 15.79 52 18V44C52 46.21 50.21 48 48 48H8C5.79 48 4 46.21 4 44V18Z"
+                fill="#1a1a1a"
               />
-              {/* Camera lens - outer circle */}
-              <circle cx="28" cy="30" r="10" stroke="#1a1a1a" strokeWidth="3" fill="none" />
-              {/* Camera lens inner - small filled dot */}
-              <circle cx="28" cy="30" r="4" fill="#1a1a1a" />
+              {/* Camera lens - white circle */}
+              <circle cx="28" cy="30" r="10" fill="#F5F3EE" />
+              {/* Camera lens inner - black dot */}
+              <circle cx="28" cy="30" r="5" fill="#1a1a1a" />
             </svg>
             <span className="text-base font-serif text-[#1a1a1a]">Capture</span>
           </div>
@@ -100,43 +99,29 @@ export function WelcomeScreen() {
           {/* Vertical divider */}
           <div className="w-px h-24 bg-[#c5c0b5]" />
 
-          {/* Track - Sync arrows icon - smooth curved arrows */}
+          {/* Track - Sync arrows icon - BOLD */}
           <div className="flex flex-col items-center flex-1">
             <svg className="w-14 h-14 mb-3" viewBox="0 0 56 56" fill="none">
-              {/* Top curved arrow (clockwise from top-left to top-right) */}
+              {/* Circular arrow - top arc */}
               <path
-                d="M16 12 A20 20 0 0 1 46 20"
+                d="M28 8C16.954 8 8 16.954 8 28c0 4.5 1.5 8.6 4 12"
                 stroke="#1a1a1a"
-                strokeWidth="3"
+                strokeWidth="4"
                 strokeLinecap="round"
                 fill="none"
               />
-              {/* Arrow head at top-right - pointing right/down */}
+              {/* Circular arrow - bottom arc */}
               <path
-                d="M44 12 L46 20 L38 20"
+                d="M28 48c11.046 0 20-8.954 20-20 0-4.5-1.5-8.6-4-12"
                 stroke="#1a1a1a"
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                fill="none"
-              />
-              {/* Bottom curved arrow (counter-clockwise from bottom-right to bottom-left) */}
-              <path
-                d="M40 44 A20 20 0 0 1 10 36"
-                stroke="#1a1a1a"
-                strokeWidth="3"
+                strokeWidth="4"
                 strokeLinecap="round"
                 fill="none"
               />
-              {/* Arrow head at bottom-left - pointing left/up */}
-              <path
-                d="M12 44 L10 36 L18 36"
-                stroke="#1a1a1a"
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                fill="none"
-              />
+              {/* Arrow head - bottom left - FILLED */}
+              <polygon points="4,36 14,44 16,32" fill="#1a1a1a" />
+              {/* Arrow head - top right - FILLED */}
+              <polygon points="52,20 42,12 40,24" fill="#1a1a1a" />
             </svg>
             <span className="text-base font-serif text-[#1a1a1a]">Track</span>
           </div>
