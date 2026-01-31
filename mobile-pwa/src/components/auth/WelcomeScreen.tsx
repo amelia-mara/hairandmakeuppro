@@ -7,52 +7,46 @@ export function WelcomeScreen() {
     <div className="min-h-screen bg-[#F5F3EE] flex flex-col">
       {/* Main content area */}
       <div className="flex-1 flex flex-col items-center justify-center px-8">
-        {/* Logo Icon - Gold checkmark with smaller ring that has gold/black gradient */}
+        {/* Logo Icon - Gold checkmark with ring (gold top to black bottom) */}
         <svg
-          width="110"
-          height="110"
+          width="120"
+          height="120"
           viewBox="0 0 100 100"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
           className="mb-5"
         >
           <defs>
-            {/* Gold gradient for checkmark */}
-            <linearGradient id="checkGold" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#D4B86A" />
-              <stop offset="40%" stopColor="#C9A962" />
+            {/* Gold gradient for checkmark - flows along the tick */}
+            <linearGradient id="checkGold" x1="0%" y1="100%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#C9A962" />
+              <stop offset="50%" stopColor="#D4B86A" />
               <stop offset="100%" stopColor="#A8893D" />
             </linearGradient>
-            {/* Ring gradient - gold/black shine effect */}
-            <linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#1a1a1a" />
-              <stop offset="35%" stopColor="#3a3a3a" />
-              <stop offset="45%" stopColor="#8B7332" />
-              <stop offset="55%" stopColor="#C9A962" />
-              <stop offset="65%" stopColor="#8B7332" />
+            {/* Ring gradient - gold at top, black at bottom, slightly angled */}
+            <linearGradient id="ringGradient" x1="30%" y1="0%" x2="70%" y2="100%">
+              <stop offset="0%" stopColor="#D4B86A" />
+              <stop offset="25%" stopColor="#C9A962" />
+              <stop offset="50%" stopColor="#6B5A28" />
               <stop offset="75%" stopColor="#3a3a3a" />
               <stop offset="100%" stopColor="#1a1a1a" />
             </linearGradient>
           </defs>
 
-          {/* Circle ring - SMALLER with gold/black gradient */}
+          {/* Circle ring - gold at top fading to black at bottom */}
           <circle
             cx="50"
             cy="50"
-            r="32"
+            r="30"
             stroke="url(#ringGradient)"
             strokeWidth="2.5"
             fill="none"
           />
 
-          {/* Gold checkmark - extends well beyond the circle */}
-          <path
-            d="M26 52L42 68L74 30"
-            stroke="url(#checkGold)"
-            strokeWidth="6"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            fill="none"
+          {/* Gold checkmark - FILLED tapered shape: wider at bottom, thin at tip */}
+          <polygon
+            points="20,50 38,68 76,26 78,30 42,72 24,54"
+            fill="url(#checkGold)"
           />
         </svg>
 
