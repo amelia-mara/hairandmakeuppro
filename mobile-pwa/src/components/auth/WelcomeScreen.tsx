@@ -7,7 +7,7 @@ export function WelcomeScreen() {
     <div className="min-h-screen bg-[#F5F3EE] flex flex-col">
       {/* Main content area */}
       <div className="flex-1 flex flex-col items-center justify-center px-8">
-        {/* Logo Icon - Gold checkmark with ring (gold top to black bottom) */}
+        {/* Logo Icon - Gold checkmark with textured ring */}
         <svg
           width="120"
           height="120"
@@ -17,13 +17,13 @@ export function WelcomeScreen() {
           className="mb-5"
         >
           <defs>
-            {/* Gold gradient for checkmark - flows along the tick */}
+            {/* Gold gradient for checkmark */}
             <linearGradient id="checkGold" x1="0%" y1="100%" x2="100%" y2="0%">
               <stop offset="0%" stopColor="#C9A962" />
               <stop offset="50%" stopColor="#D4B86A" />
               <stop offset="100%" stopColor="#A8893D" />
             </linearGradient>
-            {/* Ring gradient - gold at top, black at bottom, slightly angled */}
+            {/* Ring gradient - gold at top, black at bottom */}
             <linearGradient id="ringGradient" x1="30%" y1="0%" x2="70%" y2="100%">
               <stop offset="0%" stopColor="#D4B86A" />
               <stop offset="25%" stopColor="#C9A962" />
@@ -33,7 +33,7 @@ export function WelcomeScreen() {
             </linearGradient>
           </defs>
 
-          {/* Circle ring - gold at top fading to black at bottom */}
+          {/* Circle ring - main stroke with slight width variation */}
           <circle
             cx="50"
             cy="50"
@@ -42,10 +42,25 @@ export function WelcomeScreen() {
             strokeWidth="2.5"
             fill="none"
           />
-
-          {/* Gold checkmark - using stroke for clean tick shape */}
+          {/* Texture overlay for rustic effect - thicker at top */}
           <path
-            d="M 28 52 L 44 68 L 74 32"
+            d="M 50 20 A 30 30 0 0 1 80 50"
+            stroke="url(#ringGradient)"
+            strokeWidth="1"
+            fill="none"
+            opacity="0.5"
+          />
+          <path
+            d="M 20 50 A 30 30 0 0 1 50 20"
+            stroke="#C9A962"
+            strokeWidth="0.8"
+            fill="none"
+            opacity="0.3"
+          />
+
+          {/* Gold checkmark - V centered horizontally, in lower half */}
+          <path
+            d="M 26 48 L 50 64 L 76 30"
             stroke="url(#checkGold)"
             strokeWidth="8"
             strokeLinecap="round"
