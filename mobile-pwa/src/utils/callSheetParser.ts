@@ -6,6 +6,15 @@ import { callAI } from '@/services/aiService';
 // Configure PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
+// Enable debug logging for call sheet parsing
+const DEBUG_CALLSHEET_PARSER = true;
+
+function debugLog(...args: any[]) {
+  if (DEBUG_CALLSHEET_PARSER) {
+    console.log('[CallSheetParser]', ...args);
+  }
+}
+
 /**
  * Extract text content from a PDF file
  */
@@ -114,8 +123,8 @@ Return a JSON object with this structure (include only fields that have data in 
     {
       "sceneNumber": "1" or "1A" (string, exactly as shown),
       "locationId": "LOC 1, LOC 2, etc. if shown",
-      "setDescription": "The SET/LOCATION line only, e.g. 'EXT. FARMHOUSE' or 'INT. FARMHOUSE - KITCHEN' (first line of SET & DESCRIPTION column)",
-      "action": "The LOG LINE or scene description that appears BELOW the set description, e.g. 'PETER and GWEN meet the AOKI's' or 'PETER tells GWEN to go'. This is the brief description of what happens in the scene. IMPORTANT: Extract this separately from setDescription - it's usually the second line in the SET & DESCRIPTION column.",
+      "setDescription": "The INT/EXT location line ONLY, e.g. 'EXT. FARMHOUSE' or 'INT. FARMHOUSE - KITCHEN'. Do NOT include the scene description here.",
+      "action": "REQUIRED: The scene description/log line that describes WHAT HAPPENS in the scene. Examples: 'PETER and GWEN meet the AOKI's', 'PETER tells GWEN to go', 'PETER & GWEN watch the helicopter take off'. This is usually below the location or after a separator. Extract this for EVERY scene.",
       "dayNight": "D" or "N" or "D/N" or "D1" or "D2" or "D11" etc (from D/N column)",
       "pages": "1/8" or "2" or "1 5/8" or "1 2/8" etc (from PAGES column)",
       "cast": ["1", "2", "4"] (cast ID numbers from CAST column, as strings),
@@ -162,25 +171,49 @@ IMPORTANT:
 - CRITICAL: Only extract scenes for the CURRENT shooting day. Do NOT include scenes from "ADVANCE SCHEDULE", "ADVANCE", "NEXT DAYS", or any section showing future production days. These appear at the end of call sheets and show upcoming days - ignore them completely.
 
 SCENE DATA EXTRACTION (VERY IMPORTANT):
-- The "SET & DESCRIPTION" column typically has TWO lines per scene:
-  1. First line = setDescription (e.g., "EXT. FARMHOUSE" or "INT. FARMHOUSE - KITCHEN")
-  2. Second line = action/log line (e.g., "PETER and GWEN meet the AOKI's")
-- ALWAYS extract the action/log line separately - this is crucial for the app
+- The "SET & DESCRIPTION" column typically has TWO parts per scene:
+  1. setDescription = The INT/EXT location line ONLY (e.g., "EXT. FARMHOUSE", "INT. FARMHOUSE - KITCHEN")
+  2. action = The scene description/log line that describes WHAT HAPPENS (e.g., "PETER and GWEN meet the AOKI's", "PETER tells GWEN to go")
+- CRITICAL: The "action" field MUST contain the description of what happens in the scene, NOT the location
+- If the description appears on a separate line below the location, that is the "action"
+- If the description appears after a dash or colon after the location, extract it as the "action"
+- Examples of action: "PETER and GWEN watch the helicopter take off", "PETER tells GWEN to go", "PETER & GWEN make the poison, the house rocks"
 - ALWAYS extract cast numbers from the CAST column (e.g., "1, 2, 9, 10, 14")
 - ALWAYS extract notes from NOTES column, especially HMU (hair/makeup), VFX, SFX notes
 - ALWAYS extract page counts and timings when available`;
 
   try {
-    const response = await callAI(prompt, { system: systemPrompt, maxTokens: 4000 });
+    debugLog('Starting AI call sheet parsing...');
+    debugLog('Text length:', text.length, 'characters');
+
+    const response = await callAI(prompt, { system: systemPrompt, maxTokens: 8000 });
+    debugLog('AI response received, length:', response.length);
 
     // Parse the JSON response
     const jsonMatch = response.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       console.error('No JSON found in AI response:', response);
+      debugLog('ERROR: No JSON found in AI response');
       throw new Error('Failed to parse call sheet - invalid AI response');
     }
 
     const parsed = JSON.parse(jsonMatch[0]);
+    debugLog('JSON parsed successfully');
+    debugLog('Scenes extracted:', parsed.scenes?.length || 0);
+    debugLog('Cast calls extracted:', parsed.castCalls?.length || 0);
+
+    // Log sample scene to verify extraction
+    if (parsed.scenes?.length > 0) {
+      const sampleScene = parsed.scenes[0];
+      debugLog('Sample scene:', {
+        sceneNumber: sampleScene.sceneNumber,
+        setDescription: sampleScene.setDescription,
+        action: sampleScene.action,
+        cast: sampleScene.cast,
+        estimatedTime: sampleScene.estimatedTime,
+        pages: sampleScene.pages
+      });
+    }
 
     // Build the CallSheet object with defaults for missing fields
     // Filter out any "Advance Schedule" scenes that may have been extracted
@@ -337,6 +370,8 @@ SCENE DATA EXTRACTION (VERY IMPORTANT):
     };
   } catch (error) {
     console.error('AI call sheet parsing failed:', error);
+    debugLog('ERROR: AI parsing failed, falling back to regex parser');
+    debugLog('Error details:', error);
     // Fall back to basic regex parsing as a last resort
     return fallbackParseCallSheetText(text, pdfUri);
   }
@@ -347,6 +382,8 @@ SCENE DATA EXTRACTION (VERY IMPORTANT):
  * Extracts basic information that we can reasonably parse with patterns
  */
 function fallbackParseCallSheetText(text: string, pdfUri?: string): CallSheet {
+  debugLog('Using FALLBACK regex parser (AI parsing failed)');
+  debugLog('NOTE: Fallback parser has limited extraction - cast, timing, action fields may be missing');
   // Helper to extract time in HH:MM format
   const extractTime = (match: RegExpMatchArray | null): string | undefined => {
     if (!match) return undefined;
@@ -457,7 +494,7 @@ function fallbackParseCallSheetText(text: string, pdfUri?: string): CallSheet {
   const textWithoutAdvance = advanceScheduleIndex > 0 ? text.slice(0, advanceScheduleIndex) : text;
 
   const scenes: CallSheetScene[] = [];
-  const scenePattern = /(?:SC|SCENE)?\s*(\d+[A-Z]?)\s+((?:INT|EXT)[.\s/][^D\d]*?)\s*(D\d?|N\d?|D\/N)/gi;
+  const scenePattern = /(?:SC|SCENE)?\s*(\d+[A-Z]?)\s+((?:INT|EXT)[.\s/][^D\d]*?)\s*(D\d*|N\d*|D\/N)/gi;
   let sceneMatch;
   let shootOrder = 1;
 
@@ -470,6 +507,73 @@ function fallbackParseCallSheetText(text: string, pdfUri?: string): CallSheet {
       status: 'upcoming' as const,
     });
   }
+
+  // Try to extract cast calls from CAST INFORMATION section
+  // Look for patterns like: ID NAME CHARACTER STATUS ... with times
+  const castCalls: CastCall[] = [];
+
+  // Find the cast information section
+  const castSectionMatch = text.match(/CAST\s*INFORMATION[^]*?(?=MINIBUS|TRANSPORT|DEPARTURE|ADVANCE|$)/i);
+  if (castSectionMatch) {
+    const castSection = castSectionMatch[0];
+    debugLog('Found CAST INFORMATION section, length:', castSection.length);
+
+    // Pattern to match cast rows: ID (number), NAME, CHARACTER/ROLE, STATUS, then times
+    // Example: "1 JOHN BOYEGA PETER W 06:55 LW 07:20 07:30 07:20 07:40 08:30 08:40"
+    const castRowPattern = /\b(\d{1,2})\s+([A-Z][A-Z\s.'-]+?)\s+([A-Z][A-Z\s'-]+?)\s+(SW?F?|W|WF|H|T|R|SWF?)\s+/gi;
+    let castMatch;
+
+    while ((castMatch = castRowPattern.exec(castSection)) !== null) {
+      const id = castMatch[1];
+      const name = castMatch[2].trim();
+      const character = castMatch[3].trim();
+      const status = castMatch[4];
+
+      // Skip if name looks like a header or invalid
+      if (name === 'NAME' || name === 'ID' || character === 'ROLE' || character === 'CHARACTER') {
+        continue;
+      }
+
+      // Try to extract times from the rest of the line
+      const restOfLine = castSection.slice(castMatch.index + castMatch[0].length, castMatch.index + 200);
+      const timePattern = /(\d{1,2}:\d{2})/g;
+      const times = restOfLine.match(timePattern) || [];
+
+      castCalls.push({
+        id,
+        name,
+        character,
+        status,
+        callTime: times[0] || '',
+        makeupCall: times[1] || undefined,
+        costumeCall: times[2] || undefined,
+        hmuCall: times[3] || undefined,
+        onSetTime: times[4] || undefined,
+      });
+    }
+
+    debugLog('Extracted cast calls:', castCalls.length);
+    if (castCalls.length > 0) {
+      debugLog('Sample cast call:', castCalls[0]);
+    }
+  }
+
+  // Try to match cast numbers to scenes based on common patterns
+  // Look for cast numbers after scene info (e.g., "1, 2, 9, 10, 14")
+  scenes.forEach((scene, index) => {
+    // Search for cast numbers near this scene in the raw text
+    const sceneIndex = textWithoutAdvance.indexOf(scene.sceneNumber);
+    if (sceneIndex >= 0) {
+      const nearbyText = textWithoutAdvance.slice(sceneIndex, sceneIndex + 500);
+      // Look for a list of numbers that could be cast IDs
+      const castListMatch = nearbyText.match(/(?:CAST|cast)?[:\s]*(\d+(?:\s*,\s*\d+)+)/);
+      if (castListMatch) {
+        const castIds = castListMatch[1].split(/\s*,\s*/).map(id => id.trim());
+        scenes[index] = { ...scene, cast: castIds };
+        debugLog(`Scene ${scene.sceneNumber} cast:`, castIds);
+      }
+    }
+  });
 
   return {
     id: uuidv4(),
@@ -485,7 +589,7 @@ function fallbackParseCallSheetText(text: string, pdfUri?: string): CallSheet {
     preCalls,
     unitBase,
     scenes,
-    castCalls: [],
+    castCalls,
     supportingArtists: [],
     uploadedAt: new Date(),
     pdfUri,
