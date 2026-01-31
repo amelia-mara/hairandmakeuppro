@@ -43,9 +43,17 @@ export function WelcomeScreen() {
             fill="none"
           />
 
-          {/* Gold checkmark - FILLED tapered shape: wider at bottom, thin at tip */}
-          <polygon
-            points="20,50 38,68 76,26 78,30 42,72 24,54"
+          {/* Gold checkmark - tapered tick: thick at junction, tapers to thin tip */}
+          <path
+            d="M 22 48
+               L 36 66
+               Q 40 72, 44 68
+               L 78 28
+               L 76 32
+               L 44 64
+               Q 40 68, 38 64
+               L 26 50
+               Z"
             fill="url(#checkGold)"
           />
         </svg>
