@@ -5,7 +5,7 @@ import { CharacterAvatar } from '@/components/characters/CharacterAvatar';
 import { SceneScriptModal } from '@/components/scenes/SceneScriptModal';
 import { formatShortDate } from '@/utils/helpers';
 import type { ShootingSceneStatus, SceneFilmingStatus, CallSheetScene, Scene, Character, Look } from '@/types';
-import { SCENE_FILMING_STATUS_CONFIG } from '@/types';
+import { SCENE_FILMING_STATUS_CONFIG, parseDayTypeFromString, DAY_TYPE_LABELS } from '@/types';
 import { clsx } from 'clsx';
 
 interface TodayProps {
@@ -368,14 +368,26 @@ export function Today({ onSceneSelect }: TodayProps) {
                 </h2>
               </div>
 
-              {/* Day Type - show prominently if available */}
-              {callSheet.dayType && (
-                <div className="mb-3 pb-3 border-b border-border/50">
-                  <span className="text-xs font-semibold text-gold">
-                    {callSheet.dayType}
-                  </span>
-                </div>
-              )}
+              {/* Working Day Type Badge - show prominently */}
+              {(() => {
+                const dayTypeAbbrev = parseDayTypeFromString(callSheet.dayType);
+                const dayTypeLabel = DAY_TYPE_LABELS[dayTypeAbbrev];
+                return (
+                  <div className="mb-3 pb-3 border-b border-border/50 flex items-center gap-2">
+                    <span className={clsx(
+                      'px-2 py-0.5 text-xs font-bold rounded',
+                      dayTypeAbbrev === 'CWD' && 'bg-amber-100 text-amber-700',
+                      dayTypeAbbrev === 'SCWD' && 'bg-orange-100 text-orange-700',
+                      dayTypeAbbrev === 'SWD' && 'bg-blue-100 text-blue-700'
+                    )}>
+                      {dayTypeAbbrev}
+                    </span>
+                    <span className="text-xs text-text-muted">
+                      {dayTypeLabel}
+                    </span>
+                  </div>
+                );
+              })()}
 
               <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                 <div className="flex justify-between">
