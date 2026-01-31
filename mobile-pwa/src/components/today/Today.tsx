@@ -933,6 +933,9 @@ const TodaySceneCard = memo(function TodaySceneCard({
                   return (
                     <div key={char.id} className="flex items-center gap-1.5 bg-gray-50 rounded-full pl-1 pr-2.5 py-1">
                       <CharacterAvatar character={char} size="xs" />
+                      {char.actorNumber && (
+                        <span className="text-[10px] font-medium text-text-muted">#{char.actorNumber}</span>
+                      )}
                       <span className="text-xs font-medium text-text-primary">{char.name.split(' ')[0]}</span>
                       {look && (
                         <span className="text-[10px] text-gold">• {look.name}</span>
