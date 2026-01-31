@@ -832,6 +832,29 @@ export const DAY_TYPE_LABELS: Record<DayType, string> = {
   SCWD: 'Semi-Continuous Working Day',
 };
 
+/**
+ * Parse a call sheet day type string into a standardized DayType
+ * Examples:
+ *   "10 HRS CONTINUOUS WORKING DAY" → 'CWD'
+ *   "10.5 + 0.5 SEMI-CONTINUOUS WORKING DAY" → 'SCWD'
+ *   "STANDARD WORKING DAY" → 'SWD'
+ *   "SHORT CONTINUOUS" → 'SCWD'
+ */
+export function parseDayTypeFromString(dayTypeStr?: string): DayType {
+  if (!dayTypeStr) return 'SWD';
+  const upper = dayTypeStr.toUpperCase();
+  // Check for semi-continuous first (more specific match)
+  if (upper.includes('SEMI-CONTINUOUS') || upper.includes('SEMI CONTINUOUS') || upper.includes('SCWD') || upper.includes('SHORT CONTINUOUS')) {
+    return 'SCWD';
+  }
+  // Check for continuous working day
+  if (upper.includes('CONTINUOUS') || upper.includes('CWD')) {
+    return 'CWD';
+  }
+  // Default to standard working day
+  return 'SWD';
+}
+
 export const BASE_DAY_OPTIONS: { value: BaseDayHours; label: string }[] = [
   { value: 10, label: '10+1 (10 hours + 1hr unpaid lunch)' },
   { value: 11, label: '11+1 (11 hours + 1hr unpaid lunch)' },

@@ -8,10 +8,9 @@ import type {
   WeekSummary,
   TimesheetView,
   CallSheet,
-  DayType,
   BaseContract,
 } from '@/types';
-import { createDefaultRateCard, createEmptyTimesheetEntry, getLunchDurationForDayType } from '@/types';
+import { createDefaultRateCard, createEmptyTimesheetEntry, getLunchDurationForDayType, parseDayTypeFromString } from '@/types';
 import {
   calculateBECTUTimesheet,
   getLunchDuration,
@@ -19,15 +18,6 @@ import {
   type BECTUTimesheetEntry,
   type BECTUDayType,
 } from '@/utils/bectuCalculations';
-
-// Parse call sheet dayType string to determine DayType
-function parseDayTypeFromCallSheet(dayTypeStr?: string): DayType {
-  if (!dayTypeStr) return 'SWD';
-  const upper = dayTypeStr.toUpperCase();
-  if (upper.includes('SCWD') || upper.includes('SHORT CONTINUOUS')) return 'SCWD';
-  if (upper.includes('CWD') || upper.includes('CONTINUOUS')) return 'CWD';
-  return 'SWD';
-}
 
 /**
  * Create empty calculation result for incomplete entries
@@ -235,7 +225,7 @@ export const useTimesheetStore = create<TimesheetState>()(
         const existingEntry = get().entries[date] || createEmptyTimesheetEntry(date);
 
         // Determine day type from call sheet
-        const dayType = parseDayTypeFromCallSheet(callSheet.dayType);
+        const dayType = parseDayTypeFromString(callSheet.dayType);
         const lunchDuration = getLunchDurationForDayType(dayType);
 
         // Get HMU pre-call time from call sheet
