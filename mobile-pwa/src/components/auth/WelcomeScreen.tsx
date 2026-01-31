@@ -43,17 +43,19 @@ export function WelcomeScreen() {
             fill="none"
           />
 
-          {/* Gold checkmark - centered by V point, thick at junction, tapers to tip */}
+          {/* Gold checkmark - V point low in circle, very thick base, tapers to tip */}
           <path
-            d="M 28 38
-               L 44 58
-               L 46 62
-               L 50 62
-               L 78 24
-               L 76 26
-               L 50 58
-               L 48 56
-               L 34 40
+            d="M 22 42
+               L 32 62
+               L 38 74
+               L 44 78
+               L 50 74
+               L 78 20
+               L 76 24
+               L 50 68
+               L 44 72
+               L 40 68
+               L 30 50
                Z"
             fill="url(#checkGold)"
           />
