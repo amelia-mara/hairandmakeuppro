@@ -152,7 +152,7 @@ export function WelcomeScreen() {
         {/* Sign In - Black background with white text */}
         <button
           onClick={() => setScreen('signin')}
-          className="w-full h-14 rounded-lg font-semibold text-lg transition-all duration-200
+          className="w-full h-14 rounded font-semibold text-lg transition-all duration-200
             bg-[#1a1a1a] text-white active:scale-[0.98]"
         >
           Sign In
@@ -161,7 +161,7 @@ export function WelcomeScreen() {
         {/* Create Account - Cream with black border */}
         <button
           onClick={() => setScreen('signup')}
-          className="w-full h-14 rounded-lg font-semibold text-lg transition-all duration-200
+          className="w-full h-14 rounded font-semibold text-lg transition-all duration-200
             border border-[#1a1a1a] text-[#1a1a1a] bg-[#F5F3EE] active:scale-[0.98]"
         >
           Create Account
