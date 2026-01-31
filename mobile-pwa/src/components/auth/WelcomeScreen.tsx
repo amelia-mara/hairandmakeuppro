@@ -64,14 +64,37 @@ export function WelcomeScreen() {
           CHECKS HAPPY
         </h1>
 
-        {/* Gold underline */}
-        <div
-          className="h-[2px] mt-3 mb-8"
-          style={{
-            width: '280px',
-            background: 'linear-gradient(90deg, transparent 0%, #C9A962 15%, #D4B86A 50%, #C9A962 85%, transparent 100%)'
-          }}
-        />
+        {/* Gold underline - thicker in middle with rustic texture */}
+        <svg width="280" height="8" viewBox="0 0 280 8" className="mt-3 mb-8">
+          <defs>
+            <linearGradient id="underlineGold" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#C9A962" stopOpacity="0" />
+              <stop offset="15%" stopColor="#C9A962" />
+              <stop offset="50%" stopColor="#D4B86A" />
+              <stop offset="85%" stopColor="#C9A962" />
+              <stop offset="100%" stopColor="#C9A962" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          {/* Main stroke - thicker in middle, tapered at ends */}
+          <path
+            d="M 0 4
+               Q 70 3, 140 2
+               Q 210 3, 280 4"
+            stroke="url(#underlineGold)"
+            strokeWidth="3"
+            fill="none"
+            strokeLinecap="round"
+          />
+          {/* Subtle texture strokes for rustic effect */}
+          <path
+            d="M 40 4.5 Q 80 3.5, 120 4
+               M 160 3.5 Q 200 4.5, 240 4"
+            stroke="#B8983A"
+            strokeWidth="0.5"
+            fill="none"
+            opacity="0.4"
+          />
+        </svg>
 
         {/* Tagline */}
         <p className="text-lg font-serif text-[#4a4a4a] mb-10">
