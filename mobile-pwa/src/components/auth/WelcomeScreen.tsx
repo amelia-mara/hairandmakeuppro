@@ -43,21 +43,14 @@ export function WelcomeScreen() {
             fill="none"
           />
 
-          {/* Gold checkmark - V point low in circle, very thick base, tapers to tip */}
+          {/* Gold checkmark - using stroke for clean tick shape */}
           <path
-            d="M 22 42
-               L 32 62
-               L 38 74
-               L 44 78
-               L 50 74
-               L 78 20
-               L 76 24
-               L 50 68
-               L 44 72
-               L 40 68
-               L 30 50
-               Z"
-            fill="url(#checkGold)"
+            d="M 28 52 L 44 68 L 74 32"
+            stroke="url(#checkGold)"
+            strokeWidth="8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            fill="none"
           />
         </svg>
 
