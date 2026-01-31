@@ -832,6 +832,12 @@ const TodaySceneCard = memo(function TodaySceneCard({
                     {shootingScene.pages} pgs
                   </span>
                 )}
+                {/* Estimated timing - prominent display */}
+                {shootingScene.estimatedTime && (
+                  <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-blue-50 text-blue-700 flex-shrink-0">
+                    {shootingScene.estimatedTime}
+                  </span>
+                )}
               </div>
 
               <div className="flex items-center gap-2">
@@ -927,25 +933,15 @@ const TodaySceneCard = memo(function TodaySceneCard({
               </button>
             )}
 
-            {/* Info row: Cast numbers + Estimated time */}
-            {((shootingScene.cast && shootingScene.cast.length > 0) || shootingScene.estimatedTime) && (
+            {/* Info row: Cast numbers */}
+            {shootingScene.cast && shootingScene.cast.length > 0 && (
               <div className="flex items-center gap-4 mt-2 text-xs">
-                {shootingScene.cast && shootingScene.cast.length > 0 && (
-                  <div className="flex items-center gap-1.5">
-                    <svg className="w-3.5 h-3.5 text-text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
-                    </svg>
-                    <span className="text-text-muted">Cast: <span className="font-medium text-text-secondary">{shootingScene.cast.join(', ')}</span></span>
-                  </div>
-                )}
-                {shootingScene.estimatedTime && (
-                  <div className="flex items-center gap-1.5">
-                    <svg className="w-3.5 h-3.5 text-text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span className="text-text-muted font-medium">{shootingScene.estimatedTime}</span>
-                  </div>
-                )}
+                <div className="flex items-center gap-1.5">
+                  <svg className="w-3.5 h-3.5 text-text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+                  </svg>
+                  <span className="text-text-muted">Cast: <span className="font-medium text-text-secondary">{shootingScene.cast.join(', ')}</span></span>
+                </div>
               </div>
             )}
 
