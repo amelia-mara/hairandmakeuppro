@@ -200,6 +200,23 @@ export function Today({ onSceneSelect }: TodayProps) {
     return map;
   }, [currentProject?.looks]);
 
+  // Map: "actorNumber-sceneNumber" -> Look (lookup by cast number as fallback)
+  // This enables linking looks to characters from call sheet cast data
+  const actorNumberLookMap = useMemo(() => {
+    if (!currentProject) return new Map<string, Look>();
+    const map = new Map<string, Look>();
+    for (const look of currentProject.looks) {
+      // Find the character to get their actorNumber
+      const char = characterMap.get(look.characterId);
+      if (char?.actorNumber) {
+        for (const sceneNum of look.scenes) {
+          map.set(`${char.actorNumber}-${sceneNum}`, look);
+        }
+      }
+    }
+    return map;
+  }, [currentProject?.looks, characterMap]);
+
   // Map: cast ID (from call sheet) -> CastCall info
   // This allows us to look up character names from cast numbers in scenes
   const castCallMap = useMemo(() => {
@@ -259,7 +276,18 @@ export function Today({ onSceneSelect }: TodayProps) {
     // Fall back to call sheet cast data
     return sceneCastFromCallSheet.get(sceneNumber) || [];
   };
-  const getLookForCharacter = (characterId: string, sceneNumber: string) => characterLookMap.get(`${characterId}-${sceneNumber}`);
+  // Get look for a character in a scene - tries characterId first, then falls back to actorNumber
+  // This allows linking looks from project characters to call sheet cast data via cast number
+  const getLookForCharacter = (characterId: string, sceneNumber: string, actorNumber?: number) => {
+    // First try direct characterId lookup
+    const lookById = characterLookMap.get(`${characterId}-${sceneNumber}`);
+    if (lookById) return lookById;
+    // Fall back to actorNumber lookup (links call sheet cast to project character looks)
+    if (actorNumber) {
+      return actorNumberLookMap.get(`${actorNumber}-${sceneNumber}`);
+    }
+    return undefined;
+  };
 
   // Pre-compute filtered and sorted HMU calls to avoid recalculating on each render
   const sortedHmuCalls = useMemo(() => {
@@ -615,7 +643,7 @@ interface TodaySceneCardProps {
   shootingScene: CallSheetScene;
   scene?: Scene;
   characters: Character[];
-  getLookForCharacter: (characterId: string, sceneNumber: string) => Look | null | undefined;
+  getLookForCharacter: (characterId: string, sceneNumber: string, actorNumber?: number) => Look | null | undefined;
   onTap: () => void;
   onSynopsisClick: (scene: Scene) => void;
   onStatusChange: (status: ShootingSceneStatus) => void;
@@ -981,7 +1009,8 @@ const TodaySceneCard = memo(function TodaySceneCard({
             {characters.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-2 pt-2 border-t border-border/50">
                 {characters.map((char) => {
-                  const look = getLookForCharacter(char.id, shootingScene.sceneNumber);
+                  // Pass actorNumber for fallback lookup - links call sheet cast to project character looks
+                  const look = getLookForCharacter(char.id, shootingScene.sceneNumber, char.actorNumber);
                   const bgColor = char.avatarColour ?? '#C9A962';
                   return (
                     <div key={char.id} className="flex items-center gap-1.5 bg-gray-50 rounded-full pl-1 pr-2.5 py-1">
