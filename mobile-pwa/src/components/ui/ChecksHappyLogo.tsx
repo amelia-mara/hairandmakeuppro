@@ -27,15 +27,15 @@ export const ChecksHappyLogo = memo(function ChecksHappyLogo({
 }: ChecksHappyLogoProps) {
   // Size configurations
   const sizes = {
-    sm: { icon: 40, text: 'text-sm', underlineWidth: 100 },
-    md: { icon: 64, text: 'text-lg', underlineWidth: 160 },
-    lg: { icon: 100, text: 'text-[28px]', underlineWidth: 220 },
+    sm: { icon: 48, text: 'text-base', underlineWidth: 120, spacing: 'gap-3' },
+    md: { icon: 72, text: 'text-xl', underlineWidth: 180, spacing: 'gap-4' },
+    lg: { icon: 100, text: 'text-[26px]', underlineWidth: 260, spacing: 'gap-5' },
   };
 
   const config = sizes[size];
 
   return (
-    <div className={clsx('flex flex-col items-center', className)}>
+    <div className={clsx('flex flex-col items-center', config.spacing, className)}>
       {/* Logo Icon - Gold checkmark extending beyond smaller ring */}
       <svg
         width={config.icon}
@@ -43,26 +43,23 @@ export const ChecksHappyLogo = memo(function ChecksHappyLogo({
         viewBox="0 0 100 100"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        className={clsx('mb-4', animated && 'animate-scale-in')}
+        className={clsx(animated && 'animate-scale-in')}
       >
         <defs>
           {/* Gold gradient for checkmark */}
-          <linearGradient id="checkGold" x1="20%" y1="0%" x2="80%" y2="100%">
+          <linearGradient id="checkGoldMain" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#D4B86A" />
-            <stop offset="30%" stopColor="#E8D48A" />
-            <stop offset="50%" stopColor="#C9A962" />
-            <stop offset="70%" stopColor="#B8962E" />
+            <stop offset="40%" stopColor="#C9A962" />
             <stop offset="100%" stopColor="#A8893D" />
           </linearGradient>
           {/* Ring gradient - gold/black shine effect */}
-          <linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#1a1a1a" />
-            <stop offset="25%" stopColor="#3d3d3d" />
-            <stop offset="40%" stopColor="#8B7332" />
-            <stop offset="50%" stopColor="#C9A962" />
-            <stop offset="60%" stopColor="#8B7332" />
-            <stop offset="75%" stopColor="#3d3d3d" />
-            <stop offset="100%" stopColor="#1a1a1a" />
+          <linearGradient id="ringGradientMain" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#2a2a2a" />
+            <stop offset="30%" stopColor="#4a4a4a" />
+            <stop offset="45%" stopColor="#8B7332" />
+            <stop offset="55%" stopColor="#C9A962" />
+            <stop offset="70%" stopColor="#4a4a4a" />
+            <stop offset="100%" stopColor="#2a2a2a" />
           </linearGradient>
         </defs>
 
@@ -70,17 +67,17 @@ export const ChecksHappyLogo = memo(function ChecksHappyLogo({
         <circle
           cx="50"
           cy="50"
-          r="32"
-          stroke="url(#ringGradient)"
-          strokeWidth="3"
+          r="36"
+          stroke="url(#ringGradientMain)"
+          strokeWidth="2.5"
           fill="none"
         />
 
         {/* Gold checkmark - extends beyond the circle */}
         <path
-          d="M28 52L42 66L72 32"
-          stroke="url(#checkGold)"
-          strokeWidth="6"
+          d="M30 52L44 66L70 36"
+          stroke="url(#checkGoldMain)"
+          strokeWidth="5"
           strokeLinecap="round"
           strokeLinejoin="round"
           fill="none"
@@ -94,7 +91,7 @@ export const ChecksHappyLogo = memo(function ChecksHappyLogo({
           <h1
             className={clsx(
               config.text,
-              'font-serif font-normal tracking-[0.15em] text-[#1a1a1a]'
+              'font-serif font-normal tracking-[0.2em] text-[#1a1a1a]'
             )}
           >
             CHECKS HAPPY
@@ -103,26 +100,27 @@ export const ChecksHappyLogo = memo(function ChecksHappyLogo({
           {showUnderline && (
             <svg
               width={config.underlineWidth}
-              height="4"
-              viewBox="0 0 220 4"
-              className="mt-2"
+              height="6"
+              viewBox={`0 0 ${config.underlineWidth} 6`}
+              className="mt-3"
+              preserveAspectRatio="none"
             >
               <defs>
-                <linearGradient id="underlineGold" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#D4B86A" stopOpacity="0" />
-                  <stop offset="15%" stopColor="#D4B86A" />
-                  <stop offset="50%" stopColor="#C9A962" />
-                  <stop offset="85%" stopColor="#D4B86A" />
-                  <stop offset="100%" stopColor="#D4B86A" stopOpacity="0" />
+                <linearGradient id="underlineGoldMain" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#C9A962" stopOpacity="0" />
+                  <stop offset="20%" stopColor="#C9A962" stopOpacity="1" />
+                  <stop offset="50%" stopColor="#D4B86A" stopOpacity="1" />
+                  <stop offset="80%" stopColor="#C9A962" stopOpacity="1" />
+                  <stop offset="100%" stopColor="#C9A962" stopOpacity="0" />
                 </linearGradient>
               </defs>
               <line
                 x1="0"
-                y1="2"
-                x2="220"
-                y2="2"
-                stroke="url(#underlineGold)"
-                strokeWidth="1.5"
+                y1="3"
+                x2={config.underlineWidth}
+                y2="3"
+                stroke="url(#underlineGoldMain)"
+                strokeWidth="1"
               />
             </svg>
           )}
@@ -152,24 +150,23 @@ export const ChecksHappyIcon = memo(function ChecksHappyIcon({
       className={className}
     >
       <defs>
-        <linearGradient id="checkGoldIcon" x1="20%" y1="0%" x2="80%" y2="100%">
+        <linearGradient id="checkGoldIcon" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#D4B86A" />
           <stop offset="50%" stopColor="#C9A962" />
           <stop offset="100%" stopColor="#A8893D" />
         </linearGradient>
         <linearGradient id="ringGradientIcon" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#1a1a1a" />
-          <stop offset="40%" stopColor="#8B7332" />
-          <stop offset="50%" stopColor="#C9A962" />
-          <stop offset="60%" stopColor="#8B7332" />
-          <stop offset="100%" stopColor="#1a1a1a" />
+          <stop offset="0%" stopColor="#2a2a2a" />
+          <stop offset="45%" stopColor="#8B7332" />
+          <stop offset="55%" stopColor="#C9A962" />
+          <stop offset="100%" stopColor="#2a2a2a" />
         </linearGradient>
       </defs>
-      <circle cx="50" cy="50" r="32" stroke="url(#ringGradientIcon)" strokeWidth="3" fill="none" />
+      <circle cx="50" cy="50" r="36" stroke="url(#ringGradientIcon)" strokeWidth="2.5" fill="none" />
       <path
-        d="M28 52L42 66L72 32"
+        d="M30 52L44 66L70 36"
         stroke="url(#checkGoldIcon)"
-        strokeWidth="6"
+        strokeWidth="5"
         strokeLinecap="round"
         strokeLinejoin="round"
         fill="none"
