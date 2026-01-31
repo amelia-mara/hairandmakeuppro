@@ -114,8 +114,8 @@ Return a JSON object with this structure (include only fields that have data in 
     {
       "sceneNumber": "1" or "1A" (string, exactly as shown),
       "locationId": "LOC 1, LOC 2, etc. if shown",
-      "setDescription": "The SET/LOCATION line only, e.g. 'EXT. FARMHOUSE' or 'INT. FARMHOUSE - KITCHEN' (first line of SET & DESCRIPTION column)",
-      "action": "The LOG LINE or scene description that appears BELOW the set description, e.g. 'PETER and GWEN meet the AOKI's' or 'PETER tells GWEN to go'. This is the brief description of what happens in the scene. IMPORTANT: Extract this separately from setDescription - it's usually the second line in the SET & DESCRIPTION column.",
+      "setDescription": "The INT/EXT location line ONLY, e.g. 'EXT. FARMHOUSE' or 'INT. FARMHOUSE - KITCHEN'. Do NOT include the scene description here.",
+      "action": "REQUIRED: The scene description/log line that describes WHAT HAPPENS in the scene. Examples: 'PETER and GWEN meet the AOKI's', 'PETER tells GWEN to go', 'PETER & GWEN watch the helicopter take off'. This is usually below the location or after a separator. Extract this for EVERY scene.",
       "dayNight": "D" or "N" or "D/N" or "D1" or "D2" or "D11" etc (from D/N column)",
       "pages": "1/8" or "2" or "1 5/8" or "1 2/8" etc (from PAGES column)",
       "cast": ["1", "2", "4"] (cast ID numbers from CAST column, as strings),
@@ -162,16 +162,19 @@ IMPORTANT:
 - CRITICAL: Only extract scenes for the CURRENT shooting day. Do NOT include scenes from "ADVANCE SCHEDULE", "ADVANCE", "NEXT DAYS", or any section showing future production days. These appear at the end of call sheets and show upcoming days - ignore them completely.
 
 SCENE DATA EXTRACTION (VERY IMPORTANT):
-- The "SET & DESCRIPTION" column typically has TWO lines per scene:
-  1. First line = setDescription (e.g., "EXT. FARMHOUSE" or "INT. FARMHOUSE - KITCHEN")
-  2. Second line = action/log line (e.g., "PETER and GWEN meet the AOKI's")
-- ALWAYS extract the action/log line separately - this is crucial for the app
+- The "SET & DESCRIPTION" column typically has TWO parts per scene:
+  1. setDescription = The INT/EXT location line ONLY (e.g., "EXT. FARMHOUSE", "INT. FARMHOUSE - KITCHEN")
+  2. action = The scene description/log line that describes WHAT HAPPENS (e.g., "PETER and GWEN meet the AOKI's", "PETER tells GWEN to go")
+- CRITICAL: The "action" field MUST contain the description of what happens in the scene, NOT the location
+- If the description appears on a separate line below the location, that is the "action"
+- If the description appears after a dash or colon after the location, extract it as the "action"
+- Examples of action: "PETER and GWEN watch the helicopter take off", "PETER tells GWEN to go", "PETER & GWEN make the poison, the house rocks"
 - ALWAYS extract cast numbers from the CAST column (e.g., "1, 2, 9, 10, 14")
 - ALWAYS extract notes from NOTES column, especially HMU (hair/makeup), VFX, SFX notes
 - ALWAYS extract page counts and timings when available`;
 
   try {
-    const response = await callAI(prompt, { system: systemPrompt, maxTokens: 4000 });
+    const response = await callAI(prompt, { system: systemPrompt, maxTokens: 8000 });
 
     // Parse the JSON response
     const jsonMatch = response.match(/\{[\s\S]*\}/);
