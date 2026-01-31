@@ -60,7 +60,7 @@ export function WelcomeScreen() {
         </svg>
 
         {/* CHECKS HAPPY text */}
-        <h1 className="text-[28px] font-serif font-normal tracking-normal text-[#1a1a1a]">
+        <h1 className="text-[34px] font-serif font-medium tracking-wide text-[#1a1a1a]">
           CHECKS HAPPY
         </h1>
 
