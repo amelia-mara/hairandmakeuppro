@@ -508,6 +508,73 @@ function fallbackParseCallSheetText(text: string, pdfUri?: string): CallSheet {
     });
   }
 
+  // Try to extract cast calls from CAST INFORMATION section
+  // Look for patterns like: ID NAME CHARACTER STATUS ... with times
+  const castCalls: CastCall[] = [];
+
+  // Find the cast information section
+  const castSectionMatch = text.match(/CAST\s*INFORMATION[^]*?(?=MINIBUS|TRANSPORT|DEPARTURE|ADVANCE|$)/i);
+  if (castSectionMatch) {
+    const castSection = castSectionMatch[0];
+    debugLog('Found CAST INFORMATION section, length:', castSection.length);
+
+    // Pattern to match cast rows: ID (number), NAME, CHARACTER/ROLE, STATUS, then times
+    // Example: "1 JOHN BOYEGA PETER W 06:55 LW 07:20 07:30 07:20 07:40 08:30 08:40"
+    const castRowPattern = /\b(\d{1,2})\s+([A-Z][A-Z\s.'-]+?)\s+([A-Z][A-Z\s'-]+?)\s+(SW?F?|W|WF|H|T|R|SWF?)\s+/gi;
+    let castMatch;
+
+    while ((castMatch = castRowPattern.exec(castSection)) !== null) {
+      const id = castMatch[1];
+      const name = castMatch[2].trim();
+      const character = castMatch[3].trim();
+      const status = castMatch[4];
+
+      // Skip if name looks like a header or invalid
+      if (name === 'NAME' || name === 'ID' || character === 'ROLE' || character === 'CHARACTER') {
+        continue;
+      }
+
+      // Try to extract times from the rest of the line
+      const restOfLine = castSection.slice(castMatch.index + castMatch[0].length, castMatch.index + 200);
+      const timePattern = /(\d{1,2}:\d{2})/g;
+      const times = restOfLine.match(timePattern) || [];
+
+      castCalls.push({
+        id,
+        name,
+        character,
+        status,
+        callTime: times[0] || '',
+        makeupCall: times[1] || undefined,
+        costumeCall: times[2] || undefined,
+        hmuCall: times[3] || undefined,
+        onSetTime: times[4] || undefined,
+      });
+    }
+
+    debugLog('Extracted cast calls:', castCalls.length);
+    if (castCalls.length > 0) {
+      debugLog('Sample cast call:', castCalls[0]);
+    }
+  }
+
+  // Try to match cast numbers to scenes based on common patterns
+  // Look for cast numbers after scene info (e.g., "1, 2, 9, 10, 14")
+  scenes.forEach((scene, index) => {
+    // Search for cast numbers near this scene in the raw text
+    const sceneIndex = textWithoutAdvance.indexOf(scene.sceneNumber);
+    if (sceneIndex >= 0) {
+      const nearbyText = textWithoutAdvance.slice(sceneIndex, sceneIndex + 500);
+      // Look for a list of numbers that could be cast IDs
+      const castListMatch = nearbyText.match(/(?:CAST|cast)?[:\s]*(\d+(?:\s*,\s*\d+)+)/);
+      if (castListMatch) {
+        const castIds = castListMatch[1].split(/\s*,\s*/).map(id => id.trim());
+        scenes[index] = { ...scene, cast: castIds };
+        debugLog(`Scene ${scene.sceneNumber} cast:`, castIds);
+      }
+    }
+  });
+
   return {
     id: uuidv4(),
     date,
@@ -522,7 +589,7 @@ function fallbackParseCallSheetText(text: string, pdfUri?: string): CallSheet {
     preCalls,
     unitBase,
     scenes,
-    castCalls: [],
+    castCalls,
     supportingArtists: [],
     uploadedAt: new Date(),
     pdfUri,
