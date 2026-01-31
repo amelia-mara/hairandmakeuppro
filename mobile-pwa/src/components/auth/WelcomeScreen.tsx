@@ -58,9 +58,9 @@ export function WelcomeScreen() {
             opacity="0.3"
           />
 
-          {/* Gold checkmark - V centered horizontally, in lower half */}
+          {/* Gold checkmark - Wide Sweep style (#4) */}
           <path
-            d="M 26 48 L 50 64 L 76 30"
+            d="M 18 52 L 45 74 L 82 24"
             stroke="url(#checkGold)"
             strokeWidth="8"
             strokeLinecap="round"
