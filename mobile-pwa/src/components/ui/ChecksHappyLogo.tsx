@@ -15,8 +15,8 @@ interface ChecksHappyLogoProps {
 }
 
 /**
- * Checks Happy logo component with gold checkmark in black circle
- * Matches the brand aesthetic: elegant, premium, film industry
+ * Checks Happy logo component - gold checkmark extending beyond a smaller ring
+ * Ring has gold/black gradient shine effect
  */
 export const ChecksHappyLogo = memo(function ChecksHappyLogo({
   size = 'md',
@@ -27,61 +27,63 @@ export const ChecksHappyLogo = memo(function ChecksHappyLogo({
 }: ChecksHappyLogoProps) {
   // Size configurations
   const sizes = {
-    sm: { icon: 32, stroke: 1.2, check: 2, text: 'text-xs', spacing: 'gap-1' },
-    md: { icon: 48, stroke: 1.5, check: 2.5, text: 'text-sm', spacing: 'gap-2' },
-    lg: { icon: 80, stroke: 2, check: 3.5, text: 'text-[22px]', spacing: 'gap-4' },
+    sm: { icon: 40, text: 'text-sm', underlineWidth: 100 },
+    md: { icon: 64, text: 'text-lg', underlineWidth: 160 },
+    lg: { icon: 100, text: 'text-[28px]', underlineWidth: 220 },
   };
 
   const config = sizes[size];
-  const iconSize = config.icon;
 
   return (
-    <div className={clsx('flex flex-col items-center', config.spacing, className)}>
-      {/* Logo Icon - Gold checkmark in black circle */}
+    <div className={clsx('flex flex-col items-center', className)}>
+      {/* Logo Icon - Gold checkmark extending beyond smaller ring */}
       <svg
-        width={iconSize}
-        height={iconSize}
-        viewBox="0 0 48 48"
+        width={config.icon}
+        height={config.icon}
+        viewBox="0 0 100 100"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        className={clsx(animated && 'animate-scale-in')}
+        className={clsx('mb-4', animated && 'animate-scale-in')}
       >
-        {/* Glow effect for premium look */}
         <defs>
-          <filter id="gold-glow" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="1.5" result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-          <linearGradient id="checkmark-gradient" x1="14" y1="16" x2="34" y2="32" gradientUnits="userSpaceOnUse">
+          {/* Gold gradient for checkmark */}
+          <linearGradient id="checkGold" x1="20%" y1="0%" x2="80%" y2="100%">
             <stop offset="0%" stopColor="#D4B86A" />
-            <stop offset="40%" stopColor="#E8D48A" />
-            <stop offset="60%" stopColor="#C9A962" />
+            <stop offset="30%" stopColor="#E8D48A" />
+            <stop offset="50%" stopColor="#C9A962" />
+            <stop offset="70%" stopColor="#B8962E" />
             <stop offset="100%" stopColor="#A8893D" />
+          </linearGradient>
+          {/* Ring gradient - gold/black shine effect */}
+          <linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#1a1a1a" />
+            <stop offset="25%" stopColor="#3d3d3d" />
+            <stop offset="40%" stopColor="#8B7332" />
+            <stop offset="50%" stopColor="#C9A962" />
+            <stop offset="60%" stopColor="#8B7332" />
+            <stop offset="75%" stopColor="#3d3d3d" />
+            <stop offset="100%" stopColor="#1a1a1a" />
           </linearGradient>
         </defs>
 
-        {/* Black circle outline */}
+        {/* Circle ring - smaller than checkmark, with gold/black gradient */}
         <circle
-          cx="24"
-          cy="24"
-          r="20"
-          stroke="#1a1a1a"
-          strokeWidth={config.stroke}
+          cx="50"
+          cy="50"
+          r="32"
+          stroke="url(#ringGradient)"
+          strokeWidth="3"
           fill="none"
         />
 
-        {/* Gold checkmark with gradient */}
+        {/* Gold checkmark - extends beyond the circle */}
         <path
-          d="M15 25L21 31L33 17"
-          stroke="url(#checkmark-gradient)"
-          strokeWidth={config.check}
+          d="M28 52L42 66L72 32"
+          stroke="url(#checkGold)"
+          strokeWidth="6"
           strokeLinecap="round"
           strokeLinejoin="round"
           fill="none"
-          filter="url(#gold-glow)"
           className={clsx(animated && 'animate-draw-check')}
         />
       </svg>
@@ -92,16 +94,37 @@ export const ChecksHappyLogo = memo(function ChecksHappyLogo({
           <h1
             className={clsx(
               config.text,
-              'font-serif font-normal tracking-[0.25em] text-text-primary'
+              'font-serif font-normal tracking-[0.15em] text-[#1a1a1a]'
             )}
           >
             CHECKS HAPPY
           </h1>
+          {/* Gold underline with tapered ends */}
           {showUnderline && (
-            <div
-              className="mt-1 h-px bg-text-primary/30"
-              style={{ width: size === 'lg' ? '180px' : size === 'md' ? '120px' : '80px' }}
-            />
+            <svg
+              width={config.underlineWidth}
+              height="4"
+              viewBox="0 0 220 4"
+              className="mt-2"
+            >
+              <defs>
+                <linearGradient id="underlineGold" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#D4B86A" stopOpacity="0" />
+                  <stop offset="15%" stopColor="#D4B86A" />
+                  <stop offset="50%" stopColor="#C9A962" />
+                  <stop offset="85%" stopColor="#D4B86A" />
+                  <stop offset="100%" stopColor="#D4B86A" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+              <line
+                x1="0"
+                y1="2"
+                x2="220"
+                y2="2"
+                stroke="url(#underlineGold)"
+                strokeWidth="1.5"
+              />
+            </svg>
           )}
         </div>
       )}
@@ -123,23 +146,30 @@ export const ChecksHappyIcon = memo(function ChecksHappyIcon({
     <svg
       width={size}
       height={size}
-      viewBox="0 0 48 48"
+      viewBox="0 0 100 100"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
     >
       <defs>
-        <linearGradient id="checkmark-gradient-icon" x1="14" y1="16" x2="34" y2="32" gradientUnits="userSpaceOnUse">
+        <linearGradient id="checkGoldIcon" x1="20%" y1="0%" x2="80%" y2="100%">
           <stop offset="0%" stopColor="#D4B86A" />
           <stop offset="50%" stopColor="#C9A962" />
           <stop offset="100%" stopColor="#A8893D" />
         </linearGradient>
+        <linearGradient id="ringGradientIcon" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#1a1a1a" />
+          <stop offset="40%" stopColor="#8B7332" />
+          <stop offset="50%" stopColor="#C9A962" />
+          <stop offset="60%" stopColor="#8B7332" />
+          <stop offset="100%" stopColor="#1a1a1a" />
+        </linearGradient>
       </defs>
-      <circle cx="24" cy="24" r="20" stroke="#1a1a1a" strokeWidth="1.5" fill="none" />
+      <circle cx="50" cy="50" r="32" stroke="url(#ringGradientIcon)" strokeWidth="3" fill="none" />
       <path
-        d="M15 25L21 31L33 17"
-        stroke="url(#checkmark-gradient-icon)"
-        strokeWidth="2.5"
+        d="M28 52L42 66L72 32"
+        stroke="url(#checkGoldIcon)"
+        strokeWidth="6"
         strokeLinecap="round"
         strokeLinejoin="round"
         fill="none"
