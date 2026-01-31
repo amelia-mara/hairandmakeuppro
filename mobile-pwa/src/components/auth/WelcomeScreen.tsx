@@ -7,99 +7,59 @@ export function WelcomeScreen() {
     <div className="min-h-screen bg-[#F5F3EE] flex flex-col">
       {/* Main content area */}
       <div className="flex-1 flex flex-col items-center justify-center px-8">
-        {/* TICK OPTIONS PREVIEW - Different icon styles */}
-        <div className="grid grid-cols-5 gap-2 mb-6">
-          {/* 1. Simple stroke checkmark */}
-          <div className="flex flex-col items-center">
-            <svg width="60" height="60" viewBox="0 0 100 100" fill="none">
-              <circle cx="50" cy="50" r="30" stroke="#1a1a1a" strokeWidth="2.5" fill="none" />
-              <path d="M30 50 L45 65 L70 35" stroke="#C9A962" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-            </svg>
-            <span className="text-xs font-bold">1</span>
-          </div>
+        {/* Logo Icon - Gold checkmark in rounded diamond */}
+        <svg
+          width="120"
+          height="120"
+          viewBox="0 0 100 100"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          className="mb-5"
+        >
+          <defs>
+            {/* Gold gradient for checkmark */}
+            <linearGradient id="checkGold" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#D4B86A" />
+              <stop offset="50%" stopColor="#C9A962" />
+              <stop offset="100%" stopColor="#A8893D" />
+            </linearGradient>
+            {/* Diamond gradient - gold at top-left to black at bottom-right */}
+            <linearGradient id="diamondGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#D4B86A" />
+              <stop offset="35%" stopColor="#C9A962" />
+              <stop offset="65%" stopColor="#4a4a4a" />
+              <stop offset="100%" stopColor="#1a1a1a" />
+            </linearGradient>
+          </defs>
 
-          {/* 2. Thick bold checkmark */}
-          <div className="flex flex-col items-center">
-            <svg width="60" height="60" viewBox="0 0 100 100" fill="none">
-              <circle cx="50" cy="50" r="30" stroke="#1a1a1a" strokeWidth="2.5" fill="none" />
-              <path d="M28 52 L42 66 L72 32" stroke="#C9A962" strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-            </svg>
-            <span className="text-xs font-bold">2</span>
-          </div>
+          {/* Rounded diamond (rotated square) */}
+          <rect
+            x="22"
+            y="22"
+            width="40"
+            height="40"
+            rx="6"
+            transform="rotate(45 50 50)"
+            stroke="url(#diamondGradient)"
+            strokeWidth="3"
+            fill="none"
+          />
 
-          {/* 3. Filled checkmark shape */}
-          <div className="flex flex-col items-center">
-            <svg width="60" height="60" viewBox="0 0 100 100" fill="none">
-              <circle cx="50" cy="50" r="30" stroke="#1a1a1a" strokeWidth="2.5" fill="none" />
-              <path d="M25 50 L40 65 L75 28 L72 38 L40 58 L32 50 Z" fill="#C9A962" />
-            </svg>
-            <span className="text-xs font-bold">3</span>
-          </div>
-
-          {/* 4. Material Design style */}
-          <div className="flex flex-col items-center">
-            <svg width="60" height="60" viewBox="0 0 100 100" fill="none">
-              <circle cx="50" cy="50" r="30" stroke="#1a1a1a" strokeWidth="2.5" fill="none" />
-              <path d="M30 50 L44 64 L70 34" stroke="#C9A962" strokeWidth="8" strokeLinecap="square" strokeLinejoin="miter" fill="none" />
-            </svg>
-            <span className="text-xs font-bold">4</span>
-          </div>
-
-          {/* 5. Thin elegant */}
-          <div className="flex flex-col items-center">
-            <svg width="60" height="60" viewBox="0 0 100 100" fill="none">
-              <circle cx="50" cy="50" r="30" stroke="#1a1a1a" strokeWidth="2.5" fill="none" />
-              <path d="M28 52 L42 66 L74 30" stroke="#C9A962" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-            </svg>
-            <span className="text-xs font-bold">5</span>
-          </div>
-
-          {/* 6. Calligraphic brush stroke */}
-          <div className="flex flex-col items-center">
-            <svg width="60" height="60" viewBox="0 0 100 100" fill="none">
-              <circle cx="50" cy="50" r="30" stroke="#1a1a1a" strokeWidth="2.5" fill="none" />
-              <path d="M24 48 L38 68 L42 72 L48 68 L76 26 L74 30 L46 64 L40 64 L28 50 Z" fill="#C9A962" />
-            </svg>
-            <span className="text-xs font-bold">6</span>
-          </div>
-
-          {/* 7. Double stroke effect */}
-          <div className="flex flex-col items-center">
-            <svg width="60" height="60" viewBox="0 0 100 100" fill="none">
-              <circle cx="50" cy="50" r="30" stroke="#1a1a1a" strokeWidth="2.5" fill="none" />
-              <path d="M28 52 L42 66 L74 30" stroke="#A8893D" strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-              <path d="M28 52 L42 66 L74 30" stroke="#D4B86A" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-            </svg>
-            <span className="text-xs font-bold">7</span>
-          </div>
-
-          {/* 8. Swoosh checkmark */}
-          <div className="flex flex-col items-center">
-            <svg width="60" height="60" viewBox="0 0 100 100" fill="none">
-              <circle cx="50" cy="50" r="30" stroke="#1a1a1a" strokeWidth="2.5" fill="none" />
-              <path d="M22 55 Q35 55, 42 68 Q55 50, 78 25" stroke="#C9A962" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-            </svg>
-            <span className="text-xs font-bold">8</span>
-          </div>
-
-          {/* 9. Tapered brush */}
-          <div className="flex flex-col items-center">
-            <svg width="60" height="60" viewBox="0 0 100 100" fill="none">
-              <circle cx="50" cy="50" r="30" stroke="#1a1a1a" strokeWidth="2.5" fill="none" />
-              <path d="M22 50 L36 68 L44 76 L50 70 L78 24 L48 66 L42 70 L28 52 Z" fill="#C9A962" />
-            </svg>
-            <span className="text-xs font-bold">9</span>
-          </div>
-
-          {/* 10. Handwritten style */}
-          <div className="flex flex-col items-center">
-            <svg width="60" height="60" viewBox="0 0 100 100" fill="none">
-              <circle cx="50" cy="50" r="30" stroke="#1a1a1a" strokeWidth="2.5" fill="none" />
-              <path d="M24 54 Q32 54, 40 68 Q44 72, 46 70 Q60 50, 76 28" stroke="#C9A962" strokeWidth="6" strokeLinecap="round" fill="none" />
-            </svg>
-            <span className="text-xs font-bold">10</span>
-          </div>
-        </div>
+          {/* Gold checkmark - tapered from thick base to thin tip */}
+          <path
+            d="M 28 52
+               L 42 68
+               L 46 72
+               L 52 66
+               L 76 28
+               L 74 30
+               L 50 62
+               L 44 66
+               L 34 54
+               Z"
+            fill="url(#checkGold)"
+          />
+        </svg>
 
         {/* CHECKS HAPPY text */}
         <h1 className="text-[34px] font-serif font-medium tracking-wide text-[#1a1a1a]">
