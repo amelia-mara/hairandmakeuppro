@@ -457,7 +457,7 @@ function fallbackParseCallSheetText(text: string, pdfUri?: string): CallSheet {
   const textWithoutAdvance = advanceScheduleIndex > 0 ? text.slice(0, advanceScheduleIndex) : text;
 
   const scenes: CallSheetScene[] = [];
-  const scenePattern = /(?:SC|SCENE)?\s*(\d+[A-Z]?)\s+((?:INT|EXT)[.\s/][^D\d]*?)\s*(D\d?|N\d?|D\/N)/gi;
+  const scenePattern = /(?:SC|SCENE)?\s*(\d+[A-Z]?)\s+((?:INT|EXT)[.\s/][^D\d]*?)\s*(D\d*|N\d*|D\/N)/gi;
   let sceneMatch;
   let shootOrder = 1;
 
