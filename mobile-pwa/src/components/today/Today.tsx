@@ -200,11 +200,64 @@ export function Today({ onSceneSelect }: TodayProps) {
     return map;
   }, [currentProject?.looks]);
 
+  // Map: cast ID (from call sheet) -> CastCall info
+  // This allows us to look up character names from cast numbers in scenes
+  const castCallMap = useMemo(() => {
+    if (!callSheet?.castCalls) return new Map<string, { id: string; name: string; character?: string }>();
+    return new Map(callSheet.castCalls.map(cast => [cast.id, cast]));
+  }, [callSheet?.castCalls]);
+
+  // Map: sceneNumber -> Character[] from call sheet cast (for scenes without confirmed characters)
+  // Creates temporary Character objects from call sheet cast data
+  const sceneCastFromCallSheet = useMemo(() => {
+    if (!callSheet) return new Map<string, Character[]>();
+    const map = new Map<string, Character[]>();
+
+    for (const scene of callSheet.scenes) {
+      if (!scene.cast || scene.cast.length === 0) continue;
+
+      const characters: Character[] = [];
+      for (const castId of scene.cast) {
+        const castCall = castCallMap.get(castId);
+        if (castCall) {
+          // Create a Character object from the call sheet cast data
+          // Use character name if available, otherwise actor name
+          const name = castCall.character || castCall.name || `Cast #${castId}`;
+          const initials = name
+            .split(' ')
+            .map(word => word.charAt(0).toUpperCase())
+            .join('')
+            .slice(0, 2);
+
+          characters.push({
+            id: `cast-${castId}`,
+            name,
+            initials,
+            actorNumber: parseInt(castId, 10) || undefined,
+          });
+        } else {
+          // No cast call info, just use the ID
+          characters.push({
+            id: `cast-${castId}`,
+            name: `Cast #${castId}`,
+            initials: castId.slice(0, 2),
+            actorNumber: parseInt(castId, 10) || undefined,
+          });
+        }
+      }
+      map.set(scene.sceneNumber, characters);
+    }
+    return map;
+  }, [callSheet?.scenes, castCallMap]);
+
   // Fast lookup functions using pre-computed maps
   const getSceneData = (sceneNumber: string) => sceneDataMap.get(sceneNumber);
-  // Get characters for a scene - only returns confirmed project characters (useful for continuity)
+  // Get characters for a scene - prefers confirmed project characters, falls back to call sheet cast
   const getCharactersInScene = (sceneNumber: string): Character[] => {
-    return sceneCharactersMap.get(sceneNumber) || [];
+    const confirmedChars = sceneCharactersMap.get(sceneNumber) || [];
+    if (confirmedChars.length > 0) return confirmedChars;
+    // Fall back to call sheet cast data
+    return sceneCastFromCallSheet.get(sceneNumber) || [];
   };
   const getLookForCharacter = (characterId: string, sceneNumber: string) => characterLookMap.get(`${characterId}-${sceneNumber}`);
 
