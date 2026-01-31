@@ -297,7 +297,7 @@ export function ExportModal({ isOpen, onClose, weekSummary, weekStartDate }: Exp
       </head>
       <body>
         <div class="header">
-          <div class="logo">Hair & Makeup Pro</div>
+          <div class="logo">Checks Happy</div>
           <div class="invoice-title">
             <h1>INVOICE</h1>
             <p class="invoice-number">${invoiceNumber}</p>

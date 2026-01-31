@@ -337,7 +337,7 @@ export function UserProfileScreen({ onBack, onNavigateToBilling }: UserProfileSc
 
         {/* App Version */}
         <div className="text-center text-xs text-text-muted py-4">
-          <p>Hair & Makeup Pro v1.0.0</p>
+          <p>Checks Happy v1.0.0</p>
         </div>
       </div>
     </>
