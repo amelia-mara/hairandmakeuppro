@@ -1,7 +1,6 @@
 import { useState, useMemo, useRef, useEffect, memo } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { useCallSheetStore } from '@/stores/callSheetStore';
-import { CharacterAvatar } from '@/components/characters/CharacterAvatar';
 import { SceneScriptModal } from '@/components/scenes/SceneScriptModal';
 import { formatShortDate } from '@/utils/helpers';
 import type { ShootingSceneStatus, SceneFilmingStatus, CallSheetScene, Scene, Character, Look } from '@/types';
@@ -930,12 +929,16 @@ const TodaySceneCard = memo(function TodaySceneCard({
               <div className="flex flex-wrap gap-2 mt-2 pt-2 border-t border-border/50">
                 {characters.map((char) => {
                   const look = getLookForCharacter(char.id, shootingScene.sceneNumber);
+                  const bgColor = char.avatarColour ?? '#C9A962';
                   return (
                     <div key={char.id} className="flex items-center gap-1.5 bg-gray-50 rounded-full pl-1 pr-2.5 py-1">
-                      <CharacterAvatar character={char} size="xs" />
-                      {char.actorNumber && (
-                        <span className="text-[10px] font-medium text-text-muted">#{char.actorNumber}</span>
-                      )}
+                      {/* Cast number in colored circle */}
+                      <div
+                        className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0"
+                        style={{ backgroundColor: bgColor }}
+                      >
+                        {char.actorNumber || char.initials}
+                      </div>
                       <span className="text-xs font-medium text-text-primary">{char.name.split(' ')[0]}</span>
                       {look && (
                         <span className="text-[10px] text-gold">• {look.name}</span>
