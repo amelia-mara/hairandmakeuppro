@@ -12,7 +12,7 @@ export function WelcomeScreen() {
         <img
           src={logoTick}
           alt="Checks Happy Logo"
-          className="w-32 h-32 mb-5 object-contain"
+          className="w-32 h-32 mb-5 object-contain mix-blend-multiply"
         />
 
         {/* CHECKS HAPPY text */}
