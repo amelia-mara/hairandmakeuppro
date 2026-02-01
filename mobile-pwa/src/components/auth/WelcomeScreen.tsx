@@ -1,4 +1,5 @@
 import { useAuthStore } from '@/stores/authStore';
+import logoTick from '/logo-tick.png';
 
 export function WelcomeScreen() {
   const { setScreen } = useAuthStore();
@@ -9,7 +10,7 @@ export function WelcomeScreen() {
       <div className="flex-1 flex flex-col items-center justify-center px-8">
         {/* Logo Icon - Using uploaded image */}
         <img
-          src="/logo-tick.png"
+          src={logoTick}
           alt="Checks Happy Logo"
           className="w-32 h-32 mb-5 object-contain"
         />
