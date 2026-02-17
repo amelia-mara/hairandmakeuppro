@@ -21,6 +21,8 @@ import { useProjectSettingsStore } from '@/stores/projectSettingsStore';
 import { parseScenesFast } from '@/utils/scriptParser';
 import { AmendmentReviewModal } from '@/components/breakdown/AmendmentReviewModal';
 import type { AmendmentResult } from '@/services/scriptAmendmentService';
+import { ScheduleAmendmentModal } from '@/components/schedule/ScheduleAmendmentModal';
+import type { ScheduleAmendmentResult } from '@/services/scheduleAmendmentService';
 import { UserProfileScreen } from '@/components/profile/UserProfileScreen';
 
 type MoreView = 'menu' | 'script' | 'schedule' | 'callsheets' | 'editMenu' | 'export' | 'archivedProjects' | 'projectSettings' | 'team' | 'invite' | 'projectStats' | 'manualSchedule' | 'billing' | 'userProfile';
@@ -1122,6 +1124,11 @@ function ScheduleViewer({ onBack }: ViewerProps) {
     isUploading,
     uploadError,
     uploadScheduleStage1,
+    uploadRevisionStage1,
+    startRevisionStage2Processing,
+    compareAmendment,
+    applyAmendment,
+    clearPendingSchedule,
     clearSchedule,
     isProcessingStage2,
     stage2Progress,
@@ -1131,6 +1138,7 @@ function ScheduleViewer({ onBack }: ViewerProps) {
   } = useScheduleStore();
   const { currentProject, syncCastDataFromSchedule, canSyncCastData } = useProjectStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const revisionInputRef = useRef<HTMLInputElement>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [viewMode, setViewMode] = useState<'pdf' | 'breakdown'>('pdf');
   const [expandedDay, setExpandedDay] = useState<number | null>(null);
@@ -1138,6 +1146,8 @@ function ScheduleViewer({ onBack }: ViewerProps) {
   const [syncResult, setSyncResult] = useState<{ scenesUpdated: number; charactersCreated: number } | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [showSyncOptions, setShowSyncOptions] = useState(false);
+  const [scheduleAmendmentResult, setScheduleAmendmentResult] = useState<ScheduleAmendmentResult | null>(null);
+  const [isProcessingRevision, setIsProcessingRevision] = useState(false);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1153,6 +1163,54 @@ function ScheduleViewer({ onBack }: ViewerProps) {
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+  };
+
+  const handleRevisionUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || file.type !== 'application/pdf') return;
+
+    try {
+      setIsProcessingRevision(true);
+      // Stage 1: Parse the new schedule
+      await uploadRevisionStage1(file);
+      // Stage 2: Process with AI to extract scene data
+      await startRevisionStage2Processing();
+      // Compare against existing schedule
+      const result = compareAmendment();
+      if (result) {
+        setScheduleAmendmentResult(result);
+      }
+      setIsProcessingRevision(false);
+    } catch (err) {
+      console.error('Failed to process schedule revision:', err);
+      setIsProcessingRevision(false);
+      clearPendingSchedule();
+    }
+
+    if (revisionInputRef.current) {
+      revisionInputRef.current.value = '';
+    }
+  };
+
+  const handleApplyScheduleAmendment = (options: {
+    includeAddedScenes: boolean;
+    includeRemovedScenes: boolean;
+    includeMovedScenes: boolean;
+    includeCastChanges: boolean;
+    includeTimingChanges: boolean;
+  }) => {
+    if (!scheduleAmendmentResult) return;
+    applyAmendment(scheduleAmendmentResult, options);
+    setScheduleAmendmentResult(null);
+    // Auto-sync cast data after amendment
+    if (currentProject) {
+      handleSyncCastData({ autoConfirm: true });
+    }
+  };
+
+  const handleCancelScheduleAmendment = () => {
+    setScheduleAmendmentResult(null);
+    clearPendingSchedule();
   };
 
   const handleDelete = () => {
@@ -1304,6 +1362,13 @@ function ScheduleViewer({ onBack }: ViewerProps) {
         type="file"
         accept=".pdf"
         onChange={handleFileSelect}
+        className="hidden"
+      />
+      <input
+        ref={revisionInputRef}
+        type="file"
+        accept=".pdf"
+        onChange={handleRevisionUpload}
         className="hidden"
       />
 
@@ -1474,6 +1539,57 @@ function ScheduleViewer({ onBack }: ViewerProps) {
                 <p className="text-[10px] text-text-light mt-2">
                   Characters can still be manually edited in the Breakdown page after syncing.
                 </p>
+              </div>
+            )}
+
+            {/* Upload Revision - shown when breakdown data exists */}
+            {hasBreakdownData && !isProcessingRevision && (
+              <div className="card p-4">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="text-sm font-semibold text-text-primary">Update Schedule</h3>
+                    <p className="text-xs text-text-muted mt-0.5">
+                      Upload a revised schedule to compare changes
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => revisionInputRef.current?.click()}
+                    disabled={isUploading || isProcessingStage2}
+                    className="px-4 py-2 text-xs font-medium rounded-lg bg-blue-50 text-blue-700 border border-blue-200 active:scale-[0.98] transition-transform disabled:opacity-50"
+                  >
+                    Upload Revision
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Revision processing indicator */}
+            {isProcessingRevision && (
+              <div className="card p-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <svg className="w-5 h-5 animate-spin text-blue-600" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  <div>
+                    <span className="text-sm font-medium text-text-primary block">
+                      Processing Revised Schedule...
+                    </span>
+                    <span className="text-xs text-text-muted">
+                      {stage2Progress.message || (stage2Progress.total > 0
+                        ? `Day ${stage2Progress.current} of ${stage2Progress.total}`
+                        : 'Parsing schedule PDF')}
+                    </span>
+                  </div>
+                </div>
+                {stage2Progress.total > 0 && (
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${(stage2Progress.current / stage2Progress.total) * 100}%` }}
+                    />
+                  </div>
+                )}
               </div>
             )}
 
@@ -1664,6 +1780,16 @@ function ScheduleViewer({ onBack }: ViewerProps) {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Schedule Amendment Review Modal */}
+      {scheduleAmendmentResult && (
+        <ScheduleAmendmentModal
+          amendmentResult={scheduleAmendmentResult}
+          getCastNamesForNumbers={getCastNamesForNumbers}
+          onApply={handleApplyScheduleAmendment}
+          onCancel={handleCancelScheduleAmendment}
+        />
       )}
     </>
   );
