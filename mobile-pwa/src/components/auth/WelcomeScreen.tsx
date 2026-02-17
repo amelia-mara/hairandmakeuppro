@@ -37,16 +37,16 @@ export function WelcomeScreen() {
               <stop offset="100%" stopColor="#C9A962" stopOpacity="0.3" />
             </linearGradient>
           </defs>
-          {/* Tapered shape - pointed at ends, thick in middle */}
+          {/* Tapered shape - pointed at ends, moderate thickness in middle */}
           <path
             d="M 0 5
-               Q 40 5, 70 3.5
-               Q 100 2, 140 1.5
-               Q 180 2, 210 3.5
+               Q 40 5, 70 4.25
+               Q 100 3.5, 140 3
+               Q 180 3.5, 210 4.25
                Q 240 5, 280 5
-               Q 240 5, 210 6.5
-               Q 180 8, 140 8.5
-               Q 100 8, 70 6.5
+               Q 240 5, 210 5.75
+               Q 180 6.5, 140 7
+               Q 100 6.5, 70 5.75
                Q 40 5, 0 5
                Z"
             fill="url(#underlineGold)"
