@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
+import { useScheduleStore } from '@/stores/scheduleStore';
 import { CharacterAvatar } from '@/components/characters/CharacterAvatar';
 import { SceneScriptModal } from '@/components/scenes/SceneScriptModal';
 import {
@@ -10,6 +11,8 @@ import {
 import type { Scene, Character, Look, SceneCapture, BreakdownViewMode, BreakdownFilters, SceneFilmingStatus } from '@/types';
 import { SCENE_FILMING_STATUS_CONFIG } from '@/types';
 import { clsx } from 'clsx';
+
+type SortMode = 'scene-number' | 'shooting-order';
 
 // Filming Status Dropdown Component - allows changing status directly from Breakdown
 interface FilmingStatusDropdownProps {
@@ -208,7 +211,9 @@ interface BreakdownProps {
 
 export function Breakdown({ onSceneSelect }: BreakdownProps) {
   const { currentProject, sceneCaptures, updateSceneFilmingStatus } = useProjectStore();
+  const schedule = useScheduleStore((s) => s.schedule);
   const [viewMode, setViewMode] = useState<BreakdownViewMode>('list');
+  const [sortMode, setSortMode] = useState<SortMode>('scene-number');
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<BreakdownFilters>({
     characters: [],
@@ -319,9 +324,33 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
       }
     }
 
-    // Sort by scene number
+    // Sort by scene number or shooting order
+    if (sortMode === 'shooting-order' && schedule?.days && schedule.days.length > 0) {
+      // Build a map of sceneNumber -> { dayNumber, shootOrder } for sorting
+      const shootingOrderMap = new Map<string, { day: number; order: number }>();
+      for (const day of schedule.days) {
+        for (const entry of day.scenes) {
+          const key = entry.sceneNumber.replace(/\s+/g, '').toUpperCase();
+          shootingOrderMap.set(key, { day: day.dayNumber, order: entry.shootOrder });
+        }
+      }
+      return scenes.sort((a, b) => {
+        const aKey = a.sceneNumber.replace(/\s+/g, '').toUpperCase();
+        const bKey = b.sceneNumber.replace(/\s+/g, '').toUpperCase();
+        const aOrder = shootingOrderMap.get(aKey);
+        const bOrder = shootingOrderMap.get(bKey);
+        // Scenes not in schedule go to the end
+        if (!aOrder && !bOrder) return a.sceneNumber.localeCompare(b.sceneNumber, undefined, { numeric: true });
+        if (!aOrder) return 1;
+        if (!bOrder) return -1;
+        // Sort by day first, then by shoot order within the day
+        if (aOrder.day !== bOrder.day) return aOrder.day - bOrder.day;
+        return aOrder.order - bOrder.order;
+      });
+    }
+
     return scenes.sort((a, b) => a.sceneNumber.localeCompare(b.sceneNumber, undefined, { numeric: true }));
-  }, [currentProject, filters]);
+  }, [currentProject, filters, sortMode, schedule]);
 
   // Pre-compute data maps for efficient lookups (avoids repeated .find() calls in render loops)
 
@@ -409,6 +438,9 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
     filters.filmingStatus !== 'all' ||
     filters.lookId !== null;
 
+  // Check if schedule has breakdown data for shooting order sorting
+  const hasShootingOrder = !!(schedule?.days && schedule.days.length > 0);
+
   if (!currentProject) {
     return <EmptyState />;
   }
@@ -422,6 +454,22 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
             <h1 className="text-lg font-semibold text-text-primary">Breakdown</h1>
 
             <div className="flex items-center gap-2">
+              {/* Shooting order toggle - only when schedule has breakdown data */}
+              {hasShootingOrder && (
+                <button
+                  onClick={() => setSortMode(sortMode === 'scene-number' ? 'shooting-order' : 'scene-number')}
+                  className={clsx(
+                    'p-2 rounded-lg transition-colors touch-manipulation',
+                    sortMode === 'shooting-order' ? 'text-gold bg-gold-100/50' : 'text-text-muted hover:text-gold'
+                  )}
+                  title={sortMode === 'shooting-order' ? 'Sorted by shooting order' : 'Sort by shooting order'}
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 7.5L7.5 3m0 0L12 7.5M7.5 3v13.5m13.5-3L16.5 18m0 0L12 13.5M16.5 18V4.5" />
+                  </svg>
+                </button>
+              )}
+
               {/* Filter button */}
               <button
                 onClick={() => setShowFilters(true)}
@@ -469,11 +517,14 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
       </div>
 
       {/* Scene count bar */}
-      <div className="mobile-container px-4 py-3">
+      <div className="mobile-container px-4 py-3 flex items-center justify-between">
         <span className="text-xs text-text-muted">
           {filteredScenes.length} scene{filteredScenes.length !== 1 ? 's' : ''}
           {hasActiveFilters && ' (filtered)'}
         </span>
+        {sortMode === 'shooting-order' && (
+          <span className="text-xs text-gold font-medium">Shooting Order</span>
+        )}
       </div>
 
       {/* Character confirmation progress */}
