@@ -598,17 +598,75 @@ function AddReceiptModal({ imageUri, currencySymbol, onAdd, onClose }: AddReceip
             </div>
           )}
 
-          {/* Extracted Items Preview */}
+          {/* Extracted Items - Editable List */}
           {extractedItems.length > 0 && (
-            <div className="px-3 py-2 rounded-lg bg-gray-50 border border-gray-200">
-              <p className="text-xs font-medium text-text-secondary mb-1.5">Detected Items:</p>
-              <div className="space-y-1 max-h-24 overflow-y-auto">
+            <div className="rounded-lg border border-gray-200 overflow-hidden">
+              <div className="px-3 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+                <p className="text-xs font-medium text-text-secondary">Detected Items:</p>
+                <button
+                  type="button"
+                  onClick={() => setExtractedItems([...extractedItems, { name: '', price: 0 }])}
+                  disabled={isExtracting}
+                  className="text-[10px] font-medium text-gold hover:text-gold-dark"
+                >
+                  + Add Item
+                </button>
+              </div>
+              <div className="divide-y divide-gray-100 max-h-48 overflow-y-auto">
                 {extractedItems.map((item, index) => (
-                  <div key={index} className="flex justify-between text-xs">
-                    <span className="text-text-primary truncate flex-1 mr-2">{item.name}</span>
-                    <span className="text-text-muted">{currencySymbol}{item.price.toFixed(2)}</span>
+                  <div key={index} className="flex items-center gap-2 px-3 py-2">
+                    <input
+                      type="text"
+                      value={item.name}
+                      onChange={(e) => {
+                        const updated = [...extractedItems];
+                        updated[index] = { ...item, name: e.target.value };
+                        setExtractedItems(updated);
+                        setDescription(buildDescriptionFromItems(updated));
+                      }}
+                      className="flex-1 text-xs bg-transparent border-b border-transparent focus:border-gold outline-none py-1 text-text-primary"
+                      placeholder="Item name"
+                      disabled={isExtracting}
+                    />
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs text-text-muted">{currencySymbol}</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={item.price || ''}
+                        onChange={(e) => {
+                          const updated = [...extractedItems];
+                          updated[index] = { ...item, price: parseFloat(e.target.value) || 0 };
+                          setExtractedItems(updated);
+                        }}
+                        className="w-16 text-xs text-right bg-transparent border-b border-transparent focus:border-gold outline-none py-1 text-text-primary"
+                        placeholder="0.00"
+                        disabled={isExtracting}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updated = extractedItems.filter((_, i) => i !== index);
+                        setExtractedItems(updated);
+                        setDescription(buildDescriptionFromItems(updated));
+                      }}
+                      disabled={isExtracting}
+                      className="p-1 text-text-light hover:text-red-500 transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
                   </div>
                 ))}
+              </div>
+              {/* Items Total */}
+              <div className="px-3 py-2 bg-gray-50 border-t border-gray-200 flex justify-between">
+                <span className="text-xs font-medium text-text-secondary">Items Total:</span>
+                <span className="text-xs font-semibold text-text-primary">
+                  {currencySymbol}{extractedItems.reduce((sum, item) => sum + (item.price || 0), 0).toFixed(2)}
+                </span>
               </div>
             </div>
           )}
