@@ -397,6 +397,7 @@ export interface CallSheetScene {
   status: ShootingSceneStatus;
   filmingStatus?: SceneFilmingStatus;
   filmingNotes?: string;
+  completedAt?: string; // ISO timestamp when scene was marked complete
 }
 
 export interface CastCall {
