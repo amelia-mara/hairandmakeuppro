@@ -329,32 +329,41 @@ export function SceneCharacterStatus({
   const confirmedCharacters = characters.filter(c => scene.characters?.includes(c.id));
 
   if (status === 'confirmed') {
-    // Show confirmed characters
+    // Show confirmed characters with option to add more
     return (
-      <button
-        onClick={onConfirmClick}
-        className="w-full text-left group"
-      >
-        <div className="flex items-center gap-1.5 text-green-600 text-xs mb-1">
-          <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+      <div className="w-full">
+        <button
+          onClick={onConfirmClick}
+          className="w-full text-left group"
+        >
+          <div className="flex items-center gap-1.5 text-green-600 text-xs mb-1">
+            <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+            </svg>
+            <span className="font-medium">Characters confirmed</span>
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {confirmedCharacters.slice(0, 4).map(char => (
+              <span key={char.id} className="text-[11px] text-text-secondary">
+                {char.name}{confirmedCharacters.indexOf(char) < confirmedCharacters.length - 1 && confirmedCharacters.indexOf(char) < 3 ? ',' : ''}
+              </span>
+            ))}
+            {confirmedCharacters.length > 4 && (
+              <span className="text-[11px] text-text-muted">+{confirmedCharacters.length - 4} more</span>
+            )}
+          </div>
+        </button>
+        {/* Add character button - always visible */}
+        <button
+          onClick={onConfirmClick}
+          className="inline-flex items-center gap-1 text-[10px] text-gold font-medium mt-1.5 hover:text-gold-dark transition-colors"
+        >
+          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
           </svg>
-          <span className="font-medium">Characters confirmed</span>
-        </div>
-        <div className="flex flex-wrap gap-1">
-          {confirmedCharacters.slice(0, 4).map(char => (
-            <span key={char.id} className="text-[11px] text-text-secondary">
-              {char.name}{confirmedCharacters.indexOf(char) < confirmedCharacters.length - 1 && confirmedCharacters.indexOf(char) < 3 ? ',' : ''}
-            </span>
-          ))}
-          {confirmedCharacters.length > 4 && (
-            <span className="text-[11px] text-text-muted">+{confirmedCharacters.length - 4} more</span>
-          )}
-        </div>
-        <span className="text-[10px] text-gold opacity-0 group-hover:opacity-100 transition-opacity">
-          Tap to edit
-        </span>
-      </button>
+          Add character
+        </button>
+      </div>
     );
   }
 
