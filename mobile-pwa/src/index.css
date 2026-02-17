@@ -5,7 +5,7 @@
 /* CSS Custom Properties for theming */
 :root {
   /* Light mode - Elegant cream aesthetic */
-  --color-background: #FAF8F3;
+  --color-background: #fffaf7;
   --color-card: #ffffff;
   --color-card-hover: #fdfcfa;
   --color-input-bg: #f7f5f0;
