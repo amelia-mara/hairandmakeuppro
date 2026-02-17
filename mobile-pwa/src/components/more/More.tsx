@@ -1052,9 +1052,16 @@ function ScheduleViewer({ onBack }: ViewerProps) {
     uploadError,
     uploadScheduleStage1,
     clearSchedule,
+    isProcessingStage2,
+    stage2Progress,
+    stage2Error,
+    startStage2Processing,
+    getCastNamesForNumbers,
   } = useScheduleStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [viewMode, setViewMode] = useState<'pdf' | 'breakdown'>('pdf');
+  const [expandedDay, setExpandedDay] = useState<number | null>(null);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1075,7 +1082,15 @@ function ScheduleViewer({ onBack }: ViewerProps) {
   const handleDelete = () => {
     clearSchedule();
     setShowDeleteConfirm(false);
+    setViewMode('pdf');
   };
+
+  const handleProcessSchedule = () => {
+    startStage2Processing();
+    setViewMode('breakdown');
+  };
+
+  const hasBreakdownData = schedule?.days && schedule.days.length > 0;
 
   return (
     <>
@@ -1140,6 +1155,32 @@ function ScheduleViewer({ onBack }: ViewerProps) {
               </button>
             )}
           </div>
+
+          {/* View toggle - PDF / Breakdown */}
+          {schedule && (
+            <div className="px-4 pb-3 flex gap-1 bg-card">
+              <button
+                onClick={() => setViewMode('pdf')}
+                className={`flex-1 py-2 text-xs font-medium rounded-lg transition-colors ${
+                  viewMode === 'pdf'
+                    ? 'bg-text-primary text-white'
+                    : 'bg-gray-100 text-text-muted'
+                }`}
+              >
+                PDF
+              </button>
+              <button
+                onClick={() => setViewMode('breakdown')}
+                className={`flex-1 py-2 text-xs font-medium rounded-lg transition-colors ${
+                  viewMode === 'breakdown'
+                    ? 'bg-text-primary text-white'
+                    : 'bg-gray-100 text-text-muted'
+                }`}
+              >
+                Breakdown
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1155,6 +1196,18 @@ function ScheduleViewer({ onBack }: ViewerProps) {
         {uploadError && (
           <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
             <p className="text-sm text-red-600">{uploadError}</p>
+          </div>
+        )}
+
+        {stage2Error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm text-red-600">{stage2Error}</p>
+            <button
+              onClick={handleProcessSchedule}
+              className="mt-2 text-xs text-red-700 underline"
+            >
+              Retry Processing
+            </button>
           </div>
         )}
 
@@ -1176,15 +1229,14 @@ function ScheduleViewer({ onBack }: ViewerProps) {
               {isUploading ? 'Uploading...' : 'Upload Schedule PDF'}
             </button>
           </div>
-        ) : (
+        ) : viewMode === 'pdf' ? (
           /* Schedule PDF Viewer */
           <div className="space-y-4">
-            {/* PDF Viewer */}
             {schedule.pdfUri ? (
               <div className="card p-0 overflow-hidden">
                 <iframe
                   src={schedule.pdfUri}
-                  className="w-full h-[calc(100vh-280px)] min-h-[400px] border-0"
+                  className="w-full h-[calc(100vh-320px)] min-h-[400px] border-0"
                   title="Schedule PDF"
                 />
               </div>
@@ -1195,6 +1247,166 @@ function ScheduleViewer({ onBack }: ViewerProps) {
                 </p>
               </div>
             )}
+          </div>
+        ) : (
+          /* Breakdown View */
+          <div className="space-y-4">
+            {/* Process Schedule button - shown when no breakdown data */}
+            {!hasBreakdownData && !isProcessingStage2 && (
+              <div className="card p-4 text-center">
+                <p className="text-sm text-text-muted mb-3">
+                  Process the schedule PDF with AI to extract scene breakdown data for each shooting day.
+                </p>
+                <button
+                  onClick={handleProcessSchedule}
+                  className="px-6 py-2.5 rounded-button gold-gradient text-white text-sm font-medium active:scale-95 transition-transform"
+                >
+                  Process Schedule
+                </button>
+              </div>
+            )}
+
+            {/* Processing progress indicator */}
+            {isProcessingStage2 && (
+              <div className="card p-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <svg className="w-5 h-5 animate-spin text-gold" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  <span className="text-sm font-medium text-text-primary">
+                    {stage2Progress.message || `Processing Day ${stage2Progress.current} of ${stage2Progress.total}...`}
+                  </span>
+                </div>
+                {stage2Progress.total > 0 && (
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="gold-gradient h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${(stage2Progress.current / stage2Progress.total) * 100}%` }}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Breakdown data - shooting days */}
+            {hasBreakdownData && schedule.days.map((day) => (
+              <div key={day.dayNumber} className="card overflow-hidden">
+                {/* Day header - expandable */}
+                <button
+                  onClick={() => setExpandedDay(expandedDay === day.dayNumber ? null : day.dayNumber)}
+                  className="w-full p-3 flex items-center justify-between text-left active:bg-gray-50 transition-colors"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-text-primary">
+                        Day {day.dayNumber}
+                      </span>
+                      {day.date && (
+                        <span className="text-xs text-text-muted">
+                          {day.dayOfWeek ? `${day.dayOfWeek}, ` : ''}{day.date}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      {day.location && (
+                        <span className="text-xs text-text-muted truncate">{day.location}</span>
+                      )}
+                      <span className="text-xs text-gold font-medium">
+                        {day.scenes.length} scene{day.scenes.length !== 1 ? 's' : ''}
+                      </span>
+                      {day.totalPages && (
+                        <span className="text-xs text-text-muted">{day.totalPages} pages</span>
+                      )}
+                    </div>
+                  </div>
+                  <svg
+                    className={`w-4 h-4 text-text-muted transition-transform flex-shrink-0 ${
+                      expandedDay === day.dayNumber ? 'rotate-180' : ''
+                    }`}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {/* Expanded day - scene list */}
+                {expandedDay === day.dayNumber && (
+                  <div className="border-t border-border">
+                    {day.notes && day.notes.length > 0 && (
+                      <div className="px-3 py-2 bg-amber-50 border-b border-border">
+                        {day.notes.map((note, i) => (
+                          <span key={i} className="text-xs text-amber-700 block">{note}</span>
+                        ))}
+                      </div>
+                    )}
+                    {day.scenes.map((scene, idx) => (
+                      <div
+                        key={`${scene.sceneNumber}-${idx}`}
+                        className={`px-3 py-2.5 ${idx > 0 ? 'border-t border-border/50' : ''}`}
+                      >
+                        <div className="flex items-start gap-2">
+                          {/* Scene number badge */}
+                          <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-gray-100 flex flex-col items-center justify-center">
+                            <span className="text-[10px] text-text-muted leading-none">Sc</span>
+                            <span className="text-xs font-bold text-text-primary leading-tight">{scene.sceneNumber}</span>
+                          </div>
+                          {/* Scene details */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className={`text-[10px] font-medium px-1 py-0.5 rounded ${
+                                scene.intExt === 'EXT' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+                              }`}>
+                                {scene.intExt}
+                              </span>
+                              <span className={`text-[10px] font-medium px-1 py-0.5 rounded ${
+                                scene.dayNight.toLowerCase().includes('night') || scene.dayNight.startsWith('N')
+                                  ? 'bg-indigo-100 text-indigo-700'
+                                  : 'bg-amber-100 text-amber-700'
+                              }`}>
+                                {scene.dayNight}
+                              </span>
+                              {scene.pages && (
+                                <span className="text-[10px] text-text-muted">{scene.pages} pgs</span>
+                              )}
+                              {scene.estimatedTime && (
+                                <span className="text-[10px] text-text-muted ml-auto">{scene.estimatedTime}</span>
+                              )}
+                            </div>
+                            <p className="text-xs font-medium text-text-primary mt-0.5 truncate">
+                              {scene.setLocation}
+                            </p>
+                            {scene.description && (
+                              <p className="text-[11px] text-text-muted mt-0.5 line-clamp-2">
+                                {scene.description}
+                              </p>
+                            )}
+                            {/* Cast numbers */}
+                            {scene.castNumbers.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {getCastNamesForNumbers(scene.castNumbers).map((name, ci) => (
+                                  <span key={ci} className="text-[10px] bg-gray-100 text-text-muted px-1.5 py-0.5 rounded">
+                                    {name}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {day.scenes.length === 0 && (
+                      <div className="px-3 py-4 text-center">
+                        <p className="text-xs text-text-muted">No scenes extracted for this day</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         )}
       </div>
