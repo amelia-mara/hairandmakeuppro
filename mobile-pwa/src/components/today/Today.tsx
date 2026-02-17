@@ -301,6 +301,60 @@ export function Today({ onSceneSelect }: TodayProps) {
       });
   }, [callSheet?.castCalls]);
 
+  // Calculate schedule status - compares predicted vs actual completion times
+  const scheduleStatus = useMemo(() => {
+    if (!callSheet?.scenes || !callSheet.firstShotTime) {
+      return null;
+    }
+
+    // Parse time string (HH:MM or H:MM) to minutes since midnight
+    const parseTimeToMinutes = (timeStr: string): number | null => {
+      const match = timeStr.match(/(\d{1,2}):(\d{2})/);
+      if (!match) return null;
+      return parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
+    };
+
+    // Get completed scenes sorted by shoot order
+    const completedScenes = callSheet.scenes
+      .filter(s => s.status === 'wrapped' && s.completedAt)
+      .sort((a, b) => a.shootOrder - b.shootOrder);
+
+    if (completedScenes.length === 0) {
+      return { status: 'not-started' as const, completedCount: 0, totalCount: callSheet.scenes.length };
+    }
+
+    // Get the last completed scene
+    const lastCompleted = completedScenes[completedScenes.length - 1];
+
+    // Parse the expected end time from estimatedTime (e.g., "08:20 - 08:40" -> 08:40)
+    let expectedEndMinutes: number | null = null;
+    if (lastCompleted.estimatedTime) {
+      const endTimeMatch = lastCompleted.estimatedTime.match(/-\s*(\d{1,2}:\d{2})/);
+      if (endTimeMatch) {
+        expectedEndMinutes = parseTimeToMinutes(endTimeMatch[1]);
+      }
+    }
+
+    // If no expected time, we can't calculate
+    if (expectedEndMinutes === null) {
+      return { status: 'unknown' as const, completedCount: completedScenes.length, totalCount: callSheet.scenes.length };
+    }
+
+    // Get actual completion time from the completedAt timestamp
+    const completedAt = new Date(lastCompleted.completedAt!);
+    const actualMinutes = completedAt.getHours() * 60 + completedAt.getMinutes();
+
+    // Calculate difference (positive = behind, negative = ahead)
+    const diffMinutes = actualMinutes - expectedEndMinutes;
+
+    return {
+      status: diffMinutes > 5 ? 'behind' as const : diffMinutes < -5 ? 'ahead' as const : 'on-time' as const,
+      diffMinutes: Math.abs(diffMinutes),
+      completedCount: completedScenes.length,
+      totalCount: callSheet.scenes.length,
+    };
+  }, [callSheet?.scenes, callSheet?.firstShotTime]);
+
   // Update scene status - persists to store and updates local state for immediate UI feedback
   const updateSceneStatus = (sceneNumber: string, status: ShootingSceneStatus) => {
     if (!baseCallSheet) return;
@@ -452,23 +506,64 @@ export function Today({ onSceneSelect }: TodayProps) {
                 </h2>
               </div>
 
-              {/* Working Day Type Badge - show prominently */}
+              {/* Working Day Type Badge + Schedule Status */}
               {(() => {
                 const dayTypeAbbrev = parseDayTypeFromString(callSheet.dayType);
                 const dayTypeLabel = DAY_TYPE_LABELS[dayTypeAbbrev];
                 return (
-                  <div className="mb-3 pb-3 border-b border-border/50 flex items-center gap-2">
-                    <span className={clsx(
-                      'px-2 py-0.5 text-xs font-bold rounded',
-                      dayTypeAbbrev === 'CWD' && 'bg-amber-100 text-amber-700',
-                      dayTypeAbbrev === 'SCWD' && 'bg-orange-100 text-orange-700',
-                      dayTypeAbbrev === 'SWD' && 'bg-blue-100 text-blue-700'
-                    )}>
-                      {dayTypeAbbrev}
-                    </span>
-                    <span className="text-xs text-text-muted">
-                      {dayTypeLabel}
-                    </span>
+                  <div className="mb-3 pb-3 border-b border-border/50 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className={clsx(
+                        'px-2 py-0.5 text-xs font-bold rounded',
+                        dayTypeAbbrev === 'CWD' && 'bg-amber-100 text-amber-700',
+                        dayTypeAbbrev === 'SCWD' && 'bg-orange-100 text-orange-700',
+                        dayTypeAbbrev === 'SWD' && 'bg-blue-100 text-blue-700'
+                      )}>
+                        {dayTypeAbbrev}
+                      </span>
+                      <span className="text-xs text-text-muted">
+                        {dayTypeLabel}
+                      </span>
+                    </div>
+                    {/* Schedule Status Indicator */}
+                    {scheduleStatus && scheduleStatus.status !== 'not-started' && scheduleStatus.status !== 'unknown' && (
+                      <div className={clsx(
+                        'flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium',
+                        scheduleStatus.status === 'on-time' && 'bg-green-50 text-green-600',
+                        scheduleStatus.status === 'ahead' && 'bg-blue-50 text-blue-600',
+                        scheduleStatus.status === 'behind' && 'bg-red-50 text-red-600'
+                      )}>
+                        {scheduleStatus.status === 'on-time' && (
+                          <>
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                            <span>On Time</span>
+                          </>
+                        )}
+                        {scheduleStatus.status === 'ahead' && (
+                          <>
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                            </svg>
+                            <span>{scheduleStatus.diffMinutes}m ahead</span>
+                          </>
+                        )}
+                        {scheduleStatus.status === 'behind' && (
+                          <>
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                            </svg>
+                            <span>{scheduleStatus.diffMinutes}m behind</span>
+                          </>
+                        )}
+                      </div>
+                    )}
+                    {scheduleStatus && scheduleStatus.status === 'not-started' && (
+                      <span className="text-xs text-text-muted">
+                        {scheduleStatus.totalCount} scenes
+                      </span>
+                    )}
                   </div>
                 );
               })()}

@@ -196,7 +196,12 @@ export const useCallSheetStore = create<CallSheetState>()(
               ...cs,
               scenes: cs.scenes.map(scene =>
                 scene.sceneNumber === sceneNumber
-                  ? { ...scene, status }
+                  ? {
+                      ...scene,
+                      status,
+                      // Record completion time when marked as wrapped
+                      completedAt: status === 'wrapped' ? new Date().toISOString() : scene.completedAt,
+                    }
                   : scene
               ),
             };
@@ -212,7 +217,13 @@ export const useCallSheetStore = create<CallSheetState>()(
               ...cs,
               scenes: cs.scenes.map(scene =>
                 scene.sceneNumber === sceneNumber
-                  ? { ...scene, filmingStatus, filmingNotes, status: 'wrapped' as ShootingSceneStatus }
+                  ? {
+                      ...scene,
+                      filmingStatus,
+                      filmingNotes,
+                      status: 'wrapped' as ShootingSceneStatus,
+                      completedAt: new Date().toISOString(),
+                    }
                   : scene
               ),
             };
