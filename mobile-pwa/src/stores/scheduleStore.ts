@@ -8,6 +8,11 @@ import type {
 } from '@/types';
 import { parseScheduleStage1 } from '@/utils/scheduleParser';
 import { processScheduleStage2 } from '@/services/scheduleAIService';
+import {
+  compareScheduleAmendment,
+  applyScheduleAmendment,
+  type ScheduleAmendmentResult,
+} from '@/services/scheduleAmendmentService';
 
 interface SavedScheduleData {
   schedule: ProductionSchedule | null;
@@ -29,10 +34,27 @@ interface ScheduleState {
   stage2Progress: { current: number; total: number; message?: string };
   stage2Error: string | null;
 
+  // Amendment state
+  pendingSchedule: ProductionSchedule | null;
+
   // Actions
   setSchedule: (schedule: ProductionSchedule) => void;
   uploadScheduleStage1: (file: File) => Promise<ProductionSchedule>;
+  uploadRevisionStage1: (file: File) => Promise<ProductionSchedule>;
   startStage2Processing: () => Promise<void>;
+  startRevisionStage2Processing: () => Promise<void>;
+  compareAmendment: () => ScheduleAmendmentResult | null;
+  applyAmendment: (
+    amendmentResult: ScheduleAmendmentResult,
+    options?: {
+      includeAddedScenes?: boolean;
+      includeRemovedScenes?: boolean;
+      includeMovedScenes?: boolean;
+      includeCastChanges?: boolean;
+      includeTimingChanges?: boolean;
+    }
+  ) => void;
+  clearPendingSchedule: () => void;
   updateDayData: (dayNumber: number, day: ScheduleDay) => void;
   clearSchedule: () => void;
 
@@ -62,6 +84,7 @@ export const useScheduleStore = create<ScheduleState>()(
       isProcessingStage2: false,
       stage2Progress: { current: 0, total: 0 },
       stage2Error: null,
+      pendingSchedule: null,
 
       setSchedule: (schedule: ProductionSchedule) => {
         set({ schedule, isUploading: false, uploadError: null });
@@ -99,6 +122,125 @@ export const useScheduleStore = create<ScheduleState>()(
           set({ isUploading: false, uploadError: message });
           throw error;
         }
+      },
+
+      // Upload a revised schedule - stores as pending for comparison
+      uploadRevisionStage1: async (file: File) => {
+        set({ isUploading: true, uploadError: null });
+
+        try {
+          console.log('[ScheduleStore] Starting revision Stage 1 parsing...');
+          const result = await parseScheduleStage1(file);
+
+          const pendingSchedule = {
+            ...result.schedule,
+            status: 'pending' as const,
+          };
+
+          set({
+            pendingSchedule,
+            isUploading: false,
+          });
+
+          return pendingSchedule;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Failed to parse revised schedule';
+          console.error('[ScheduleStore] Revision Stage 1 failed:', error);
+          set({ isUploading: false, uploadError: message });
+          throw error;
+        }
+      },
+
+      // Process Stage 2 for the pending revision schedule
+      startRevisionStage2Processing: async () => {
+        const state = get();
+        if (!state.pendingSchedule || state.isProcessingStage2) return;
+
+        set({
+          isProcessingStage2: true,
+          stage2Error: null,
+          stage2Progress: { current: 0, total: state.pendingSchedule.totalDays || 1 },
+        });
+
+        try {
+          const result = await processScheduleStage2(
+            state.pendingSchedule,
+            (progress) => {
+              set({ stage2Progress: progress });
+            }
+          );
+
+          set((s) => ({
+            pendingSchedule: s.pendingSchedule
+              ? {
+                  ...s.pendingSchedule,
+                  days: result.days,
+                  status: 'complete' as const,
+                  processingProgress: { current: result.days.length, total: result.days.length },
+                }
+              : null,
+            isProcessingStage2: false,
+            stage2Progress: { current: result.days.length, total: result.days.length },
+          }));
+
+          console.log('[ScheduleStore] Revision Stage 2 complete:', {
+            daysProcessed: result.days.length,
+            totalScenes: result.days.reduce((sum, d) => sum + d.scenes.length, 0),
+          });
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Failed to process revised schedule';
+          console.error('[ScheduleStore] Revision Stage 2 failed:', error);
+          set({
+            isProcessingStage2: false,
+            stage2Error: message,
+          });
+        }
+      },
+
+      // Compare pending schedule against current schedule
+      compareAmendment: () => {
+        const state = get();
+        if (!state.schedule || !state.pendingSchedule) return null;
+        if (state.schedule.days.length === 0 || state.pendingSchedule.days.length === 0) return null;
+
+        return compareScheduleAmendment(state.schedule, state.pendingSchedule);
+      },
+
+      // Apply amendment from pending schedule
+      applyAmendment: (
+        amendmentResult: ScheduleAmendmentResult,
+        options?: {
+          includeAddedScenes?: boolean;
+          includeRemovedScenes?: boolean;
+          includeMovedScenes?: boolean;
+          includeCastChanges?: boolean;
+          includeTimingChanges?: boolean;
+        }
+      ) => {
+        const state = get();
+        if (!state.schedule || !state.pendingSchedule) return;
+
+        const mergedSchedule = applyScheduleAmendment(
+          state.schedule,
+          state.pendingSchedule,
+          amendmentResult,
+          options
+        );
+
+        set({
+          schedule: mergedSchedule,
+          pendingSchedule: null,
+        });
+
+        console.log('[ScheduleStore] Amendment applied:', {
+          days: mergedSchedule.days.length,
+          totalScenes: mergedSchedule.days.reduce((sum, d) => sum + d.scenes.length, 0),
+        });
+      },
+
+      // Clear the pending schedule without applying
+      clearPendingSchedule: () => {
+        set({ pendingSchedule: null });
       },
 
       // Stage 2: AI-powered scene extraction per shooting day
