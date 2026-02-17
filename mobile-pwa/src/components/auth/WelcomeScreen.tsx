@@ -26,35 +26,30 @@ export function WelcomeScreen() {
           CHECKS HAPPY
         </h1>
 
-        {/* Gold underline - thicker in middle with rustic texture */}
-        <svg width="280" height="8" viewBox="0 0 280 8" className="mt-3 mb-8">
+        {/* Gold underline - tapered ends, thicker in middle */}
+        <svg width="280" height="10" viewBox="0 0 280 10" className="mt-3 mb-8">
           <defs>
             <linearGradient id="underlineGold" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#C9A962" stopOpacity="0" />
-              <stop offset="15%" stopColor="#C9A962" />
+              <stop offset="0%" stopColor="#C9A962" stopOpacity="0.3" />
+              <stop offset="10%" stopColor="#C9A962" />
               <stop offset="50%" stopColor="#D4B86A" />
-              <stop offset="85%" stopColor="#C9A962" />
-              <stop offset="100%" stopColor="#C9A962" stopOpacity="0" />
+              <stop offset="90%" stopColor="#C9A962" />
+              <stop offset="100%" stopColor="#C9A962" stopOpacity="0.3" />
             </linearGradient>
           </defs>
-          {/* Main stroke - thicker in middle, tapered at ends */}
+          {/* Tapered shape - pointed at ends, thick in middle */}
           <path
-            d="M 0 4
-               Q 70 3, 140 2
-               Q 210 3, 280 4"
-            stroke="url(#underlineGold)"
-            strokeWidth="3"
-            fill="none"
-            strokeLinecap="round"
-          />
-          {/* Subtle texture strokes for rustic effect */}
-          <path
-            d="M 40 4.5 Q 80 3.5, 120 4
-               M 160 3.5 Q 200 4.5, 240 4"
-            stroke="#B8983A"
-            strokeWidth="0.5"
-            fill="none"
-            opacity="0.4"
+            d="M 0 5
+               Q 40 5, 70 3.5
+               Q 100 2, 140 1.5
+               Q 180 2, 210 3.5
+               Q 240 5, 280 5
+               Q 240 5, 210 6.5
+               Q 180 8, 140 8.5
+               Q 100 8, 70 6.5
+               Q 40 5, 0 5
+               Z"
+            fill="url(#underlineGold)"
           />
         </svg>
 
