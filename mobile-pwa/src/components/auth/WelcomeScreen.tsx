@@ -128,20 +128,20 @@ export function WelcomeScreen() {
 
       {/* Bottom action buttons */}
       <div className="px-8 pb-10 space-y-4">
-        {/* Sign In - Black background with white text */}
+        {/* Sign In - Gold gradient background */}
         <button
           onClick={() => setScreen('signin')}
           className="w-full h-14 rounded font-semibold text-lg transition-all duration-200
-            bg-[#1a1a1a] text-white active:scale-[0.98]"
+            bg-gradient-to-r from-[#C9A962] via-[#D4B86A] to-[#C9A962] text-white active:scale-[0.98] shadow-sm"
         >
           Sign In
         </button>
 
-        {/* Create Account - Cream with black border */}
+        {/* Create Account - Black background */}
         <button
           onClick={() => setScreen('signup')}
           className="w-full h-14 rounded font-semibold text-lg transition-all duration-200
-            border border-[#1a1a1a] text-[#1a1a1a] bg-[#fefcfb] active:scale-[0.98]"
+            bg-[#1a1a1a] text-white active:scale-[0.98]"
         >
           Create Account
         </button>
