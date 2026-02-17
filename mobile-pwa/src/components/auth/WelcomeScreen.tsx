@@ -5,7 +5,7 @@ export function WelcomeScreen() {
   const { setScreen } = useAuthStore();
 
   return (
-    <div className="min-h-screen bg-[#fffaf7] flex flex-col">
+    <div className="min-h-screen bg-[#fefcfb] flex flex-col">
       {/* Main content area */}
       <div className="flex-1 flex flex-col items-center justify-center px-8">
         {/* Logo Icon - Using uploaded image */}
@@ -68,7 +68,7 @@ export function WelcomeScreen() {
                 fill="#1a1a1a"
               />
               {/* Camera lens - white circle */}
-              <circle cx="28" cy="30" r="10" fill="#fffaf7" />
+              <circle cx="28" cy="30" r="10" fill="#fefcfb" />
               {/* Camera lens inner - black dot */}
               <circle cx="28" cy="30" r="5" fill="#1a1a1a" />
             </svg>
@@ -141,7 +141,7 @@ export function WelcomeScreen() {
         <button
           onClick={() => setScreen('signup')}
           className="w-full h-14 rounded font-semibold text-lg transition-all duration-200
-            border border-[#1a1a1a] text-[#1a1a1a] bg-[#fffaf7] active:scale-[0.98]"
+            border border-[#1a1a1a] text-[#1a1a1a] bg-[#fefcfb] active:scale-[0.98]"
         >
           Create Account
         </button>
