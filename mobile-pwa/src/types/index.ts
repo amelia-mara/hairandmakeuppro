@@ -24,6 +24,9 @@ export interface Project {
 // Character confirmation status for progressive scene-by-scene workflow
 export type CharacterConfirmationStatus = 'pending' | 'detecting' | 'ready' | 'confirmed';
 
+// Scene amendment status for tracking script revisions
+export type SceneAmendmentStatus = 'unchanged' | 'modified' | 'new' | 'deleted';
+
 export interface Scene {
   id: string;
   sceneNumber: string; // Can be "4A", "4B", etc. for alphanumeric scene numbers
@@ -43,6 +46,12 @@ export interface Scene {
   // Character confirmation state (for progressive workflow)
   characterConfirmationStatus?: CharacterConfirmationStatus;
   suggestedCharacters?: string[]; // AI/regex suggested character names before confirmation
+
+  // Script amendment tracking
+  amendmentStatus?: SceneAmendmentStatus; // Status from latest script revision
+  previousScriptContent?: string; // Content before amendment (for comparison)
+  amendmentDate?: string; // ISO date when scene was last amended
+  amendmentNotes?: string; // Auto-generated summary of what changed
 }
 
 export interface Character {

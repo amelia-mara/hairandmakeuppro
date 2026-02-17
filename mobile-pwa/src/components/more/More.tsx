@@ -18,6 +18,9 @@ import {
   ProjectSettingsScreen,
 } from '@/components/project-settings';
 import { useProjectSettingsStore } from '@/stores/projectSettingsStore';
+import { parseScenesFast } from '@/utils/scriptParser';
+import { AmendmentReviewModal } from '@/components/breakdown/AmendmentReviewModal';
+import type { AmendmentResult } from '@/services/scriptAmendmentService';
 import { UserProfileScreen } from '@/components/profile/UserProfileScreen';
 
 type MoreView = 'menu' | 'script' | 'schedule' | 'callsheets' | 'editMenu' | 'export' | 'archivedProjects' | 'projectSettings' | 'team' | 'invite' | 'projectStats' | 'manualSchedule' | 'billing' | 'userProfile';
@@ -796,8 +799,50 @@ function ScriptViewer({ onBack }: ViewerProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedScene, setSelectedScene] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'full' | 'pdf'>('full');
-  const { currentProject } = useProjectStore();
+  const { currentProject, compareScriptAmendment, applyScriptAmendment } = useProjectStore();
   const sceneRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [amendmentResult, setAmendmentResult] = useState<AmendmentResult | null>(null);
+
+  // Handle revised script upload
+  const handleRevisedScriptUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      // Parse the new script using fast parsing
+      const parsedScript = await parseScenesFast(file);
+
+      // Compare against existing breakdown
+      const result = compareScriptAmendment(parsedScript.scenes);
+      if (result) {
+        setAmendmentResult(result);
+      }
+    } catch (error) {
+      console.error('Error processing revised script:', error);
+      alert('Failed to process the script. Please try again.');
+    } finally {
+      setIsUploading(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  // Handle applying amendment changes
+  const handleApplyAmendment = (options: {
+    includeNew: boolean;
+    includeModified: boolean;
+    includeDeleted: boolean;
+  }) => {
+    if (amendmentResult) {
+      applyScriptAmendment(amendmentResult, options);
+      setAmendmentResult(null);
+    }
+  };
 
   // Sort scenes by scene number
   const sortedScenes = useMemo(() => {
@@ -859,9 +904,26 @@ function ScriptViewer({ onBack }: ViewerProps) {
             </button>
             <h1 className="text-lg font-semibold text-text-primary">Script</h1>
             {hasScriptContent && (
-              <span className="ml-auto text-xs text-text-muted">
-                {sortedScenes.length} scenes
-              </span>
+              <>
+                <span className="ml-auto text-xs text-text-muted">
+                  {sortedScenes.length} scenes
+                </span>
+                {/* Upload Revised Script button */}
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading}
+                  className="ml-2 px-2 py-1 text-[10px] font-medium text-gold border border-gold rounded-lg active:bg-gold/10 transition-colors disabled:opacity-50"
+                >
+                  {isUploading ? 'Processing...' : 'Upload Revision'}
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.fdx,.txt,.fountain"
+                  onChange={handleRevisedScriptUpload}
+                  className="hidden"
+                />
+              </>
             )}
           </div>
 
@@ -1040,6 +1102,15 @@ function ScriptViewer({ onBack }: ViewerProps) {
           </div>
         )}
       </div>
+
+      {/* Amendment Review Modal */}
+      {amendmentResult && (
+        <AmendmentReviewModal
+          amendmentResult={amendmentResult}
+          onApply={handleApplyAmendment}
+          onCancel={() => setAmendmentResult(null)}
+        />
+      )}
     </>
   );
 }

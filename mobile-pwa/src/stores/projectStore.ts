@@ -28,6 +28,14 @@ import {
   type CastSyncResult,
 } from '@/services/castSyncService';
 import {
+  compareScriptAmendment,
+  applyAmendmentToScenes,
+  clearAmendmentFlags,
+  getAmendmentCount,
+  type AmendmentResult,
+} from '@/services/scriptAmendmentService';
+import type { FastParsedScene } from '@/utils/scriptParser';
+import {
   createEmptyContinuityFlags,
   createEmptySFXDetails,
   createDefaultLifecycle,
@@ -148,6 +156,16 @@ interface ProjectState {
     options?: { createMissingCharacters?: boolean; overwriteExisting?: boolean; autoConfirm?: boolean }
   ) => CastSyncResult | null;
   canSyncCastData: (schedule: ProductionSchedule | null) => { canSync: boolean; reason?: string };
+
+  // Actions - Script Amendment (revised script uploads)
+  compareScriptAmendment: (newParsedScenes: FastParsedScene[]) => AmendmentResult | null;
+  applyScriptAmendment: (
+    amendmentResult: AmendmentResult,
+    options?: { includeNew?: boolean; includeModified?: boolean; includeDeleted?: boolean }
+  ) => void;
+  clearSceneAmendmentFlags: () => void;
+  clearSingleSceneAmendment: (sceneId: string) => void;
+  getAmendmentCounts: () => { total: number; new: number; modified: number; deleted: number };
 
   // Actions - Lifecycle
   updateActivity: () => void;
@@ -1047,6 +1065,77 @@ export const useProjectStore = create<ProjectState>()(
       },
 
       canSyncCastData: (schedule) => canSyncCastData(schedule),
+
+      // Script Amendment actions
+      compareScriptAmendment: (newParsedScenes) => {
+        const { currentProject } = get();
+        if (!currentProject?.scenes) return null;
+        return compareScriptAmendment(currentProject.scenes, newParsedScenes);
+      },
+
+      applyScriptAmendment: (amendmentResult, options = { includeNew: true, includeModified: true, includeDeleted: false }) => {
+        const { currentProject } = get();
+        if (!currentProject) return;
+
+        const updatedScenes = applyAmendmentToScenes(
+          currentProject.scenes,
+          amendmentResult,
+          options
+        );
+
+        set({
+          currentProject: {
+            ...currentProject,
+            scenes: updatedScenes,
+            updatedAt: new Date(),
+          },
+        });
+      },
+
+      clearSceneAmendmentFlags: () => {
+        const { currentProject } = get();
+        if (!currentProject) return;
+
+        const clearedScenes = clearAmendmentFlags(currentProject.scenes);
+
+        set({
+          currentProject: {
+            ...currentProject,
+            scenes: clearedScenes,
+          },
+        });
+      },
+
+      clearSingleSceneAmendment: (sceneId) => {
+        const { currentProject } = get();
+        if (!currentProject) return;
+
+        const updatedScenes = currentProject.scenes.map(scene =>
+          scene.id === sceneId
+            ? {
+                ...scene,
+                amendmentStatus: undefined,
+                amendmentNotes: undefined,
+                previousScriptContent: undefined,
+              }
+            : scene
+        );
+
+        set({
+          currentProject: {
+            ...currentProject,
+            scenes: updatedScenes,
+          },
+        });
+      },
+
+      getAmendmentCounts: () => {
+        const { currentProject } = get();
+        if (!currentProject?.scenes) {
+          return { total: 0, new: 0, modified: 0, deleted: 0 };
+        }
+        return getAmendmentCount(currentProject.scenes);
+      },
 
       // Lifecycle actions
       updateActivity: () => {

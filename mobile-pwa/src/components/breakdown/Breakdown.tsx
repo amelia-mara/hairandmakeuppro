@@ -8,6 +8,7 @@ import {
   SceneCharacterStatus,
   CharacterConfirmationProgress,
 } from '@/components/breakdown/SceneCharacterConfirmation';
+import { AmendmentBadge } from '@/components/breakdown/AmendmentReviewModal';
 import type { Scene, Character, Look, SceneCapture, BreakdownFilters, SceneFilmingStatus } from '@/types';
 import { SCENE_FILMING_STATUS_CONFIG } from '@/types';
 import { clsx } from 'clsx';
@@ -210,7 +211,7 @@ interface BreakdownProps {
 }
 
 export function Breakdown({ onSceneSelect }: BreakdownProps) {
-  const { currentProject, sceneCaptures, updateSceneFilmingStatus } = useProjectStore();
+  const { currentProject, sceneCaptures, updateSceneFilmingStatus, clearSingleSceneAmendment } = useProjectStore();
   const schedule = useScheduleStore((s) => s.schedule);
   const [sortMode, setSortMode] = useState<SortMode>('scene-number');
   const [showFilters, setShowFilters] = useState(false);
@@ -537,6 +538,7 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
             allCharacters={currentProject?.characters || []}
             onFilmingStatusChange={handleFilmingStatusChange}
             onNotesModalOpen={handleNotesModalOpen}
+            onDismissAmendment={(sceneId) => clearSingleSceneAmendment(sceneId)}
           />
         )}
       </div>
@@ -599,6 +601,7 @@ interface BreakdownListViewProps {
   allCharacters: Character[];
   onFilmingStatusChange: (sceneNumber: string, status: SceneFilmingStatus, notes?: string) => void;
   onNotesModalOpen: (sceneNumber: string, status: 'partial' | 'not-filmed') => void;
+  onDismissAmendment: (sceneId: string) => void;
 }
 
 // Get glass overlay class based on filming status
@@ -630,6 +633,7 @@ function BreakdownListView({
   allCharacters,
   onFilmingStatusChange,
   onNotesModalOpen,
+  onDismissAmendment,
 }: BreakdownListViewProps) {
   return (
     <div className="space-y-2">
@@ -673,11 +677,18 @@ function BreakdownListView({
               onClick={() => onToggleExpand(scene.id)}
               className="w-full flex items-center gap-3 p-3 text-left touch-manipulation"
             >
-              {/* Scene number */}
-              <div className="w-10 flex items-center justify-center">
-                <span className="text-lg font-bold text-text-primary">
+              {/* Scene number + Amendment badge */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-lg font-bold text-text-primary min-w-[2rem]">
                   {scene.sceneNumber}
                 </span>
+                {scene.amendmentStatus && scene.amendmentStatus !== 'unchanged' && (
+                  <AmendmentBadge
+                    status={scene.amendmentStatus}
+                    notes={scene.amendmentNotes}
+                    onDismiss={() => onDismissAmendment(scene.id)}
+                  />
+                )}
               </div>
 
               {/* INT/EXT badge */}
