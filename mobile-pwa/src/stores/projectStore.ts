@@ -20,7 +20,13 @@ import type {
   CharacterConfirmationStatus,
   CharacterDetectionStatus,
   CastProfile,
+  ProductionSchedule,
 } from '@/types';
+import {
+  syncCastDataToScenes,
+  canSyncCastData,
+  type CastSyncResult,
+} from '@/services/castSyncService';
 import {
   createEmptyContinuityFlags,
   createEmptySFXDetails,
@@ -135,6 +141,13 @@ interface ProjectState {
   addCharacterFromScene: (sceneId: string, characterName: string) => Character;
   getUnconfirmedScenesCount: () => number;
   getConfirmedScenesCount: () => number;
+
+  // Actions - Cast Sync from Schedule
+  syncCastDataFromSchedule: (
+    schedule: ProductionSchedule,
+    options?: { createMissingCharacters?: boolean; overwriteExisting?: boolean; autoConfirm?: boolean }
+  ) => CastSyncResult | null;
+  canSyncCastData: (schedule: ProductionSchedule | null) => { canSync: boolean; reason?: string };
 
   // Actions - Lifecycle
   updateActivity: () => void;
@@ -992,6 +1005,48 @@ export const useProjectStore = create<ProjectState>()(
           .filter(s => look.scenes.includes(s.sceneNumber))
           .sort((a, b) => a.sceneNumber.localeCompare(b.sceneNumber, undefined, { numeric: true }));
       },
+
+      // Cast Sync from Schedule
+      syncCastDataFromSchedule: (schedule, options = {}) => {
+        const state = get();
+        if (!state.currentProject) return null;
+
+        const { canSync, reason } = canSyncCastData(schedule);
+        if (!canSync) {
+          console.error('[ProjectStore] Cannot sync cast data:', reason);
+          return null;
+        }
+
+        const { result, updatedScenes, updatedCharacters, updatedLooks } = syncCastDataToScenes(
+          schedule,
+          state.currentProject.scenes,
+          state.currentProject.characters,
+          state.currentProject.looks,
+          options
+        );
+
+        if (result.scenesUpdated > 0 || result.charactersCreated > 0) {
+          set((s) => ({
+            currentProject: s.currentProject
+              ? {
+                  ...s.currentProject,
+                  scenes: updatedScenes,
+                  characters: updatedCharacters,
+                  looks: updatedLooks,
+                }
+              : null,
+          }));
+
+          console.log('[ProjectStore] Cast sync complete:', {
+            scenesUpdated: result.scenesUpdated,
+            charactersCreated: result.charactersCreated,
+          });
+        }
+
+        return result;
+      },
+
+      canSyncCastData: (schedule) => canSyncCastData(schedule),
 
       // Lifecycle actions
       updateActivity: () => {
