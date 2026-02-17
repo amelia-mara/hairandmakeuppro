@@ -8,7 +8,7 @@ import {
   SceneCharacterStatus,
   CharacterConfirmationProgress,
 } from '@/components/breakdown/SceneCharacterConfirmation';
-import type { Scene, Character, Look, SceneCapture, BreakdownViewMode, BreakdownFilters, SceneFilmingStatus } from '@/types';
+import type { Scene, Character, Look, SceneCapture, BreakdownFilters, SceneFilmingStatus } from '@/types';
 import { SCENE_FILMING_STATUS_CONFIG } from '@/types';
 import { clsx } from 'clsx';
 
@@ -212,7 +212,6 @@ interface BreakdownProps {
 export function Breakdown({ onSceneSelect }: BreakdownProps) {
   const { currentProject, sceneCaptures, updateSceneFilmingStatus } = useProjectStore();
   const schedule = useScheduleStore((s) => s.schedule);
-  const [viewMode, setViewMode] = useState<BreakdownViewMode>('list');
   const [sortMode, setSortMode] = useState<SortMode>('scene-number');
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<BreakdownFilters>({
@@ -485,32 +484,6 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
                   <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-gold" />
                 )}
               </button>
-
-              {/* View toggle */}
-              <div className="flex rounded-lg overflow-hidden border border-border">
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={clsx(
-                    'px-2.5 py-1.5 transition-colors touch-manipulation',
-                    viewMode === 'list' ? 'bg-gold text-white' : 'bg-card text-text-muted'
-                  )}
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-                  </svg>
-                </button>
-                <button
-                  onClick={() => setViewMode('grid')}
-                  className={clsx(
-                    'px-2.5 py-1.5 transition-colors touch-manipulation',
-                    viewMode === 'grid' ? 'bg-gold text-white' : 'bg-card text-text-muted'
-                  )}
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                  </svg>
-                </button>
-              </div>
             </div>
           </div>
         </div>
@@ -549,7 +522,7 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
               Clear Filters
             </button>
           </div>
-        ) : viewMode === 'list' ? (
+        ) : (
           <BreakdownListView
             scenes={filteredScenes}
             expandedSceneId={expandedSceneId}
@@ -562,15 +535,6 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
             getSceneProgress={getSceneProgress}
             onCharacterConfirm={(sceneId) => setCharacterConfirmSceneId(sceneId)}
             allCharacters={currentProject?.characters || []}
-            onFilmingStatusChange={handleFilmingStatusChange}
-            onNotesModalOpen={handleNotesModalOpen}
-          />
-        ) : (
-          <BreakdownGridView
-            scenes={filteredScenes}
-            onSceneSelect={onSceneSelect}
-            getCharactersForScene={getCharactersForScene}
-            getSceneProgress={getSceneProgress}
             onFilmingStatusChange={handleFilmingStatusChange}
             onNotesModalOpen={handleNotesModalOpen}
           />
@@ -978,138 +942,6 @@ function FilmingStatusIcon({ status }: { status: SceneFilmingStatus }) {
       <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
       </svg>
-    </div>
-  );
-}
-
-// Grid View Component
-interface BreakdownGridViewProps {
-  scenes: Scene[];
-  onSceneSelect: (id: string) => void;
-  getCharactersForScene: (scene: Scene) => Character[];
-  getSceneProgress: (scene: Scene) => { captured: number; total: number };
-  onFilmingStatusChange: (sceneNumber: string, status: SceneFilmingStatus, notes?: string) => void;
-  onNotesModalOpen: (sceneNumber: string, status: 'partial' | 'not-filmed') => void;
-}
-
-function BreakdownGridView({
-  scenes,
-  onSceneSelect,
-  getCharactersForScene,
-  getSceneProgress,
-  onFilmingStatusChange,
-  onNotesModalOpen,
-}: BreakdownGridViewProps) {
-  return (
-    <div className="grid grid-cols-2 gap-2.5">
-      {scenes.map((scene) => {
-        const characters = getCharactersForScene(scene);
-        const progress = getSceneProgress(scene);
-        const progressPercent = progress.total > 0 ? (progress.captured / progress.total) * 100 : 0;
-        const isComplete = progress.total > 0 && progress.captured === progress.total;
-
-        const glassOverlayClass = getGlassOverlayClass(scene.filmingStatus);
-
-        // Get accent bar class based on filming status
-        const getAccentBarClass = () => {
-          if (!scene.filmingStatus) return 'accent-bar-neutral';
-          switch (scene.filmingStatus) {
-            case 'complete': return 'accent-bar-complete';
-            case 'partial': return 'accent-bar-partial';
-            case 'not-filmed': return 'accent-bar-incomplete';
-            default: return 'accent-bar-neutral';
-          }
-        };
-
-        return (
-          <div key={scene.id} className="card text-left w-full relative overflow-hidden">
-            {/* Glass overlay - inside card to cover entire pill */}
-            {glassOverlayClass && (
-              <div className={clsx('scene-glass-overlay', glassOverlayClass)} />
-            )}
-            {/* Left accent bar */}
-            <div className={clsx('absolute left-0 top-0 bottom-0 w-1', getAccentBarClass())} />
-
-            {/* Main clickable area */}
-            <button
-              onClick={() => onSceneSelect(scene.id)}
-              className="w-full text-left active:scale-[0.98] transition-transform"
-            >
-
-            {/* Scene number and INT/EXT */}
-            <div className="flex items-center justify-between mb-1.5">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xl font-bold text-text-primary">{scene.sceneNumber}</span>
-                {/* Checkmark icon when complete - like Today page */}
-                {isComplete && (
-                  <span className="text-green-500">
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-1">
-                <span className={clsx(
-                  'px-1.5 py-0.5 text-[9px] font-bold rounded',
-                  scene.intExt === 'INT' ? 'bg-slate-100 text-slate-600' : 'bg-stone-100 text-stone-600'
-                )}>
-                  {scene.intExt}
-                </span>
-              </div>
-            </div>
-
-            {/* Slugline (truncated) */}
-            <p className="text-xs text-text-muted line-clamp-2 mb-2.5 min-h-[2.5rem]">
-              {scene.slugline.replace(/^(INT|EXT)\.\s*/, '').replace(/\s*-\s*(DAY|NIGHT|MORNING|EVENING|CONTINUOUS)$/i, '')}
-            </p>
-
-            {/* Character avatars */}
-            <div className="flex items-center -space-x-1 mb-2.5">
-              {characters.slice(0, 4).map((char) => (
-                <CharacterAvatar key={char.id} character={char} size="xs" />
-              ))}
-              {characters.length > 4 && (
-                <span className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center text-[9px] font-bold text-text-muted">
-                  +{characters.length - 4}
-                </span>
-              )}
-            </div>
-
-            {/* Progress bar - sophisticated color palette */}
-            <div className="h-1.5 bg-gray-100/80 rounded-full overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all"
-                style={{
-                  width: `${progressPercent}%`,
-                  background: scene.filmingStatus === 'complete'
-                    ? 'linear-gradient(90deg, #10b981 0%, #059669 100%)'
-                    : scene.filmingStatus === 'partial'
-                    ? 'linear-gradient(90deg, #d4a853 0%, #c9a962 100%)'
-                    : scene.filmingStatus === 'not-filmed'
-                    ? 'linear-gradient(90deg, #f87171 0%, #ef4444 100%)'
-                    : progressPercent === 100
-                    ? 'linear-gradient(90deg, #10b981 0%, #059669 100%)'
-                    : 'linear-gradient(90deg, #c9a962 0%, #d4a853 100%)'
-                }}
-              />
-            </div>
-            <span className="text-[10px] text-text-light mt-1 block">
-              {progress.captured}/{progress.total} captured
-            </span>
-            </button>
-
-            {/* Filming status dropdown - outside button to avoid nesting */}
-            <div className="mt-2 pt-2 border-t border-border/50">
-              <FilmingStatusDropdown
-                scene={scene}
-                onStatusChange={onFilmingStatusChange}
-                onNotesModalOpen={onNotesModalOpen}
-              />
-            </div>
-          </div>
-        );
-      })}
     </div>
   );
 }
