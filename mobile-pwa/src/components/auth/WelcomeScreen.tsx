@@ -8,11 +8,15 @@ export function WelcomeScreen() {
     <div className="min-h-screen bg-[#fefcfb] flex flex-col">
       {/* Main content area */}
       <div className="flex-1 flex flex-col items-center justify-center px-8">
-        {/* Logo Icon - Using uploaded image */}
+        {/* Logo Icon - Using uploaded image with edge fade */}
         <img
           src={logoTick}
           alt="Checks Happy Logo"
-          className="w-32 h-32 mb-5 object-contain mix-blend-multiply"
+          className="w-32 h-32 mb-5 object-contain"
+          style={{
+            maskImage: 'radial-gradient(ellipse 70% 70% at center, black 50%, transparent 100%)',
+            WebkitMaskImage: 'radial-gradient(ellipse 70% 70% at center, black 50%, transparent 100%)',
+          }}
         />
 
         {/* CHECKS HAPPY text */}
