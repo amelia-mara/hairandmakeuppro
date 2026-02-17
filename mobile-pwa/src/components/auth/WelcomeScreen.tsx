@@ -59,8 +59,8 @@ export function WelcomeScreen() {
         </svg>
 
         {/* Tagline */}
-        <p className="text-lg font-serif text-[#4a4a4a] mb-10">
-          Streamline Hair & Makeup Continuity
+        <p className="text-lg text-[#4a4a4a] mb-10">
+          Your personal onset assistant
         </p>
 
         {/* Feature icons - BLACK, SOLID, BOLD */}
