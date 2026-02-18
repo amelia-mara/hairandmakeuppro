@@ -1231,10 +1231,12 @@ function ScheduleViewer({ onBack }: ViewerProps) {
   };
 
   const handleSyncCastData = (options?: { createMissingCharacters?: boolean; overwriteExisting?: boolean; autoConfirm?: boolean }) => {
-    if (!schedule || !currentProject) return;
+    // Get fresh schedule data from store (not from hook, which may be stale after async operations)
+    const freshSchedule = useScheduleStore.getState().schedule;
+    if (!freshSchedule || !currentProject) return;
 
     try {
-      const result = syncCastDataFromSchedule(schedule, {
+      const result = syncCastDataFromSchedule(freshSchedule, {
         createMissingCharacters: options?.createMissingCharacters ?? true,
         overwriteExisting: options?.overwriteExisting ?? false,
         autoConfirm: options?.autoConfirm ?? true,
