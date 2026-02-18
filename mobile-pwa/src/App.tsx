@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { useAuthStore } from '@/stores/authStore';
+import { useScheduleStore } from '@/stores/scheduleStore';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { migrateToIndexedDB, flushPendingWrites } from '@/db/zustandStorage';
 import { BottomNav, ProjectHeader } from '@/components/navigation';
@@ -145,6 +146,54 @@ function AppContent() {
       updateActivity();
     }
   }, [currentProject, currentSceneId, activeTab, updateActivity]);
+
+  // Background Schedule Stage 2 Processing: Automatically process pending schedules
+  // This extracts detailed scene data from each shooting day using AI
+  const { schedule, isProcessingStage2, startStage2Processing } = useScheduleStore();
+  const { syncCastDataFromSchedule } = useProjectStore();
+  const scheduleProcessingTriggered = useRef(false);
+
+  useEffect(() => {
+    // Only start if schedule exists, is pending, and not already processing
+    if (
+      schedule &&
+      schedule.status === 'pending' &&
+      !isProcessingStage2 &&
+      (!schedule.days || schedule.days.length === 0) &&
+      !scheduleProcessingTriggered.current
+    ) {
+      scheduleProcessingTriggered.current = true;
+      console.log('[App] Starting background schedule Stage 2 processing...');
+      startStage2Processing();
+    }
+  }, [schedule, isProcessingStage2, startStage2Processing]);
+
+  // Auto-sync cast data after Stage 2 processing completes
+  const scheduleSyncTriggered = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (
+      schedule &&
+      schedule.status === 'complete' &&
+      !isProcessingStage2 &&
+      schedule.days &&
+      schedule.days.length > 0 &&
+      currentProject &&
+      scheduleSyncTriggered.current !== schedule.id // Only sync once per schedule
+    ) {
+      scheduleSyncTriggered.current = schedule.id;
+      // Get fresh schedule from store for sync
+      const freshSchedule = useScheduleStore.getState().schedule;
+      if (freshSchedule) {
+        console.log('[App] Schedule processing complete, auto-syncing cast data...');
+        syncCastDataFromSchedule(freshSchedule, {
+          createMissingCharacters: true,
+          overwriteExisting: false,
+          autoConfirm: true,
+        });
+      }
+    }
+  }, [schedule?.status, schedule?.days?.length, schedule?.id, isProcessingStage2, currentProject, syncCastDataFromSchedule]);
 
   // Handle project ready (from Home component)
   const handleProjectReady = () => {
