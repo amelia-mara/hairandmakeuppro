@@ -205,12 +205,14 @@ export function ProjectHubScreen() {
     const store = useProjectStore.getState();
     if (store.hasSavedProject(membership.projectId)) {
       store.restoreSavedProject(membership.projectId);
+      store.setActiveTab('today'); // Always open to Today page
       return;
     }
 
     // Check if the current project in store already matches (user may be re-opening same project)
     if (store.currentProject?.id === membership.projectId) {
-      // Already loaded, nothing to do
+      // Already loaded, just reset to Today page
+      store.setActiveTab('today');
       return;
     }
 
@@ -226,6 +228,7 @@ export function ProjectHubScreen() {
         name: membership.projectName,
       };
       store.setProject(updatedProject);
+      store.setActiveTab('today'); // Always open to Today page
       return;
     }
 
@@ -234,6 +237,7 @@ export function ProjectHubScreen() {
     // This is safer than creating an empty project which would lose data
     const project = createProjectFromMembership(membership);
     store.setProjectNeedsSetup(project);
+    store.setActiveTab('today'); // Always open to Today page
   };
 
   const handleCreateClick = () => {
