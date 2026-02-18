@@ -327,10 +327,9 @@ export function Today({ onSceneSelect }: TodayProps) {
       return parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
     };
 
-    // Get completed scenes sorted by shoot order
-    const completedScenes = callSheet.scenes
-      .filter(s => s.status === 'wrapped' && s.completedAt)
-      .sort((a, b) => a.shootOrder - b.shootOrder);
+    // Get scenes sorted by shoot order
+    const sortedScenes = [...callSheet.scenes].sort((a, b) => a.shootOrder - b.shootOrder);
+    const completedScenes = sortedScenes.filter(s => s.status === 'wrapped' && s.completedAt);
 
     if (completedScenes.length === 0) {
       return { status: 'not-started' as const, completedCount: 0, totalCount: callSheet.scenes.length };
@@ -339,7 +338,7 @@ export function Today({ onSceneSelect }: TodayProps) {
     // Get the last completed scene
     const lastCompleted = completedScenes[completedScenes.length - 1];
 
-    // Parse the expected end time from estimatedTime (e.g., "08:20 - 08:40" -> 08:40)
+    // Check if we finished ahead: compare last completed scene's actual time vs expected END time
     let expectedEndMinutes: number | null = null;
     if (lastCompleted.estimatedTime) {
       const endTimeMatch = lastCompleted.estimatedTime.match(/-\s*(\d{1,2}:\d{2})/);
@@ -348,24 +347,60 @@ export function Today({ onSceneSelect }: TodayProps) {
       }
     }
 
-    // If no expected time, we can't calculate
-    if (expectedEndMinutes === null) {
+    // Get actual completion time from the completedAt timestamp
+    const completedAt = new Date(lastCompleted.completedAt!);
+    const completionMinutes = completedAt.getHours() * 60 + completedAt.getMinutes();
+
+    // If we finished before expected end time, we're ahead
+    if (expectedEndMinutes !== null && completionMinutes < expectedEndMinutes - 2) {
+      const aheadMinutes = expectedEndMinutes - completionMinutes;
+      return {
+        status: 'ahead' as const,
+        diffMinutes: aheadMinutes,
+        completedCount: completedScenes.length,
+        totalCount: callSheet.scenes.length,
+      };
+    }
+
+    // Find the next upcoming scene (first scene not wrapped)
+    const nextScene = sortedScenes.find(s => s.status !== 'wrapped');
+
+    if (!nextScene) {
+      // All scenes completed
+      return { status: 'completed' as const, completedCount: completedScenes.length, totalCount: callSheet.scenes.length };
+    }
+
+    // Get next scene's expected START time
+    let nextStartMinutes: number | null = null;
+    if (nextScene.estimatedTime) {
+      const startTimeMatch = nextScene.estimatedTime.match(/^(\d{1,2}:\d{2})/);
+      if (startTimeMatch) {
+        nextStartMinutes = parseTimeToMinutes(startTimeMatch[1]);
+      }
+    }
+
+    // If no expected time for next scene, we can't calculate behind status
+    if (nextStartMinutes === null) {
       return { status: 'unknown' as const, completedCount: completedScenes.length, totalCount: callSheet.scenes.length };
     }
 
-    // Get actual completion time from the completedAt timestamp
-    const completedAt = new Date(lastCompleted.completedAt!);
-    const actualMinutes = completedAt.getHours() * 60 + completedAt.getMinutes();
+    // Get current time
+    const now = new Date();
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
-    // Calculate difference (positive = behind, negative = ahead)
-    const diffMinutes = actualMinutes - expectedEndMinutes;
+    // Only show "behind" if the next scene's start time has passed
+    if (nowMinutes > nextStartMinutes + 2) {
+      const behindMinutes = nowMinutes - nextStartMinutes;
+      return {
+        status: 'behind' as const,
+        diffMinutes: behindMinutes,
+        completedCount: completedScenes.length,
+        totalCount: callSheet.scenes.length,
+      };
+    }
 
-    return {
-      status: diffMinutes > 5 ? 'behind' as const : diffMinutes < -5 ? 'ahead' as const : 'on-time' as const,
-      diffMinutes: Math.abs(diffMinutes),
-      completedCount: completedScenes.length,
-      totalCount: callSheet.scenes.length,
-    };
+    // We're not ahead and not behind - just show scene count
+    return { status: 'on-track' as const, completedCount: completedScenes.length, totalCount: callSheet.scenes.length };
   }, [callSheet?.scenes, callSheet?.firstShotTime]);
 
   // Update scene status - persists to store and updates local state for immediate UI feedback
@@ -532,22 +567,13 @@ export function Today({ onSceneSelect }: TodayProps) {
                     )}>
                       {dayTypeAbbrev}
                     </span>
-                    {/* Schedule Status Indicator */}
-                    {scheduleStatus && scheduleStatus.status !== 'not-started' && scheduleStatus.status !== 'unknown' && (
+                    {/* Schedule Status Indicator - only show ahead or behind */}
+                    {scheduleStatus && (scheduleStatus.status === 'ahead' || scheduleStatus.status === 'behind') && (
                       <div className={clsx(
                         'flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium',
-                        scheduleStatus.status === 'on-time' && 'bg-green-50 text-green-600',
                         scheduleStatus.status === 'ahead' && 'bg-blue-50 text-blue-600',
                         scheduleStatus.status === 'behind' && 'bg-red-50 text-red-600'
                       )}>
-                        {scheduleStatus.status === 'on-time' && (
-                          <>
-                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span>On Time</span>
-                          </>
-                        )}
                         {scheduleStatus.status === 'ahead' && (
                           <>
                             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -565,11 +591,6 @@ export function Today({ onSceneSelect }: TodayProps) {
                           </>
                         )}
                       </div>
-                    )}
-                    {scheduleStatus && scheduleStatus.status === 'not-started' && (
-                      <span className="text-xs text-text-muted">
-                        {scheduleStatus.totalCount} scenes
-                      </span>
                     )}
                   </div>
                 );
