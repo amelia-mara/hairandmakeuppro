@@ -1136,16 +1136,12 @@ function ScheduleViewer({ onBack }: ViewerProps) {
     startStage2Processing,
     getCastNamesForNumbers,
   } = useScheduleStore();
-  const { currentProject, syncCastDataFromSchedule, canSyncCastData } = useProjectStore();
+  const { currentProject, syncCastDataFromSchedule } = useProjectStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const revisionInputRef = useRef<HTMLInputElement>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [viewMode, setViewMode] = useState<'pdf' | 'breakdown'>('pdf');
   const [expandedDay, setExpandedDay] = useState<number | null>(null);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [syncResult, setSyncResult] = useState<{ scenesUpdated: number; charactersCreated: number } | null>(null);
-  const [syncError, setSyncError] = useState<string | null>(null);
-  const [showSyncOptions, setShowSyncOptions] = useState(false);
   const [scheduleAmendmentResult, setScheduleAmendmentResult] = useState<ScheduleAmendmentResult | null>(null);
   const [isProcessingRevision, setIsProcessingRevision] = useState(false);
 
@@ -1231,10 +1227,6 @@ function ScheduleViewer({ onBack }: ViewerProps) {
   const handleSyncCastData = (options?: { createMissingCharacters?: boolean; overwriteExisting?: boolean; autoConfirm?: boolean }) => {
     if (!schedule || !currentProject) return;
 
-    setIsSyncing(true);
-    setSyncError(null);
-    setSyncResult(null);
-
     try {
       const result = syncCastDataFromSchedule(schedule, {
         createMissingCharacters: options?.createMissingCharacters ?? true,
@@ -1243,27 +1235,20 @@ function ScheduleViewer({ onBack }: ViewerProps) {
       });
 
       if (result) {
-        setSyncResult({
+        console.log('[ScheduleViewer] Cast data synced:', {
           scenesUpdated: result.scenesUpdated,
           charactersCreated: result.charactersCreated,
         });
         if (result.errors.length > 0) {
           console.warn('[ScheduleViewer] Sync had some errors:', result.errors);
         }
-      } else {
-        const check = canSyncCastData(schedule);
-        setSyncError(check.reason || 'Unable to sync cast data');
       }
     } catch (error) {
-      setSyncError(error instanceof Error ? error.message : 'Failed to sync cast data');
-    } finally {
-      setIsSyncing(false);
-      setShowSyncOptions(false);
+      console.error('[ScheduleViewer] Failed to sync cast data:', error);
     }
   };
 
   const hasBreakdownData = schedule?.days && schedule.days.length > 0;
-  const syncStatus = schedule ? canSyncCastData(schedule) : { canSync: false };
 
   return (
     <>
@@ -1476,43 +1461,6 @@ function ScheduleViewer({ onBack }: ViewerProps) {
               </div>
             )}
 
-            {/* Cast Sync - compact inline bar */}
-            {hasBreakdownData && currentProject && (
-              <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg border border-border/50">
-                <span className="text-xs text-text-muted flex-shrink-0">Cast Sync</span>
-                {syncResult && (
-                  <span className="flex items-center gap-1 text-[10px] text-green-600">
-                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                    {syncResult.scenesUpdated} synced
-                  </span>
-                )}
-                {syncError && (
-                  <span className="text-[10px] text-red-500 truncate flex-1">{syncError}</span>
-                )}
-                <div className="flex items-center gap-1 ml-auto">
-                  <button
-                    onClick={() => handleSyncCastData({ autoConfirm: true })}
-                    disabled={isSyncing || !syncStatus.canSync}
-                    className="px-2.5 py-1 text-[10px] font-medium rounded gold-gradient text-white active:scale-[0.98] transition-transform disabled:opacity-50"
-                  >
-                    {isSyncing ? 'Syncing...' : syncResult ? 'Re-sync' : 'Sync'}
-                  </button>
-                  <button
-                    onClick={() => setShowSyncOptions(true)}
-                    disabled={isSyncing || !syncStatus.canSync}
-                    className="p-1 text-text-muted active:text-gold transition-colors disabled:opacity-50"
-                    title="Sync Options"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            )}
-
             {/* Revision processing indicator */}
             {isProcessingRevision && (
               <div className="card p-4">
@@ -1687,47 +1635,6 @@ function ScheduleViewer({ onBack }: ViewerProps) {
                 Delete
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Sync Options Modal */}
-      {showSyncOptions && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-card rounded-xl p-4 max-w-sm w-full">
-            <h3 className="text-base font-semibold text-text-primary mb-2">Sync Options</h3>
-            <p className="text-sm text-text-muted mb-4">
-              Choose how to sync cast data from the schedule to your breakdown.
-            </p>
-            <div className="space-y-2 mb-4">
-              <button
-                onClick={() => handleSyncCastData({ autoConfirm: true, createMissingCharacters: true, overwriteExisting: false })}
-                className="w-full px-4 py-3 text-left rounded-lg border border-border hover:border-gold/50 active:bg-gray-50 transition-colors"
-              >
-                <span className="text-sm font-medium text-text-primary block">Add New Only</span>
-                <span className="text-xs text-text-muted">Only update scenes without confirmed characters</span>
-              </button>
-              <button
-                onClick={() => handleSyncCastData({ autoConfirm: true, createMissingCharacters: true, overwriteExisting: true })}
-                className="w-full px-4 py-3 text-left rounded-lg border border-border hover:border-gold/50 active:bg-gray-50 transition-colors"
-              >
-                <span className="text-sm font-medium text-text-primary block">Overwrite All</span>
-                <span className="text-xs text-text-muted">Replace all scene characters with schedule data</span>
-              </button>
-              <button
-                onClick={() => handleSyncCastData({ autoConfirm: false, createMissingCharacters: true, overwriteExisting: false })}
-                className="w-full px-4 py-3 text-left rounded-lg border border-border hover:border-gold/50 active:bg-gray-50 transition-colors"
-              >
-                <span className="text-sm font-medium text-text-primary block">Suggest Only</span>
-                <span className="text-xs text-text-muted">Add as suggestions for manual confirmation</span>
-              </button>
-            </div>
-            <button
-              onClick={() => setShowSyncOptions(false)}
-              className="w-full px-4 py-2.5 rounded-button text-sm font-medium text-text-primary bg-gray-100 active:bg-gray-200 transition-colors"
-            >
-              Cancel
-            </button>
           </div>
         </div>
       )}
