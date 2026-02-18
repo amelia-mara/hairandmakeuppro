@@ -1139,7 +1139,7 @@ function ScheduleViewer({ onBack }: ViewerProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const revisionInputRef = useRef<HTMLInputElement>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [viewMode, setViewMode] = useState<'pdf' | 'breakdown'>('pdf');
+  const [viewMode, setViewMode] = useState<'pdf' | 'breakdown'>('breakdown');
   const [expandedDay, setExpandedDay] = useState<number | null>(null);
   const [scheduleAmendmentResult, setScheduleAmendmentResult] = useState<ScheduleAmendmentResult | null>(null);
   const [isProcessingRevision, setIsProcessingRevision] = useState(false);
