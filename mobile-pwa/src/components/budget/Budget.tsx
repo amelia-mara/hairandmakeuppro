@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { formatShortDate } from '@/utils/helpers';
 import {
   CURRENCIES,
@@ -29,24 +29,15 @@ export interface BudgetSummary {
   byCategory: Record<ExpenseCategory, number>;
 }
 
-// Empty initial state for real projects
-const emptyBudgetSummary: BudgetSummary = {
-  totalBudget: 0,
-  totalSpent: 0,
-  byCategory: {
-    'Kit Supplies': 0,
-    'Consumables': 0,
-    'Transportation': 0,
-    'Equipment': 0,
-    'Other': 0,
-  },
-};
-
 const CATEGORIES: ExpenseCategory[] = ['Kit Supplies', 'Consumables', 'Transportation', 'Equipment', 'Other'];
+
+// Local storage key for budget data
+const BUDGET_STORAGE_KEY = 'hairandmakeup_budget';
 
 export function Budget() {
   const [receipts, setReceipts] = useState<Receipt[]>([]);
-  const [summary] = useState<BudgetSummary>(emptyBudgetSummary);
+  const [budgetTotal, setBudgetTotal] = useState<number>(0);
+  const [showBudgetEdit, setShowBudgetEdit] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [showAddReceipt, setShowAddReceipt] = useState(false);
   const [showScanOptions, setShowScanOptions] = useState(false);
@@ -55,11 +46,55 @@ export function Budget() {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
+  // Load saved data on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(BUDGET_STORAGE_KEY);
+      if (saved) {
+        const data = JSON.parse(saved);
+        if (data.budgetTotal !== undefined) setBudgetTotal(data.budgetTotal);
+        if (data.receipts) setReceipts(data.receipts);
+        if (data.currency) setCurrency(data.currency);
+      }
+    } catch (e) {
+      console.error('Failed to load budget data:', e);
+    }
+  }, []);
+
+  // Save data when it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(BUDGET_STORAGE_KEY, JSON.stringify({
+        budgetTotal,
+        receipts,
+        currency,
+      }));
+    } catch (e) {
+      console.error('Failed to save budget data:', e);
+    }
+  }, [budgetTotal, receipts, currency]);
+
   // Get current currency info
   const currentCurrency = getCurrencyByCode(currency);
 
-  const remainingBudget = summary.totalBudget - summary.totalSpent;
-  const percentUsed = summary.totalBudget > 0 ? (summary.totalSpent / summary.totalBudget) * 100 : 0;
+  // Calculate totals from receipts
+  const { totalSpent, byCategory } = useMemo(() => {
+    const spent = receipts.reduce((sum, r) => sum + r.amount, 0);
+    const cats: Record<ExpenseCategory, number> = {
+      'Kit Supplies': 0,
+      'Consumables': 0,
+      'Transportation': 0,
+      'Equipment': 0,
+      'Other': 0,
+    };
+    receipts.forEach(r => {
+      cats[r.category] += r.amount;
+    });
+    return { totalSpent: spent, byCategory: cats };
+  }, [receipts]);
+
+  const remainingBudget = budgetTotal - totalSpent;
+  const percentUsed = budgetTotal > 0 ? (totalSpent / budgetTotal) * 100 : 0;
 
   // Handle receipt image capture
   const handleScanReceipt = () => {
@@ -163,33 +198,58 @@ export function Budget() {
         <div className="card">
           <div className="flex items-center justify-between mb-3">
             <h2 className="section-header">SPENDING OVERVIEW</h2>
-            <span className="text-xs text-text-muted">This Production</span>
+            <button
+              onClick={() => setShowBudgetEdit(true)}
+              className="flex items-center gap-1 text-xs text-gold font-medium"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" />
+              </svg>
+              {budgetTotal > 0 ? 'Edit Budget' : 'Set Budget'}
+            </button>
           </div>
 
           {/* Progress bar */}
           <div className="relative h-3 bg-gray-100 rounded-full overflow-hidden mb-3">
-            <div
-              className={`absolute left-0 top-0 h-full rounded-full transition-all ${
-                percentUsed > 90 ? 'bg-error' : percentUsed > 70 ? 'bg-amber-500' : 'bg-gold'
-              }`}
-              style={{ width: `${Math.min(percentUsed, 100)}%` }}
-            />
+            {budgetTotal > 0 ? (
+              <div
+                className={`absolute left-0 top-0 h-full rounded-full transition-all ${
+                  percentUsed > 90 ? 'bg-error' : percentUsed > 70 ? 'bg-amber-500' : 'bg-gold'
+                }`}
+                style={{ width: `${Math.min(percentUsed, 100)}%` }}
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-[10px] text-text-light">Set a budget to track spending</span>
+              </div>
+            )}
           </div>
 
           <div className="flex justify-between items-end">
             <div>
               <span className="text-2xl font-bold text-text-primary">
-                {formatCurrency(summary.totalSpent, currency)}
+                {formatCurrency(totalSpent, currency)}
               </span>
               <span className="text-sm text-text-muted ml-1">spent</span>
             </div>
             <div className="text-right">
-              <span className={`text-lg font-semibold ${
-                remainingBudget < 0 ? 'text-error' : 'text-green-600'
-              }`}>
-                {formatCurrency(remainingBudget, currency)}
-              </span>
-              <span className="text-xs text-text-muted block">remaining of {formatCurrency(summary.totalBudget, currency)}</span>
+              {budgetTotal > 0 ? (
+                <>
+                  <span className={`text-lg font-semibold ${
+                    remainingBudget < 0 ? 'text-error' : 'text-green-600'
+                  }`}>
+                    {formatCurrency(remainingBudget, currency)}
+                  </span>
+                  <span className="text-xs text-text-muted block">remaining of {formatCurrency(budgetTotal, currency)}</span>
+                </>
+              ) : (
+                <button
+                  onClick={() => setShowBudgetEdit(true)}
+                  className="text-sm text-gold font-medium"
+                >
+                  Tap to set budget
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -198,9 +258,9 @@ export function Budget() {
         <div className="card">
           <h2 className="section-header mb-3">BY CATEGORY</h2>
           <div className="space-y-2">
-            {CATEGORIES.filter(cat => summary.byCategory[cat] > 0).map((category) => {
-              const amount = summary.byCategory[category];
-              const catPercent = (amount / summary.totalSpent) * 100;
+            {CATEGORIES.filter(cat => byCategory[cat] > 0).map((category) => {
+              const amount = byCategory[category];
+              const catPercent = totalSpent > 0 ? (amount / totalSpent) * 100 : 0;
               return (
                 <div key={category} className="flex items-center gap-3">
                   <div className="flex-1">
@@ -218,6 +278,9 @@ export function Budget() {
                 </div>
               );
             })}
+            {totalSpent === 0 && (
+              <p className="text-xs text-text-light text-center py-2">No expenses recorded yet</p>
+            )}
           </div>
         </div>
 
@@ -325,6 +388,19 @@ export function Budget() {
           onChooseFromLibrary={handleChooseFromLibrary}
           onManualEntry={handleManualEntry}
           onClose={() => setShowScanOptions(false)}
+        />
+      )}
+
+      {/* Budget Edit Modal */}
+      {showBudgetEdit && (
+        <BudgetEditModal
+          currentBudget={budgetTotal}
+          currencySymbol={currentCurrency.symbol}
+          onSave={(amount) => {
+            setBudgetTotal(amount);
+            setShowBudgetEdit(false);
+          }}
+          onClose={() => setShowBudgetEdit(false)}
         />
       )}
     </div>
@@ -766,6 +842,78 @@ function AddReceiptModal({ imageUri, currencySymbol, onAdd, onClose }: AddReceip
               disabled={!vendor || !amount || isExtracting}
             >
               {isExtracting ? 'Analyzing...' : 'Add Receipt'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// Budget Edit Modal
+interface BudgetEditModalProps {
+  currentBudget: number;
+  currencySymbol: string;
+  onSave: (amount: number) => void;
+  onClose: () => void;
+}
+
+function BudgetEditModal({ currentBudget, currencySymbol, onSave, onClose }: BudgetEditModalProps) {
+  const [amount, setAmount] = useState(currentBudget > 0 ? currentBudget.toString() : '');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const value = parseFloat(amount);
+    if (!isNaN(value) && value >= 0) {
+      onSave(value);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50" onClick={onClose}>
+      <div
+        className="bg-card rounded-t-2xl w-full max-w-lg animate-slideUp"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="px-4 py-3 border-b border-border">
+          <h2 className="text-lg font-semibold text-text-primary text-center">Set Budget Total</h2>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+          <p className="text-sm text-text-muted">
+            Enter your total budget for this production. Expenses will be tracked against this amount.
+          </p>
+
+          <div>
+            <label className="field-label block mb-1.5">Budget Amount</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-lg">{currencySymbol}</span>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="input-field w-full pl-8 text-2xl font-bold"
+                placeholder="0.00"
+                autoFocus
+              />
+            </div>
+          </div>
+
+          <div className="pt-2 flex gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-3 rounded-button bg-gray-100 text-text-primary font-medium"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="flex-1 px-4 py-3 rounded-button gold-gradient text-white font-medium"
+            >
+              Save Budget
             </button>
           </div>
         </form>
