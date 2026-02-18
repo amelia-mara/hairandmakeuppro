@@ -1329,28 +1329,28 @@ function ScheduleViewer({ onBack }: ViewerProps) {
             )}
           </div>
 
-          {/* View toggle - PDF / Breakdown */}
+          {/* View toggle - Breakdown / PDF */}
           {schedule && (
             <div className="px-4 pb-3 flex gap-1 bg-card">
-              <button
-                onClick={() => setViewMode('pdf')}
-                className={`flex-1 py-2 text-xs font-medium rounded-lg transition-colors ${
-                  viewMode === 'pdf'
-                    ? 'bg-text-primary text-white'
-                    : 'bg-gray-100 text-text-muted'
-                }`}
-              >
-                PDF
-              </button>
               <button
                 onClick={() => setViewMode('breakdown')}
                 className={`flex-1 py-2 text-xs font-medium rounded-lg transition-colors ${
                   viewMode === 'breakdown'
-                    ? 'bg-text-primary text-white'
+                    ? 'gold-gradient text-white'
                     : 'bg-gray-100 text-text-muted'
                 }`}
               >
                 Breakdown
+              </button>
+              <button
+                onClick={() => setViewMode('pdf')}
+                className={`flex-1 py-2 text-xs font-medium rounded-lg transition-colors ${
+                  viewMode === 'pdf'
+                    ? 'gold-gradient text-white'
+                    : 'bg-gray-100 text-text-muted'
+                }`}
+              >
+                PDF
               </button>
             </div>
           )}
@@ -1410,24 +1410,21 @@ function ScheduleViewer({ onBack }: ViewerProps) {
             </button>
           </div>
         ) : viewMode === 'pdf' ? (
-          /* Schedule PDF Viewer */
-          <div className="space-y-4">
-            {schedule.pdfUri ? (
-              <div className="card p-0 overflow-hidden">
-                <iframe
-                  src={schedule.pdfUri}
-                  className="w-full h-[calc(100vh-320px)] min-h-[400px] border-0"
-                  title="Schedule PDF"
-                />
-              </div>
-            ) : (
-              <div className="card">
-                <p className="text-sm text-text-muted text-center py-4">
-                  PDF preview not available
-                </p>
-              </div>
-            )}
-          </div>
+          /* Schedule PDF Viewer - full page */
+          schedule.pdfUri ? (
+            <iframe
+              src={schedule.pdfUri}
+              className="w-full h-[calc(100vh-180px)] border-0 -mx-4 -mt-4"
+              style={{ width: 'calc(100% + 2rem)' }}
+              title="Schedule PDF"
+            />
+          ) : (
+            <div className="card">
+              <p className="text-sm text-text-muted text-center py-4">
+                PDF preview not available
+              </p>
+            </div>
+          )
         ) : (
           /* Breakdown View */
           <div className="space-y-4">
