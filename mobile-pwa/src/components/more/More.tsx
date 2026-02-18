@@ -916,7 +916,7 @@ function ScriptViewer({ onBack }: ViewerProps) {
                   disabled={isUploading}
                   className="ml-2 px-2 py-1 text-[10px] font-medium text-gold border border-gold rounded-lg active:bg-gold/10 transition-colors disabled:opacity-50"
                 >
-                  {isUploading ? 'Processing...' : 'Upload Revision'}
+                  {isUploading ? 'Processing...' : 'Upload New Draft'}
                 </button>
                 <input
                   ref={fileInputRef}
@@ -1284,6 +1284,16 @@ function ScheduleViewer({ onBack }: ViewerProps) {
             </div>
             {schedule ? (
               <div className="flex items-center gap-2">
+                {/* Upload New Draft button - shown when breakdown data exists */}
+                {hasBreakdownData && (
+                  <button
+                    onClick={() => revisionInputRef.current?.click()}
+                    disabled={isUploading || isProcessingStage2 || isProcessingRevision}
+                    className="px-2 py-1 text-[10px] font-medium text-gold border border-gold rounded-lg active:bg-gold/10 transition-colors disabled:opacity-50"
+                  >
+                    {isProcessingRevision ? 'Processing...' : 'Upload New Draft'}
+                  </button>
+                )}
                 <button
                   onClick={() => setShowDeleteConfirm(true)}
                   className="p-2 text-red-500 active:opacity-70 transition-opacity touch-manipulation"
@@ -1539,38 +1549,17 @@ function ScheduleViewer({ onBack }: ViewerProps) {
               </div>
             )}
 
-            {/* Upload Revision - shown when breakdown data exists */}
-            {hasBreakdownData && !isProcessingRevision && (
-              <div className="card p-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="text-sm font-semibold text-text-primary">Update Schedule</h3>
-                    <p className="text-xs text-text-muted mt-0.5">
-                      Upload a revised schedule to compare changes
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => revisionInputRef.current?.click()}
-                    disabled={isUploading || isProcessingStage2}
-                    className="px-4 py-2 text-xs font-medium rounded-lg bg-blue-50 text-blue-700 border border-blue-200 active:scale-[0.98] transition-transform disabled:opacity-50"
-                  >
-                    Upload Revision
-                  </button>
-                </div>
-              </div>
-            )}
-
             {/* Revision processing indicator */}
             {isProcessingRevision && (
               <div className="card p-4">
                 <div className="flex items-center gap-3 mb-3">
-                  <svg className="w-5 h-5 animate-spin text-blue-600" fill="none" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 animate-spin text-gold" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
                   <div>
                     <span className="text-sm font-medium text-text-primary block">
-                      Processing Revised Schedule...
+                      Processing New Draft...
                     </span>
                     <span className="text-xs text-text-muted">
                       {stage2Progress.message || (stage2Progress.total > 0
@@ -1582,7 +1571,7 @@ function ScheduleViewer({ onBack }: ViewerProps) {
                 {stage2Progress.total > 0 && (
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div
-                      className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                      className="gold-gradient h-2 rounded-full transition-all duration-300"
                       style={{ width: `${(stage2Progress.current / stage2Progress.total) * 100}%` }}
                     />
                   </div>
