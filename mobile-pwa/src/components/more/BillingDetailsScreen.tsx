@@ -1,18 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useBillingStore, formatSortCode, formatAccountNumber } from '@/stores/billingStore';
-import { useAuthStore } from '@/stores/authStore';
-import type { UserTier } from '@/types';
 
 interface BillingDetailsScreenProps {
   onBack: () => void;
   onUpgrade?: () => void;
 }
 
-// Tiers that can access full billing features
-const BILLING_TIERS: UserTier[] = ['supervisor', 'designer'];
-
-export function BillingDetailsScreen({ onBack, onUpgrade }: BillingDetailsScreenProps) {
-  const { user } = useAuthStore();
+export function BillingDetailsScreen({ onBack }: BillingDetailsScreenProps) {
   const {
     billingDetails,
     updatePersonalInfo,
@@ -26,9 +20,6 @@ export function BillingDetailsScreen({ onBack, onUpgrade }: BillingDetailsScreen
 
   const [showValidation, setShowValidation] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
-
-  // Check if user has access to billing features
-  const hasAccess = user && BILLING_TIERS.includes(user.tier);
 
   // Auto-save feedback
   useEffect(() => {
@@ -48,54 +39,6 @@ export function BillingDetailsScreen({ onBack, onUpgrade }: BillingDetailsScreen
 
   const validationErrors = showValidation ? getValidationErrors() : [];
   const isComplete = isBillingComplete();
-
-  // Restricted view for lower tiers
-  if (!hasAccess) {
-    return (
-      <>
-        <div className="sticky top-0 z-30 bg-card border-b border-border safe-top">
-          <div className="mobile-container">
-            <div className="h-14 px-4 flex items-center gap-3">
-              <button
-                onClick={onBack}
-                className="p-2 -ml-2 text-text-muted active:text-gold transition-colors touch-manipulation"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-              <h1 className="text-lg font-semibold text-text-primary">Billing Details</h1>
-            </div>
-          </div>
-        </div>
-
-        <div className="mobile-container px-4 py-8">
-          <div className="text-center">
-            <div className="w-20 h-20 rounded-full bg-gold/10 flex items-center justify-center mx-auto mb-4">
-              <svg className="w-10 h-10 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
-              </svg>
-            </div>
-            <h2 className="text-xl font-semibold text-text-primary mb-2">
-              Invoice Generation
-            </h2>
-            <p className="text-text-muted mb-6 max-w-xs mx-auto">
-              Upgrade to Supervisor or Designer to generate professional invoices with your billing details.
-            </p>
-            <button
-              onClick={onUpgrade}
-              className="px-6 py-2.5 rounded-button gold-gradient text-white text-sm font-medium active:scale-95 transition-transform"
-            >
-              Upgrade to Supervisor
-            </button>
-            <p className="text-xs text-text-muted mt-3">
-              Starting at £9.99/month
-            </p>
-          </div>
-        </div>
-      </>
-    );
-  }
 
   return (
     <>
