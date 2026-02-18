@@ -4,7 +4,7 @@ import { useCallSheetStore } from '@/stores/callSheetStore';
 import { SceneScriptModal } from '@/components/scenes/SceneScriptModal';
 import { formatShortDate } from '@/utils/helpers';
 import type { ShootingSceneStatus, SceneFilmingStatus, CallSheetScene, Scene, Character, Look } from '@/types';
-import { SCENE_FILMING_STATUS_CONFIG, parseDayTypeFromString, DAY_TYPE_LABELS } from '@/types';
+import { SCENE_FILMING_STATUS_CONFIG, parseDayTypeFromString } from '@/types';
 import { clsx } from 'clsx';
 
 interface TodayProps {
@@ -509,22 +509,16 @@ export function Today({ onSceneSelect }: TodayProps) {
               {/* Working Day Type Badge + Schedule Status */}
               {(() => {
                 const dayTypeAbbrev = parseDayTypeFromString(callSheet.dayType);
-                const dayTypeLabel = DAY_TYPE_LABELS[dayTypeAbbrev];
                 return (
                   <div className="mb-3 pb-3 border-b border-border/50 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className={clsx(
-                        'px-2 py-0.5 text-xs font-bold rounded',
-                        dayTypeAbbrev === 'CWD' && 'bg-amber-100 text-amber-700',
-                        dayTypeAbbrev === 'SCWD' && 'bg-orange-100 text-orange-700',
-                        dayTypeAbbrev === 'SWD' && 'bg-blue-100 text-blue-700'
-                      )}>
-                        {dayTypeAbbrev}
-                      </span>
-                      <span className="text-xs text-text-muted">
-                        {dayTypeLabel}
-                      </span>
-                    </div>
+                    <span className={clsx(
+                      'px-2 py-0.5 text-xs font-bold rounded',
+                      dayTypeAbbrev === 'CWD' && 'bg-amber-100 text-amber-700',
+                      dayTypeAbbrev === 'SCWD' && 'bg-orange-100 text-orange-700',
+                      dayTypeAbbrev === 'SWD' && 'bg-blue-100 text-blue-700'
+                    )}>
+                      {dayTypeAbbrev}
+                    </span>
                     {/* Schedule Status Indicator */}
                     {scheduleStatus && scheduleStatus.status !== 'not-started' && scheduleStatus.status !== 'unknown' && (
                       <div className={clsx(
