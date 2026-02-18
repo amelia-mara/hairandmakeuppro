@@ -72,8 +72,16 @@ interface TodayProps {
   onNavigateToTab?: (tab: NavTab) => void;
 }
 
+// Interface for unmatched scene modal
+interface UnmatchedSceneInfo {
+  sceneNumber: string;
+  character: Character;
+  callSheetScene: CallSheetScene;
+  suggestedMergeScenes: Scene[]; // Scenes that might be related (e.g., "15" for "15pt2")
+}
+
 export function Today({ onSceneSelect, onNavigateToTab }: TodayProps) {
-  const { currentProject, updateSceneFilmingStatus: syncFilmingStatus } = useProjectStore();
+  const { currentProject, updateSceneFilmingStatus: syncFilmingStatus, addScene, addCharacterToScene } = useProjectStore();
 
   // Subscribe to actual state values from call sheet store for proper reactivity
   const callSheets = useCallSheetStore(state => state.callSheets);
@@ -144,6 +152,9 @@ export function Today({ onSceneSelect, onNavigateToTab }: TodayProps) {
 
   // State for scene script modal
   const [scriptModalScene, setScriptModalScene] = useState<Scene | null>(null);
+
+  // State for unmatched scene modal (when scene from call sheet doesn't exist in breakdown)
+  const [unmatchedSceneInfo, setUnmatchedSceneInfo] = useState<UnmatchedSceneInfo | null>(null);
 
   // File upload ref and handler
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -585,7 +596,8 @@ export function Today({ onSceneSelect, onNavigateToTab }: TodayProps) {
 
   // Handle character tap - navigate to continuity tracking for this character
   // Works even when scene doesn't match by finding a valid scene for the character
-  const handleCharacterTap = (character: Character, callSheetSceneNumber: string) => {
+  // For unmatched scenes, shows modal to add scene or merge with existing
+  const handleCharacterTap = (character: Character, callSheetSceneNumber: string, callSheetScene: CallSheetScene) => {
     // First try to find a matching scene from the call sheet
     const matchedScene = getSceneData(callSheetSceneNumber);
     if (matchedScene) {
@@ -594,21 +606,31 @@ export function Today({ onSceneSelect, onNavigateToTab }: TodayProps) {
       return;
     }
 
-    // If no scene match, try to find any scene this character is in
-    // so we can still navigate to track their continuity
+    // Scene doesn't exist in breakdown - find suggested scenes to merge with
+    // Look for scenes with similar numbers (e.g., "15" for "15pt2")
+    const suggestedMergeScenes: Scene[] = [];
     if (currentProject) {
-      const sceneWithCharacter = currentProject.scenes.find(s =>
-        s.characters.includes(character.id)
-      );
-      if (sceneWithCharacter) {
-        onSceneSelect(sceneWithCharacter.id);
-        return;
+      const possibleNumbers = splitCombinedSceneNumber(callSheetSceneNumber);
+      // Find scenes that might be related (same base number)
+      for (const scene of currentProject.scenes) {
+        const sceneNumbers = splitCombinedSceneNumber(scene.sceneNumber);
+        // Check if any of the possible numbers match
+        const hasMatch = possibleNumbers.some(pn =>
+          sceneNumbers.some(sn => sn === pn || sn.startsWith(pn) || pn.startsWith(sn))
+        );
+        if (hasMatch && !suggestedMergeScenes.includes(scene)) {
+          suggestedMergeScenes.push(scene);
+        }
       }
     }
 
-    // If character has no assigned scenes yet, we can't navigate anywhere
-    // In the future, we could add a character-only continuity view
-    console.log('[Today] Character has no assigned scenes, cannot navigate:', character.name);
+    // Show the unmatched scene modal
+    setUnmatchedSceneInfo({
+      sceneNumber: callSheetSceneNumber,
+      character,
+      callSheetScene,
+      suggestedMergeScenes,
+    });
   };
 
   return (
@@ -896,7 +918,7 @@ export function Today({ onSceneSelect, onNavigateToTab }: TodayProps) {
                     characters={characters}
                     getLookForCharacter={getLookForCharacter}
                     onTap={() => handleSceneTap(shootingScene.sceneNumber)}
-                    onCharacterTap={(char) => handleCharacterTap(char, shootingScene.sceneNumber)}
+                    onCharacterTap={(char) => handleCharacterTap(char, shootingScene.sceneNumber, shootingScene)}
                     onSynopsisClick={(scene) => setScriptModalScene(scene)}
                     onStatusChange={(status) => updateSceneStatus(shootingScene.sceneNumber, status)}
                     onFilmingStatusChange={(filmingStatus, notes) =>
@@ -927,6 +949,32 @@ export function Today({ onSceneSelect, onNavigateToTab }: TodayProps) {
         <SceneScriptModal
           scene={scriptModalScene}
           onClose={() => setScriptModalScene(null)}
+        />
+      )}
+
+      {/* Unmatched Scene Modal - shown when tapping character in scene that doesn't exist in breakdown */}
+      {unmatchedSceneInfo && (
+        <UnmatchedSceneModal
+          info={unmatchedSceneInfo}
+          onClose={() => setUnmatchedSceneInfo(null)}
+          onAddScene={(sceneData) => {
+            // Create new scene in breakdown
+            const newScene = addScene(sceneData);
+            // Add the character to this scene
+            addCharacterToScene(newScene.id, unmatchedSceneInfo.character.id);
+            // Close modal and navigate to the new scene
+            setUnmatchedSceneInfo(null);
+            onSceneSelect(newScene.id);
+          }}
+          onMergeWithScene={(targetScene) => {
+            // Add character to existing scene if not already there
+            if (!targetScene.characters.includes(unmatchedSceneInfo.character.id)) {
+              addCharacterToScene(targetScene.id, unmatchedSceneInfo.character.id);
+            }
+            // Close modal and navigate to that scene
+            setUnmatchedSceneInfo(null);
+            onSceneSelect(targetScene.id);
+          }}
         />
       )}
     </div>
@@ -1547,6 +1595,134 @@ const EmptyState = memo(function EmptyState({ hasAnyCallSheets, onUploadClick, i
       >
         {isUploading ? 'Uploading...' : 'Upload Call Sheet PDF'}
       </button>
+    </div>
+  );
+});
+
+// Unmatched Scene Modal - shown when scene from call sheet doesn't exist in breakdown
+interface UnmatchedSceneModalProps {
+  info: UnmatchedSceneInfo;
+  onClose: () => void;
+  onAddScene: (sceneData: Partial<Scene> & { sceneNumber: string }) => void;
+  onMergeWithScene: (targetScene: Scene) => void;
+}
+
+const UnmatchedSceneModal = memo(function UnmatchedSceneModal({
+  info,
+  onClose,
+  onAddScene,
+  onMergeWithScene,
+}: UnmatchedSceneModalProps) {
+  const { sceneNumber, character, callSheetScene, suggestedMergeScenes } = info;
+
+  // Build scene data from call sheet info
+  const handleAddScene = () => {
+    // Parse INT/EXT and location from setDescription
+    let intExt: 'INT' | 'EXT' = 'INT';
+    let slugline = callSheetScene.setDescription || `Scene ${sceneNumber}`;
+
+    const intExtMatch = callSheetScene.setDescription?.match(/^(INT|EXT)\./i);
+    if (intExtMatch) {
+      intExt = intExtMatch[1].toUpperCase() as 'INT' | 'EXT';
+    }
+
+    onAddScene({
+      sceneNumber,
+      slugline,
+      intExt,
+      timeOfDay: callSheetScene.dayNight?.toUpperCase() as 'DAY' | 'NIGHT' | undefined || 'DAY',
+      synopsis: callSheetScene.action,
+      characters: [character.id],
+    });
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md bg-card rounded-2xl overflow-hidden animate-slideUp"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="p-4 border-b border-border">
+          <h3 className="text-base font-semibold text-text-primary">
+            Scene {sceneNumber} Not in Breakdown
+          </h3>
+          <p className="text-xs text-text-muted mt-1">
+            This scene from the call sheet doesn't exist in your script breakdown.
+            Choose how to handle continuity for <span className="font-medium text-gold">{character.name}</span>.
+          </p>
+        </div>
+
+        {/* Options */}
+        <div className="py-2">
+          {/* Add as new scene */}
+          <button
+            onClick={handleAddScene}
+            className="w-full px-4 py-3.5 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors"
+          >
+            <div className="w-10 h-10 rounded-full bg-gold-100 flex items-center justify-center flex-shrink-0">
+              <svg className="w-5 h-5 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <span className="text-sm font-medium text-text-primary block">
+                Add Scene {sceneNumber} to Breakdown
+              </span>
+              <span className="text-xs text-text-muted">
+                Create a new scene and track continuity there
+              </span>
+            </div>
+            <svg className="w-5 h-5 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+
+          {/* Merge options */}
+          {suggestedMergeScenes.length > 0 && (
+            <>
+              <div className="px-4 py-2 border-t border-border/50 mt-1">
+                <span className="text-[10px] font-bold tracking-wider uppercase text-text-light">
+                  OR MERGE WITH EXISTING SCENE
+                </span>
+              </div>
+              {suggestedMergeScenes.map((scene) => (
+                <button
+                  key={scene.id}
+                  onClick={() => onMergeWithScene(scene)}
+                  className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors"
+                >
+                  <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
+                    <span className="text-sm font-bold text-blue-600">{scene.sceneNumber}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-medium text-text-primary block truncate">
+                      Merge with Scene {scene.sceneNumber}
+                    </span>
+                    <span className="text-xs text-text-muted truncate block">
+                      {scene.slugline}
+                    </span>
+                  </div>
+                  <svg className="w-5 h-5 text-text-muted flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              ))}
+            </>
+          )}
+        </div>
+
+        {/* Cancel */}
+        <button
+          onClick={onClose}
+          className="w-full p-4 text-center text-sm font-medium text-text-muted border-t border-border hover:bg-gray-50 transition-colors"
+        >
+          Cancel
+        </button>
+      </div>
     </div>
   );
 });

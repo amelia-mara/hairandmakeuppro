@@ -121,6 +121,10 @@ interface ProjectState {
   addSFXPhoto: (captureId: string, photo: Photo) => void;
   removeSFXPhoto: (captureId: string, photoId: string) => void;
 
+  // Actions - Scene Management
+  addScene: (sceneData: Partial<Scene> & { sceneNumber: string }) => Scene;
+  addCharacterToScene: (sceneId: string, characterId: string) => void;
+
   // Actions - Scene Completion
   markSceneComplete: (sceneId: string) => void;
   markSceneIncomplete: (sceneId: string) => void;
@@ -579,6 +583,63 @@ export const useProjectStore = create<ProjectState>()(
                   sfxReferencePhotos: capture.sfxDetails.sfxReferencePhotos.filter(p => p.id !== photoId),
                 },
               },
+            },
+          };
+        });
+      },
+
+      // Scene management
+      addScene: (sceneData) => {
+        const newScene: Scene = {
+          id: `scene-${sceneData.sceneNumber}-${Date.now()}`,
+          sceneNumber: sceneData.sceneNumber,
+          slugline: sceneData.slugline || `Scene ${sceneData.sceneNumber}`,
+          intExt: sceneData.intExt || 'INT',
+          timeOfDay: sceneData.timeOfDay || 'DAY',
+          synopsis: sceneData.synopsis,
+          scriptContent: sceneData.scriptContent,
+          characters: sceneData.characters || [],
+          isComplete: false,
+          characterConfirmationStatus: 'confirmed', // New scenes from call sheet are considered confirmed
+          shootingDay: sceneData.shootingDay,
+        };
+
+        set((state) => {
+          if (!state.currentProject) return state;
+
+          // Insert scene in order by scene number
+          const scenes = [...state.currentProject.scenes, newScene].sort((a, b) => {
+            // Extract numeric part for sorting
+            const numA = parseInt(a.sceneNumber.replace(/\D/g, '')) || 0;
+            const numB = parseInt(b.sceneNumber.replace(/\D/g, '')) || 0;
+            if (numA !== numB) return numA - numB;
+            // If same number, sort alphabetically
+            return a.sceneNumber.localeCompare(b.sceneNumber);
+          });
+
+          return {
+            currentProject: {
+              ...state.currentProject,
+              scenes,
+            },
+          };
+        });
+
+        return newScene;
+      },
+
+      addCharacterToScene: (sceneId, characterId) => {
+        set((state) => {
+          if (!state.currentProject) return state;
+
+          return {
+            currentProject: {
+              ...state.currentProject,
+              scenes: state.currentProject.scenes.map((s) =>
+                s.id === sceneId && !s.characters.includes(characterId)
+                  ? { ...s, characters: [...s.characters, characterId] }
+                  : s
+              ),
             },
           };
         });
