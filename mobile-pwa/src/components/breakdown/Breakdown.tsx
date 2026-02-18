@@ -5,7 +5,6 @@ import { CharacterAvatar } from '@/components/characters/CharacterAvatar';
 import { SceneScriptModal } from '@/components/scenes/SceneScriptModal';
 import {
   SceneCharacterConfirmation,
-  SceneCharacterStatus,
   CharacterConfirmationProgress,
 } from '@/components/breakdown/SceneCharacterConfirmation';
 import { AmendmentBadge } from '@/components/breakdown/AmendmentReviewModal';
@@ -535,7 +534,6 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
             getCapture={getCapture}
             getSceneProgress={getSceneProgress}
             onCharacterConfirm={(sceneId) => setCharacterConfirmSceneId(sceneId)}
-            allCharacters={currentProject?.characters || []}
             onFilmingStatusChange={handleFilmingStatusChange}
             onNotesModalOpen={handleNotesModalOpen}
             onDismissAmendment={(sceneId) => clearSingleSceneAmendment(sceneId)}
@@ -598,7 +596,6 @@ interface BreakdownListViewProps {
   getCapture: (sceneId: string, characterId: string) => SceneCapture | null | undefined;
   getSceneProgress: (scene: Scene) => { captured: number; total: number };
   onCharacterConfirm: (sceneId: string) => void;
-  allCharacters: Character[];
   onFilmingStatusChange: (sceneNumber: string, status: SceneFilmingStatus, notes?: string) => void;
   onNotesModalOpen: (sceneNumber: string, status: 'partial' | 'not-filmed') => void;
   onDismissAmendment: (sceneId: string) => void;
@@ -630,7 +627,6 @@ function BreakdownListView({
   getCapture,
   getSceneProgress,
   onCharacterConfirm,
-  allCharacters,
   onFilmingStatusChange,
   onNotesModalOpen,
   onDismissAmendment,
@@ -784,16 +780,21 @@ function BreakdownListView({
                 </button>
               )}
 
-              {/* Character confirmation status - show when not all confirmed or when showing status is useful */}
-              {(scene.characterConfirmationStatus !== 'confirmed' || characters.length === 0) && (
-                <div className="mt-2 pt-2 border-t border-border/30">
-                  <SceneCharacterStatus
-                    scene={scene}
-                    characters={allCharacters}
-                    onConfirmClick={() => onCharacterConfirm(scene.id)}
-                  />
-                </div>
-              )}
+              {/* Add/Edit characters button - always shown */}
+              <div className="mt-2 pt-2 border-t border-border/30">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCharacterConfirm(scene.id);
+                  }}
+                  className="inline-flex items-center gap-1 text-xs text-gold font-medium"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                  </svg>
+                  {characters.length > 0 ? 'Edit characters' : 'Add characters'}
+                </button>
+              </div>
             </div>
 
             {/* Expanded content */}
