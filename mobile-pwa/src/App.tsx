@@ -154,12 +154,13 @@ function AppContent() {
   const scheduleProcessingTriggered = useRef(false);
 
   useEffect(() => {
-    // Only start if schedule exists, is pending, and not already processing
+    // Start processing if schedule exists with no breakdown data and not already processing
+    // Handles both 'pending' status (new uploads) and 'complete' with empty days (legacy/incorrect status)
     if (
       schedule &&
-      schedule.status === 'pending' &&
       !isProcessingStage2 &&
       (!schedule.days || schedule.days.length === 0) &&
+      schedule.rawText && // Has raw text for Stage 2 to process
       !scheduleProcessingTriggered.current
     ) {
       scheduleProcessingTriggered.current = true;
