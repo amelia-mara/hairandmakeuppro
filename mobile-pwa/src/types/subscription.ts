@@ -1,5 +1,8 @@
 // Subscription Tier Types and Data for Checks Happy
 
+// Beta Mode - Set to false when ready to launch with pricing
+export const BETA_MODE = true;
+
 export type SubscriptionTier = 'trainee' | 'artist' | 'supervisor' | 'designer';
 export type BillingPeriod = 'monthly' | 'yearly' | 'per_project';
 export type SubscriptionStatus = 'active' | 'cancelled' | 'past_due' | 'trialing' | null;
@@ -316,8 +319,9 @@ export const getDowngradeWarnings = (fromTier: SubscriptionTier, toTier: Subscri
 };
 
 // Create default subscription data for new users
+// In beta mode, all users get Designer tier with full access
 export const createDefaultSubscription = (): SubscriptionData => ({
-  tier: 'trainee',
-  status: null,
+  tier: BETA_MODE ? 'designer' : 'trainee',
+  status: BETA_MODE ? 'active' : null,
   billingPeriod: null,
 });
