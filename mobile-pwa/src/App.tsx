@@ -373,7 +373,7 @@ function AppContent() {
     // Tab content
     switch (activeTab) {
       case 'today':
-        return <Today onSceneSelect={handleSceneSelect} />;
+        return <Today onSceneSelect={handleSceneSelect} onNavigateToTab={handleNavigateToTab} />;
       case 'breakdown':
         return <Breakdown onSceneSelect={handleSceneSelect} />;
       case 'lookbook':
@@ -391,7 +391,7 @@ function AppContent() {
       case 'more':
         return <More onNavigateToTab={handleNavigateToTab} onStartNewProject={handleStartNewProject} initialView={activeTab} resetKey={tabResetKey} subView={moreSubView} />;
       default:
-        return <Today onSceneSelect={handleSceneSelect} />;
+        return <Today onSceneSelect={handleSceneSelect} onNavigateToTab={handleNavigateToTab} />;
     }
   };
 
