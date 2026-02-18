@@ -8,6 +8,7 @@ import {
   type CurrencyCode,
 } from '@/types';
 import { extractReceiptData, buildDescriptionFromItems } from '@/services/receiptAIService';
+import { useProjectStore } from '@/stores/projectStore';
 
 // Budget expense category types
 export type ExpenseCategory = 'Kit Supplies' | 'Consumables' | 'Transportation' | 'Equipment' | 'Other';
@@ -43,8 +44,10 @@ export function Budget() {
   const [showScanOptions, setShowScanOptions] = useState(false);
   const [currency, setCurrency] = useState<CurrencyCode>(DEFAULT_CURRENCY);
   const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
+  const { currentProject } = useProjectStore();
 
   // Load saved data on mount
   useEffect(() => {
@@ -142,6 +145,217 @@ export function Budget() {
     setShowAddReceipt(true);
   };
 
+  // Generate spending reconciliation CSV
+  const generateReconciliationCSV = (): string => {
+    const projectName = currentProject?.name || 'Production';
+    const currencyInfo = getCurrencyByCode(currency);
+    const exportDate = new Date().toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+
+    const lines: string[] = [];
+
+    // Header info
+    lines.push('SPENDING RECONCILIATION REPORT');
+    lines.push(`Project: ${projectName}`);
+    lines.push(`Export Date: ${exportDate}`);
+    lines.push(`Currency: ${currency} (${currencyInfo.symbol})`);
+    lines.push('');
+
+    // Budget Summary
+    lines.push('BUDGET SUMMARY');
+    lines.push(`Total Budget,${currencyInfo.symbol}${budgetTotal.toFixed(2)}`);
+    lines.push(`Total Spent,${currencyInfo.symbol}${totalSpent.toFixed(2)}`);
+    lines.push(`Remaining,${currencyInfo.symbol}${remainingBudget.toFixed(2)}`);
+    lines.push(`Percentage Used,${percentUsed.toFixed(1)}%`);
+    lines.push('');
+
+    // Category Breakdown
+    lines.push('SPENDING BY CATEGORY');
+    lines.push('Category,Amount');
+    CATEGORIES.forEach(cat => {
+      if (byCategory[cat] > 0) {
+        lines.push(`${cat},${currencyInfo.symbol}${byCategory[cat].toFixed(2)}`);
+      }
+    });
+    lines.push(`TOTAL,${currencyInfo.symbol}${totalSpent.toFixed(2)}`);
+    lines.push('');
+
+    // Receipt Details
+    lines.push('RECEIPT DETAILS');
+    lines.push('Date,Vendor,Category,Description,Amount');
+
+    // Sort receipts by date
+    const sortedReceipts = [...receipts].sort((a, b) =>
+      new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+
+    sortedReceipts.forEach(receipt => {
+      const date = new Date(receipt.date).toLocaleDateString('en-GB');
+      // Escape commas in text fields
+      const vendor = receipt.vendor.includes(',') ? `"${receipt.vendor}"` : receipt.vendor;
+      const description = receipt.description.includes(',') ? `"${receipt.description}"` : receipt.description;
+      lines.push(`${date},${vendor},${receipt.category},${description},${currencyInfo.symbol}${receipt.amount.toFixed(2)}`);
+    });
+
+    lines.push('');
+    lines.push(`Total Receipts: ${receipts.length}`);
+
+    return lines.join('\n');
+  };
+
+  // Handle export
+  const handleExport = (format: 'csv' | 'pdf') => {
+    const projectName = currentProject?.name || 'Production';
+    const dateStr = new Date().toISOString().split('T')[0];
+
+    if (format === 'csv') {
+      const content = generateReconciliationCSV();
+      const blob = new Blob([content], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `spending-reconciliation-${projectName.replace(/\s+/g, '-').toLowerCase()}-${dateStr}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } else {
+      // Generate printable HTML for PDF
+      const content = generateReconciliationHTML();
+      const blob = new Blob([content], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const newWindow = window.open(url, '_blank');
+      if (newWindow) {
+        newWindow.addEventListener('load', () => {
+          setTimeout(() => newWindow.print(), 500);
+        });
+      }
+      URL.revokeObjectURL(url);
+    }
+    setShowExportModal(false);
+  };
+
+  // Generate printable HTML for PDF export
+  const generateReconciliationHTML = (): string => {
+    const projectName = currentProject?.name || 'Production';
+    const currencyInfo = getCurrencyByCode(currency);
+    const exportDate = new Date().toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+
+    const sortedReceipts = [...receipts].sort((a, b) =>
+      new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Spending Reconciliation - ${projectName}</title>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; color: #333; }
+          h1 { color: #C9A962; font-size: 24px; margin-bottom: 4px; }
+          .subtitle { color: #666; font-size: 14px; margin-bottom: 20px; }
+          .summary-box { background: linear-gradient(135deg, #C9A962, #B8985A); color: white; padding: 20px; border-radius: 12px; margin-bottom: 24px; }
+          .summary-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+          .summary-item { text-align: center; }
+          .summary-item .label { font-size: 11px; opacity: 0.9; text-transform: uppercase; }
+          .summary-item .value { font-size: 24px; font-weight: bold; }
+          .summary-item.highlight { background: rgba(255,255,255,0.15); padding: 12px; border-radius: 8px; }
+          .section { margin-bottom: 24px; }
+          .section h2 { font-size: 14px; color: #666; text-transform: uppercase; margin-bottom: 12px; border-bottom: 2px solid #C9A962; padding-bottom: 4px; }
+          .category-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+          .category-table td { padding: 8px 0; border-bottom: 1px solid #eee; }
+          .category-table .amount { text-align: right; font-weight: 500; }
+          .category-table .total { border-top: 2px solid #C9A962; font-weight: bold; }
+          table.receipts { width: 100%; border-collapse: collapse; font-size: 12px; }
+          table.receipts th { background: #f5f5f5; padding: 10px 8px; text-align: left; font-weight: 600; }
+          table.receipts td { padding: 10px 8px; border-bottom: 1px solid #eee; }
+          table.receipts .amount { text-align: right; font-weight: 500; }
+          .footer { margin-top: 24px; padding-top: 16px; border-top: 1px solid #eee; font-size: 11px; color: #999; }
+          @media print { body { padding: 0; } .summary-box { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+        </style>
+      </head>
+      <body>
+        <h1>Spending Reconciliation</h1>
+        <p class="subtitle">${projectName} • Exported ${exportDate}</p>
+
+        <div class="summary-box">
+          <div class="summary-grid">
+            <div class="summary-item">
+              <div class="label">Total Budget</div>
+              <div class="value">${currencyInfo.symbol}${budgetTotal.toFixed(2)}</div>
+            </div>
+            <div class="summary-item">
+              <div class="label">Total Spent</div>
+              <div class="value">${currencyInfo.symbol}${totalSpent.toFixed(2)}</div>
+            </div>
+            <div class="summary-item highlight">
+              <div class="label">${remainingBudget >= 0 ? 'Remaining' : 'Over Budget'}</div>
+              <div class="value">${currencyInfo.symbol}${Math.abs(remainingBudget).toFixed(2)}</div>
+            </div>
+            <div class="summary-item highlight">
+              <div class="label">Budget Used</div>
+              <div class="value">${percentUsed.toFixed(1)}%</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>Spending by Category</h2>
+          <table class="category-table">
+            ${CATEGORIES.filter(cat => byCategory[cat] > 0).map(cat => `
+              <tr>
+                <td>${cat}</td>
+                <td class="amount">${currencyInfo.symbol}${byCategory[cat].toFixed(2)}</td>
+              </tr>
+            `).join('')}
+            <tr class="total">
+              <td>Total</td>
+              <td class="amount">${currencyInfo.symbol}${totalSpent.toFixed(2)}</td>
+            </tr>
+          </table>
+        </div>
+
+        <div class="section">
+          <h2>Receipt Details (${receipts.length} receipts)</h2>
+          <table class="receipts">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Vendor</th>
+                <th>Category</th>
+                <th>Description</th>
+                <th class="amount">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${sortedReceipts.map(r => `
+                <tr>
+                  <td>${new Date(r.date).toLocaleDateString('en-GB')}</td>
+                  <td>${r.vendor}</td>
+                  <td>${r.category}</td>
+                  <td>${r.description || '-'}</td>
+                  <td class="amount">${currencyInfo.symbol}${r.amount.toFixed(2)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="footer">
+          <p>Generated by Hair & Makeup Pro • ${exportDate}</p>
+        </div>
+      </body>
+      </html>
+    `;
+  };
+
   return (
     <div className="min-h-screen bg-background pb-safe-bottom">
       {/* Header */}
@@ -162,16 +376,31 @@ export function Budget() {
                 </svg>
               </button>
             </div>
-            <button
-              onClick={handleScanReceipt}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gold active:opacity-70 transition-opacity"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
-              </svg>
-              Scan
-            </button>
+            <div className="flex items-center gap-1">
+              {/* Export Button */}
+              {receipts.length > 0 && (
+                <button
+                  onClick={() => setShowExportModal(true)}
+                  className="p-2 text-text-muted active:text-gold transition-colors"
+                  title="Export reconciliation"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                  </svg>
+                </button>
+              )}
+              {/* Scan Button */}
+              <button
+                onClick={handleScanReceipt}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gold active:opacity-70 transition-opacity"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
+                </svg>
+                Scan
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -401,6 +630,17 @@ export function Budget() {
             setShowBudgetEdit(false);
           }}
           onClose={() => setShowBudgetEdit(false)}
+        />
+      )}
+
+      {/* Export Modal */}
+      {showExportModal && (
+        <ExportReconciliationModal
+          onExport={handleExport}
+          onClose={() => setShowExportModal(false)}
+          receiptsCount={receipts.length}
+          totalSpent={totalSpent}
+          currencySymbol={currentCurrency.symbol}
         />
       )}
     </div>
@@ -917,6 +1157,106 @@ function BudgetEditModal({ currentBudget, currencySymbol, onSave, onClose }: Bud
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+// Export Reconciliation Modal
+interface ExportReconciliationModalProps {
+  onExport: (format: 'csv' | 'pdf') => void;
+  onClose: () => void;
+  receiptsCount: number;
+  totalSpent: number;
+  currencySymbol: string;
+}
+
+function ExportReconciliationModal({
+  onExport,
+  onClose,
+  receiptsCount,
+  totalSpent,
+  currencySymbol,
+}: ExportReconciliationModalProps) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50" onClick={onClose}>
+      <div
+        className="bg-card rounded-t-2xl w-full max-w-lg animate-slideUp"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="px-4 py-4 border-b border-border">
+          <h2 className="text-lg font-semibold text-text-primary text-center">Export Spending Report</h2>
+        </div>
+
+        <div className="p-4 space-y-4">
+          {/* Summary */}
+          <div className="rounded-xl bg-gold/5 border border-gold/20 p-4">
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="text-sm font-medium text-text-primary">Reconciliation Summary</p>
+                <p className="text-xs text-text-muted">{receiptsCount} receipts recorded</p>
+              </div>
+              <div className="text-right">
+                <p className="text-lg font-bold text-gold">{currencySymbol}{totalSpent.toFixed(2)}</p>
+                <p className="text-xs text-text-muted">total spent</p>
+              </div>
+            </div>
+          </div>
+
+          <p className="text-sm text-text-muted">
+            Export a spending reconciliation report to send to production. Choose your preferred format:
+          </p>
+
+          {/* Export Options */}
+          <div className="space-y-3">
+            {/* CSV Option */}
+            <button
+              onClick={() => onExport('csv')}
+              className="w-full flex items-center gap-4 px-4 py-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
+            >
+              <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+                <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h7.5c.621 0 1.125-.504 1.125-1.125m-9.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-7.5A1.125 1.125 0 0112 18.375m9.75-12.75c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125m19.5 0v1.5c0 .621-.504 1.125-1.125 1.125M2.25 5.625v1.5c0 .621.504 1.125 1.125 1.125m0 0h17.25m-17.25 0h7.5c.621 0 1.125.504 1.125 1.125M3.375 8.25c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125m17.25-3.75h-7.5c-.621 0-1.125.504-1.125 1.125m8.625-1.125c.621 0 1.125.504 1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125" />
+                </svg>
+              </div>
+              <div className="flex-1 text-left">
+                <span className="text-base font-semibold text-text-primary block">Spreadsheet (CSV)</span>
+                <span className="text-sm text-text-muted">Opens in Excel, Google Sheets</span>
+              </div>
+              <svg className="w-5 h-5 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+
+            {/* PDF Option */}
+            <button
+              onClick={() => onExport('pdf')}
+              className="w-full flex items-center gap-4 px-4 py-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
+            >
+              <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+                <svg className="w-6 h-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                </svg>
+              </div>
+              <div className="flex-1 text-left">
+                <span className="text-base font-semibold text-text-primary block">PDF Report</span>
+                <span className="text-sm text-text-muted">Print-ready document</span>
+              </div>
+              <svg className="w-5 h-5 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div className="p-4 border-t border-border">
+          <button
+            onClick={onClose}
+            className="w-full px-4 py-3 rounded-button bg-gray-100 text-text-primary font-medium"
+          >
+            Cancel
+          </button>
+        </div>
       </div>
     </div>
   );
