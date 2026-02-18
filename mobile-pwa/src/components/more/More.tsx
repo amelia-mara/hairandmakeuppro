@@ -124,7 +124,6 @@ export function More({ onNavigateToTab, onStartNewProject, initialView, resetKey
           <ProjectSettingsScreen
             projectId={currentProjectMembership?.projectId || ''}
             onBack={() => setCurrentView('menu')}
-            onNavigateToSchedule={() => setCurrentView('manualSchedule')}
             onNavigateToTeam={() => setCurrentView('team')}
             onNavigateToStats={() => setCurrentView('projectStats')}
             onNavigateToExport={() => setCurrentView('export')}
