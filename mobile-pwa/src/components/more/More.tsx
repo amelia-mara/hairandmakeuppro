@@ -1150,6 +1150,13 @@ function ScheduleViewer({ onBack }: ViewerProps) {
       try {
         // Stage 1: Parse cast list for character identification
         await uploadScheduleStage1(file);
+        // Automatically start Stage 2 processing in the background
+        setViewMode('breakdown');
+        await startStage2Processing();
+        // Auto-sync after processing completes
+        if (currentProject) {
+          handleSyncCastData({ autoConfirm: true });
+        }
       } catch (err) {
         console.error('Failed to upload schedule:', err);
       }
@@ -1398,10 +1405,22 @@ function ScheduleViewer({ onBack }: ViewerProps) {
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploading}
-              className="px-6 py-2.5 rounded-button gold-gradient text-white text-sm font-medium active:scale-95 transition-transform disabled:opacity-50"
+              className="px-6 py-2.5 rounded-button gold-gradient text-white text-sm font-medium active:scale-95 transition-transform disabled:opacity-50 mb-6"
             >
               {isUploading ? 'Uploading...' : 'Upload Schedule PDF'}
             </button>
+            {/* Background processing note */}
+            <div className="rounded-xl bg-gold/5 border border-gold/20 p-4 max-w-xs">
+              <div className="flex gap-3">
+                <svg className="w-5 h-5 text-gold flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div className="text-xs text-text-secondary">
+                  <p className="font-medium mb-1">Automatic Processing</p>
+                  <p>The schedule will process automatically in the background. Characters will be confirmed within a few minutes.</p>
+                </div>
+              </div>
+            </div>
           </div>
         ) : viewMode === 'pdf' ? (
           /* Schedule PDF Viewer - full page */
@@ -1422,21 +1441,6 @@ function ScheduleViewer({ onBack }: ViewerProps) {
         ) : (
           /* Breakdown View */
           <div className="space-y-4">
-            {/* Process Schedule button - shown when no breakdown data */}
-            {!hasBreakdownData && !isProcessingStage2 && (
-              <div className="card p-4 text-center">
-                <p className="text-sm text-text-muted mb-3">
-                  Process the schedule PDF with AI to extract scene breakdown data for each shooting day.
-                </p>
-                <button
-                  onClick={handleProcessSchedule}
-                  className="px-6 py-2.5 rounded-button gold-gradient text-white text-sm font-medium active:scale-95 transition-transform"
-                >
-                  Process Schedule
-                </button>
-              </div>
-            )}
-
             {/* Processing progress indicator */}
             {isProcessingStage2 && (
               <div className="card p-4">
@@ -1445,18 +1449,26 @@ function ScheduleViewer({ onBack }: ViewerProps) {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
-                  <span className="text-sm font-medium text-text-primary">
-                    {stage2Progress.message || `Processing Day ${stage2Progress.current} of ${stage2Progress.total}...`}
-                  </span>
+                  <div className="flex-1">
+                    <span className="text-sm font-medium text-text-primary block">
+                      {stage2Progress.message || `Processing Day ${stage2Progress.current} of ${stage2Progress.total}...`}
+                    </span>
+                    <span className="text-xs text-text-muted">
+                      You can navigate away - processing continues in the background
+                    </span>
+                  </div>
                 </div>
                 {stage2Progress.total > 0 && (
-                  <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
                     <div
                       className="gold-gradient h-2 rounded-full transition-all duration-300"
                       style={{ width: `${(stage2Progress.current / stage2Progress.total) * 100}%` }}
                     />
                   </div>
                 )}
+                <p className="text-xs text-text-muted">
+                  Characters will be automatically confirmed once processing completes.
+                </p>
               </div>
             )}
 

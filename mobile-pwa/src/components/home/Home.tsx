@@ -605,7 +605,7 @@ function UploadScreen({
         </div>
 
         {/* Info */}
-        <div className="rounded-xl bg-blue-50 border border-blue-100 p-4">
+        <div className="rounded-xl bg-blue-50 border border-blue-100 p-4 mb-4">
           <div className="flex gap-3">
             <svg className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
@@ -613,6 +613,19 @@ function UploadScreen({
             <div className="text-xs text-blue-700">
               <p className="font-medium mb-1">Faster with Schedule</p>
               <p>The schedule contains the official cast list with character numbers. This allows instant, accurate character detection per scene without AI processing.</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Background processing note */}
+        <div className="rounded-xl bg-gold/5 border border-gold/20 p-4">
+          <div className="flex gap-3">
+            <svg className="w-5 h-5 text-gold flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div className="text-xs text-text-secondary">
+              <p className="font-medium mb-1">Background Processing</p>
+              <p>The schedule will process automatically in the background. Character assignments will be confirmed within a few minutes - you can start using the app right away.</p>
             </div>
           </div>
         </div>
