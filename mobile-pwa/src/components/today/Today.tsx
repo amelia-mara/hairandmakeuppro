@@ -7,6 +7,19 @@ import type { ShootingSceneStatus, SceneFilmingStatus, CallSheetScene, Scene, Ch
 import { SCENE_FILMING_STATUS_CONFIG, parseDayTypeFromString } from '@/types';
 import { clsx } from 'clsx';
 
+// Format minutes into hours and minutes (e.g., 206 -> "3hr 26m")
+function formatDuration(minutes: number): string {
+  if (minutes < 60) {
+    return `${minutes}m`;
+  }
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  if (mins === 0) {
+    return `${hours}hr`;
+  }
+  return `${hours}hr ${mins}m`;
+}
+
 interface TodayProps {
   onSceneSelect: (sceneId: string) => void;
 }
@@ -540,7 +553,7 @@ export function Today({ onSceneSelect }: TodayProps) {
                             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                               <path strokeLinecap="round" strokeLinejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18" />
                             </svg>
-                            <span>{scheduleStatus.diffMinutes}m ahead</span>
+                            <span>{formatDuration(scheduleStatus.diffMinutes)} ahead</span>
                           </>
                         )}
                         {scheduleStatus.status === 'behind' && (
@@ -548,7 +561,7 @@ export function Today({ onSceneSelect }: TodayProps) {
                             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                               <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
                             </svg>
-                            <span>{scheduleStatus.diffMinutes}m behind</span>
+                            <span>{formatDuration(scheduleStatus.diffMinutes)} behind</span>
                           </>
                         )}
                       </div>
