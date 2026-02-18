@@ -21,23 +21,50 @@ function formatDuration(minutes: number): string {
 }
 
 /**
- * Split combined scene numbers into individual components
+ * Split combined scene numbers and extract base scene numbers
  * Examples:
- *   "32/32B" -> ["32", "32B"]
+ *   "32/32B" -> ["32/32B", "32", "32B"]
+ *   "15pt2" -> ["15pt2", "15"]
+ *   "15pt 2" -> ["15pt 2", "15"]
+ *   "15A" -> ["15A", "15"]
  *   "119" -> ["119"]
- *   "1A/1B/1C" -> ["1A", "1B", "1C"]
- *   "32-32B" -> ["32", "32B"]
+ *   "1A/1B/1C" -> ["1A/1B/1C", "1A", "1B", "1C", "1"]
  */
 function splitCombinedSceneNumber(sceneNumber: string): string[] {
-  // Split on / or - but only if followed by scene-like patterns
-  const parts = sceneNumber.split(/[\/]/).map(s => s.trim()).filter(Boolean);
-  if (parts.length > 1) return parts;
+  const results = new Set<string>();
+  results.add(sceneNumber); // Always include original
 
-  // Also try splitting on comma
+  // Split on /
+  const slashParts = sceneNumber.split(/[\/]/).map(s => s.trim()).filter(Boolean);
+  slashParts.forEach(p => results.add(p));
+
+  // Split on comma
   const commaParts = sceneNumber.split(/[,]/).map(s => s.trim()).filter(Boolean);
-  if (commaParts.length > 1) return commaParts;
+  commaParts.forEach(p => results.add(p));
 
-  return [sceneNumber];
+  // Extract base scene number from patterns like "15pt2", "15pt 2", "15A", "15-2"
+  // Pattern: digits followed by optional letter, then "pt"/"part"/letter/dash + more
+  const baseMatch = sceneNumber.match(/^(\d+[A-Za-z]?)(?:pt|part|PT|PART|-|\s)/i);
+  if (baseMatch) {
+    results.add(baseMatch[1]); // Add the base number (e.g., "15" from "15pt2")
+  }
+
+  // Also try extracting just the leading digits
+  const digitsMatch = sceneNumber.match(/^(\d+)/);
+  if (digitsMatch && digitsMatch[1] !== sceneNumber) {
+    results.add(digitsMatch[1]);
+  }
+
+  // For each part found, also try to extract its base
+  const allParts = [...results];
+  for (const part of allParts) {
+    const partBase = part.match(/^(\d+)[A-Za-z]$/);
+    if (partBase) {
+      results.add(partBase[1]); // "32B" -> "32"
+    }
+  }
+
+  return [...results];
 }
 
 interface TodayProps {
@@ -318,17 +345,39 @@ export function Today({ onSceneSelect, onNavigateToTab }: TodayProps) {
     return undefined;
   };
 
-  // Find a project character by name (case-insensitive, supports partial first name match)
+  // Find a project character by name (flexible matching)
+  // Tries: exact match, first name match, contains match
   const findProjectCharacterByName = (name: string): Character | undefined => {
-    if (!currentProject) return undefined;
+    if (!currentProject || !name) return undefined;
     const normalizedName = name.toUpperCase().trim();
-    return currentProject.characters.find(c => {
-      const charName = c.name.toUpperCase().trim();
-      // Try exact match, or first name match
-      return charName === normalizedName ||
-             charName.startsWith(normalizedName + ' ') ||
-             normalizedName.startsWith(charName.split(' ')[0]);
+
+    // First try exact match
+    const exact = currentProject.characters.find(c =>
+      c.name.toUpperCase().trim() === normalizedName
+    );
+    if (exact) return exact;
+
+    // Try first name match (call sheet might have just "CARA", project has "CARA SMITH")
+    const firstNameMatch = currentProject.characters.find(c => {
+      const charFirstName = c.name.toUpperCase().trim().split(' ')[0];
+      return charFirstName === normalizedName;
     });
+    if (firstNameMatch) return firstNameMatch;
+
+    // Try if project character name starts with the search name
+    const startsWithMatch = currentProject.characters.find(c =>
+      c.name.toUpperCase().trim().startsWith(normalizedName + ' ')
+    );
+    if (startsWithMatch) return startsWithMatch;
+
+    // Try if search name contains the project character's first name
+    const containsMatch = currentProject.characters.find(c => {
+      const charFirstName = c.name.toUpperCase().trim().split(' ')[0];
+      return normalizedName.includes(charFirstName) && charFirstName.length > 2;
+    });
+    if (containsMatch) return containsMatch;
+
+    return undefined;
   };
 
   // Get characters for a scene - prefers confirmed project characters, falls back to call sheet cast
@@ -361,16 +410,31 @@ export function Today({ onSceneSelect, onNavigateToTab }: TodayProps) {
 
     return [];
   };
-  // Get look for a character in a scene - tries characterId first, then falls back to actorNumber
-  // This allows linking looks from project characters to call sheet cast data via cast number
+  // Get look for a character in a scene - tries multiple matching strategies
+  // Handles combined scenes and part scenes by also checking base scene numbers
   const getLookForCharacter = (characterId: string, sceneNumber: string, actorNumber?: number) => {
-    // First try direct characterId lookup
-    const lookById = characterLookMap.get(`${characterId}-${sceneNumber}`);
-    if (lookById) return lookById;
-    // Fall back to actorNumber lookup (links call sheet cast to project character looks)
-    if (actorNumber) {
-      return actorNumberLookMap.get(`${actorNumber}-${sceneNumber}`);
+    // Get all possible scene numbers to check (includes base scenes like "15" from "15pt2")
+    const scenesToCheck = splitCombinedSceneNumber(sceneNumber);
+
+    // Try characterId lookup for each possible scene
+    for (const scene of scenesToCheck) {
+      const lookById = characterLookMap.get(`${characterId}-${scene}`);
+      if (lookById) return lookById;
     }
+
+    // Fall back to actorNumber lookup for each possible scene
+    if (actorNumber) {
+      for (const scene of scenesToCheck) {
+        const lookByActor = actorNumberLookMap.get(`${actorNumber}-${scene}`);
+        if (lookByActor) return lookByActor;
+      }
+    }
+
+    // Final fallback: find any look for this character (for unmatched scenes)
+    if (currentProject && !characterId.startsWith('cast-')) {
+      return currentProject.looks.find(l => l.characterId === characterId);
+    }
+
     return undefined;
   };
 
