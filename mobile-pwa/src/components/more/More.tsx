@@ -1256,6 +1256,21 @@ function ScheduleViewer({ onBack }: ViewerProps) {
     }
   };
 
+  // Auto-start processing if schedule is in pending state (e.g., after page refresh during processing)
+  useEffect(() => {
+    if (
+      schedule &&
+      (schedule.status === 'pending' || schedule.status === 'processing') &&
+      !isProcessingStage2 &&
+      !isProcessingRevision &&
+      (!schedule.days || schedule.days.length === 0)
+    ) {
+      console.log('[ScheduleViewer] Auto-starting processing for pending schedule');
+      handleProcessSchedule();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run on mount
+
   const hasBreakdownData = schedule?.days && schedule.days.length > 0;
 
   return (
@@ -1501,6 +1516,40 @@ function ScheduleViewer({ onBack }: ViewerProps) {
                     />
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Pending state - schedule uploaded but not yet processed */}
+            {!hasBreakdownData && !isProcessingStage2 && !isProcessingRevision && schedule && (
+              <div className="flex flex-col items-center justify-center py-12">
+                <div className="w-16 h-16 rounded-full bg-gold/10 flex items-center justify-center mb-4">
+                  <svg className="w-8 h-8 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <h3 className="text-base font-semibold text-text-primary mb-1">Schedule Ready to Process</h3>
+                <p className="text-sm text-text-muted text-center mb-6 max-w-xs">
+                  {schedule.totalDays > 0
+                    ? `Your schedule has ${schedule.totalDays} shooting day${schedule.totalDays !== 1 ? 's' : ''}. Process it to view the breakdown.`
+                    : 'Tap below to extract scene data from your schedule.'}
+                </p>
+                <button
+                  onClick={handleProcessSchedule}
+                  className="px-6 py-2.5 rounded-button gold-gradient text-white text-sm font-medium active:scale-95 transition-transform mb-6"
+                >
+                  Process Schedule
+                </button>
+                <div className="rounded-xl bg-gold/5 border border-gold/20 p-4 max-w-xs">
+                  <div className="flex gap-3">
+                    <svg className="w-5 h-5 text-gold flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+                    </svg>
+                    <div className="text-xs text-text-secondary">
+                      <p className="font-medium mb-1">AI-Powered Extraction</p>
+                      <p>Processing uses AI to extract scenes, cast, and timing from each shooting day.</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 
