@@ -20,6 +20,26 @@ function formatDuration(minutes: number): string {
   return `${hours}hr ${mins}m`;
 }
 
+/**
+ * Split combined scene numbers into individual components
+ * Examples:
+ *   "32/32B" -> ["32", "32B"]
+ *   "119" -> ["119"]
+ *   "1A/1B/1C" -> ["1A", "1B", "1C"]
+ *   "32-32B" -> ["32", "32B"]
+ */
+function splitCombinedSceneNumber(sceneNumber: string): string[] {
+  // Split on / or - but only if followed by scene-like patterns
+  const parts = sceneNumber.split(/[\/]/).map(s => s.trim()).filter(Boolean);
+  if (parts.length > 1) return parts;
+
+  // Also try splitting on comma
+  const commaParts = sceneNumber.split(/[,]/).map(s => s.trim()).filter(Boolean);
+  if (commaParts.length > 1) return commaParts;
+
+  return [sceneNumber];
+}
+
 interface TodayProps {
   onSceneSelect: (sceneId: string) => void;
   onNavigateToTab?: (tab: NavTab) => void;
@@ -282,13 +302,64 @@ export function Today({ onSceneSelect, onNavigateToTab }: TodayProps) {
   }, [callSheet?.scenes, castCallMap]);
 
   // Fast lookup functions using pre-computed maps
-  const getSceneData = (sceneNumber: string) => sceneDataMap.get(sceneNumber);
+  // Improved scene lookup that handles combined scene numbers like "32/32B"
+  const getSceneData = (sceneNumber: string): Scene | undefined => {
+    // First try exact match
+    const exact = sceneDataMap.get(sceneNumber);
+    if (exact) return exact;
+
+    // Try matching any component of a combined scene number
+    const parts = splitCombinedSceneNumber(sceneNumber);
+    for (const part of parts) {
+      const match = sceneDataMap.get(part);
+      if (match) return match;
+    }
+
+    return undefined;
+  };
+
+  // Find a project character by name (case-insensitive, supports partial first name match)
+  const findProjectCharacterByName = (name: string): Character | undefined => {
+    if (!currentProject) return undefined;
+    const normalizedName = name.toUpperCase().trim();
+    return currentProject.characters.find(c => {
+      const charName = c.name.toUpperCase().trim();
+      // Try exact match, or first name match
+      return charName === normalizedName ||
+             charName.startsWith(normalizedName + ' ') ||
+             normalizedName.startsWith(charName.split(' ')[0]);
+    });
+  };
+
   // Get characters for a scene - prefers confirmed project characters, falls back to call sheet cast
+  // Also tries to link call sheet cast to existing project characters by name
   const getCharactersInScene = (sceneNumber: string): Character[] => {
+    // First try exact scene match
     const confirmedChars = sceneCharactersMap.get(sceneNumber) || [];
     if (confirmedChars.length > 0) return confirmedChars;
-    // Fall back to call sheet cast data
-    return sceneCastFromCallSheet.get(sceneNumber) || [];
+
+    // Try matching via combined scene components (e.g., "32/32B" -> check "32" and "32B")
+    const parts = splitCombinedSceneNumber(sceneNumber);
+    for (const part of parts) {
+      const partChars = sceneCharactersMap.get(part) || [];
+      if (partChars.length > 0) return partChars;
+    }
+
+    // Fall back to call sheet cast data, but try to link to project characters by name
+    const callSheetChars = sceneCastFromCallSheet.get(sceneNumber) || [];
+    if (callSheetChars.length > 0) {
+      return callSheetChars.map(char => {
+        // Try to find matching project character by name
+        const projectChar = findProjectCharacterByName(char.name);
+        if (projectChar) {
+          // Return project character with actorNumber from call sheet for look matching
+          return { ...projectChar, actorNumber: char.actorNumber };
+        }
+        return char;
+      });
+    }
+
+    return [];
   };
   // Get look for a character in a scene - tries characterId first, then falls back to actorNumber
   // This allows linking looks from project characters to call sheet cast data via cast number
@@ -440,12 +511,40 @@ export function Today({ onSceneSelect, onNavigateToTab }: TodayProps) {
     syncFilmingStatus(sceneNumber, filmingStatus, filmingNotes);
   };
 
-  // Handle scene tap
+  // Handle scene tap - improved to handle combined scenes
   const handleSceneTap = (sceneNumber: string) => {
     const scene = getSceneData(sceneNumber);
     if (scene) {
       onSceneSelect(scene.id);
     }
+  };
+
+  // Handle character tap - navigate to continuity tracking for this character
+  // Works even when scene doesn't match by finding a valid scene for the character
+  const handleCharacterTap = (character: Character, callSheetSceneNumber: string) => {
+    // First try to find a matching scene from the call sheet
+    const matchedScene = getSceneData(callSheetSceneNumber);
+    if (matchedScene) {
+      // Navigate to the matched scene - SceneView will show this character
+      onSceneSelect(matchedScene.id);
+      return;
+    }
+
+    // If no scene match, try to find any scene this character is in
+    // so we can still navigate to track their continuity
+    if (currentProject) {
+      const sceneWithCharacter = currentProject.scenes.find(s =>
+        s.characters.includes(character.id)
+      );
+      if (sceneWithCharacter) {
+        onSceneSelect(sceneWithCharacter.id);
+        return;
+      }
+    }
+
+    // If character has no assigned scenes yet, we can't navigate anywhere
+    // In the future, we could add a character-only continuity view
+    console.log('[Today] Character has no assigned scenes, cannot navigate:', character.name);
   };
 
   return (
@@ -733,6 +832,7 @@ export function Today({ onSceneSelect, onNavigateToTab }: TodayProps) {
                     characters={characters}
                     getLookForCharacter={getLookForCharacter}
                     onTap={() => handleSceneTap(shootingScene.sceneNumber)}
+                    onCharacterTap={(char) => handleCharacterTap(char, shootingScene.sceneNumber)}
                     onSynopsisClick={(scene) => setScriptModalScene(scene)}
                     onStatusChange={(status) => updateSceneStatus(shootingScene.sceneNumber, status)}
                     onFilmingStatusChange={(filmingStatus, notes) =>
@@ -776,6 +876,7 @@ interface TodaySceneCardProps {
   characters: Character[];
   getLookForCharacter: (characterId: string, sceneNumber: string, actorNumber?: number) => Look | null | undefined;
   onTap: () => void;
+  onCharacterTap: (character: Character) => void;
   onSynopsisClick: (scene: Scene) => void;
   onStatusChange: (status: ShootingSceneStatus) => void;
   onFilmingStatusChange: (status: SceneFilmingStatus, notes?: string) => void;
@@ -793,6 +894,7 @@ const TodaySceneCard = memo(function TodaySceneCard({
   characters,
   getLookForCharacter,
   onTap,
+  onCharacterTap,
   onSynopsisClick,
   onStatusChange,
   onFilmingStatusChange,
@@ -1142,8 +1244,25 @@ const TodaySceneCard = memo(function TodaySceneCard({
                 {characters.map((char) => {
                   const look = getLookForCharacter(char.id, shootingScene.sceneNumber, char.actorNumber);
                   const bgColor = char.avatarColour ?? '#C9A962';
+                  // Character is clickable if it's a real project character (id doesn't start with 'cast-')
+                  const isProjectCharacter = !char.id.startsWith('cast-');
                   return (
-                    <div key={char.id} className="flex items-center gap-1 bg-gray-50 rounded-full pl-0.5 pr-2 py-0.5">
+                    <button
+                      key={char.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (isProjectCharacter) {
+                          onCharacterTap(char);
+                        }
+                      }}
+                      disabled={!isProjectCharacter}
+                      className={clsx(
+                        'flex items-center gap-1 rounded-full pl-0.5 pr-2 py-0.5 transition-colors',
+                        isProjectCharacter
+                          ? 'bg-gray-50 hover:bg-gold/10 active:bg-gold/20 cursor-pointer'
+                          : 'bg-gray-50 opacity-60 cursor-not-allowed'
+                      )}
+                    >
                       {/* Cast number in colored circle */}
                       <div
                         className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0"
@@ -1155,7 +1274,7 @@ const TodaySceneCard = memo(function TodaySceneCard({
                       {look && (
                         <span className="text-[10px] text-gold">• {look.name}</span>
                       )}
-                    </div>
+                    </button>
                   );
                 })}
               </div>
