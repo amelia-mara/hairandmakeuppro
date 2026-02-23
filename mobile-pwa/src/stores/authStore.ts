@@ -657,12 +657,27 @@ if (isSupabaseConfigured) {
     if (event === 'SIGNED_IN' && session?.user) {
       // User signed in - refresh state
       useAuthStore.getState().initializeAuth();
+    } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+      // Token refreshed - ensure state is still valid
+      const state = useAuthStore.getState();
+      if (!state.isAuthenticated) {
+        useAuthStore.getState().initializeAuth();
+      }
+    } else if (event === 'USER_UPDATED' && session?.user) {
+      // User profile updated (e.g., email change, password reset)
+      useAuthStore.getState().initializeAuth();
     } else if (event === 'SIGNED_OUT') {
-      // User signed out - clear state
+      // User signed out - clear all auth state
       useAuthStore.setState({
         isAuthenticated: false,
         user: null,
         projectMemberships: [],
+        currentScreen: 'welcome',
+        screenHistory: [],
+        hasCompletedOnboarding: false,
+        hasSelectedPlan: false,
+        subscription: createDefaultSubscription(),
+        guestProjectCode: null,
       });
     }
   });

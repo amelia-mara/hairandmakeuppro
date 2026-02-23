@@ -290,7 +290,7 @@ export function LookCard({ look, character: _character, progress }: LookCardProp
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                // Would open edit modal
+                handleSceneClick(look.scenes[0]);
               }}
               className="flex-1 py-2.5 px-4 rounded-button border border-gold text-gold text-sm font-medium active:scale-95 transition-transform"
             >

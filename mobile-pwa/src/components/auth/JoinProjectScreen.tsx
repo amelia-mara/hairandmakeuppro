@@ -86,8 +86,7 @@ export function JoinProjectScreen() {
               fullWidth
               size="lg"
               onClick={() => {
-                // This would navigate to the actual project
-                // For now, just acknowledge
+                setScreen('hub');
               }}
             >
               Open Project
