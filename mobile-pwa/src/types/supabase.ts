@@ -412,14 +412,3 @@ export type Database = {
   }
 }
 
-// Convenience types
-export type User = Database['public']['Tables']['users']['Row']
-export type Project = Database['public']['Tables']['projects']['Row']
-export type ProjectMember = Database['public']['Tables']['project_members']['Row']
-export type Character = Database['public']['Tables']['characters']['Row']
-export type Scene = Database['public']['Tables']['scenes']['Row']
-export type Look = Database['public']['Tables']['looks']['Row']
-export type ContinuityEvent = Database['public']['Tables']['continuity_events']['Row']
-export type Photo = Database['public']['Tables']['photos']['Row']
-export type ScheduleData = Database['public']['Tables']['schedule_data']['Row']
-export type Timesheet = Database['public']['Tables']['timesheets']['Row']

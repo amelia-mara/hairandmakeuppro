@@ -1,1 +1,1 @@
-export { useCamera, useCameraPermissions } from './useCamera';
+export { useCamera } from './useCamera';

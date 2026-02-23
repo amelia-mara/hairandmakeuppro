@@ -13,7 +13,7 @@ import type {
 type MainPhotoAngle = 'front' | 'left' | 'right' | 'back';
 
 // Photo blob storage - stores actual image data separately from metadata
-export interface PhotoBlob {
+interface PhotoBlob {
   id: string;
   blob: Blob;
   thumbnail: string; // Keep thumbnail as base64 for quick rendering
@@ -22,14 +22,14 @@ export interface PhotoBlob {
 }
 
 // Project data for IndexedDB storage
-export interface StoredProject {
+interface StoredProject {
   id: string;
   data: Project;
   updatedAt: Date;
 }
 
 // Scene captures stored separately with photo references
-export interface StoredSceneCapture {
+interface StoredSceneCapture {
   id: string;
   projectId: string;
   sceneId: string;
@@ -42,14 +42,14 @@ export interface StoredSceneCapture {
 }
 
 // Zustand store state backup
-export interface StoreBackup {
+interface StoreBackup {
   id: string; // store name
   state: unknown;
   updatedAt: Date;
 }
 
 // Define the database with version 2 schema for blob storage
-export class HairMakeupDB extends Dexie {
+class HairMakeupDB extends Dexie {
   projects!: Table<StoredProject>;
   scenes!: Table<Scene>;
   characters!: Table<Character>;
@@ -100,7 +100,7 @@ export const db = new HairMakeupDB();
 /**
  * Save a photo blob to IndexedDB
  */
-export async function savePhotoBlob(
+async function savePhotoBlob(
   id: string,
   blob: Blob,
   thumbnail: string,
@@ -119,7 +119,7 @@ export async function savePhotoBlob(
 /**
  * Get a photo blob by ID
  */
-export async function getPhotoBlob(id: string): Promise<PhotoBlob | undefined> {
+async function getPhotoBlob(id: string): Promise<PhotoBlob | undefined> {
   return await db.photoBlobs.get(id);
 }
 
@@ -150,7 +150,7 @@ export async function deletePhotoBlobs(ids: string[]): Promise<void> {
  * Convert a Photo object (with base64 uri) to blob storage
  * Returns the photo ID for reference
  */
-export async function migratePhotoToBlob(photo: Photo): Promise<string> {
+async function migratePhotoToBlob(photo: Photo): Promise<string> {
   // Convert base64 to blob
   const response = await fetch(photo.uri);
   const blob = await response.blob();
@@ -162,7 +162,7 @@ export async function migratePhotoToBlob(photo: Photo): Promise<string> {
 /**
  * Get photo as Photo object (converts blob back to base64 for compatibility)
  */
-export async function getPhotoAsBase64(id: string): Promise<Photo | undefined> {
+async function getPhotoAsBase64(id: string): Promise<Photo | undefined> {
   const photoBlob = await getPhotoBlob(id);
   if (!photoBlob) return undefined;
 
@@ -312,7 +312,7 @@ export async function saveSceneCaptureToDb(
 /**
  * Get scene capture with photos loaded from blob storage
  */
-export async function getSceneCaptureFromDb(id: string): Promise<SceneCapture | undefined> {
+async function getSceneCaptureFromDb(id: string): Promise<SceneCapture | undefined> {
   const stored = await db.sceneCaptures.get(id);
   if (!stored) return undefined;
 
@@ -362,11 +362,16 @@ export async function getSceneCapturesForProject(
 ): Promise<Record<string, SceneCapture>> {
   const stored = await db.sceneCaptures.where('projectId').equals(projectId).toArray();
 
+  // Load all captures in parallel to avoid N+1 query pattern
+  const results = await Promise.all(
+    stored.map(s => getSceneCaptureFromDb(s.id))
+  );
+
   const captures: Record<string, SceneCapture> = {};
-  for (const s of stored) {
-    const capture = await getSceneCaptureFromDb(s.id);
+  for (let i = 0; i < stored.length; i++) {
+    const capture = results[i];
     if (capture) {
-      captures[s.id] = capture;
+      captures[stored[i].id] = capture;
     }
   }
 
@@ -496,5 +501,4 @@ export async function clearAllData(): Promise<void> {
   ]);
 }
 
-// Export database for direct access if needed
-export default db;
+// db is already exported as a named export above

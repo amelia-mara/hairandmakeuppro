@@ -10,7 +10,7 @@ const THUMBNAIL_QUALITY = 0.6;
 /**
  * Compress an image blob to specified dimensions and quality
  */
-export async function compressImage(
+async function compressImage(
   blob: Blob,
   maxDimension: number = MAX_IMAGE_DIMENSION,
   quality: number = IMAGE_QUALITY
@@ -74,7 +74,7 @@ export async function compressImage(
 /**
  * Generate a thumbnail from an image blob
  */
-export async function generateThumbnail(blob: Blob): Promise<string> {
+async function generateThumbnail(blob: Blob): Promise<string> {
   const thumbnailBlob = await compressImage(blob, THUMBNAIL_SIZE, THUMBNAIL_QUALITY);
   return blobToBase64(thumbnailBlob);
 }
@@ -82,7 +82,7 @@ export async function generateThumbnail(blob: Blob): Promise<string> {
 /**
  * Convert a Blob to base64 string
  */
-export function blobToBase64(blob: Blob): Promise<string> {
+function blobToBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onloadend = () => {
@@ -98,9 +98,17 @@ export function blobToBase64(blob: Blob): Promise<string> {
  * Convert a base64 string to Blob
  */
 export function base64ToBlob(base64: string): Blob {
+  if (!base64 || !base64.includes(',')) {
+    throw new Error('Invalid base64 string: missing data URI header');
+  }
+
   const [header, data] = base64.split(',');
   const mimeMatch = header.match(/:(.*?);/);
   const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+
+  if (!data) {
+    throw new Error('Invalid base64 string: missing data after header');
+  }
 
   const byteString = atob(data);
   const arrayBuffer = new ArrayBuffer(byteString.length);

@@ -13,7 +13,7 @@ export interface ParsedScript {
   rawText: string;
 }
 
-export interface ParsedScene {
+interface ParsedScene {
   sceneNumber: string;
   slugline: string;
   intExt: 'INT' | 'EXT';
@@ -24,7 +24,7 @@ export interface ParsedScene {
   synopsis?: string;
 }
 
-export interface ParsedCharacter {
+interface ParsedCharacter {
   name: string;
   normalizedName: string;
   sceneCount: number;
@@ -623,7 +623,7 @@ function parseSceneHeadingLine(line: string): ParsedSceneHeading {
 /**
  * Parse script text to extract scenes and characters
  */
-export function parseScriptText(text: string): ParsedScript {
+function parseScriptText(text: string): ParsedScript {
   const lines = text.split('\n');
   const scenes: ParsedScene[] = [];
   const characterMap = new Map<string, ParsedCharacter>();
@@ -1213,7 +1213,7 @@ export async function parseScenesFast(file: File): Promise<FastParsedScript> {
  * @param options - Optional settings including known characters from schedule
  * @returns Array of character names detected in this scene
  */
-export async function detectCharactersForScene(
+async function detectCharactersForScene(
   sceneContent: string,
   _rawText: string,
   options?: { useAI?: boolean; knownCharacters?: string[] }

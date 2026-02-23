@@ -7,7 +7,7 @@ import { callAI } from '@/services/aiService';
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 // Enable debug logging for call sheet parsing
-const DEBUG_CALLSHEET_PARSER = true;
+const DEBUG_CALLSHEET_PARSER = false;
 
 function debugLog(...args: any[]) {
   if (DEBUG_CALLSHEET_PARSER) {
@@ -18,7 +18,7 @@ function debugLog(...args: any[]) {
 /**
  * Extract text content from a PDF file
  */
-export async function extractTextFromPDF(file: File): Promise<string> {
+async function extractTextFromPDF(file: File): Promise<string> {
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
 
@@ -40,7 +40,7 @@ export async function extractTextFromPDF(file: File): Promise<string> {
  * Parse extracted text into a structured CallSheet object using AI
  * This handles varying call sheet formats from different ADs/productions
  */
-export async function parseCallSheetText(text: string, pdfUri?: string): Promise<CallSheet> {
+async function parseCallSheetText(text: string, pdfUri?: string): Promise<CallSheet> {
   const systemPrompt = `You are an expert at parsing film/TV production call sheets. Your job is to extract structured data from call sheet text that has been extracted from a PDF.
 
 IMPORTANT: Call sheets vary significantly between productions and ADs. The text extraction may lose table structure, so look for patterns and context clues.

@@ -16,7 +16,7 @@
 /**
  * Parse time string "HH:MM" to minutes since midnight
  */
-export function timeToMinutes(time: string): number {
+function timeToMinutes(time: string): number {
   if (!time) return 0;
   const [hours, mins] = time.split(':').map(Number);
   if (isNaN(hours) || isNaN(mins)) return 0;
@@ -26,7 +26,7 @@ export function timeToMinutes(time: string): number {
 /**
  * Convert minutes since midnight back to "HH:MM" format
  */
-export function minutesToTime(minutes: number): string {
+function minutesToTime(minutes: number): string {
   const normalizedMins = ((minutes % (24 * 60)) + 24 * 60) % (24 * 60);
   const h = Math.floor(normalizedMins / 60);
   const m = normalizedMins % 60;
@@ -37,10 +37,10 @@ export function minutesToTime(minutes: number): string {
  * Get difference in hours between two times
  * Handles overnight wraps (end time is next day)
  */
-export function timeDiffHours(startTime: string, endTime: string): number {
+function timeDiffHours(startTime: string, endTime: string): number {
   if (!startTime || !endTime) return 0;
 
-  let startMins = timeToMinutes(startTime);
+  const startMins = timeToMinutes(startTime);
   let endMins = timeToMinutes(endTime);
 
   // Handle overnight (wrap after midnight)
@@ -54,30 +54,9 @@ export function timeDiffHours(startTime: string, endTime: string): number {
 /**
  * Add hours to a time string
  */
-export function addHoursToTime(time: string, hours: number): string {
+function addHoursToTime(time: string, hours: number): string {
   const mins = timeToMinutes(time) + (hours * 60);
   return minutesToTime(mins);
-}
-
-/**
- * Check if time1 is before time2
- */
-export function timeIsBefore(time1: string, time2: string): boolean {
-  return timeToMinutes(time1) < timeToMinutes(time2);
-}
-
-/**
- * Check if time1 is after time2
- */
-export function timeIsAfter(time1: string, time2: string): boolean {
-  return timeToMinutes(time1) > timeToMinutes(time2);
-}
-
-/**
- * Check if two times are equal
- */
-export function timeEquals(time1: string, time2: string): boolean {
-  return timeToMinutes(time1) === timeToMinutes(time2);
 }
 
 // ============================================
@@ -87,23 +66,23 @@ export function timeEquals(time1: string, time2: string): boolean {
 export type BaseContract = '10+1' | '11+1';
 export type BECTUDayType = 'SWD' | 'SCWD' | 'CWD';
 
-export interface BaseContractConfig {
+interface BaseContractConfig {
   baseWorkHours: number;
   label: string;
 }
 
-export interface DayTypeConfig {
+interface DayTypeConfig {
   name: string;
   lunchMins: number;
   hourReduction: number;
 }
 
-export const BASE_CONTRACTS: Record<BaseContract, BaseContractConfig> = {
+const BASE_CONTRACTS: Record<BaseContract, BaseContractConfig> = {
   '10+1': { baseWorkHours: 10, label: '10+1 (10 hours + 1hr lunch)' },
   '11+1': { baseWorkHours: 11, label: '11+1 (11 hours + 1hr lunch)' },
 };
 
-export const DAY_TYPES: Record<BECTUDayType, DayTypeConfig> = {
+const DAY_TYPES: Record<BECTUDayType, DayTypeConfig> = {
   'SWD': {
     name: 'Standard Working Day',
     lunchMins: 60,
@@ -123,16 +102,8 @@ export const DAY_TYPES: Record<BECTUDayType, DayTypeConfig> = {
 
 /**
  * Calculate contracted work hours based on base contract and day type
- *
- * Examples:
- * - 11+1 + SWD = 11 hours work, 1hr lunch, 12hr total on set
- * - 11+1 + SCWD = 10.5 hours work, 30min lunch, 11hr total on set
- * - 11+1 + CWD = 10 hours work, no lunch, 10hr total on set
- * - 10+1 + SWD = 10 hours work, 1hr lunch, 11hr total on set
- * - 10+1 + SCWD = 9.5 hours work, 30min lunch, 10hr total on set
- * - 10+1 + CWD = 9 hours work, no lunch, 9hr total on set
  */
-export function getContractedWorkHours(baseContract: BaseContract, dayType: BECTUDayType): number {
+function getContractedWorkHours(baseContract: BaseContract, dayType: BECTUDayType): number {
   const base = BASE_CONTRACTS[baseContract].baseWorkHours;
   const reduction = DAY_TYPES[dayType].hourReduction;
   return base - reduction;
@@ -148,7 +119,7 @@ export function getLunchDuration(dayType: BECTUDayType): number {
 /**
  * Calculate hourly rate from day rate
  */
-export function getHourlyRate(dayRate: number, baseContract: BaseContract, dayType: BECTUDayType): number {
+function getHourlyRate(dayRate: number, baseContract: BaseContract, dayType: BECTUDayType): number {
   const workHours = getContractedWorkHours(baseContract, dayType);
   if (workHours <= 0) return 0;
   return dayRate / workHours;
@@ -158,7 +129,7 @@ export function getHourlyRate(dayRate: number, baseContract: BaseContract, dayTy
 // CALCULATION COMPONENTS
 // ============================================
 
-export interface HoursAndPay {
+interface HoursAndPay {
   hours: number;
   pay: number;
 }
@@ -167,7 +138,7 @@ export interface HoursAndPay {
  * Calculate pre-call pay
  * Time worked before unit call, paid at pre-call multiplier
  */
-export function calculatePreCall(
+function calculatePreCall(
   preCallTime: string | null | undefined,
   unitCallTime: string,
   hourlyRate: number,
@@ -188,7 +159,7 @@ export function calculatePreCall(
  * Calculate overtime
  * OT only applies when actual work hours EXCEED contracted hours
  */
-export function calculateOvertime(
+function calculateOvertime(
   actualWorkHours: number,
   contractedHours: number,
   hourlyRate: number,
@@ -210,7 +181,7 @@ export function calculateOvertime(
  * If lunch is taken AFTER the 6 hour mark, the time between
  * the 6 hour deadline and when lunch was actually taken is paid at OT rate.
  */
-export function calculateBrokenLunch(
+function calculateBrokenLunch(
   unitCallTime: string,
   lunchTime: string | null | undefined,
   dayType: BECTUDayType,
@@ -224,16 +195,14 @@ export function calculateBrokenLunch(
 
   // Lunch deadline is 6 hours from unit call
   const lunchDeadline = addHoursToTime(unitCallTime, 6);
-  const lunchMins = timeToMinutes(lunchTime);
-  const deadlineMins = timeToMinutes(lunchDeadline);
+
+  // Use timeDiffHours for comparison to handle overnight wraps correctly
+  const brokenHours = timeDiffHours(lunchDeadline, lunchTime);
 
   // If lunch is taken on time or before deadline, no penalty
-  if (lunchMins <= deadlineMins) {
+  if (brokenHours <= 0) {
     return { hours: 0, pay: 0 };
   }
-
-  // Calculate how late lunch was taken
-  const brokenHours = timeDiffHours(lunchDeadline, lunchTime);
   const otRate = hourlyRate * otMultiplier;
 
   return {
@@ -246,7 +215,7 @@ export function calculateBrokenLunch(
  * Calculate broken turnaround penalty
  * OT rate applies for any shortfall under 11 hours between previous wrap and current call
  */
-export function calculateBrokenTurnaround(
+function calculateBrokenTurnaround(
   previousWrapOut: string | null | undefined,
   currentPreCall: string | null | undefined,
   currentUnitCall: string,
@@ -262,14 +231,8 @@ export function calculateBrokenTurnaround(
   const callTime = currentPreCall || currentUnitCall;
 
   // Calculate actual turnaround (hours between previous wrap and current call)
-  // Note: This calculation assumes same day or next day scenarios
-  // For overnight scenarios, we need to add 24 hours to the call time
-  let turnaroundHours = timeDiffHours(previousWrapOut, callTime);
-
-  // If turnaround appears negative or very small, it's likely next day
-  if (turnaroundHours < 0) {
-    turnaroundHours += 24;
-  }
+  // timeDiffHours handles overnight wraps automatically
+  const turnaroundHours = timeDiffHours(previousWrapOut, callTime);
 
   // If turnaround is sufficient, no penalty
   if (turnaroundHours >= minimumTurnaround) {
@@ -292,7 +255,7 @@ export function calculateBrokenTurnaround(
  * Late night is paid as ADDITIONAL enhancement on top of base/OT,
  * so we pay the DIFFERENCE between late night rate and normal rate.
  */
-export function calculateLateNight(
+function calculateLateNight(
   unitCallTime: string,
   wrapTime: string,
   lunchTime: string | null | undefined,
@@ -321,13 +284,7 @@ export function calculateLateNight(
   }
 
   // Calculate hours worked after 23:00
-  let lateNightMins: number;
-  if (adjustedWrapMins > thresholdMins) {
-    lateNightMins = adjustedWrapMins - thresholdMins;
-  } else {
-    // Wrap is after midnight on next day
-    lateNightMins = adjustedWrapMins - thresholdMins;
-  }
+  const lateNightMins = adjustedWrapMins - thresholdMins;
 
   let lateNightHours = lateNightMins / 60;
 
@@ -353,7 +310,7 @@ export function calculateLateNight(
 /**
  * Apply 6th/7th day multiplier to entire day's earnings
  */
-export function applyDayMultiplier(
+function applyDayMultiplier(
   baseDayTotal: number,
   is6thDay: boolean,
   is7thDay: boolean,
@@ -607,11 +564,4 @@ function round2(num: number): number {
  */
 export function baseDayHoursToContract(baseDayHours: number): BaseContract {
   return baseDayHours === 10 ? '10+1' : '11+1';
-}
-
-/**
- * Convert BaseContract to legacy baseDayHours
- */
-export function contractToBaseDayHours(contract: BaseContract): number {
-  return contract === '10+1' ? 10 : 11;
 }

@@ -17,7 +17,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.j
 /**
  * Stage 1 Result - minimal data for immediate use
  */
-export interface Stage1Result {
+interface Stage1Result {
   schedule: ProductionSchedule;
   rawText: string;
   dayTextBlocks: string[]; // Kept for backwards compatibility
@@ -272,7 +272,7 @@ function extractMetadata(text: string): { productionName?: string; scriptVersion
 /**
  * Get character name from cast list by number
  */
-export function getCharacterNameByNumber(
+function getCharacterNameByNumber(
   castList: ScheduleCastMember[],
   number: number
 ): string | undefined {

@@ -253,12 +253,10 @@ export async function getStorageInfo(): Promise<{
     indexedDBUsage = estimate.usage || 0;
   }
 
-  // Count photos
+  // Count photos - use count() instead of iterating all blobs into memory
   const photoCount = await db.photoBlobs.count();
-  let photosSize = 0;
-  await db.photoBlobs.each((photo) => {
-    photosSize += photo.blob.size;
-  });
+  // Approximate photos size from IndexedDB usage estimate (avoids full table scan)
+  const photosSize = indexedDBUsage;
 
   return {
     indexedDBUsage,
@@ -279,6 +277,10 @@ if (typeof window !== 'undefined') {
         } catch {
           // Ignore errors during unload
         }
+      } else {
+        // Best-effort async write for IndexedDB stores during unload
+        // The visibilitychange handler below is the primary safety net
+        saveStoreBackup(name, value).catch(() => {});
       }
     }
   });
