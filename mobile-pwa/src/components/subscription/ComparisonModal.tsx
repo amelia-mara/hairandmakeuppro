@@ -1,6 +1,6 @@
 import { BottomSheet } from '@/components/ui';
 import { clsx } from 'clsx';
-import { SUBSCRIPTION_TIERS } from '@/types/subscription';
+import { SUBSCRIPTION_TIERS, BETA_MODE } from '@/types/subscription';
 import type { SubscriptionTier } from '@/types/subscription';
 
 export interface ComparisonModalProps {
@@ -223,32 +223,51 @@ export function ComparisonModal({ isOpen, onClose, currentTier }: ComparisonModa
             </tr>
           </thead>
 
-          {/* Pricing row */}
+          {/* Pricing row - Hidden in beta mode */}
           <tbody>
-            <tr className="border-b border-border bg-gold-50/30">
-              <td className="py-3 pr-4 text-sm font-medium text-text-primary">
-                Price
-              </td>
-              {tiers.map((tier) => (
-                <td
-                  key={tier.id}
-                  className={clsx(
-                    'text-center py-3 px-2',
-                    tier.id === currentTier ? 'bg-gold-50/50' : ''
-                  )}
-                >
-                  <span className={clsx(
-                    'text-sm font-bold',
-                    tier.id === 'trainee' ? 'text-text-primary' : 'text-gold'
-                  )}>
-                    {tier.pricing.monthly === 0 ? 'Free' : `£${tier.pricing.monthly.toFixed(2)}`}
-                  </span>
-                  {tier.pricing.monthly > 0 && (
-                    <span className="text-[10px] text-text-muted block">/month</span>
-                  )}
+            {BETA_MODE ? (
+              <tr className="border-b border-border bg-gold-50/30">
+                <td className="py-3 pr-4 text-sm font-medium text-text-primary">
+                  Beta Access
                 </td>
-              ))}
-            </tr>
+                {tiers.map((tier) => (
+                  <td
+                    key={tier.id}
+                    className={clsx(
+                      'text-center py-3 px-2',
+                      tier.id === currentTier ? 'bg-gold-50/50' : ''
+                    )}
+                  >
+                    <span className="text-sm font-bold text-gold">Free</span>
+                  </td>
+                ))}
+              </tr>
+            ) : (
+              <tr className="border-b border-border bg-gold-50/30">
+                <td className="py-3 pr-4 text-sm font-medium text-text-primary">
+                  Price
+                </td>
+                {tiers.map((tier) => (
+                  <td
+                    key={tier.id}
+                    className={clsx(
+                      'text-center py-3 px-2',
+                      tier.id === currentTier ? 'bg-gold-50/50' : ''
+                    )}
+                  >
+                    <span className={clsx(
+                      'text-sm font-bold',
+                      tier.id === 'trainee' ? 'text-text-primary' : 'text-gold'
+                    )}>
+                      {tier.pricing.monthly === 0 ? 'Free' : `£${tier.pricing.monthly.toFixed(2)}`}
+                    </span>
+                    {tier.pricing.monthly > 0 && (
+                      <span className="text-[10px] text-text-muted block">/month</span>
+                    )}
+                  </td>
+                ))}
+              </tr>
+            )}
 
             {/* Feature rows */}
             {COMPARISON_FEATURES.map((feature, index) => (
@@ -284,7 +303,10 @@ export function ComparisonModal({ isOpen, onClose, currentTier }: ComparisonModa
       {/* Footer note */}
       <div className="mt-4 pt-4 border-t border-border">
         <p className="text-xs text-text-muted text-center">
-          All prices in GBP. Cancel anytime. 7-day free trial on paid plans.
+          {BETA_MODE
+            ? 'All features available during beta testing. Thank you for testing!'
+            : 'All prices in GBP. Cancel anytime. 7-day free trial on paid plans.'
+          }
         </p>
       </div>
     </BottomSheet>

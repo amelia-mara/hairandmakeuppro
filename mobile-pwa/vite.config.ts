@@ -15,9 +15,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       manifest: {
-        name: 'Hair & Makeup Pro',
-        short_name: 'H&M Pro',
-        description: 'Mobile continuity tracker for film/TV hair and makeup departments',
+        name: 'Checks Happy',
+        short_name: 'Checks Happy',
+        description: 'Hair & Makeup Continuity Simplified - Mobile tracker for film/TV departments',
         theme_color: '#C9A962',
         background_color: '#f5f4f2',
         display: 'standalone',

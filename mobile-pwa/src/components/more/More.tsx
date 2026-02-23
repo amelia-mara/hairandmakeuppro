@@ -18,6 +18,11 @@ import {
   ProjectSettingsScreen,
 } from '@/components/project-settings';
 import { useProjectSettingsStore } from '@/stores/projectSettingsStore';
+import { parseScenesFast } from '@/utils/scriptParser';
+import { AmendmentReviewModal } from '@/components/breakdown/AmendmentReviewModal';
+import type { AmendmentResult } from '@/services/scriptAmendmentService';
+import { ScheduleAmendmentModal } from '@/components/schedule/ScheduleAmendmentModal';
+import type { ScheduleAmendmentResult } from '@/services/scheduleAmendmentService';
 import { UserProfileScreen } from '@/components/profile/UserProfileScreen';
 
 type MoreView = 'menu' | 'script' | 'schedule' | 'callsheets' | 'editMenu' | 'export' | 'archivedProjects' | 'projectSettings' | 'team' | 'invite' | 'projectStats' | 'manualSchedule' | 'billing' | 'userProfile';
@@ -119,7 +124,6 @@ export function More({ onNavigateToTab, onStartNewProject, initialView, resetKey
           <ProjectSettingsScreen
             projectId={currentProjectMembership?.projectId || ''}
             onBack={() => setCurrentView('menu')}
-            onNavigateToSchedule={() => setCurrentView('manualSchedule')}
             onNavigateToTeam={() => setCurrentView('team')}
             onNavigateToStats={() => setCurrentView('projectStats')}
             onNavigateToExport={() => setCurrentView('export')}
@@ -796,8 +800,50 @@ function ScriptViewer({ onBack }: ViewerProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedScene, setSelectedScene] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'full' | 'pdf'>('full');
-  const { currentProject } = useProjectStore();
+  const { currentProject, compareScriptAmendment, applyScriptAmendment } = useProjectStore();
   const sceneRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [amendmentResult, setAmendmentResult] = useState<AmendmentResult | null>(null);
+
+  // Handle revised script upload
+  const handleRevisedScriptUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      // Parse the new script using fast parsing
+      const parsedScript = await parseScenesFast(file);
+
+      // Compare against existing breakdown
+      const result = compareScriptAmendment(parsedScript.scenes);
+      if (result) {
+        setAmendmentResult(result);
+      }
+    } catch (error) {
+      console.error('Error processing revised script:', error);
+      alert('Failed to process the script. Please try again.');
+    } finally {
+      setIsUploading(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  // Handle applying amendment changes
+  const handleApplyAmendment = (options: {
+    includeNew: boolean;
+    includeModified: boolean;
+    includeDeleted: boolean;
+  }) => {
+    if (amendmentResult) {
+      applyScriptAmendment(amendmentResult, options);
+      setAmendmentResult(null);
+    }
+  };
 
   // Sort scenes by scene number
   const sortedScenes = useMemo(() => {
@@ -859,9 +905,26 @@ function ScriptViewer({ onBack }: ViewerProps) {
             </button>
             <h1 className="text-lg font-semibold text-text-primary">Script</h1>
             {hasScriptContent && (
-              <span className="ml-auto text-xs text-text-muted">
-                {sortedScenes.length} scenes
-              </span>
+              <>
+                <span className="ml-auto text-xs text-text-muted">
+                  {sortedScenes.length} scenes
+                </span>
+                {/* Upload Revised Script button */}
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading}
+                  className="ml-2 px-2 py-1 text-[10px] font-medium text-gold border border-gold rounded-lg active:bg-gold/10 transition-colors disabled:opacity-50"
+                >
+                  {isUploading ? 'Processing...' : 'Upload New Draft'}
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.fdx,.txt,.fountain"
+                  onChange={handleRevisedScriptUpload}
+                  className="hidden"
+                />
+              </>
             )}
           </div>
 
@@ -1040,6 +1103,15 @@ function ScriptViewer({ onBack }: ViewerProps) {
           </div>
         )}
       </div>
+
+      {/* Amendment Review Modal */}
+      {amendmentResult && (
+        <AmendmentReviewModal
+          amendmentResult={amendmentResult}
+          onApply={handleApplyAmendment}
+          onCancel={() => setAmendmentResult(null)}
+        />
+      )}
     </>
   );
 }
@@ -1051,10 +1123,26 @@ function ScheduleViewer({ onBack }: ViewerProps) {
     isUploading,
     uploadError,
     uploadScheduleStage1,
+    uploadRevisionStage1,
+    startRevisionStage2Processing,
+    compareAmendment,
+    applyAmendment,
+    clearPendingSchedule,
     clearSchedule,
+    isProcessingStage2,
+    stage2Progress,
+    stage2Error,
+    startStage2Processing,
+    getCastNamesForNumbers,
   } = useScheduleStore();
+  const { currentProject, syncCastDataFromSchedule } = useProjectStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const revisionInputRef = useRef<HTMLInputElement>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [viewMode, setViewMode] = useState<'pdf' | 'breakdown'>('breakdown');
+  const [expandedDay, setExpandedDay] = useState<number | null>(null);
+  const [scheduleAmendmentResult, setScheduleAmendmentResult] = useState<ScheduleAmendmentResult | null>(null);
+  const [isProcessingRevision, setIsProcessingRevision] = useState(false);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1062,6 +1150,13 @@ function ScheduleViewer({ onBack }: ViewerProps) {
       try {
         // Stage 1: Parse cast list for character identification
         await uploadScheduleStage1(file);
+        // Automatically start Stage 2 processing in the background
+        setViewMode('breakdown');
+        await startStage2Processing();
+        // Auto-sync after processing completes
+        if (currentProject) {
+          handleSyncCastData({ autoConfirm: true });
+        }
       } catch (err) {
         console.error('Failed to upload schedule:', err);
       }
@@ -1072,10 +1167,111 @@ function ScheduleViewer({ onBack }: ViewerProps) {
     }
   };
 
+  const handleRevisionUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || file.type !== 'application/pdf') return;
+
+    try {
+      setIsProcessingRevision(true);
+      // Stage 1: Parse the new schedule
+      await uploadRevisionStage1(file);
+      // Stage 2: Process with AI to extract scene data
+      await startRevisionStage2Processing();
+      // Compare against existing schedule
+      const result = compareAmendment();
+      if (result) {
+        setScheduleAmendmentResult(result);
+      }
+      setIsProcessingRevision(false);
+    } catch (err) {
+      console.error('Failed to process schedule revision:', err);
+      setIsProcessingRevision(false);
+      clearPendingSchedule();
+    }
+
+    if (revisionInputRef.current) {
+      revisionInputRef.current.value = '';
+    }
+  };
+
+  const handleApplyScheduleAmendment = (options: {
+    includeAddedScenes: boolean;
+    includeRemovedScenes: boolean;
+    includeMovedScenes: boolean;
+    includeCastChanges: boolean;
+    includeTimingChanges: boolean;
+  }) => {
+    if (!scheduleAmendmentResult) return;
+    applyAmendment(scheduleAmendmentResult, options);
+    setScheduleAmendmentResult(null);
+    // Auto-sync cast data after amendment
+    if (currentProject) {
+      handleSyncCastData({ autoConfirm: true });
+    }
+  };
+
+  const handleCancelScheduleAmendment = () => {
+    setScheduleAmendmentResult(null);
+    clearPendingSchedule();
+  };
+
   const handleDelete = () => {
     clearSchedule();
     setShowDeleteConfirm(false);
+    setViewMode('pdf');
   };
+
+  const handleProcessSchedule = async () => {
+    setViewMode('breakdown');
+    await startStage2Processing();
+    // Auto-sync after processing completes
+    if (currentProject) {
+      handleSyncCastData({ autoConfirm: true });
+    }
+  };
+
+  const handleSyncCastData = (options?: { createMissingCharacters?: boolean; overwriteExisting?: boolean; autoConfirm?: boolean }) => {
+    // Get fresh schedule data from store (not from hook, which may be stale after async operations)
+    const freshSchedule = useScheduleStore.getState().schedule;
+    if (!freshSchedule || !currentProject) return;
+
+    try {
+      const result = syncCastDataFromSchedule(freshSchedule, {
+        createMissingCharacters: options?.createMissingCharacters ?? true,
+        overwriteExisting: options?.overwriteExisting ?? false,
+        autoConfirm: options?.autoConfirm ?? true,
+      });
+
+      if (result) {
+        console.log('[ScheduleViewer] Cast data synced:', {
+          scenesUpdated: result.scenesUpdated,
+          charactersCreated: result.charactersCreated,
+        });
+        if (result.errors.length > 0) {
+          console.warn('[ScheduleViewer] Sync had some errors:', result.errors);
+        }
+      }
+    } catch (error) {
+      console.error('[ScheduleViewer] Failed to sync cast data:', error);
+    }
+  };
+
+  // Auto-start processing if schedule has no breakdown data (e.g., after page refresh during processing)
+  useEffect(() => {
+    if (
+      schedule &&
+      !isProcessingStage2 &&
+      !isProcessingRevision &&
+      (!schedule.days || schedule.days.length === 0) &&
+      schedule.rawText // Has raw text available for processing
+    ) {
+      console.log('[ScheduleViewer] Auto-starting processing for unprocessed schedule');
+      handleProcessSchedule();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run on mount
+
+  const hasBreakdownData = schedule?.days && schedule.days.length > 0;
 
   return (
     <>
@@ -1096,6 +1292,16 @@ function ScheduleViewer({ onBack }: ViewerProps) {
             </div>
             {schedule ? (
               <div className="flex items-center gap-2">
+                {/* Upload New Draft button - shown when breakdown data exists */}
+                {hasBreakdownData && (
+                  <button
+                    onClick={() => revisionInputRef.current?.click()}
+                    disabled={isUploading || isProcessingStage2 || isProcessingRevision}
+                    className="px-2 py-1 text-[10px] font-medium text-gold border border-gold rounded-lg active:bg-gold/10 transition-colors disabled:opacity-50"
+                  >
+                    {isProcessingRevision ? 'Processing...' : 'Upload New Draft'}
+                  </button>
+                )}
                 <button
                   onClick={() => setShowDeleteConfirm(true)}
                   className="p-2 text-red-500 active:opacity-70 transition-opacity touch-manipulation"
@@ -1140,6 +1346,32 @@ function ScheduleViewer({ onBack }: ViewerProps) {
               </button>
             )}
           </div>
+
+          {/* View toggle - Breakdown / PDF */}
+          {schedule && (
+            <div className="px-4 pb-3 flex gap-1 bg-card">
+              <button
+                onClick={() => setViewMode('breakdown')}
+                className={`flex-1 py-2 text-xs font-medium rounded-lg transition-colors ${
+                  viewMode === 'breakdown'
+                    ? 'gold-gradient text-white'
+                    : 'bg-gray-100 text-text-muted'
+                }`}
+              >
+                Breakdown
+              </button>
+              <button
+                onClick={() => setViewMode('pdf')}
+                className={`flex-1 py-2 text-xs font-medium rounded-lg transition-colors ${
+                  viewMode === 'pdf'
+                    ? 'gold-gradient text-white'
+                    : 'bg-gray-100 text-text-muted'
+                }`}
+              >
+                PDF
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1150,11 +1382,30 @@ function ScheduleViewer({ onBack }: ViewerProps) {
         onChange={handleFileSelect}
         className="hidden"
       />
+      <input
+        ref={revisionInputRef}
+        type="file"
+        accept=".pdf"
+        onChange={handleRevisionUpload}
+        className="hidden"
+      />
 
       <div className="mobile-container px-4 py-4">
         {uploadError && (
           <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
             <p className="text-sm text-red-600">{uploadError}</p>
+          </div>
+        )}
+
+        {stage2Error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm text-red-600">{stage2Error}</p>
+            <button
+              onClick={handleProcessSchedule}
+              className="mt-2 text-xs text-red-700 underline"
+            >
+              Retry Processing
+            </button>
           </div>
         )}
 
@@ -1171,30 +1422,242 @@ function ScheduleViewer({ onBack }: ViewerProps) {
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploading}
-              className="px-6 py-2.5 rounded-button gold-gradient text-white text-sm font-medium active:scale-95 transition-transform disabled:opacity-50"
+              className="px-6 py-2.5 rounded-button gold-gradient text-white text-sm font-medium active:scale-95 transition-transform disabled:opacity-50 mb-6"
             >
               {isUploading ? 'Uploading...' : 'Upload Schedule PDF'}
             </button>
-          </div>
-        ) : (
-          /* Schedule PDF Viewer */
-          <div className="space-y-4">
-            {/* PDF Viewer */}
-            {schedule.pdfUri ? (
-              <div className="card p-0 overflow-hidden">
-                <iframe
-                  src={schedule.pdfUri}
-                  className="w-full h-[calc(100vh-280px)] min-h-[400px] border-0"
-                  title="Schedule PDF"
-                />
+            {/* Background processing note */}
+            <div className="rounded-xl bg-gold/5 border border-gold/20 p-4 max-w-xs">
+              <div className="flex gap-3">
+                <svg className="w-5 h-5 text-gold flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div className="text-xs text-text-secondary">
+                  <p className="font-medium mb-1">Automatic Processing</p>
+                  <p>The schedule will process automatically in the background. Characters will be confirmed within a few minutes.</p>
+                </div>
               </div>
-            ) : (
-              <div className="card">
-                <p className="text-sm text-text-muted text-center py-4">
-                  PDF preview not available
+            </div>
+          </div>
+        ) : viewMode === 'pdf' ? (
+          /* Schedule PDF Viewer - full page */
+          schedule.pdfUri ? (
+            <iframe
+              src={schedule.pdfUri}
+              className="w-full h-[calc(100vh-180px)] border-0 -mx-4 -mt-4"
+              style={{ width: 'calc(100% + 2rem)' }}
+              title="Schedule PDF"
+            />
+          ) : (
+            <div className="card">
+              <p className="text-sm text-text-muted text-center py-4">
+                PDF preview not available
+              </p>
+            </div>
+          )
+        ) : (
+          /* Breakdown View */
+          <div className="space-y-4">
+            {/* Processing progress indicator */}
+            {isProcessingStage2 && (
+              <div className="card p-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <svg className="w-5 h-5 animate-spin text-gold" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  <div className="flex-1">
+                    <span className="text-sm font-medium text-text-primary block">
+                      {stage2Progress.message || `Processing Day ${stage2Progress.current} of ${stage2Progress.total}...`}
+                    </span>
+                    <span className="text-xs text-text-muted">
+                      You can navigate away - processing continues in the background
+                    </span>
+                  </div>
+                </div>
+                {stage2Progress.total > 0 && (
+                  <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
+                    <div
+                      className="gold-gradient h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${(stage2Progress.current / stage2Progress.total) * 100}%` }}
+                    />
+                  </div>
+                )}
+                <p className="text-xs text-text-muted">
+                  Characters will be automatically confirmed once processing completes.
                 </p>
               </div>
             )}
+
+            {/* Revision processing indicator */}
+            {isProcessingRevision && (
+              <div className="card p-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <svg className="w-5 h-5 animate-spin text-gold" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  <div>
+                    <span className="text-sm font-medium text-text-primary block">
+                      Processing New Draft...
+                    </span>
+                    <span className="text-xs text-text-muted">
+                      {stage2Progress.message || (stage2Progress.total > 0
+                        ? `Day ${stage2Progress.current} of ${stage2Progress.total}`
+                        : 'Parsing schedule PDF')}
+                    </span>
+                  </div>
+                </div>
+                {stage2Progress.total > 0 && (
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="gold-gradient h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${(stage2Progress.current / stage2Progress.total) * 100}%` }}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Pending state - schedule uploaded, processing starting automatically */}
+            {!hasBreakdownData && !isProcessingStage2 && !isProcessingRevision && schedule && (
+              <div className="flex flex-col items-center justify-center py-12">
+                <div className="w-16 h-16 rounded-full bg-gold/10 flex items-center justify-center mb-4">
+                  <svg className="w-8 h-8 text-gold animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                </div>
+                <h3 className="text-base font-semibold text-text-primary mb-1">Processing Schedule</h3>
+                <p className="text-sm text-text-muted text-center mb-6 max-w-xs">
+                  {schedule.totalDays > 0
+                    ? `Preparing to process ${schedule.totalDays} shooting day${schedule.totalDays !== 1 ? 's' : ''}...`
+                    : 'Starting schedule processing...'}
+                </p>
+                <p className="text-xs text-text-muted text-center max-w-xs">
+                  Characters will be automatically synced to your breakdown once processing completes.
+                </p>
+              </div>
+            )}
+
+            {/* Breakdown data - shooting days */}
+            {hasBreakdownData && schedule.days.map((day) => (
+              <div key={day.dayNumber} className="card overflow-hidden">
+                {/* Day header - expandable */}
+                <button
+                  onClick={() => setExpandedDay(expandedDay === day.dayNumber ? null : day.dayNumber)}
+                  className="w-full p-3 flex items-center justify-between text-left active:bg-gray-50 transition-colors"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-text-primary">
+                        Day {day.dayNumber}
+                      </span>
+                      {day.date && (
+                        <span className="text-xs text-text-muted">
+                          {day.dayOfWeek ? `${day.dayOfWeek}, ` : ''}{day.date}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      {day.location && (
+                        <span className="text-xs text-text-muted truncate">{day.location}</span>
+                      )}
+                      <span className="text-xs text-gold font-medium">
+                        {day.scenes.length} scene{day.scenes.length !== 1 ? 's' : ''}
+                      </span>
+                      {day.totalPages && (
+                        <span className="text-xs text-text-muted">{day.totalPages} pages</span>
+                      )}
+                    </div>
+                  </div>
+                  <svg
+                    className={`w-4 h-4 text-text-muted transition-transform flex-shrink-0 ${
+                      expandedDay === day.dayNumber ? 'rotate-180' : ''
+                    }`}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {/* Expanded day - scene list */}
+                {expandedDay === day.dayNumber && (
+                  <div className="border-t border-border">
+                    {day.notes && day.notes.length > 0 && (
+                      <div className="px-3 py-2 bg-amber-50 border-b border-border">
+                        {day.notes.map((note, i) => (
+                          <span key={i} className="text-xs text-amber-700 block">{note}</span>
+                        ))}
+                      </div>
+                    )}
+                    {day.scenes.map((scene, idx) => (
+                      <div
+                        key={`${scene.sceneNumber}-${idx}`}
+                        className={`px-3 py-2.5 ${idx > 0 ? 'border-t border-border/50' : ''}`}
+                      >
+                        <div className="flex items-start gap-2">
+                          {/* Scene number badge */}
+                          <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-gray-100 flex flex-col items-center justify-center">
+                            <span className="text-[10px] text-text-muted leading-none">Sc</span>
+                            <span className="text-xs font-bold text-text-primary leading-tight">{scene.sceneNumber}</span>
+                          </div>
+                          {/* Scene details */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className={`text-[10px] font-medium px-1 py-0.5 rounded ${
+                                scene.intExt === 'EXT' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+                              }`}>
+                                {scene.intExt}
+                              </span>
+                              <span className={`text-[10px] font-medium px-1 py-0.5 rounded ${
+                                scene.dayNight.toLowerCase().includes('night') || scene.dayNight.startsWith('N')
+                                  ? 'bg-indigo-100 text-indigo-700'
+                                  : 'bg-amber-100 text-amber-700'
+                              }`}>
+                                {scene.dayNight}
+                              </span>
+                              {scene.pages && (
+                                <span className="text-[10px] text-text-muted">{scene.pages} pgs</span>
+                              )}
+                              {scene.estimatedTime && (
+                                <span className="text-[10px] text-text-muted ml-auto">{scene.estimatedTime}</span>
+                              )}
+                            </div>
+                            <p className="text-xs font-medium text-text-primary mt-0.5 truncate">
+                              {scene.setLocation}
+                            </p>
+                            {scene.description && (
+                              <p className="text-[11px] text-text-muted mt-0.5 line-clamp-2">
+                                {scene.description}
+                              </p>
+                            )}
+                            {/* Cast numbers */}
+                            {scene.castNumbers.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {getCastNamesForNumbers(scene.castNumbers).map((name, ci) => (
+                                  <span key={ci} className="text-[10px] bg-gray-100 text-text-muted px-1.5 py-0.5 rounded">
+                                    {name}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {day.scenes.length === 0 && (
+                      <div className="px-3 py-4 text-center">
+                        <p className="text-xs text-text-muted">No scenes extracted for this day</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -1223,6 +1686,16 @@ function ScheduleViewer({ onBack }: ViewerProps) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Schedule Amendment Review Modal */}
+      {scheduleAmendmentResult && (
+        <ScheduleAmendmentModal
+          amendmentResult={scheduleAmendmentResult}
+          getCastNamesForNumbers={getCastNamesForNumbers}
+          onApply={handleApplyScheduleAmendment}
+          onCancel={handleCancelScheduleAmendment}
+        />
       )}
     </>
   );

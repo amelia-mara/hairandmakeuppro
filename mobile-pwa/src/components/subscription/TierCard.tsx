@@ -1,7 +1,7 @@
 import { clsx } from 'clsx';
 import { Badge, Button } from '@/components/ui';
 import type { TierInfo, BillingPeriod, SubscriptionTier } from '@/types/subscription';
-import { formatPrice, formatMonthlyEquivalent } from '@/types/subscription';
+import { formatPrice, formatMonthlyEquivalent, BETA_MODE } from '@/types/subscription';
 import { FeatureList } from './FeatureList';
 
 export interface TierCardProps {
@@ -125,25 +125,37 @@ export function TierCard({
         {description}
       </p>
 
-      {/* Price */}
-      <div className="mb-4">
-        <div className="flex items-baseline gap-1">
-          <span className={clsx(
-            'text-3xl font-bold',
-            id === 'trainee' ? 'text-text-primary' : 'text-gold'
-          )}>
-            {getDisplayPrice()}
-          </span>
-          <span className="text-sm text-text-muted">
-            {getBillingLabel()}
-          </span>
-        </div>
-        {monthlyEquivalent && (
+      {/* Price - Hidden in beta mode */}
+      {BETA_MODE ? (
+        <div className="mb-4">
+          <div className="flex items-center gap-2">
+            <span className="text-lg font-bold text-gold">Beta Access</span>
+            <Badge variant="gold" size="sm">Free</Badge>
+          </div>
           <p className="text-xs text-text-muted mt-1">
-            ({monthlyEquivalent} billed annually)
+            Full access during beta testing
           </p>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div className="mb-4">
+          <div className="flex items-baseline gap-1">
+            <span className={clsx(
+              'text-3xl font-bold',
+              id === 'trainee' ? 'text-text-primary' : 'text-gold'
+            )}>
+              {getDisplayPrice()}
+            </span>
+            <span className="text-sm text-text-muted">
+              {getBillingLabel()}
+            </span>
+          </div>
+          {monthlyEquivalent && (
+            <p className="text-xs text-text-muted mt-1">
+              ({monthlyEquivalent} billed annually)
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Features */}
       <FeatureList features={featureList} />

@@ -58,8 +58,8 @@ export async function parseScheduleStage1(file: File): Promise<Stage1Result> {
     productionName: metadata.productionName,
     scriptVersion: metadata.scriptVersion,
     scheduleVersion: metadata.scheduleVersion,
-    status: 'complete', // Complete since we're only doing PDF viewing now
-    processingProgress: { current: totalDays, total: totalDays },
+    status: 'pending', // Pending until Stage 2 processes scene breakdown
+    processingProgress: { current: 0, total: totalDays },
     castList,
     days: [], // Empty - scene parsing removed
     totalDays,

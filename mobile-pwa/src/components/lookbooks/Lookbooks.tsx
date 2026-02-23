@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
+import { useCallSheetStore } from '@/stores/callSheetStore';
 import type { Look, Character } from '@/types';
 import { CharacterSection } from './CharacterSection';
 import { AddLookModal } from './AddLookModal';
@@ -10,11 +11,34 @@ type SyncStatus = 'synced' | 'pending' | 'offline';
 export function Lookbooks() {
   const { currentProject, sceneCaptures } = useProjectStore();
   const { schedule } = useScheduleStore();
+  const { callSheets } = useCallSheetStore();
   const [addLookOpen, setAddLookOpen] = useState(false);
   const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(null);
 
   // Simulated sync status (would come from sync service in real app)
   const syncStatus: SyncStatus = 'offline';
+
+  // Build a map of cast number -> scene numbers from all call sheets
+  // This lets us count how many scenes each cast member appears in
+  const castSceneMap = useMemo(() => {
+    const map = new Map<number, Set<string>>();
+    for (const callSheet of callSheets) {
+      for (const scene of callSheet.scenes) {
+        if (scene.cast) {
+          for (const castId of scene.cast) {
+            const castNum = parseInt(castId, 10);
+            if (!isNaN(castNum)) {
+              if (!map.has(castNum)) {
+                map.set(castNum, new Set());
+              }
+              map.get(castNum)!.add(scene.sceneNumber);
+            }
+          }
+        }
+      }
+    }
+    return map;
+  }, [callSheets]);
 
   // Merge characters from schedule cast list with confirmed project characters
   // This ensures cast appears immediately when schedule is uploaded
@@ -47,8 +71,9 @@ export function Lookbooks() {
           }
         } else {
           // Create a placeholder character from the cast list
+          // Use cast-${number} ID format to match call sheet character IDs
           const name = castMember.character || castMember.name;
-          const placeholderId = `schedule-cast-${castMember.number}`;
+          const placeholderId = `cast-${castMember.number}`;
 
           // Generate initials
           const words = name.split(/\s+/).filter(Boolean);
@@ -172,12 +197,23 @@ export function Lookbooks() {
 
                   // Calculate total capture progress for character
                   let totalCaptured = 0;
-                  let totalScenes = 0;
+                  let looksSceneCount = 0;
                   looks.forEach(look => {
                     const progress = getCaptureProgress(look);
                     totalCaptured += progress.captured;
-                    totalScenes += progress.total;
+                    looksSceneCount += progress.total;
                   });
+
+                  // Get scenes from call sheet data using cast number
+                  // This shows total scenes the cast member appears in across all call sheets
+                  const callSheetScenes = character.actorNumber
+                    ? castSceneMap.get(character.actorNumber)
+                    : undefined;
+                  const callSheetSceneCount = callSheetScenes?.size || 0;
+
+                  // Use the larger of looks-based scene count or call sheet scene count
+                  // This ensures we show accurate counts even if looks aren't fully set up
+                  const totalScenes = Math.max(looksSceneCount, callSheetSceneCount);
 
                   return (
                     <CharacterSection

@@ -178,6 +178,82 @@ export function SceneCharacterConfirmation({
 
         {/* Character selection */}
         <div className="flex-1 overflow-y-auto p-4">
+          {/* Current characters section - show existing confirmed characters with remove option */}
+          {scene.characters && scene.characters.length > 0 && (
+            <div className="mb-4">
+              <h4 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-2">
+                CURRENT CHARACTERS
+              </h4>
+              <div className="space-y-2">
+                {scene.characters.map(charId => {
+                  const char = projectCharacters.find(c => c.id === charId);
+                  if (!char) return null;
+                  const isSelected = selectedCharacterIds.has(charId);
+                  return (
+                    <div
+                      key={charId}
+                      className={clsx(
+                        'flex items-center gap-3 p-3 rounded-xl border transition-all',
+                        isSelected
+                          ? 'border-gold bg-gold/5'
+                          : 'border-red-200 bg-red-50'
+                      )}
+                    >
+                      <CharacterAvatar character={char} size="sm" />
+                      <div className="flex-1 min-w-0">
+                        <span className={clsx(
+                          'font-medium',
+                          isSelected ? 'text-text-primary' : 'text-red-400 line-through'
+                        )}>{char.name}</span>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setSelectedCharacterIds(ids => {
+                            const newIds = new Set(ids);
+                            if (newIds.has(charId)) {
+                              newIds.delete(charId);
+                            } else {
+                              newIds.add(charId);
+                            }
+                            return newIds;
+                          });
+                          // Also update suggested names if this character was from suggestions
+                          const charNameUpper = char.name.toUpperCase();
+                          setSelectedSuggestedNames(names => {
+                            const newNames = new Set(names);
+                            if (isSelected) {
+                              newNames.delete(charNameUpper);
+                            } else {
+                              newNames.add(charNameUpper);
+                            }
+                            return newNames;
+                          });
+                        }}
+                        className={clsx(
+                          'p-1.5 rounded-lg transition-colors flex-shrink-0',
+                          isSelected
+                            ? 'text-red-500 hover:bg-red-50 active:bg-red-100'
+                            : 'text-green-600 hover:bg-green-50 active:bg-green-100'
+                        )}
+                        title={isSelected ? 'Remove from scene' : 'Add back to scene'}
+                      >
+                        {isSelected ? (
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        ) : (
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Suggested characters section */}
           {suggestedWithExisting.length > 0 && (
             <div className="mb-4">
@@ -329,32 +405,41 @@ export function SceneCharacterStatus({
   const confirmedCharacters = characters.filter(c => scene.characters?.includes(c.id));
 
   if (status === 'confirmed') {
-    // Show confirmed characters
+    // Show confirmed characters with option to add more
     return (
-      <button
-        onClick={onConfirmClick}
-        className="w-full text-left group"
-      >
-        <div className="flex items-center gap-1.5 text-green-600 text-xs mb-1">
-          <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+      <div className="w-full">
+        <button
+          onClick={onConfirmClick}
+          className="w-full text-left group"
+        >
+          <div className="flex items-center gap-1.5 text-green-600 text-xs mb-1">
+            <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+            </svg>
+            <span className="font-medium">Characters confirmed</span>
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {confirmedCharacters.slice(0, 4).map(char => (
+              <span key={char.id} className="text-[11px] text-text-secondary">
+                {char.name}{confirmedCharacters.indexOf(char) < confirmedCharacters.length - 1 && confirmedCharacters.indexOf(char) < 3 ? ',' : ''}
+              </span>
+            ))}
+            {confirmedCharacters.length > 4 && (
+              <span className="text-[11px] text-text-muted">+{confirmedCharacters.length - 4} more</span>
+            )}
+          </div>
+        </button>
+        {/* Add character button - always visible */}
+        <button
+          onClick={onConfirmClick}
+          className="inline-flex items-center gap-1 text-[10px] text-gold font-medium mt-1.5 hover:text-gold-dark transition-colors"
+        >
+          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
           </svg>
-          <span className="font-medium">Characters confirmed</span>
-        </div>
-        <div className="flex flex-wrap gap-1">
-          {confirmedCharacters.slice(0, 4).map(char => (
-            <span key={char.id} className="text-[11px] text-text-secondary">
-              {char.name}{confirmedCharacters.indexOf(char) < confirmedCharacters.length - 1 && confirmedCharacters.indexOf(char) < 3 ? ',' : ''}
-            </span>
-          ))}
-          {confirmedCharacters.length > 4 && (
-            <span className="text-[11px] text-text-muted">+{confirmedCharacters.length - 4} more</span>
-          )}
-        </div>
-        <span className="text-[10px] text-gold opacity-0 group-hover:opacity-100 transition-opacity">
-          Tap to edit
-        </span>
-      </button>
+          Add character
+        </button>
+      </div>
     );
   }
 
@@ -396,24 +481,16 @@ export function SceneCharacterStatus({
     );
   }
 
-  // Pending with no suggestions
+  // Pending with no suggestions - just show add button
   return (
     <button
       onClick={onConfirmClick}
-      className="w-full text-left"
+      className="inline-flex items-center gap-1 text-xs text-gold font-medium"
     >
-      <div className="flex items-center gap-1.5 text-text-muted text-xs mb-1">
-        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-        </svg>
-        <span>No characters assigned</span>
-      </div>
-      <span className="inline-flex items-center gap-1 text-[10px] text-gold font-medium">
-        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-        </svg>
-        Tap to add characters
-      </span>
+      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+      </svg>
+      Tap to add characters
     </button>
   );
 }

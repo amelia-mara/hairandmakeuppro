@@ -60,6 +60,13 @@ export default {
           'Arial',
           'sans-serif',
         ],
+        serif: [
+          '"Playfair Display"',
+          'Georgia',
+          '"Times New Roman"',
+          'Times',
+          'serif',
+        ],
       },
       fontSize: {
         'section': ['10px', { letterSpacing: '0.1em', fontWeight: '700' }],
