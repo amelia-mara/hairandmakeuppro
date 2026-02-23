@@ -193,9 +193,11 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
       );
 
       // Update each scene with suggested characters
+      // Use current store state to avoid stale closure on `project` parameter
       const store = useProjectStore.getState();
+      const currentScenes = store.currentProject?.scenes || project.scenes;
       results.forEach((characters, sceneNumber) => {
-        const scene = project.scenes.find((s) => s.sceneNumber === sceneNumber);
+        const scene = currentScenes.find((s) => s.sceneNumber === sceneNumber);
         if (scene) {
           store.updateSceneSuggestedCharacters(scene.id, characters);
         }
