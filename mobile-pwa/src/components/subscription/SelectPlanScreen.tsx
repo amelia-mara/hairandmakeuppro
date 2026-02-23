@@ -9,6 +9,7 @@ import {
   SUBSCRIPTION_TIERS,
   getDowngradeWarnings,
   isTierHigher,
+  BETA_MODE,
 } from '@/types/subscription';
 import type { SubscriptionTier, BillingPeriod } from '@/types/subscription';
 
@@ -118,18 +119,23 @@ export function SelectPlanScreen({
       {/* Subheader text */}
       <div className="px-6 pt-4 pb-2 text-center">
         <p className="text-sm text-text-secondary">
-          Select the tier that fits your role. You can upgrade anytime.
+          {BETA_MODE
+            ? 'All features are available during beta testing. Select your preferred tier.'
+            : 'Select the tier that fits your role. You can upgrade anytime.'
+          }
         </p>
       </div>
 
-      {/* Billing period toggle */}
-      <div className="px-6 py-4 flex justify-center">
-        <PriceToggle
-          value={billingPeriod}
-          onChange={setBillingPeriod}
-          showPerProject={false}
-        />
-      </div>
+      {/* Billing period toggle - Hidden in beta mode */}
+      {!BETA_MODE && (
+        <div className="px-6 py-4 flex justify-center">
+          <PriceToggle
+            value={billingPeriod}
+            onChange={setBillingPeriod}
+            showPerProject={false}
+          />
+        </div>
+      )}
 
       {/* Tier cards - scrollable */}
       <div className="flex-1 overflow-y-auto px-4 pb-4">
@@ -159,8 +165,17 @@ export function SelectPlanScreen({
 
         {/* FAQ / Reassurance */}
         <div className="mt-6 text-center space-y-1">
-          <p className="text-xs text-text-muted">Cancel anytime</p>
-          <p className="text-xs text-text-muted">7-day free trial on paid plans</p>
+          {BETA_MODE ? (
+            <>
+              <p className="text-xs text-text-muted">Full access during beta</p>
+              <p className="text-xs text-text-muted">Thank you for testing!</p>
+            </>
+          ) : (
+            <>
+              <p className="text-xs text-text-muted">Cancel anytime</p>
+              <p className="text-xs text-text-muted">7-day free trial on paid plans</p>
+            </>
+          )}
           <button className="text-xs text-gold hover:underline">
             Questions? Contact us
           </button>

@@ -20,7 +20,21 @@ import type {
   CharacterConfirmationStatus,
   CharacterDetectionStatus,
   CastProfile,
+  ProductionSchedule,
 } from '@/types';
+import {
+  syncCastDataToScenes,
+  canSyncCastData,
+  type CastSyncResult,
+} from '@/services/castSyncService';
+import {
+  compareScriptAmendment,
+  applyAmendmentToScenes,
+  clearAmendmentFlags,
+  getAmendmentCount,
+  type AmendmentResult,
+} from '@/services/scriptAmendmentService';
+import type { FastParsedScene } from '@/utils/scriptParser';
 import {
   createEmptyContinuityFlags,
   createEmptySFXDetails,
@@ -107,6 +121,10 @@ interface ProjectState {
   addSFXPhoto: (captureId: string, photo: Photo) => void;
   removeSFXPhoto: (captureId: string, photoId: string) => void;
 
+  // Actions - Scene Management
+  addScene: (sceneData: Partial<Scene> & { sceneNumber: string }) => Scene;
+  addCharacterToScene: (sceneId: string, characterId: string) => void;
+
   // Actions - Scene Completion
   markSceneComplete: (sceneId: string) => void;
   markSceneIncomplete: (sceneId: string) => void;
@@ -135,6 +153,23 @@ interface ProjectState {
   addCharacterFromScene: (sceneId: string, characterName: string) => Character;
   getUnconfirmedScenesCount: () => number;
   getConfirmedScenesCount: () => number;
+
+  // Actions - Cast Sync from Schedule
+  syncCastDataFromSchedule: (
+    schedule: ProductionSchedule,
+    options?: { createMissingCharacters?: boolean; overwriteExisting?: boolean; autoConfirm?: boolean }
+  ) => CastSyncResult | null;
+  canSyncCastData: (schedule: ProductionSchedule | null) => { canSync: boolean; reason?: string };
+
+  // Actions - Script Amendment (revised script uploads)
+  compareScriptAmendment: (newParsedScenes: FastParsedScene[]) => AmendmentResult | null;
+  applyScriptAmendment: (
+    amendmentResult: AmendmentResult,
+    options?: { includeNew?: boolean; includeModified?: boolean; includeDeleted?: boolean }
+  ) => void;
+  clearSceneAmendmentFlags: () => void;
+  clearSingleSceneAmendment: (sceneId: string) => void;
+  getAmendmentCounts: () => { total: number; new: number; modified: number; deleted: number };
 
   // Actions - Lifecycle
   updateActivity: () => void;
@@ -548,6 +583,63 @@ export const useProjectStore = create<ProjectState>()(
                   sfxReferencePhotos: capture.sfxDetails.sfxReferencePhotos.filter(p => p.id !== photoId),
                 },
               },
+            },
+          };
+        });
+      },
+
+      // Scene management
+      addScene: (sceneData) => {
+        const newScene: Scene = {
+          id: `scene-${sceneData.sceneNumber}-${Date.now()}`,
+          sceneNumber: sceneData.sceneNumber,
+          slugline: sceneData.slugline || `Scene ${sceneData.sceneNumber}`,
+          intExt: sceneData.intExt || 'INT',
+          timeOfDay: sceneData.timeOfDay || 'DAY',
+          synopsis: sceneData.synopsis,
+          scriptContent: sceneData.scriptContent,
+          characters: sceneData.characters || [],
+          isComplete: false,
+          characterConfirmationStatus: 'confirmed', // New scenes from call sheet are considered confirmed
+          shootingDay: sceneData.shootingDay,
+        };
+
+        set((state) => {
+          if (!state.currentProject) return state;
+
+          // Insert scene in order by scene number
+          const scenes = [...state.currentProject.scenes, newScene].sort((a, b) => {
+            // Extract numeric part for sorting
+            const numA = parseInt(a.sceneNumber.replace(/\D/g, '')) || 0;
+            const numB = parseInt(b.sceneNumber.replace(/\D/g, '')) || 0;
+            if (numA !== numB) return numA - numB;
+            // If same number, sort alphabetically
+            return a.sceneNumber.localeCompare(b.sceneNumber);
+          });
+
+          return {
+            currentProject: {
+              ...state.currentProject,
+              scenes,
+            },
+          };
+        });
+
+        return newScene;
+      },
+
+      addCharacterToScene: (sceneId, characterId) => {
+        set((state) => {
+          if (!state.currentProject) return state;
+
+          return {
+            currentProject: {
+              ...state.currentProject,
+              scenes: state.currentProject.scenes.map((s) =>
+                s.id === sceneId && !s.characters.includes(characterId)
+                  ? { ...s, characters: [...s.characters, characterId] }
+                  : s
+              ),
             },
           };
         });
@@ -991,6 +1083,119 @@ export const useProjectStore = create<ProjectState>()(
         return state.currentProject.scenes
           .filter(s => look.scenes.includes(s.sceneNumber))
           .sort((a, b) => a.sceneNumber.localeCompare(b.sceneNumber, undefined, { numeric: true }));
+      },
+
+      // Cast Sync from Schedule
+      syncCastDataFromSchedule: (schedule, options = {}) => {
+        const state = get();
+        if (!state.currentProject) return null;
+
+        const { canSync, reason } = canSyncCastData(schedule);
+        if (!canSync) {
+          console.error('[ProjectStore] Cannot sync cast data:', reason);
+          return null;
+        }
+
+        const { result, updatedScenes, updatedCharacters, updatedLooks } = syncCastDataToScenes(
+          schedule,
+          state.currentProject.scenes,
+          state.currentProject.characters,
+          state.currentProject.looks,
+          options
+        );
+
+        if (result.scenesUpdated > 0 || result.charactersCreated > 0) {
+          set((s) => ({
+            currentProject: s.currentProject
+              ? {
+                  ...s.currentProject,
+                  scenes: updatedScenes,
+                  characters: updatedCharacters,
+                  looks: updatedLooks,
+                }
+              : null,
+          }));
+
+          console.log('[ProjectStore] Cast sync complete:', {
+            scenesUpdated: result.scenesUpdated,
+            charactersCreated: result.charactersCreated,
+          });
+        }
+
+        return result;
+      },
+
+      canSyncCastData: (schedule) => canSyncCastData(schedule),
+
+      // Script Amendment actions
+      compareScriptAmendment: (newParsedScenes) => {
+        const { currentProject } = get();
+        if (!currentProject?.scenes) return null;
+        return compareScriptAmendment(currentProject.scenes, newParsedScenes);
+      },
+
+      applyScriptAmendment: (amendmentResult, options = { includeNew: true, includeModified: true, includeDeleted: false }) => {
+        const { currentProject } = get();
+        if (!currentProject) return;
+
+        const updatedScenes = applyAmendmentToScenes(
+          currentProject.scenes,
+          amendmentResult,
+          options
+        );
+
+        set({
+          currentProject: {
+            ...currentProject,
+            scenes: updatedScenes,
+            updatedAt: new Date(),
+          },
+        });
+      },
+
+      clearSceneAmendmentFlags: () => {
+        const { currentProject } = get();
+        if (!currentProject) return;
+
+        const clearedScenes = clearAmendmentFlags(currentProject.scenes);
+
+        set({
+          currentProject: {
+            ...currentProject,
+            scenes: clearedScenes,
+          },
+        });
+      },
+
+      clearSingleSceneAmendment: (sceneId) => {
+        const { currentProject } = get();
+        if (!currentProject) return;
+
+        const updatedScenes = currentProject.scenes.map(scene =>
+          scene.id === sceneId
+            ? {
+                ...scene,
+                amendmentStatus: undefined,
+                amendmentNotes: undefined,
+                previousScriptContent: undefined,
+              }
+            : scene
+        );
+
+        set({
+          currentProject: {
+            ...currentProject,
+            scenes: updatedScenes,
+          },
+        });
+      },
+
+      getAmendmentCounts: () => {
+        const { currentProject } = get();
+        if (!currentProject?.scenes) {
+          return { total: 0, new: 0, modified: 0, deleted: 0 };
+        }
+        return getAmendmentCount(currentProject.scenes);
       },
 
       // Lifecycle actions

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Input } from '@/components/ui/Input';
-import { PermissionPicker, StatusPicker, ProductionTypeSelector } from './PermissionPicker';
+import { PermissionPicker, ProductionTypeSelector } from './PermissionPicker';
 import { DangerZone } from './DangerZone';
 import { InviteCodeShare } from './InviteCodeShare';
 import { useProjectSettingsStore } from '@/stores/projectSettingsStore';
@@ -11,8 +11,6 @@ import { PROJECT_RETENTION_DAYS } from '@/types';
 interface ProjectSettingsScreenProps {
   projectId: string;
   onBack: () => void;
-  onNavigateToSchedule?: () => void;
-  onNavigateToSceneManagement?: () => void;
   onNavigateToTeam?: () => void;
   onNavigateToStats?: () => void;
   onNavigateToExport?: () => void;
@@ -23,8 +21,6 @@ interface ProjectSettingsScreenProps {
 export function ProjectSettingsScreen({
   projectId,
   onBack,
-  onNavigateToSchedule,
-  onNavigateToSceneManagement,
   onNavigateToTeam,
   onNavigateToStats,
   onNavigateToExport,
@@ -38,7 +34,6 @@ export function ProjectSettingsScreen({
     loadProjectSettings,
     updateProjectName,
     updateProjectType,
-    updateProjectStatus,
     updatePermission,
     archiveProject,
     deleteProject,
@@ -196,12 +191,6 @@ export function ProjectSettingsScreen({
               value={projectSettings.type}
               onChange={updateProjectType}
             />
-
-            {/* Project Status */}
-            <StatusPicker
-              value={projectSettings.status as 'prep' | 'shooting' | 'wrapped'}
-              onChange={updateProjectStatus}
-            />
           </div>
         </section>
 
@@ -276,76 +265,6 @@ export function ProjectSettingsScreen({
                   <p className="text-sm font-medium text-text-primary">Project Stats</p>
                   <p className="text-xs text-text-muted">View project statistics</p>
                 </div>
-              </div>
-              <svg className="w-5 h-5 text-text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-              </svg>
-            </button>
-          </div>
-        </section>
-
-        {/* Shooting Schedule Section */}
-        <section>
-          <h3 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-3">
-            SHOOTING SCHEDULE
-          </h3>
-
-          <div className="space-y-3">
-            <button
-              onClick={() => {/* TODO: Import schedule */}}
-              className="w-full card flex items-center justify-between active:scale-[0.98] transition-transform"
-            >
-              <div className="text-left">
-                <p className="text-sm font-medium text-text-primary">Import Schedule</p>
-                <p className="text-xs text-text-muted">Upload a shooting schedule</p>
-              </div>
-              <svg className="w-5 h-5 text-text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-              </svg>
-            </button>
-
-            <button
-              onClick={onNavigateToSchedule}
-              className="w-full card flex items-center justify-between active:scale-[0.98] transition-transform"
-            >
-              <div className="text-left">
-                <p className="text-sm font-medium text-text-primary">Manual Schedule Entry</p>
-                <p className="text-xs text-text-muted">Set today's scenes manually</p>
-              </div>
-              <svg className="w-5 h-5 text-text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-              </svg>
-            </button>
-          </div>
-        </section>
-
-        {/* Script Section */}
-        <section>
-          <h3 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-3">
-            SCRIPT
-          </h3>
-
-          <div className="space-y-3">
-            <button
-              onClick={() => {/* TODO: Re-import script */}}
-              className="w-full card flex items-center justify-between active:scale-[0.98] transition-transform"
-            >
-              <div className="text-left">
-                <p className="text-sm font-medium text-text-primary">Re-import Script</p>
-                <p className="text-xs text-text-muted">Upload updated script</p>
-              </div>
-              <svg className="w-5 h-5 text-text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-              </svg>
-            </button>
-
-            <button
-              onClick={onNavigateToSceneManagement}
-              className="w-full card flex items-center justify-between active:scale-[0.98] transition-transform"
-            >
-              <div className="text-left">
-                <p className="text-sm font-medium text-text-primary">Scene Management</p>
-                <p className="text-xs text-text-muted">Add, edit, or remove scenes</p>
               </div>
               <svg className="w-5 h-5 text-text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />

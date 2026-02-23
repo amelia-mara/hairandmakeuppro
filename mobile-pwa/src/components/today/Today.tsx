@@ -3,16 +3,85 @@ import { useProjectStore } from '@/stores/projectStore';
 import { useCallSheetStore } from '@/stores/callSheetStore';
 import { SceneScriptModal } from '@/components/scenes/SceneScriptModal';
 import { formatShortDate } from '@/utils/helpers';
-import type { ShootingSceneStatus, SceneFilmingStatus, CallSheetScene, Scene, Character, Look } from '@/types';
-import { SCENE_FILMING_STATUS_CONFIG, parseDayTypeFromString, DAY_TYPE_LABELS } from '@/types';
+import type { ShootingSceneStatus, SceneFilmingStatus, CallSheetScene, Scene, Character, Look, NavTab } from '@/types';
+import { SCENE_FILMING_STATUS_CONFIG, parseDayTypeFromString } from '@/types';
 import { clsx } from 'clsx';
+
+// Format minutes into hours and minutes (e.g., 206 -> "3hr 26m")
+function formatDuration(minutes: number): string {
+  if (minutes < 60) {
+    return `${minutes}m`;
+  }
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  if (mins === 0) {
+    return `${hours}hr`;
+  }
+  return `${hours}hr ${mins}m`;
+}
+
+/**
+ * Split combined scene numbers and extract base scene numbers
+ * Examples:
+ *   "32/32B" -> ["32/32B", "32", "32B"]
+ *   "15pt2" -> ["15pt2", "15"]
+ *   "15pt 2" -> ["15pt 2", "15"]
+ *   "15A" -> ["15A", "15"]
+ *   "119" -> ["119"]
+ *   "1A/1B/1C" -> ["1A/1B/1C", "1A", "1B", "1C", "1"]
+ */
+function splitCombinedSceneNumber(sceneNumber: string): string[] {
+  const results = new Set<string>();
+  results.add(sceneNumber); // Always include original
+
+  // Split on /
+  const slashParts = sceneNumber.split(/[\/]/).map(s => s.trim()).filter(Boolean);
+  slashParts.forEach(p => results.add(p));
+
+  // Split on comma
+  const commaParts = sceneNumber.split(/[,]/).map(s => s.trim()).filter(Boolean);
+  commaParts.forEach(p => results.add(p));
+
+  // Extract base scene number from patterns like "15pt2", "15pt 2", "15A", "15-2"
+  // Pattern: digits followed by optional letter, then "pt"/"part"/letter/dash + more
+  const baseMatch = sceneNumber.match(/^(\d+[A-Za-z]?)(?:pt|part|PT|PART|-|\s)/i);
+  if (baseMatch) {
+    results.add(baseMatch[1]); // Add the base number (e.g., "15" from "15pt2")
+  }
+
+  // Also try extracting just the leading digits
+  const digitsMatch = sceneNumber.match(/^(\d+)/);
+  if (digitsMatch && digitsMatch[1] !== sceneNumber) {
+    results.add(digitsMatch[1]);
+  }
+
+  // For each part found, also try to extract its base
+  const allParts = [...results];
+  for (const part of allParts) {
+    const partBase = part.match(/^(\d+)[A-Za-z]$/);
+    if (partBase) {
+      results.add(partBase[1]); // "32B" -> "32"
+    }
+  }
+
+  return [...results];
+}
 
 interface TodayProps {
   onSceneSelect: (sceneId: string) => void;
+  onNavigateToTab?: (tab: NavTab) => void;
 }
 
-export function Today({ onSceneSelect }: TodayProps) {
-  const { currentProject, updateSceneFilmingStatus: syncFilmingStatus } = useProjectStore();
+// Interface for unmatched scene modal
+interface UnmatchedSceneInfo {
+  sceneNumber: string;
+  character: Character;
+  callSheetScene: CallSheetScene;
+  suggestedMergeScenes: Scene[]; // Scenes that might be related (e.g., "15" for "15pt2")
+}
+
+export function Today({ onSceneSelect, onNavigateToTab }: TodayProps) {
+  const { currentProject, updateSceneFilmingStatus: syncFilmingStatus, addScene, addCharacterToScene } = useProjectStore();
 
   // Subscribe to actual state values from call sheet store for proper reactivity
   const callSheets = useCallSheetStore(state => state.callSheets);
@@ -83,6 +152,9 @@ export function Today({ onSceneSelect }: TodayProps) {
 
   // State for scene script modal
   const [scriptModalScene, setScriptModalScene] = useState<Scene | null>(null);
+
+  // State for unmatched scene modal (when scene from call sheet doesn't exist in breakdown)
+  const [unmatchedSceneInfo, setUnmatchedSceneInfo] = useState<UnmatchedSceneInfo | null>(null);
 
   // File upload ref and handler
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -200,6 +272,23 @@ export function Today({ onSceneSelect }: TodayProps) {
     return map;
   }, [currentProject?.looks]);
 
+  // Map: "actorNumber-sceneNumber" -> Look (lookup by cast number as fallback)
+  // This enables linking looks to characters from call sheet cast data
+  const actorNumberLookMap = useMemo(() => {
+    if (!currentProject) return new Map<string, Look>();
+    const map = new Map<string, Look>();
+    for (const look of currentProject.looks) {
+      // Find the character to get their actorNumber
+      const char = characterMap.get(look.characterId);
+      if (char?.actorNumber) {
+        for (const sceneNum of look.scenes) {
+          map.set(`${char.actorNumber}-${sceneNum}`, look);
+        }
+      }
+    }
+    return map;
+  }, [currentProject?.looks, characterMap]);
+
   // Map: cast ID (from call sheet) -> CastCall info
   // This allows us to look up character names from cast numbers in scenes
   const castCallMap = useMemo(() => {
@@ -251,15 +340,114 @@ export function Today({ onSceneSelect }: TodayProps) {
   }, [callSheet?.scenes, castCallMap]);
 
   // Fast lookup functions using pre-computed maps
-  const getSceneData = (sceneNumber: string) => sceneDataMap.get(sceneNumber);
+  // Improved scene lookup that handles combined scene numbers like "32/32B"
+  const getSceneData = (sceneNumber: string): Scene | undefined => {
+    // First try exact match
+    const exact = sceneDataMap.get(sceneNumber);
+    if (exact) return exact;
+
+    // Try matching any component of a combined scene number
+    const parts = splitCombinedSceneNumber(sceneNumber);
+    for (const part of parts) {
+      const match = sceneDataMap.get(part);
+      if (match) return match;
+    }
+
+    return undefined;
+  };
+
+  // Find a project character by name (flexible matching)
+  // Tries: exact match, first name match, contains match
+  const findProjectCharacterByName = (name: string): Character | undefined => {
+    if (!currentProject || !name) return undefined;
+    const normalizedName = name.toUpperCase().trim();
+
+    // First try exact match
+    const exact = currentProject.characters.find(c =>
+      c.name.toUpperCase().trim() === normalizedName
+    );
+    if (exact) return exact;
+
+    // Try first name match (call sheet might have just "CARA", project has "CARA SMITH")
+    const firstNameMatch = currentProject.characters.find(c => {
+      const charFirstName = c.name.toUpperCase().trim().split(' ')[0];
+      return charFirstName === normalizedName;
+    });
+    if (firstNameMatch) return firstNameMatch;
+
+    // Try if project character name starts with the search name
+    const startsWithMatch = currentProject.characters.find(c =>
+      c.name.toUpperCase().trim().startsWith(normalizedName + ' ')
+    );
+    if (startsWithMatch) return startsWithMatch;
+
+    // Try if search name contains the project character's first name
+    const containsMatch = currentProject.characters.find(c => {
+      const charFirstName = c.name.toUpperCase().trim().split(' ')[0];
+      return normalizedName.includes(charFirstName) && charFirstName.length > 2;
+    });
+    if (containsMatch) return containsMatch;
+
+    return undefined;
+  };
+
   // Get characters for a scene - prefers confirmed project characters, falls back to call sheet cast
+  // Also tries to link call sheet cast to existing project characters by name
   const getCharactersInScene = (sceneNumber: string): Character[] => {
+    // First try exact scene match
     const confirmedChars = sceneCharactersMap.get(sceneNumber) || [];
     if (confirmedChars.length > 0) return confirmedChars;
-    // Fall back to call sheet cast data
-    return sceneCastFromCallSheet.get(sceneNumber) || [];
+
+    // Try matching via combined scene components (e.g., "32/32B" -> check "32" and "32B")
+    const parts = splitCombinedSceneNumber(sceneNumber);
+    for (const part of parts) {
+      const partChars = sceneCharactersMap.get(part) || [];
+      if (partChars.length > 0) return partChars;
+    }
+
+    // Fall back to call sheet cast data, but try to link to project characters by name
+    const callSheetChars = sceneCastFromCallSheet.get(sceneNumber) || [];
+    if (callSheetChars.length > 0) {
+      return callSheetChars.map(char => {
+        // Try to find matching project character by name
+        const projectChar = findProjectCharacterByName(char.name);
+        if (projectChar) {
+          // Return project character with actorNumber from call sheet for look matching
+          return { ...projectChar, actorNumber: char.actorNumber };
+        }
+        return char;
+      });
+    }
+
+    return [];
   };
-  const getLookForCharacter = (characterId: string, sceneNumber: string) => characterLookMap.get(`${characterId}-${sceneNumber}`);
+  // Get look for a character in a scene - tries multiple matching strategies
+  // Handles combined scenes and part scenes by also checking base scene numbers
+  const getLookForCharacter = (characterId: string, sceneNumber: string, actorNumber?: number) => {
+    // Get all possible scene numbers to check (includes base scenes like "15" from "15pt2")
+    const scenesToCheck = splitCombinedSceneNumber(sceneNumber);
+
+    // Try characterId lookup for each possible scene
+    for (const scene of scenesToCheck) {
+      const lookById = characterLookMap.get(`${characterId}-${scene}`);
+      if (lookById) return lookById;
+    }
+
+    // Fall back to actorNumber lookup for each possible scene
+    if (actorNumber) {
+      for (const scene of scenesToCheck) {
+        const lookByActor = actorNumberLookMap.get(`${actorNumber}-${scene}`);
+        if (lookByActor) return lookByActor;
+      }
+    }
+
+    // Final fallback: find any look for this character (for unmatched scenes)
+    if (currentProject && !characterId.startsWith('cast-')) {
+      return currentProject.looks.find(l => l.characterId === characterId);
+    }
+
+    return undefined;
+  };
 
   // Pre-compute filtered and sorted HMU calls to avoid recalculating on each render
   const sortedHmuCalls = useMemo(() => {
@@ -272,6 +460,95 @@ export function Today({ onSceneSelect }: TodayProps) {
         return timeA.localeCompare(timeB);
       });
   }, [callSheet?.castCalls]);
+
+  // Calculate schedule status - compares predicted vs actual completion times
+  const scheduleStatus = useMemo(() => {
+    if (!callSheet?.scenes || !callSheet.firstShotTime) {
+      return null;
+    }
+
+    // Parse time string (HH:MM or H:MM) to minutes since midnight
+    const parseTimeToMinutes = (timeStr: string): number | null => {
+      const match = timeStr.match(/(\d{1,2}):(\d{2})/);
+      if (!match) return null;
+      return parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
+    };
+
+    // Get scenes sorted by shoot order
+    const sortedScenes = [...callSheet.scenes].sort((a, b) => a.shootOrder - b.shootOrder);
+    const completedScenes = sortedScenes.filter(s => s.status === 'wrapped' && s.completedAt);
+
+    if (completedScenes.length === 0) {
+      return { status: 'not-started' as const, completedCount: 0, totalCount: callSheet.scenes.length };
+    }
+
+    // Get the last completed scene
+    const lastCompleted = completedScenes[completedScenes.length - 1];
+
+    // Check if we finished ahead: compare last completed scene's actual time vs expected END time
+    let expectedEndMinutes: number | null = null;
+    if (lastCompleted.estimatedTime) {
+      const endTimeMatch = lastCompleted.estimatedTime.match(/-\s*(\d{1,2}:\d{2})/);
+      if (endTimeMatch) {
+        expectedEndMinutes = parseTimeToMinutes(endTimeMatch[1]);
+      }
+    }
+
+    // Get actual completion time from the completedAt timestamp
+    const completedAt = new Date(lastCompleted.completedAt!);
+    const completionMinutes = completedAt.getHours() * 60 + completedAt.getMinutes();
+
+    // If we finished before expected end time, we're ahead
+    if (expectedEndMinutes !== null && completionMinutes < expectedEndMinutes - 2) {
+      const aheadMinutes = expectedEndMinutes - completionMinutes;
+      return {
+        status: 'ahead' as const,
+        diffMinutes: aheadMinutes,
+        completedCount: completedScenes.length,
+        totalCount: callSheet.scenes.length,
+      };
+    }
+
+    // Find the next upcoming scene (first scene not wrapped)
+    const nextScene = sortedScenes.find(s => s.status !== 'wrapped');
+
+    if (!nextScene) {
+      // All scenes completed
+      return { status: 'completed' as const, completedCount: completedScenes.length, totalCount: callSheet.scenes.length };
+    }
+
+    // Get next scene's expected START time
+    let nextStartMinutes: number | null = null;
+    if (nextScene.estimatedTime) {
+      const startTimeMatch = nextScene.estimatedTime.match(/^(\d{1,2}:\d{2})/);
+      if (startTimeMatch) {
+        nextStartMinutes = parseTimeToMinutes(startTimeMatch[1]);
+      }
+    }
+
+    // If no expected time for next scene, we can't calculate behind status
+    if (nextStartMinutes === null) {
+      return { status: 'unknown' as const, completedCount: completedScenes.length, totalCount: callSheet.scenes.length };
+    }
+
+    // Get current time
+    const now = new Date();
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+    // Only show "behind" if the next scene's start time has passed
+    if (nowMinutes > nextStartMinutes + 2) {
+      const behindMinutes = nowMinutes - nextStartMinutes;
+      return {
+        status: 'behind' as const,
+        diffMinutes: behindMinutes,
+        completedCount: completedScenes.length,
+        totalCount: callSheet.scenes.length,
+      };
+    }
+
+    // We're not ahead and not behind - just show scene count
+    return { status: 'on-track' as const, completedCount: completedScenes.length, totalCount: callSheet.scenes.length };
+  }, [callSheet?.scenes, callSheet?.firstShotTime]);
 
   // Update scene status - persists to store and updates local state for immediate UI feedback
   const updateSceneStatus = (sceneNumber: string, status: ShootingSceneStatus) => {
@@ -309,12 +586,51 @@ export function Today({ onSceneSelect }: TodayProps) {
     syncFilmingStatus(sceneNumber, filmingStatus, filmingNotes);
   };
 
-  // Handle scene tap
+  // Handle scene tap - improved to handle combined scenes
   const handleSceneTap = (sceneNumber: string) => {
     const scene = getSceneData(sceneNumber);
     if (scene) {
       onSceneSelect(scene.id);
     }
+  };
+
+  // Handle character tap - navigate to continuity tracking for this character
+  // Works even when scene doesn't match by finding a valid scene for the character
+  // For unmatched scenes, shows modal to add scene or merge with existing
+  const handleCharacterTap = (character: Character, callSheetSceneNumber: string, callSheetScene: CallSheetScene) => {
+    // First try to find a matching scene from the call sheet
+    const matchedScene = getSceneData(callSheetSceneNumber);
+    if (matchedScene) {
+      // Navigate to the matched scene - SceneView will show this character
+      onSceneSelect(matchedScene.id);
+      return;
+    }
+
+    // Scene doesn't exist in breakdown - find suggested scenes to merge with
+    // Look for scenes with similar numbers (e.g., "15" for "15pt2")
+    const suggestedMergeScenes: Scene[] = [];
+    if (currentProject) {
+      const possibleNumbers = splitCombinedSceneNumber(callSheetSceneNumber);
+      // Find scenes that might be related (same base number)
+      for (const scene of currentProject.scenes) {
+        const sceneNumbers = splitCombinedSceneNumber(scene.sceneNumber);
+        // Check if any of the possible numbers match
+        const hasMatch = possibleNumbers.some(pn =>
+          sceneNumbers.some(sn => sn === pn || sn.startsWith(pn) || pn.startsWith(sn))
+        );
+        if (hasMatch && !suggestedMergeScenes.includes(scene)) {
+          suggestedMergeScenes.push(scene);
+        }
+      }
+    }
+
+    // Show the unmatched scene modal
+    setUnmatchedSceneInfo({
+      sceneNumber: callSheetSceneNumber,
+      character,
+      callSheetScene,
+      suggestedMergeScenes,
+    });
   };
 
   return (
@@ -395,9 +711,16 @@ export function Today({ onSceneSelect }: TodayProps) {
                       </svg>
                     )}
                   </button>
-                  <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-gold-100 text-gold">
+                  <button
+                    onClick={() => onNavigateToTab?.('callsheets')}
+                    className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full bg-gold-100 text-gold active:bg-gold-200 transition-colors"
+                    title="View call sheet PDF"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
                     Day {callSheet.productionDay}
-                  </span>
+                  </button>
                 </>
               )}
             </div>
@@ -424,12 +747,11 @@ export function Today({ onSceneSelect }: TodayProps) {
                 </h2>
               </div>
 
-              {/* Working Day Type Badge - show prominently */}
+              {/* Working Day Type Badge + Schedule Status */}
               {(() => {
                 const dayTypeAbbrev = parseDayTypeFromString(callSheet.dayType);
-                const dayTypeLabel = DAY_TYPE_LABELS[dayTypeAbbrev];
                 return (
-                  <div className="mb-3 pb-3 border-b border-border/50 flex items-center gap-2">
+                  <div className="mb-3 pb-3 border-b border-border/50 flex items-center justify-between">
                     <span className={clsx(
                       'px-2 py-0.5 text-xs font-bold rounded',
                       dayTypeAbbrev === 'CWD' && 'bg-amber-100 text-amber-700',
@@ -438,9 +760,31 @@ export function Today({ onSceneSelect }: TodayProps) {
                     )}>
                       {dayTypeAbbrev}
                     </span>
-                    <span className="text-xs text-text-muted">
-                      {dayTypeLabel}
-                    </span>
+                    {/* Schedule Status Indicator - only show ahead or behind */}
+                    {scheduleStatus && (scheduleStatus.status === 'ahead' || scheduleStatus.status === 'behind') && (
+                      <div className={clsx(
+                        'flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium',
+                        scheduleStatus.status === 'ahead' && 'bg-blue-50 text-blue-600',
+                        scheduleStatus.status === 'behind' && 'bg-red-50 text-red-600'
+                      )}>
+                        {scheduleStatus.status === 'ahead' && (
+                          <>
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                            </svg>
+                            <span>{formatDuration(scheduleStatus.diffMinutes)} ahead</span>
+                          </>
+                        )}
+                        {scheduleStatus.status === 'behind' && (
+                          <>
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                            </svg>
+                            <span>{formatDuration(scheduleStatus.diffMinutes)} behind</span>
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })()}
@@ -574,6 +918,7 @@ export function Today({ onSceneSelect }: TodayProps) {
                     characters={characters}
                     getLookForCharacter={getLookForCharacter}
                     onTap={() => handleSceneTap(shootingScene.sceneNumber)}
+                    onCharacterTap={(char) => handleCharacterTap(char, shootingScene.sceneNumber, shootingScene)}
                     onSynopsisClick={(scene) => setScriptModalScene(scene)}
                     onStatusChange={(status) => updateSceneStatus(shootingScene.sceneNumber, status)}
                     onFilmingStatusChange={(filmingStatus, notes) =>
@@ -606,6 +951,32 @@ export function Today({ onSceneSelect }: TodayProps) {
           onClose={() => setScriptModalScene(null)}
         />
       )}
+
+      {/* Unmatched Scene Modal - shown when tapping character in scene that doesn't exist in breakdown */}
+      {unmatchedSceneInfo && (
+        <UnmatchedSceneModal
+          info={unmatchedSceneInfo}
+          onClose={() => setUnmatchedSceneInfo(null)}
+          onAddScene={(sceneData) => {
+            // Create new scene in breakdown
+            const newScene = addScene(sceneData);
+            // Add the character to this scene
+            addCharacterToScene(newScene.id, unmatchedSceneInfo.character.id);
+            // Close modal and navigate to the new scene
+            setUnmatchedSceneInfo(null);
+            onSceneSelect(newScene.id);
+          }}
+          onMergeWithScene={(targetScene) => {
+            // Add character to existing scene if not already there
+            if (!targetScene.characters.includes(unmatchedSceneInfo.character.id)) {
+              addCharacterToScene(targetScene.id, unmatchedSceneInfo.character.id);
+            }
+            // Close modal and navigate to that scene
+            setUnmatchedSceneInfo(null);
+            onSceneSelect(targetScene.id);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -615,8 +986,9 @@ interface TodaySceneCardProps {
   shootingScene: CallSheetScene;
   scene?: Scene;
   characters: Character[];
-  getLookForCharacter: (characterId: string, sceneNumber: string) => Look | null | undefined;
+  getLookForCharacter: (characterId: string, sceneNumber: string, actorNumber?: number) => Look | null | undefined;
   onTap: () => void;
+  onCharacterTap: (character: Character) => void;
   onSynopsisClick: (scene: Scene) => void;
   onStatusChange: (status: ShootingSceneStatus) => void;
   onFilmingStatusChange: (status: SceneFilmingStatus, notes?: string) => void;
@@ -634,6 +1006,7 @@ const TodaySceneCard = memo(function TodaySceneCard({
   characters,
   getLookForCharacter,
   onTap,
+  onCharacterTap,
   onSynopsisClick,
   onStatusChange,
   onFilmingStatusChange,
@@ -829,104 +1202,104 @@ const TodaySceneCard = memo(function TodaySceneCard({
 
           {/* Card content - positioned above glass overlay */}
           <div className="relative z-10 pl-2">
-            {/* Top row: Scene number + badges + Status dropdown */}
-            <div className="flex items-start justify-between mb-2">
-              <div className="flex items-center gap-2 flex-1 min-w-0">
-                <span className="text-lg font-bold text-text-primary flex-shrink-0">
-                  {shootingScene.sceneNumber}
-                </span>
-                {/* INT/EXT badge */}
-                {(scene?.intExt || parsedSceneInfo?.intExt) && (
-                  <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded flex-shrink-0 ${
-                    (scene?.intExt || parsedSceneInfo?.intExt) === 'INT'
-                      ? 'bg-slate-100 text-slate-600'
-                      : 'bg-stone-100 text-stone-600'
-                  }`}>
-                    {scene?.intExt || parsedSceneInfo?.intExt}
-                  </span>
-                )}
-                {/* Day/Night indicator (D11, N, etc.) */}
-                {shootingScene.dayNight && (
-                  <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-amber-100 text-amber-700 flex-shrink-0">
-                    {shootingScene.dayNight}
-                  </span>
-                )}
-                {/* Pages badge */}
-                {shootingScene.pages && (
-                  <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-gray-100 text-text-muted flex-shrink-0">
-                    {shootingScene.pages} pgs
-                  </span>
-                )}
-                {/* Estimated timing - prominent display */}
-                {shootingScene.estimatedTime && (
-                  <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-blue-50 text-blue-700 flex-shrink-0">
-                    {shootingScene.estimatedTime}
-                  </span>
-                )}
-              </div>
+            {/* Top row: Scene number + Status dropdown only */}
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xl font-bold text-text-primary">
+                {shootingScene.sceneNumber}
+              </span>
 
-              <div className="flex items-center gap-2">
-                {/* Status Dropdown */}
-                <div ref={dropdownRef} className="relative">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowStatusDropdown(!showStatusDropdown);
-                    }}
-                    className="status-dropdown-btn touch-manipulation"
-                    style={{ borderColor: filmingStatus ? statusBadge.color : undefined }}
-                  >
-                    <span
-                      className="w-2.5 h-2.5 rounded-full"
-                      style={{ backgroundColor: statusBadge.color }}
-                    />
-                    <span className={statusBadge.text}>{statusBadge.label}</span>
-                    <svg className={clsx('w-3 h-3 text-text-muted transition-transform', showStatusDropdown && 'rotate-180')} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-                  {/* Dropdown menu */}
-                  {showStatusDropdown && (
-                    <div className="absolute right-0 top-full mt-1 w-44 bg-card border border-border rounded-lg shadow-lg z-50 overflow-hidden animate-fadeIn">
-                      {(['complete', 'partial', 'not-filmed'] as SceneFilmingStatus[]).map((status) => {
-                        const config = SCENE_FILMING_STATUS_CONFIG[status];
-                        const isSelected = filmingStatus === status;
-                        return (
-                          <button
-                            key={status}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleStatusSelect(status);
-                            }}
-                            className={clsx(
-                              'w-full px-3 py-2.5 text-left text-sm flex items-center gap-2.5 transition-colors',
-                              isSelected ? config.bgClass : 'hover:bg-gray-50'
-                            )}
-                          >
-                            <span
-                              className="w-3 h-3 rounded-full flex-shrink-0"
-                              style={{ backgroundColor: config.color }}
-                            />
-                            <span className={clsx('font-medium', isSelected && config.textClass)}>
-                              {config.label}
-                            </span>
-                            {isSelected && (
-                              <svg className={clsx('w-4 h-4 ml-auto', config.textClass)} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                              </svg>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
+              {/* Status Dropdown */}
+              <div ref={dropdownRef} className="relative">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowStatusDropdown(!showStatusDropdown);
+                  }}
+                  className="status-dropdown-btn touch-manipulation"
+                  style={{ borderColor: filmingStatus ? statusBadge.color : undefined }}
+                >
+                  <span
+                    className="w-2.5 h-2.5 rounded-full"
+                    style={{ backgroundColor: statusBadge.color }}
+                  />
+                  <span className={statusBadge.text}>{statusBadge.label}</span>
+                  <svg className={clsx('w-3 h-3 text-text-muted transition-transform', showStatusDropdown && 'rotate-180')} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {/* Dropdown menu */}
+                {showStatusDropdown && (
+                  <div className="absolute right-0 top-full mt-1 w-44 bg-card border border-border rounded-lg shadow-lg z-50 overflow-hidden animate-fadeIn">
+                    {(['complete', 'partial', 'not-filmed'] as SceneFilmingStatus[]).map((status) => {
+                      const config = SCENE_FILMING_STATUS_CONFIG[status];
+                      const isSelected = filmingStatus === status;
+                      return (
+                        <button
+                          key={status}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleStatusSelect(status);
+                          }}
+                          className={clsx(
+                            'w-full px-3 py-2.5 text-left text-sm flex items-center gap-2.5 transition-colors',
+                            isSelected ? config.bgClass : 'hover:bg-gray-50'
+                          )}
+                        >
+                          <span
+                            className="w-3 h-3 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: config.color }}
+                          />
+                          <span className={clsx('font-medium', isSelected && config.textClass)}>
+                            {config.label}
+                          </span>
+                          {isSelected && (
+                            <svg className={clsx('w-4 h-4 ml-auto', config.textClass)} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Set description / Location - full text */}
+            {/* Scene metadata row - smaller badges with proper spacing */}
+            <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+              {/* INT/EXT badge */}
+              {(scene?.intExt || parsedSceneInfo?.intExt) && (
+                <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded ${
+                  (scene?.intExt || parsedSceneInfo?.intExt) === 'INT'
+                    ? 'bg-slate-100 text-slate-600'
+                    : 'bg-stone-100 text-stone-600'
+                }`}>
+                  {scene?.intExt || parsedSceneInfo?.intExt}
+                </span>
+              )}
+              {/* Day/Night indicator */}
+              {shootingScene.dayNight && (
+                <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-amber-100 text-amber-700">
+                  {shootingScene.dayNight}
+                </span>
+              )}
+              {/* Pages badge */}
+              {shootingScene.pages && (
+                <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-gray-100 text-text-muted">
+                  {shootingScene.pages} pgs
+                </span>
+              )}
+              {/* Estimated timing */}
+              {shootingScene.estimatedTime && (
+                <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-blue-50 text-blue-600">
+                  {shootingScene.estimatedTime}
+                </span>
+              )}
+            </div>
+
+            {/* Set description / Location */}
             {shootingScene.setDescription && (
-              <p className="text-sm font-medium text-text-primary">
+              <p className="text-sm font-medium text-text-primary mb-1">
                 {shootingScene.setDescription}
               </p>
             )}
@@ -938,7 +1311,7 @@ const TodaySceneCard = memo(function TodaySceneCard({
                   e.stopPropagation();
                   if (scene) onSynopsisClick(scene);
                 }}
-                className="w-full text-left group mt-1.5"
+                className="w-full text-left group"
                 disabled={!scene?.scriptContent}
               >
                 <p className={clsx(
@@ -948,7 +1321,7 @@ const TodaySceneCard = memo(function TodaySceneCard({
                   {shootingScene.action || scene?.synopsis}
                 </p>
                 {scene?.scriptContent && (
-                  <span className="text-[10px] text-gold flex items-center gap-1 mt-1">
+                  <span className="text-[10px] text-gold flex items-center gap-1 mt-0.5">
                     <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
@@ -961,13 +1334,13 @@ const TodaySceneCard = memo(function TodaySceneCard({
             {/* Notes (HMU, VFX, SFX, etc.) - highlighted */}
             {shootingScene.notes && (
               <div className="mt-2 px-2.5 py-2 rounded-lg bg-gold-50 border border-gold-100">
-                <div className="text-xs text-gold-700 font-medium whitespace-pre-line">
+                <div className="text-xs text-gold-700 font-medium leading-relaxed">
                   {shootingScene.notes}
                 </div>
               </div>
             )}
 
-            {/* Filming notes if partial or incomplete - read from project scene (single source of truth) */}
+            {/* Filming notes if partial or incomplete */}
             {filmingStatus && filmingStatus !== 'complete' && filmingNotes && (
               <div className={clsx(
                 'mt-2 px-2.5 py-2 rounded-lg text-xs',
@@ -979,12 +1352,29 @@ const TodaySceneCard = memo(function TodaySceneCard({
 
             {/* Characters with looks */}
             {characters.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-2 pt-2 border-t border-border/50">
+              <div className="flex flex-wrap gap-1.5 mt-2.5 pt-2 border-t border-border/50">
                 {characters.map((char) => {
-                  const look = getLookForCharacter(char.id, shootingScene.sceneNumber);
+                  const look = getLookForCharacter(char.id, shootingScene.sceneNumber, char.actorNumber);
                   const bgColor = char.avatarColour ?? '#C9A962';
+                  // Character is clickable if it's a real project character (id doesn't start with 'cast-')
+                  const isProjectCharacter = !char.id.startsWith('cast-');
                   return (
-                    <div key={char.id} className="flex items-center gap-1.5 bg-gray-50 rounded-full pl-1 pr-2.5 py-1">
+                    <button
+                      key={char.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (isProjectCharacter) {
+                          onCharacterTap(char);
+                        }
+                      }}
+                      disabled={!isProjectCharacter}
+                      className={clsx(
+                        'flex items-center gap-1 rounded-full pl-0.5 pr-2 py-0.5 transition-colors',
+                        isProjectCharacter
+                          ? 'bg-gray-50 hover:bg-gold/10 active:bg-gold/20 cursor-pointer'
+                          : 'bg-gray-50 opacity-60 cursor-not-allowed'
+                      )}
+                    >
                       {/* Cast number in colored circle */}
                       <div
                         className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0"
@@ -992,11 +1382,11 @@ const TodaySceneCard = memo(function TodaySceneCard({
                       >
                         {char.actorNumber || char.initials}
                       </div>
-                      <span className="text-xs font-medium text-text-primary">{char.name.split(' ')[0]}</span>
+                      <span className="text-[11px] font-medium text-text-primary">{char.name.split(' ')[0]}</span>
                       {look && (
                         <span className="text-[10px] text-gold">• {look.name}</span>
                       )}
-                    </div>
+                    </button>
                   );
                 })}
               </div>
@@ -1205,6 +1595,134 @@ const EmptyState = memo(function EmptyState({ hasAnyCallSheets, onUploadClick, i
       >
         {isUploading ? 'Uploading...' : 'Upload Call Sheet PDF'}
       </button>
+    </div>
+  );
+});
+
+// Unmatched Scene Modal - shown when scene from call sheet doesn't exist in breakdown
+interface UnmatchedSceneModalProps {
+  info: UnmatchedSceneInfo;
+  onClose: () => void;
+  onAddScene: (sceneData: Partial<Scene> & { sceneNumber: string }) => void;
+  onMergeWithScene: (targetScene: Scene) => void;
+}
+
+const UnmatchedSceneModal = memo(function UnmatchedSceneModal({
+  info,
+  onClose,
+  onAddScene,
+  onMergeWithScene,
+}: UnmatchedSceneModalProps) {
+  const { sceneNumber, character, callSheetScene, suggestedMergeScenes } = info;
+
+  // Build scene data from call sheet info
+  const handleAddScene = () => {
+    // Parse INT/EXT and location from setDescription
+    let intExt: 'INT' | 'EXT' = 'INT';
+    let slugline = callSheetScene.setDescription || `Scene ${sceneNumber}`;
+
+    const intExtMatch = callSheetScene.setDescription?.match(/^(INT|EXT)\./i);
+    if (intExtMatch) {
+      intExt = intExtMatch[1].toUpperCase() as 'INT' | 'EXT';
+    }
+
+    onAddScene({
+      sceneNumber,
+      slugline,
+      intExt,
+      timeOfDay: callSheetScene.dayNight?.toUpperCase() as 'DAY' | 'NIGHT' | undefined || 'DAY',
+      synopsis: callSheetScene.action,
+      characters: [character.id],
+    });
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md bg-card rounded-2xl overflow-hidden animate-slideUp"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="p-4 border-b border-border">
+          <h3 className="text-base font-semibold text-text-primary">
+            Scene {sceneNumber} Not in Breakdown
+          </h3>
+          <p className="text-xs text-text-muted mt-1">
+            This scene from the call sheet doesn't exist in your script breakdown.
+            Choose how to handle continuity for <span className="font-medium text-gold">{character.name}</span>.
+          </p>
+        </div>
+
+        {/* Options */}
+        <div className="py-2">
+          {/* Add as new scene */}
+          <button
+            onClick={handleAddScene}
+            className="w-full px-4 py-3.5 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors"
+          >
+            <div className="w-10 h-10 rounded-full bg-gold-100 flex items-center justify-center flex-shrink-0">
+              <svg className="w-5 h-5 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <span className="text-sm font-medium text-text-primary block">
+                Add Scene {sceneNumber} to Breakdown
+              </span>
+              <span className="text-xs text-text-muted">
+                Create a new scene and track continuity there
+              </span>
+            </div>
+            <svg className="w-5 h-5 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+
+          {/* Merge options */}
+          {suggestedMergeScenes.length > 0 && (
+            <>
+              <div className="px-4 py-2 border-t border-border/50 mt-1">
+                <span className="text-[10px] font-bold tracking-wider uppercase text-text-light">
+                  OR MERGE WITH EXISTING SCENE
+                </span>
+              </div>
+              {suggestedMergeScenes.map((scene) => (
+                <button
+                  key={scene.id}
+                  onClick={() => onMergeWithScene(scene)}
+                  className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors"
+                >
+                  <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
+                    <span className="text-sm font-bold text-blue-600">{scene.sceneNumber}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-medium text-text-primary block truncate">
+                      Merge with Scene {scene.sceneNumber}
+                    </span>
+                    <span className="text-xs text-text-muted truncate block">
+                      {scene.slugline}
+                    </span>
+                  </div>
+                  <svg className="w-5 h-5 text-text-muted flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              ))}
+            </>
+          )}
+        </div>
+
+        {/* Cancel */}
+        <button
+          onClick={onClose}
+          className="w-full p-4 text-center text-sm font-medium text-text-muted border-t border-border hover:bg-gray-50 transition-colors"
+        >
+          Cancel
+        </button>
+      </div>
     </div>
   );
 });

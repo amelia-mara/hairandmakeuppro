@@ -13,7 +13,7 @@ import type {
   SubscriptionData,
   BillingPeriod,
 } from '@/types';
-import { TIER_LIMITS, createDefaultSubscription, SubscriptionTier } from '@/types';
+import { TIER_LIMITS, createDefaultSubscription, SubscriptionTier, BETA_MODE } from '@/types';
 
 interface AuthState {
   // Auth state
@@ -295,7 +295,8 @@ export const useAuthStore = create<AuthState>()(
             id: authUser.id,
             email: authUser.email!,
             name,
-            tier: 'trainee',
+            // In beta mode, all users get Designer tier
+            tier: BETA_MODE ? 'designer' : 'trainee',
             createdAt: new Date(),
           };
 
@@ -304,9 +305,10 @@ export const useAuthStore = create<AuthState>()(
             user: appUser,
             isLoading: false,
             error: null,
-            currentScreen: 'select-plan',
-            hasCompletedOnboarding: false,
-            hasSelectedPlan: false,
+            // Skip plan selection in beta mode, go directly to hub
+            currentScreen: BETA_MODE ? 'hub' : 'select-plan',
+            hasCompletedOnboarding: BETA_MODE,
+            hasSelectedPlan: BETA_MODE,
             subscription: createDefaultSubscription(),
             projectMemberships: [],
           });
