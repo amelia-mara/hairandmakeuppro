@@ -167,96 +167,148 @@ export function ExportModal({ isOpen, onClose, weekSummary, weekStartDate }: Exp
   const generatePDFContent = (): string => {
     const weekEntries = getWeekEntries();
     const hourlyRate = rateCard.dailyRate / rateCard.baseDayHours;
+    const sym = '&pound;';
 
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Timesheet - ${formatDateRange()}</title>
-        <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
-          h1 { color: #C9A962; font-size: 24px; margin-bottom: 4px; }
-          .subtitle { color: #666; font-size: 14px; margin-bottom: 20px; }
-          .rate-info { background: #f5f5f5; padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 12px; }
-          .rate-info span { margin-right: 20px; }
-          table { width: 100%; border-collapse: collapse; font-size: 12px; }
-          th { background: #C9A962; color: white; padding: 8px; text-align: left; }
-          td { padding: 8px; border-bottom: 1px solid #eee; }
-          tr:nth-child(even) { background: #f9f9f9; }
-          .summary { margin-top: 20px; background: linear-gradient(135deg, #C9A962, #B8985A); color: white; padding: 16px; border-radius: 8px; }
-          .summary h3 { margin: 0 0 12px 0; font-size: 16px; }
-          .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-          .summary-item { text-align: center; }
-          .summary-item .label { font-size: 10px; opacity: 0.9; }
-          .summary-item .value { font-size: 18px; font-weight: bold; }
-          .total-box { background: rgba(255,255,255,0.2); padding: 12px; border-radius: 8px; text-align: center; margin-top: 12px; }
-          .total-box .label { font-size: 12px; opacity: 0.9; }
-          .total-box .value { font-size: 28px; font-weight: bold; }
-          @media print { body { padding: 0; } }
-        </style>
-      </head>
-      <body>
-        <h1>Timesheet</h1>
-        <p class="subtitle">${formatDateRange()}</p>
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Timesheet - ${formatDateRange()}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 32px; max-width: 800px; margin: 0 auto; color: #1a1a1a; font-size: 13px; line-height: 1.5; }
 
-        <div class="rate-info">
-          <span><strong>Daily Rate:</strong> £${rateCard.dailyRate.toFixed(2)}</span>
-          <span><strong>Base Day:</strong> ${rateCard.baseDayHours} hours</span>
-          <span><strong>Hourly:</strong> £${hourlyRate.toFixed(2)}/hr</span>
-          <span><strong>Kit Rental:</strong> £${rateCard.kitRental.toFixed(2)}/day</span>
-        </div>
+    .header { margin-bottom: 24px; }
+    .header h1 { font-size: 22px; font-weight: 700; margin-bottom: 2px; }
+    .header .period { font-size: 14px; color: #C9A962; font-weight: 600; }
 
-        <table>
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Pre-Call</th>
-              <th>Unit Call</th>
-              <th>Wrap</th>
-              <th>Hours</th>
-              <th>OT</th>
-              <th>Earnings</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${weekEntries.map(({ date, entry, calc }) => `
-              <tr>
-                <td><strong>${formatDate(date)}</strong>${entry.isSixthDay ? ' <span style="color:#C9A962">(6th)</span>' : ''}</td>
-                <td>${entry.preCall || '—'}</td>
-                <td>${entry.unitCall || '—'}</td>
-                <td>${entry.wrapOut || '—'}</td>
-                <td>${calc.totalHours.toFixed(1)}</td>
-                <td>${calc.otHours > 0 ? calc.otHours.toFixed(1) : '—'}</td>
-                <td>£${calc.totalEarnings.toFixed(2)}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
+    .rate-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 24px; }
+    .rate-card { background: #f8f8f8; border: 1px solid #e5e5e5; border-radius: 8px; padding: 10px 12px; text-align: center; }
+    .rate-card .label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #888; margin-bottom: 2px; }
+    .rate-card .value { font-size: 15px; font-weight: 700; }
 
-        <div class="summary">
-          <h3>Week Summary</h3>
-          <div class="summary-grid">
-            <div class="summary-item">
-              <div class="label">Total Hours</div>
-              <div class="value">${weekSummary.totalHours.toFixed(1)}</div>
-            </div>
-            <div class="summary-item">
-              <div class="label">Days Worked</div>
-              <div class="value">${daysWorked}</div>
-            </div>
-            <div class="summary-item">
-              <div class="label">OT Hours</div>
-              <div class="value">${weekSummary.otHours.toFixed(1)}</div>
-            </div>
-          </div>
-          <div class="total-box">
-            <div class="label">Total Earnings</div>
-            <div class="value">£${weekSummary.totalEarnings.toFixed(2)}</div>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
+    table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+    thead th { background: #f8f8f8; padding: 10px 8px; text-align: left; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; color: #666; border-bottom: 2px solid #e5e5e5; }
+    tbody td { padding: 10px 8px; border-bottom: 1px solid #f0f0f0; }
+    tbody tr:last-child td { border-bottom: none; }
+    .day-name { font-weight: 600; }
+    .sixth-tag { display: inline-block; font-size: 9px; font-weight: 600; color: #C9A962; background: #faf6ed; border: 1px solid #C9A962; border-radius: 3px; padding: 1px 4px; margin-left: 4px; vertical-align: middle; }
+    .amt { text-align: right; font-weight: 600; }
+    .muted { color: #ccc; }
+    tfoot td { border-top: 2px solid #C9A962; font-weight: 700; padding-top: 12px; }
+
+    .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+    .summary-card { border: 1px solid #e5e5e5; border-radius: 8px; padding: 14px 12px; text-align: center; }
+    .summary-card .label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #888; margin-bottom: 4px; }
+    .summary-card .value { font-size: 20px; font-weight: 700; }
+    .summary-card.gold { border-color: #C9A962; background: #faf6ed; }
+    .summary-card.gold .value { color: #C9A962; }
+
+    .sign-off { margin-top: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+    .sign-line { border-top: 1px solid #ccc; padding-top: 8px; font-size: 11px; color: #888; }
+
+    .footer { margin-top: 32px; padding-top: 12px; border-top: 1px solid #e5e5e5; font-size: 11px; color: #aaa; text-align: center; }
+
+    @media print {
+      body { padding: 16px; }
+      .rate-card, .summary-card.gold, thead th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>Timesheet</h1>
+    <div class="period">${formatDateRange()}</div>
+  </div>
+
+  <div class="rate-cards">
+    <div class="rate-card">
+      <div class="label">Daily Rate</div>
+      <div class="value">${sym}${rateCard.dailyRate.toFixed(2)}</div>
+    </div>
+    <div class="rate-card">
+      <div class="label">Base Day</div>
+      <div class="value">${rateCard.baseDayHours} hrs</div>
+    </div>
+    <div class="rate-card">
+      <div class="label">Hourly Rate</div>
+      <div class="value">${sym}${hourlyRate.toFixed(2)}</div>
+    </div>
+    <div class="rate-card">
+      <div class="label">Kit Rental</div>
+      <div class="value">${sym}${rateCard.kitRental.toFixed(2)}/day</div>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Pre-Call</th>
+        <th>Unit Call</th>
+        <th>Wrap</th>
+        <th>Hours</th>
+        <th>OT</th>
+        <th class="amt">Earnings</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${weekEntries.map(({ date, entry, calc }) => `
+      <tr>
+        <td><span class="day-name">${formatDate(date)}</span>${entry.isSixthDay ? '<span class="sixth-tag">6th Day</span>' : ''}</td>
+        <td>${entry.preCall || '<span class="muted">&mdash;</span>'}</td>
+        <td>${entry.unitCall || '<span class="muted">&mdash;</span>'}</td>
+        <td>${entry.wrapOut || '<span class="muted">&mdash;</span>'}</td>
+        <td>${calc.totalHours.toFixed(1)}</td>
+        <td>${calc.otHours > 0 ? calc.otHours.toFixed(1) : '<span class="muted">&mdash;</span>'}</td>
+        <td class="amt">${sym}${calc.totalEarnings.toFixed(2)}</td>
+      </tr>`).join('')}
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="4">Total (${daysWorked} days)</td>
+        <td>${weekSummary.totalHours.toFixed(1)}</td>
+        <td>${weekSummary.otHours > 0 ? weekSummary.otHours.toFixed(1) : '&mdash;'}</td>
+        <td class="amt">${sym}${weekSummary.totalEarnings.toFixed(2)}</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <div class="summary">
+    <div class="summary-card">
+      <div class="label">Days Worked</div>
+      <div class="value">${daysWorked}</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">Total Hours</div>
+      <div class="value">${weekSummary.totalHours.toFixed(1)}</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">OT Hours</div>
+      <div class="value">${weekSummary.otHours.toFixed(1)}</div>
+    </div>
+    <div class="summary-card gold">
+      <div class="label">Total Earnings</div>
+      <div class="value">${sym}${weekSummary.totalEarnings.toFixed(2)}</div>
+    </div>
+  </div>
+
+  <div class="sign-off">
+    <div>
+      <div class="sign-line">Employee Signature</div>
+    </div>
+    <div>
+      <div class="sign-line">Date</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Generated by Hair &amp; Makeup Pro
+  </div>
+
+</body>
+</html>`;
   };
 
   // Generate invoice HTML
@@ -264,142 +316,176 @@ export function ExportModal({ isOpen, onClose, weekSummary, weekStartDate }: Exp
     const hourlyRate = rateCard.dailyRate / rateCard.baseDayHours;
     const invoiceNumber = `INV-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
     const invoiceDate = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+    const sym = '&pound;';
 
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Invoice ${invoiceNumber}</title>
-        <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; color: #333; }
-          .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; }
-          .logo { font-size: 28px; font-weight: bold; color: #C9A962; }
-          .invoice-title { text-align: right; }
-          .invoice-title h1 { margin: 0; font-size: 32px; color: #C9A962; }
-          .invoice-number { color: #666; font-size: 14px; }
-          .details { display: flex; justify-content: space-between; margin-bottom: 40px; }
-          .bill-to, .invoice-info { font-size: 14px; }
-          .bill-to h3, .invoice-info h3 { margin: 0 0 8px 0; font-size: 12px; color: #999; text-transform: uppercase; }
-          .period { font-size: 18px; font-weight: 600; margin-bottom: 30px; color: #333; border-bottom: 2px solid #C9A962; padding-bottom: 10px; }
-          table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-          th { text-align: left; padding: 12px 8px; border-bottom: 2px solid #C9A962; font-size: 12px; color: #666; text-transform: uppercase; }
-          td { padding: 12px 8px; border-bottom: 1px solid #eee; font-size: 14px; }
-          .amount { text-align: right; }
-          .subtotals { width: 300px; margin-left: auto; }
-          .subtotals table { margin-bottom: 0; }
-          .subtotals td { border-bottom: none; padding: 6px 0; }
-          .subtotals .label { color: #666; }
-          .subtotals .total { border-top: 2px solid #C9A962; font-size: 18px; font-weight: bold; }
-          .total .value { color: #C9A962; }
-          .footer { margin-top: 60px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #999; }
-          @media print { body { padding: 20px; } }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <div class="logo">Checks Happy</div>
-          <div class="invoice-title">
-            <h1>INVOICE</h1>
-            <p class="invoice-number">${invoiceNumber}</p>
-          </div>
-        </div>
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Invoice ${invoiceNumber}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; color: #1a1a1a; font-size: 14px; line-height: 1.5; }
 
-        <div class="details">
-          <div class="bill-to">
-            <h3>Bill To</h3>
-            <p>[Production Company Name]<br>
-            [Address Line 1]<br>
-            [City, Postcode]</p>
-          </div>
-          <div class="invoice-info">
-            <h3>Invoice Details</h3>
-            <p><strong>Date:</strong> ${invoiceDate}<br>
-            <strong>Due:</strong> 30 days from receipt<br>
-            <strong>Period:</strong> ${formatDateRange()}</p>
-          </div>
-        </div>
+    .inv-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 36px; padding-bottom: 20px; border-bottom: 3px solid #C9A962; }
+    .inv-brand { font-size: 20px; font-weight: 700; color: #1a1a1a; }
+    .inv-brand-sub { font-size: 12px; color: #888; margin-top: 2px; }
+    .inv-title-block { text-align: right; }
+    .inv-title { font-size: 28px; font-weight: 800; color: #C9A962; letter-spacing: 2px; }
+    .inv-number { font-size: 13px; color: #666; margin-top: 2px; }
 
-        <table>
-          <thead>
-            <tr>
-              <th>Description</th>
-              <th>Quantity</th>
-              <th>Rate</th>
-              <th class="amount">Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Hair & Makeup Services - Base Day Rate<br><small style="color:#666">${daysWorked} days × ${rateCard.baseDayHours} hours</small></td>
-              <td>${daysWorked}</td>
-              <td>£${rateCard.dailyRate.toFixed(2)}</td>
-              <td class="amount">£${totals.basePay.toFixed(2)}</td>
-            </tr>
-            ${weekSummary.otHours > 0 ? `
-            <tr>
-              <td>Overtime Hours<br><small style="color:#666">At ${rateCard.otMultiplier}x hourly rate (£${(hourlyRate * rateCard.otMultiplier).toFixed(2)}/hr)</small></td>
-              <td>${weekSummary.otHours.toFixed(1)} hrs</td>
-              <td>£${(hourlyRate * rateCard.otMultiplier).toFixed(2)}</td>
-              <td class="amount">£${totals.otPay.toFixed(2)}</td>
-            </tr>
-            ` : ''}
-            ${totals.sixthDayBonus > 0 ? `
-            <tr>
-              <td>6th Day Premium<br><small style="color:#666">Additional 50% for 6th working day</small></td>
-              <td>—</td>
-              <td>—</td>
-              <td class="amount">£${totals.sixthDayBonus.toFixed(2)}</td>
-            </tr>
-            ` : ''}
-            ${weekSummary.kitRentalTotal > 0 ? `
-            <tr>
-              <td>Kit / Box Rental<br><small style="color:#666">${daysWorked} days @ £${rateCard.kitRental.toFixed(2)}/day</small></td>
-              <td>${daysWorked}</td>
-              <td>£${rateCard.kitRental.toFixed(2)}</td>
-              <td class="amount">£${weekSummary.kitRentalTotal.toFixed(2)}</td>
-            </tr>
-            ` : ''}
-          </tbody>
-        </table>
+    .inv-details { display: flex; justify-content: space-between; margin-bottom: 32px; }
+    .inv-col h3 { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 8px; font-weight: 600; }
+    .inv-col p { font-size: 13px; color: #333; line-height: 1.7; }
+    .inv-col strong { font-weight: 600; }
+    .inv-placeholder { color: #bbb; font-style: italic; }
 
-        <div class="subtotals">
-          <table>
-            <tr>
-              <td class="label">Subtotal (Base)</td>
-              <td class="amount">£${totals.basePay.toFixed(2)}</td>
-            </tr>
-            ${totals.otPay > 0 ? `
-            <tr>
-              <td class="label">Overtime</td>
-              <td class="amount">£${totals.otPay.toFixed(2)}</td>
-            </tr>
-            ` : ''}
-            ${totals.sixthDayBonus > 0 ? `
-            <tr>
-              <td class="label">6th Day Premium</td>
-              <td class="amount">£${totals.sixthDayBonus.toFixed(2)}</td>
-            </tr>
-            ` : ''}
-            ${weekSummary.kitRentalTotal > 0 ? `
-            <tr>
-              <td class="label">Kit Rental</td>
-              <td class="amount">£${weekSummary.kitRentalTotal.toFixed(2)}</td>
-            </tr>
-            ` : ''}
-            <tr class="total">
-              <td class="label">Total Due</td>
-              <td class="amount value">£${weekSummary.totalEarnings.toFixed(2)}</td>
-            </tr>
-          </table>
-        </div>
+    table.inv-table { width: 100%; border-collapse: collapse; margin-bottom: 28px; }
+    table.inv-table thead th { text-align: left; padding: 10px 10px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; color: #666; border-bottom: 2px solid #e5e5e5; }
+    table.inv-table tbody td { padding: 14px 10px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+    table.inv-table tbody tr:last-child td { border-bottom: none; }
+    table.inv-table .desc-sub { font-size: 12px; color: #888; margin-top: 2px; }
+    table.inv-table .amt { text-align: right; font-weight: 600; white-space: nowrap; }
 
-        <div class="footer">
-          <p>Payment terms: 30 days from invoice date<br>
-          Please include invoice number with payment</p>
-        </div>
-      </body>
-      </html>
-    `;
+    .inv-totals { width: 280px; margin-left: auto; margin-bottom: 40px; }
+    .inv-totals .row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; }
+    .inv-totals .row .lbl { color: #666; }
+    .inv-totals .row .val { font-weight: 600; }
+    .inv-totals .total-row { border-top: 2px solid #C9A962; padding-top: 10px; margin-top: 6px; }
+    .inv-totals .total-row .lbl { font-weight: 700; font-size: 14px; color: #1a1a1a; }
+    .inv-totals .total-row .val { font-weight: 800; font-size: 18px; color: #C9A962; }
+
+    .inv-terms { background: #f8f8f8; border-radius: 8px; padding: 16px 20px; margin-bottom: 32px; font-size: 12px; color: #666; }
+    .inv-terms strong { color: #333; }
+
+    .inv-footer { padding-top: 16px; border-top: 1px solid #e5e5e5; font-size: 11px; color: #aaa; text-align: center; }
+
+    @media print {
+      body { padding: 20px; }
+      .inv-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="inv-header">
+    <div>
+      <div class="inv-brand">Hair &amp; Makeup Pro</div>
+      <div class="inv-brand-sub">Freelance Services</div>
+    </div>
+    <div class="inv-title-block">
+      <div class="inv-title">INVOICE</div>
+      <div class="inv-number">${invoiceNumber}</div>
+    </div>
+  </div>
+
+  <div class="inv-details">
+    <div class="inv-col">
+      <h3>From</h3>
+      <p>
+        <span class="inv-placeholder">[Your Name]</span><br>
+        <span class="inv-placeholder">[Your Address]</span><br>
+        <span class="inv-placeholder">[City, Postcode]</span>
+      </p>
+    </div>
+    <div class="inv-col">
+      <h3>Bill To</h3>
+      <p>
+        <span class="inv-placeholder">[Production Company]</span><br>
+        <span class="inv-placeholder">[Address]</span><br>
+        <span class="inv-placeholder">[City, Postcode]</span>
+      </p>
+    </div>
+    <div class="inv-col" style="text-align: right;">
+      <h3>Invoice Details</h3>
+      <p>
+        <strong>Date:</strong> ${invoiceDate}<br>
+        <strong>Due:</strong> 30 days from receipt<br>
+        <strong>Period:</strong> ${formatDateRange()}
+      </p>
+    </div>
+  </div>
+
+  <table class="inv-table">
+    <thead>
+      <tr>
+        <th>Description</th>
+        <th>Qty</th>
+        <th>Rate</th>
+        <th class="amt">Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Hair &amp; Makeup Services &mdash; Base Day Rate<div class="desc-sub">${daysWorked} days &times; ${rateCard.baseDayHours} hours</div></td>
+        <td>${daysWorked}</td>
+        <td>${sym}${rateCard.dailyRate.toFixed(2)}</td>
+        <td class="amt">${sym}${totals.basePay.toFixed(2)}</td>
+      </tr>
+      ${totals.preCallPay > 0 ? `
+      <tr>
+        <td>Pre-Call Hours<div class="desc-sub">${totals.preCallHours.toFixed(1)} hours at hourly rate</div></td>
+        <td>${totals.preCallHours.toFixed(1)} hrs</td>
+        <td>${sym}${hourlyRate.toFixed(2)}</td>
+        <td class="amt">${sym}${totals.preCallPay.toFixed(2)}</td>
+      </tr>` : ''}
+      ${totals.otPay > 0 ? `
+      <tr>
+        <td>Overtime<div class="desc-sub">At ${rateCard.otMultiplier}&times; hourly rate (${sym}${(hourlyRate * rateCard.otMultiplier).toFixed(2)}/hr)</div></td>
+        <td>${weekSummary.otHours.toFixed(1)} hrs</td>
+        <td>${sym}${(hourlyRate * rateCard.otMultiplier).toFixed(2)}</td>
+        <td class="amt">${sym}${totals.otPay.toFixed(2)}</td>
+      </tr>` : ''}
+      ${totals.lateNightPay > 0 ? `
+      <tr>
+        <td>Late Night Hours<div class="desc-sub">${totals.lateNightHours.toFixed(1)} hours after midnight</div></td>
+        <td>${totals.lateNightHours.toFixed(1)} hrs</td>
+        <td>&mdash;</td>
+        <td class="amt">${sym}${totals.lateNightPay.toFixed(2)}</td>
+      </tr>` : ''}
+      ${totals.sixthDayBonus > 0 ? `
+      <tr>
+        <td>6th Day Premium<div class="desc-sub">Additional 50% for 6th consecutive working day</div></td>
+        <td>&mdash;</td>
+        <td>&mdash;</td>
+        <td class="amt">${sym}${totals.sixthDayBonus.toFixed(2)}</td>
+      </tr>` : ''}
+      ${weekSummary.kitRentalTotal > 0 ? `
+      <tr>
+        <td>Kit / Box Rental<div class="desc-sub">${daysWorked} days at ${sym}${rateCard.kitRental.toFixed(2)}/day</div></td>
+        <td>${daysWorked}</td>
+        <td>${sym}${rateCard.kitRental.toFixed(2)}</td>
+        <td class="amt">${sym}${weekSummary.kitRentalTotal.toFixed(2)}</td>
+      </tr>` : ''}
+    </tbody>
+  </table>
+
+  <div class="inv-totals">
+    <div class="row">
+      <span class="lbl">Base Pay</span>
+      <span class="val">${sym}${totals.basePay.toFixed(2)}</span>
+    </div>
+    ${totals.preCallPay > 0 ? `<div class="row"><span class="lbl">Pre-Call</span><span class="val">${sym}${totals.preCallPay.toFixed(2)}</span></div>` : ''}
+    ${totals.otPay > 0 ? `<div class="row"><span class="lbl">Overtime</span><span class="val">${sym}${totals.otPay.toFixed(2)}</span></div>` : ''}
+    ${totals.lateNightPay > 0 ? `<div class="row"><span class="lbl">Late Night</span><span class="val">${sym}${totals.lateNightPay.toFixed(2)}</span></div>` : ''}
+    ${totals.sixthDayBonus > 0 ? `<div class="row"><span class="lbl">6th Day Premium</span><span class="val">${sym}${totals.sixthDayBonus.toFixed(2)}</span></div>` : ''}
+    ${weekSummary.kitRentalTotal > 0 ? `<div class="row"><span class="lbl">Kit Rental</span><span class="val">${sym}${weekSummary.kitRentalTotal.toFixed(2)}</span></div>` : ''}
+    <div class="row total-row">
+      <span class="lbl">Total Due</span>
+      <span class="val">${sym}${weekSummary.totalEarnings.toFixed(2)}</span>
+    </div>
+  </div>
+
+  <div class="inv-terms">
+    <strong>Payment Terms:</strong> 30 days from invoice date. Please reference invoice number <strong>${invoiceNumber}</strong> with payment.
+  </div>
+
+  <div class="inv-footer">
+    Generated by Hair &amp; Makeup Pro
+  </div>
+
+</body>
+</html>`;
   };
 
   // Handle export
@@ -430,8 +516,8 @@ export function ExportModal({ isOpen, onClose, weekSummary, weekStartDate }: Exp
           break;
       }
 
-      // Create blob and download
-      const blob = new Blob([content], { type: mimeType });
+      // Create blob and download (charset=utf-8 for correct £ symbol rendering)
+      const blob = new Blob([content], { type: mimeType === 'text/html' ? 'text/html;charset=utf-8' : mimeType });
       const url = URL.createObjectURL(blob);
 
       // For PDF/Invoice, open in new window for printing

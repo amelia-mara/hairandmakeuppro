@@ -2,12 +2,12 @@ import { useState, useCallback, useMemo } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
 import { useCallSheetStore } from '@/stores/callSheetStore';
+import { generateCharacterLookbookPDF } from '@/utils/exportUtils';
 import type { Look, Character } from '@/types';
 import { CharacterSection } from './CharacterSection';
 import { AddLookModal } from './AddLookModal';
 import { LookOverview } from './LookOverview';
-
-type SyncStatus = 'synced' | 'pending' | 'offline';
+import { SyncStatusBanner } from '@/components/sync';
 
 export function Lookbooks() {
   const { currentProject, sceneCaptures, currentLookId, setCurrentLook, setActiveTab, setCurrentScene } = useProjectStore();
@@ -15,9 +15,6 @@ export function Lookbooks() {
   const { callSheets } = useCallSheetStore();
   const [addLookOpen, setAddLookOpen] = useState(false);
   const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(null);
-
-  // Simulated sync status (would come from sync service in real app)
-  const syncStatus: SyncStatus = 'offline';
 
   // Build a map of cast number -> scene numbers from all call sheets
   // This lets us count how many scenes each cast member appears in
@@ -160,6 +157,52 @@ export function Lookbooks() {
     setAddLookOpen(true);
   };
 
+  // Export all character lookbooks
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExportLookbooks = useCallback(async () => {
+    if (!currentProject || isExporting) return;
+    setIsExporting(true);
+    try {
+      // Generate combined HTML for all characters with looks
+      const allPages = currentProject.characters
+        .filter(char => currentProject.looks.some(l => l.characterId === char.id))
+        .map(char => {
+          const charLooks = currentProject.looks.filter(l => l.characterId === char.id);
+          return generateCharacterLookbookPDF(char, charLooks, currentProject.scenes, sceneCaptures);
+        });
+
+      if (allPages.length === 0) return;
+
+      // If single character, use their page directly; otherwise combine
+      let html: string;
+      if (allPages.length === 1) {
+        html = allPages[0];
+      } else {
+        // Extract body content from each page and combine into one document
+        const bodies = allPages.map(page => {
+          const bodyMatch = page.match(/<body>([\s\S]*?)<\/body>/);
+          return bodyMatch ? bodyMatch[1] : '';
+        });
+        const styleMatch = allPages[0].match(/<style>([\s\S]*?)<\/style>/);
+        const style = styleMatch ? styleMatch[1] : '';
+        html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>${currentProject.name} - Lookbooks</title><style>${style}</style></head><body>${bodies.join('<div class="page-break"></div>')}</body></html>`;
+      }
+
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const newWindow = window.open(url, '_blank');
+      if (newWindow) {
+        newWindow.addEventListener('load', () => {
+          setTimeout(() => newWindow.print(), 500);
+        });
+      }
+      URL.revokeObjectURL(url);
+    } finally {
+      setIsExporting(false);
+    }
+  }, [currentProject, sceneCaptures, isExporting]);
+
   // Show Look Overview when a look is selected
   if (currentLookId) {
     return (
@@ -191,12 +234,12 @@ export function Lookbooks() {
 
   return (
     <div className="min-h-screen bg-background pb-safe-bottom">
-      <LookbooksHeader />
+      <LookbooksHeader onExport={handleExportLookbooks} isExporting={isExporting} />
 
       <div className="mobile-container">
         <div className="px-4 pt-4 pb-24">
           {/* Sync Status Banner */}
-          <SyncBanner status={syncStatus} />
+          <SyncStatusBanner />
 
           {hasCharacters ? (
             <>
@@ -273,37 +316,36 @@ export function Lookbooks() {
 }
 
 // Header component
-function LookbooksHeader() {
+function LookbooksHeader({ onExport, isExporting }: { onExport?: () => void; isExporting?: boolean }) {
   return (
     <div className="sticky top-0 z-30 bg-card border-b border-border safe-top">
       <div className="mobile-container">
-        <div className="h-14 px-4 flex items-center justify-center">
+        <div className="h-14 px-4 flex items-center justify-between">
+          {/* Spacer for centering */}
+          <div className="w-9" />
           <h1 className="text-[17px] font-bold text-text-primary">Lookbook</h1>
+          {onExport ? (
+            <button
+              onClick={onExport}
+              disabled={isExporting}
+              className="p-2 rounded-lg transition-colors touch-manipulation text-text-muted hover:text-gold disabled:opacity-50"
+              title="Export Lookbooks"
+            >
+              {isExporting ? (
+                <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                </svg>
+              )}
+            </button>
+          ) : (
+            <div className="w-9" />
+          )}
         </div>
-      </div>
-    </div>
-  );
-}
-
-// Sync status banner
-function SyncBanner({ status }: { status: SyncStatus }) {
-  const colors = {
-    synced: 'bg-success',
-    pending: 'bg-warning',
-    offline: 'bg-gray-400',
-  };
-
-  const labels = {
-    synced: 'Synced with desktop',
-    pending: 'Pending sync...',
-    offline: 'Working offline',
-  };
-
-  return (
-    <div className="bg-card rounded-[10px] px-4 py-3 mb-4 flex items-center justify-between shadow-card">
-      <div className="flex items-center gap-2.5">
-        <div className={`w-2 h-2 rounded-full ${colors[status]}`} />
-        <span className="text-xs text-text-secondary">{labels[status]}</span>
       </div>
     </div>
   );

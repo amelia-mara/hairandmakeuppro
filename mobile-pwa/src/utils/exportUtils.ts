@@ -39,110 +39,151 @@ export function generateContinuityBiblePDF(
   }).join('');
 
   // Generate scene sections
-  const sceneSections = project.scenes
-    .sort((a, b) => a.sceneNumber.localeCompare(b.sceneNumber, undefined, { numeric: true }))
+  const sortedScenes = project.scenes
+    .sort((a, b) => a.sceneNumber.localeCompare(b.sceneNumber, undefined, { numeric: true }));
+
+  const sceneSections = sortedScenes
     .map(scene => generateSceneSection(scene, project.characters, project.looks, sceneCaptures))
     .join('');
 
-  // Generate table of contents
+  // Generate table of contents - ALL characters
   const characterTOC = project.characters
     .map((c) => `<li><a href="#character-${c.id}">${c.name}</a></li>`)
     .join('');
 
-  const sceneTOC = project.scenes
-    .slice(0, 20) // Limit to first 20 for TOC
-    .map(s => `<li><a href="#scene-${s.id}">Scene ${s.sceneNumber}</a></li>`)
+  // Generate table of contents - ALL scenes
+  const sceneTOC = sortedScenes
+    .map(s => `<li><a href="#scene-${s.id}">Sc ${s.sceneNumber} – ${s.slugline || 'Untitled'}</a></li>`)
     .join('');
+
+  const totalLooks = project.looks.length;
+  const exportDate = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 
   return `
     <!DOCTYPE html>
-    <html>
+    <html lang="en">
     <head>
+      <meta charset="UTF-8">
       <title>${project.name} - Continuity Bible</title>
       <style>
         @media print {
           .page-break { page-break-before: always; }
+          .no-break { page-break-inside: avoid; }
           .no-print { display: none; }
+          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
-        * { box-sizing: border-box; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-          padding: 40px;
+          padding: 0;
           max-width: 900px;
           margin: 0 auto;
-          color: #333;
+          color: #2c2c2c;
           line-height: 1.5;
+          font-size: 13px;
         }
 
-        /* Cover Page */
+        /* ── Cover Page ── */
         .cover-page {
           text-align: center;
-          padding: 100px 20px;
-          min-height: 90vh;
+          min-height: 95vh;
           display: flex;
           flex-direction: column;
           justify-content: center;
+          align-items: center;
+          padding: 60px 40px;
         }
-        .cover-title { font-size: 36px; font-weight: bold; color: #C9A962; margin-bottom: 10px; }
-        .cover-subtitle { font-size: 24px; color: #666; margin-bottom: 60px; }
-        .cover-meta { font-size: 14px; color: #888; }
-        .cover-meta p { margin: 8px 0; }
+        .cover-rule { width: 80px; height: 3px; background: #C9A962; margin: 0 auto 40px; }
+        .cover-title { font-size: 38px; font-weight: 700; color: #1a1a1a; letter-spacing: -0.5px; margin-bottom: 6px; }
+        .cover-subtitle { font-size: 18px; font-weight: 400; color: #C9A962; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 50px; }
+        .cover-stats { display: flex; gap: 40px; justify-content: center; margin-bottom: 50px; }
+        .cover-stat { text-align: center; }
+        .cover-stat-value { font-size: 28px; font-weight: 700; color: #C9A962; display: block; }
+        .cover-stat-label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+        .cover-meta { font-size: 12px; color: #999; line-height: 1.8; }
+        .cover-meta strong { color: #666; }
 
-        /* Table of Contents */
-        .toc { margin: 40px 0; }
-        .toc h2 { color: #C9A962; border-bottom: 2px solid #C9A962; padding-bottom: 8px; }
-        .toc ul { list-style: none; padding: 0; }
-        .toc li { padding: 4px 0; }
-        .toc a { color: #333; text-decoration: none; }
+        /* ── Section Headings ── */
+        .section-heading {
+          font-size: 22px;
+          font-weight: 700;
+          color: #1a1a1a;
+          margin: 0 0 6px 0;
+          padding: 30px 40px 0;
+        }
+        .section-heading-rule { width: 50px; height: 3px; background: #C9A962; margin: 0 0 30px 40px; }
+
+        /* ── Table of Contents ── */
+        .toc { padding: 30px 40px; }
+        .toc h2 { font-size: 22px; font-weight: 700; color: #1a1a1a; margin-bottom: 4px; }
+        .toc-rule { width: 50px; height: 3px; background: #C9A962; margin-bottom: 30px; }
+        .toc h3 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: #C9A962; margin-bottom: 10px; }
+        .toc ul { list-style: none; padding: 0; margin: 0 0 24px 0; }
+        .toc li { padding: 3px 0; font-size: 12px; border-bottom: 1px dotted #e5e5e5; }
+        .toc li:last-child { border-bottom: none; }
+        .toc a { color: #444; text-decoration: none; }
         .toc a:hover { color: #C9A962; }
-        .toc-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .toc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        .toc-scenes-list { columns: 2; column-gap: 24px; }
+        .toc-scenes-list li { break-inside: avoid; }
 
-        /* Character Section */
-        .character-section { margin-bottom: 60px; }
+        /* ── Character Section ── */
+        .character-section { padding: 0 40px; margin-bottom: 20px; page-break-inside: avoid; }
         .character-header {
-          background: linear-gradient(135deg, #C9A962, #B8985A);
+          background: linear-gradient(135deg, #C9A962, #B8975A);
           color: white;
-          padding: 20px;
+          padding: 16px 20px;
           border-radius: 8px 8px 0 0;
         }
-        .character-name { font-size: 24px; font-weight: bold; margin: 0; }
+        .character-name { font-size: 20px; font-weight: 700; margin: 0; }
+        .character-look-count { font-size: 12px; opacity: 0.85; margin-top: 2px; }
 
-        /* Look Section */
+        /* ── Look Card ── */
         .look-section {
-          border: 1px solid #ddd;
+          border: 1px solid #e0e0e0;
           border-top: none;
           padding: 20px;
-          margin-bottom: 20px;
+          margin-bottom: 0;
+          page-break-inside: avoid;
         }
+        .look-section:last-child { border-radius: 0 0 8px 8px; }
         .look-header {
           display: flex;
           justify-content: space-between;
           align-items: baseline;
-          margin-bottom: 15px;
+          margin-bottom: 14px;
           padding-bottom: 10px;
-          border-bottom: 1px solid #eee;
+          border-bottom: 1px solid #f0f0f0;
         }
-        .look-name { font-size: 18px; font-weight: 600; color: #333; }
-        .look-scenes { font-size: 12px; color: #666; }
-        .look-time { font-size: 12px; color: #888; }
+        .look-name { font-size: 16px; font-weight: 600; color: #1a1a1a; }
+        .look-scenes { font-size: 11px; color: #777; margin-top: 2px; }
+        .look-time {
+          font-size: 11px;
+          color: #C9A962;
+          font-weight: 500;
+          white-space: nowrap;
+        }
 
-        /* Photo Grid */
+        /* ── Photo Grid ── */
         .photo-grid {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
-          gap: 10px;
-          margin: 15px 0;
+          gap: 8px;
+          margin: 0 0 16px;
+          page-break-inside: avoid;
         }
         .photo-placeholder {
           aspect-ratio: 3/4;
-          background: #f5f5f5;
-          border: 1px dashed #ccc;
+          background: #fafafa;
+          border: 1px dashed #d5d5d5;
           border-radius: 4px;
           display: flex;
           align-items: center;
           justify-content: center;
           font-size: 10px;
-          color: #999;
+          color: #bbb;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
         }
         .photo-img {
           width: 100%;
@@ -160,99 +201,95 @@ export function generateContinuityBiblePDF(
           height: 100%;
         }
 
-        /* Details Tables */
+        /* ── Details Tables ── */
         .details-grid {
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: 20px;
-          margin-top: 20px;
+          margin-top: 16px;
         }
         .details-section h4 {
-          font-size: 11px;
+          font-size: 10px;
           text-transform: uppercase;
-          letter-spacing: 1px;
+          letter-spacing: 1.5px;
           color: #C9A962;
-          margin: 0 0 10px 0;
-          padding-bottom: 5px;
-          border-bottom: 1px solid #eee;
+          font-weight: 600;
+          margin: 0 0 8px 0;
+          padding-bottom: 6px;
+          border-bottom: 1px solid #f0f0f0;
         }
-        .details-table {
-          width: 100%;
-          font-size: 12px;
-        }
-        .details-table td {
-          padding: 4px 0;
-          vertical-align: top;
-        }
-        .details-table td:first-child {
-          color: #666;
-          width: 45%;
-        }
-        .details-table td:last-child {
-          color: #333;
-          font-weight: 500;
-        }
+        .details-table { width: 100%; font-size: 12px; border-collapse: collapse; }
+        .details-table td { padding: 3px 0; vertical-align: top; }
+        .details-table td:first-child { color: #888; width: 42%; }
+        .details-table td:last-child { color: #2c2c2c; font-weight: 500; }
 
-        /* Notes */
+        /* ── Notes ── */
         .notes-section {
-          margin-top: 15px;
-          padding: 12px;
-          background: #f9f9f9;
+          margin-top: 14px;
+          padding: 10px 14px;
+          background: #f8f8f8;
           border-radius: 6px;
-          font-size: 13px;
+          border-left: 3px solid #C9A962;
         }
         .notes-section h4 {
-          font-size: 11px;
+          font-size: 10px;
           text-transform: uppercase;
           letter-spacing: 1px;
-          color: #666;
-          margin: 0 0 8px 0;
+          color: #888;
+          margin: 0 0 6px 0;
         }
+        .notes-section p { font-size: 12px; color: #555; margin: 0; }
 
-        /* Scene Section */
+        /* ── Scene Section ── */
         .scene-section {
-          margin-bottom: 40px;
-          border: 1px solid #ddd;
+          margin: 0 40px 16px;
+          border: 1px solid #e0e0e0;
           border-radius: 8px;
           overflow: hidden;
+          page-break-inside: avoid;
         }
         .scene-header {
-          background: #f5f5f5;
-          padding: 15px;
-          border-bottom: 1px solid #ddd;
+          background: #f7f7f7;
+          padding: 12px 16px;
+          border-bottom: 1px solid #e0e0e0;
         }
-        .scene-number { font-size: 14px; color: #C9A962; font-weight: bold; }
-        .scene-slugline { font-size: 16px; font-weight: 600; color: #333; margin: 5px 0; }
-        .scene-synopsis { font-size: 13px; color: #666; }
-        .scene-content { padding: 15px; }
-        .scene-characters {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 10px;
+        .scene-number {
+          font-size: 11px;
+          color: #C9A962;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 1px;
         }
+        .scene-slugline { font-size: 15px; font-weight: 600; color: #1a1a1a; margin: 4px 0 0; }
+        .scene-synopsis { font-size: 12px; color: #777; margin-top: 4px; }
+        .scene-content { padding: 14px 16px; }
+        .scene-content h4 {
+          font-size: 10px;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+          color: #999;
+          margin: 0 0 10px;
+        }
+        .scene-characters { display: flex; flex-wrap: wrap; gap: 8px; }
         .scene-character-card {
           flex: 1;
-          min-width: 200px;
-          padding: 12px;
-          background: #f9f9f9;
+          min-width: 180px;
+          padding: 10px 12px;
+          background: #fafafa;
+          border: 1px solid #eee;
           border-radius: 6px;
         }
-        .scene-character-name { font-weight: 600; font-size: 14px; }
-        .scene-character-look { font-size: 12px; color: #666; }
-        .scene-character-page { font-size: 11px; color: #C9A962; }
+        .scene-character-name { font-weight: 600; font-size: 13px; color: #1a1a1a; }
+        .scene-character-look { font-size: 11px; color: #777; margin-top: 2px; }
 
-        /* Continuity Flags */
-        .flags-list {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-          margin-top: 10px;
-        }
+        /* ── Continuity Flags ── */
+        .flags-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
         .flag-badge {
-          padding: 4px 10px;
-          border-radius: 12px;
-          font-size: 11px;
-          font-weight: 500;
+          padding: 3px 8px;
+          border-radius: 10px;
+          font-size: 10px;
+          font-weight: 600;
+          letter-spacing: 0.3px;
         }
         .flag-sweat { background: #e3f2fd; color: #1565c0; }
         .flag-dishevelled { background: #fff3e0; color: #ef6c00; }
@@ -261,34 +298,47 @@ export function generateContinuityBiblePDF(
         .flag-wetHair { background: #e0f7fa; color: #00838f; }
         .flag-tears { background: #e8eaf6; color: #3949ab; }
 
-        /* SFX Section */
+        /* ── SFX ── */
         .sfx-section {
-          margin-top: 15px;
-          padding: 12px;
-          background: #fff8e1;
-          border: 1px solid #ffe082;
+          margin-top: 14px;
+          padding: 10px 14px;
+          background: #fffbf0;
+          border: 1px solid #f0e0b0;
           border-radius: 6px;
         }
         .sfx-section h4 {
-          color: #f57c00;
-          font-size: 11px;
+          color: #d48806;
+          font-size: 10px;
           text-transform: uppercase;
           letter-spacing: 1px;
-          margin: 0 0 8px 0;
+          margin: 0 0 6px 0;
         }
       </style>
     </head>
     <body>
       <!-- Cover Page -->
       <div class="cover-page">
+        <div class="cover-rule"></div>
         <h1 class="cover-title">${project.name}</h1>
-        <h2 class="cover-subtitle">Hair & Makeup Continuity Bible</h2>
+        <h2 class="cover-subtitle">Continuity Bible</h2>
+        <div class="cover-stats">
+          <div class="cover-stat">
+            <span class="cover-stat-value">${project.scenes.length}</span>
+            <span class="cover-stat-label">Scenes</span>
+          </div>
+          <div class="cover-stat">
+            <span class="cover-stat-value">${project.characters.length}</span>
+            <span class="cover-stat-label">Characters</span>
+          </div>
+          <div class="cover-stat">
+            <span class="cover-stat-value">${totalLooks}</span>
+            <span class="cover-stat-label">Looks</span>
+          </div>
+        </div>
         <div class="cover-meta">
           <p><strong>Prepared by:</strong> ${preparedBy}</p>
-          <p><strong>Date Range:</strong> ${formatDate(firstShoot)} - ${formatDate(lastShoot)}</p>
-          <p><strong>Department:</strong> Hair & Makeup</p>
-          <p><strong>Total Scenes:</strong> ${project.scenes.length}</p>
-          <p><strong>Total Characters:</strong> ${project.characters.length}</p>
+          <p><strong>Production Dates:</strong> ${formatDate(firstShoot)} – ${formatDate(lastShoot)}</p>
+          <p><strong>Exported:</strong> ${exportDate}</p>
         </div>
       </div>
 
@@ -296,16 +346,16 @@ export function generateContinuityBiblePDF(
 
       <!-- Table of Contents -->
       <div class="toc">
-        <h2>Table of Contents</h2>
-        <div class="toc-columns">
+        <h2>Contents</h2>
+        <div class="toc-rule"></div>
+        <div class="toc-grid">
           <div>
-            <h3>Characters</h3>
+            <h3>Characters (${project.characters.length})</h3>
             <ul>${characterTOC}</ul>
           </div>
           <div>
-            <h3>Scenes</h3>
-            <ul>${sceneTOC}</ul>
-            ${project.scenes.length > 20 ? '<li><em>...and more</em></li>' : ''}
+            <h3>Scenes (${sortedScenes.length})</h3>
+            <ul class="toc-scenes-list">${sceneTOC}</ul>
           </div>
         </div>
       </div>
@@ -313,13 +363,15 @@ export function generateContinuityBiblePDF(
       <div class="page-break"></div>
 
       <!-- Character Sections -->
-      <h2 style="color: #C9A962; margin-bottom: 30px;">Character Reference</h2>
+      <div class="section-heading">Character Reference</div>
+      <div class="section-heading-rule"></div>
       ${characterSections}
 
       <div class="page-break"></div>
 
       <!-- Scene Sections -->
-      <h2 style="color: #C9A962; margin-bottom: 30px;">Scene Index</h2>
+      <div class="section-heading">Scene Index</div>
+      <div class="section-heading-rule"></div>
       ${sceneSections}
     </body>
     </html>
@@ -409,6 +461,7 @@ function generateCharacterSection(
     <div class="character-section" id="character-${character.id}">
       <div class="character-header">
         <h3 class="character-name">${character.name}</h3>
+        <div class="character-look-count">${looks.length} Look${looks.length !== 1 ? 's' : ''}</div>
       </div>
       ${lookSections}
     </div>
@@ -624,8 +677,9 @@ export function generateCharacterLookbookPDF(
 
   return `
     <!DOCTYPE html>
-    <html>
+    <html lang="en">
     <head>
+      <meta charset="UTF-8">
       <title>${character.name} - Lookbook</title>
       <style>
         @media print { .page-break { page-break-before: always; } }
@@ -709,8 +763,9 @@ export function generateTimesheetsPDF(
 
   return `
     <!DOCTYPE html>
-    <html>
+    <html lang="en">
     <head>
+      <meta charset="UTF-8">
       <title>${projectName} - Timesheets</title>
       <style>
         body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 40px; max-width: 900px; margin: 0 auto; }

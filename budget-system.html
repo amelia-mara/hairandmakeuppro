@@ -1615,7 +1615,7 @@
                                 <div class="upload-icon">📄</div>
                                 <div class="upload-text">Drag & drop receipts here or click to browse</div>
                                 <div class="upload-subtext">Accepts JPG, PNG, HEIC, PDF (max 10MB each)</div>
-                                <input type="file" id="receipt-file-input" accept=".jpg,.jpeg,.png,.heic,.pdf,image/jpeg,image/png,image/heic,application/pdf" multiple style="display: none;" onchange="handleReceiptFiles(this.files)">
+                                <input type="file" id="receipt-file-input" accept=".jpg,.jpeg,.png,.heic,.heif,.pdf,image/jpeg,image/png,image/heic,image/heif,application/pdf" multiple style="display: none;" onchange="handleReceiptFiles(this.files)">
                             </div>
                         </div>
                     </div>
@@ -2081,6 +2081,9 @@
         </div>
         <button class="fab" onclick="toggleFab()">+</button>
     </div>
+
+    <!-- HEIC to JPEG conversion library -->
+    <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
 
     <script>
         // Enhanced Budget Management System
@@ -3781,13 +3784,20 @@
 
         async function processReceiptFile(file) {
             try {
-                const base64 = await fileToBase64(file);
+                // Convert HEIC/HEIF files to JPEG so browsers can display them
+                let processedFile = file;
+                if (isHeicFile(file)) {
+                    budgetManager.showNotification('Converting HEIC image...', 'info');
+                    processedFile = await convertHeicToJpeg(file);
+                }
+
+                const base64 = await fileToBase64(processedFile);
                 const receipt = {
                     id: Date.now(),
                     project_id: budgetManager.data.projectInfo.code,
                     file_data: base64,
-                    file_type: file.type || 'image/jpeg',
-                    file_name: file.name,
+                    file_type: processedFile.type || 'image/jpeg',
+                    file_name: processedFile.name,
                     supplier: '',
                     invoice_number: '',
                     receipt_date: '',
@@ -3803,8 +3813,26 @@
                 budgetManager.showNotification('Receipt uploaded successfully', 'success');
             } catch (error) {
                 console.error('Error processing file:', error);
-                budgetManager.showNotification('Error processing file', 'danger');
+                budgetManager.showNotification('Error processing file: ' + error.message, 'danger');
             }
+        }
+
+        function isHeicFile(file) {
+            return file.type === 'image/heic' || file.type === 'image/heif' ||
+                   file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif');
+        }
+
+        async function convertHeicToJpeg(file) {
+            const blob = await heic2any({
+                blob: file,
+                toType: 'image/jpeg',
+                quality: 0.9
+            });
+            // heic2any may return an array of blobs for multi-frame HEIC; use the first one
+            const resultBlob = Array.isArray(blob) ? blob[0] : blob;
+            return new File([resultBlob], file.name.replace(/\.heic$/i, '.jpg').replace(/\.heif$/i, '.jpg'), {
+                type: 'image/jpeg'
+            });
         }
 
         function fileToBase64(file) {
@@ -3937,9 +3965,9 @@
             // Extract base64 data from data URL
             const base64Data = imageBase64.split(',')[1];
 
-            // Determine media type
+            // Determine media type (HEIC files are already converted to JPEG during upload)
             let mediaType = fileType;
-            if (mediaType === 'image/heic') mediaType = 'image/jpeg'; // Claude doesn't support HEIC directly
+            if (mediaType === 'image/heic' || mediaType === 'image/heif') mediaType = 'image/jpeg';
 
             const prompt = `Analyse this receipt/invoice image and extract the following data in JSON format:
 {

@@ -32,7 +32,7 @@ interface MoreProps {
   onStartNewProject?: () => void;
   initialView?: NavTab;
   resetKey?: number;
-  subView?: 'team' | 'invite' | 'projectStats' | 'projectSettings' | 'userProfile'; // Direct navigation to sub-views
+  subView?: 'team' | 'invite' | 'projectStats' | 'projectSettings' | 'userProfile' | 'billing'; // Direct navigation to sub-views
 }
 
 export function More({ onNavigateToTab, onStartNewProject, initialView, resetKey, subView }: MoreProps) {

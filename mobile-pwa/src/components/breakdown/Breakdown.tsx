@@ -1,6 +1,7 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
+import { generateSceneBreakdownCSV } from '@/utils/exportUtils';
 import { CharacterAvatar } from '@/components/characters/CharacterAvatar';
 import { SceneScriptModal } from '@/components/scenes/SceneScriptModal';
 import {
@@ -224,6 +225,28 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
   const [expandedSceneId, setExpandedSceneId] = useState<string | null>(null);
   const [scriptModalSceneId, setScriptModalSceneId] = useState<string | null>(null);
   const [characterConfirmSceneId, setCharacterConfirmSceneId] = useState<string | null>(null);
+
+  // Export state
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExportBreakdown = useCallback(async () => {
+    if (!currentProject || isExporting) return;
+    setIsExporting(true);
+    try {
+      const csvContent = generateSceneBreakdownCSV(currentProject, sceneCaptures);
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${currentProject.name}_Scene_Breakdown.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } finally {
+      setIsExporting(false);
+    }
+  }, [currentProject, sceneCaptures, isExporting]);
 
   // Filming status notes modal state
   const [notesModalState, setNotesModalState] = useState<{
@@ -468,6 +491,25 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
                   </svg>
                 </button>
               )}
+
+              {/* Export button */}
+              <button
+                onClick={handleExportBreakdown}
+                disabled={isExporting}
+                className="p-2 rounded-lg transition-colors touch-manipulation text-text-muted hover:text-gold disabled:opacity-50"
+                title="Export Scene Breakdown"
+              >
+                {isExporting ? (
+                  <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                  </svg>
+                )}
+              </button>
 
               {/* Filter button */}
               <button
