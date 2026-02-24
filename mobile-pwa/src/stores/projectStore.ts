@@ -833,7 +833,7 @@ export const useProjectStore = create<ProjectState>()(
         let changed = false;
 
         for (const sceneNum of look.scenes) {
-          const scene = state.currentProject.scenes.find(s => s.sceneNumber === sceneNum);
+          const scene: Scene | undefined = state.currentProject.scenes.find(s => s.sceneNumber === sceneNum);
           if (!scene) continue;
 
           const captureKey = `${scene.id}-${look.characterId}`;
