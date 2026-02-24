@@ -63,6 +63,7 @@ interface ProjectState {
   currentProject: Project | null;
   currentSceneId: string | null;
   currentCharacterId: string | null;
+  currentLookId: string | null;
   activeTab: NavTab;
   sceneFilter: SceneFilter;
   searchQuery: string;
@@ -103,6 +104,7 @@ interface ProjectState {
   setActiveTab: (tab: NavTab) => void;
   setCurrentScene: (sceneId: string | null) => void;
   setCurrentCharacter: (characterId: string | null) => void;
+  setCurrentLook: (lookId: string | null) => void;
   setSceneFilter: (filter: SceneFilter) => void;
   setSearchQuery: (query: string) => void;
 
@@ -139,6 +141,7 @@ interface ProjectState {
 
   // Actions - Look Updates
   updateLook: (lookId: string, updates: Partial<Look>) => void;
+  updateLookWithPropagation: (lookId: string, updates: Partial<Look>) => void;
 
   // Actions - Cast Profiles
   getCastProfile: (characterId: string) => CastProfile | undefined;
@@ -200,6 +203,7 @@ export const useProjectStore = create<ProjectState>()(
       currentProject: null,
       currentSceneId: null,
       currentCharacterId: null,
+      currentLookId: null,
       activeTab: 'today',
       sceneFilter: 'all',
       searchQuery: '',
@@ -338,6 +342,7 @@ export const useProjectStore = create<ProjectState>()(
       setActiveTab: (tab) => set({ activeTab: tab }),
       setCurrentScene: (sceneId) => set({ currentSceneId: sceneId }),
       setCurrentCharacter: (characterId) => set({ currentCharacterId: characterId }),
+      setCurrentLook: (lookId) => set({ currentLookId: lookId }),
       setSceneFilter: (filter) => set({ sceneFilter: filter }),
       setSearchQuery: (query) => set({ searchQuery: query }),
 
@@ -802,6 +807,73 @@ export const useProjectStore = create<ProjectState>()(
         });
       },
 
+      // Update look and propagate defaults to scene captures that haven't been customized
+      updateLookWithPropagation: (lookId, updates) => {
+        const state = get();
+        if (!state.currentProject) return;
+
+        const look = state.currentProject.looks.find(l => l.id === lookId);
+        if (!look) return;
+
+        // First update the look itself
+        set((s) => {
+          if (!s.currentProject) return s;
+          return {
+            currentProject: {
+              ...s.currentProject,
+              looks: s.currentProject.looks.map((l) =>
+                l.id === lookId ? { ...l, ...updates } : l
+              ),
+            },
+          };
+        });
+
+        // Then propagate to scene captures
+        const newCaptures = { ...state.sceneCaptures };
+        let changed = false;
+
+        for (const sceneNum of look.scenes) {
+          const scene: Scene | undefined = state.currentProject.scenes.find(s => s.sceneNumber === sceneNum);
+          if (!scene) continue;
+
+          const captureKey = `${scene.id}-${look.characterId}`;
+          const capture = newCaptures[captureKey];
+          if (!capture) continue;
+
+          const captureUpdates: Partial<SceneCapture> = {};
+
+          // Propagate continuity flags if scene capture still has all-false defaults
+          if (updates.continuityFlags) {
+            const flags = capture.continuityFlags;
+            const allDefault = !flags.sweat && !flags.dishevelled && !flags.blood && !flags.dirt && !flags.wetHair && !flags.tears;
+            if (allDefault) {
+              captureUpdates.continuityFlags = { ...updates.continuityFlags };
+            }
+          }
+
+          // Propagate notes if scene capture notes are empty
+          if (updates.notes !== undefined && !capture.notes) {
+            captureUpdates.notes = updates.notes;
+          }
+
+          // Propagate SFX if scene capture has default SFX (not required, no types)
+          if (updates.sfxDetails) {
+            if (!capture.sfxDetails.sfxRequired && capture.sfxDetails.sfxTypes.length === 0) {
+              captureUpdates.sfxDetails = { ...updates.sfxDetails };
+            }
+          }
+
+          if (Object.keys(captureUpdates).length > 0) {
+            newCaptures[captureKey] = { ...capture, ...captureUpdates };
+            changed = true;
+          }
+        }
+
+        if (changed) {
+          set({ sceneCaptures: newCaptures });
+        }
+      },
+
       // Cast profile actions
       getCastProfile: (characterId) => {
         const state = get();
@@ -912,6 +984,10 @@ export const useProjectStore = create<ProjectState>()(
         set((state) => {
           if (!state.currentProject) return state;
 
+          // Get previous characters before updating (to detect removals)
+          const previousScene = state.currentProject.scenes.find(s => s.id === sceneId);
+          const previousCharacterIds = previousScene?.characters || [];
+
           const updatedScenes = state.currentProject.scenes.map((s) =>
             s.id === sceneId
               ? {
@@ -928,20 +1004,50 @@ export const useProjectStore = create<ProjectState>()(
             (s) => s.characterConfirmationStatus === 'confirmed'
           ).length;
 
-          // Update looks to include the confirmed characters in this scene
           const scene = updatedScenes.find((s) => s.id === sceneId);
-          const updatedLooks = state.currentProject.looks.map((look) => {
-            if (scene && confirmedCharacterIds.includes(look.characterId)) {
-              // Add this scene to the character's look if not already there
-              if (!look.scenes.includes(scene.sceneNumber)) {
-                return {
-                  ...look,
-                  scenes: [...look.scenes, scene.sceneNumber].sort((a, b) =>
-                    a.localeCompare(b, undefined, { numeric: true })
-                  ),
-                };
-              }
+
+          // Characters removed from this scene — their looks should drop this scene
+          const removedCharacterIds = previousCharacterIds.filter(
+            id => !confirmedCharacterIds.includes(id)
+          );
+
+          // Track which characters already have this scene in one of their looks
+          const characterHasScene = new Set<string>();
+          for (const look of state.currentProject.looks) {
+            if (scene && look.scenes.includes(scene.sceneNumber)) {
+              characterHasScene.add(look.characterId);
             }
+          }
+
+          // Track characters we've already added the scene to (for multi-look chars)
+          const addedTo = new Set<string>();
+
+          const updatedLooks = state.currentProject.looks.map((look) => {
+            if (!scene) return look;
+
+            // Remove scene from looks of characters no longer in this scene
+            if (removedCharacterIds.includes(look.characterId) && look.scenes.includes(scene.sceneNumber)) {
+              return {
+                ...look,
+                scenes: look.scenes.filter(s => s !== scene.sceneNumber),
+              };
+            }
+
+            // Add scene to first look of newly confirmed characters (if not already in any of their looks)
+            if (
+              confirmedCharacterIds.includes(look.characterId) &&
+              !characterHasScene.has(look.characterId) &&
+              !addedTo.has(look.characterId)
+            ) {
+              addedTo.add(look.characterId);
+              return {
+                ...look,
+                scenes: [...look.scenes, scene.sceneNumber].sort((a, b) =>
+                  a.localeCompare(b, undefined, { numeric: true })
+                ),
+              };
+            }
+
             return look;
           });
 
@@ -991,7 +1097,7 @@ export const useProjectStore = create<ProjectState>()(
           const newLook: Look = {
             id: `look-${newCharacter.id}`,
             characterId: newCharacter.id,
-            name: 'Look 1',
+            name: 'Day 1',
             scenes: scene ? [scene.sceneNumber] : [],
             estimatedTime: 30,
             makeup: createEmptyMakeupDetails(),

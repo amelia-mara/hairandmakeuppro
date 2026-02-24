@@ -5,11 +5,12 @@ import { useCallSheetStore } from '@/stores/callSheetStore';
 import type { Look, Character } from '@/types';
 import { CharacterSection } from './CharacterSection';
 import { AddLookModal } from './AddLookModal';
+import { LookOverview } from './LookOverview';
 
 type SyncStatus = 'synced' | 'pending' | 'offline';
 
 export function Lookbooks() {
-  const { currentProject, sceneCaptures } = useProjectStore();
+  const { currentProject, sceneCaptures, currentLookId, setCurrentLook, setActiveTab, setCurrentScene } = useProjectStore();
   const { schedule } = useScheduleStore();
   const { callSheets } = useCallSheetStore();
   const [addLookOpen, setAddLookOpen] = useState(false);
@@ -159,6 +160,21 @@ export function Lookbooks() {
     setAddLookOpen(true);
   };
 
+  // Show Look Overview when a look is selected
+  if (currentLookId) {
+    return (
+      <LookOverview
+        lookId={currentLookId}
+        onBack={() => setCurrentLook(null)}
+        onSceneClick={(sceneId) => {
+          setCurrentLook(null);
+          setActiveTab('breakdown');
+          setCurrentScene(sceneId);
+        }}
+      />
+    );
+  }
+
   // No project loaded
   if (!currentProject) {
     return (
@@ -261,19 +277,8 @@ function LookbooksHeader() {
   return (
     <div className="sticky top-0 z-30 bg-card border-b border-border safe-top">
       <div className="mobile-container">
-        <div className="h-14 px-4 flex items-center justify-between">
-          <button className="p-2 -ml-2 text-text-primary">
-            <svg className="w-[22px] h-[22px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
+        <div className="h-14 px-4 flex items-center justify-center">
           <h1 className="text-[17px] font-bold text-text-primary">Lookbook</h1>
-          <button className="p-2 -mr-2 text-text-primary">
-            <svg className="w-[22px] h-[22px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
-          </button>
         </div>
       </div>
     </div>
@@ -300,7 +305,6 @@ function SyncBanner({ status }: { status: SyncStatus }) {
         <div className={`w-2 h-2 rounded-full ${colors[status]}`} />
         <span className="text-xs text-text-secondary">{labels[status]}</span>
       </div>
-      <span className="text-[11px] text-text-light">2 min ago</span>
     </div>
   );
 }

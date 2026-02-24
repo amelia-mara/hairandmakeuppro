@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTimesheetStore, addDays } from '@/stores/timesheetStore';
-import type { EntryStatus, DayType, TimesheetEntry as TimesheetEntryType, TimesheetCalculation } from '@/types';
+import { SmartTimeInput } from './SmartTimeInput';
+import type { DayType, RateCard, TimesheetEntry as TimesheetEntryType, TimesheetCalculation } from '@/types';
 import { DAY_TYPE_LABELS, createEmptyTimesheetEntry, getLunchDurationForDayType } from '@/types';
 
 interface WeekViewProps {
@@ -13,7 +14,7 @@ const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const DAY_TYPES: DayType[] = ['SWD', 'CWD', 'SCWD'];
 
 export function WeekView({ weekStartDate, onNavigate }: WeekViewProps) {
-  const { entries, calculateEntry, saveEntry, getEntry } = useTimesheetStore();
+  const { entries, calculateEntry, saveEntry, getEntry, rateCard } = useTimesheetStore();
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
   const [editingEntry, setEditingEntry] = useState<TimesheetEntryType | null>(null);
 
@@ -133,15 +134,21 @@ export function WeekView({ weekStartDate, onNavigate }: WeekViewProps) {
       </div>
 
       {/* Day cards */}
-      <div className="space-y-3">
+      <div className="space-y-2">
         {weekDays.map(({ date, dayLabel, dayNumber, entry, calc, isToday, isWeekend }) => {
           const hasEntry = entry && entry.unitCall && entry.wrapOut;
           const isExpanded = expandedDate === date;
-          const hasOT = calc && calc.otHours > 0;
-          const hasPreCall = calc && calc.preCallHours > 0;
-          const is6thDay = entry?.isSixthDay;
-          const is7thDay = entry?.isSeventhDay;
           const timeRange = formatTimeRange(entry);
+
+          // Build concise detail fragments
+          const details: string[] = [];
+          if (hasEntry) {
+            if (entry.dayType !== 'SWD') details.push(entry.dayType);
+            if (calc && calc.preCallHours > 0) details.push(`${calc.preCallHours.toFixed(1)}h pre`);
+            if (calc && calc.otHours > 0) details.push(`${calc.otHours.toFixed(1)}h OT`);
+            if (entry.isSixthDay && !entry.isSeventhDay) details.push('6th day');
+            if (entry.isSeventhDay) details.push('7th day');
+          }
 
           return (
             <div
@@ -156,7 +163,7 @@ export function WeekView({ weekStartDate, onNavigate }: WeekViewProps) {
               {/* Day Card Header */}
               <div
                 onClick={() => handleDayClick(date)}
-                className="p-3.5 flex items-center cursor-pointer"
+                className="px-3.5 py-3 flex items-center cursor-pointer"
               >
                 {/* Date column */}
                 <div className="flex-shrink-0 w-11 text-center mr-3">
@@ -180,79 +187,48 @@ export function WeekView({ weekStartDate, onNavigate }: WeekViewProps) {
                 <div className="flex-1 min-w-0">
                   {hasEntry ? (
                     <>
-                      <div className="text-[15px] font-medium" style={{ color: 'var(--color-text-primary)' }}>
+                      <div className="text-[14px] font-semibold" style={{ color: 'var(--color-text-primary)' }}>
                         {timeRange}
                       </div>
-                      <div className="flex flex-wrap gap-1.5 mt-1">
-                        <span
-                          className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
-                            entry.dayType === 'CWD'
-                              ? 'bg-blue-100 text-blue-600'
-                              : entry.dayType === 'SCWD'
-                              ? 'bg-pink-100 text-pink-600'
-                              : ''
-                          }`}
-                          style={
-                            entry.dayType === 'SWD'
-                              ? { backgroundColor: 'var(--color-input-bg)', color: 'var(--color-text-muted)' }
-                              : undefined
-                          }
+                      {details.length > 0 && (
+                        <div
+                          className="text-[11px] mt-0.5 truncate"
+                          style={{ color: 'var(--color-text-muted)' }}
                         >
-                          {entry.dayType}
-                        </span>
-                        {hasPreCall && (
-                          <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-emerald-100 text-emerald-600">
-                            +{calc.preCallHours.toFixed(1)} Pre
-                          </span>
-                        )}
-                        {hasOT && (
-                          <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-gold text-white">
-                            +{calc.otHours.toFixed(1)} OT
-                          </span>
-                        )}
-                        {is6thDay && !is7thDay && (
-                          <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-orange-100 text-orange-600">
-                            6th Day
-                          </span>
-                        )}
-                        {is7thDay && (
-                          <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-red-100 text-red-600">
-                            7th Day
-                          </span>
-                        )}
-                      </div>
+                          {details.join(' · ')}
+                        </div>
+                      )}
                     </>
                   ) : (
                     <>
                       <div
-                        className={`text-[15px] font-medium ${isToday ? 'text-gold' : ''}`}
+                        className={`text-[14px] font-medium ${isToday ? 'text-gold' : ''}`}
                         style={{ color: isToday ? undefined : 'var(--color-text-muted)' }}
                       >
                         {isToday ? 'Today' : '—'}
                       </div>
-                      <div className="text-[13px] text-gold font-medium">+ Add hours</div>
+                      <div className="text-[12px] text-gold font-medium mt-0.5">+ Add hours</div>
                     </>
                   )}
                 </div>
 
-                {/* Hours display - show when there are calculated hours */}
+                {/* Hours + earnings */}
                 {calc && calc.totalHours > 0 && (
                   <div className="text-right ml-3 flex-shrink-0">
-                    <div className="text-xl font-bold text-gold">
-                      {calc.totalHours.toFixed(calc.totalHours % 1 === 0 ? 0 : 1)}
+                    <div className="text-[17px] font-bold text-gold leading-tight">
+                      {calc.totalHours.toFixed(calc.totalHours % 1 === 0 ? 0 : 1)}h
                     </div>
-                    <div className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>
-                      hrs
-                    </div>
+                    {calc.totalEarnings > 0 && (
+                      <div className="text-[11px] font-medium leading-tight" style={{ color: 'var(--color-text-muted)' }}>
+                        £{calc.totalEarnings.toFixed(0)}
+                      </div>
+                    )}
                   </div>
                 )}
 
-                {/* Status dot */}
-                <StatusIndicator status={entry?.status || 'draft'} hasEntry={!!hasEntry} />
-
                 {/* Chevron */}
                 <svg
-                  className={`w-2.5 h-2.5 ml-2 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                  className={`w-3 h-3 ml-2.5 flex-shrink-0 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
                   style={{ color: 'var(--color-text-muted)' }}
                   fill="none"
                   viewBox="0 0 24 24"
@@ -268,6 +244,7 @@ export function WeekView({ weekStartDate, onNavigate }: WeekViewProps) {
                   entry={editingEntry}
                   updateField={updateField}
                   calculation={calculateEntry(editingEntry)}
+                  rateCard={rateCard}
                 />
               )}
             </div>
@@ -278,29 +255,15 @@ export function WeekView({ weekStartDate, onNavigate }: WeekViewProps) {
   );
 }
 
-// Status indicator component
-function StatusIndicator({ status, hasEntry }: { status: EntryStatus; hasEntry: boolean }) {
-  if (!hasEntry) {
-    return <div className="w-2 h-2 rounded-full ml-2" style={{ backgroundColor: '#e0e0e0' }} />;
-  }
-
-  const colors: Record<EntryStatus, string> = {
-    draft: 'bg-warning',
-    pending: 'bg-gold',
-    approved: 'bg-success',
-  };
-
-  return <div className={`w-2 h-2 rounded-full ml-2 ${colors[status]}`} />;
-}
-
 // Expanded day content component
 interface ExpandedDayContentProps {
   entry: TimesheetEntryType;
   updateField: <K extends keyof TimesheetEntryType>(field: K, value: TimesheetEntryType[K]) => void;
   calculation: TimesheetCalculation;
+  rateCard: RateCard;
 }
 
-function ExpandedDayContent({ entry, updateField, calculation }: ExpandedDayContentProps) {
+function ExpandedDayContent({ entry, updateField, calculation, rateCard }: ExpandedDayContentProps) {
   const isAutoFilled = !!entry.autoFilledFrom;
 
   return (
@@ -363,7 +326,7 @@ function ExpandedDayContent({ entry, updateField, calculation }: ExpandedDayCont
             {entry.isSixthDay && '✓'}
           </div>
           <span className="text-[13px] font-medium" style={{ color: 'var(--color-text-primary)' }}>6th Day</span>
-          <span className="text-[11px] text-orange-500">(1.5x)</span>
+          <span className="text-[11px] text-orange-500">({rateCard.sixthDayMultiplier}x)</span>
           <input
             type="checkbox"
             checked={entry.isSixthDay}
@@ -394,7 +357,7 @@ function ExpandedDayContent({ entry, updateField, calculation }: ExpandedDayCont
             {entry.isSeventhDay && '✓'}
           </div>
           <span className="text-[13px] font-medium" style={{ color: 'var(--color-text-primary)' }}>7th Day</span>
-          <span className="text-[11px] text-red-600">(2x)</span>
+          <span className="text-[11px] text-red-600">({rateCard.seventhDayMultiplier}x)</span>
           <input
             type="checkbox"
             checked={entry.isSeventhDay}
@@ -414,7 +377,7 @@ function ExpandedDayContent({ entry, updateField, calculation }: ExpandedDayCont
           value={entry.preCall}
           onChange={(v) => updateField('preCall', v)}
           highlight="gold"
-          hint="@ 1.5x"
+          hint={`@ ${rateCard.preCallMultiplier}x`}
         />
         <TimeInputCell
           label="Unit Call"
@@ -470,14 +433,14 @@ function ExpandedDayContent({ entry, updateField, calculation }: ExpandedDayCont
           </div>
           <div className="space-y-1.5">
             {calculation.preCallHours > 0 && (
-              <BreakdownRow label="Pre-Call" hours={calculation.preCallHours} rate="@ 1.5x" />
+              <BreakdownRow label="Pre-Call" hours={calculation.preCallHours} rate={`@ ${rateCard.preCallMultiplier}x`} />
             )}
             <BreakdownRow label="Base Hours" hours={calculation.baseHours} rate="@ 1x" />
             {calculation.otHours > 0 && (
-              <BreakdownRow label="Overtime" hours={calculation.otHours} rate="@ 1.5x" />
+              <BreakdownRow label="Overtime" hours={calculation.otHours} rate={`@ ${rateCard.otMultiplier}x`} />
             )}
             {calculation.lateNightHours > 0 && (
-              <BreakdownRow label="Late Night" hours={calculation.lateNightHours} rate="@ 2x" />
+              <BreakdownRow label="Late Night" hours={calculation.lateNightHours} rate={`@ ${rateCard.lateNightMultiplier}x`} />
             )}
             <BreakdownRow label="Lunch (unpaid)" hours={-(entry.lunchTaken / 60)} />
             <div
@@ -543,8 +506,8 @@ function TimeInputCell({ label, value, onChange, highlight, hint }: TimeInputCel
     : { backgroundColor: 'var(--color-input-bg)', border: '1px solid var(--color-border)' };
 
   return (
-    <div className="p-2.5 rounded-lg" style={bgStyle}>
-      <div className="flex justify-between items-center">
+    <div className="p-2.5 rounded-lg relative" style={{ ...bgStyle, overflow: 'visible' }}>
+      <div className="flex justify-between items-center mb-0.5">
         <span className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
           {label}
         </span>
@@ -557,11 +520,10 @@ function TimeInputCell({ label, value, onChange, highlight, hint }: TimeInputCel
           </span>
         )}
       </div>
-      <input
-        type="time"
-        value={value || ''}
-        onChange={(e) => onChange(e.target.value)}
-        className="text-[15px] font-semibold bg-transparent w-full"
+      <SmartTimeInput
+        value={value}
+        onChange={onChange}
+        className="text-[15px] font-semibold bg-transparent outline-none min-w-0"
         style={{ color: value ? 'var(--color-text-primary)' : 'var(--color-text-muted)' }}
       />
     </div>

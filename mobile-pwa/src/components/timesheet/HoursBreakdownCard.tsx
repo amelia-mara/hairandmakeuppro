@@ -50,10 +50,10 @@ export function HoursBreakdownCard({ calculation, entry, previousWrapOut }: Hour
   // Get multiplier badge info
   const getDayMultiplierBadge = () => {
     if (entry.isSeventhDay) {
-      return { label: '7th Day (2x)', color: 'bg-orange-500' };
+      return { label: `7th Day (${rateCard.seventhDayMultiplier}x)`, color: 'bg-orange-500' };
     }
     if (entry.isSixthDay) {
-      return { label: '6th Day (1.5x)', color: 'bg-gold' };
+      return { label: `6th Day (${rateCard.sixthDayMultiplier}x)`, color: 'bg-gold' };
     }
     return null;
   };
@@ -130,7 +130,7 @@ export function HoursBreakdownCard({ calculation, entry, previousWrapOut }: Hour
             label="Pre-Call"
             hours={calculation.preCallHours}
             earnings={calculation.preCallEarnings}
-            badge={{ label: '1.5x', color: 'gold' }}
+            badge={{ label: `${rateCard.preCallMultiplier}x`, color: 'gold' }}
           />
         )}
 
@@ -148,7 +148,7 @@ export function HoursBreakdownCard({ calculation, entry, previousWrapOut }: Hour
             label="Overtime"
             hours={calculation.otHours}
             earnings={calculation.overtimePay || calculation.otEarnings}
-            badge={{ label: '1.5x', color: 'orange' }}
+            badge={{ label: `${rateCard.otMultiplier}x`, color: 'orange' }}
           />
         )}
 
@@ -158,7 +158,7 @@ export function HoursBreakdownCard({ calculation, entry, previousWrapOut }: Hour
             label="Broken Lunch Penalty"
             hours={calculation.brokenLunchHours || 0}
             earnings={calculation.brokenLunchPay || 0}
-            badge={{ label: '1.5x', color: 'amber' }}
+            badge={{ label: `${rateCard.otMultiplier}x`, color: 'amber' }}
           />
         )}
 
@@ -168,7 +168,7 @@ export function HoursBreakdownCard({ calculation, entry, previousWrapOut }: Hour
             label="Broken Turnaround"
             hours={calculation.brokenTurnaroundHours || 0}
             earnings={calculation.brokenTurnaroundPay || 0}
-            badge={{ label: '1.5x', color: 'purple' }}
+            badge={{ label: `${rateCard.otMultiplier}x`, color: 'purple' }}
           />
         )}
 
@@ -178,7 +178,7 @@ export function HoursBreakdownCard({ calculation, entry, previousWrapOut }: Hour
             label="Late Night (after 23:00)"
             hours={calculation.lateNightHours}
             earnings={calculation.lateNightPay || calculation.lateNightEarnings}
-            badge={{ label: '2x', color: 'red' }}
+            badge={{ label: `${rateCard.lateNightMultiplier}x`, color: 'red' }}
           />
         )}
 

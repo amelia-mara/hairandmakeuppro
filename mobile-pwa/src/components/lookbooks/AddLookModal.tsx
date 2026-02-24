@@ -59,10 +59,22 @@ export function AddLookModal({ isOpen, onClose, preselectedCharacterId }: AddLoo
       hair: createEmptyHairDetails(),
     };
 
-    // Update project with new look
+    // Remove assigned scenes from other looks of the same character
+    // A scene should only belong to one look per character
+    const updatedLooks = currentProject.looks.map(look => {
+      if (look.characterId === characterId && scenes.length > 0) {
+        const remainingScenes = look.scenes.filter(s => !scenes.includes(s));
+        if (remainingScenes.length !== look.scenes.length) {
+          return { ...look, scenes: remainingScenes };
+        }
+      }
+      return look;
+    });
+
+    // Update project with new look and cleaned-up existing looks
     setProject({
       ...currentProject,
-      looks: [...currentProject.looks, newLook],
+      looks: [...updatedLooks, newLook],
       updatedAt: new Date(),
     });
 

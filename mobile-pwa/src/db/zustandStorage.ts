@@ -105,7 +105,10 @@ export function createHybridStorage<S>(storeName: string): PersistStorage<S> {
           // Wait for database to be ready
           await db.open();
           const state = await getStoreBackup(name);
-          return state as StorageValue<S> | null;
+          if (state) return state as StorageValue<S>;
+          // IndexedDB was empty — check localStorage backup
+          const localData = localStorage.getItem(name);
+          return localData ? JSON.parse(localData) : null;
         } catch (error) {
           console.error(`Failed to read store ${name} from IndexedDB:`, error);
           // Fall back to localStorage
@@ -120,8 +123,14 @@ export function createHybridStorage<S>(storeName: string): PersistStorage<S> {
 
     setItem: (name: string, value: StorageValue<S>): void => {
       if (useIndexedDB) {
-        // Debounced write to IndexedDB
+        // Debounced write to IndexedDB + synchronous localStorage backup
         debouncedWrite(name, value, async (n, v) => {
+          // Write localStorage backup first (synchronous, survives tab close)
+          try {
+            localStorage.setItem(n, JSON.stringify(v));
+          } catch {
+            // localStorage might be full for large stores — that's OK
+          }
           await saveStoreBackup(n, v);
         });
       } else {
@@ -271,14 +280,14 @@ export async function getStorageInfo(): Promise<{
 // Register beforeunload handler to flush pending writes
 if (typeof window !== 'undefined') {
   window.addEventListener('beforeunload', () => {
-    // Synchronously flush to localStorage for stores that use it
+    // Synchronously flush ALL pending writes to localStorage (including IndexedDB stores)
+    // IndexedDB writes are async and won't complete during unload, so localStorage
+    // serves as a synchronous safety net for data that hasn't been persisted yet
     for (const [name, value] of Object.entries(pendingWrites)) {
-      if (!INDEXEDDB_STORES.has(name)) {
-        try {
-          localStorage.setItem(name, JSON.stringify(value));
-        } catch {
-          // Ignore errors during unload
-        }
+      try {
+        localStorage.setItem(name, JSON.stringify(value));
+      } catch {
+        // Ignore errors during unload (e.g. quota exceeded for large stores)
       }
     }
   });

@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { clsx } from 'clsx';
-import type { ContinuityEvent, ContinuityEventType, Photo } from '@/types';
+import type { ContinuityEvent, ContinuityEventType, Photo, ProgressionStage } from '@/types';
 import { CONTINUITY_EVENT_TYPES, STAGE_SUGGESTIONS } from '@/types';
 import { BottomSheet, Button, Input, Textarea } from '../ui';
 import { createPhotoFromBlob } from '@/utils/imageUtils';
@@ -10,14 +10,15 @@ interface AddEventModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAdd: (event: Omit<ContinuityEvent, 'id'>) => void;
+  availableScenes?: string[];
 }
 
-export function AddEventModal({ isOpen, onClose, onAdd }: AddEventModalProps) {
+export function AddEventModal({ isOpen, onClose, onAdd, availableScenes = [] }: AddEventModalProps) {
   const [type, setType] = useState<ContinuityEventType>('Wound');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [stage, setStage] = useState('');
-  const [sceneRange, setSceneRange] = useState('');
+  const [selectedScenes, setSelectedScenes] = useState<string[]>([]);
   const [products, setProducts] = useState('');
   const [showStageSuggestions, setShowStageSuggestions] = useState(false);
   const [referencePhotos, setReferencePhotos] = useState<Photo[]>([]);
@@ -25,15 +26,21 @@ export function AddEventModal({ isOpen, onClose, onAdd }: AddEventModalProps) {
   const [showPhotoCapture, setShowPhotoCapture] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Progression timeline
+  const [progression, setProgression] = useState<ProgressionStage[]>([]);
+  const [showProgression, setShowProgression] = useState(false);
+
   const resetForm = () => {
     setType('Wound');
     setName('');
     setDescription('');
     setStage('');
-    setSceneRange('');
+    setSelectedScenes([]);
     setProducts('');
     setReferencePhotos([]);
     setShowPhotoCapture(false);
+    setProgression([]);
+    setShowProgression(false);
   };
 
   const handleSubmit = () => {
@@ -44,9 +51,11 @@ export function AddEventModal({ isOpen, onClose, onAdd }: AddEventModalProps) {
       name: name.trim(),
       description: description.trim(),
       stage: stage.trim(),
-      sceneRange: sceneRange.trim(),
+      sceneRange: selectedScenes.length > 0 ? selectedScenes.join(', ') : '',
+      scenes: selectedScenes,
       products: products.trim(),
       referencePhotos,
+      progression,
     });
 
     resetForm();
@@ -57,6 +66,50 @@ export function AddEventModal({ isOpen, onClose, onAdd }: AddEventModalProps) {
     onClose();
   };
 
+  const toggleScene = (scene: string) => {
+    setSelectedScenes((prev) =>
+      prev.includes(scene)
+        ? prev.filter((s) => s !== scene)
+        : [...prev, scene]
+    );
+  };
+
+  const selectAllScenes = () => {
+    if (selectedScenes.length === availableScenes.length) {
+      setSelectedScenes([]);
+    } else {
+      setSelectedScenes([...availableScenes]);
+    }
+  };
+
+  // Progression stage management
+  const addProgressionStage = () => {
+    const nextScene = selectedScenes.find(
+      (s) => !progression.some((p) => p.scene === s)
+    ) || '';
+    setProgression((prev) => [
+      ...prev,
+      {
+        id: `stage-${Date.now()}`,
+        scene: nextScene,
+        stage: '',
+        notes: '',
+        referencePhotos: [],
+      },
+    ]);
+  };
+
+  const updateProgressionStage = (id: string, updates: Partial<ProgressionStage>) => {
+    setProgression((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, ...updates } : p))
+    );
+  };
+
+  const removeProgressionStage = (id: string) => {
+    setProgression((prev) => prev.filter((p) => p.id !== id));
+  };
+
+  // Photo handling
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -70,7 +123,6 @@ export function AddEventModal({ isOpen, onClose, onAdd }: AddEventModalProps) {
         setIsCapturing(false);
       }
     }
-    // Reset file input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -96,6 +148,9 @@ export function AddEventModal({ isOpen, onClose, onAdd }: AddEventModalProps) {
   const handleAddPhoto = () => {
     setShowPhotoCapture(true);
   };
+
+  // Types that typically have changing progression
+  const hasProgression = type === 'Wound' || type === 'Bruise' || type === 'Other';
 
   return (
     <>
@@ -163,10 +218,60 @@ export function AddEventModal({ isOpen, onClose, onAdd }: AddEventModalProps) {
           rows={2}
         />
 
-        {/* Stage with suggestions */}
+        {/* Scene Selection */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className="field-label">SCENES</label>
+            {availableScenes.length > 0 && (
+              <button
+                type="button"
+                onClick={selectAllScenes}
+                className="text-[11px] text-gold font-medium"
+              >
+                {selectedScenes.length === availableScenes.length ? 'Deselect All' : 'Select All'}
+              </button>
+            )}
+          </div>
+          {availableScenes.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5">
+              {availableScenes.map((scene) => {
+                const isSelected = selectedScenes.includes(scene);
+                return (
+                  <button
+                    key={scene}
+                    type="button"
+                    onClick={() => toggleScene(scene)}
+                    className={clsx(
+                      'min-w-[44px] px-2.5 py-1.5 text-xs font-medium rounded-lg border transition-colors touch-manipulation',
+                      {
+                        'bg-gold text-white border-gold': isSelected,
+                        'bg-gray-50 text-text-secondary border-gray-200': !isSelected,
+                      }
+                    )}
+                  >
+                    {scene}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <Input
+              value={selectedScenes.join(', ')}
+              onChange={(e) => setSelectedScenes(e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+              placeholder="e.g., 12, 13, 14, 15"
+            />
+          )}
+          {selectedScenes.length > 0 && (
+            <p className="text-[11px] text-text-muted mt-1.5">
+              {selectedScenes.length} scene{selectedScenes.length !== 1 ? 's' : ''} selected
+            </p>
+          )}
+        </div>
+
+        {/* Current Stage with suggestions */}
         <div className="relative">
           <Input
-            label="STAGE"
+            label="CURRENT STAGE"
             value={stage}
             onChange={(e) => setStage(e.target.value)}
             onFocus={() => setShowStageSuggestions(true)}
@@ -174,7 +279,7 @@ export function AddEventModal({ isOpen, onClose, onAdd }: AddEventModalProps) {
             placeholder="e.g., Fresh, Day 2 Healing"
           />
           {showStageSuggestions && (
-            <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-card rounded-lg shadow-lg border border-border overflow-hidden">
+            <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-card rounded-lg shadow-lg border border-border overflow-hidden max-h-40 overflow-y-auto">
               {STAGE_SUGGESTIONS.map((suggestion) => (
                 <button
                   key={suggestion}
@@ -192,13 +297,109 @@ export function AddEventModal({ isOpen, onClose, onAdd }: AddEventModalProps) {
           )}
         </div>
 
-        {/* Scene Range */}
-        <Input
-          label="SCENE RANGE"
-          value={sceneRange}
-          onChange={(e) => setSceneRange(e.target.value)}
-          placeholder="e.g., 12-18"
-        />
+        {/* Progression Timeline */}
+        {hasProgression && selectedScenes.length > 1 && (
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="field-label">PROGRESSION TIMELINE</label>
+              <button
+                type="button"
+                onClick={() => setShowProgression(!showProgression)}
+                className="text-[11px] text-gold font-medium"
+              >
+                {showProgression ? 'Hide' : 'Plan changes over scenes'}
+              </button>
+            </div>
+
+            {showProgression && (
+              <div className="space-y-2.5">
+                {progression.length > 0 && (
+                  <div className="space-y-2">
+                    {progression.map((ps, idx) => (
+                      <div key={ps.id} className="bg-gray-50 rounded-lg p-3 relative">
+                        {/* Stage number indicator */}
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="w-5 h-5 rounded-full bg-gold text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0">
+                            {idx + 1}
+                          </div>
+                          <span className="text-[11px] font-semibold text-text-muted uppercase tracking-wide">
+                            Stage {idx + 1}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => removeProgressionStage(ps.id)}
+                            className="ml-auto p-0.5 text-text-light hover:text-red-500 transition-colors"
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+
+                        {/* Scene picker for this stage */}
+                        <div className="mb-2">
+                          <span className="text-[10px] font-semibold text-text-muted uppercase tracking-wide block mb-1">From Scene</span>
+                          <div className="flex flex-wrap gap-1">
+                            {selectedScenes.map((scene) => (
+                              <button
+                                key={scene}
+                                type="button"
+                                onClick={() => updateProgressionStage(ps.id, { scene })}
+                                className={clsx(
+                                  'min-w-[36px] px-2 py-1 text-[11px] font-medium rounded border transition-colors touch-manipulation',
+                                  {
+                                    'bg-gold text-white border-gold': ps.scene === scene,
+                                    'bg-white text-text-secondary border-gray-200': ps.scene !== scene,
+                                  }
+                                )}
+                              >
+                                {scene}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Stage description */}
+                        <div className="mb-2 relative">
+                          <ProgressionStagePicker
+                            value={ps.stage}
+                            onChange={(val) => updateProgressionStage(ps.id, { stage: val })}
+                          />
+                        </div>
+
+                        {/* Notes for this stage */}
+                        <Textarea
+                          value={ps.notes}
+                          onChange={(e) => updateProgressionStage(ps.id, { notes: e.target.value })}
+                          placeholder="Application notes for this stage..."
+                          rows={1}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Add stage button */}
+                <button
+                  type="button"
+                  onClick={addProgressionStage}
+                  className="w-full py-2.5 flex items-center justify-center gap-1.5 text-[12px] font-medium text-gold bg-gold-100/30 border border-dashed border-gold-300 rounded-lg hover:bg-gold-100/50 transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                  </svg>
+                  Add Stage
+                </button>
+
+                {progression.length === 0 && (
+                  <p className="text-[11px] text-text-light text-center">
+                    Plan how this event changes across scenes — e.g. fresh wound in Sc 5, scabbing by Sc 12, healed by Sc 20
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Products */}
         <Textarea
@@ -281,5 +482,40 @@ export function AddEventModal({ isOpen, onClose, onAdd }: AddEventModalProps) {
       </div>
       </BottomSheet>
     </>
+  );
+}
+
+// Small inline component for stage selection with suggestions
+function ProgressionStagePicker({ value, onChange }: { value: string; onChange: (val: string) => void }) {
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  return (
+    <div className="relative">
+      <Input
+        label="STAGE"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onFocus={() => setShowSuggestions(true)}
+        onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+        placeholder="e.g., Fresh, Scabbed"
+      />
+      {showSuggestions && (
+        <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-card rounded-lg shadow-lg border border-border overflow-hidden max-h-32 overflow-y-auto">
+          {STAGE_SUGGESTIONS.map((suggestion) => (
+            <button
+              key={suggestion}
+              type="button"
+              onClick={() => {
+                onChange(suggestion);
+                setShowSuggestions(false);
+              }}
+              className="w-full px-3 py-1.5 text-left text-[12px] text-text-secondary hover:bg-gray-50 touch-manipulation"
+            >
+              {suggestion}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
