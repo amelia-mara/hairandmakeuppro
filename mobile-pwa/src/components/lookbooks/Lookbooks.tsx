@@ -7,8 +7,7 @@ import type { Look, Character } from '@/types';
 import { CharacterSection } from './CharacterSection';
 import { AddLookModal } from './AddLookModal';
 import { LookOverview } from './LookOverview';
-
-type SyncStatus = 'synced' | 'pending' | 'offline';
+import { SyncStatusBanner } from '@/components/sync';
 
 export function Lookbooks() {
   const { currentProject, sceneCaptures, currentLookId, setCurrentLook, setActiveTab, setCurrentScene } = useProjectStore();
@@ -16,9 +15,6 @@ export function Lookbooks() {
   const { callSheets } = useCallSheetStore();
   const [addLookOpen, setAddLookOpen] = useState(false);
   const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(null);
-
-  // Simulated sync status (would come from sync service in real app)
-  const syncStatus: SyncStatus = 'offline';
 
   // Build a map of cast number -> scene numbers from all call sheets
   // This lets us count how many scenes each cast member appears in
@@ -243,7 +239,7 @@ export function Lookbooks() {
       <div className="mobile-container">
         <div className="px-4 pt-4 pb-24">
           {/* Sync Status Banner */}
-          <SyncBanner status={syncStatus} />
+          <SyncStatusBanner />
 
           {hasCharacters ? (
             <>
@@ -350,30 +346,6 @@ function LookbooksHeader({ onExport, isExporting }: { onExport?: () => void; isE
             <div className="w-9" />
           )}
         </div>
-      </div>
-    </div>
-  );
-}
-
-// Sync status banner
-function SyncBanner({ status }: { status: SyncStatus }) {
-  const colors = {
-    synced: 'bg-success',
-    pending: 'bg-warning',
-    offline: 'bg-gray-400',
-  };
-
-  const labels = {
-    synced: 'Synced with desktop',
-    pending: 'Pending sync...',
-    offline: 'Working offline',
-  };
-
-  return (
-    <div className="bg-card rounded-[10px] px-4 py-3 mb-4 flex items-center justify-between shadow-card">
-      <div className="flex items-center gap-2.5">
-        <div className={`w-2 h-2 rounded-full ${colors[status]}`} />
-        <span className="text-xs text-text-secondary">{labels[status]}</span>
       </div>
     </div>
   );

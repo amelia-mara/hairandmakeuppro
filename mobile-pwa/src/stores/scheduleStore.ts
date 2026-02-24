@@ -452,3 +452,4 @@ export function getCastNameFromNumber(num: number): string {
   const member = useScheduleStore.getState().getCastMemberByNumber(num);
   return member ? (member.character || member.name) : `Cast #${num}`;
 }
+

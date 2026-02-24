@@ -3,7 +3,12 @@ import { useProjectStore } from '@/stores/projectStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
 import { isSupabaseConfigured } from '@/lib/supabase';
+import { startSync, stopSync } from '@/services/syncService';
+import { initSyncSubscriptions } from '@/services/syncSubscriptions';
 import { migrateToIndexedDB, flushPendingWrites } from '@/db/zustandStorage';
+
+// Initialize sync subscriptions (idempotent, runs once)
+initSyncSubscriptions();
 import { BottomNav, ProjectHeader } from '@/components/navigation';
 import { SceneView } from '@/components/scenes';
 import { Today } from '@/components/today';
@@ -150,6 +155,25 @@ function AppContent() {
     }
   }, [currentProject, currentSceneId, activeTab, updateActivity]);
 
+  // Start/stop real-time sync when project changes
+  const syncStartedForProject = useRef<string | null>(null);
+  useEffect(() => {
+    if (currentProject && currentProject.id !== syncStartedForProject.current) {
+      syncStartedForProject.current = currentProject.id;
+      startSync(currentProject.id, user?.id);
+    }
+    if (!currentProject && syncStartedForProject.current) {
+      syncStartedForProject.current = null;
+      stopSync();
+    }
+    return () => {
+      // Clean up on unmount
+      if (syncStartedForProject.current) {
+        stopSync();
+      }
+    };
+  }, [currentProject?.id, user?.id]);
+
   // Background Schedule Stage 2 Processing: Automatically process pending schedules
   // This extracts detailed scene data from each shooting day using AI
   const { schedule, isProcessingStage2, startStage2Processing } = useScheduleStore();
@@ -210,6 +234,9 @@ function AppContent() {
 
   // Handle switching to a different project (from Project Menu)
   const handleSwitchProject = () => {
+    // Stop sync before clearing project
+    stopSync();
+    syncStartedForProject.current = null;
     // Save current project data before clearing (so it can be restored later)
     useProjectStore.getState().saveAndClearProject();
     setShowHome(false);

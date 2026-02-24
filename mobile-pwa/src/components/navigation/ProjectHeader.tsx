@@ -1,5 +1,6 @@
 import { useAuthStore } from '@/stores/authStore';
 import { useProjectStore } from '@/stores/projectStore';
+import { SyncDot } from '@/components/sync';
 
 interface ProjectHeaderProps {
   onSwitchProject?: () => void;
@@ -46,13 +47,18 @@ export function ProjectHeader({ onSwitchProject, onNavigateToProfile }: ProjectH
               </svg>
             </button>
 
-            {/* Account icon - navigates directly to profile */}
-            <button
-              onClick={onNavigateToProfile}
-              className="w-8 h-8 rounded-full bg-gold-100 flex items-center justify-center text-gold text-xs font-bold active:scale-95 transition-transform"
-            >
-              {getInitials()}
-            </button>
+            <div className="flex items-center gap-3">
+              {/* Sync status dot */}
+              <SyncDot />
+
+              {/* Account icon - navigates directly to profile */}
+              <button
+                onClick={onNavigateToProfile}
+                className="w-8 h-8 rounded-full bg-gold-100 flex items-center justify-center text-gold text-xs font-bold active:scale-95 transition-transform"
+              >
+                {getInitials()}
+              </button>
+            </div>
           </div>
         </div>
       </div>
