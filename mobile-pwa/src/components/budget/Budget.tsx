@@ -509,11 +509,6 @@ export function Budget() {
           <td style="padding:8px 0; color:#666">Owed by Production (overspend on float)</td>
           <td style="padding:8px 0; text-align:right; font-weight:700; color:#dc3545">${sym}${(totalSpent - floatReceived).toFixed(2)}</td>
         </tr>` : ''}
-        ${floatReceived > 0 && totalSpent < floatReceived ? `
-        <tr>
-          <td style="padding:8px 0; color:#666">To Return to Production</td>
-          <td style="padding:8px 0; text-align:right; font-weight:700; color:#198754">${sym}${(floatReceived - totalSpent).toFixed(2)}</td>
-        </tr>` : ''}
       </tbody>
     </table>
   </div>
