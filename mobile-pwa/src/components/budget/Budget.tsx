@@ -789,17 +789,7 @@ export function Budget() {
             <span className="text-xs text-text-muted">{receipts.length} total</span>
           </div>
 
-          {receipts.length === 0 ? (
-            <div className="card text-center py-8">
-              <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-gray-100 flex items-center justify-center">
-                <svg className="w-6 h-6 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
-                </svg>
-              </div>
-              <p className="text-sm text-text-muted mb-1">No receipts yet</p>
-              <p className="text-xs text-text-light">Scan or add receipts to track expenses</p>
-            </div>
-          ) : (
+          {receipts.length > 0 && (
             <div className="space-y-2">
               {receipts.map((receipt) => (
                 <div
@@ -859,7 +849,7 @@ export function Budget() {
           <svg className="w-6 h-6 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
           </svg>
-          <span className="text-sm font-medium text-gold">Quick Scan Receipt</span>
+          <span className="text-sm font-medium text-gold">Add Receipt</span>
         </button>
 
         {/* Sync Notice */}
