@@ -186,45 +186,95 @@ async function extractTextFromPDF(file: File): Promise<string> {
 
 /**
  * Fast extraction of cast list from schedule text using multiple patterns
+ * Handles various schedule formats: Movie Magic, Gorilla, EP Scheduling, etc.
  */
 function extractCastListFast(text: string): ScheduleCastMember[] {
   const castList: ScheduleCastMember[] = [];
-  const castSection = text.slice(0, 8000); // Cast list typically on first pages
+  // Cast list is usually on the first 1-2 pages — extend search area for longer headers
+  const castSection = text.slice(0, 15000);
 
-  // Pattern 1: "1.MARGOT" or "1. MARGOT" format (common in schedules)
-  const pattern1 = /\b(\d{1,2})\s*[.\-]\s*([A-Z][A-Z'\-\s]{1,25}?)(?=\s+\d{1,2}\s*[.\-]|\s*\n|\s*$)/g;
+  // Strategy 1: Find a dedicated cast section by header
+  // Look for common section headers: "CAST", "CAST LIST", "CAST MEMBERS", "CHARACTER", "CHARACTERS", "CAST:"
+  const castHeaderPatterns = [
+    /(?:CAST\s*LIST|CAST\s*MEMBERS?|CAST|CHARACTERS?)[:\s]*\n([\s\S]*?)(?=\n\s*\n\s*\n|SHOOTING\s*DAY|END\s*OF|DAY\s+\d|=== PAGE)/i,
+    /(?:CAST\s*LIST|CAST\s*MEMBERS?|CAST|CHARACTERS?)[:\s]*\n([\s\S]*?)(?=\n[A-Z]{3,}\s*\n|\nSCENE|\nDAY\b)/i,
+  ];
 
-  // Pattern 2: Tabular format "1\tMARGOT" or "1 MARGOT"
-  const pattern2 = /(?:^|\n|\t)(\d{1,2})\s+([A-Z][A-Z'\-]{1,25})(?:\s|$)/gm;
-
-  // Pattern 3: Cast section header followed by numbered list
-  const castSectionMatch = castSection.match(/CAST[:\s]*\n([\s\S]*?)(?=\n\s*\n|\nDAY|\nSCENE|$)/i);
-  if (castSectionMatch) {
-    const castBlock = castSectionMatch[1];
-    const castLinePattern = /(\d{1,2})\s*[.\-]?\s*([A-Z][A-Z'\-\s]{2,25})/g;
-    let match;
-    while ((match = castLinePattern.exec(castBlock)) !== null) {
-      addCastMember(castList, match[1], match[2]);
+  for (const headerPattern of castHeaderPatterns) {
+    const castSectionMatch = castSection.match(headerPattern);
+    if (castSectionMatch) {
+      const castBlock = castSectionMatch[1];
+      // Within a found cast section, be generous with matching: number followed by name
+      const castLinePattern = /(\d{1,3})\s*[.\-)\]:]?\s*([A-Z][A-Za-z'\-.\s]{1,30})/g;
+      let match;
+      while ((match = castLinePattern.exec(castBlock)) !== null) {
+        addCastMember(castList, match[1], match[2]);
+      }
+      // If we found characters in a clear cast section, trust it
+      if (castList.length >= 2) break;
     }
   }
 
-  // Try pattern 1
+  // Strategy 2: Pattern-based extraction across the whole cast section area
+  // These run regardless but addCastMember deduplicates by number
+
+  // "1.MARGOT" or "1. MARGOT" or "1- MARGOT" or "1) MARGOT"
+  const pattern1 = /(?:^|\n|\t)\s*(\d{1,3})\s*[.\-)\]:]\s*([A-Z][A-Za-z'\-.\s]{1,30}?)(?=\s*\n|\s*\t|\s{3,})/gm;
   let match;
   while ((match = pattern1.exec(castSection)) !== null) {
     addCastMember(castList, match[1], match[2]);
   }
 
-  // Try pattern 2 if we need more
-  if (castList.length < 5) {
-    while ((match = pattern2.exec(castSection)) !== null) {
-      addCastMember(castList, match[1], match[2]);
+  // Tabular format: "1\tMARGOT SMITH" or with multiple spaces/tabs between number and name
+  const pattern2 = /(?:^|\n)\s*(\d{1,3})[\t\s]{2,}([A-Z][A-Za-z'\-.\s]{1,30}?)(?=\s*[\t\n]|\s{3,}|$)/gm;
+  while ((match = pattern2.exec(castSection)) !== null) {
+    addCastMember(castList, match[1], match[2]);
+  }
+
+  // Parenthesized numbers: "(1) MARGOT" — some schedules use this format
+  const pattern3 = /\((\d{1,3})\)\s*([A-Z][A-Za-z'\-.\s]{1,30}?)(?=\s*\n|\s*\t|\s{3,})/gm;
+  while ((match = pattern3.exec(castSection)) !== null) {
+    addCastMember(castList, match[1], match[2]);
+  }
+
+  // Strategy 3: Look for cast numbers embedded in scene strips
+  // Schedules often list cast as "Cast: 1,2,4,7" or "1. 2. 4. 7." in scene entries
+  // If we found no cast from headers, try to build the cast list from scene references
+  if (castList.length < 3) {
+    // Look for lines where a number is followed by a name that appears multiple times in the text
+    const candidatePattern = /(?:^|\n|\t)\s*(\d{1,2})\s*[.\-)\]:]\s*([A-Z][A-Za-z'\-.\s]{2,25})/gm;
+    const candidates: Array<{ num: string; name: string; count: number }> = [];
+
+    while ((match = candidatePattern.exec(text.slice(0, 20000))) !== null) {
+      const name = match[2].trim();
+      // Count how many times this name appears in the full text (indicates it's a real character)
+      const nameRegex = new RegExp(`\\b${escapeRegExpSchedule(name.split(' ')[0])}\\b`, 'gi');
+      const occurrences = (text.match(nameRegex) || []).length;
+      if (occurrences >= 2) {
+        candidates.push({ num: match[1], name, count: occurrences });
+      }
+    }
+
+    // Sort by frequency and add the most likely cast members
+    candidates.sort((a, b) => b.count - a.count);
+    for (const candidate of candidates) {
+      addCastMember(castList, candidate.num, candidate.name);
     }
   }
 
   // Sort by number
   castList.sort((a, b) => a.number - b.number);
 
+  console.log('extractCastListFast: Found', castList.length, 'cast members:', castList.map(c => `${c.number}.${c.name}`).join(', '));
+
   return castList;
+}
+
+/**
+ * Escape special regex characters in a string (for schedule parser)
+ */
+function escapeRegExpSchedule(string: string): string {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 /**
@@ -232,17 +282,24 @@ function extractCastListFast(text: string): ScheduleCastMember[] {
  */
 function addCastMember(castList: ScheduleCastMember[], numStr: string, nameStr: string): void {
   const num = parseInt(numStr, 10);
-  const name = nameStr.trim().replace(/\s+/g, ' ');
+  // Clean up: trim, collapse whitespace, remove trailing punctuation
+  let name = nameStr.trim().replace(/\s+/g, ' ').replace(/[.,;:]+$/, '').trim();
 
   // Validate
-  if (num <= 0 || num > 99) return;
+  if (num <= 0 || num > 200) return;
   if (name.length < 2 || name.length > 30) return;
 
-  // Skip if it looks like a location, time, or scene marker
-  if (/^(INT|EXT|DAY|NIGHT|MORNING|HOURS|PAGE|SCENE|EST|TIME|CALL|UNIT)/i.test(name)) return;
+  // Skip if it looks like a location, time, scene marker, or schedule metadata
+  if (/^(INT|EXT|DAY|NIGHT|MORNING|HOURS|PAGE|SCENE|EST|TIME|CALL|UNIT|SET|LOC|END|TOTAL|SHOOT)/i.test(name)) return;
 
-  // Skip if already exists
+  // Skip if name is all numbers or looks like a date/time
+  if (/^\d+$/.test(name) || /^\d{1,2}[:/]\d{2}/.test(name)) return;
+
+  // Skip if already exists (by number)
   if (castList.find(c => c.number === num)) return;
+
+  // Normalize to uppercase for consistency
+  name = name.toUpperCase();
 
   castList.push({ number: num, name });
 }
