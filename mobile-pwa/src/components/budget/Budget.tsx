@@ -45,6 +45,7 @@ export function Budget() {
   const [currency, setCurrency] = useState<CurrencyCode>(DEFAULT_CURRENCY);
   const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const { currentProject } = useProjectStore();
@@ -143,6 +144,16 @@ export function Budget() {
     setShowScanOptions(false);
     setCapturedImage(null);
     setShowAddReceipt(true);
+  };
+
+  const handleUpdateReceipt = (updated: Receipt) => {
+    setReceipts(receipts.map(r => r.id === updated.id ? updated : r));
+    setSelectedReceipt(null);
+  };
+
+  const handleDeleteReceipt = (receiptId: string) => {
+    setReceipts(receipts.filter(r => r.id !== receiptId));
+    setSelectedReceipt(null);
   };
 
   // Generate spending reconciliation CSV
@@ -533,7 +544,11 @@ export function Budget() {
           ) : (
             <div className="space-y-2">
               {receipts.map((receipt) => (
-                <div key={receipt.id} className="card">
+                <div
+                  key={receipt.id}
+                  className="card cursor-pointer active:scale-[0.98] transition-transform"
+                  onClick={() => setSelectedReceipt(receipt)}
+                >
                   <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
@@ -556,9 +571,14 @@ export function Budget() {
                         </span>
                       </div>
                     </div>
-                    <span className="text-base font-bold text-text-primary ml-3">
-                      {formatCurrency(receipt.amount, currency)}
-                    </span>
+                    <div className="flex items-center gap-2 ml-3">
+                      <span className="text-base font-bold text-text-primary">
+                        {formatCurrency(receipt.amount, currency)}
+                      </span>
+                      <svg className="w-4 h-4 text-text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -641,6 +661,17 @@ export function Budget() {
           receiptsCount={receipts.length}
           totalSpent={totalSpent}
           currencySymbol={currentCurrency.symbol}
+        />
+      )}
+
+      {/* Receipt Detail/Edit Modal */}
+      {selectedReceipt && (
+        <ReceiptDetailModal
+          receipt={selectedReceipt}
+          currencySymbol={currentCurrency.symbol}
+          onSave={handleUpdateReceipt}
+          onDelete={handleDeleteReceipt}
+          onClose={() => setSelectedReceipt(null)}
         />
       )}
     </div>
@@ -1085,6 +1116,261 @@ function AddReceiptModal({ imageUri, currencySymbol, onAdd, onClose }: AddReceip
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+// Receipt Detail/Edit Modal
+interface ReceiptDetailModalProps {
+  receipt: Receipt;
+  currencySymbol: string;
+  onSave: (updated: Receipt) => void;
+  onDelete: (receiptId: string) => void;
+  onClose: () => void;
+}
+
+function ReceiptDetailModal({ receipt, currencySymbol, onSave, onDelete, onClose }: ReceiptDetailModalProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [vendor, setVendor] = useState(receipt.vendor);
+  const [amount, setAmount] = useState(receipt.amount.toFixed(2));
+  const [category, setCategory] = useState<ExpenseCategory>(receipt.category);
+  const [description, setDescription] = useState(receipt.description);
+  const [date, setDate] = useState(receipt.date);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!vendor || !amount) return;
+
+    onSave({
+      ...receipt,
+      vendor,
+      amount: parseFloat(amount),
+      category,
+      description,
+      date,
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50" onClick={onClose}>
+      <div
+        className="bg-card rounded-t-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-slideUp"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="sticky top-0 bg-card border-b border-border px-4 py-3 flex items-center justify-between z-10">
+          <h2 className="text-lg font-semibold text-text-primary">
+            {isEditing ? 'Edit Receipt' : 'Receipt Details'}
+          </h2>
+          <div className="flex items-center gap-2">
+            {!isEditing && (
+              <button
+                onClick={() => setIsEditing(true)}
+                className="p-2 text-gold hover:text-gold-dark transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                </svg>
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="p-2 -mr-2 text-text-muted hover:text-text-primary transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Receipt Image */}
+        {receipt.imageUri && (
+          <div className="relative aspect-[4/3] bg-gray-100">
+            <img
+              src={receipt.imageUri}
+              alt="Receipt"
+              className="w-full h-full object-contain"
+            />
+          </div>
+        )}
+
+        {isEditing ? (
+          <form onSubmit={handleSave} className="p-4 space-y-4">
+            {/* Vendor */}
+            <div>
+              <label className="field-label block mb-1.5">Vendor / Store</label>
+              <input
+                type="text"
+                value={vendor}
+                onChange={(e) => setVendor(e.target.value)}
+                className="input-field w-full"
+                placeholder="e.g., Camera Ready Cosmetics"
+                required
+              />
+            </div>
+
+            {/* Amount */}
+            <div>
+              <label className="field-label block mb-1.5">Amount</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted">{currencySymbol}</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className="input-field w-full pl-7"
+                  placeholder="0.00"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Date */}
+            <div>
+              <label className="field-label block mb-1.5">Date</label>
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="input-field w-full"
+              />
+            </div>
+
+            {/* Category */}
+            <div>
+              <label className="field-label block mb-1.5">Category</label>
+              <div className="flex flex-wrap gap-2">
+                {CATEGORIES.map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setCategory(cat)}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-all ${
+                      category === cat
+                        ? 'bg-gold text-white border-gold'
+                        : 'bg-white text-text-secondary border-border hover:border-gold/50'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Description */}
+            <div>
+              <label className="field-label block mb-1.5">Description</label>
+              <input
+                type="text"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="input-field w-full"
+                placeholder="e.g., Foundation restocks"
+              />
+            </div>
+
+            {/* Save / Cancel */}
+            <div className="pt-2 flex gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setVendor(receipt.vendor);
+                  setAmount(receipt.amount.toFixed(2));
+                  setCategory(receipt.category);
+                  setDescription(receipt.description);
+                  setDate(receipt.date);
+                  setIsEditing(false);
+                }}
+                className="flex-1 px-4 py-3 rounded-button bg-gray-100 text-text-primary font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="flex-1 px-4 py-3 rounded-button gold-gradient text-white font-medium disabled:opacity-50"
+                disabled={!vendor || !amount}
+              >
+                Save Changes
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className="p-4 space-y-4">
+            {/* Vendor & Amount */}
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-text-primary">{receipt.vendor}</h3>
+                <p className="text-sm text-text-muted mt-0.5">{formatShortDate(receipt.date)}</p>
+              </div>
+              <span className="text-xl font-bold text-text-primary">
+                {currencySymbol}{receipt.amount.toFixed(2)}
+              </span>
+            </div>
+
+            {/* Details */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between py-2 border-b border-border">
+                <span className="text-sm text-text-muted">Category</span>
+                <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-gray-100 text-text-secondary">
+                  {receipt.category}
+                </span>
+              </div>
+
+              {receipt.description && (
+                <div className="flex items-start justify-between py-2 border-b border-border">
+                  <span className="text-sm text-text-muted">Description</span>
+                  <span className="text-sm text-text-primary text-right max-w-[60%]">
+                    {receipt.description}
+                  </span>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between py-2 border-b border-border">
+                <span className="text-sm text-text-muted">Status</span>
+                <span className={`px-2 py-0.5 text-xs font-medium rounded ${
+                  receipt.synced
+                    ? 'bg-green-100 text-green-700'
+                    : 'bg-amber-100 text-amber-700'
+                }`}>
+                  {receipt.synced ? 'Synced' : 'Pending'}
+                </span>
+              </div>
+            </div>
+
+            {/* Delete Button */}
+            <div className="pt-2">
+              {showDeleteConfirm ? (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-3">
+                  <p className="text-sm text-red-700 mb-3">Delete this receipt? This cannot be undone.</p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setShowDeleteConfirm(false)}
+                      className="flex-1 px-4 py-2.5 rounded-button bg-white border border-border text-text-primary text-sm font-medium"
+                    >
+                      Keep
+                    </button>
+                    <button
+                      onClick={() => onDelete(receipt.id)}
+                      className="flex-1 px-4 py-2.5 rounded-button bg-red-500 text-white text-sm font-medium"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="w-full px-4 py-3 rounded-button text-red-500 text-sm font-medium hover:bg-red-50 transition-colors"
+                >
+                  Delete Receipt
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
