@@ -81,7 +81,7 @@ interface UnmatchedSceneInfo {
 }
 
 export function Today({ onSceneSelect, onNavigateToTab }: TodayProps) {
-  const { currentProject, updateSceneFilmingStatus: syncFilmingStatus, addScene, addCharacterToScene } = useProjectStore();
+  const { currentProject, updateSceneFilmingStatus: syncFilmingStatus, addScene, addCharacterToScene, addCharacterFromScene, setCurrentCharacter } = useProjectStore();
 
   // Subscribe to actual state values from call sheet store for proper reactivity
   const callSheets = useCallSheetStore(state => state.callSheets);
@@ -597,11 +597,36 @@ export function Today({ onSceneSelect, onNavigateToTab }: TodayProps) {
   // Handle character tap - navigate to continuity tracking for this character
   // Works even when scene doesn't match by finding a valid scene for the character
   // For unmatched scenes, shows modal to add scene or merge with existing
+  // For call-sheet-only characters (cast- prefix), creates them in the project first
   const handleCharacterTap = (character: Character, callSheetSceneNumber: string, callSheetScene: CallSheetScene) => {
+    const isCastOnlyCharacter = character.id.startsWith('cast-');
+
     // First try to find a matching scene from the call sheet
     const matchedScene = getSceneData(callSheetSceneNumber);
     if (matchedScene) {
-      // Navigate to the matched scene - SceneView will show this character
+      if (isCastOnlyCharacter) {
+        // Character is from call sheet only - create them in the project and add to the scene
+        const newChar = addCharacterFromScene(matchedScene.id, character.name);
+        // Also copy actorNumber from call sheet data
+        if (character.actorNumber) {
+          // Update the character with actor number via store
+          const store = useProjectStore.getState();
+          if (store.currentProject) {
+            const updatedChars = store.currentProject.characters.map(c =>
+              c.id === newChar.id ? { ...c, actorNumber: character.actorNumber } : c
+            );
+            useProjectStore.setState({
+              currentProject: { ...store.currentProject, characters: updatedChars }
+            });
+          }
+        }
+        addCharacterToScene(matchedScene.id, newChar.id);
+        setCurrentCharacter(newChar.id);
+      } else {
+        // Ensure character is set as current before navigating
+        setCurrentCharacter(character.id);
+      }
+      // Navigate to the matched scene
       onSceneSelect(matchedScene.id);
       return;
     }
@@ -622,6 +647,27 @@ export function Today({ onSceneSelect, onNavigateToTab }: TodayProps) {
           suggestedMergeScenes.push(scene);
         }
       }
+    }
+
+    // For cast-only characters with no matching scene, we need to handle creating both
+    // the character and the scene via the unmatched scene modal
+    if (isCastOnlyCharacter) {
+      // Create the character first so the modal can reference a real character
+      let resolvedCharacter = character;
+      if (currentProject) {
+        // Check if there's already a project character with this name
+        const existing = findProjectCharacterByName(character.name);
+        if (existing) {
+          resolvedCharacter = existing;
+        }
+      }
+      setUnmatchedSceneInfo({
+        sceneNumber: callSheetSceneNumber,
+        character: resolvedCharacter,
+        callSheetScene,
+        suggestedMergeScenes,
+      });
+      return;
     }
 
     // Show the unmatched scene modal
@@ -1356,24 +1402,14 @@ const TodaySceneCard = memo(function TodaySceneCard({
                 {characters.map((char) => {
                   const look = getLookForCharacter(char.id, shootingScene.sceneNumber, char.actorNumber);
                   const bgColor = char.avatarColour ?? '#C9A962';
-                  // Character is clickable if it's a real project character (id doesn't start with 'cast-')
-                  const isProjectCharacter = !char.id.startsWith('cast-');
                   return (
                     <button
                       key={char.id}
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (isProjectCharacter) {
-                          onCharacterTap(char);
-                        }
+                        onCharacterTap(char);
                       }}
-                      disabled={!isProjectCharacter}
-                      className={clsx(
-                        'flex items-center gap-1 rounded-full pl-0.5 pr-2 py-0.5 transition-colors',
-                        isProjectCharacter
-                          ? 'bg-gray-50 hover:bg-gold/10 active:bg-gold/20 cursor-pointer'
-                          : 'bg-gray-50 opacity-60 cursor-not-allowed'
-                      )}
+                      className="flex items-center gap-1 rounded-full pl-0.5 pr-2 py-0.5 transition-colors bg-gray-50 hover:bg-gold/10 active:bg-gold/20 cursor-pointer"
                     >
                       {/* Cast number in colored circle */}
                       <div
