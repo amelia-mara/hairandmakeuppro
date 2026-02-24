@@ -63,6 +63,11 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
           setParsedSchedule(schedule);
           setSchedule(schedule);
           console.log(`Schedule parsed: ${schedule.castList.length} cast members identified`);
+          if (schedule.castList.length === 0) {
+            console.warn('Schedule uploaded but no cast members extracted - character detection will use script regex fallback');
+          } else {
+            console.log('Cast list:', schedule.castList.map(c => `${c.number}.${c.name}`).join(', '));
+          }
         } catch (e) {
           console.warn('Schedule parsing failed, continuing without:', e);
         }
