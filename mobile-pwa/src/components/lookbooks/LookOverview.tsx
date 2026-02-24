@@ -418,6 +418,7 @@ export function LookOverview({ lookId, onBack, onSceneClick }: LookOverviewProps
         isOpen={addEventOpen}
         onClose={() => setAddEventOpen(false)}
         onAdd={handleAddEvent}
+        availableScenes={look.scenes}
       />
 
       {/* Photo Viewer Modal */}
