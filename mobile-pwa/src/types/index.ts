@@ -229,6 +229,14 @@ export interface ContinuityFlags {
   tears: boolean;
 }
 
+export interface ProgressionStage {
+  id: string;
+  scene: string;       // Scene number where this stage applies
+  stage: string;       // e.g. "Fresh", "Day 2 Healing"
+  notes: string;       // Specific notes for this stage
+  referencePhotos: Photo[];
+}
+
 export interface ContinuityEvent {
   id: string;
   type: ContinuityEventType;
@@ -236,8 +244,10 @@ export interface ContinuityEvent {
   description: string;
   stage: string;
   sceneRange: string;
+  scenes?: string[];           // Explicit scene numbers this event spans
   products: string;
   referencePhotos: Photo[];
+  progression?: ProgressionStage[]; // Timeline of how the event changes across scenes
 }
 
 export type ContinuityEventType = 'Wound' | 'Bruise' | 'Prosthetic' | 'Scar' | 'Tattoo' | 'Other';
