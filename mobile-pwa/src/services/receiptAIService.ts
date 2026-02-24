@@ -7,6 +7,7 @@ import { ensureSupportedImageFormat } from '@/utils/imageUtils';
 interface ExtractedReceiptData {
   vendor: string;
   amount: number | null;
+  vat: number | null;
   date: string | null;
   items: Array<{ name: string; price: number }>;
   currency: string;
@@ -56,6 +57,7 @@ export async function extractReceiptData(imageDataUrl: string): Promise<ReceiptE
 {
   "vendor": "Store or supplier name",
   "amount": 123.45,
+  "vat": 20.58,
   "date": "YYYY-MM-DD",
   "items": [
     { "name": "Item description", "price": 12.34 }
@@ -66,11 +68,12 @@ export async function extractReceiptData(imageDataUrl: string): Promise<ReceiptE
 
 IMPORTANT INSTRUCTIONS:
 1. "vendor" - Extract the store/supplier name (e.g., "Amazon", "Catwalk Hair & Cosmetics", "Boots")
-2. "amount" - The TOTAL amount paid (as a number, not string). Look for "Total", "Grand Total", "Amount Due", etc.
-3. "date" - The receipt date in YYYY-MM-DD format. Convert from any format you see (e.g., "23 November 2025" → "2025-11-23")
-4. "items" - List individual items with their prices. Include product names and individual prices.
-5. "currency" - Detect currency from symbols (£=GBP, $=USD, €=EUR) or text. Default to "GBP" if unclear.
-6. "confidence" - Set to "high" if all fields are clearly visible, "medium" if some are unclear, "low" if the image is hard to read.
+2. "amount" - The TOTAL amount paid (as a number, not string). Look for "Total", "Grand Total", "Amount Due", etc. This should be the final amount INCLUDING VAT.
+3. "vat" - The VAT amount (as a number, not string). Look for "VAT", "Tax", "Sales Tax", "GST", or similar. If multiple VAT lines, sum them. If the receipt shows a VAT rate but no amount, calculate it from the subtotal. Set to null if no VAT information is visible.
+4. "date" - The receipt date in YYYY-MM-DD format. Convert from any format you see (e.g., "23 November 2025" → "2025-11-23")
+5. "items" - List individual items with their prices. Include product names and individual prices.
+6. "currency" - Detect currency from symbols (£=GBP, $=USD, €=EUR) or text. Default to "GBP" if unclear.
+7. "confidence" - Set to "high" if all fields are clearly visible, "medium" if some are unclear, "low" if the image is hard to read.
 
 If a field cannot be determined, use null for that field (except items which should be an empty array).
 Return ONLY the JSON object, no markdown or explanation.`,
@@ -122,6 +125,7 @@ For dates, always convert to YYYY-MM-DD format regardless of the source format.`
     const extractedData: ExtractedReceiptData = {
       vendor: typeof parsed.vendor === 'string' ? parsed.vendor.trim() : '',
       amount: typeof parsed.amount === 'number' ? parsed.amount : parseFloat(parsed.amount) || null,
+      vat: typeof parsed.vat === 'number' ? parsed.vat : parseFloat(parsed.vat) || null,
       date: validateDate(parsed.date),
       items: Array.isArray(parsed.items)
         ? parsed.items

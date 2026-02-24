@@ -18,6 +18,7 @@ export interface Receipt {
   date: string;
   vendor: string;
   amount: number;
+  vat: number;
   category: ExpenseCategory;
   description: string;
   imageUri?: string;
@@ -38,6 +39,7 @@ const BUDGET_STORAGE_KEY = 'hairandmakeup_budget';
 export function Budget() {
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [budgetTotal, setBudgetTotal] = useState<number>(0);
+  const [floatReceived, setFloatReceived] = useState<number>(0);
   const [showBudgetEdit, setShowBudgetEdit] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [showAddReceipt, setShowAddReceipt] = useState(false);
@@ -57,6 +59,7 @@ export function Budget() {
       if (saved) {
         const data = JSON.parse(saved);
         if (data.budgetTotal !== undefined) setBudgetTotal(data.budgetTotal);
+        if (data.floatReceived !== undefined) setFloatReceived(data.floatReceived);
         if (data.receipts) setReceipts(data.receipts);
         if (data.currency) setCurrency(data.currency);
       }
@@ -70,20 +73,22 @@ export function Budget() {
     try {
       localStorage.setItem(BUDGET_STORAGE_KEY, JSON.stringify({
         budgetTotal,
+        floatReceived,
         receipts,
         currency,
       }));
     } catch (e) {
       console.error('Failed to save budget data:', e);
     }
-  }, [budgetTotal, receipts, currency]);
+  }, [budgetTotal, floatReceived, receipts, currency]);
 
   // Get current currency info
   const currentCurrency = getCurrencyByCode(currency);
 
   // Calculate totals from receipts
-  const { totalSpent, byCategory } = useMemo(() => {
+  const { totalSpent, totalVat, byCategory } = useMemo(() => {
     const spent = receipts.reduce((sum, r) => sum + r.amount, 0);
+    const vat = receipts.reduce((sum, r) => sum + (r.vat || 0), 0);
     const cats: Record<ExpenseCategory, number> = {
       'Kit Supplies': 0,
       'Consumables': 0,
@@ -94,7 +99,7 @@ export function Budget() {
     receipts.forEach(r => {
       cats[r.category] += r.amount;
     });
-    return { totalSpent: spent, byCategory: cats };
+    return { totalSpent: spent, totalVat: vat, byCategory: cats };
   }, [receipts]);
 
   const remainingBudget = budgetTotal - totalSpent;
@@ -178,8 +183,11 @@ export function Budget() {
     // Budget Summary
     lines.push('BUDGET SUMMARY');
     lines.push(`Total Budget,${currencyInfo.symbol}${budgetTotal.toFixed(2)}`);
+    lines.push(`Float Received,${currencyInfo.symbol}${floatReceived.toFixed(2)}`);
     lines.push(`Total Spent,${currencyInfo.symbol}${totalSpent.toFixed(2)}`);
-    lines.push(`Remaining,${currencyInfo.symbol}${remainingBudget.toFixed(2)}`);
+    lines.push(`Total VAT,${currencyInfo.symbol}${totalVat.toFixed(2)}`);
+    lines.push(`Remaining Budget,${currencyInfo.symbol}${remainingBudget.toFixed(2)}`);
+    lines.push(`Float Remaining,${currencyInfo.symbol}${(floatReceived - totalSpent).toFixed(2)}`);
     lines.push(`Percentage Used,${percentUsed.toFixed(1)}%`);
     lines.push('');
 
@@ -196,7 +204,7 @@ export function Budget() {
 
     // Receipt Details
     lines.push('RECEIPT DETAILS');
-    lines.push('Date,Vendor,Category,Description,Amount');
+    lines.push('Date,Vendor,Category,Description,Amount,VAT');
 
     // Sort receipts by date
     const sortedReceipts = [...receipts].sort((a, b) =>
@@ -208,7 +216,8 @@ export function Budget() {
       // Escape commas in text fields
       const vendor = receipt.vendor.includes(',') ? `"${receipt.vendor}"` : receipt.vendor;
       const description = receipt.description.includes(',') ? `"${receipt.description}"` : receipt.description;
-      lines.push(`${date},${vendor},${receipt.category},${description},${currencyInfo.symbol}${receipt.amount.toFixed(2)}`);
+      const vatStr = receipt.vat > 0 ? `${currencyInfo.symbol}${receipt.vat.toFixed(2)}` : '';
+      lines.push(`${date},${vendor},${receipt.category},${description},${currencyInfo.symbol}${receipt.amount.toFixed(2)},${vatStr}`);
     });
 
     lines.push('');
@@ -460,6 +469,56 @@ export function Budget() {
   </div>
 
   <div class="section">
+    <div class="section-title">Financial Reconciliation</div>
+    <table style="width:100%; border-collapse:collapse; font-size:13px;">
+      <tbody>
+        <tr style="border-bottom:1px solid #f0f0f0">
+          <td style="padding:8px 0; color:#666">Total Budget</td>
+          <td style="padding:8px 0; text-align:right; font-weight:600">${sym}${budgetTotal.toFixed(2)}</td>
+        </tr>
+        ${floatReceived > 0 ? `
+        <tr style="border-bottom:1px solid #f0f0f0">
+          <td style="padding:8px 0; color:#666">Float Received</td>
+          <td style="padding:8px 0; text-align:right; font-weight:600">${sym}${floatReceived.toFixed(2)}</td>
+        </tr>` : ''}
+        <tr style="border-bottom:1px solid #f0f0f0">
+          <td style="padding:8px 0; color:#666">Total Spent</td>
+          <td style="padding:8px 0; text-align:right; font-weight:600">${sym}${totalSpent.toFixed(2)}</td>
+        </tr>
+        ${totalVat > 0 ? `
+        <tr style="border-bottom:1px solid #f0f0f0">
+          <td style="padding:8px 0; color:#666">Total VAT (included in spent)</td>
+          <td style="padding:8px 0; text-align:right; font-weight:600">${sym}${totalVat.toFixed(2)}</td>
+        </tr>
+        <tr style="border-bottom:1px solid #f0f0f0">
+          <td style="padding:8px 0; color:#666">Spend excl. VAT</td>
+          <td style="padding:8px 0; text-align:right; font-weight:600">${sym}${(totalSpent - totalVat).toFixed(2)}</td>
+        </tr>` : ''}
+        ${floatReceived > 0 ? `
+        <tr style="border-bottom:1px solid #f0f0f0">
+          <td style="padding:8px 0; color:#666">Float Remaining</td>
+          <td style="padding:8px 0; text-align:right; font-weight:700; color:${floatReceived - totalSpent >= 0 ? '#198754' : '#dc3545'}">${sym}${(floatReceived - totalSpent).toFixed(2)}</td>
+        </tr>` : ''}
+        ${floatReceived > 0 && floatReceived < budgetTotal ? `
+        <tr style="border-bottom:1px solid #f0f0f0">
+          <td style="padding:8px 0; color:#666">Outstanding from Production</td>
+          <td style="padding:8px 0; text-align:right; font-weight:700; color:#C9A962">${sym}${(budgetTotal - floatReceived).toFixed(2)}</td>
+        </tr>` : ''}
+        ${floatReceived > 0 && totalSpent > floatReceived ? `
+        <tr>
+          <td style="padding:8px 0; color:#666">Owed by Production (overspend on float)</td>
+          <td style="padding:8px 0; text-align:right; font-weight:700; color:#dc3545">${sym}${(totalSpent - floatReceived).toFixed(2)}</td>
+        </tr>` : ''}
+        ${floatReceived > 0 && totalSpent < floatReceived ? `
+        <tr>
+          <td style="padding:8px 0; color:#666">To Return to Production</td>
+          <td style="padding:8px 0; text-align:right; font-weight:700; color:#198754">${sym}${(floatReceived - totalSpent).toFixed(2)}</td>
+        </tr>` : ''}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
     <div class="section-title">Spending by Category</div>
     ${CATEGORIES.filter(cat => byCategory[cat] > 0).map(cat => {
       const catPct = totalSpent > 0 ? (byCategory[cat] / totalSpent) * 100 : 0;
@@ -486,6 +545,7 @@ export function Budget() {
           <th>Vendor</th>
           <th>Category</th>
           <th>Description</th>
+          <th class="amt">VAT</th>
           <th class="amt">Amount</th>
         </tr>
       </thead>
@@ -497,12 +557,14 @@ export function Budget() {
           <td>${r.vendor}</td>
           <td class="cat">${r.category}</td>
           <td class="desc">${r.description || '&mdash;'}</td>
+          <td class="amt">${r.vat > 0 ? `${sym}${r.vat.toFixed(2)}` : '&mdash;'}</td>
           <td class="amt">${sym}${r.amount.toFixed(2)}</td>
         </tr>`).join('')}
       </tbody>
       <tfoot>
         <tr>
           <td colspan="5">Total (${receipts.length} receipts)</td>
+          <td class="amt">${totalVat > 0 ? `${sym}${totalVat.toFixed(2)}` : '&mdash;'}</td>
           <td class="amt">${sym}${totalSpent.toFixed(2)}</td>
         </tr>
       </tfoot>
@@ -662,6 +724,32 @@ export function Budget() {
               )}
             </div>
           </div>
+
+          {/* Float & Reconciliation Summary */}
+          {(floatReceived > 0 || totalVat > 0) && (
+            <div className="mt-3 pt-3 border-t border-border space-y-1.5">
+              {floatReceived > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-text-muted">Float received</span>
+                  <span className="font-medium text-text-primary">{formatCurrency(floatReceived, currency)}</span>
+                </div>
+              )}
+              {floatReceived > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-text-muted">Float remaining</span>
+                  <span className={`font-semibold ${floatReceived - totalSpent < 0 ? 'text-error' : 'text-green-600'}`}>
+                    {formatCurrency(floatReceived - totalSpent, currency)}
+                  </span>
+                </div>
+              )}
+              {totalVat > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-text-muted">Total VAT</span>
+                  <span className="font-medium text-text-primary">{formatCurrency(totalVat, currency)}</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Category Breakdown */}
@@ -742,9 +830,16 @@ export function Budget() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 ml-3">
-                      <span className="text-base font-bold text-text-primary">
-                        {formatCurrency(receipt.amount, currency)}
-                      </span>
+                      <div className="text-right">
+                        <span className="text-base font-bold text-text-primary">
+                          {formatCurrency(receipt.amount, currency)}
+                        </span>
+                        {receipt.vat > 0 && (
+                          <span className="text-[10px] text-text-light block">
+                            VAT {formatCurrency(receipt.vat, currency)}
+                          </span>
+                        )}
+                      </div>
                       <svg className="w-4 h-4 text-text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                       </svg>
@@ -814,9 +909,11 @@ export function Budget() {
       {showBudgetEdit && (
         <BudgetEditModal
           currentBudget={budgetTotal}
+          currentFloat={floatReceived}
           currencySymbol={currentCurrency.symbol}
-          onSave={(amount) => {
+          onSave={(amount, floatAmt) => {
             setBudgetTotal(amount);
+            setFloatReceived(floatAmt);
             setShowBudgetEdit(false);
           }}
           onClose={() => setShowBudgetEdit(false)}
@@ -996,6 +1093,7 @@ function ScanOptionsModal({ onTakePhoto, onChooseFromLibrary, onManualEntry, onC
 function AddReceiptModal({ imageUri, currencySymbol, onAdd, onClose }: AddReceiptModalProps) {
   const [vendor, setVendor] = useState('');
   const [amount, setAmount] = useState('');
+  const [vat, setVat] = useState('');
   const [category, setCategory] = useState<ExpenseCategory>('Kit Supplies');
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -1026,6 +1124,9 @@ function AddReceiptModal({ imageUri, currencySymbol, onAdd, onClose }: AddReceip
         }
         if (data.amount !== null) {
           setAmount(data.amount.toFixed(2));
+        }
+        if (data.vat !== null && data.vat !== undefined) {
+          setVat(data.vat.toFixed(2));
         }
         if (data.date) {
           setDate(data.date);
@@ -1059,6 +1160,7 @@ function AddReceiptModal({ imageUri, currencySymbol, onAdd, onClose }: AddReceip
       date,
       vendor,
       amount: parseFloat(amount),
+      vat: parseFloat(vat) || 0,
       category,
       description,
       imageUri: imageUri || undefined,
@@ -1220,16 +1322,34 @@ function AddReceiptModal({ imageUri, currencySymbol, onAdd, onClose }: AddReceip
             </div>
           </div>
 
-          {/* Date */}
-          <div>
-            <label className="field-label block mb-1.5">Date</label>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="input-field w-full"
-              disabled={isExtracting}
-            />
+          {/* Amount + VAT row */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="field-label block mb-1.5">VAT</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted">{currencySymbol}</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={vat}
+                  onChange={(e) => setVat(e.target.value)}
+                  className="input-field w-full pl-7"
+                  placeholder="0.00"
+                  disabled={isExtracting}
+                />
+              </div>
+            </div>
+            <div>
+              <label className="field-label block mb-1.5">Date</label>
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="input-field w-full"
+                disabled={isExtracting}
+              />
+            </div>
           </div>
 
           {/* Category */}
@@ -1304,6 +1424,7 @@ function ReceiptDetailModal({ receipt, currencySymbol, onSave, onDelete, onClose
   const [isEditing, setIsEditing] = useState(false);
   const [vendor, setVendor] = useState(receipt.vendor);
   const [amount, setAmount] = useState(receipt.amount.toFixed(2));
+  const [vat, setVat] = useState((receipt.vat || 0).toFixed(2));
   const [category, setCategory] = useState<ExpenseCategory>(receipt.category);
   const [description, setDescription] = useState(receipt.description);
   const [date, setDate] = useState(receipt.date);
@@ -1317,6 +1438,7 @@ function ReceiptDetailModal({ receipt, currencySymbol, onSave, onDelete, onClose
       ...receipt,
       vendor,
       amount: parseFloat(amount),
+      vat: parseFloat(vat) || 0,
       category,
       description,
       date,
@@ -1398,15 +1520,32 @@ function ReceiptDetailModal({ receipt, currencySymbol, onSave, onDelete, onClose
               </div>
             </div>
 
-            {/* Date */}
-            <div>
-              <label className="field-label block mb-1.5">Date</label>
-              <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="input-field w-full"
-              />
+            {/* VAT + Date row */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="field-label block mb-1.5">VAT</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted">{currencySymbol}</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={vat}
+                    onChange={(e) => setVat(e.target.value)}
+                    className="input-field w-full pl-7"
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="field-label block mb-1.5">Date</label>
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="input-field w-full"
+                />
+              </div>
             </div>
 
             {/* Category */}
@@ -1449,6 +1588,7 @@ function ReceiptDetailModal({ receipt, currencySymbol, onSave, onDelete, onClose
                 onClick={() => {
                   setVendor(receipt.vendor);
                   setAmount(receipt.amount.toFixed(2));
+                  setVat((receipt.vat || 0).toFixed(2));
                   setCategory(receipt.category);
                   setDescription(receipt.description);
                   setDate(receipt.date);
@@ -1475,13 +1615,24 @@ function ReceiptDetailModal({ receipt, currencySymbol, onSave, onDelete, onClose
                 <h3 className="text-lg font-bold text-text-primary">{receipt.vendor}</h3>
                 <p className="text-sm text-text-muted mt-0.5">{formatShortDate(receipt.date)}</p>
               </div>
-              <span className="text-xl font-bold text-text-primary">
-                {currencySymbol}{receipt.amount.toFixed(2)}
-              </span>
+              <div className="text-right">
+                <span className="text-xl font-bold text-text-primary">
+                  {currencySymbol}{receipt.amount.toFixed(2)}
+                </span>
+                {receipt.vat > 0 && (
+                  <span className="text-xs text-text-muted block">incl. {currencySymbol}{receipt.vat.toFixed(2)} VAT</span>
+                )}
+              </div>
             </div>
 
             {/* Details */}
             <div className="space-y-3">
+              {receipt.vat > 0 && (
+                <div className="flex items-center justify-between py-2 border-b border-border">
+                  <span className="text-sm text-text-muted">VAT</span>
+                  <span className="text-sm font-medium text-text-primary">{currencySymbol}{receipt.vat.toFixed(2)}</span>
+                </div>
+              )}
               <div className="flex items-center justify-between py-2 border-b border-border">
                 <span className="text-sm text-text-muted">Category</span>
                 <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-gray-100 text-text-secondary">
@@ -1549,19 +1700,22 @@ function ReceiptDetailModal({ receipt, currencySymbol, onSave, onDelete, onClose
 // Budget Edit Modal
 interface BudgetEditModalProps {
   currentBudget: number;
+  currentFloat: number;
   currencySymbol: string;
-  onSave: (amount: number) => void;
+  onSave: (amount: number, floatAmount: number) => void;
   onClose: () => void;
 }
 
-function BudgetEditModal({ currentBudget, currencySymbol, onSave, onClose }: BudgetEditModalProps) {
+function BudgetEditModal({ currentBudget, currentFloat, currencySymbol, onSave, onClose }: BudgetEditModalProps) {
   const [amount, setAmount] = useState(currentBudget > 0 ? currentBudget.toString() : '');
+  const [floatAmt, setFloatAmt] = useState(currentFloat > 0 ? currentFloat.toString() : '');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const value = parseFloat(amount);
-    if (!isNaN(value) && value >= 0) {
-      onSave(value);
+    const budgetValue = parseFloat(amount);
+    const floatValue = parseFloat(floatAmt) || 0;
+    if (!isNaN(budgetValue) && budgetValue >= 0) {
+      onSave(budgetValue, floatValue);
     }
   };
 
@@ -1572,16 +1726,13 @@ function BudgetEditModal({ currentBudget, currencySymbol, onSave, onClose }: Bud
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-4 py-3 border-b border-border">
-          <h2 className="text-lg font-semibold text-text-primary text-center">Set Budget Total</h2>
+          <h2 className="text-lg font-semibold text-text-primary text-center">Budget Settings</h2>
         </div>
 
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
-          <p className="text-sm text-text-muted">
-            Enter your total budget for this production. Expenses will be tracked against this amount.
-          </p>
-
           <div>
-            <label className="field-label block mb-1.5">Budget Amount</label>
+            <label className="field-label block mb-1.5">Total Budget</label>
+            <p className="text-xs text-text-light mb-2">The overall budget allocated for this production.</p>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-lg">{currencySymbol}</span>
               <input
@@ -1593,6 +1744,23 @@ function BudgetEditModal({ currentBudget, currencySymbol, onSave, onClose }: Bud
                 className="input-field w-full pl-8 text-2xl font-bold"
                 placeholder="0.00"
                 autoFocus
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="field-label block mb-1.5">Float Received</label>
+            <p className="text-xs text-text-light mb-2">Money received in advance from production. This could be the full budget or a partial payment.</p>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-lg">{currencySymbol}</span>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={floatAmt}
+                onChange={(e) => setFloatAmt(e.target.value)}
+                className="input-field w-full pl-8 text-xl font-bold"
+                placeholder="0.00"
               />
             </div>
           </div>
@@ -1609,7 +1777,7 @@ function BudgetEditModal({ currentBudget, currencySymbol, onSave, onClose }: Bud
               type="submit"
               className="flex-1 px-4 py-3 rounded-button gold-gradient text-white font-medium"
             >
-              Save Budget
+              Save
             </button>
           </div>
         </form>
