@@ -3,6 +3,7 @@ import { useTimesheetStore } from '@/stores/timesheetStore';
 import type { DayType, TimesheetEntry as TimesheetEntryType } from '@/types';
 import { DAY_TYPE_LABELS, createEmptyTimesheetEntry, getLunchDurationForDayType } from '@/types';
 import { HoursBreakdownCard } from './HoursBreakdownCard';
+import { SmartTimeInput } from './SmartTimeInput';
 
 // Debounce helper with flush capability
 function debounce<T extends unknown[]>(
@@ -448,10 +449,9 @@ function TimeInput({
           </span>
         )}
       </div>
-      <input
-        type="time"
+      <SmartTimeInput
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={onChange}
         placeholder={placeholder}
         className={`input-field w-full ${
           highlight === 'gold' ? 'border-gold/30 focus:border-gold' :

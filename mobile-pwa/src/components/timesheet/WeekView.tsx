@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTimesheetStore, addDays } from '@/stores/timesheetStore';
+import { SmartTimeInput } from './SmartTimeInput';
 import type { EntryStatus, DayType, RateCard, TimesheetEntry as TimesheetEntryType, TimesheetCalculation } from '@/types';
 import { DAY_TYPE_LABELS, createEmptyTimesheetEntry, getLunchDurationForDayType } from '@/types';
 
@@ -559,11 +560,10 @@ function TimeInputCell({ label, value, onChange, highlight, hint }: TimeInputCel
           </span>
         )}
       </div>
-      <input
-        type="time"
-        value={value || ''}
-        onChange={(e) => onChange(e.target.value)}
-        className="text-[15px] font-semibold bg-transparent w-full"
+      <SmartTimeInput
+        value={value}
+        onChange={onChange}
+        className="text-[15px] font-semibold bg-transparent w-full outline-none"
         style={{ color: value ? 'var(--color-text-primary)' : 'var(--color-text-muted)' }}
       />
     </div>
