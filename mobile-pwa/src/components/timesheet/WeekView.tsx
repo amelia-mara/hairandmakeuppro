@@ -506,8 +506,8 @@ function TimeInputCell({ label, value, onChange, highlight, hint }: TimeInputCel
     : { backgroundColor: 'var(--color-input-bg)', border: '1px solid var(--color-border)' };
 
   return (
-    <div className="p-2.5 rounded-lg" style={bgStyle}>
-      <div className="flex justify-between items-center">
+    <div className="p-2.5 rounded-lg relative" style={{ ...bgStyle, overflow: 'visible' }}>
+      <div className="flex justify-between items-center mb-0.5">
         <span className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
           {label}
         </span>
@@ -523,7 +523,7 @@ function TimeInputCell({ label, value, onChange, highlight, hint }: TimeInputCel
       <SmartTimeInput
         value={value}
         onChange={onChange}
-        className="text-[15px] font-semibold bg-transparent w-full outline-none"
+        className="text-[15px] font-semibold bg-transparent outline-none min-w-0"
         style={{ color: value ? 'var(--color-text-primary)' : 'var(--color-text-muted)' }}
       />
     </div>
