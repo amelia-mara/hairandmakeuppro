@@ -61,8 +61,10 @@ function AppContent() {
     activeTab,
     setActiveTab,
     currentSceneId,
+    currentLookId,
     setCurrentScene,
     setCurrentCharacter,
+    setCurrentLook,
     checkWrapTrigger,
     lifecycle,
     updateActivity,
@@ -241,6 +243,10 @@ function AppContent() {
     if (currentSceneId) {
       setCurrentScene(null);
       setCurrentCharacter(null);
+    }
+    // Clear look overview if open
+    if (currentLookId) {
+      setCurrentLook(null);
     }
   };
 

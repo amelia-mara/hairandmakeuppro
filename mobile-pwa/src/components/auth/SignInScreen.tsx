@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { Button, Input } from '@/components/ui';
+import { resetPassword } from '@/services/supabaseAuth';
 
 export function SignInScreen() {
   const { setScreen, goBack, signIn, isLoading, error, clearError } = useAuthStore();
@@ -8,6 +9,9 @@ export function SignInScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,9 +104,9 @@ export function SignInScreen() {
           </div>
 
           {/* Error message */}
-          {error && (
+          {(error || resetError) && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-700">{error}</p>
+              <p className="text-sm text-red-700">{error || resetError}</p>
             </div>
           )}
 
@@ -111,11 +115,37 @@ export function SignInScreen() {
             <button
               type="button"
               className="text-sm text-gold hover:underline"
-              onClick={() => {/* TODO: Implement forgot password */}}
+              disabled={resetLoading}
+              onClick={async () => {
+                if (!email.trim()) {
+                  setResetError('Enter your email address first, then tap "Forgot password?"');
+                  return;
+                }
+                setResetLoading(true);
+                setResetSent(false);
+                setResetError(null);
+                clearError();
+                const { error: err } = await resetPassword(email.trim());
+                setResetLoading(false);
+                if (err) {
+                  setResetError(err.message);
+                } else {
+                  setResetSent(true);
+                }
+              }}
             >
-              Forgot password?
+              {resetLoading ? 'Sending...' : 'Forgot password?'}
             </button>
           </div>
+
+          {/* Password reset confirmation */}
+          {resetSent && (
+            <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-sm text-green-700">
+                Password reset link sent to {email}. Check your inbox.
+              </p>
+            </div>
+          )}
 
           {/* Submit button */}
           <Button
