@@ -133,6 +133,60 @@ function getTimeOrder(timeOfDay: string): number {
 }
 
 /**
+ * Check if a raw time-of-day string explicitly indicates a new day
+ * Handles: "NEXT MORNING", "NEXT DAY", "THE NEXT DAY", "FOLLOWING DAY",
+ * "FOLLOWING MORNING", "A NEW DAY", "LATER THAT NIGHT" (NOT a new day),
+ * "THE FOLLOWING EVENING", etc.
+ */
+function isExplicitNewDay(rawTimeOfDay: string): boolean {
+  const t = rawTimeOfDay.toUpperCase().trim();
+  // "NEXT" followed by a time period = new day
+  if (/\bNEXT\s+(DAY|MORNING|EVENING|NIGHT|AFTERNOON)\b/.test(t)) return true;
+  // "FOLLOWING" followed by a time period = new day
+  if (/\bFOLLOWING\s+(DAY|MORNING|EVENING|NIGHT|AFTERNOON)\b/.test(t)) return true;
+  // "NEW DAY", "A NEW DAY"
+  if (/\bNEW\s+DAY\b/.test(t)) return true;
+  // "DAYS LATER", "HOURS LATER" (ambiguous but likely new day for looks)
+  if (/\b\d+\s+(DAYS?|WEEKS?|MONTHS?|YEARS?)\s+LATER\b/.test(t)) return true;
+  // "ONE WEEK LATER", "TWO DAYS LATER" etc.
+  if (/\b(ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|SEVERAL|FEW|SOME)\s+(DAYS?|WEEKS?|MONTHS?|YEARS?)\s+LATER\b/.test(t)) return true;
+  return false;
+}
+
+/**
+ * Detect if transitioning between two time-of-day values signals a new story day.
+ *
+ * New day triggers:
+ *   NIGHT/EVENING → MORNING/DAY  (classic overnight transition)
+ *   DAY → MORNING               (morning comes before day, so this is next day)
+ *   MORNING → MORNING           (next morning = new day)
+ *   DAY → DAY                   (only if raw string says "NEXT DAY")
+ *   Any explicit "NEXT X" or "FOLLOWING X" in the raw string
+ */
+function isNewStoryDay(
+  prevTimeOrder: number,
+  currentTimeOrder: number,
+  rawTimeOfDay: string
+): boolean {
+  // Explicit markers always trigger a new day regardless of time order
+  if (isExplicitNewDay(rawTimeOfDay)) return true;
+
+  // Both must be known time values for transition detection
+  if (prevTimeOrder < 0 || currentTimeOrder < 0) return false;
+
+  // NIGHT or EVENING → MORNING or DAY (went through overnight)
+  if (prevTimeOrder >= 2 && currentTimeOrder <= 1) return true;
+
+  // DAY → MORNING (morning is earlier in the day, so this must be next day)
+  if (prevTimeOrder === 1 && currentTimeOrder === 0) return true;
+
+  // MORNING → MORNING (same time of day repeating = next day)
+  if (prevTimeOrder === 0 && currentTimeOrder === 0) return true;
+
+  return false;
+}
+
+/**
  * Build a map of scene number -> story day number
  * Uses schedule dayNight values (D1/D2/N1 notation) if available,
  * otherwise infers from time-of-day transitions in story order
@@ -143,10 +197,10 @@ function buildStoryDayMap(
 ): Map<string, number> {
   const storyDayMap = new Map<string, number>();
 
-  // Build sceneNumber -> time of day from schedule entries and project scenes
+  // Build sceneNumber -> raw time of day string from schedule entries and project scenes
   const sceneTimeMap = new Map<string, string>();
 
-  // From schedule entries first (may have D1/D2 notation)
+  // From schedule entries first (may have D1/D2 notation or "NEXT MORNING" etc.)
   for (const day of schedule.days) {
     for (const entry of day.scenes) {
       const normalized = entry.sceneNumber.replace(/\s+/g, '').toUpperCase();
@@ -159,6 +213,20 @@ function buildStoryDayMap(
     const normalized = scene.sceneNumber.replace(/\s+/g, '').toUpperCase();
     if (!sceneTimeMap.has(normalized)) {
       sceneTimeMap.set(normalized, scene.timeOfDay);
+    }
+  }
+
+  // Also build a map from scene sluglines for richer time-of-day info
+  // (sluglines may contain "NEXT MORNING" even when timeOfDay is normalized to "MORNING")
+  const sceneSluglineTimeMap = new Map<string, string>();
+  for (const scene of scenes) {
+    const normalized = scene.sceneNumber.replace(/\s+/g, '').toUpperCase();
+    if (scene.slugline) {
+      // Extract time portion from slugline: "INT. HOUSE - NEXT MORNING" → "NEXT MORNING"
+      const timeMatch = scene.slugline.match(/[-–—]\s*([^-–—]+)$/);
+      if (timeMatch) {
+        sceneSluglineTimeMap.set(normalized, timeMatch[1].trim());
+      }
     }
   }
 
@@ -188,14 +256,15 @@ function buildStoryDayMap(
   let prevTimeOrder = -1;
 
   for (const sceneNum of allSceneNums) {
-    const timeOfDay = sceneTimeMap.get(sceneNum) || '';
-    const timeOrder = getTimeOrder(timeOfDay);
+    const rawTimeOfDay = sceneTimeMap.get(sceneNum) || '';
+    const sluglineTime = sceneSluglineTimeMap.get(sceneNum) || '';
+    // Use slugline time if it's richer (contains "NEXT", "FOLLOWING", etc.)
+    const bestRawTime = sluglineTime.length > rawTimeOfDay.length ? sluglineTime : rawTimeOfDay;
+    const timeOrder = getTimeOrder(rawTimeOfDay);
 
-    // Detect new story day: going from NIGHT/EVENING back to MORNING/DAY
-    if (prevTimeOrder >= 0 && timeOrder >= 0) {
-      if (prevTimeOrder >= 2 && timeOrder <= 1) {
-        currentDay++;
-      }
+    // Detect new story day using both transition logic and explicit markers
+    if (isNewStoryDay(prevTimeOrder, timeOrder, bestRawTime)) {
+      currentDay++;
     }
 
     storyDayMap.set(sceneNum, currentDay);
