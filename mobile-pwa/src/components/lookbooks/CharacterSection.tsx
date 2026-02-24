@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import type { Character, Look, CastProfile } from '@/types';
 import { createEmptyCastProfile } from '@/types';
 import { useProjectStore } from '@/stores/projectStore';
@@ -28,7 +28,7 @@ export function CharacterSection({
 
   const { getCastProfile, updateCastProfile } = useProjectStore();
   const profile = getCastProfile(character.id) || createEmptyCastProfile(character.id);
-  const hasProfileData = profile.actorName || profile.phone || profile.email || profile.allergies || profile.specialRequirements;
+  const hasProfileData = profile.actorName || profile.phone || profile.email || profile.allergies || profile.specialRequirements || profile.profilePhotoUri;
 
   return (
     <>
@@ -39,15 +39,23 @@ export function CharacterSection({
         className="w-full py-3 flex items-center justify-between text-left"
       >
         <div className="flex items-center gap-3">
-          {/* Avatar with cast number */}
-          <div
-            className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-semibold flex-shrink-0"
-            style={{
-              background: `linear-gradient(135deg, ${character.avatarColour || '#C9A962'} 0%, ${adjustColor(character.avatarColour || '#C9A962', -20)} 100%)`,
-            }}
-          >
-            {character.actorNumber ?? character.initials}
-          </div>
+          {/* Avatar with cast number or headshot */}
+          {profile.profilePhotoUri ? (
+            <img
+              src={profile.profilePhotoUri}
+              alt={character.name}
+              className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+            />
+          ) : (
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-semibold flex-shrink-0"
+              style={{
+                background: `linear-gradient(135deg, ${character.avatarColour || '#C9A962'} 0%, ${adjustColor(character.avatarColour || '#C9A962', -20)} 100%)`,
+              }}
+            >
+              {character.actorNumber ?? character.initials}
+            </div>
+          )}
 
           {/* Character info */}
           <div className="min-w-0 flex-1">
@@ -116,6 +124,17 @@ export function CharacterSection({
 
             {showCastProfile && (
               <div className="px-4 pb-4 pt-1 space-y-3 border-t border-border">
+                {/* Headshot */}
+                {profile.profilePhotoUri && (
+                  <div className="flex justify-center">
+                    <img
+                      src={profile.profilePhotoUri}
+                      alt={profile.actorName || character.name}
+                      className="w-20 h-20 rounded-full object-cover border-2 border-gold"
+                    />
+                  </div>
+                )}
+
                 {/* Actor Name */}
                 {profile.actorName && (
                   <div>
@@ -295,6 +314,38 @@ function EditCastProfileModal({
   const [specialRequirements, setSpecialRequirements] = useState(profile.specialRequirements);
   const [skinType, setSkinType] = useState(profile.skinType);
   const [notes, setNotes] = useState(profile.notes);
+  const [profilePhotoUri, setProfilePhotoUri] = useState(profile.profilePhotoUri || '');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePhotoSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Resize and convert to data URI for persistence
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const size = 256;
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d')!;
+
+        // Crop to square center
+        const srcSize = Math.min(img.width, img.height);
+        const sx = (img.width - srcSize) / 2;
+        const sy = (img.height - srcSize) / 2;
+        ctx.drawImage(img, sx, sy, srcSize, srcSize, 0, 0, size, size);
+
+        setProfilePhotoUri(canvas.toDataURL('image/jpeg', 0.8));
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+    // Reset so same file can be re-selected
+    event.target.value = '';
+  };
 
   const handleSave = () => {
     onSave({
@@ -308,6 +359,7 @@ function EditCastProfileModal({
       specialRequirements,
       skinType,
       notes,
+      profilePhotoUri: profilePhotoUri || undefined,
     });
   };
 
@@ -319,6 +371,54 @@ function EditCastProfileModal({
       height="auto"
     >
       <div className="space-y-4 pb-4">
+        {/* Headshot Upload */}
+        <div className="flex flex-col items-center gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handlePhotoSelect}
+            className="hidden"
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="relative group"
+          >
+            {profilePhotoUri ? (
+              <img
+                src={profilePhotoUri}
+                alt="Headshot"
+                className="w-20 h-20 rounded-full object-cover border-2 border-gold"
+              />
+            ) : (
+              <div className="w-20 h-20 rounded-full bg-input-bg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center">
+                <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
+                </svg>
+              </div>
+            )}
+            <div className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-gold flex items-center justify-center shadow-sm">
+              <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+            </div>
+          </button>
+          <span className="text-[11px] text-text-muted">
+            {profilePhotoUri ? 'Tap to change headshot' : 'Add headshot'}
+          </span>
+          {profilePhotoUri && (
+            <button
+              type="button"
+              onClick={() => setProfilePhotoUri('')}
+              className="text-[11px] text-red-500 font-medium"
+            >
+              Remove photo
+            </button>
+          )}
+        </div>
+
         {/* Actor Details Section */}
         <div>
           <h4 className="font-semibold text-text-primary mb-2">Actor Details</h4>
