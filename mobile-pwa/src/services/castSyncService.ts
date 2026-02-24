@@ -158,10 +158,11 @@ function isExplicitNewDay(rawTimeOfDay: string): boolean {
  *
  * New day triggers:
  *   NIGHT/EVENING → MORNING/DAY  (classic overnight transition)
- *   DAY → MORNING               (morning comes before day, so this is next day)
- *   MORNING → MORNING           (next morning = new day)
- *   DAY → DAY                   (only if raw string says "NEXT DAY")
+ *   DAY → MORNING               (morning is earlier in the day, so this is next day)
  *   Any explicit "NEXT X" or "FOLLOWING X" in the raw string
+ *
+ * NOT a new day (same time repeating is just another scene at that time):
+ *   MORNING → MORNING, DAY → DAY, NIGHT → NIGHT  (unless explicit "NEXT" keyword)
  */
 function isNewStoryDay(
   prevTimeOrder: number,
@@ -179,9 +180,6 @@ function isNewStoryDay(
 
   // DAY → MORNING (morning is earlier in the day, so this must be next day)
   if (prevTimeOrder === 1 && currentTimeOrder === 0) return true;
-
-  // MORNING → MORNING (same time of day repeating = next day)
-  if (prevTimeOrder === 0 && currentTimeOrder === 0) return true;
 
   return false;
 }
