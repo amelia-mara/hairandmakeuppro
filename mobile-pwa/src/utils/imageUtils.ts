@@ -7,6 +7,39 @@ const IMAGE_QUALITY = 0.8;
 const THUMBNAIL_SIZE = 200;
 const THUMBNAIL_QUALITY = 0.6;
 
+// Media types accepted by Claude Vision API
+const SUPPORTED_IMAGE_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+]);
+
+/**
+ * Check if a media type is supported by the Claude Vision API
+ */
+export function isSupportedImageType(mediaType: string): boolean {
+  return SUPPORTED_IMAGE_TYPES.has(mediaType.toLowerCase());
+}
+
+/**
+ * Convert an image data URL to a supported format (JPEG) if needed.
+ * Uses canvas to re-encode HEIC/HEIF and other unsupported formats.
+ * Returns the original data URL if already in a supported format.
+ */
+export async function ensureSupportedImageFormat(dataUrl: string): Promise<string> {
+  const matches = dataUrl.match(/^data:([^;]+);base64,/);
+  if (!matches) return dataUrl;
+
+  const mediaType = matches[1].toLowerCase();
+  if (isSupportedImageType(mediaType)) return dataUrl;
+
+  // Convert unsupported format (e.g. HEIC) to JPEG via canvas
+  const blob = base64ToBlob(dataUrl);
+  const converted = await compressImage(blob, MAX_IMAGE_DIMENSION, IMAGE_QUALITY);
+  return blobToBase64(converted);
+}
+
 /**
  * Compress an image blob to specified dimensions and quality
  */

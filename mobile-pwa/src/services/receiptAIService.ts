@@ -2,6 +2,8 @@
  * Receipt AI Service - Extract data from receipt images using Claude Vision
  */
 
+import { ensureSupportedImageFormat } from '@/utils/imageUtils';
+
 interface ExtractedReceiptData {
   vendor: string;
   amount: number | null;
@@ -23,8 +25,11 @@ interface ReceiptExtractionResult {
  */
 export async function extractReceiptData(imageDataUrl: string): Promise<ReceiptExtractionResult> {
   try {
+    // Convert HEIC/HEIF or other unsupported formats to JPEG before sending to API
+    const supportedDataUrl = await ensureSupportedImageFormat(imageDataUrl);
+
     // Parse the data URL to get base64 data and media type
-    const matches = imageDataUrl.match(/^data:([^;]+);base64,(.+)$/);
+    const matches = supportedDataUrl.match(/^data:([^;]+);base64,(.+)$/);
     if (!matches) {
       return { success: false, data: null, error: 'Invalid image data format' };
     }
