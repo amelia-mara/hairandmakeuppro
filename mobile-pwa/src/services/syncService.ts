@@ -483,8 +483,8 @@ function mergeScheduleData(dbSchedule: DbScheduleData, _projectId: string): void
     rawText: dbSchedule.raw_pdf_text || undefined,
   };
 
-  // Use the store's restoration mechanism
-  scheduleStore.saveScheduleForProject(schedule.id, schedule);
+  // Set the schedule directly in the store
+  scheduleStore.setSchedule(schedule);
 }
 
 // ============================================================================
