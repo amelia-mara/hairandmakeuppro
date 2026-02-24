@@ -62,13 +62,19 @@ interface AuthState {
   setSettingsProjectId: (projectId: string | null) => void;
 }
 
+// Valid tiers for lookup safety
+const VALID_TIERS: UserTier[] = ['trainee', 'artist', 'supervisor', 'designer'];
+
 // Convert Supabase user profile to app User type
 function toAppUser(profile: supabaseAuth.UserProfile): User {
+  const tier = VALID_TIERS.includes(profile.tier as UserTier)
+    ? (profile.tier as UserTier)
+    : 'trainee';
   return {
     id: profile.id,
     email: profile.email,
     name: profile.name,
-    tier: profile.tier as UserTier,
+    tier,
     createdAt: new Date(profile.created_at),
   };
 }
@@ -403,7 +409,8 @@ export const useAuthStore = create<AuthState>()(
       createProject: async (name, type) => {
         const { user, projectMemberships } = get();
 
-        if (!user || !TIER_LIMITS[user.tier].canCreateProjects) {
+        const tierLimits = user ? TIER_LIMITS[user.tier] : null;
+        if (!user || !tierLimits?.canCreateProjects) {
           set({ error: 'Your account tier does not allow creating projects' });
           return { success: false, error: 'Insufficient permissions' };
         }
@@ -462,7 +469,9 @@ export const useAuthStore = create<AuthState>()(
       canCreateProjects: () => {
         const { user } = get();
         if (!user) return false;
-        return TIER_LIMITS[user.tier].canCreateProjects;
+        const limits = TIER_LIMITS[user.tier];
+        if (!limits) return false;
+        return limits.canCreateProjects;
       },
 
       // Update last accessed time for a project
