@@ -22,7 +22,7 @@ export function CharacterSection({
   getCaptureProgress,
   onAddLook,
 }: CharacterSectionProps) {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [showCastProfile, setShowCastProfile] = useState(false);
   const [editProfileOpen, setEditProfileOpen] = useState(false);
 
