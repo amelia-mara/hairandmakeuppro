@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import type { Look, Character } from '@/types';
 
@@ -9,68 +8,9 @@ interface LookCardProps {
 }
 
 export function LookCard({ look, character: _character, progress }: LookCardProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const { currentProject, sceneCaptures, setActiveTab, setCurrentScene, setCurrentLook } = useProjectStore();
+  const { currentProject, sceneCaptures, setCurrentLook } = useProjectStore();
 
   const progressPercent = progress.total > 0 ? (progress.captured / progress.total) * 100 : 0;
-
-  // Get capture status for each scene in this look
-  const getSceneCaptureStatus = (sceneNum: string): 'captured' | 'not-captured' => {
-    if (!currentProject) return 'not-captured';
-    const scene = currentProject.scenes.find(s => s.sceneNumber === sceneNum);
-    if (!scene) return 'not-captured';
-
-    const captureKey = `${scene.id}-${look.characterId}`;
-    const capture = sceneCaptures[captureKey];
-    return capture && (capture.photos.front || capture.additionalPhotos.length > 0)
-      ? 'captured'
-      : 'not-captured';
-  };
-
-  // Navigate to scene for capturing
-  const handleSceneClick = (sceneNum: string) => {
-    if (!currentProject) return;
-    const scene = currentProject.scenes.find(s => s.sceneNumber === sceneNum);
-    if (scene) {
-      setActiveTab('breakdown');
-      setCurrentScene(scene.id);
-    }
-  };
-
-  // Get makeup summary line
-  const getMakeupSummary = (): string[] => {
-    const lines: string[] = [];
-    if (look.makeup.foundation) {
-      lines.push(`Foundation: ${look.makeup.foundation}${look.makeup.coverage ? ` (${look.makeup.coverage})` : ''}`);
-    }
-    if (look.makeup.lipColour || look.makeup.lipLiner) {
-      lines.push(`Lips: ${[look.makeup.lipLiner, look.makeup.lipColour].filter(Boolean).join(' + ')}`);
-    }
-    if (look.makeup.lidColour || look.makeup.liner || look.makeup.lashes) {
-      const eyeParts = [look.makeup.lidColour, look.makeup.liner, look.makeup.lashes].filter(Boolean);
-      if (eyeParts.length > 0) {
-        lines.push(`Eyes: ${eyeParts.join(', ')}`);
-      }
-    }
-    return lines;
-  };
-
-  // Get hair summary
-  const getHairSummary = (): string[] => {
-    const lines: string[] = [];
-    if (look.hair.style) {
-      lines.push(look.hair.style);
-    }
-    const details = [look.hair.parting, look.hair.piecesOut, look.hair.accessories].filter(Boolean);
-    if (details.length > 0) {
-      lines.push(details.join(' • '));
-    }
-    return lines;
-  };
-
-  const makeupSummary = getMakeupSummary();
-  const hairSummary = getHairSummary();
-
   const isComplete = progress.captured === progress.total && progress.total > 0;
 
   // Get recent capture info (last captured scene)
@@ -94,9 +34,9 @@ export function LookCard({ look, character: _character, progress }: LookCardProp
 
   return (
     <div className="bg-card rounded-card overflow-hidden shadow-card">
-      {/* Main card content - always visible */}
+      {/* Main card content - tap to open full look */}
       <button
-        onClick={() => setIsExpanded(!isExpanded)}
+        onClick={() => setCurrentLook(look.id)}
         className="w-full p-4 text-left"
       >
         {/* Look name and info row */}
@@ -112,15 +52,13 @@ export function LookCard({ look, character: _character, progress }: LookCardProp
               {progress.captured}/{progress.total}
             </span>
             <svg
-              className={`w-[18px] h-[18px] text-text-light transition-transform duration-200 ${
-                isExpanded ? 'rotate-180' : ''
-              }`}
+              className="w-[18px] h-[18px] text-text-light"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
               strokeWidth={2}
             >
-              <polyline points="6 9 12 15 18 9" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
             </svg>
           </div>
         </div>
@@ -189,114 +127,6 @@ export function LookCard({ look, character: _character, progress }: LookCardProp
           )}
         </div>
       </button>
-
-      {/* Expandable details */}
-      <div
-        className={`overflow-hidden transition-all duration-300 ease-in-out ${
-          isExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'
-        }`}
-      >
-        <div className="px-3 pb-3 space-y-3 border-t border-border/50 pt-3">
-          {/* Makeup & Hair side-by-side grid */}
-          {(makeupSummary.length > 0 || hairSummary.length > 0) && (
-            <div className="grid grid-cols-2 gap-2">
-              {/* Makeup */}
-              <div className="bg-gray-50 rounded-lg p-2.5">
-                <h5 className="text-[9px] font-bold tracking-wider uppercase text-text-light mb-1.5">MAKEUP</h5>
-                {makeupSummary.length > 0 ? (
-                  <div className="space-y-0.5">
-                    {makeupSummary.map((line, i) => (
-                      <p key={i} className="text-[11px] text-text-secondary">{line}</p>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-[11px] text-text-placeholder">Not specified</p>
-                )}
-              </div>
-
-              {/* Hair */}
-              <div className="bg-gray-50 rounded-lg p-2.5">
-                <h5 className="text-[9px] font-bold tracking-wider uppercase text-text-light mb-1.5">HAIR</h5>
-                {hairSummary.length > 0 ? (
-                  <div className="space-y-0.5">
-                    {hairSummary.map((line, i) => (
-                      <p key={i} className="text-[11px] text-text-secondary">{line}</p>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-[11px] text-text-placeholder">Not specified</p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Scene captures - horizontal scroll */}
-          <div>
-            <h5 className="text-[9px] font-bold tracking-wider uppercase text-text-light mb-2">SCENE CAPTURES</h5>
-            <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
-              {look.scenes.map(sceneNum => {
-                const status = getSceneCaptureStatus(sceneNum);
-                const isCaptured = status === 'captured';
-                return (
-                  <button
-                    key={sceneNum}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleSceneClick(sceneNum);
-                    }}
-                    className={`flex-shrink-0 w-16 rounded-lg border overflow-hidden transition-colors ${
-                      isCaptured
-                        ? 'border-gold bg-gold-100/30'
-                        : 'border-gray-200 bg-gray-50'
-                    }`}
-                  >
-                    <div className="aspect-[3/4] flex items-center justify-center">
-                      {isCaptured ? (
-                        <svg className="w-5 h-5 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                      ) : (
-                        <svg className="w-5 h-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                          <rect x="3" y="3" width="18" height="18" rx="2" />
-                          <circle cx="8.5" cy="8.5" r="1.5" />
-                          <path d="M21 15l-5-5L5 21" />
-                        </svg>
-                      )}
-                    </div>
-                    <div className={`py-1.5 text-center text-[10px] font-semibold ${
-                      isCaptured ? 'text-gold' : 'text-text-muted'
-                    }`}>
-                      Sc {sceneNum}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Action buttons */}
-          <div className="flex gap-2 pt-1">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setCurrentLook(look.id);
-              }}
-              className="flex-1 py-2.5 px-4 rounded-button gold-gradient text-white text-sm font-medium active:scale-95 transition-transform"
-            >
-              View Full Look
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setCurrentLook(look.id);
-              }}
-              className="flex-1 py-2.5 px-4 rounded-button border border-gold text-gold text-sm font-medium active:scale-95 transition-transform"
-            >
-              Edit Details
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
