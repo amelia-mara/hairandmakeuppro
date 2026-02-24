@@ -1,10 +1,12 @@
 import type { WeekSummary } from '@/types';
+import { useTimesheetStore } from '@/stores/timesheetStore';
 
 interface SummaryCardProps {
   summary: WeekSummary;
 }
 
 export function SummaryCard({ summary }: SummaryCardProps) {
+  const { rateCard } = useTimesheetStore();
   const hasData = summary.entries.length > 0;
 
   if (!hasData) {
@@ -45,12 +47,12 @@ export function SummaryCard({ summary }: SummaryCardProps) {
         <SummaryItem
           label="Pre-Call"
           value={summary.preCallHours.toFixed(1)}
-          subtext="@ 1.5x"
+          subtext={`@ ${rateCard.preCallMultiplier}x`}
         />
         <SummaryItem
           label="Overtime"
           value={summary.otHours.toFixed(1)}
-          subtext="@ 1.5x"
+          subtext={`@ ${rateCard.otMultiplier}x`}
           highlight
         />
       </div>
@@ -65,21 +67,21 @@ export function SummaryCard({ summary }: SummaryCardProps) {
             <SummaryItem
               label="6th Day"
               value={summary.sixthDayHours.toFixed(1)}
-              subtext="@ 1.5x"
+              subtext={`@ ${rateCard.sixthDayMultiplier}x`}
             />
           )}
           {summary.seventhDayHours > 0 && (
             <SummaryItem
               label="7th Day"
               value={summary.seventhDayHours.toFixed(1)}
-              subtext="@ 2x"
+              subtext={`@ ${rateCard.seventhDayMultiplier}x`}
             />
           )}
           {summary.lateNightHours > 0 && (
             <SummaryItem
               label="Late Night"
               value={summary.lateNightHours.toFixed(1)}
-              subtext="@ 2x"
+              subtext={`@ ${rateCard.lateNightMultiplier}x`}
             />
           )}
         </div>
