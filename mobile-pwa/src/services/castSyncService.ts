@@ -120,23 +120,149 @@ function createCharacterFromName(
 }
 
 /**
- * Create a look for a new character
+ * Get a time-of-day ordering for story day detection
+ * MORNING=0, DAY=1, EVENING=2, NIGHT=3, unknown/CONTINUOUS=-1
  */
-function createLookForCharacter(
+function getTimeOrder(timeOfDay: string): number {
+  const t = timeOfDay.toUpperCase().trim();
+  if (t.includes('MORN') || t === 'DAWN' || t === 'SUNRISE') return 0;
+  if (t.includes('DAY') || t === 'D' || t.includes('AFTERNOON')) return 1;
+  if (t.includes('EVEN') || t === 'DUSK' || t === 'SUNSET') return 2;
+  if (t.includes('NIGHT') || t === 'N') return 3;
+  return -1; // CONTINUOUS or unknown — inherits previous
+}
+
+/**
+ * Build a map of scene number -> story day number
+ * Uses schedule dayNight values (D1/D2/N1 notation) if available,
+ * otherwise infers from time-of-day transitions in story order
+ */
+function buildStoryDayMap(
+  schedule: ProductionSchedule,
+  scenes: Scene[]
+): Map<string, number> {
+  const storyDayMap = new Map<string, number>();
+
+  // Build sceneNumber -> time of day from schedule entries and project scenes
+  const sceneTimeMap = new Map<string, string>();
+
+  // From schedule entries first (may have D1/D2 notation)
+  for (const day of schedule.days) {
+    for (const entry of day.scenes) {
+      const normalized = entry.sceneNumber.replace(/\s+/g, '').toUpperCase();
+      sceneTimeMap.set(normalized, entry.dayNight);
+    }
+  }
+
+  // From project scenes as fallback
+  for (const scene of scenes) {
+    const normalized = scene.sceneNumber.replace(/\s+/g, '').toUpperCase();
+    if (!sceneTimeMap.has(normalized)) {
+      sceneTimeMap.set(normalized, scene.timeOfDay);
+    }
+  }
+
+  // Strategy 1: Check for explicit story day markers (D1, D2, N1, N2)
+  const dayNightPattern = /^[DN](\d+)/i;
+  let hasExplicitDays = false;
+
+  for (const [sceneNum, timeOfDay] of sceneTimeMap) {
+    const match = timeOfDay.match(dayNightPattern);
+    if (match) {
+      hasExplicitDays = true;
+      storyDayMap.set(sceneNum, parseInt(match[1], 10));
+    }
+  }
+
+  if (hasExplicitDays && storyDayMap.size > 0) {
+    console.log('[CastSync] Story days from explicit D1/D2/N1 markers:', storyDayMap.size, 'scenes mapped');
+    return storyDayMap;
+  }
+
+  // Strategy 2: Infer story days from time-of-day transitions in scene order
+  const allSceneNums = Array.from(sceneTimeMap.keys()).sort((a, b) =>
+    a.localeCompare(b, undefined, { numeric: true })
+  );
+
+  let currentDay = 1;
+  let prevTimeOrder = -1;
+
+  for (const sceneNum of allSceneNums) {
+    const timeOfDay = sceneTimeMap.get(sceneNum) || '';
+    const timeOrder = getTimeOrder(timeOfDay);
+
+    // Detect new story day: going from NIGHT/EVENING back to MORNING/DAY
+    if (prevTimeOrder >= 0 && timeOrder >= 0) {
+      if (prevTimeOrder >= 2 && timeOrder <= 1) {
+        currentDay++;
+      }
+    }
+
+    storyDayMap.set(sceneNum, currentDay);
+
+    if (timeOrder >= 0) {
+      prevTimeOrder = timeOrder;
+    }
+  }
+
+  console.log('[CastSync] Story days inferred from time-of-day transitions:', currentDay, 'days detected');
+  return storyDayMap;
+}
+
+/**
+ * Create looks for a new character, grouped by story day
+ * Each story day gets its own look: "Day 1", "Day 2", etc.
+ */
+function createLooksForCharacter(
   character: Character,
-  sceneNumbers: string[]
-): Look {
-  return {
-    id: `look-${character.id}`,
-    characterId: character.id,
-    name: 'Look 1',
-    scenes: sceneNumbers.sort((a, b) =>
+  sceneNumbers: string[],
+  storyDayMap: Map<string, number>
+): Look[] {
+  // Group scenes by story day
+  const dayGroups = new Map<number, string[]>();
+
+  for (const sceneNum of sceneNumbers) {
+    const normalized = sceneNum.replace(/\s+/g, '').toUpperCase();
+    const storyDay = storyDayMap.get(normalized) || 1;
+    if (!dayGroups.has(storyDay)) {
+      dayGroups.set(storyDay, []);
+    }
+    dayGroups.get(storyDay)!.push(sceneNum);
+  }
+
+  const sortedDays = Array.from(dayGroups.keys()).sort((a, b) => a - b);
+
+  const looks: Look[] = [];
+  for (const dayNum of sortedDays) {
+    const scenes = dayGroups.get(dayNum)!.sort((a, b) =>
       a.localeCompare(b, undefined, { numeric: true })
-    ),
-    estimatedTime: 30,
-    makeup: createEmptyMakeupDetails(),
-    hair: createEmptyHairDetails(),
-  };
+    );
+
+    looks.push({
+      id: `look-${character.id}-day${dayNum}`,
+      characterId: character.id,
+      name: `Day ${dayNum}`,
+      scenes,
+      estimatedTime: 30,
+      makeup: createEmptyMakeupDetails(),
+      hair: createEmptyHairDetails(),
+    });
+  }
+
+  // If no scenes at all, create a single empty look
+  if (looks.length === 0) {
+    looks.push({
+      id: `look-${character.id}`,
+      characterId: character.id,
+      name: 'Day 1',
+      scenes: [],
+      estimatedTime: 30,
+      makeup: createEmptyMakeupDetails(),
+      hair: createEmptyHairDetails(),
+    });
+  }
+
+  return looks;
 }
 
 /**
@@ -220,6 +346,9 @@ export function syncCastDataToScenes(
 
   // Build map of scene number -> cast numbers from schedule
   const sceneCastMap = buildSceneCastMap(schedule);
+
+  // Build story day map for look grouping
+  const storyDayMap = buildStoryDayMap(schedule, scenes);
 
   console.log(
     '[CastSync] Scene cast map built:',
@@ -333,11 +462,12 @@ export function syncCastDataToScenes(
   // Add new characters to the list
   updatedCharacters.push(...newCharacters);
 
-  // Create looks for new characters
+  // Create looks for new characters, grouped by story day
   const newLooks: Look[] = [];
   for (const char of newCharacters) {
     const sceneNums = newCharacterScenes.get(char.id) || [];
-    newLooks.push(createLookForCharacter(char, sceneNums));
+    const charLooks = createLooksForCharacter(char, sceneNums, storyDayMap);
+    newLooks.push(...charLooks);
   }
 
   // Update existing looks to include new scenes for existing characters
