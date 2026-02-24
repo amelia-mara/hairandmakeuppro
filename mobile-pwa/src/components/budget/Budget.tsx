@@ -18,6 +18,7 @@ export interface Receipt {
   date: string;
   vendor: string;
   amount: number;
+  vat: number;
   category: ExpenseCategory;
   description: string;
   imageUri?: string;
@@ -38,6 +39,7 @@ const BUDGET_STORAGE_KEY = 'hairandmakeup_budget';
 export function Budget() {
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [budgetTotal, setBudgetTotal] = useState<number>(0);
+  const [floatReceived, setFloatReceived] = useState<number>(0);
   const [showBudgetEdit, setShowBudgetEdit] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [showAddReceipt, setShowAddReceipt] = useState(false);
@@ -45,6 +47,7 @@ export function Budget() {
   const [currency, setCurrency] = useState<CurrencyCode>(DEFAULT_CURRENCY);
   const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const { currentProject } = useProjectStore();
@@ -56,6 +59,7 @@ export function Budget() {
       if (saved) {
         const data = JSON.parse(saved);
         if (data.budgetTotal !== undefined) setBudgetTotal(data.budgetTotal);
+        if (data.floatReceived !== undefined) setFloatReceived(data.floatReceived);
         if (data.receipts) setReceipts(data.receipts);
         if (data.currency) setCurrency(data.currency);
       }
@@ -69,20 +73,22 @@ export function Budget() {
     try {
       localStorage.setItem(BUDGET_STORAGE_KEY, JSON.stringify({
         budgetTotal,
+        floatReceived,
         receipts,
         currency,
       }));
     } catch (e) {
       console.error('Failed to save budget data:', e);
     }
-  }, [budgetTotal, receipts, currency]);
+  }, [budgetTotal, floatReceived, receipts, currency]);
 
   // Get current currency info
   const currentCurrency = getCurrencyByCode(currency);
 
   // Calculate totals from receipts
-  const { totalSpent, byCategory } = useMemo(() => {
+  const { totalSpent, totalVat, byCategory } = useMemo(() => {
     const spent = receipts.reduce((sum, r) => sum + r.amount, 0);
+    const vat = receipts.reduce((sum, r) => sum + (r.vat || 0), 0);
     const cats: Record<ExpenseCategory, number> = {
       'Kit Supplies': 0,
       'Consumables': 0,
@@ -93,7 +99,7 @@ export function Budget() {
     receipts.forEach(r => {
       cats[r.category] += r.amount;
     });
-    return { totalSpent: spent, byCategory: cats };
+    return { totalSpent: spent, totalVat: vat, byCategory: cats };
   }, [receipts]);
 
   const remainingBudget = budgetTotal - totalSpent;
@@ -145,6 +151,16 @@ export function Budget() {
     setShowAddReceipt(true);
   };
 
+  const handleUpdateReceipt = (updated: Receipt) => {
+    setReceipts(receipts.map(r => r.id === updated.id ? updated : r));
+    setSelectedReceipt(null);
+  };
+
+  const handleDeleteReceipt = (receiptId: string) => {
+    setReceipts(receipts.filter(r => r.id !== receiptId));
+    setSelectedReceipt(null);
+  };
+
   // Generate spending reconciliation CSV
   const generateReconciliationCSV = (): string => {
     const projectName = currentProject?.name || 'Production';
@@ -167,8 +183,11 @@ export function Budget() {
     // Budget Summary
     lines.push('BUDGET SUMMARY');
     lines.push(`Total Budget,${currencyInfo.symbol}${budgetTotal.toFixed(2)}`);
+    lines.push(`Float Received,${currencyInfo.symbol}${floatReceived.toFixed(2)}`);
     lines.push(`Total Spent,${currencyInfo.symbol}${totalSpent.toFixed(2)}`);
-    lines.push(`Remaining,${currencyInfo.symbol}${remainingBudget.toFixed(2)}`);
+    lines.push(`Total VAT,${currencyInfo.symbol}${totalVat.toFixed(2)}`);
+    lines.push(`Remaining Budget,${currencyInfo.symbol}${remainingBudget.toFixed(2)}`);
+    lines.push(`Float Remaining,${currencyInfo.symbol}${(floatReceived - totalSpent).toFixed(2)}`);
     lines.push(`Percentage Used,${percentUsed.toFixed(1)}%`);
     lines.push('');
 
@@ -185,7 +204,7 @@ export function Budget() {
 
     // Receipt Details
     lines.push('RECEIPT DETAILS');
-    lines.push('Date,Vendor,Category,Description,Amount');
+    lines.push('Date,Vendor,Category,Description,Amount,VAT');
 
     // Sort receipts by date
     const sortedReceipts = [...receipts].sort((a, b) =>
@@ -197,7 +216,8 @@ export function Budget() {
       // Escape commas in text fields
       const vendor = receipt.vendor.includes(',') ? `"${receipt.vendor}"` : receipt.vendor;
       const description = receipt.description.includes(',') ? `"${receipt.description}"` : receipt.description;
-      lines.push(`${date},${vendor},${receipt.category},${description},${currencyInfo.symbol}${receipt.amount.toFixed(2)}`);
+      const vatStr = receipt.vat > 0 ? `${currencyInfo.symbol}${receipt.vat.toFixed(2)}` : '';
+      lines.push(`${date},${vendor},${receipt.category},${description},${currencyInfo.symbol}${receipt.amount.toFixed(2)},${vatStr}`);
     });
 
     lines.push('');
@@ -225,7 +245,7 @@ export function Budget() {
     } else {
       // Generate printable HTML for PDF
       const content = generateReconciliationHTML();
-      const blob = new Blob([content], { type: 'text/html' });
+      const blob = new Blob([content], { type: 'text/html;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const newWindow = window.open(url, '_blank');
       if (newWindow) {
@@ -242,6 +262,7 @@ export function Budget() {
   const generateReconciliationHTML = (): string => {
     const projectName = currentProject?.name || 'Production';
     const currencyInfo = getCurrencyByCode(currency);
+    const sym = currencyInfo.symbol;
     const exportDate = new Date().toLocaleDateString('en-GB', {
       day: 'numeric',
       month: 'long',
@@ -252,108 +273,325 @@ export function Budget() {
       new Date(a.date).getTime() - new Date(b.date).getTime()
     );
 
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Spending Reconciliation - ${projectName}</title>
-        <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; color: #333; }
-          h1 { color: #C9A962; font-size: 24px; margin-bottom: 4px; }
-          .subtitle { color: #666; font-size: 14px; margin-bottom: 20px; }
-          .summary-box { background: linear-gradient(135deg, #C9A962, #B8985A); color: white; padding: 20px; border-radius: 12px; margin-bottom: 24px; }
-          .summary-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
-          .summary-item { text-align: center; }
-          .summary-item .label { font-size: 11px; opacity: 0.9; text-transform: uppercase; }
-          .summary-item .value { font-size: 24px; font-weight: bold; }
-          .summary-item.highlight { background: rgba(255,255,255,0.15); padding: 12px; border-radius: 8px; }
-          .section { margin-bottom: 24px; }
-          .section h2 { font-size: 14px; color: #666; text-transform: uppercase; margin-bottom: 12px; border-bottom: 2px solid #C9A962; padding-bottom: 4px; }
-          .category-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
-          .category-table td { padding: 8px 0; border-bottom: 1px solid #eee; }
-          .category-table .amount { text-align: right; font-weight: 500; }
-          .category-table .total { border-top: 2px solid #C9A962; font-weight: bold; }
-          table.receipts { width: 100%; border-collapse: collapse; font-size: 12px; }
-          table.receipts th { background: #f5f5f5; padding: 10px 8px; text-align: left; font-weight: 600; }
-          table.receipts td { padding: 10px 8px; border-bottom: 1px solid #eee; }
-          table.receipts .amount { text-align: right; font-weight: 500; }
-          .footer { margin-top: 24px; padding-top: 16px; border-top: 1px solid #eee; font-size: 11px; color: #999; }
-          @media print { body { padding: 0; } .summary-box { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
-        </style>
-      </head>
-      <body>
-        <h1>Spending Reconciliation</h1>
-        <p class="subtitle">${projectName} • Exported ${exportDate}</p>
+    const receiptsWithImages = sortedReceipts.filter(r => r.imageUri);
 
-        <div class="summary-box">
-          <div class="summary-grid">
-            <div class="summary-item">
-              <div class="label">Total Budget</div>
-              <div class="value">${currencyInfo.symbol}${budgetTotal.toFixed(2)}</div>
-            </div>
-            <div class="summary-item">
-              <div class="label">Total Spent</div>
-              <div class="value">${currencyInfo.symbol}${totalSpent.toFixed(2)}</div>
-            </div>
-            <div class="summary-item highlight">
-              <div class="label">${remainingBudget >= 0 ? 'Remaining' : 'Over Budget'}</div>
-              <div class="value">${currencyInfo.symbol}${Math.abs(remainingBudget).toFixed(2)}</div>
-            </div>
-            <div class="summary-item highlight">
-              <div class="label">Budget Used</div>
-              <div class="value">${percentUsed.toFixed(1)}%</div>
-            </div>
-          </div>
-        </div>
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Spending Reconciliation - ${projectName}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      padding: 32px;
+      max-width: 800px;
+      margin: 0 auto;
+      color: #1a1a1a;
+      font-size: 13px;
+      line-height: 1.5;
+    }
 
-        <div class="section">
-          <h2>Spending by Category</h2>
-          <table class="category-table">
-            ${CATEGORIES.filter(cat => byCategory[cat] > 0).map(cat => `
-              <tr>
-                <td>${cat}</td>
-                <td class="amount">${currencyInfo.symbol}${byCategory[cat].toFixed(2)}</td>
-              </tr>
-            `).join('')}
-            <tr class="total">
-              <td>Total</td>
-              <td class="amount">${currencyInfo.symbol}${totalSpent.toFixed(2)}</td>
-            </tr>
-          </table>
-        </div>
+    /* Header */
+    .header { margin-bottom: 28px; }
+    .header h1 { font-size: 22px; font-weight: 700; color: #1a1a1a; margin-bottom: 2px; }
+    .header .project { font-size: 15px; color: #C9A962; font-weight: 600; margin-bottom: 4px; }
+    .header .date { font-size: 12px; color: #888; }
 
-        <div class="section">
-          <h2>Receipt Details (${receipts.length} receipts)</h2>
-          <table class="receipts">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Vendor</th>
-                <th>Category</th>
-                <th>Description</th>
-                <th class="amount">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${sortedReceipts.map(r => `
-                <tr>
-                  <td>${new Date(r.date).toLocaleDateString('en-GB')}</td>
-                  <td>${r.vendor}</td>
-                  <td>${r.category}</td>
-                  <td>${r.description || '-'}</td>
-                  <td class="amount">${currencyInfo.symbol}${r.amount.toFixed(2)}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
+    /* Summary Cards */
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+    .summary-card {
+      border: 1px solid #e5e5e5;
+      border-radius: 8px;
+      padding: 14px 12px;
+      text-align: center;
+    }
+    .summary-card .label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #888; margin-bottom: 4px; }
+    .summary-card .value { font-size: 20px; font-weight: 700; color: #1a1a1a; }
+    .summary-card.gold { border-color: #C9A962; background: #faf6ed; }
+    .summary-card.gold .value { color: #C9A962; }
+    .summary-card.over .value { color: #dc3545; }
 
-        <div class="footer">
-          <p>Generated by Hair & Makeup Pro • ${exportDate}</p>
-        </div>
-      </body>
-      </html>
-    `;
+    /* Progress Bar */
+    .progress-wrap { margin-bottom: 28px; }
+    .progress-bar { height: 8px; background: #f0f0f0; border-radius: 4px; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 4px; background: #C9A962; }
+    .progress-fill.over { background: #dc3545; }
+    .progress-label { display: flex; justify-content: space-between; margin-top: 4px; font-size: 11px; color: #888; }
+
+    /* Sections */
+    .section { margin-bottom: 28px; }
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #888;
+      padding-bottom: 6px;
+      border-bottom: 2px solid #C9A962;
+      margin-bottom: 12px;
+    }
+
+    /* Category Breakdown */
+    .cat-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+    .cat-row .name { color: #333; }
+    .cat-row .bar-wrap { flex: 1; margin: 0 16px; display: flex; align-items: center; }
+    .cat-bar { height: 6px; background: #C9A962; border-radius: 3px; opacity: 0.6; }
+    .cat-row .amt { font-weight: 600; color: #1a1a1a; min-width: 80px; text-align: right; }
+    .cat-total { display: flex; justify-content: space-between; padding: 10px 0; border-top: 2px solid #C9A962; font-weight: 700; margin-top: 4px; }
+
+    /* Receipts Table */
+    table.receipts { width: 100%; border-collapse: collapse; }
+    table.receipts th {
+      background: #f8f8f8;
+      padding: 10px 8px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      color: #666;
+      border-bottom: 2px solid #e5e5e5;
+    }
+    table.receipts td {
+      padding: 10px 8px;
+      border-bottom: 1px solid #f0f0f0;
+      vertical-align: top;
+    }
+    table.receipts tr:last-child td { border-bottom: none; }
+    table.receipts .num { text-align: center; color: #aaa; font-size: 11px; }
+    table.receipts .amt { text-align: right; font-weight: 600; white-space: nowrap; }
+    table.receipts .cat { font-size: 11px; color: #666; }
+    table.receipts .desc { font-size: 11px; color: #999; }
+    table.receipts tfoot td { border-top: 2px solid #C9A962; font-weight: 700; padding-top: 12px; }
+
+    /* Receipt Filing */
+    .filing-entry {
+      page-break-inside: avoid;
+      border: 1px solid #e5e5e5;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+    .filing-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      background: #f8f8f8;
+      border-bottom: 1px solid #e5e5e5;
+    }
+    .filing-header .vendor { font-weight: 600; font-size: 14px; }
+    .filing-header .amount { font-weight: 700; font-size: 14px; }
+    .filing-meta {
+      display: flex;
+      gap: 16px;
+      padding: 8px 14px;
+      font-size: 11px;
+      color: #666;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .filing-meta span { display: flex; align-items: center; gap: 4px; }
+    .filing-image {
+      padding: 12px;
+      text-align: center;
+      background: #fafafa;
+    }
+    .filing-image img {
+      max-width: 100%;
+      max-height: 500px;
+      object-fit: contain;
+      border-radius: 4px;
+    }
+
+    /* Footer */
+    .footer {
+      margin-top: 32px;
+      padding-top: 12px;
+      border-top: 1px solid #e5e5e5;
+      font-size: 11px;
+      color: #aaa;
+      text-align: center;
+    }
+
+    @media print {
+      body { padding: 16px; }
+      .summary-card.gold, table.receipts th, .filing-header {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .filing-entry { page-break-inside: avoid; }
+      .receipt-filing { page-break-before: always; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>Spending Reconciliation</h1>
+    <div class="project">${projectName}</div>
+    <div class="date">Exported ${exportDate}</div>
+  </div>
+
+  <div class="summary">
+    <div class="summary-card">
+      <div class="label">Budget</div>
+      <div class="value">${sym}${budgetTotal.toFixed(2)}</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">Spent</div>
+      <div class="value">${sym}${totalSpent.toFixed(2)}</div>
+    </div>
+    <div class="summary-card ${remainingBudget >= 0 ? 'gold' : 'over'}">
+      <div class="label">${remainingBudget >= 0 ? 'Remaining' : 'Over Budget'}</div>
+      <div class="value">${sym}${Math.abs(remainingBudget).toFixed(2)}</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">Used</div>
+      <div class="value">${percentUsed.toFixed(1)}%</div>
+    </div>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-bar">
+      <div class="progress-fill ${percentUsed > 100 ? 'over' : ''}" style="width: ${Math.min(percentUsed, 100)}%"></div>
+    </div>
+    <div class="progress-label">
+      <span>0%</span>
+      <span>Budget utilisation</span>
+      <span>100%</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Financial Reconciliation</div>
+    <table style="width:100%; border-collapse:collapse; font-size:13px;">
+      <tbody>
+        <tr style="border-bottom:1px solid #f0f0f0">
+          <td style="padding:8px 0; color:#666">Total Budget</td>
+          <td style="padding:8px 0; text-align:right; font-weight:600">${sym}${budgetTotal.toFixed(2)}</td>
+        </tr>
+        ${floatReceived > 0 ? `
+        <tr style="border-bottom:1px solid #f0f0f0">
+          <td style="padding:8px 0; color:#666">Float Received</td>
+          <td style="padding:8px 0; text-align:right; font-weight:600">${sym}${floatReceived.toFixed(2)}</td>
+        </tr>` : ''}
+        <tr style="border-bottom:1px solid #f0f0f0">
+          <td style="padding:8px 0; color:#666">Total Spent</td>
+          <td style="padding:8px 0; text-align:right; font-weight:600">${sym}${totalSpent.toFixed(2)}</td>
+        </tr>
+        ${totalVat > 0 ? `
+        <tr style="border-bottom:1px solid #f0f0f0">
+          <td style="padding:8px 0; color:#666">Total VAT (included in spent)</td>
+          <td style="padding:8px 0; text-align:right; font-weight:600">${sym}${totalVat.toFixed(2)}</td>
+        </tr>
+        <tr style="border-bottom:1px solid #f0f0f0">
+          <td style="padding:8px 0; color:#666">Spend excl. VAT</td>
+          <td style="padding:8px 0; text-align:right; font-weight:600">${sym}${(totalSpent - totalVat).toFixed(2)}</td>
+        </tr>` : ''}
+        ${floatReceived > 0 ? `
+        <tr style="border-bottom:1px solid #f0f0f0">
+          <td style="padding:8px 0; color:#666">Float Remaining</td>
+          <td style="padding:8px 0; text-align:right; font-weight:700; color:${floatReceived - totalSpent >= 0 ? '#198754' : '#dc3545'}">${sym}${(floatReceived - totalSpent).toFixed(2)}</td>
+        </tr>` : ''}
+        ${floatReceived > 0 && floatReceived < budgetTotal ? `
+        <tr style="border-bottom:1px solid #f0f0f0">
+          <td style="padding:8px 0; color:#666">Outstanding from Production</td>
+          <td style="padding:8px 0; text-align:right; font-weight:700; color:#C9A962">${sym}${(budgetTotal - floatReceived).toFixed(2)}</td>
+        </tr>` : ''}
+        ${floatReceived > 0 && totalSpent > floatReceived ? `
+        <tr>
+          <td style="padding:8px 0; color:#666">Owed by Production (overspend on float)</td>
+          <td style="padding:8px 0; text-align:right; font-weight:700; color:#dc3545">${sym}${(totalSpent - floatReceived).toFixed(2)}</td>
+        </tr>` : ''}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Spending by Category</div>
+    ${CATEGORIES.filter(cat => byCategory[cat] > 0).map(cat => {
+      const catPct = totalSpent > 0 ? (byCategory[cat] / totalSpent) * 100 : 0;
+      return `
+      <div class="cat-row">
+        <span class="name">${cat}</span>
+        <span class="bar-wrap"><span class="cat-bar" style="width: ${catPct}%"></span></span>
+        <span class="amt">${sym}${byCategory[cat].toFixed(2)}</span>
+      </div>`;
+    }).join('')}
+    <div class="cat-total">
+      <span>Total</span>
+      <span>${sym}${totalSpent.toFixed(2)}</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Receipt Log (${receipts.length} receipts)</div>
+    <table class="receipts">
+      <thead>
+        <tr>
+          <th style="width:30px">#</th>
+          <th>Date</th>
+          <th>Vendor</th>
+          <th>Category</th>
+          <th>Description</th>
+          <th class="amt">VAT</th>
+          <th class="amt">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${sortedReceipts.map((r, i) => `
+        <tr>
+          <td class="num">${i + 1}</td>
+          <td>${new Date(r.date).toLocaleDateString('en-GB')}</td>
+          <td>${r.vendor}</td>
+          <td class="cat">${r.category}</td>
+          <td class="desc">${r.description || '&mdash;'}</td>
+          <td class="amt">${r.vat > 0 ? `${sym}${r.vat.toFixed(2)}` : '&mdash;'}</td>
+          <td class="amt">${sym}${r.amount.toFixed(2)}</td>
+        </tr>`).join('')}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="5">Total (${receipts.length} receipts)</td>
+          <td class="amt">${totalVat > 0 ? `${sym}${totalVat.toFixed(2)}` : '&mdash;'}</td>
+          <td class="amt">${sym}${totalSpent.toFixed(2)}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  ${receiptsWithImages.length > 0 ? `
+  <div class="section receipt-filing">
+    <div class="section-title">Receipt Filing (${receiptsWithImages.length} images)</div>
+    ${receiptsWithImages.map((r, i) => `
+    <div class="filing-entry">
+      <div class="filing-header">
+        <span class="vendor">${i + 1}. ${r.vendor}</span>
+        <span class="amount">${sym}${r.amount.toFixed(2)}</span>
+      </div>
+      <div class="filing-meta">
+        <span>${new Date(r.date).toLocaleDateString('en-GB')}</span>
+        <span>${r.category}</span>
+        ${r.description ? `<span>${r.description}</span>` : ''}
+      </div>
+      <div class="filing-image">
+        <img src="${r.imageUri}" alt="Receipt from ${r.vendor}">
+      </div>
+    </div>`).join('')}
+  </div>` : ''}
+
+  <div class="footer">
+    Generated by Hair &amp; Makeup Pro &middot; ${exportDate}
+  </div>
+
+</body>
+</html>`;
   };
 
   return (
@@ -481,6 +719,32 @@ export function Budget() {
               )}
             </div>
           </div>
+
+          {/* Float & Reconciliation Summary */}
+          {(floatReceived > 0 || totalVat > 0) && (
+            <div className="mt-3 pt-3 border-t border-border space-y-1.5">
+              {floatReceived > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-text-muted">Float received</span>
+                  <span className="font-medium text-text-primary">{formatCurrency(floatReceived, currency)}</span>
+                </div>
+              )}
+              {floatReceived > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-text-muted">Float remaining</span>
+                  <span className={`font-semibold ${floatReceived - totalSpent < 0 ? 'text-error' : 'text-green-600'}`}>
+                    {formatCurrency(floatReceived - totalSpent, currency)}
+                  </span>
+                </div>
+              )}
+              {totalVat > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-text-muted">Total VAT</span>
+                  <span className="font-medium text-text-primary">{formatCurrency(totalVat, currency)}</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Category Breakdown */}
@@ -520,20 +784,14 @@ export function Budget() {
             <span className="text-xs text-text-muted">{receipts.length} total</span>
           </div>
 
-          {receipts.length === 0 ? (
-            <div className="card text-center py-8">
-              <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-gray-100 flex items-center justify-center">
-                <svg className="w-6 h-6 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
-                </svg>
-              </div>
-              <p className="text-sm text-text-muted mb-1">No receipts yet</p>
-              <p className="text-xs text-text-light">Scan or add receipts to track expenses</p>
-            </div>
-          ) : (
+          {receipts.length > 0 && (
             <div className="space-y-2">
               {receipts.map((receipt) => (
-                <div key={receipt.id} className="card">
+                <div
+                  key={receipt.id}
+                  className="card cursor-pointer active:scale-[0.98] transition-transform"
+                  onClick={() => setSelectedReceipt(receipt)}
+                >
                   <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
@@ -556,9 +814,21 @@ export function Budget() {
                         </span>
                       </div>
                     </div>
-                    <span className="text-base font-bold text-text-primary ml-3">
-                      {formatCurrency(receipt.amount, currency)}
-                    </span>
+                    <div className="flex items-center gap-2 ml-3">
+                      <div className="text-right">
+                        <span className="text-base font-bold text-text-primary">
+                          {formatCurrency(receipt.amount, currency)}
+                        </span>
+                        {receipt.vat > 0 && (
+                          <span className="text-[10px] text-text-light block">
+                            VAT {formatCurrency(receipt.vat, currency)}
+                          </span>
+                        )}
+                      </div>
+                      <svg className="w-4 h-4 text-text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -574,7 +844,7 @@ export function Budget() {
           <svg className="w-6 h-6 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
           </svg>
-          <span className="text-sm font-medium text-gold">Quick Scan Receipt</span>
+          <span className="text-sm font-medium text-gold">Add Receipt</span>
         </button>
 
         {/* Sync Notice */}
@@ -624,9 +894,11 @@ export function Budget() {
       {showBudgetEdit && (
         <BudgetEditModal
           currentBudget={budgetTotal}
+          currentFloat={floatReceived}
           currencySymbol={currentCurrency.symbol}
-          onSave={(amount) => {
+          onSave={(amount, floatAmt) => {
             setBudgetTotal(amount);
+            setFloatReceived(floatAmt);
             setShowBudgetEdit(false);
           }}
           onClose={() => setShowBudgetEdit(false)}
@@ -641,6 +913,17 @@ export function Budget() {
           receiptsCount={receipts.length}
           totalSpent={totalSpent}
           currencySymbol={currentCurrency.symbol}
+        />
+      )}
+
+      {/* Receipt Detail/Edit Modal */}
+      {selectedReceipt && (
+        <ReceiptDetailModal
+          receipt={selectedReceipt}
+          currencySymbol={currentCurrency.symbol}
+          onSave={handleUpdateReceipt}
+          onDelete={handleDeleteReceipt}
+          onClose={() => setSelectedReceipt(null)}
         />
       )}
     </div>
@@ -795,6 +1078,7 @@ function ScanOptionsModal({ onTakePhoto, onChooseFromLibrary, onManualEntry, onC
 function AddReceiptModal({ imageUri, currencySymbol, onAdd, onClose }: AddReceiptModalProps) {
   const [vendor, setVendor] = useState('');
   const [amount, setAmount] = useState('');
+  const [vat, setVat] = useState('');
   const [category, setCategory] = useState<ExpenseCategory>('Kit Supplies');
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -825,6 +1109,9 @@ function AddReceiptModal({ imageUri, currencySymbol, onAdd, onClose }: AddReceip
         }
         if (data.amount !== null) {
           setAmount(data.amount.toFixed(2));
+        }
+        if (data.vat !== null && data.vat !== undefined) {
+          setVat(data.vat.toFixed(2));
         }
         if (data.date) {
           setDate(data.date);
@@ -858,6 +1145,7 @@ function AddReceiptModal({ imageUri, currencySymbol, onAdd, onClose }: AddReceip
       date,
       vendor,
       amount: parseFloat(amount),
+      vat: parseFloat(vat) || 0,
       category,
       description,
       imageUri: imageUri || undefined,
@@ -1019,16 +1307,34 @@ function AddReceiptModal({ imageUri, currencySymbol, onAdd, onClose }: AddReceip
             </div>
           </div>
 
-          {/* Date */}
-          <div>
-            <label className="field-label block mb-1.5">Date</label>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="input-field w-full"
-              disabled={isExtracting}
-            />
+          {/* Amount + VAT row */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="field-label block mb-1.5">VAT</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted">{currencySymbol}</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={vat}
+                  onChange={(e) => setVat(e.target.value)}
+                  className="input-field w-full pl-7"
+                  placeholder="0.00"
+                  disabled={isExtracting}
+                />
+              </div>
+            </div>
+            <div>
+              <label className="field-label block mb-1.5">Date</label>
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="input-field w-full"
+                disabled={isExtracting}
+              />
+            </div>
           </div>
 
           {/* Category */}
@@ -1090,22 +1396,311 @@ function AddReceiptModal({ imageUri, currencySymbol, onAdd, onClose }: AddReceip
   );
 }
 
-// Budget Edit Modal
-interface BudgetEditModalProps {
-  currentBudget: number;
+// Receipt Detail/Edit Modal
+interface ReceiptDetailModalProps {
+  receipt: Receipt;
   currencySymbol: string;
-  onSave: (amount: number) => void;
+  onSave: (updated: Receipt) => void;
+  onDelete: (receiptId: string) => void;
   onClose: () => void;
 }
 
-function BudgetEditModal({ currentBudget, currencySymbol, onSave, onClose }: BudgetEditModalProps) {
+function ReceiptDetailModal({ receipt, currencySymbol, onSave, onDelete, onClose }: ReceiptDetailModalProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [vendor, setVendor] = useState(receipt.vendor);
+  const [amount, setAmount] = useState(receipt.amount.toFixed(2));
+  const [vat, setVat] = useState((receipt.vat || 0).toFixed(2));
+  const [category, setCategory] = useState<ExpenseCategory>(receipt.category);
+  const [description, setDescription] = useState(receipt.description);
+  const [date, setDate] = useState(receipt.date);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!vendor || !amount) return;
+
+    onSave({
+      ...receipt,
+      vendor,
+      amount: parseFloat(amount),
+      vat: parseFloat(vat) || 0,
+      category,
+      description,
+      date,
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50" onClick={onClose}>
+      <div
+        className="bg-card rounded-t-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-slideUp"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="sticky top-0 bg-card border-b border-border px-4 py-3 flex items-center justify-between z-10">
+          <h2 className="text-lg font-semibold text-text-primary">
+            {isEditing ? 'Edit Receipt' : 'Receipt Details'}
+          </h2>
+          <div className="flex items-center gap-2">
+            {!isEditing && (
+              <button
+                onClick={() => setIsEditing(true)}
+                className="p-2 text-gold hover:text-gold-dark transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                </svg>
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="p-2 -mr-2 text-text-muted hover:text-text-primary transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Receipt Image */}
+        {receipt.imageUri && (
+          <div className="relative aspect-[4/3] bg-gray-100">
+            <img
+              src={receipt.imageUri}
+              alt="Receipt"
+              className="w-full h-full object-contain"
+            />
+          </div>
+        )}
+
+        {isEditing ? (
+          <form onSubmit={handleSave} className="p-4 space-y-4">
+            {/* Vendor */}
+            <div>
+              <label className="field-label block mb-1.5">Vendor / Store</label>
+              <input
+                type="text"
+                value={vendor}
+                onChange={(e) => setVendor(e.target.value)}
+                className="input-field w-full"
+                placeholder="e.g., Camera Ready Cosmetics"
+                required
+              />
+            </div>
+
+            {/* Amount */}
+            <div>
+              <label className="field-label block mb-1.5">Amount</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted">{currencySymbol}</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className="input-field w-full pl-7"
+                  placeholder="0.00"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* VAT + Date row */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="field-label block mb-1.5">VAT</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted">{currencySymbol}</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={vat}
+                    onChange={(e) => setVat(e.target.value)}
+                    className="input-field w-full pl-7"
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="field-label block mb-1.5">Date</label>
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="input-field w-full"
+                />
+              </div>
+            </div>
+
+            {/* Category */}
+            <div>
+              <label className="field-label block mb-1.5">Category</label>
+              <div className="flex flex-wrap gap-2">
+                {CATEGORIES.map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setCategory(cat)}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-all ${
+                      category === cat
+                        ? 'bg-gold text-white border-gold'
+                        : 'bg-white text-text-secondary border-border hover:border-gold/50'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Description */}
+            <div>
+              <label className="field-label block mb-1.5">Description</label>
+              <input
+                type="text"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="input-field w-full"
+                placeholder="e.g., Foundation restocks"
+              />
+            </div>
+
+            {/* Save / Cancel */}
+            <div className="pt-2 flex gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setVendor(receipt.vendor);
+                  setAmount(receipt.amount.toFixed(2));
+                  setVat((receipt.vat || 0).toFixed(2));
+                  setCategory(receipt.category);
+                  setDescription(receipt.description);
+                  setDate(receipt.date);
+                  setIsEditing(false);
+                }}
+                className="flex-1 px-4 py-3 rounded-button bg-gray-100 text-text-primary font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="flex-1 px-4 py-3 rounded-button gold-gradient text-white font-medium disabled:opacity-50"
+                disabled={!vendor || !amount}
+              >
+                Save Changes
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className="p-4 space-y-4">
+            {/* Vendor & Amount */}
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-text-primary">{receipt.vendor}</h3>
+                <p className="text-sm text-text-muted mt-0.5">{formatShortDate(receipt.date)}</p>
+              </div>
+              <div className="text-right">
+                <span className="text-xl font-bold text-text-primary">
+                  {currencySymbol}{receipt.amount.toFixed(2)}
+                </span>
+                {receipt.vat > 0 && (
+                  <span className="text-xs text-text-muted block">incl. {currencySymbol}{receipt.vat.toFixed(2)} VAT</span>
+                )}
+              </div>
+            </div>
+
+            {/* Details */}
+            <div className="space-y-3">
+              {receipt.vat > 0 && (
+                <div className="flex items-center justify-between py-2 border-b border-border">
+                  <span className="text-sm text-text-muted">VAT</span>
+                  <span className="text-sm font-medium text-text-primary">{currencySymbol}{receipt.vat.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex items-center justify-between py-2 border-b border-border">
+                <span className="text-sm text-text-muted">Category</span>
+                <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-gray-100 text-text-secondary">
+                  {receipt.category}
+                </span>
+              </div>
+
+              {receipt.description && (
+                <div className="flex items-start justify-between py-2 border-b border-border">
+                  <span className="text-sm text-text-muted">Description</span>
+                  <span className="text-sm text-text-primary text-right max-w-[60%]">
+                    {receipt.description}
+                  </span>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between py-2 border-b border-border">
+                <span className="text-sm text-text-muted">Status</span>
+                <span className={`px-2 py-0.5 text-xs font-medium rounded ${
+                  receipt.synced
+                    ? 'bg-green-100 text-green-700'
+                    : 'bg-amber-100 text-amber-700'
+                }`}>
+                  {receipt.synced ? 'Synced' : 'Pending'}
+                </span>
+              </div>
+            </div>
+
+            {/* Delete Button */}
+            <div className="pt-2">
+              {showDeleteConfirm ? (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-3">
+                  <p className="text-sm text-red-700 mb-3">Delete this receipt? This cannot be undone.</p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setShowDeleteConfirm(false)}
+                      className="flex-1 px-4 py-2.5 rounded-button bg-white border border-border text-text-primary text-sm font-medium"
+                    >
+                      Keep
+                    </button>
+                    <button
+                      onClick={() => onDelete(receipt.id)}
+                      className="flex-1 px-4 py-2.5 rounded-button bg-red-500 text-white text-sm font-medium"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="w-full px-4 py-3 rounded-button text-red-500 text-sm font-medium hover:bg-red-50 transition-colors"
+                >
+                  Delete Receipt
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Budget Edit Modal
+interface BudgetEditModalProps {
+  currentBudget: number;
+  currentFloat: number;
+  currencySymbol: string;
+  onSave: (amount: number, floatAmount: number) => void;
+  onClose: () => void;
+}
+
+function BudgetEditModal({ currentBudget, currentFloat, currencySymbol, onSave, onClose }: BudgetEditModalProps) {
   const [amount, setAmount] = useState(currentBudget > 0 ? currentBudget.toString() : '');
+  const [floatAmt, setFloatAmt] = useState(currentFloat > 0 ? currentFloat.toString() : '');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const value = parseFloat(amount);
-    if (!isNaN(value) && value >= 0) {
-      onSave(value);
+    const budgetValue = parseFloat(amount);
+    const floatValue = parseFloat(floatAmt) || 0;
+    if (!isNaN(budgetValue) && budgetValue >= 0) {
+      onSave(budgetValue, floatValue);
     }
   };
 
@@ -1116,16 +1711,13 @@ function BudgetEditModal({ currentBudget, currencySymbol, onSave, onClose }: Bud
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-4 py-3 border-b border-border">
-          <h2 className="text-lg font-semibold text-text-primary text-center">Set Budget Total</h2>
+          <h2 className="text-lg font-semibold text-text-primary text-center">Budget Settings</h2>
         </div>
 
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
-          <p className="text-sm text-text-muted">
-            Enter your total budget for this production. Expenses will be tracked against this amount.
-          </p>
-
           <div>
-            <label className="field-label block mb-1.5">Budget Amount</label>
+            <label className="field-label block mb-1.5">Total Budget</label>
+            <p className="text-xs text-text-light mb-2">The overall budget allocated for this production.</p>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-lg">{currencySymbol}</span>
               <input
@@ -1137,6 +1729,23 @@ function BudgetEditModal({ currentBudget, currencySymbol, onSave, onClose }: Bud
                 className="input-field w-full pl-8 text-2xl font-bold"
                 placeholder="0.00"
                 autoFocus
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="field-label block mb-1.5">Float Received</label>
+            <p className="text-xs text-text-light mb-2">Money received in advance from production. This could be the full budget or a partial payment.</p>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-lg">{currencySymbol}</span>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={floatAmt}
+                onChange={(e) => setFloatAmt(e.target.value)}
+                className="input-field w-full pl-8 text-xl font-bold"
+                placeholder="0.00"
               />
             </div>
           </div>
@@ -1153,7 +1762,7 @@ function BudgetEditModal({ currentBudget, currencySymbol, onSave, onClose }: Bud
               type="submit"
               className="flex-1 px-4 py-3 rounded-button gold-gradient text-white font-medium"
             >
-              Save Budget
+              Save
             </button>
           </div>
         </form>

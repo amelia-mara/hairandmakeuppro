@@ -3,7 +3,12 @@ import { useProjectStore } from '@/stores/projectStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
 import { isSupabaseConfigured } from '@/lib/supabase';
+import { startSync, stopSync } from '@/services/syncService';
+import { initSyncSubscriptions } from '@/services/syncSubscriptions';
 import { migrateToIndexedDB, flushPendingWrites } from '@/db/zustandStorage';
+
+// Initialize sync subscriptions (idempotent, runs once)
+initSyncSubscriptions();
 import { BottomNav, ProjectHeader } from '@/components/navigation';
 import { SceneView } from '@/components/scenes';
 import { Today } from '@/components/today';
@@ -89,6 +94,7 @@ function AppContent() {
   // Start as false - will be set true explicitly when needed
   const [showHome, setShowHome] = useState(false);
   const [showExport, setShowExport] = useState(false);
+  const [showProcessingNotice, setShowProcessingNotice] = useState(false);
 
   // Track if migration has been attempted
   const migrationAttempted = useRef(false);
@@ -118,8 +124,8 @@ function AppContent() {
   }, []);
   // Key to force More component to reset when clicking the same tab
   const [tabResetKey, setTabResetKey] = useState(0);
-  // SubView for direct navigation to team, invite, stats, project settings, or user profile
-  const [moreSubView, setMoreSubView] = useState<'team' | 'invite' | 'projectStats' | 'projectSettings' | 'userProfile' | undefined>(undefined);
+  // SubView for direct navigation to team, invite, stats, project settings, billing, or user profile
+  const [moreSubView, setMoreSubView] = useState<'team' | 'invite' | 'projectStats' | 'projectSettings' | 'userProfile' | 'billing' | undefined>(undefined);
 
   // Validate state on mount - fix inconsistent persisted state that causes blank screens
   useEffect(() => {
@@ -148,6 +154,25 @@ function AppContent() {
       updateActivity();
     }
   }, [currentProject, currentSceneId, activeTab, updateActivity]);
+
+  // Start/stop real-time sync when project changes
+  const syncStartedForProject = useRef<string | null>(null);
+  useEffect(() => {
+    if (currentProject && currentProject.id !== syncStartedForProject.current) {
+      syncStartedForProject.current = currentProject.id;
+      startSync(currentProject.id, user?.id);
+    }
+    if (!currentProject && syncStartedForProject.current) {
+      syncStartedForProject.current = null;
+      stopSync();
+    }
+    return () => {
+      // Clean up on unmount
+      if (syncStartedForProject.current) {
+        stopSync();
+      }
+    };
+  }, [currentProject?.id, user?.id]);
 
   // Background Schedule Stage 2 Processing: Automatically process pending schedules
   // This extracts detailed scene data from each shooting day using AI
@@ -203,10 +228,15 @@ function AppContent() {
     setShowHome(false);
     clearNeedsSetup();
     setActiveTab('today');
+    // Show processing notice so user knows background work is still happening
+    setShowProcessingNotice(true);
   };
 
   // Handle switching to a different project (from Project Menu)
   const handleSwitchProject = () => {
+    // Stop sync before clearing project
+    stopSync();
+    syncStartedForProject.current = null;
     // Save current project data before clearing (so it can be restored later)
     useProjectStore.getState().saveAndClearProject();
     setShowHome(false);
@@ -409,7 +439,11 @@ function AppContent() {
     return (
       <UserProfileScreen
         onBack={() => setShowUserProfile(false)}
-        onNavigateToBilling={() => setScreen('select-plan')}
+        onNavigateToBilling={() => {
+          setShowUserProfile(false);
+          setActiveTab('more');
+          setMoreSubView('billing');
+        }}
       />
     );
   }
@@ -481,6 +515,64 @@ function AppContent() {
 
       {/* Wrap Popup Modal (shows when project completion is triggered) */}
       <WrapPopupModal onExport={() => setShowExport(true)} />
+
+      {/* Processing Notice - shown once after project setup to inform user about background work */}
+      {showProcessingNotice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-card rounded-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="pt-8 pb-4 text-center">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gold/10 flex items-center justify-center">
+                <svg className="w-8 h-8 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-bold text-text-primary mb-1">You're All Set!</h2>
+              <p className="text-sm text-text-muted px-6">Your project is ready to explore</p>
+            </div>
+
+            {/* Content */}
+            <div className="px-6 pb-6">
+              {/* Schedule processing info */}
+              <div className="rounded-xl bg-gold/5 border border-gold/20 p-4 mb-4">
+                <div className="flex gap-3">
+                  <div className="w-5 h-5 flex-shrink-0 mt-0.5">
+                    <svg className="w-5 h-5 text-gold animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                  </div>
+                  <div className="text-xs text-text-secondary">
+                    <p className="font-medium mb-1">Schedule Processing</p>
+                    <p>Your schedule is being processed in the background. Character assignments will be confirmed automatically once complete.</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* What you can do now */}
+              <div className="rounded-xl bg-blue-50 border border-blue-100 p-4 mb-6">
+                <div className="flex gap-3">
+                  <svg className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                  </svg>
+                  <div className="text-xs text-blue-700">
+                    <p className="font-medium mb-1">Start Working Now</p>
+                    <p>You can browse scenes, add looks, and set up your continuity bible while the schedule finishes processing.</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Dismiss button */}
+              <button
+                onClick={() => setShowProcessingNotice(false)}
+                className="w-full py-3.5 rounded-button gold-gradient text-white font-semibold text-base shadow-lg active:scale-[0.98] transition-transform"
+              >
+                Got It
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

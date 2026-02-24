@@ -205,7 +205,7 @@ export function ProjectExportScreen({ onBack, onExportComplete, onNavigateToBill
 
     // Download each export
     for (const exp of exports) {
-      const blob = new Blob([exp.content], { type: exp.mimeType });
+      const blob = new Blob([exp.content], { type: exp.mimeType === 'text/html' ? 'text/html;charset=utf-8' : exp.mimeType });
       const url = URL.createObjectURL(blob);
 
       if (exp.mimeType === 'text/html') {
