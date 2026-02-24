@@ -238,30 +238,32 @@ export function ProjectHubScreen() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <header className="px-4 pt-4 pb-3 safe-top">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {!hasCompletedOnboarding && (
-              <button
-                onClick={goBack}
-                className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 -ml-1"
-              >
-                <svg className="w-5 h-5 text-text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M19 12H5" />
-                  <path d="M12 19l-7-7 7-7" />
-                </svg>
-              </button>
-            )}
-            <h1 className="text-lg font-semibold text-text-primary">Projects</h1>
+      <div className="sticky top-0 z-30 bg-card border-b border-border safe-top">
+        <div className="mobile-container">
+          <div className="h-14 px-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {!hasCompletedOnboarding && (
+                <button
+                  onClick={goBack}
+                  className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 -ml-2"
+                >
+                  <svg className="w-5 h-5 text-text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M19 12H5" />
+                    <path d="M12 19l-7-7 7-7" />
+                  </svg>
+                </button>
+              )}
+              <h1 className="text-[17px] font-bold text-text-primary">Projects</h1>
+            </div>
+            <button
+              onClick={() => setScreen('profile')}
+              className="w-8 h-8 rounded-full bg-gold-100 flex items-center justify-center text-gold text-xs font-bold active:scale-95 transition-transform"
+            >
+              {getUserInitials()}
+            </button>
           </div>
-          <button
-            onClick={() => setScreen('profile')}
-            className="w-8 h-8 rounded-full bg-gold-100 flex items-center justify-center text-gold text-xs font-bold active:scale-95 transition-transform"
-          >
-            {getUserInitials()}
-          </button>
         </div>
-      </header>
+      </div>
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-4 pb-4">
