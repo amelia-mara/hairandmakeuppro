@@ -449,6 +449,15 @@ export const useTimesheetStore = create<TimesheetState>()(
     {
       name: 'hair-makeup-timesheet-storage',
       storage: createHybridStorage('hair-makeup-timesheet-storage'),
+      // Deep-merge entries so rehydration doesn't overwrite entries added before hydration completed
+      merge: (persistedState, currentState) => ({
+        ...currentState,
+        ...(persistedState as Partial<TimesheetState>),
+        entries: {
+          ...(currentState as TimesheetState).entries,
+          ...((persistedState as Partial<TimesheetState>)?.entries || {}),
+        },
+      }),
     }
   )
 );

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTimesheetStore, addDays } from '@/stores/timesheetStore';
-import type { EntryStatus, DayType, TimesheetEntry as TimesheetEntryType, TimesheetCalculation } from '@/types';
+import type { EntryStatus, DayType, RateCard, TimesheetEntry as TimesheetEntryType, TimesheetCalculation } from '@/types';
 import { DAY_TYPE_LABELS, createEmptyTimesheetEntry, getLunchDurationForDayType } from '@/types';
 
 interface WeekViewProps {
@@ -13,7 +13,7 @@ const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const DAY_TYPES: DayType[] = ['SWD', 'CWD', 'SCWD'];
 
 export function WeekView({ weekStartDate, onNavigate }: WeekViewProps) {
-  const { entries, calculateEntry, saveEntry, getEntry } = useTimesheetStore();
+  const { entries, calculateEntry, saveEntry, getEntry, rateCard } = useTimesheetStore();
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
   const [editingEntry, setEditingEntry] = useState<TimesheetEntryType | null>(null);
 
@@ -268,6 +268,7 @@ export function WeekView({ weekStartDate, onNavigate }: WeekViewProps) {
                   entry={editingEntry}
                   updateField={updateField}
                   calculation={calculateEntry(editingEntry)}
+                  rateCard={rateCard}
                 />
               )}
             </div>
@@ -298,9 +299,10 @@ interface ExpandedDayContentProps {
   entry: TimesheetEntryType;
   updateField: <K extends keyof TimesheetEntryType>(field: K, value: TimesheetEntryType[K]) => void;
   calculation: TimesheetCalculation;
+  rateCard: RateCard;
 }
 
-function ExpandedDayContent({ entry, updateField, calculation }: ExpandedDayContentProps) {
+function ExpandedDayContent({ entry, updateField, calculation, rateCard }: ExpandedDayContentProps) {
   const isAutoFilled = !!entry.autoFilledFrom;
 
   return (
@@ -363,7 +365,7 @@ function ExpandedDayContent({ entry, updateField, calculation }: ExpandedDayCont
             {entry.isSixthDay && '✓'}
           </div>
           <span className="text-[13px] font-medium" style={{ color: 'var(--color-text-primary)' }}>6th Day</span>
-          <span className="text-[11px] text-orange-500">(1.5x)</span>
+          <span className="text-[11px] text-orange-500">({rateCard.sixthDayMultiplier}x)</span>
           <input
             type="checkbox"
             checked={entry.isSixthDay}
@@ -394,7 +396,7 @@ function ExpandedDayContent({ entry, updateField, calculation }: ExpandedDayCont
             {entry.isSeventhDay && '✓'}
           </div>
           <span className="text-[13px] font-medium" style={{ color: 'var(--color-text-primary)' }}>7th Day</span>
-          <span className="text-[11px] text-red-600">(2x)</span>
+          <span className="text-[11px] text-red-600">({rateCard.seventhDayMultiplier}x)</span>
           <input
             type="checkbox"
             checked={entry.isSeventhDay}
@@ -414,7 +416,7 @@ function ExpandedDayContent({ entry, updateField, calculation }: ExpandedDayCont
           value={entry.preCall}
           onChange={(v) => updateField('preCall', v)}
           highlight="gold"
-          hint="@ 1.5x"
+          hint={`@ ${rateCard.preCallMultiplier}x`}
         />
         <TimeInputCell
           label="Unit Call"
@@ -470,14 +472,14 @@ function ExpandedDayContent({ entry, updateField, calculation }: ExpandedDayCont
           </div>
           <div className="space-y-1.5">
             {calculation.preCallHours > 0 && (
-              <BreakdownRow label="Pre-Call" hours={calculation.preCallHours} rate="@ 1.5x" />
+              <BreakdownRow label="Pre-Call" hours={calculation.preCallHours} rate={`@ ${rateCard.preCallMultiplier}x`} />
             )}
             <BreakdownRow label="Base Hours" hours={calculation.baseHours} rate="@ 1x" />
             {calculation.otHours > 0 && (
-              <BreakdownRow label="Overtime" hours={calculation.otHours} rate="@ 1.5x" />
+              <BreakdownRow label="Overtime" hours={calculation.otHours} rate={`@ ${rateCard.otMultiplier}x`} />
             )}
             {calculation.lateNightHours > 0 && (
-              <BreakdownRow label="Late Night" hours={calculation.lateNightHours} rate="@ 2x" />
+              <BreakdownRow label="Late Night" hours={calculation.lateNightHours} rate={`@ ${rateCard.lateNightMultiplier}x`} />
             )}
             <BreakdownRow label="Lunch (unpaid)" hours={-(entry.lunchTaken / 60)} />
             <div
