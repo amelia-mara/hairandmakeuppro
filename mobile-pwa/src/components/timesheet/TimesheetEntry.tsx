@@ -50,6 +50,7 @@ export function TimesheetEntry({ onBack }: TimesheetEntryProps) {
     saveEntry,
     calculateEntry,
     getPreviousWrapOut,
+    rateCard,
   } = useTimesheetStore();
 
   const [entry, setEntry] = useState<TimesheetEntryType>(() =>
@@ -233,7 +234,7 @@ export function TimesheetEntry({ onBack }: TimesheetEntryProps) {
               onChange={(v) => updateField('preCall', v)}
               placeholder="05:30"
               highlight="gold"
-              hint="1.5x"
+              hint={`${rateCard.preCallMultiplier}x`}
             />
             <TimeInput
               label="UNIT CALL"
@@ -334,7 +335,7 @@ export function TimesheetEntry({ onBack }: TimesheetEntryProps) {
                 className="w-5 h-5 rounded border-border text-gold focus:ring-gold"
               />
               <span className="text-sm" style={{ color: 'var(--color-text-primary)' }}>6th Day</span>
-              <span className="text-xs text-gold font-semibold">(1.5x)</span>
+              <span className="text-xs text-gold font-semibold">({rateCard.sixthDayMultiplier}x)</span>
             </label>
 
             {/* 7th Day toggle */}
@@ -349,7 +350,7 @@ export function TimesheetEntry({ onBack }: TimesheetEntryProps) {
                 className="w-5 h-5 rounded border-border text-orange-500 focus:ring-orange-500"
               />
               <span className="text-sm" style={{ color: 'var(--color-text-primary)' }}>7th Day</span>
-              <span className="text-xs text-orange-500 font-semibold">(2x)</span>
+              <span className="text-xs text-orange-500 font-semibold">({rateCard.seventhDayMultiplier}x)</span>
             </label>
           </div>
         </div>
