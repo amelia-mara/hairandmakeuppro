@@ -104,6 +104,11 @@ export interface Look {
   masterReference?: Photo;
   makeup: MakeupDetails;
   hair: HairDetails;
+  // Look-level defaults (auto-fill into scene captures when set here)
+  continuityFlags?: ContinuityFlags;
+  continuityEvents?: ContinuityEvent[];
+  sfxDetails?: SFXDetails;
+  notes?: string;
 }
 
 export interface MakeupDetails {

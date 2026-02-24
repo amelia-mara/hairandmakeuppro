@@ -10,7 +10,7 @@ interface LookCardProps {
 
 export function LookCard({ look, character: _character, progress }: LookCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const { currentProject, sceneCaptures, setActiveTab, setCurrentScene } = useProjectStore();
+  const { currentProject, sceneCaptures, setActiveTab, setCurrentScene, setCurrentLook } = useProjectStore();
 
   const progressPercent = progress.total > 0 ? (progress.captured / progress.total) * 100 : 0;
 
@@ -279,9 +279,7 @@ export function LookCard({ look, character: _character, progress }: LookCardProp
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                // Navigate to first uncaptured scene or first scene
-                const uncaptured = look.scenes.find(sn => getSceneCaptureStatus(sn) === 'not-captured');
-                handleSceneClick(uncaptured || look.scenes[0]);
+                setCurrentLook(look.id);
               }}
               className="flex-1 py-2.5 px-4 rounded-button gold-gradient text-white text-sm font-medium active:scale-95 transition-transform"
             >
@@ -290,7 +288,7 @@ export function LookCard({ look, character: _character, progress }: LookCardProp
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                handleSceneClick(look.scenes[0]);
+                setCurrentLook(look.id);
               }}
               className="flex-1 py-2.5 px-4 rounded-button border border-gold text-gold text-sm font-medium active:scale-95 transition-transform"
             >
