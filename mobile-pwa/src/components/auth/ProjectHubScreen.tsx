@@ -1,72 +1,56 @@
 import { useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useProjectStore } from '@/stores/projectStore';
-import { Button, Badge } from '@/components/ui';
-import { ProjectCard, EmptyState, UpgradeModal, QuickAccessBar } from '@/components/dashboard';
-import type { ProjectMembership, Project } from '@/types';
-import { getTierById } from '@/types/subscription';
-import type { SubscriptionTier } from '@/types/subscription';
+import { UpgradeModal } from '@/components/dashboard';
+import type { ProjectMembership, Project, ProjectRole, ProductionType } from '@/types';
 
-// Sync Project Modal component
-function SyncProjectModal({
-  isOpen,
-  onClose,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-}) {
-  if (!isOpen) return null;
+// Format relative time
+const formatRelativeTime = (date: Date): string => {
+  const now = new Date();
+  const then = new Date(date);
+  const diffMs = now.getTime() - then.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return then.toLocaleDateString();
+};
 
-      {/* Modal */}
-      <div className="relative bg-card rounded-2xl p-6 max-w-sm w-full shadow-xl">
-        <h3 className="text-lg font-bold text-text-primary mb-2">
-          Sync with Desktop
-        </h3>
-        <p className="text-text-secondary text-sm mb-6">
-          Connect to your desktop project to sync data between devices. This feature is coming soon.
-        </p>
+const getRoleLabel = (role: ProjectRole): string => {
+  const labels: Record<string, string> = {
+    owner: 'Owner', designer: 'Designer', hod: 'HOD',
+    supervisor: 'Supervisor', key: 'Key', floor: 'Floor',
+    daily: 'Daily', trainee: 'Trainee', artist: 'Artist', viewer: 'Viewer',
+  };
+  return labels[role] || role;
+};
 
-        <div className="p-4 bg-gold-50 border border-gold-200 rounded-xl mb-6">
-          <div className="flex gap-3">
-            <div className="w-8 h-8 rounded-full bg-gold-100 flex items-center justify-center flex-shrink-0">
-              <svg
-                className="w-4 h-4 text-gold"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <path d="M12 16v-4" />
-                <path d="M12 8h.01" />
-              </svg>
-            </div>
-            <div>
-              <p className="text-sm text-gold-800">
-                To sync, you'll need to be logged into the same account on the desktop app.
-              </p>
-            </div>
-          </div>
-        </div>
+const getTypeLabel = (type: ProductionType): string => {
+  const labels: Record<string, string> = {
+    film: 'Feature Film', tv_series: 'TV Series', short_film: 'Short Film',
+    commercial: 'Commercial', music_video: 'Music Video', other: 'Production',
+  };
+  return labels[type] || 'Production';
+};
 
-        <Button
-          fullWidth
-          variant="primary"
-          onClick={onClose}
-        >
-          Got it
-        </Button>
-      </div>
-    </div>
-  );
+function createProjectFromMembership(membership: ProjectMembership): Project {
+  return {
+    id: membership.projectId,
+    name: membership.projectName,
+    createdAt: membership.joinedAt,
+    updatedAt: membership.lastAccessedAt,
+    scenes: [],
+    characters: [],
+    looks: [],
+  };
 }
 
-// Delete Project Confirmation Modal
+// Delete/Leave Confirmation Modal
 function DeleteProjectModal({
   isOpen,
   onClose,
@@ -84,87 +68,76 @@ function DeleteProjectModal({
 }) {
   if (!isOpen) return null;
 
-  const title = isOwner ? 'Delete Project' : 'Leave Project';
-  const description = isOwner
-    ? `Are you sure you want to delete "${projectName}"? This will permanently remove the project and all its data for all team members. This action cannot be undone.`
-    : `Are you sure you want to leave "${projectName}"? You will lose access to this project and will need a new invite code to rejoin.`;
-  const confirmText = isOwner ? 'Delete Project' : 'Leave Project';
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-
-      {/* Modal */}
-      <div className="relative bg-card rounded-2xl p-6 max-w-sm w-full shadow-xl">
-        <h3 className="text-lg font-bold text-text-primary mb-2">
-          {title}
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center px-4 pb-8">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative bg-card rounded-2xl p-5 max-w-sm w-full shadow-xl">
+        <h3 className="text-base font-semibold text-text-primary mb-1.5">
+          {isOwner ? 'Delete project?' : 'Leave project?'}
         </h3>
-        <p className="text-text-secondary text-sm mb-6">
-          {description}
+        <p className="text-sm text-text-secondary mb-5">
+          {isOwner
+            ? `This will permanently delete "${projectName}" and all its data for everyone.`
+            : `You'll need a new invite code to rejoin "${projectName}".`}
         </p>
-
-        {isOwner && (
-          <div className="p-4 bg-red-50 border border-red-200 rounded-xl mb-6">
-            <div className="flex gap-3">
-              <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
-                <svg
-                  className="w-4 h-4 text-red-600"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <circle cx="12" cy="12" r="10" />
-                  <path d="M12 8v4" />
-                  <path d="M12 16h.01" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-sm text-red-800">
-                  Warning: All scenes, characters, looks, and photos will be permanently deleted.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
         <div className="flex gap-3">
-          <Button
-            fullWidth
-            variant="outline"
+          <button
             onClick={onClose}
             disabled={isLoading}
+            className="flex-1 h-11 rounded-xl border border-border text-sm font-medium text-text-primary active:scale-[0.98] transition-transform"
           >
             Cancel
-          </Button>
-          <Button
-            fullWidth
-            variant="primary"
+          </button>
+          <button
             onClick={onConfirm}
             disabled={isLoading}
-            className="bg-red-600 hover:bg-red-700"
+            className="flex-1 h-11 rounded-xl bg-red-600 text-sm font-medium text-white active:scale-[0.98] transition-transform"
           >
-            {isLoading ? 'Processing...' : confirmText}
-          </Button>
+            {isLoading ? 'Deleting...' : isOwner ? 'Delete' : 'Leave'}
+          </button>
         </div>
       </div>
     </div>
   );
 }
 
-// Helper to create a mock project from membership data
-// In production, this would fetch the full project from the server
-function createProjectFromMembership(membership: ProjectMembership): Project {
-  return {
-    id: membership.projectId,
-    name: membership.projectName,
-    createdAt: membership.joinedAt,
-    updatedAt: membership.lastAccessedAt,
-    scenes: [], // Would be loaded from server
-    characters: [],
-    looks: [],
-  };
+// Overflow menu for project actions
+function ProjectMenu({
+  isOpen,
+  onClose,
+  onSettings,
+  onDelete,
+  isOwner,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onSettings?: () => void;
+  onDelete: () => void;
+  isOwner: boolean;
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <>
+      <div className="fixed inset-0 z-40" onClick={onClose} />
+      <div className="absolute right-0 top-full mt-1 z-50 bg-card rounded-xl shadow-lg border border-border py-1 min-w-[160px]">
+        {onSettings && (
+          <button
+            onClick={() => { onSettings(); onClose(); }}
+            className="w-full text-left px-4 py-2.5 text-sm text-text-primary hover:bg-gray-50 transition-colors"
+          >
+            Settings
+          </button>
+        )}
+        <button
+          onClick={() => { onDelete(); onClose(); }}
+          className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+        >
+          {isOwner ? 'Delete project' : 'Leave project'}
+        </button>
+      </div>
+    </>
+  );
 }
 
 export function ProjectHubScreen() {
@@ -184,60 +157,46 @@ export function ProjectHubScreen() {
   } = useAuthStore();
 
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const [showSyncModal, setShowSyncModal] = useState(false);
   const [deleteModalProject, setDeleteModalProject] = useState<ProjectMembership | null>(null);
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
 
-  // Sort projects by last accessed (most recent first)
+  // Sort by last accessed
   const sortedProjects = [...projectMemberships].sort(
     (a, b) => new Date(b.lastAccessedAt).getTime() - new Date(a.lastAccessedAt).getTime()
   );
 
-  // Get the most recently accessed project (active project)
-  const activeProject = sortedProjects.length > 0 ? sortedProjects[0] : null;
-
-  // Get user's tier info
-  const tierInfo = user ? getTierById(user.tier as SubscriptionTier) : null;
+  const currentProject = sortedProjects.length > 0 ? sortedProjects[0] : null;
+  const otherProjects = sortedProjects.slice(1);
 
   const handleProjectOpen = (membership: ProjectMembership) => {
     updateLastAccessed(membership.projectId);
 
-    // First try to restore saved project data (preserves scenes, characters, etc.)
     const store = useProjectStore.getState();
     if (store.hasSavedProject(membership.projectId)) {
       store.restoreSavedProject(membership.projectId);
-      store.setActiveTab('today'); // Always open to Today page
-      return;
-    }
-
-    // Check if the current project in store already matches (user may be re-opening same project)
-    if (store.currentProject?.id === membership.projectId) {
-      // Already loaded, just reset to Today page
       store.setActiveTab('today');
       return;
     }
 
-    // Check if currentProject has actual data (scenes uploaded) - don't overwrite it!
-    // This handles the case where user uploaded a script but project IDs don't match
-    // (e.g., local project vs server project with different IDs)
+    if (store.currentProject?.id === membership.projectId) {
+      store.setActiveTab('today');
+      return;
+    }
+
     if (store.currentProject && store.currentProject.scenes.length > 0) {
-      // Current project has data - preserve it, don't replace with empty shell
-      // Just update the project ID and name to match the membership
       const updatedProject: Project = {
         ...store.currentProject,
         id: membership.projectId,
         name: membership.projectName,
       };
       store.setProject(updatedProject);
-      store.setActiveTab('today'); // Always open to Today page
+      store.setActiveTab('today');
       return;
     }
 
-    // Fallback: Create a project that needs setup
-    // Use setProjectNeedsSetup to prompt user to upload their script
-    // This is safer than creating an empty project which would lose data
     const project = createProjectFromMembership(membership);
     store.setProjectNeedsSetup(project);
-    store.setActiveTab('today'); // Always open to Today page
+    store.setActiveTab('today');
   };
 
   const handleCreateClick = () => {
@@ -248,30 +207,18 @@ export function ProjectHubScreen() {
     }
   };
 
-  const handleUpgrade = () => {
-    setShowUpgradeModal(false);
-    setScreen('select-plan');
-  };
-
-  const handleDeleteClick = (project: ProjectMembership) => {
-    setDeleteModalProject(project);
-  };
-
   const handleDeleteConfirm = async () => {
     if (!deleteModalProject) return;
-
     const isOwner = deleteModalProject.role === 'owner';
     const result = isOwner
       ? await deleteProject(deleteModalProject.projectId)
       : await leaveProject(deleteModalProject.projectId);
 
     if (result.success) {
-      // Also clear from project store if this was the current project
       const store = useProjectStore.getState();
       if (store.currentProject?.id === deleteModalProject.projectId) {
         store.clearProject();
       }
-      // Also clear from saved projects
       if (store.hasSavedProject(deleteModalProject.projectId)) {
         store.removeSavedProject(deleteModalProject.projectId);
       }
@@ -279,181 +226,235 @@ export function ProjectHubScreen() {
     }
   };
 
-  // Generate user initials for avatar
   const getUserInitials = (): string => {
     if (!user?.name) return '?';
     const parts = user.name.split(' ');
-    if (parts.length >= 2) {
-      return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-    }
+    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
     return user.name.slice(0, 2).toUpperCase();
   };
+
+  const canManage = (role: string) => role === 'owner' || role === 'supervisor';
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <header className="px-4 py-4 safe-top border-b border-border bg-card">
+      <header className="px-4 pt-4 pb-3 safe-top">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {/* Back button - shown when user hasn't completed onboarding */}
             {!hasCompletedOnboarding && (
               <button
                 onClick={goBack}
-                className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 -ml-2"
-                aria-label="Go back"
+                className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 -ml-1"
               >
-                <svg
-                  className="w-6 h-6 text-text-primary"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
+                <svg className="w-5 h-5 text-text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M19 12H5" />
                   <path d="M12 19l-7-7 7-7" />
                 </svg>
               </button>
             )}
-            <div>
-              <h1 className="text-xl font-bold text-text-primary">Your Projects</h1>
-              {tierInfo && (
-                <div className="flex items-center gap-2 mt-1">
-                  <Badge
-                    variant={tierInfo.isPremium ? 'gold' : 'default'}
-                    size="sm"
-                  >
-                    {tierInfo.displayName}
-                  </Badge>
-                </div>
-              )}
-            </div>
+            <h1 className="text-lg font-semibold text-text-primary">Projects</h1>
           </div>
-
-          {/* User avatar */}
           <button
             onClick={() => setScreen('profile')}
-            className="flex items-center gap-2"
+            className="w-8 h-8 rounded-full bg-gold-100 flex items-center justify-center text-gold text-xs font-bold active:scale-95 transition-transform"
           >
-            <div className="w-10 h-10 rounded-full bg-gold flex items-center justify-center text-white font-semibold text-sm">
-              {getUserInitials()}
-            </div>
+            {getUserInitials()}
           </button>
         </div>
       </header>
 
-      {/* Quick access bar for active project */}
-      {activeProject && sortedProjects.length > 1 && (
-        <QuickAccessBar
-          project={activeProject}
-          onReturn={() => handleProjectOpen(activeProject)}
-        />
-      )}
-
-      {/* Main content */}
-      <div className="flex-1 overflow-y-auto px-4 py-4">
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto px-4 pb-4">
         {sortedProjects.length === 0 ? (
-          // Empty state
-          <EmptyState
-            canCreate={canCreateProjects()}
-            onJoinClick={() => setScreen('join')}
-            onCreateClick={handleCreateClick}
-            onSyncClick={() => setShowSyncModal(true)}
-          />
-        ) : (
-          // Project list
-          <div className="space-y-4">
-            {/* Primary actions */}
-            <div className="space-y-3 mb-6">
-              <div className="flex gap-3">
-                <Button
-                  fullWidth
-                  size="md"
-                  variant="primary"
-                  onClick={handleCreateClick}
-                >
-                  Create Project
-                </Button>
-                <Button
-                  fullWidth
-                  size="md"
-                  variant="outline"
-                  onClick={() => setScreen('join')}
-                >
-                  Join Production
-                </Button>
-              </div>
-              {/* Sync Project button */}
-              <Button
-                fullWidth
-                size="md"
-                variant="ghost"
-                onClick={() => setShowSyncModal(true)}
-                className="text-gold"
-              >
-                <svg
-                  className="w-4 h-4 mr-2"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9H3m9 9a9 9 0 0 1-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9" />
-                </svg>
-                Sync Project from Desktop
-              </Button>
+          /* Empty state */
+          <div className="flex flex-col items-center justify-center text-center py-16 px-4">
+            <div className="w-16 h-16 rounded-2xl bg-card border border-border flex items-center justify-center mb-5">
+              <svg className="w-7 h-7 text-text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+              </svg>
             </div>
+            <h2 className="text-base font-semibold text-text-primary mb-1">No projects yet</h2>
+            <p className="text-sm text-text-muted mb-8 max-w-[240px]">
+              Create a new project or join your team with an invite code.
+            </p>
+            <div className="w-full max-w-[280px] space-y-3">
+              <button
+                onClick={handleCreateClick}
+                className="w-full h-11 rounded-xl gold-gradient text-white text-sm font-medium active:scale-[0.98] transition-transform"
+              >
+                Create Project
+              </button>
+              <button
+                onClick={() => setScreen('join')}
+                className="w-full h-11 rounded-xl border border-border text-sm font-medium text-text-primary active:scale-[0.98] transition-transform"
+              >
+                Join with Code
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {/* Current project - hero card */}
+            {currentProject && (
+              <section>
+                <div className="text-[11px] font-medium tracking-wider text-text-muted uppercase mb-2.5">Current</div>
+                <button
+                  onClick={() => handleProjectOpen(currentProject)}
+                  className="w-full text-left bg-card rounded-2xl p-4 shadow-sm border border-border active:scale-[0.99] transition-transform"
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <h3 className="text-base font-semibold text-text-primary leading-tight pr-2">
+                      {currentProject.projectName}
+                    </h3>
+                    <div className="relative flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setMenuOpenId(menuOpenId === currentProject.projectId ? null : currentProject.projectId);
+                        }}
+                        className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 -mr-1 -mt-0.5"
+                      >
+                        <svg className="w-4 h-4 text-text-muted" viewBox="0 0 24 24" fill="currentColor">
+                          <circle cx="12" cy="5" r="1.5" />
+                          <circle cx="12" cy="12" r="1.5" />
+                          <circle cx="12" cy="19" r="1.5" />
+                        </svg>
+                      </button>
+                      <ProjectMenu
+                        isOpen={menuOpenId === currentProject.projectId}
+                        onClose={() => setMenuOpenId(null)}
+                        onSettings={
+                          canManage(currentProject.role)
+                            ? () => { setSettingsProjectId(currentProject.projectId); setScreen('project-settings'); }
+                            : undefined
+                        }
+                        onDelete={() => setDeleteModalProject(currentProject)}
+                        isOwner={currentProject.role === 'owner'}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-text-muted">
+                    {getTypeLabel(currentProject.productionType)}
+                    <span className="mx-1.5 text-text-light">&middot;</span>
+                    {getRoleLabel(currentProject.role)}
+                  </p>
+                  {(currentProject.sceneCount > 0 || currentProject.teamMemberCount > 0) && (
+                    <p className="text-xs text-text-muted mt-1.5">
+                      {currentProject.sceneCount > 0 && `${currentProject.sceneCount} scene${currentProject.sceneCount !== 1 ? 's' : ''}`}
+                      {currentProject.sceneCount > 0 && currentProject.teamMemberCount > 0 && (
+                        <span className="mx-1.5 text-text-light">&middot;</span>
+                      )}
+                      {currentProject.teamMemberCount > 0 && `${currentProject.teamMemberCount} team`}
+                    </p>
+                  )}
+                </button>
+              </section>
+            )}
 
-            {/* Project cards */}
-            {sortedProjects.map((project, index) => (
-              <ProjectCard
-                key={project.projectId}
-                project={project}
-                isActive={index === 0} // First project is most recently accessed
-                onOpen={() => handleProjectOpen(project)}
-                onSettings={
-                  (project.role === 'owner' || project.role === 'supervisor')
-                    ? () => {
-                        // Navigate to project settings
-                        setSettingsProjectId(project.projectId);
-                        setScreen('project-settings');
-                      }
-                    : undefined
-                }
-                onDelete={() => handleDeleteClick(project)}
-              />
-            ))}
+            {/* Other projects - list rows */}
+            {otherProjects.length > 0 && (
+              <section>
+                <div className="text-[11px] font-medium tracking-wider text-text-muted uppercase mb-2.5">Other Projects</div>
+                <div className="bg-card rounded-2xl border border-border overflow-hidden divide-y divide-border">
+                  {otherProjects.map((project) => (
+                    <div key={project.projectId} className="relative">
+                      <button
+                        onClick={() => handleProjectOpen(project)}
+                        className="w-full text-left px-4 py-3.5 flex items-center justify-between active:bg-gray-50 transition-colors"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <h4 className="text-sm font-medium text-text-primary truncate">
+                            {project.projectName}
+                          </h4>
+                          <p className="text-xs text-text-muted mt-0.5">
+                            {getTypeLabel(project.productionType)}
+                            <span className="mx-1.5 text-text-light">&middot;</span>
+                            {formatRelativeTime(project.lastAccessedAt)}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 ml-3 flex-shrink-0">
+                          <div onClick={(e) => e.stopPropagation()} className="relative">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setMenuOpenId(menuOpenId === project.projectId ? null : project.projectId);
+                              }}
+                              className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100"
+                            >
+                              <svg className="w-4 h-4 text-text-muted" viewBox="0 0 24 24" fill="currentColor">
+                                <circle cx="12" cy="5" r="1.5" />
+                                <circle cx="12" cy="12" r="1.5" />
+                                <circle cx="12" cy="19" r="1.5" />
+                              </svg>
+                            </button>
+                            <ProjectMenu
+                              isOpen={menuOpenId === project.projectId}
+                              onClose={() => setMenuOpenId(null)}
+                              onSettings={
+                                canManage(project.role)
+                                  ? () => { setSettingsProjectId(project.projectId); setScreen('project-settings'); }
+                                  : undefined
+                              }
+                              onDelete={() => setDeleteModalProject(project)}
+                              isOwner={project.role === 'owner'}
+                            />
+                          </div>
+                          <svg className="w-4 h-4 text-text-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M9 18l6-6-6-6" />
+                          </svg>
+                        </div>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Create / Join - inline at bottom */}
+            <div className="flex items-center justify-center gap-5 pt-2 pb-4">
+              <button
+                onClick={handleCreateClick}
+                className="flex items-center gap-1.5 text-sm font-medium text-gold active:opacity-70 transition-opacity"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                Create
+              </button>
+              <div className="w-px h-4 bg-border" />
+              <button
+                onClick={() => setScreen('join')}
+                className="flex items-center gap-1.5 text-sm font-medium text-text-secondary active:opacity-70 transition-opacity"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                  <polyline points="10 17 15 12 10 7" />
+                  <line x1="15" y1="12" x2="3" y2="12" />
+                </svg>
+                Join
+              </button>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Sign out link */}
-      <div className="px-4 py-4 pb-safe-bottom border-t border-border">
+      {/* Sign out */}
+      <div className="px-4 py-3 pb-safe-bottom">
         <button
           onClick={signOut}
-          className="w-full text-center text-sm text-text-muted hover:text-text-secondary"
+          className="w-full text-center text-xs text-text-muted active:opacity-70 transition-opacity"
         >
-          Sign Out
+          Sign out
         </button>
       </div>
 
-      {/* Upgrade modal */}
+      {/* Modals */}
       <UpgradeModal
         isOpen={showUpgradeModal}
         onClose={() => setShowUpgradeModal(false)}
-        onUpgrade={handleUpgrade}
+        onUpgrade={() => { setShowUpgradeModal(false); setScreen('select-plan'); }}
       />
-
-      {/* Sync Project modal */}
-      <SyncProjectModal
-        isOpen={showSyncModal}
-        onClose={() => setShowSyncModal(false)}
-      />
-
-      {/* Delete/Leave Project modal */}
       <DeleteProjectModal
         isOpen={deleteModalProject !== null}
         onClose={() => setDeleteModalProject(null)}
