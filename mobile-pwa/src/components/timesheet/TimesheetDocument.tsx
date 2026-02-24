@@ -9,7 +9,7 @@ interface TimesheetDocumentProps {
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 export function TimesheetDocument({ weekStartDate, onNavigate }: TimesheetDocumentProps) {
-  const { entries, calculateEntry, getWeekSummary, getPreviousWrapOut } = useTimesheetStore();
+  const { entries, calculateEntry, getWeekSummary, getPreviousWrapOut, rateCard } = useTimesheetStore();
 
   const weekSummary = getWeekSummary(weekStartDate);
 
@@ -382,11 +382,11 @@ export function TimesheetDocument({ weekStartDate, onNavigate }: TimesheetDocume
           </h4>
           <div className="space-y-2">
             <BreakdownRow label="Base Pay" value={weekSummary.basePay} />
-            {weekSummary.preCallPay > 0 && <BreakdownRow label="Pre-Call (1.5x)" value={weekSummary.preCallPay} highlight="gold" />}
-            {weekSummary.overtimePay > 0 && <BreakdownRow label="Overtime (1.5x)" value={weekSummary.overtimePay} highlight="orange" />}
+            {weekSummary.preCallPay > 0 && <BreakdownRow label={`Pre-Call (${rateCard.preCallMultiplier}x)`} value={weekSummary.preCallPay} highlight="gold" />}
+            {weekSummary.overtimePay > 0 && <BreakdownRow label={`Overtime (${rateCard.otMultiplier}x)`} value={weekSummary.overtimePay} highlight="orange" />}
             {weekSummary.brokenLunchPay > 0 && <BreakdownRow label="Broken Lunch" value={weekSummary.brokenLunchPay} highlight="amber" />}
             {weekSummary.brokenTurnaroundPay > 0 && <BreakdownRow label="Broken Turnaround" value={weekSummary.brokenTurnaroundPay} highlight="purple" />}
-            {weekSummary.lateNightPay > 0 && <BreakdownRow label="Late Night (2x)" value={weekSummary.lateNightPay} highlight="red" />}
+            {weekSummary.lateNightPay > 0 && <BreakdownRow label={`Late Night (${rateCard.lateNightMultiplier}x)`} value={weekSummary.lateNightPay} highlight="red" />}
             {weekSummary.kitRentalTotal > 0 && <BreakdownRow label="Kit Rental" value={weekSummary.kitRentalTotal} />}
 
             <div className="pt-2 mt-2" style={{ borderTop: '1px solid var(--color-border)' }}>
