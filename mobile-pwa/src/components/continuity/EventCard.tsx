@@ -50,7 +50,7 @@ export function EventCard({ event, onRemove }: EventCardProps) {
           <div className="flex flex-wrap gap-1">
             {scenes.map((scene) => {
               // Highlight scenes that have progression stages
-              const hasStage = hasProgression && event.progression.some((p) => p.scene === scene);
+              const hasStage = hasProgression && event.progression!.some((p) => p.scene === scene);
               return (
                 <span
                   key={scene}
@@ -118,7 +118,7 @@ export function EventCard({ event, onRemove }: EventCardProps) {
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
             </svg>
-            Progression ({event.progression.length} stage{event.progression.length !== 1 ? 's' : ''})
+            Progression ({event.progression!.length} stage{event.progression!.length !== 1 ? 's' : ''})
             <svg
               className={`w-3.5 h-3.5 transition-transform ${showTimeline ? 'rotate-180' : ''}`}
               fill="none"
@@ -136,7 +136,7 @@ export function EventCard({ event, onRemove }: EventCardProps) {
               <div className="absolute left-[7px] top-1 bottom-1 w-[2px] bg-gold-200 rounded" />
 
               <div className="space-y-3">
-                {event.progression.map((ps, idx) => (
+                {event.progression!.map((ps, idx) => (
                   <div key={ps.id} className="relative">
                     {/* Timeline dot */}
                     <div className="absolute -left-4 top-0.5 w-4 h-4 rounded-full bg-gold flex items-center justify-center">
