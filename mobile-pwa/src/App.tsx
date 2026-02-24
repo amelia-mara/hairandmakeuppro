@@ -119,8 +119,8 @@ function AppContent() {
   }, []);
   // Key to force More component to reset when clicking the same tab
   const [tabResetKey, setTabResetKey] = useState(0);
-  // SubView for direct navigation to team, invite, stats, project settings, or user profile
-  const [moreSubView, setMoreSubView] = useState<'team' | 'invite' | 'projectStats' | 'projectSettings' | 'userProfile' | undefined>(undefined);
+  // SubView for direct navigation to team, invite, stats, project settings, billing, or user profile
+  const [moreSubView, setMoreSubView] = useState<'team' | 'invite' | 'projectStats' | 'projectSettings' | 'userProfile' | 'billing' | undefined>(undefined);
 
   // Validate state on mount - fix inconsistent persisted state that causes blank screens
   useEffect(() => {
@@ -412,7 +412,11 @@ function AppContent() {
     return (
       <UserProfileScreen
         onBack={() => setShowUserProfile(false)}
-        onNavigateToBilling={() => setScreen('select-plan')}
+        onNavigateToBilling={() => {
+          setShowUserProfile(false);
+          setActiveTab('more');
+          setMoreSubView('billing');
+        }}
       />
     );
   }
