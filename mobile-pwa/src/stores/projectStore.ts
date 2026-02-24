@@ -912,6 +912,10 @@ export const useProjectStore = create<ProjectState>()(
         set((state) => {
           if (!state.currentProject) return state;
 
+          // Get previous characters before updating (to detect removals)
+          const previousScene = state.currentProject.scenes.find(s => s.id === sceneId);
+          const previousCharacterIds = previousScene?.characters || [];
+
           const updatedScenes = state.currentProject.scenes.map((s) =>
             s.id === sceneId
               ? {
@@ -928,20 +932,50 @@ export const useProjectStore = create<ProjectState>()(
             (s) => s.characterConfirmationStatus === 'confirmed'
           ).length;
 
-          // Update looks to include the confirmed characters in this scene
           const scene = updatedScenes.find((s) => s.id === sceneId);
-          const updatedLooks = state.currentProject.looks.map((look) => {
-            if (scene && confirmedCharacterIds.includes(look.characterId)) {
-              // Add this scene to the character's look if not already there
-              if (!look.scenes.includes(scene.sceneNumber)) {
-                return {
-                  ...look,
-                  scenes: [...look.scenes, scene.sceneNumber].sort((a, b) =>
-                    a.localeCompare(b, undefined, { numeric: true })
-                  ),
-                };
-              }
+
+          // Characters removed from this scene — their looks should drop this scene
+          const removedCharacterIds = previousCharacterIds.filter(
+            id => !confirmedCharacterIds.includes(id)
+          );
+
+          // Track which characters already have this scene in one of their looks
+          const characterHasScene = new Set<string>();
+          for (const look of state.currentProject.looks) {
+            if (scene && look.scenes.includes(scene.sceneNumber)) {
+              characterHasScene.add(look.characterId);
             }
+          }
+
+          // Track characters we've already added the scene to (for multi-look chars)
+          const addedTo = new Set<string>();
+
+          const updatedLooks = state.currentProject.looks.map((look) => {
+            if (!scene) return look;
+
+            // Remove scene from looks of characters no longer in this scene
+            if (removedCharacterIds.includes(look.characterId) && look.scenes.includes(scene.sceneNumber)) {
+              return {
+                ...look,
+                scenes: look.scenes.filter(s => s !== scene.sceneNumber),
+              };
+            }
+
+            // Add scene to first look of newly confirmed characters (if not already in any of their looks)
+            if (
+              confirmedCharacterIds.includes(look.characterId) &&
+              !characterHasScene.has(look.characterId) &&
+              !addedTo.has(look.characterId)
+            ) {
+              addedTo.add(look.characterId);
+              return {
+                ...look,
+                scenes: [...look.scenes, scene.sceneNumber].sort((a, b) =>
+                  a.localeCompare(b, undefined, { numeric: true })
+                ),
+              };
+            }
+
             return look;
           });
 
@@ -991,7 +1025,7 @@ export const useProjectStore = create<ProjectState>()(
           const newLook: Look = {
             id: `look-${newCharacter.id}`,
             characterId: newCharacter.id,
-            name: 'Look 1',
+            name: 'Day 1',
             scenes: scene ? [scene.sceneNumber] : [],
             estimatedTime: 30,
             makeup: createEmptyMakeupDetails(),
