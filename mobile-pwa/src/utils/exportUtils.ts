@@ -56,8 +56,9 @@ export function generateContinuityBiblePDF(
 
   return `
     <!DOCTYPE html>
-    <html>
+    <html lang="en">
     <head>
+      <meta charset="UTF-8">
       <title>${project.name} - Continuity Bible</title>
       <style>
         @media print {
@@ -624,8 +625,9 @@ export function generateCharacterLookbookPDF(
 
   return `
     <!DOCTYPE html>
-    <html>
+    <html lang="en">
     <head>
+      <meta charset="UTF-8">
       <title>${character.name} - Lookbook</title>
       <style>
         @media print { .page-break { page-break-before: always; } }
@@ -709,8 +711,9 @@ export function generateTimesheetsPDF(
 
   return `
     <!DOCTYPE html>
-    <html>
+    <html lang="en">
     <head>
+      <meta charset="UTF-8">
       <title>${projectName} - Timesheets</title>
       <style>
         body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 40px; max-width: 900px; margin: 0 auto; }
