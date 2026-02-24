@@ -5,11 +5,12 @@ import { useCallSheetStore } from '@/stores/callSheetStore';
 import type { Look, Character } from '@/types';
 import { CharacterSection } from './CharacterSection';
 import { AddLookModal } from './AddLookModal';
+import { LookOverview } from './LookOverview';
 
 type SyncStatus = 'synced' | 'pending' | 'offline';
 
 export function Lookbooks() {
-  const { currentProject, sceneCaptures } = useProjectStore();
+  const { currentProject, sceneCaptures, currentLookId, setCurrentLook, setActiveTab, setCurrentScene } = useProjectStore();
   const { schedule } = useScheduleStore();
   const { callSheets } = useCallSheetStore();
   const [addLookOpen, setAddLookOpen] = useState(false);
@@ -158,6 +159,21 @@ export function Lookbooks() {
     setSelectedCharacterId(characterId || null);
     setAddLookOpen(true);
   };
+
+  // Show Look Overview when a look is selected
+  if (currentLookId) {
+    return (
+      <LookOverview
+        lookId={currentLookId}
+        onBack={() => setCurrentLook(null)}
+        onSceneClick={(sceneId) => {
+          setCurrentLook(null);
+          setActiveTab('breakdown');
+          setCurrentScene(sceneId);
+        }}
+      />
+    );
+  }
 
   // No project loaded
   if (!currentProject) {

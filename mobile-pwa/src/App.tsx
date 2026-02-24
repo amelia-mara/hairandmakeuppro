@@ -63,6 +63,7 @@ function AppContent() {
     currentSceneId,
     setCurrentScene,
     setCurrentCharacter,
+    setCurrentLook,
     checkWrapTrigger,
     lifecycle,
     updateActivity,
@@ -237,11 +238,12 @@ function AppContent() {
     setActiveTab(tab);
     // Clear subView when changing tabs (unless it's being set deliberately)
     setMoreSubView(undefined);
-    // Clear scene view when switching tabs or re-clicking current tab
+    // Clear scene view and look overview when switching tabs or re-clicking current tab
     if (currentSceneId) {
       setCurrentScene(null);
       setCurrentCharacter(null);
     }
+    setCurrentLook(null);
   };
 
   // Handle navigation to user profile from project header (goes back to project, not menu)
