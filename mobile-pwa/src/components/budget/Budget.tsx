@@ -236,7 +236,7 @@ export function Budget() {
     } else {
       // Generate printable HTML for PDF
       const content = generateReconciliationHTML();
-      const blob = new Blob([content], { type: 'text/html' });
+      const blob = new Blob([content], { type: 'text/html;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const newWindow = window.open(url, '_blank');
       if (newWindow) {
@@ -253,6 +253,7 @@ export function Budget() {
   const generateReconciliationHTML = (): string => {
     const projectName = currentProject?.name || 'Production';
     const currencyInfo = getCurrencyByCode(currency);
+    const sym = currencyInfo.symbol;
     const exportDate = new Date().toLocaleDateString('en-GB', {
       day: 'numeric',
       month: 'long',
@@ -263,108 +264,277 @@ export function Budget() {
       new Date(a.date).getTime() - new Date(b.date).getTime()
     );
 
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Spending Reconciliation - ${projectName}</title>
-        <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; color: #333; }
-          h1 { color: #C9A962; font-size: 24px; margin-bottom: 4px; }
-          .subtitle { color: #666; font-size: 14px; margin-bottom: 20px; }
-          .summary-box { background: linear-gradient(135deg, #C9A962, #B8985A); color: white; padding: 20px; border-radius: 12px; margin-bottom: 24px; }
-          .summary-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
-          .summary-item { text-align: center; }
-          .summary-item .label { font-size: 11px; opacity: 0.9; text-transform: uppercase; }
-          .summary-item .value { font-size: 24px; font-weight: bold; }
-          .summary-item.highlight { background: rgba(255,255,255,0.15); padding: 12px; border-radius: 8px; }
-          .section { margin-bottom: 24px; }
-          .section h2 { font-size: 14px; color: #666; text-transform: uppercase; margin-bottom: 12px; border-bottom: 2px solid #C9A962; padding-bottom: 4px; }
-          .category-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
-          .category-table td { padding: 8px 0; border-bottom: 1px solid #eee; }
-          .category-table .amount { text-align: right; font-weight: 500; }
-          .category-table .total { border-top: 2px solid #C9A962; font-weight: bold; }
-          table.receipts { width: 100%; border-collapse: collapse; font-size: 12px; }
-          table.receipts th { background: #f5f5f5; padding: 10px 8px; text-align: left; font-weight: 600; }
-          table.receipts td { padding: 10px 8px; border-bottom: 1px solid #eee; }
-          table.receipts .amount { text-align: right; font-weight: 500; }
-          .footer { margin-top: 24px; padding-top: 16px; border-top: 1px solid #eee; font-size: 11px; color: #999; }
-          @media print { body { padding: 0; } .summary-box { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
-        </style>
-      </head>
-      <body>
-        <h1>Spending Reconciliation</h1>
-        <p class="subtitle">${projectName} • Exported ${exportDate}</p>
+    const receiptsWithImages = sortedReceipts.filter(r => r.imageUri);
 
-        <div class="summary-box">
-          <div class="summary-grid">
-            <div class="summary-item">
-              <div class="label">Total Budget</div>
-              <div class="value">${currencyInfo.symbol}${budgetTotal.toFixed(2)}</div>
-            </div>
-            <div class="summary-item">
-              <div class="label">Total Spent</div>
-              <div class="value">${currencyInfo.symbol}${totalSpent.toFixed(2)}</div>
-            </div>
-            <div class="summary-item highlight">
-              <div class="label">${remainingBudget >= 0 ? 'Remaining' : 'Over Budget'}</div>
-              <div class="value">${currencyInfo.symbol}${Math.abs(remainingBudget).toFixed(2)}</div>
-            </div>
-            <div class="summary-item highlight">
-              <div class="label">Budget Used</div>
-              <div class="value">${percentUsed.toFixed(1)}%</div>
-            </div>
-          </div>
-        </div>
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Spending Reconciliation - ${projectName}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      padding: 32px;
+      max-width: 800px;
+      margin: 0 auto;
+      color: #1a1a1a;
+      font-size: 13px;
+      line-height: 1.5;
+    }
 
-        <div class="section">
-          <h2>Spending by Category</h2>
-          <table class="category-table">
-            ${CATEGORIES.filter(cat => byCategory[cat] > 0).map(cat => `
-              <tr>
-                <td>${cat}</td>
-                <td class="amount">${currencyInfo.symbol}${byCategory[cat].toFixed(2)}</td>
-              </tr>
-            `).join('')}
-            <tr class="total">
-              <td>Total</td>
-              <td class="amount">${currencyInfo.symbol}${totalSpent.toFixed(2)}</td>
-            </tr>
-          </table>
-        </div>
+    /* Header */
+    .header { margin-bottom: 28px; }
+    .header h1 { font-size: 22px; font-weight: 700; color: #1a1a1a; margin-bottom: 2px; }
+    .header .project { font-size: 15px; color: #C9A962; font-weight: 600; margin-bottom: 4px; }
+    .header .date { font-size: 12px; color: #888; }
 
-        <div class="section">
-          <h2>Receipt Details (${receipts.length} receipts)</h2>
-          <table class="receipts">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Vendor</th>
-                <th>Category</th>
-                <th>Description</th>
-                <th class="amount">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${sortedReceipts.map(r => `
-                <tr>
-                  <td>${new Date(r.date).toLocaleDateString('en-GB')}</td>
-                  <td>${r.vendor}</td>
-                  <td>${r.category}</td>
-                  <td>${r.description || '-'}</td>
-                  <td class="amount">${currencyInfo.symbol}${r.amount.toFixed(2)}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
+    /* Summary Cards */
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+    .summary-card {
+      border: 1px solid #e5e5e5;
+      border-radius: 8px;
+      padding: 14px 12px;
+      text-align: center;
+    }
+    .summary-card .label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #888; margin-bottom: 4px; }
+    .summary-card .value { font-size: 20px; font-weight: 700; color: #1a1a1a; }
+    .summary-card.gold { border-color: #C9A962; background: #faf6ed; }
+    .summary-card.gold .value { color: #C9A962; }
+    .summary-card.over .value { color: #dc3545; }
 
-        <div class="footer">
-          <p>Generated by Hair & Makeup Pro • ${exportDate}</p>
-        </div>
-      </body>
-      </html>
-    `;
+    /* Progress Bar */
+    .progress-wrap { margin-bottom: 28px; }
+    .progress-bar { height: 8px; background: #f0f0f0; border-radius: 4px; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 4px; background: #C9A962; }
+    .progress-fill.over { background: #dc3545; }
+    .progress-label { display: flex; justify-content: space-between; margin-top: 4px; font-size: 11px; color: #888; }
+
+    /* Sections */
+    .section { margin-bottom: 28px; }
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #888;
+      padding-bottom: 6px;
+      border-bottom: 2px solid #C9A962;
+      margin-bottom: 12px;
+    }
+
+    /* Category Breakdown */
+    .cat-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+    .cat-row .name { color: #333; }
+    .cat-row .bar-wrap { flex: 1; margin: 0 16px; display: flex; align-items: center; }
+    .cat-bar { height: 6px; background: #C9A962; border-radius: 3px; opacity: 0.6; }
+    .cat-row .amt { font-weight: 600; color: #1a1a1a; min-width: 80px; text-align: right; }
+    .cat-total { display: flex; justify-content: space-between; padding: 10px 0; border-top: 2px solid #C9A962; font-weight: 700; margin-top: 4px; }
+
+    /* Receipts Table */
+    table.receipts { width: 100%; border-collapse: collapse; }
+    table.receipts th {
+      background: #f8f8f8;
+      padding: 10px 8px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      color: #666;
+      border-bottom: 2px solid #e5e5e5;
+    }
+    table.receipts td {
+      padding: 10px 8px;
+      border-bottom: 1px solid #f0f0f0;
+      vertical-align: top;
+    }
+    table.receipts tr:last-child td { border-bottom: none; }
+    table.receipts .num { text-align: center; color: #aaa; font-size: 11px; }
+    table.receipts .amt { text-align: right; font-weight: 600; white-space: nowrap; }
+    table.receipts .cat { font-size: 11px; color: #666; }
+    table.receipts .desc { font-size: 11px; color: #999; }
+    table.receipts tfoot td { border-top: 2px solid #C9A962; font-weight: 700; padding-top: 12px; }
+
+    /* Receipt Filing */
+    .filing-entry {
+      page-break-inside: avoid;
+      border: 1px solid #e5e5e5;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+    .filing-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      background: #f8f8f8;
+      border-bottom: 1px solid #e5e5e5;
+    }
+    .filing-header .vendor { font-weight: 600; font-size: 14px; }
+    .filing-header .amount { font-weight: 700; font-size: 14px; }
+    .filing-meta {
+      display: flex;
+      gap: 16px;
+      padding: 8px 14px;
+      font-size: 11px;
+      color: #666;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .filing-meta span { display: flex; align-items: center; gap: 4px; }
+    .filing-image {
+      padding: 12px;
+      text-align: center;
+      background: #fafafa;
+    }
+    .filing-image img {
+      max-width: 100%;
+      max-height: 500px;
+      object-fit: contain;
+      border-radius: 4px;
+    }
+
+    /* Footer */
+    .footer {
+      margin-top: 32px;
+      padding-top: 12px;
+      border-top: 1px solid #e5e5e5;
+      font-size: 11px;
+      color: #aaa;
+      text-align: center;
+    }
+
+    @media print {
+      body { padding: 16px; }
+      .summary-card.gold, table.receipts th, .filing-header {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .filing-entry { page-break-inside: avoid; }
+      .receipt-filing { page-break-before: always; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>Spending Reconciliation</h1>
+    <div class="project">${projectName}</div>
+    <div class="date">Exported ${exportDate}</div>
+  </div>
+
+  <div class="summary">
+    <div class="summary-card">
+      <div class="label">Budget</div>
+      <div class="value">${sym}${budgetTotal.toFixed(2)}</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">Spent</div>
+      <div class="value">${sym}${totalSpent.toFixed(2)}</div>
+    </div>
+    <div class="summary-card ${remainingBudget >= 0 ? 'gold' : 'over'}">
+      <div class="label">${remainingBudget >= 0 ? 'Remaining' : 'Over Budget'}</div>
+      <div class="value">${sym}${Math.abs(remainingBudget).toFixed(2)}</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">Used</div>
+      <div class="value">${percentUsed.toFixed(1)}%</div>
+    </div>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-bar">
+      <div class="progress-fill ${percentUsed > 100 ? 'over' : ''}" style="width: ${Math.min(percentUsed, 100)}%"></div>
+    </div>
+    <div class="progress-label">
+      <span>0%</span>
+      <span>Budget utilisation</span>
+      <span>100%</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Spending by Category</div>
+    ${CATEGORIES.filter(cat => byCategory[cat] > 0).map(cat => {
+      const catPct = totalSpent > 0 ? (byCategory[cat] / totalSpent) * 100 : 0;
+      return `
+      <div class="cat-row">
+        <span class="name">${cat}</span>
+        <span class="bar-wrap"><span class="cat-bar" style="width: ${catPct}%"></span></span>
+        <span class="amt">${sym}${byCategory[cat].toFixed(2)}</span>
+      </div>`;
+    }).join('')}
+    <div class="cat-total">
+      <span>Total</span>
+      <span>${sym}${totalSpent.toFixed(2)}</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Receipt Log (${receipts.length} receipts)</div>
+    <table class="receipts">
+      <thead>
+        <tr>
+          <th style="width:30px">#</th>
+          <th>Date</th>
+          <th>Vendor</th>
+          <th>Category</th>
+          <th>Description</th>
+          <th class="amt">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${sortedReceipts.map((r, i) => `
+        <tr>
+          <td class="num">${i + 1}</td>
+          <td>${new Date(r.date).toLocaleDateString('en-GB')}</td>
+          <td>${r.vendor}</td>
+          <td class="cat">${r.category}</td>
+          <td class="desc">${r.description || '&mdash;'}</td>
+          <td class="amt">${sym}${r.amount.toFixed(2)}</td>
+        </tr>`).join('')}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="5">Total (${receipts.length} receipts)</td>
+          <td class="amt">${sym}${totalSpent.toFixed(2)}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  ${receiptsWithImages.length > 0 ? `
+  <div class="section receipt-filing">
+    <div class="section-title">Receipt Filing (${receiptsWithImages.length} images)</div>
+    ${receiptsWithImages.map((r, i) => `
+    <div class="filing-entry">
+      <div class="filing-header">
+        <span class="vendor">${i + 1}. ${r.vendor}</span>
+        <span class="amount">${sym}${r.amount.toFixed(2)}</span>
+      </div>
+      <div class="filing-meta">
+        <span>${new Date(r.date).toLocaleDateString('en-GB')}</span>
+        <span>${r.category}</span>
+        ${r.description ? `<span>${r.description}</span>` : ''}
+      </div>
+      <div class="filing-image">
+        <img src="${r.imageUri}" alt="Receipt from ${r.vendor}">
+      </div>
+    </div>`).join('')}
+  </div>` : ''}
+
+  <div class="footer">
+    Generated by Hair &amp; Makeup Pro &middot; ${exportDate}
+  </div>
+
+</body>
+</html>`;
   };
 
   return (
