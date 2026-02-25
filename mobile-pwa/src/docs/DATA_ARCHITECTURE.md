@@ -154,6 +154,16 @@ Receipt scanned/entered
   -> NOT sent to Supabase
 ```
 
+### Invoice Generation (Mobile)
+```
+Timesheet ExportModal (weekly invoice) or ProjectExportScreen (invoice_summary):
+  -> billingStore: user name, address, email, bank details, VAT settings, payment terms
+  -> productionDetailsStore: production company, bill-to address, PO/cost code/job ref, invoice notes
+  -> timesheetStore: entries, calculations, rate card
+  -> calculateInvoiceWithVAT(): subtotal + VAT breakdown
+  -> Output: HTML invoice with all real data populated
+```
+
 ---
 
 ## AI Chat Data Access Summary

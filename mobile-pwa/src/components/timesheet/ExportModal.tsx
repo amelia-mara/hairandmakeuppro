@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { useTimesheetStore, addDays } from '@/stores/timesheetStore';
-import type { WeekSummary } from '@/types';
+import { useBillingStore } from '@/stores/billingStore';
+import { useProductionDetailsStore } from '@/stores/productionDetailsStore';
+import { useProjectStore } from '@/stores/projectStore';
+import { calculateInvoiceWithVAT, type WeekSummary } from '@/types';
 
 interface ExportModalProps {
   isOpen: boolean;
@@ -13,6 +16,9 @@ type ExportFormat = 'pdf' | 'csv' | 'invoice';
 
 export function ExportModal({ isOpen, onClose, weekSummary, weekStartDate }: ExportModalProps) {
   const { entries, calculateEntry, rateCard } = useTimesheetStore();
+  const { billingDetails } = useBillingStore();
+  const projectId = useProjectStore((s) => s.currentProject?.id ?? '');
+  const productionDetails = useProductionDetailsStore((s) => s.getDetails(projectId));
   const [exportFormat, setExportFormat] = useState<ExportFormat>('pdf');
   const [isExporting, setIsExporting] = useState(false);
   const [exportSuccess, setExportSuccess] = useState(false);
@@ -311,12 +317,32 @@ export function ExportModal({ isOpen, onClose, weekSummary, weekStartDate }: Exp
 </html>`;
   };
 
-  // Generate invoice HTML
+  // Generate invoice HTML using billing details + production invoicing details
   const generateInvoice = (): string => {
     const hourlyRate = rateCard.dailyRate / rateCard.baseDayHours;
     const invoiceNumber = `INV-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
     const invoiceDate = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
     const sym = '&pound;';
+
+    // Pull real data from stores
+    const bd = billingDetails;
+    const pd = productionDetails;
+    const vat = calculateInvoiceWithVAT(weekSummary.totalEarnings, bd.vatSettings);
+
+    // Format multi-line address with <br> tags
+    const fmtAddr = (addr: string) =>
+      addr ? addr.split('\n').map((l) => l.trim()).filter(Boolean).join('<br>') : '';
+
+    // Determine the "Bill To" address — use invoice address if flagged different
+    const billToAddress = pd.invoiceAddressDifferent && pd.invoiceAddress
+      ? fmtAddr(pd.invoiceAddress)
+      : fmtAddr(pd.productionAddress);
+
+    // Build reference lines (PO number, cost code, job ref) if provided
+    const refLines: string[] = [];
+    if (pd.poNumber) refLines.push(`<strong>PO:</strong> ${pd.poNumber}`);
+    if (pd.costCode) refLines.push(`<strong>Cost Code:</strong> ${pd.costCode}`);
+    if (pd.jobReference) refLines.push(`<strong>Job Ref:</strong> ${pd.jobReference}`);
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -355,8 +381,13 @@ export function ExportModal({ isOpen, onClose, weekSummary, weekStartDate }: Exp
     .inv-totals .total-row .lbl { font-weight: 700; font-size: 14px; color: #1a1a1a; }
     .inv-totals .total-row .val { font-weight: 800; font-size: 18px; color: #C9A962; }
 
+    .inv-bank { background: #f8f8f8; border-radius: 8px; padding: 16px 20px; margin-bottom: 16px; font-size: 12px; color: #666; }
+    .inv-bank strong { color: #333; }
     .inv-terms { background: #f8f8f8; border-radius: 8px; padding: 16px 20px; margin-bottom: 32px; font-size: 12px; color: #666; }
     .inv-terms strong { color: #333; }
+    .inv-refs { font-size: 12px; color: #666; margin-bottom: 16px; }
+    .inv-refs strong { color: #333; }
+    .inv-notes { font-size: 12px; color: #666; font-style: italic; margin-bottom: 16px; }
 
     .inv-footer { padding-top: 16px; border-top: 1px solid #e5e5e5; font-size: 11px; color: #aaa; text-align: center; }
 
@@ -370,8 +401,8 @@ export function ExportModal({ isOpen, onClose, weekSummary, weekStartDate }: Exp
 
   <div class="inv-header">
     <div>
-      <div class="inv-brand">Hair &amp; Makeup Pro</div>
-      <div class="inv-brand-sub">Freelance Services</div>
+      <div class="inv-brand">${bd.businessName || bd.fullName || '<span class="inv-placeholder">[Your Name]</span>'}</div>
+      <div class="inv-brand-sub">${bd.businessName && bd.fullName ? bd.fullName : 'Freelance Services'}</div>
     </div>
     <div class="inv-title-block">
       <div class="inv-title">INVOICE</div>
@@ -383,24 +414,27 @@ export function ExportModal({ isOpen, onClose, weekSummary, weekStartDate }: Exp
     <div class="inv-col">
       <h3>From</h3>
       <p>
-        <span class="inv-placeholder">[Your Name]</span><br>
-        <span class="inv-placeholder">[Your Address]</span><br>
-        <span class="inv-placeholder">[City, Postcode]</span>
+        ${bd.fullName ? `<strong>${bd.fullName}</strong><br>` : '<span class="inv-placeholder">[Your Name]</span><br>'}
+        ${bd.address ? fmtAddr(bd.address) : '<span class="inv-placeholder">[Your Address]</span>'}
+        ${bd.phone ? `<br>${bd.phone}` : ''}
+        ${bd.email ? `<br>${bd.email}` : ''}
+        ${vat.isVATApplicable && bd.vatSettings.vatNumber ? `<br>VAT No: ${bd.vatSettings.vatNumber}` : ''}
       </p>
     </div>
     <div class="inv-col">
       <h3>Bill To</h3>
       <p>
-        <span class="inv-placeholder">[Production Company]</span><br>
-        <span class="inv-placeholder">[Address]</span><br>
-        <span class="inv-placeholder">[City, Postcode]</span>
+        ${pd.productionCompany ? `<strong>${pd.productionCompany}</strong><br>` : '<span class="inv-placeholder">[Production Company]</span><br>'}
+        ${billToAddress || '<span class="inv-placeholder">[Address]</span>'}
+        ${pd.accountsPayableContact ? `<br>Attn: ${pd.accountsPayableContact}` : ''}
+        ${pd.accountsPayableEmail ? `<br>${pd.accountsPayableEmail}` : ''}
       </p>
     </div>
     <div class="inv-col" style="text-align: right;">
       <h3>Invoice Details</h3>
       <p>
         <strong>Date:</strong> ${invoiceDate}<br>
-        <strong>Due:</strong> 30 days from receipt<br>
+        <strong>Due:</strong> ${bd.paymentTerms || '30 days from receipt'}<br>
         <strong>Period:</strong> ${formatDateRange()}
       </p>
     </div>
@@ -462,26 +496,44 @@ export function ExportModal({ isOpen, onClose, weekSummary, weekStartDate }: Exp
 
   <div class="inv-totals">
     <div class="row">
-      <span class="lbl">Base Pay</span>
-      <span class="val">${sym}${totals.basePay.toFixed(2)}</span>
+      <span class="lbl">Subtotal</span>
+      <span class="val">${sym}${vat.subtotal.toFixed(2)}</span>
     </div>
-    ${totals.preCallPay > 0 ? `<div class="row"><span class="lbl">Pre-Call</span><span class="val">${sym}${totals.preCallPay.toFixed(2)}</span></div>` : ''}
-    ${totals.otPay > 0 ? `<div class="row"><span class="lbl">Overtime</span><span class="val">${sym}${totals.otPay.toFixed(2)}</span></div>` : ''}
-    ${totals.lateNightPay > 0 ? `<div class="row"><span class="lbl">Late Night</span><span class="val">${sym}${totals.lateNightPay.toFixed(2)}</span></div>` : ''}
-    ${totals.sixthDayBonus > 0 ? `<div class="row"><span class="lbl">6th Day Premium</span><span class="val">${sym}${totals.sixthDayBonus.toFixed(2)}</span></div>` : ''}
-    ${weekSummary.kitRentalTotal > 0 ? `<div class="row"><span class="lbl">Kit Rental</span><span class="val">${sym}${weekSummary.kitRentalTotal.toFixed(2)}</span></div>` : ''}
+    ${vat.isVATApplicable ? `
+    <div class="row">
+      <span class="lbl">VAT (${vat.vatRate}%)</span>
+      <span class="val">${sym}${vat.vatAmount.toFixed(2)}</span>
+    </div>` : ''}
     <div class="row total-row">
       <span class="lbl">Total Due</span>
-      <span class="val">${sym}${weekSummary.totalEarnings.toFixed(2)}</span>
+      <span class="val">${sym}${vat.total.toFixed(2)}</span>
     </div>
   </div>
 
+  ${bd.bankDetails.accountName || bd.bankDetails.sortCode || bd.bankDetails.accountNumber ? `
+  <div class="inv-bank">
+    <strong>Bank Details:</strong><br>
+    ${bd.bankDetails.accountName ? `Account Name: ${bd.bankDetails.accountName}<br>` : ''}
+    ${bd.bankDetails.sortCode ? `Sort Code: ${bd.bankDetails.sortCode}<br>` : ''}
+    ${bd.bankDetails.accountNumber ? `Account Number: ${bd.bankDetails.accountNumber}` : ''}
+  </div>` : ''}
+
+  ${refLines.length > 0 ? `
+  <div class="inv-refs">
+    ${refLines.join(' &nbsp;|&nbsp; ')}
+  </div>` : ''}
+
+  ${pd.invoiceNotes ? `
+  <div class="inv-notes">
+    ${pd.invoiceNotes}
+  </div>` : ''}
+
   <div class="inv-terms">
-    <strong>Payment Terms:</strong> 30 days from invoice date. Please reference invoice number <strong>${invoiceNumber}</strong> with payment.
+    <strong>Payment Terms:</strong> ${bd.paymentTerms || 'Payment within 30 days'}. Please reference invoice number <strong>${invoiceNumber}</strong> with payment.
   </div>
 
   <div class="inv-footer">
-    Generated by Hair &amp; Makeup Pro
+    Generated by Checks Happy
   </div>
 
 </body>
