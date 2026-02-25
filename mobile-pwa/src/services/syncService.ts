@@ -242,6 +242,7 @@ function dbToSceneCapture(
 
 export async function pullProjectData(projectId: string): Promise<boolean> {
   if (!isSupabaseConfigured) return false;
+  console.log('[PULL] pullProjectData called for project:', projectId);
 
   const syncStore = useSyncStore.getState();
   syncStore.setSyncing();
@@ -291,8 +292,18 @@ export async function pullProjectData(projectId: string): Promise<boolean> {
       : { data: [], error: null };
     const dbPhotos: DbPhoto[] = photosRes.data || [];
 
+    console.log('[PULL] Server data:', {
+      scenes: dbScenes.length,
+      characters: dbChars.length,
+      looks: dbLooks.length,
+      captures: dbCaptures.length,
+      photos: dbPhotos.length,
+      schedule: dbSchedule.length,
+    });
+
     // Skip merge if server has no data (fresh project)
     if (dbScenes.length === 0 && dbChars.length === 0 && dbLooks.length === 0) {
+      console.log('[PULL] Server has no data for this project, skipping merge');
       syncStore.setSynced();
       return true;
     }
@@ -375,6 +386,13 @@ export async function pullProjectData(projectId: string): Promise<boolean> {
       looks: mergedLooks,
     };
 
+    console.log('[PULL] Merging server data into store:', {
+      scenes: mergedScenes.length,
+      characters: mergedChars.length,
+      looks: mergedLooks.length,
+      captures: Object.keys(mergedCaptures).length,
+    });
+
     projectStore.setProject(updatedProject);
 
     // Merge scene captures
@@ -390,6 +408,7 @@ export async function pullProjectData(projectId: string): Promise<boolean> {
       mergeScheduleData(schedule, projectId);
     }
 
+    console.log('[PULL] Pull complete, data merged successfully');
     syncStore.setSynced();
     return true;
   } catch (error) {
@@ -492,32 +511,39 @@ function mergeScheduleData(dbSchedule: DbScheduleData, _projectId: string): void
 // ============================================================================
 
 function debouncedPush(table: string, pushFn: () => Promise<void>): void {
+  // Only increment pendingChanges on the first call for a table;
+  // subsequent debounced calls for the same table reuse the existing count.
   if (pushTimers[table]) {
     clearTimeout(pushTimers[table]);
+  } else {
+    useSyncStore.getState().incrementPending();
   }
 
-  useSyncStore.getState().incrementPending();
-
   pushTimers[table] = setTimeout(async () => {
+    // Delete timer reference immediately so new calls during async
+    // pushFn get their own fresh increment/decrement cycle.
+    delete pushTimers[table];
     pushingTables.add(table);
     try {
       useSyncStore.getState().setSyncing();
       await pushFn();
+      console.log(`[PUSH] ${table} pushed successfully`);
+    } catch (error) {
+      console.error(`[PUSH] ${table} FAILED:`, error);
+      useSyncStore.getState().setError(`Failed to sync ${table}`);
+    } finally {
+      pushingTables.delete(table);
       useSyncStore.getState().decrementPending();
       if (useSyncStore.getState().pendingChanges === 0) {
         useSyncStore.getState().setSynced();
       }
-    } catch (error) {
-      console.error(`[SyncService] Push ${table} failed:`, error);
-      useSyncStore.getState().setError(`Failed to sync ${table}`);
-    } finally {
-      pushingTables.delete(table);
     }
   }, PUSH_DEBOUNCE_MS);
 }
 
 export async function pushScenes(projectId: string, scenes: Scene[]): Promise<void> {
   if (!isSupabaseConfigured) return;
+  console.log(`[PUSH] pushScenes called: projectId=${projectId}, count=${scenes.length}`);
 
   debouncedPush('scenes', async () => {
     // Upsert scenes
@@ -558,6 +584,7 @@ export async function pushScenes(projectId: string, scenes: Scene[]): Promise<vo
 
 export async function pushCharacters(projectId: string, characters: Character[]): Promise<void> {
   if (!isSupabaseConfigured) return;
+  console.log(`[PUSH] pushCharacters called: projectId=${projectId}, count=${characters.length}`);
 
   debouncedPush('characters', async () => {
     const dbChars = characters.map(c => characterToDb(c, projectId));
@@ -570,6 +597,7 @@ export async function pushCharacters(projectId: string, characters: Character[])
 
 export async function pushLooks(projectId: string, looks: Look[]): Promise<void> {
   if (!isSupabaseConfigured) return;
+  console.log(`[PUSH] pushLooks called: projectId=${projectId}, count=${looks.length}`);
 
   debouncedPush('looks', async () => {
     const dbLooks = looks.map(l => lookToDb(l, projectId));
@@ -609,6 +637,7 @@ export async function pushSceneCapture(
   userId: string | null
 ): Promise<void> {
   if (!isSupabaseConfigured) return;
+  console.log(`[PUSH] pushSceneCapture called: captureId=${capture.id}, sceneId=${capture.sceneId}`);
 
   debouncedPush(`capture_${capture.id}`, async () => {
     const dbCapture = sceneCaptureToDb(capture, projectId, userId);
@@ -689,6 +718,7 @@ async function syncCapturePhotos(projectId: string, capture: SceneCapture): Prom
 
 export async function pushScheduleData(projectId: string, schedule: ProductionSchedule): Promise<void> {
   if (!isSupabaseConfigured) return;
+  console.log(`[PUSH] pushScheduleData called: projectId=${projectId}, status=${schedule.status}, days=${schedule.days?.length}`);
 
   debouncedPush('schedule', async () => {
     const { error } = await supabase
@@ -1063,7 +1093,10 @@ async function fetchCapturePhotos(captureId: string): Promise<DbPhoto[]> {
 // ============================================================================
 
 export async function startSync(projectId: string, userId?: string): Promise<void> {
+  console.log('[SYNC] startSync called:', { projectId, userId });
+
   if (!isSupabaseConfigured) {
+    console.warn('[SYNC] Supabase not configured, going offline');
     useSyncStore.getState().setOffline();
     return;
   }
@@ -1079,10 +1112,19 @@ export async function startSync(projectId: string, userId?: string): Promise<voi
   }
 
   // Pull latest data from server
-  await pullProjectData(projectId);
+  const pullSuccess = await pullProjectData(projectId);
+  console.log('[SYNC] Pull complete, success:', pullSuccess);
 
-  // Set up real-time subscriptions
+  // Set up real-time subscriptions (this sets activeProjectId)
   subscribeToProject(projectId, userId);
+  console.log('[SYNC] Realtime subscriptions active, activeProjectId:', activeProjectId);
+
+  // Push any local data that was set before sync started.
+  // This fixes the race condition where Zustand store updates happen
+  // synchronously (e.g., script upload sets scenes/characters) but
+  // startSync runs asynchronously via useEffect — so the sync
+  // subscriptions fire before activeProjectId is set, missing the push.
+  await pushInitialData(projectId, userId);
 
   // Listen for online/offline events
   window.addEventListener('offline', () => {
@@ -1092,8 +1134,65 @@ export async function startSync(projectId: string, userId?: string): Promise<voi
     useSyncStore.getState().setStatus('syncing');
     pullProjectData(projectId).then(() => {
       subscribeToProject(projectId, userId);
+      pushInitialData(projectId, userId);
     });
   });
+}
+
+/**
+ * Push all current local data to Supabase.
+ *
+ * Called after startSync establishes activeProjectId to ensure data that
+ * was set before sync started (and missed by the Zustand subscriptions
+ * due to the race condition) gets pushed to the server.
+ *
+ * Uses upsert, so pushing data that already exists on the server is
+ * idempotent — it won't create duplicates or corrupt existing data.
+ */
+async function pushInitialData(projectId: string, userId?: string): Promise<void> {
+  const project = useProjectStore.getState().currentProject;
+  if (!project) {
+    console.log('[SYNC] pushInitialData: no current project, skipping');
+    return;
+  }
+
+  console.log('[SYNC] pushInitialData: pushing local data for project', projectId, {
+    scenes: project.scenes.length,
+    characters: project.characters.length,
+    looks: project.looks.length,
+  });
+
+  // Push scenes
+  if (project.scenes.length > 0) {
+    pushScenes(projectId, project.scenes);
+  }
+
+  // Push characters
+  if (project.characters.length > 0) {
+    pushCharacters(projectId, project.characters);
+  }
+
+  // Push looks
+  if (project.looks.length > 0) {
+    pushLooks(projectId, project.looks);
+  }
+
+  // Push scene captures (continuity events + photos)
+  const captures = useProjectStore.getState().sceneCaptures;
+  const captureCount = Object.keys(captures).length;
+  if (captureCount > 0) {
+    console.log('[SYNC] pushInitialData: pushing', captureCount, 'scene captures');
+    for (const capture of Object.values(captures)) {
+      pushSceneCapture(projectId, capture as SceneCapture, userId || null);
+    }
+  }
+
+  // Push schedule if complete
+  const schedule = useScheduleStore.getState().schedule;
+  if (schedule && schedule.status === 'complete') {
+    console.log('[SYNC] pushInitialData: pushing schedule');
+    pushScheduleData(projectId, schedule);
+  }
 }
 
 export function stopSync(): void {

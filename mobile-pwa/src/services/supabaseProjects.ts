@@ -217,23 +217,37 @@ export async function getProjectData(projectId: string): Promise<{
   error: Error | null;
 }> {
   try {
-    // Fetch all data in parallel
-    const [scenesRes, charactersRes, looksRes, sceneCharsRes, lookScenesRes] = await Promise.all([
+    // Phase 1: Fetch project-level tables in parallel
+    const [scenesRes, charactersRes, looksRes] = await Promise.all([
       supabase.from('scenes').select('*').eq('project_id', projectId).order('scene_number'),
       supabase.from('characters').select('*').eq('project_id', projectId).order('name'),
       supabase.from('looks').select('*').eq('project_id', projectId),
-      supabase.from('scene_characters').select('scene_id, character_id'),
-      supabase.from('look_scenes').select('look_id, scene_number'),
     ]);
 
     if (scenesRes.error) throw scenesRes.error;
     if (charactersRes.error) throw charactersRes.error;
     if (looksRes.error) throw looksRes.error;
 
+    const scenes = scenesRes.data || [];
+    const looks = looksRes.data || [];
+
+    // Phase 2: Fetch junction tables filtered by the scene/look IDs we found
+    const sceneIds = scenes.map(s => s.id);
+    const lookIds = looks.map(l => l.id);
+
+    const [sceneCharsRes, lookScenesRes] = await Promise.all([
+      sceneIds.length > 0
+        ? supabase.from('scene_characters').select('scene_id, character_id').in('scene_id', sceneIds)
+        : Promise.resolve({ data: [], error: null }),
+      lookIds.length > 0
+        ? supabase.from('look_scenes').select('look_id, scene_number').in('look_id', lookIds)
+        : Promise.resolve({ data: [], error: null }),
+    ]);
+
     return {
-      scenes: scenesRes.data || [],
+      scenes,
       characters: charactersRes.data || [],
-      looks: looksRes.data || [],
+      looks,
       sceneCharacters: sceneCharsRes.data || [],
       lookScenes: lookScenesRes.data || [],
       error: null,
