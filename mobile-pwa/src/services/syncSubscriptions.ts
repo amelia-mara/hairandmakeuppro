@@ -24,29 +24,41 @@ let initialized = false;
 export function initSyncSubscriptions(): void {
   if (initialized) return;
   initialized = true;
+  console.log('[SYNC-SUB] Initializing sync subscriptions');
 
   // Watch projectStore for changes → push to Supabase
   useProjectStore.subscribe((state, prevState) => {
     const projectId = getActiveProjectId();
-    if (!projectId) return;
+    if (!projectId) {
+      // activeProjectId not set yet — startSync hasn't completed.
+      // pushInitialData() in startSync will catch this data.
+      return;
+    }
     if (!state.currentProject) return;
 
     const prev = prevState.currentProject;
     const curr = state.currentProject;
-    if (!prev || !curr) return;
+    if (!prev || !curr) {
+      // First setProject() call (null → project). pushInitialData()
+      // in startSync will handle pushing this initial data.
+      return;
+    }
 
     // Push scenes if changed
     if (prev.scenes !== curr.scenes) {
+      console.log('[SYNC-SUB] Scenes changed:', prev.scenes.length, '→', curr.scenes.length);
       pushScenes(projectId, curr.scenes);
     }
 
     // Push characters if changed
     if (prev.characters !== curr.characters) {
+      console.log('[SYNC-SUB] Characters changed:', prev.characters.length, '→', curr.characters.length);
       pushCharacters(projectId, curr.characters);
     }
 
     // Push looks if changed
     if (prev.looks !== curr.looks) {
+      console.log('[SYNC-SUB] Looks changed:', prev.looks.length, '→', curr.looks.length);
       pushLooks(projectId, curr.looks);
     }
 
@@ -55,6 +67,7 @@ export function initSyncSubscriptions(): void {
       const userId = useAuthStore.getState().user?.id || null;
       for (const [captureId, capture] of Object.entries(state.sceneCaptures)) {
         if (prevState.sceneCaptures[captureId] !== capture) {
+          console.log('[SYNC-SUB] Scene capture changed:', captureId);
           pushSceneCapture(projectId, capture as any, userId);
         }
       }
@@ -71,6 +84,7 @@ export function initSyncSubscriptions(): void {
       state.schedule &&
       state.schedule.status === 'complete'
     ) {
+      console.log('[SYNC-SUB] Schedule changed, pushing to Supabase');
       pushScheduleData(projectId, state.schedule);
     }
   });
