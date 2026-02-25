@@ -50,6 +50,7 @@ export function More({ onNavigateToTab, onStartNewProject, initialView, resetKey
   };
 
   const [currentView, setCurrentView] = useState<MoreView>(getInitialView);
+  const [billingReturnView, setBillingReturnView] = useState<MoreView>('menu');
   const { isEditMenuOpen, closeEditMenu, openEditMenu } = useNavigationStore();
   const { projectMemberships, user } = useAuthStore();
   const { projectSettings, clearState: clearProjectSettingsState } = useProjectSettingsStore();
@@ -115,7 +116,7 @@ export function More({ onNavigateToTab, onStartNewProject, initialView, resetKey
           <ProjectExportScreen
             onBack={() => setCurrentView('projectSettings')}
             onExportComplete={() => setCurrentView('projectSettings')}
-            onNavigateToBilling={() => setCurrentView('billing')}
+            onNavigateToBilling={() => { setBillingReturnView('export'); setCurrentView('billing'); }}
           />
         );
       case 'archivedProjects':
@@ -181,7 +182,7 @@ export function More({ onNavigateToTab, onStartNewProject, initialView, resetKey
       case 'billing':
         return (
           <BillingDetailsScreen
-            onBack={() => setCurrentView('menu')}
+            onBack={() => setCurrentView(billingReturnView)}
             onUpgrade={() => {
               useAuthStore.getState().setScreen('select-plan');
             }}
@@ -191,7 +192,7 @@ export function More({ onNavigateToTab, onStartNewProject, initialView, resetKey
         return (
           <UserProfileScreen
             onBack={() => setCurrentView('menu')}
-            onNavigateToBilling={() => setCurrentView('billing')}
+            onNavigateToBilling={() => { setBillingReturnView('userProfile'); setCurrentView('billing'); }}
           />
         );
       default:
