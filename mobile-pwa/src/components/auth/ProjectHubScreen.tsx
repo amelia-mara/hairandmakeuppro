@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useProjectStore } from '@/stores/projectStore';
+import { useCallSheetStore } from '@/stores/callSheetStore';
 import { UpgradeModal } from '@/components/dashboard';
 import * as supabaseProjects from '@/services/supabaseProjects';
 import type { ProjectMembership, Project, ProjectRole, ProductionType } from '@/types';
@@ -193,6 +194,9 @@ export function ProjectHubScreen() {
     // 3. Save current project if it has data, before switching
     if (store.currentProject && store.currentProject.scenes.length > 0) {
       store.saveAndClearProject();
+    } else if (store.currentProject) {
+      // Project exists but has no scenes - still clear call sheets to prevent data leaking
+      useCallSheetStore.getState().clearCallSheetsForProject();
     }
 
     // 4. Try to fetch project data from Supabase
@@ -294,8 +298,10 @@ export function ProjectHubScreen() {
 
     if (result.success) {
       const store = useProjectStore.getState();
+      const callSheetStore = useCallSheetStore.getState();
       if (store.currentProject?.id === deleteModalProject.projectId) {
         store.clearProject();
+        callSheetStore.clearCallSheetsForProject();
       }
       if (store.hasSavedProject(deleteModalProject.projectId)) {
         store.removeSavedProject(deleteModalProject.projectId);

@@ -333,6 +333,7 @@ export const SCENE_FILMING_STATUS_CONFIG: Record<SceneFilmingStatus, {
 // Call Sheet Types - Comprehensive model for PDF call sheets
 export interface CallSheet {
   id: string;
+  projectId?: string; // Associated project ID for multi-project isolation
   date: string; // ISO date YYYY-MM-DD
   productionDay: number;
   totalProductionDays?: number;
