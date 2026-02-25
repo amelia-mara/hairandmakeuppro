@@ -108,19 +108,21 @@ function ProjectMenu({
   onSettings,
   onDelete,
   isOwner,
+  openUpward,
 }: {
   isOpen: boolean;
   onClose: () => void;
   onSettings?: () => void;
   onDelete: () => void;
   isOwner: boolean;
+  openUpward?: boolean;
 }) {
   if (!isOpen) return null;
 
   return (
     <>
       <div className="fixed inset-0 z-40" onClick={onClose} />
-      <div className="absolute right-0 top-full mt-1 z-50 bg-card rounded-xl shadow-lg border border-border py-1 min-w-[160px]">
+      <div className={`absolute right-0 z-50 bg-card rounded-xl shadow-lg border border-border py-1 min-w-[160px] ${openUpward ? 'bottom-full mb-1' : 'top-full mt-1'}`}>
         {onSettings && (
           <button
             onClick={() => { onSettings(); onClose(); }}
@@ -357,7 +359,7 @@ export function ProjectHubScreen() {
             {otherProjects.length > 0 && (
               <section>
                 <div className="text-[11px] font-medium tracking-wider text-text-muted uppercase mb-2.5">Other Projects</div>
-                <div className="bg-card rounded-2xl border border-border overflow-hidden divide-y divide-border">
+                <div className="bg-card rounded-2xl border border-border divide-y divide-border">
                   {otherProjects.map((project) => (
                     <div key={project.projectId} className="relative">
                       <button
@@ -399,6 +401,7 @@ export function ProjectHubScreen() {
                               }
                               onDelete={() => setDeleteModalProject(project)}
                               isOwner={project.role === 'owner'}
+                              openUpward
                             />
                           </div>
                           <svg className="w-4 h-4 text-text-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
