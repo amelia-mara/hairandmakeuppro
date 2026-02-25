@@ -12,6 +12,7 @@ import {
   generateProjectCode,
   createDefaultProjectPermissions,
 } from '@/types';
+import { useAuthStore } from './authStore';
 
 interface ProjectSettingsState {
   // Project settings
@@ -49,30 +50,23 @@ interface ProjectSettingsState {
 // Mock delay for API simulation
 const mockDelay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Generate mock team members
-const generateMockTeamMembers = (projectId: string): TeamMember[] => {
-  const names = [
-    { name: 'Sarah Chen', role: 'designer' as TeamMemberRole, isOwner: true },
-    { name: 'Mike Torres', role: 'supervisor' as TeamMemberRole, isOwner: false },
-    { name: 'Emma Wright', role: 'key' as TeamMemberRole, isOwner: false },
-    { name: 'David Park', role: 'key' as TeamMemberRole, isOwner: false },
-    { name: 'Lucy Hammond', role: 'hair' as TeamMemberRole, isOwner: false },
-    { name: 'Alex Rivera', role: 'makeup' as TeamMemberRole, isOwner: false },
-    { name: 'Jordan Lee', role: 'sfx' as TeamMemberRole, isOwner: false },
-    { name: 'James Cole', role: 'daily' as TeamMemberRole, isOwner: false },
-  ];
+// Build team members from the current authenticated user
+const getTeamFromCurrentUser = (projectId: string): TeamMember[] => {
+  const { user } = useAuthStore.getState();
+  if (!user) return [];
 
-  return names.map((member, index) => ({
-    userId: `user-${index + 1}`,
+  return [{
+    userId: user.id,
     projectId,
-    name: member.name,
-    email: `${member.name.toLowerCase().replace(' ', '.')}@example.com`,
-    role: member.role,
-    isOwner: member.isOwner,
-    joinedAt: new Date(Date.now() - (30 - index) * 24 * 60 * 60 * 1000),
-    lastActiveAt: new Date(Date.now() - index * 60 * 60 * 1000),
-    editCount: Math.floor(Math.random() * 500) + 50,
-  }));
+    name: user.name,
+    email: user.email,
+    avatarUrl: user.avatarUrl,
+    role: 'designer' as TeamMemberRole,
+    isOwner: true,
+    joinedAt: user.createdAt,
+    lastActiveAt: new Date(),
+    editCount: 0,
+  }];
 };
 
 // Generate mock project stats
@@ -100,19 +94,24 @@ export const useProjectSettingsStore = create<ProjectSettingsState>((set, get) =
 
   // Load project settings
   loadProjectSettings: async (projectId) => {
+    // If settings already loaded for this project, skip reload
+    const existing = get().projectSettings;
+    if (existing && existing.id === projectId) {
+      return;
+    }
+
     set({ isLoading: true, error: null });
 
     try {
-      await mockDelay(400);
+      const { user } = useAuthStore.getState();
 
-      // Mock project settings
       const settings: ProjectSettings = {
         id: projectId,
-        name: 'The Punishing',
+        name: projectId, // Will be overridden by project store's name
         type: 'film',
         status: 'shooting',
-        inviteCode: 'TMK-4827',
-        ownerId: 'user-1',
+        inviteCode: generateProjectCode(),
+        ownerId: user?.id || '',
         permissions: createDefaultProjectPermissions(),
         createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
         archivedAt: null,
@@ -261,13 +260,12 @@ export const useProjectSettingsStore = create<ProjectSettingsState>((set, get) =
     }
   },
 
-  // Load team members
+  // Load team members from the current authenticated user
   loadTeamMembers: async (projectId) => {
     set({ isLoading: true, error: null });
 
     try {
-      await mockDelay(400);
-      const members = generateMockTeamMembers(projectId);
+      const members = getTeamFromCurrentUser(projectId);
       set({ teamMembers: members, isLoading: false });
     } catch {
       set({ isLoading: false, error: 'Failed to load team members' });

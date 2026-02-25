@@ -6,6 +6,7 @@ import { groupTeamMembersByRole } from '@/types';
 
 interface TeamMemberListProps {
   members: TeamMember[];
+  currentUserId?: string;
   canManage: boolean;
   onChangeRole?: (userId: string, newRole: TeamMemberRole) => void;
   onRemoveMember?: (userId: string) => void;
@@ -13,6 +14,7 @@ interface TeamMemberListProps {
 
 export function TeamMemberList({
   members,
+  currentUserId,
   canManage,
   onChangeRole,
   onRemoveMember,
@@ -77,17 +79,18 @@ export function TeamMemberList({
 
   return (
     <>
-      <div className="space-y-6">
+      <div className="space-y-5">
         {roleGroups.map((group) => (
           <div key={group.role}>
-            <h3 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-3 px-1">
+            <h3 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-2 px-1">
               {getGroupLabel(group)}
             </h3>
-            <div>
+            <div className="space-y-2">
               {group.members.map((member) => (
                 <TeamMemberCard
                   key={member.userId}
                   member={member}
+                  isCurrentUser={member.userId === currentUserId}
                   canManage={canManage}
                   onChangeRole={onChangeRole}
                   onRemove={handleRemoveRequest}
