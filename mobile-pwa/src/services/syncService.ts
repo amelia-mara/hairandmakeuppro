@@ -492,32 +492,39 @@ function mergeScheduleData(dbSchedule: DbScheduleData, _projectId: string): void
 // ============================================================================
 
 function debouncedPush(table: string, pushFn: () => Promise<void>): void {
+  // Only increment pendingChanges on the first call for a table;
+  // subsequent debounced calls for the same table reuse the existing count.
   if (pushTimers[table]) {
     clearTimeout(pushTimers[table]);
+  } else {
+    useSyncStore.getState().incrementPending();
   }
 
-  useSyncStore.getState().incrementPending();
-
   pushTimers[table] = setTimeout(async () => {
+    // Delete timer reference immediately so new calls during async
+    // pushFn get their own fresh increment/decrement cycle.
+    delete pushTimers[table];
     pushingTables.add(table);
     try {
       useSyncStore.getState().setSyncing();
       await pushFn();
+      console.log(`[PUSH] ${table} pushed successfully`);
+    } catch (error) {
+      console.error(`[PUSH] ${table} FAILED:`, error);
+      useSyncStore.getState().setError(`Failed to sync ${table}`);
+    } finally {
+      pushingTables.delete(table);
       useSyncStore.getState().decrementPending();
       if (useSyncStore.getState().pendingChanges === 0) {
         useSyncStore.getState().setSynced();
       }
-    } catch (error) {
-      console.error(`[SyncService] Push ${table} failed:`, error);
-      useSyncStore.getState().setError(`Failed to sync ${table}`);
-    } finally {
-      pushingTables.delete(table);
     }
   }, PUSH_DEBOUNCE_MS);
 }
 
 export async function pushScenes(projectId: string, scenes: Scene[]): Promise<void> {
   if (!isSupabaseConfigured) return;
+  console.log(`[PUSH] pushScenes called: projectId=${projectId}, count=${scenes.length}`);
 
   debouncedPush('scenes', async () => {
     // Upsert scenes
@@ -558,6 +565,7 @@ export async function pushScenes(projectId: string, scenes: Scene[]): Promise<vo
 
 export async function pushCharacters(projectId: string, characters: Character[]): Promise<void> {
   if (!isSupabaseConfigured) return;
+  console.log(`[PUSH] pushCharacters called: projectId=${projectId}, count=${characters.length}`);
 
   debouncedPush('characters', async () => {
     const dbChars = characters.map(c => characterToDb(c, projectId));
@@ -570,6 +578,7 @@ export async function pushCharacters(projectId: string, characters: Character[])
 
 export async function pushLooks(projectId: string, looks: Look[]): Promise<void> {
   if (!isSupabaseConfigured) return;
+  console.log(`[PUSH] pushLooks called: projectId=${projectId}, count=${looks.length}`);
 
   debouncedPush('looks', async () => {
     const dbLooks = looks.map(l => lookToDb(l, projectId));
