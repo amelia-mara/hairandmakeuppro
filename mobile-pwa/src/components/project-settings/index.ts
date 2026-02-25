@@ -15,3 +15,4 @@ export { InviteScreen } from './InviteScreen';
 export { ProjectStatsScreen } from './ProjectStatsScreen';
 export { ScheduleScreen } from './ScheduleScreen';
 export { ProjectSettingsScreen } from './ProjectSettingsScreen';
+export { ProductionDetailsScreen } from './ProductionDetailsScreen';
