@@ -1,21 +1,19 @@
 import { useState, useRef, useEffect } from 'react';
 import { useChatStore } from '@/stores/chatStore';
-import { useProjectStore } from '@/stores/projectStore';
-import { useTimesheetStore } from '@/stores/timesheetStore';
 
-// Suggestion prompts for quick start
+// Suggestion prompts — quick-fire questions for on-set use
 const SUGGESTIONS = [
   {
-    label: 'Character overview',
-    prompt: 'Give me an overview of all characters and their looks in this project',
+    label: "Today's schedule",
+    prompt: "What's filming today?",
   },
   {
-    label: 'Continuity tracking',
-    prompt: 'What continuity events should I track across scenes?',
+    label: 'Capture progress',
+    prompt: 'How much continuity has been captured?',
   },
   {
-    label: 'Complex H&MU scenes',
-    prompt: 'Which scenes have the most complex hair and makeup requirements?',
+    label: 'Budget status',
+    prompt: 'How much budget is remaining?',
   },
 ];
 
@@ -49,62 +47,16 @@ export function ChatAssistant() {
     }
   }, [isOpen]);
 
-  // Build context from stores
-  const buildContext = () => {
-    const projectStore = useProjectStore.getState();
-    const timesheetStore = useTimesheetStore.getState();
-
-    const parts: string[] = [];
-
-    // Project info
-    if (projectStore.currentProject) {
-      const project = projectStore.currentProject;
-      parts.push(`Project: ${project.name}`);
-      parts.push(`Characters: ${project.characters.length}`);
-      parts.push(`Scenes: ${project.scenes.length}`);
-      parts.push(`Looks: ${project.looks.length}`);
-
-      // Character details
-      if (project.characters.length > 0) {
-        parts.push('\nCharacters:');
-        project.characters.slice(0, 10).forEach((char) => {
-          const charLooks = project.looks.filter((l) => l.characterId === char.id);
-          parts.push(`- ${char.name} (${char.initials}): ${charLooks.length} looks`);
-        });
-      }
-
-      // Scene status
-      const completedScenes = project.scenes.filter((s) => s.isComplete).length;
-      parts.push(`\nScenes: ${completedScenes}/${project.scenes.length} complete`);
-    }
-
-    // Timesheet summary
-    const entries = Object.values(timesheetStore.entries);
-    if (entries.length > 0) {
-      const totalHours = entries.reduce((sum, entry) => {
-        const calc = timesheetStore.calculateEntry(entry);
-        return sum + calc.totalHours;
-      }, 0);
-      parts.push(`\nTimesheet: ${entries.length} days logged, ${totalHours.toFixed(1)} total hours`);
-    }
-
-    return parts.join('\n') || 'No project data available yet.';
-  };
-
   const handleSend = async () => {
     const content = inputValue.trim();
     if (!content || isLoading) return;
 
     setInputValue('');
-    const context = buildContext();
-    await sendMessage(content, context);
+    await sendMessage(content);
   };
 
   const handleSuggestionClick = (prompt: string) => {
-    setInputValue(prompt);
-    // Auto-send the suggestion
-    const context = buildContext();
-    sendMessage(prompt, context);
+    sendMessage(prompt);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

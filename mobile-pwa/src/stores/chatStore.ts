@@ -1,5 +1,10 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { parseUserQuery, executeQuery } from '@/services/chatQueryRouter';
+import {
+  generateSystemPrompt,
+  getProjectContext,
+} from '@/services/chatSystemPrompt';
 
 export interface ChatMessage {
   id: string;
@@ -23,25 +28,13 @@ interface ChatState {
   clearMessages: () => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
-  sendMessage: (content: string, context: string) => Promise<void>;
+  sendMessage: (content: string) => Promise<void>;
 }
 
 const MAX_STORED_MESSAGES = 50;
+const MAX_CONVERSATION_HISTORY = 10;
+const MAX_TOKENS = 500;
 const API_ENDPOINT = '/api/ai';
-
-// System prompt for mobile H&MU assistant
-const SYSTEM_PROMPT = `You are Claude, an AI assistant specialized in film and television hair, makeup, and continuity production. You're helping a hair and makeup professional manage their work on set.
-
-You have access to their project data including:
-- Characters and their looks
-- Scene breakdowns with H&MU requirements
-- Continuity tracking and events
-- Timesheet and hours data
-- Budget information
-
-Be helpful, concise, and production-focused. Use industry terminology appropriately. When discussing looks or continuity, be specific about products, techniques, and timing.
-
-Keep responses focused and practical - these users are often on set and need quick, actionable information.`;
 
 export const useChatStore = create<ChatState>()(
   persist(
@@ -75,7 +68,7 @@ export const useChatStore = create<ChatState>()(
 
       setError: (error) => set({ error }),
 
-      sendMessage: async (content, context) => {
+      sendMessage: async (content) => {
         const { addMessage, setLoading, setError } = get();
 
         // Add user message
@@ -84,27 +77,45 @@ export const useChatStore = create<ChatState>()(
         setError(null);
 
         try {
-          // Build messages array for API (last 10 messages for context)
-          const recentMessages = get().messages.slice(-10).map((m) => ({
-            role: m.role,
-            content: m.content,
-          }));
+          // 1. Parse intent & extract parameters
+          const parsed = parseUserQuery(content);
 
-          // Build full system prompt with context
-          const fullSystemPrompt = `${SYSTEM_PROMPT}
+          // 2. Execute queries to get relevant data
+          const queryResults = executeQuery(parsed);
 
-Current Project Context:
-${context}`;
+          // 3. Build system prompt with cached project context
+          const projectCtx = getProjectContext();
+          const systemPrompt = generateSystemPrompt(projectCtx);
 
+          // 4. Build conversation history (last N messages for context)
+          const recentMessages = get()
+            .messages.slice(-MAX_CONVERSATION_HISTORY)
+            .map((m) => ({
+              role: m.role,
+              content: m.content,
+            }));
+
+          // 5. Compose the user turn with data context
+          const userTurn =
+            queryResults && queryResults !== 'No specific data matched for this query.'
+              ? `[DATA CONTEXT]\n${queryResults}\n\n[USER QUESTION]\n${content}`
+              : content;
+
+          // Replace the last message (which is the raw user content) with the
+          // enriched version for the API, but keep the original in history
+          const messagesForApi = [
+            ...recentMessages.slice(0, -1),
+            { role: 'user' as const, content: userTurn },
+          ];
+
+          // 6. Call the API
           const response = await fetch(API_ENDPOINT, {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              messages: recentMessages,
-              system: fullSystemPrompt,
-              maxTokens: 1024,
+              messages: messagesForApi,
+              system: systemPrompt,
+              maxTokens: MAX_TOKENS,
               model: 'claude-sonnet-4-20250514',
             }),
           });
@@ -116,7 +127,6 @@ ${context}`;
 
           const data = await response.json();
 
-          // Extract response text from Claude API response
           const assistantContent =
             data.content?.[0]?.text ||
             data.completion ||
@@ -124,9 +134,13 @@ ${context}`;
 
           addMessage('assistant', assistantContent);
         } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Failed to send message';
+          const errorMessage =
+            error instanceof Error ? error.message : 'Failed to send message';
           setError(errorMessage);
-          addMessage('assistant', `Sorry, I encountered an error: ${errorMessage}`);
+          addMessage(
+            'assistant',
+            `Sorry, I encountered an error: ${errorMessage}`,
+          );
         } finally {
           setLoading(false);
         }
