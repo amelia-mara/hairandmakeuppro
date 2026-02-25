@@ -147,14 +147,14 @@ export function WelcomeScreen() {
           Create Account
         </button>
 
-        {/* Join with Project Code */}
+        {/* Join a Team - directs to signup since account is required */}
         <div className="pt-8 flex items-center justify-center gap-4">
           <div className="flex-1 h-px bg-[#c5c0b5]" />
           <button
             className="text-sm text-[#7a7a7a] hover:text-[#4a4a4a] transition-colors whitespace-nowrap"
-            onClick={() => setScreen('join')}
+            onClick={() => setScreen('signup')}
           >
-            Join with Project Code
+            Join a Team
           </button>
           <div className="flex-1 h-px bg-[#c5c0b5]" />
         </div>
