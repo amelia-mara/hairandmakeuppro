@@ -13,7 +13,9 @@ import type {
   HairDetails,
   SFXDetails,
   ContinuityFlags,
+  ContinuityEvent,
 } from '@/types';
+import * as XLSX from 'xlsx';
 
 // ============================================
 // CONTINUITY BIBLE PDF GENERATOR
@@ -510,90 +512,245 @@ function generateSceneSection(
 }
 
 // ============================================
-// SCENE BREAKDOWN CSV GENERATOR
+// SCENE BREAKDOWN EXPORT (CSV + XLSX)
 // ============================================
 
+// Column group definitions for the breakdown export
+const BREAKDOWN_GROUP_HEADERS = [
+  { label: 'Scene', span: 4 },
+  { label: 'Character', span: 2 },
+  { label: 'Makeup', span: 7 },
+  { label: 'Hair', span: 5 },
+  { label: 'SFX', span: 1 },
+  { label: 'Continuity Events', span: 1 },
+  { label: 'Notes & Status', span: 3 },
+];
+
+const BREAKDOWN_HEADERS = [
+  // Scene (4)
+  'Scene #', 'INT/EXT', 'Slugline', 'Time of Day',
+  // Character (2)
+  'Character', 'Look',
+  // Makeup (7)
+  'Base', 'Concealer', 'Contour & Highlight', 'Blush', 'Brows', 'Eyes', 'Lips',
+  // Hair (5)
+  'Style & Parting', 'Products', 'Pieces & Pins', 'Accessories', 'Wig Details',
+  // SFX (1)
+  'SFX',
+  // Continuity Events (1)
+  'Continuity Events',
+  // Notes & Status (3)
+  'Flags', 'Notes', 'Status',
+];
+
+/** Combine non-empty values with a separator */
+function joinParts(parts: (string | undefined | null)[], sep = ', '): string {
+  return parts.filter(Boolean).join(sep);
+}
+
+/** Format makeup data into 7 grouped columns */
+function formatMakeupGroups(m: MakeupDetails): string[] {
+  return [
+    // Base: Foundation + Coverage
+    joinParts([
+      m.foundation && `Foundation: ${m.foundation}`,
+      m.coverage && `Coverage: ${m.coverage}`,
+    ]),
+    // Concealer
+    joinParts([
+      m.concealer && `${m.concealer}`,
+      m.concealerPlacement && `(${m.concealerPlacement})`,
+    ], ' '),
+    // Contour & Highlight
+    joinParts([
+      m.contour && `Contour: ${m.contour}`,
+      m.contourPlacement && `(${m.contourPlacement})`,
+      m.highlight && `Highlight: ${m.highlight}`,
+      m.highlightPlacement && `(${m.highlightPlacement})`,
+    ], ' | '),
+    // Blush
+    joinParts([
+      m.blush && `${m.blush}`,
+      m.blushPlacement && `(${m.blushPlacement})`,
+    ], ' '),
+    // Brows
+    joinParts([
+      m.browProduct && `Product: ${m.browProduct}`,
+      m.browShape && `Shape: ${m.browShape}`,
+    ]),
+    // Eyes
+    joinParts([
+      m.eyePrimer && `Primer: ${m.eyePrimer}`,
+      m.lidColour && `Lid: ${m.lidColour}`,
+      m.creaseColour && `Crease: ${m.creaseColour}`,
+      m.outerV && `Outer V: ${m.outerV}`,
+      m.liner && `Liner: ${m.liner}`,
+      m.lashes && `Lashes: ${m.lashes}`,
+    ]),
+    // Lips
+    joinParts([
+      m.lipLiner && `Liner: ${m.lipLiner}`,
+      m.lipColour && `Colour: ${m.lipColour}`,
+    ]),
+  ];
+}
+
+/** Format hair data into 5 grouped columns */
+function formatHairGroups(h: HairDetails): string[] {
+  return [
+    // Style & Parting
+    joinParts([h.style, h.parting && `Parting: ${h.parting}`]),
+    // Products
+    h.products || '',
+    // Pieces & Pins
+    joinParts([
+      h.piecesOut && `Pieces out: ${h.piecesOut}`,
+      h.pins && `Pins: ${h.pins}`,
+    ]),
+    // Accessories
+    h.accessories || '',
+    // Wig Details (only if wig)
+    h.hairType === 'Wig' ? joinParts([
+      h.wigNameId && `Name: ${h.wigNameId}`,
+      h.wigType && `Type: ${h.wigType}`,
+      h.wigCapMethod && `Cap: ${h.wigCapMethod}`,
+      h.wigAttachment?.length ? `Attachment: ${h.wigAttachment.join(', ')}` : null,
+      h.hairline && `Hairline: ${h.hairline}`,
+      h.laceTint && `Lace tint: ${h.laceTint}`,
+      h.edgesBabyHairs && `Edges: ${h.edgesBabyHairs}`,
+    ], ' | ') : '',
+  ];
+}
+
+/** Format SFX details into a single combined string */
+function formatSFX(sfx: SFXDetails): string {
+  if (!sfx.sfxRequired) return '';
+  return joinParts([
+    sfx.sfxTypes.length ? `Types: ${sfx.sfxTypes.join(', ')}` : null,
+    sfx.prostheticPieces && `Prosthetics: ${sfx.prostheticPieces}`,
+    sfx.prostheticAdhesive && `Adhesive: ${sfx.prostheticAdhesive}`,
+    sfx.bloodTypes?.length ? `Blood: ${sfx.bloodTypes.join(', ')}` : null,
+    sfx.bloodProducts && `Blood products: ${sfx.bloodProducts}`,
+    sfx.bloodPlacement && `Placement: ${sfx.bloodPlacement}`,
+    sfx.tattooCoverage && `Tattoo coverage: ${sfx.tattooCoverage}`,
+    sfx.temporaryTattoos && `Temp tattoos: ${sfx.temporaryTattoos}`,
+    sfx.contactLenses && `Contacts: ${sfx.contactLenses}`,
+    sfx.teeth && `Teeth: ${sfx.teeth}`,
+    sfx.agingCharacterNotes && `Aging: ${sfx.agingCharacterNotes}`,
+  ], ' | ');
+}
+
+/** Format continuity events for a specific scene */
+function formatContinuityEvents(events: ContinuityEvent[], sceneNumber: string): string {
+  const relevant = events.filter(e =>
+    (e.scenes && e.scenes.includes(sceneNumber)) ||
+    (!e.scenes && e.sceneRange)
+  );
+  if (!relevant.length) return '';
+  return relevant.map(e => {
+    const parts = [e.type, e.name];
+    if (e.stage) parts.push(`Stage: ${e.stage}`);
+    if (e.description) parts.push(e.description);
+    return parts.join(' - ');
+  }).join('; ');
+}
+
+/** Format continuity flags */
+function formatFlags(flags: ContinuityFlags): string {
+  const active = Object.entries(flags)
+    .filter(([_, v]) => v)
+    .map(([k]) => k);
+  return active.join(', ');
+}
+
+/** Build the breakdown data rows (one row per character per scene) */
+function buildBreakdownRows(
+  project: Project,
+  sceneCaptures: Record<string, SceneCapture>
+): string[][] {
+  const rows: string[][] = [];
+
+  const sortedScenes = [...project.scenes].sort(
+    (a, b) => a.sceneNumber.localeCompare(b.sceneNumber, undefined, { numeric: true })
+  );
+
+  for (const scene of sortedScenes) {
+    const sceneCharacters = project.characters.filter(c => scene.characters.includes(c.id));
+
+    if (sceneCharacters.length === 0) {
+      // Scene with no characters — still include a row
+      rows.push([
+        scene.sceneNumber, scene.intExt, scene.slugline, scene.timeOfDay,
+        '', '', // character, look
+        '', '', '', '', '', '', '', // makeup (7)
+        '', '', '', '', '', // hair (5)
+        '', // sfx
+        '', // continuity events
+        '', '', scene.isComplete ? 'Complete' : 'Incomplete', // flags, notes, status
+      ]);
+      continue;
+    }
+
+    for (const char of sceneCharacters) {
+      const look = project.looks.find(l =>
+        l.characterId === char.id && l.scenes.includes(scene.sceneNumber)
+      );
+      const captureKey = `${scene.id}-${char.id}`;
+      const capture = sceneCaptures[captureKey];
+
+      // Makeup (7 columns)
+      const makeupCols = look ? formatMakeupGroups(look.makeup) : ['', '', '', '', '', '', ''];
+
+      // Hair (5 columns)
+      const hairCols = look ? formatHairGroups(look.hair) : ['', '', '', '', ''];
+
+      // SFX — prefer capture-level, fall back to look-level
+      const sfxSource = capture?.sfxDetails || look?.sfxDetails;
+      const sfxText = sfxSource ? formatSFX(sfxSource) : '';
+
+      // Continuity events — merge from capture and look
+      const allEvents: ContinuityEvent[] = [
+        ...(capture?.continuityEvents || []),
+        ...(look?.continuityEvents || []),
+      ];
+      const eventsText = formatContinuityEvents(allEvents, scene.sceneNumber);
+
+      // Flags — prefer capture-level, fall back to look-level
+      const flagsText = capture
+        ? formatFlags(capture.continuityFlags)
+        : (look?.continuityFlags ? formatFlags(look.continuityFlags) : '');
+
+      // Notes
+      const notesText = capture?.notes || look?.notes || '';
+
+      rows.push([
+        scene.sceneNumber,
+        scene.intExt,
+        scene.slugline,
+        scene.timeOfDay,
+        char.name,
+        look?.name || '',
+        ...makeupCols,
+        ...hairCols,
+        sfxText,
+        eventsText,
+        flagsText,
+        notesText,
+        scene.isComplete ? 'Complete' : 'Incomplete',
+      ]);
+    }
+  }
+
+  return rows;
+}
+
+/** Generate the scene breakdown as a CSV string */
 export function generateSceneBreakdownCSV(
   project: Project,
   sceneCaptures: Record<string, SceneCapture>
 ): string {
-  const headers = [
-    'Scene',
-    'INT/EXT',
-    'Location',
-    'Time',
-    'Characters',
-    'Looks',
-    'Makeup Summary',
-    'Hair Summary',
-    'SFX',
-    'Flags',
-    'Notes',
-    'Status',
-  ];
+  const rows = buildBreakdownRows(project, sceneCaptures);
 
-  const rows = project.scenes
-    .sort((a, b) => a.sceneNumber.localeCompare(b.sceneNumber, undefined, { numeric: true }))
-    .map(scene => {
-      const sceneCharacters = project.characters.filter(c => scene.characters.includes(c.id));
-      const characterNames = sceneCharacters.map(c => c.name).join('; ');
-
-      const lookNames = sceneCharacters.map(char => {
-        const look = project.looks.find(l =>
-          l.characterId === char.id && l.scenes.includes(scene.sceneNumber)
-        );
-        return look ? `${char.name}: ${look.name}` : null;
-      }).filter(Boolean).join('; ');
-
-      // Aggregate makeup/hair/sfx info
-      let makeupSummary: string[] = [];
-      let hairSummary: string[] = [];
-      let sfxSummary: string[] = [];
-      let flags: string[] = [];
-      let notes: string[] = [];
-
-      sceneCharacters.forEach(char => {
-        const captureKey = `${scene.id}-${char.id}`;
-        const capture = sceneCaptures[captureKey];
-        const look = project.looks.find(l =>
-          l.characterId === char.id && l.scenes.includes(scene.sceneNumber)
-        );
-
-        if (look) {
-          if (look.makeup.foundation) makeupSummary.push(look.makeup.foundation);
-          if (look.makeup.lipColour) makeupSummary.push(look.makeup.lipColour);
-          if (look.hair.style) hairSummary.push(look.hair.style);
-        }
-
-        if (capture) {
-          if (capture.sfxDetails.sfxRequired) {
-            sfxSummary.push(capture.sfxDetails.sfxTypes.join(', '));
-          }
-          const activeFlags = Object.entries(capture.continuityFlags)
-            .filter(([_, v]) => v)
-            .map(([k]) => k);
-          flags.push(...activeFlags);
-          if (capture.notes) notes.push(capture.notes);
-        }
-      });
-
-      return [
-        scene.sceneNumber.toString(),
-        scene.intExt,
-        scene.slugline,
-        scene.timeOfDay,
-        characterNames,
-        lookNames,
-        [...new Set(makeupSummary)].join(', '),
-        [...new Set(hairSummary)].join(', '),
-        [...new Set(sfxSummary)].join(', ') || 'None',
-        [...new Set(flags)].join(', ') || '-',
-        notes.join(' | '),
-        scene.isComplete ? 'Complete' : 'Incomplete',
-      ];
-    });
-
-  // Escape CSV values
   const escapeCSV = (val: string) => {
     if (val.includes(',') || val.includes('"') || val.includes('\n')) {
       return `"${val.replace(/"/g, '""')}"`;
@@ -602,11 +759,134 @@ export function generateSceneBreakdownCSV(
   };
 
   const csvContent = [
-    headers.join(','),
+    BREAKDOWN_HEADERS.join(','),
     ...rows.map(row => row.map(escapeCSV).join(',')),
   ].join('\n');
 
   return csvContent;
+}
+
+/** Group header fill colours */
+const GROUP_COLOURS: Record<string, { fill: string; font: string }> = {
+  'Scene':             { fill: '2C3E50', font: 'FFFFFF' },
+  'Character':         { fill: '8E44AD', font: 'FFFFFF' },
+  'Makeup':            { fill: 'E74C3C', font: 'FFFFFF' },
+  'Hair':              { fill: '2980B9', font: 'FFFFFF' },
+  'SFX':               { fill: 'D35400', font: 'FFFFFF' },
+  'Continuity Events': { fill: '27AE60', font: 'FFFFFF' },
+  'Notes & Status':    { fill: '7F8C8D', font: 'FFFFFF' },
+};
+
+/** Generate the scene breakdown as an XLSX ArrayBuffer with formatting */
+export function generateSceneBreakdownXLSX(
+  project: Project,
+  sceneCaptures: Record<string, SceneCapture>
+): ArrayBuffer {
+  const rows = buildBreakdownRows(project, sceneCaptures);
+  const wb = XLSX.utils.book_new();
+
+  // Build group header row (row 1)
+  const groupRow: string[] = [];
+  for (const g of BREAKDOWN_GROUP_HEADERS) {
+    groupRow.push(g.label);
+    for (let i = 1; i < g.span; i++) groupRow.push('');
+  }
+
+  // Build data: group headers (row 0), column headers (row 1), then data rows
+  const allData = [groupRow, BREAKDOWN_HEADERS, ...rows];
+  const ws = XLSX.utils.aoa_to_sheet(allData);
+
+  // Merge group header cells
+  const merges: XLSX.Range[] = [];
+  let col = 0;
+  for (const g of BREAKDOWN_GROUP_HEADERS) {
+    if (g.span > 1) {
+      merges.push({ s: { r: 0, c: col }, e: { r: 0, c: col + g.span - 1 } });
+    }
+    col += g.span;
+  }
+  ws['!merges'] = merges;
+
+  // Column widths
+  const totalCols = BREAKDOWN_HEADERS.length;
+  const colWidths: XLSX.ColInfo[] = [];
+  for (let i = 0; i < totalCols; i++) {
+    const header = BREAKDOWN_HEADERS[i];
+    let wch = 14; // default
+    if (header === 'Slugline') wch = 28;
+    else if (header === 'Eyes' || header === 'Wig Details' || header === 'SFX') wch = 30;
+    else if (header === 'Contour & Highlight') wch = 22;
+    else if (header === 'Continuity Events' || header === 'Notes') wch = 25;
+    else if (header === 'Scene #' || header === 'INT/EXT' || header === 'Status') wch = 10;
+    colWidths.push({ wch });
+  }
+  ws['!cols'] = colWidths;
+
+  // Apply styling via cell properties
+  // Group header row (row 0) — bold, coloured backgrounds
+  col = 0;
+  for (const g of BREAKDOWN_GROUP_HEADERS) {
+    const cellRef = XLSX.utils.encode_cell({ r: 0, c: col });
+    if (!ws[cellRef]) ws[cellRef] = { v: g.label, t: 's' };
+    ws[cellRef].s = {
+      fill: { fgColor: { rgb: GROUP_COLOURS[g.label]?.fill || '333333' } },
+      font: { bold: true, color: { rgb: GROUP_COLOURS[g.label]?.font || 'FFFFFF' }, sz: 11 },
+      alignment: { horizontal: 'center', vertical: 'center' },
+      border: {
+        top: { style: 'thin', color: { rgb: '000000' } },
+        bottom: { style: 'thin', color: { rgb: '000000' } },
+        left: { style: 'thin', color: { rgb: '000000' } },
+        right: { style: 'thin', color: { rgb: '000000' } },
+      },
+    };
+    col += g.span;
+  }
+
+  // Column header row (row 1) — bold, light grey background
+  for (let c = 0; c < totalCols; c++) {
+    const cellRef = XLSX.utils.encode_cell({ r: 1, c });
+    if (!ws[cellRef]) ws[cellRef] = { v: BREAKDOWN_HEADERS[c], t: 's' };
+    ws[cellRef].s = {
+      fill: { fgColor: { rgb: 'ECF0F1' } },
+      font: { bold: true, sz: 10 },
+      alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+      border: {
+        top: { style: 'thin', color: { rgb: '000000' } },
+        bottom: { style: 'medium', color: { rgb: '000000' } },
+        left: { style: 'thin', color: { rgb: 'BDBDBD' } },
+        right: { style: 'thin', color: { rgb: 'BDBDBD' } },
+      },
+    };
+  }
+
+  // Data rows — alternating background, text wrapping, borders
+  for (let r = 0; r < rows.length; r++) {
+    const isEven = r % 2 === 0;
+    for (let c = 0; c < totalCols; c++) {
+      const cellRef = XLSX.utils.encode_cell({ r: r + 2, c }); // offset by 2 header rows
+      if (!ws[cellRef]) ws[cellRef] = { v: rows[r][c] || '', t: 's' };
+      ws[cellRef].s = {
+        fill: { fgColor: { rgb: isEven ? 'FFFFFF' : 'F7F9FA' } },
+        font: { sz: 9 },
+        alignment: { vertical: 'top', wrapText: true },
+        border: {
+          top: { style: 'thin', color: { rgb: 'E0E0E0' } },
+          bottom: { style: 'thin', color: { rgb: 'E0E0E0' } },
+          left: { style: 'thin', color: { rgb: 'E0E0E0' } },
+          right: { style: 'thin', color: { rgb: 'E0E0E0' } },
+        },
+      };
+    }
+  }
+
+  // Freeze panes: freeze the first 2 rows (group + column headers) and first 6 cols (scene + character)
+  ws['!freeze'] = { xSplit: 6, ySplit: 2 };
+
+  XLSX.utils.book_append_sheet(wb, ws, 'Scene Breakdown');
+
+  // Write with xlsxStyle support for cell styling
+  const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array', cellStyles: true });
+  return buf;
 }
 
 // ============================================
