@@ -16,6 +16,7 @@ import {
   ProjectStatsScreen,
   ScheduleScreen,
   ProjectSettingsScreen,
+  ProductionDetailsScreen,
 } from '@/components/project-settings';
 import { useProjectSettingsStore } from '@/stores/projectSettingsStore';
 import { parseScenesFast } from '@/utils/scriptParser';
@@ -25,7 +26,7 @@ import { ScheduleAmendmentModal } from '@/components/schedule/ScheduleAmendmentM
 import type { ScheduleAmendmentResult } from '@/services/scheduleAmendmentService';
 import { UserProfileScreen } from '@/components/profile/UserProfileScreen';
 
-type MoreView = 'menu' | 'script' | 'schedule' | 'callsheets' | 'editMenu' | 'export' | 'archivedProjects' | 'projectSettings' | 'team' | 'invite' | 'projectStats' | 'manualSchedule' | 'billing' | 'userProfile';
+type MoreView = 'menu' | 'script' | 'schedule' | 'callsheets' | 'editMenu' | 'export' | 'archivedProjects' | 'projectSettings' | 'team' | 'invite' | 'projectStats' | 'manualSchedule' | 'billing' | 'userProfile' | 'productionDetails';
 
 interface MoreProps {
   onNavigateToTab?: (tab: NavTab) => void;
@@ -127,6 +128,7 @@ export function More({ onNavigateToTab, onStartNewProject, initialView, resetKey
             onNavigateToTeam={() => setCurrentView('team')}
             onNavigateToStats={() => setCurrentView('projectStats')}
             onNavigateToExport={() => setCurrentView('export')}
+            onNavigateToProductionDetails={() => setCurrentView('productionDetails')}
             onProjectArchived={() => {
               clearProjectSettingsState();
               setCurrentView('menu');
@@ -135,6 +137,13 @@ export function More({ onNavigateToTab, onStartNewProject, initialView, resetKey
               clearProjectSettingsState();
               onStartNewProject?.();
             }}
+          />
+        );
+      case 'productionDetails':
+        return (
+          <ProductionDetailsScreen
+            projectId={currentProjectMembership?.projectId || ''}
+            onBack={() => setCurrentView('projectSettings')}
           />
         );
       case 'team':
