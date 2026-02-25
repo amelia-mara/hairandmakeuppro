@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { UpgradeModal } from '@/components/dashboard';
+import * as supabaseProjects from '@/services/supabaseProjects';
 import type { ProjectMembership, Project, ProjectRole, ProductionType } from '@/types';
+import { createEmptyMakeupDetails, createEmptyHairDetails } from '@/types';
 
 // Format relative time
 const formatRelativeTime = (date: Date): string => {
@@ -170,32 +172,106 @@ export function ProjectHubScreen() {
   const currentProject = sortedProjects.length > 0 ? sortedProjects[0] : null;
   const otherProjects = sortedProjects.slice(1);
 
-  const handleProjectOpen = (membership: ProjectMembership) => {
+  const handleProjectOpen = async (membership: ProjectMembership) => {
     updateLastAccessed(membership.projectId);
 
     const store = useProjectStore.getState();
+
+    // 1. Restore from local save if available
     if (store.hasSavedProject(membership.projectId)) {
       store.restoreSavedProject(membership.projectId);
       store.setActiveTab('today');
       return;
     }
 
+    // 2. Already the active project
     if (store.currentProject?.id === membership.projectId) {
       store.setActiveTab('today');
       return;
     }
 
+    // 3. Save current project if it has data, before switching
     if (store.currentProject && store.currentProject.scenes.length > 0) {
-      const updatedProject: Project = {
-        ...store.currentProject,
-        id: membership.projectId,
-        name: membership.projectName,
-      };
-      store.setProject(updatedProject);
-      store.setActiveTab('today');
-      return;
+      store.saveAndClearProject();
     }
 
+    // 4. Try to fetch project data from Supabase
+    try {
+      const { scenes, characters, looks, sceneCharacters, lookScenes, error } =
+        await supabaseProjects.getProjectData(membership.projectId);
+
+      if (!error && (scenes.length > 0 || characters.length > 0)) {
+        // Build character ID lookup for scene_characters mapping
+        const sceneCharMap = new Map<string, string[]>();
+        for (const sc of sceneCharacters) {
+          const existing = sceneCharMap.get(sc.scene_id) || [];
+          existing.push(sc.character_id);
+          sceneCharMap.set(sc.scene_id, existing);
+        }
+
+        // Build look_scenes mapping
+        const lookSceneMap = new Map<string, string[]>();
+        for (const ls of lookScenes) {
+          const existing = lookSceneMap.get(ls.look_id) || [];
+          existing.push(ls.scene_number);
+          lookSceneMap.set(ls.look_id, existing);
+        }
+
+        // Convert DB scenes to local Scene type
+        const localScenes = scenes.map(s => ({
+          id: s.id,
+          sceneNumber: s.scene_number,
+          slugline: s.location || `Scene ${s.scene_number}`,
+          intExt: (s.int_ext === 'EXT' ? 'EXT' : 'INT') as 'INT' | 'EXT',
+          timeOfDay: (s.time_of_day || 'DAY') as 'DAY' | 'NIGHT' | 'MORNING' | 'EVENING' | 'CONTINUOUS',
+          synopsis: s.synopsis || undefined,
+          characters: sceneCharMap.get(s.id) || [],
+          isComplete: s.is_complete,
+          completedAt: s.completed_at ? new Date(s.completed_at) : undefined,
+          filmingStatus: s.filming_status as any,
+          filmingNotes: s.filming_notes || undefined,
+          shootingDay: s.shooting_day || undefined,
+          characterConfirmationStatus: 'confirmed' as const,
+        }));
+
+        // Convert DB characters to local Character type
+        const localCharacters = characters.map(c => ({
+          id: c.id,
+          name: c.name,
+          initials: c.initials,
+          avatarColour: c.avatar_colour,
+        }));
+
+        // Convert DB looks to local Look type
+        const localLooks = looks.map(l => ({
+          id: l.id,
+          characterId: l.character_id,
+          name: l.name,
+          scenes: lookSceneMap.get(l.id) || [],
+          estimatedTime: l.estimated_time,
+          makeup: (l.makeup_details as any) || createEmptyMakeupDetails(),
+          hair: (l.hair_details as any) || createEmptyHairDetails(),
+        }));
+
+        const project: Project = {
+          id: membership.projectId,
+          name: membership.projectName,
+          createdAt: membership.joinedAt,
+          updatedAt: membership.lastAccessedAt,
+          scenes: localScenes,
+          characters: localCharacters,
+          looks: localLooks,
+        };
+
+        store.setProject(project);
+        store.setActiveTab('today');
+        return;
+      }
+    } catch (err) {
+      console.error('Failed to fetch project data from server:', err);
+    }
+
+    // 5. Fallback: no data on server either, show setup flow
     const project = createProjectFromMembership(membership);
     store.setProjectNeedsSetup(project);
     store.setActiveTab('today');

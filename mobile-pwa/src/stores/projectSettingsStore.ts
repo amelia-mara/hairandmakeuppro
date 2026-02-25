@@ -16,6 +16,7 @@ import {
 } from '@/types';
 import { useAuthStore } from './authStore';
 import { useProjectStore } from './projectStore';
+import * as supabaseProjects from '@/services/supabaseProjects';
 
 interface ProjectSettingsState {
   // Project settings
@@ -171,25 +172,34 @@ export const useProjectSettingsStore = create<ProjectSettingsState>((set, get) =
 
   // Load project settings
   loadProjectSettings: async (projectId) => {
-    // If settings already loaded for this project, skip reload
+    // If settings already loaded for this project, just refresh the invite code
     const existing = get().projectSettings;
     if (existing && existing.id === projectId) {
+      const { projectMemberships } = useAuthStore.getState();
+      const membership = projectMemberships.find(pm => pm.projectId === projectId);
+      if (membership?.projectCode && membership.projectCode !== existing.inviteCode) {
+        set({ projectSettings: { ...existing, inviteCode: membership.projectCode } });
+      }
       return;
     }
 
     set({ isLoading: true, error: null });
 
     try {
-      const { user } = useAuthStore.getState();
+      const { user, projectMemberships } = useAuthStore.getState();
       const { currentProject, sceneCaptures } = useProjectStore.getState();
       const teamMembers = getTeamFromCurrentUser(projectId);
 
+      // Use the real invite code from the project membership (stored from DB)
+      const membership = projectMemberships.find(pm => pm.projectId === projectId);
+      const inviteCode = membership?.projectCode || generateProjectCode();
+
       const settings: ProjectSettings = {
         id: projectId,
-        name: currentProject?.name || projectId,
-        type: 'film',
+        name: currentProject?.name || membership?.projectName || projectId,
+        type: (membership?.productionType as ProjectSettings['type']) || 'film',
         status: 'shooting',
-        inviteCode: generateProjectCode(),
+        inviteCode,
         ownerId: user?.id || '',
         permissions: createDefaultProjectPermissions(),
         createdAt: currentProject?.createdAt || new Date(),
@@ -286,12 +296,28 @@ export const useProjectSettingsStore = create<ProjectSettingsState>((set, get) =
 
     set({ isLoading: true });
     try {
-      await mockDelay(500);
-      const newCode = generateProjectCode();
+      // Call Supabase to regenerate the code in the database
+      const { inviteCode: newCode, error } = await supabaseProjects.regenerateInviteCode(projectSettings.id);
+
+      if (error || !newCode) {
+        throw error || new Error('Failed to regenerate invite code');
+      }
+
+      // Update local settings state
       set({
         projectSettings: { ...projectSettings, inviteCode: newCode },
         isLoading: false,
       });
+
+      // Also update the authStore membership so the code stays in sync
+      const authStore = useAuthStore.getState();
+      const updatedMemberships = authStore.projectMemberships.map(pm =>
+        pm.projectId === projectSettings.id
+          ? { ...pm, projectCode: newCode }
+          : pm
+      );
+      useAuthStore.setState({ projectMemberships: updatedMemberships });
+
       return newCode;
     } catch {
       set({ isLoading: false, error: 'Failed to regenerate invite code' });
@@ -339,15 +365,34 @@ export const useProjectSettingsStore = create<ProjectSettingsState>((set, get) =
     }
   },
 
-  // Load team members from the current authenticated user
+  // Load team members from Supabase (falls back to current user if fetch fails)
   loadTeamMembers: async (projectId) => {
     set({ isLoading: true, error: null });
 
     try {
-      const members = getTeamFromCurrentUser(projectId);
-      set({ teamMembers: members, isLoading: false });
+      const { members, error } = await supabaseProjects.getProjectMembers(projectId);
+
+      if (!error && members.length > 0) {
+        const teamMembers: TeamMember[] = members.map((m) => ({
+          userId: m.user_id,
+          projectId: m.project_id,
+          name: m.user?.name || 'Unknown',
+          email: m.user?.email || '',
+          role: m.role as TeamMemberRole,
+          isOwner: m.is_owner,
+          joinedAt: new Date(m.joined_at),
+          lastActiveAt: new Date(),
+          editCount: 0,
+        }));
+        set({ teamMembers, isLoading: false });
+      } else {
+        // Fallback to current user only
+        const fallback = getTeamFromCurrentUser(projectId);
+        set({ teamMembers: fallback, isLoading: false });
+      }
     } catch {
-      set({ isLoading: false, error: 'Failed to load team members' });
+      const fallback = getTeamFromCurrentUser(projectId);
+      set({ teamMembers: fallback, isLoading: false, error: 'Failed to load team members' });
     }
   },
 
