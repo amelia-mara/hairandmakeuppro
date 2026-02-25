@@ -1,86 +1,50 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
 import { formatShortDate } from '@/utils/helpers';
 import {
   CURRENCIES,
-  DEFAULT_CURRENCY,
   formatCurrency,
   getCurrencyByCode,
   type CurrencyCode,
 } from '@/types';
 import { extractReceiptData, buildDescriptionFromItems } from '@/services/receiptAIService';
 import { useProjectStore } from '@/stores/projectStore';
+import {
+  useBudgetStore,
+  EXPENSE_CATEGORIES as CATEGORIES,
+  type ExpenseCategory,
+  type Receipt,
+  type BudgetSummary,
+} from '@/stores/budgetStore';
 
-// Budget expense category types
-export type ExpenseCategory = 'Kit Supplies' | 'Consumables' | 'Transportation' | 'Equipment' | 'Other';
-
-export interface Receipt {
-  id: string;
-  date: string;
-  vendor: string;
-  amount: number;
-  vat: number;
-  category: ExpenseCategory;
-  description: string;
-  imageUri?: string;
-  synced: boolean;
-}
-
-export interface BudgetSummary {
-  totalBudget: number;
-  totalSpent: number;
-  byCategory: Record<ExpenseCategory, number>;
-}
-
-const CATEGORIES: ExpenseCategory[] = ['Kit Supplies', 'Consumables', 'Transportation', 'Equipment', 'Other'];
-
-// Local storage key for budget data
-const BUDGET_STORAGE_KEY = 'hairandmakeup_budget';
+// Re-export types for any external consumers
+export type { ExpenseCategory, Receipt, BudgetSummary };
 
 export function Budget() {
-  const [receipts, setReceipts] = useState<Receipt[]>([]);
-  const [budgetTotal, setBudgetTotal] = useState<number>(0);
-  const [floatReceived, setFloatReceived] = useState<number>(0);
+  // Budget data from store (persisted to IndexedDB)
+  const {
+    budgetTotal,
+    floatReceived,
+    receipts,
+    currency,
+    setBudgetTotal,
+    setFloatReceived,
+    setCurrency,
+    addReceipt,
+    updateReceipt: storeUpdateReceipt,
+    deleteReceipt: storeDeleteReceipt,
+  } = useBudgetStore();
+
+  // UI-only state (not persisted)
   const [showBudgetEdit, setShowBudgetEdit] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [showAddReceipt, setShowAddReceipt] = useState(false);
   const [showScanOptions, setShowScanOptions] = useState(false);
-  const [currency, setCurrency] = useState<CurrencyCode>(DEFAULT_CURRENCY);
   const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const { currentProject } = useProjectStore();
-
-  // Load saved data on mount
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(BUDGET_STORAGE_KEY);
-      if (saved) {
-        const data = JSON.parse(saved);
-        if (data.budgetTotal !== undefined) setBudgetTotal(data.budgetTotal);
-        if (data.floatReceived !== undefined) setFloatReceived(data.floatReceived);
-        if (data.receipts) setReceipts(data.receipts);
-        if (data.currency) setCurrency(data.currency);
-      }
-    } catch (e) {
-      console.error('Failed to load budget data:', e);
-    }
-  }, []);
-
-  // Save data when it changes
-  useEffect(() => {
-    try {
-      localStorage.setItem(BUDGET_STORAGE_KEY, JSON.stringify({
-        budgetTotal,
-        floatReceived,
-        receipts,
-        currency,
-      }));
-    } catch (e) {
-      console.error('Failed to save budget data:', e);
-    }
-  }, [budgetTotal, floatReceived, receipts, currency]);
 
   // Get current currency info
   const currentCurrency = getCurrencyByCode(currency);
@@ -135,12 +99,7 @@ export function Budget() {
   };
 
   const handleAddReceipt = (receipt: Omit<Receipt, 'id' | 'synced'>) => {
-    const newReceipt: Receipt = {
-      ...receipt,
-      id: `r-${Date.now()}`,
-      synced: false,
-    };
-    setReceipts([newReceipt, ...receipts]);
+    addReceipt(receipt);
     setShowAddReceipt(false);
     setCapturedImage(null);
   };
@@ -152,12 +111,12 @@ export function Budget() {
   };
 
   const handleUpdateReceipt = (updated: Receipt) => {
-    setReceipts(receipts.map(r => r.id === updated.id ? updated : r));
+    storeUpdateReceipt(updated.id, updated);
     setSelectedReceipt(null);
   };
 
   const handleDeleteReceipt = (receiptId: string) => {
-    setReceipts(receipts.filter(r => r.id !== receiptId));
+    storeDeleteReceipt(receiptId);
     setSelectedReceipt(null);
   };
 

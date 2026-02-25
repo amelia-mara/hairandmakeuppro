@@ -16,6 +16,7 @@ import {
   ProjectStatsScreen,
   ScheduleScreen,
   ProjectSettingsScreen,
+  ProductionDetailsScreen,
 } from '@/components/project-settings';
 import { useProjectSettingsStore } from '@/stores/projectSettingsStore';
 import { parseScenesFast } from '@/utils/scriptParser';
@@ -25,7 +26,7 @@ import { ScheduleAmendmentModal } from '@/components/schedule/ScheduleAmendmentM
 import type { ScheduleAmendmentResult } from '@/services/scheduleAmendmentService';
 import { UserProfileScreen } from '@/components/profile/UserProfileScreen';
 
-type MoreView = 'menu' | 'script' | 'schedule' | 'callsheets' | 'editMenu' | 'export' | 'archivedProjects' | 'projectSettings' | 'team' | 'invite' | 'projectStats' | 'manualSchedule' | 'billing' | 'userProfile';
+type MoreView = 'menu' | 'script' | 'schedule' | 'callsheets' | 'editMenu' | 'export' | 'archivedProjects' | 'projectSettings' | 'team' | 'invite' | 'projectStats' | 'manualSchedule' | 'billing' | 'userProfile' | 'productionDetails';
 
 interface MoreProps {
   onNavigateToTab?: (tab: NavTab) => void;
@@ -49,12 +50,15 @@ export function More({ onNavigateToTab, onStartNewProject, initialView, resetKey
   };
 
   const [currentView, setCurrentView] = useState<MoreView>(getInitialView);
+  const [billingReturnView, setBillingReturnView] = useState<MoreView>('menu');
   const { isEditMenuOpen, closeEditMenu, openEditMenu } = useNavigationStore();
   const { projectMemberships, user } = useAuthStore();
   const { projectSettings, clearState: clearProjectSettingsState } = useProjectSettingsStore();
+  const activeProjectId = useProjectStore((s) => s.currentProject?.id ?? '');
 
-  // Get current project membership
-  const currentProjectMembership = projectMemberships.length > 0 ? projectMemberships[0] : null;
+  // Get current project membership — match the ACTIVE project, not just the first in the array
+  const currentProjectMembership = projectMemberships.find(pm => pm.projectId === activeProjectId)
+    || (projectMemberships.length > 0 ? projectMemberships[0] : null);
   const isOwner = currentProjectMembership?.role === 'owner';
   const canManage = currentProjectMembership && user ? canManageProject(user.tier, {
     isOwner,
@@ -114,7 +118,7 @@ export function More({ onNavigateToTab, onStartNewProject, initialView, resetKey
           <ProjectExportScreen
             onBack={() => setCurrentView('projectSettings')}
             onExportComplete={() => setCurrentView('projectSettings')}
-            onNavigateToBilling={() => setCurrentView('billing')}
+            onNavigateToBilling={() => { setBillingReturnView('export'); setCurrentView('billing'); }}
           />
         );
       case 'archivedProjects':
@@ -122,11 +126,12 @@ export function More({ onNavigateToTab, onStartNewProject, initialView, resetKey
       case 'projectSettings':
         return (
           <ProjectSettingsScreen
-            projectId={currentProjectMembership?.projectId || ''}
+            projectId={activeProjectId || currentProjectMembership?.projectId || ''}
             onBack={() => setCurrentView('menu')}
             onNavigateToTeam={() => setCurrentView('team')}
             onNavigateToStats={() => setCurrentView('projectStats')}
             onNavigateToExport={() => setCurrentView('export')}
+            onNavigateToProductionDetails={() => setCurrentView('productionDetails')}
             onProjectArchived={() => {
               clearProjectSettingsState();
               setCurrentView('menu');
@@ -137,10 +142,17 @@ export function More({ onNavigateToTab, onStartNewProject, initialView, resetKey
             }}
           />
         );
+      case 'productionDetails':
+        return (
+          <ProductionDetailsScreen
+            projectId={activeProjectId || currentProjectMembership?.projectId || ''}
+            onBack={() => setCurrentView('projectSettings')}
+          />
+        );
       case 'team':
         return (
           <TeamScreen
-            projectId={currentProjectMembership?.projectId || ''}
+            projectId={activeProjectId || currentProjectMembership?.projectId || ''}
             canManage={canManage}
             isOwner={isOwner}
             onBack={() => setCurrentView('projectSettings')}
@@ -158,7 +170,7 @@ export function More({ onNavigateToTab, onStartNewProject, initialView, resetKey
       case 'projectStats':
         return (
           <ProjectStatsScreen
-            projectId={currentProjectMembership?.projectId || ''}
+            projectId={activeProjectId || currentProjectMembership?.projectId || ''}
             onBack={() => setCurrentView('projectSettings')}
           />
         );
@@ -172,7 +184,7 @@ export function More({ onNavigateToTab, onStartNewProject, initialView, resetKey
       case 'billing':
         return (
           <BillingDetailsScreen
-            onBack={() => setCurrentView('menu')}
+            onBack={() => setCurrentView(billingReturnView)}
             onUpgrade={() => {
               useAuthStore.getState().setScreen('select-plan');
             }}
@@ -182,7 +194,7 @@ export function More({ onNavigateToTab, onStartNewProject, initialView, resetKey
         return (
           <UserProfileScreen
             onBack={() => setCurrentView('menu')}
-            onNavigateToBilling={() => setCurrentView('billing')}
+            onNavigateToBilling={() => { setBillingReturnView('userProfile'); setCurrentView('billing'); }}
           />
         );
       default:

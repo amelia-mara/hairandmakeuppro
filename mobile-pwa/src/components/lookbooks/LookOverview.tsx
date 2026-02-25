@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { createPhotoFromBlob } from '@/utils/imageUtils';
-import { formatEstimatedTime, formatSceneRange } from '@/utils/helpers';
+import { formatEstimatedTime, formatSceneRange, parseSceneRange } from '@/utils/helpers';
 import type { Photo, PhotoAngle, ContinuityEvent, SFXDetails } from '@/types';
 import {
   countFilledFields,
@@ -42,6 +42,12 @@ export function LookOverview({ lookId, onBack, onSceneClick }: LookOverviewProps
   const [viewerPhotos, setViewerPhotos] = useState<Photo[]>([]);
   const [viewerInitialIndex, setViewerInitialIndex] = useState(0);
   const [captureSFX, setCaptureSFX] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editingScenes, setEditingScenes] = useState(false);
+  const [editScenes, setEditScenes] = useState('');
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const scenesInputRef = useRef<HTMLInputElement>(null);
 
   const look = currentProject?.looks.find((l) => l.id === lookId);
   const character = look ? getCharacter(look.characterId) : undefined;
@@ -153,6 +159,76 @@ export function LookOverview({ lookId, onBack, onSceneClick }: LookOverviewProps
     updateLookWithPropagation(look.id, { notes });
   };
 
+  // Handle look name editing
+  const handleStartEditName = () => {
+    setEditName(look.name);
+    setEditingName(true);
+  };
+
+  useEffect(() => {
+    if (editingName && nameInputRef.current) {
+      nameInputRef.current.focus();
+      nameInputRef.current.select();
+    }
+  }, [editingName]);
+
+  const handleSaveName = () => {
+    const trimmed = editName.trim();
+    if (trimmed && trimmed !== look.name) {
+      updateLook(look.id, { name: trimmed });
+    }
+    setEditingName(false);
+  };
+
+  // Handle scenes editing
+  const handleStartEditScenes = () => {
+    setEditScenes(formatSceneRange(look.scenes));
+    setEditingScenes(true);
+  };
+
+  useEffect(() => {
+    if (editingScenes && scenesInputRef.current) {
+      scenesInputRef.current.focus();
+    }
+  }, [editingScenes]);
+
+  const handleSaveScenes = () => {
+    const parsed = parseSceneRange(editScenes);
+    if (parsed.length > 0) {
+      const newScenes = parsed.map(String);
+
+      // Remove reassigned scenes from other looks of the same character
+      if (currentProject) {
+        const otherLooks = currentProject.looks.filter(
+          (l) => l.characterId === look.characterId && l.id !== look.id
+        );
+        const hasConflicts = otherLooks.some((l) =>
+          l.scenes.some((s) => newScenes.includes(s))
+        );
+
+        if (hasConflicts) {
+          const updatedLooks = currentProject.looks.map((l) => {
+            if (l.id === look.id) {
+              return { ...l, scenes: newScenes };
+            }
+            if (l.characterId === look.characterId) {
+              const remaining = l.scenes.filter((s) => !newScenes.includes(s));
+              if (remaining.length !== l.scenes.length) {
+                return { ...l, scenes: remaining };
+              }
+            }
+            return l;
+          });
+          const { setProject } = useProjectStore.getState();
+          setProject({ ...currentProject, looks: updatedLooks, updatedAt: new Date() });
+        } else {
+          updateLook(look.id, { scenes: newScenes });
+        }
+      }
+    }
+    setEditingScenes(false);
+  };
+
   // Handle photo deletion from viewer
   const handleDeleteFromViewer = (photoId: string) => {
     if (look.masterReference?.id === photoId) {
@@ -201,13 +277,70 @@ export function LookOverview({ lookId, onBack, onSceneClick }: LookOverviewProps
               <h2 className="text-character-name text-gold font-bold truncate">
                 {character.name}
               </h2>
-              <p className="text-sm font-semibold text-text-primary mt-0.5">
-                {look.name}
-              </p>
-              <p className="text-xs text-text-muted mt-0.5">
-                Scenes {formatSceneRange(look.scenes)} •{' '}
-                ~{formatEstimatedTime(look.estimatedTime)}
-              </p>
+
+              {/* Editable look name */}
+              {editingName ? (
+                <div className="mt-0.5 flex items-center gap-1.5">
+                  <input
+                    ref={nameInputRef}
+                    type="text"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    onBlur={handleSaveName}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSaveName();
+                      if (e.key === 'Escape') setEditingName(false);
+                    }}
+                    className="input-field text-sm font-semibold py-1 px-2 w-full"
+                    placeholder="Look name"
+                  />
+                </div>
+              ) : (
+                <button
+                  onClick={handleStartEditName}
+                  className="flex items-center gap-1 mt-0.5 group"
+                >
+                  <p className="text-sm font-semibold text-text-primary">
+                    {look.name}
+                  </p>
+                  <svg className="w-3 h-3 text-text-light group-active:text-gold transition-colors flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                  </svg>
+                </button>
+              )}
+
+              {/* Editable scenes */}
+              {editingScenes ? (
+                <div className="mt-1 flex items-center gap-1.5">
+                  <span className="text-xs text-text-muted flex-shrink-0">Scenes</span>
+                  <input
+                    ref={scenesInputRef}
+                    type="text"
+                    value={editScenes}
+                    onChange={(e) => setEditScenes(e.target.value)}
+                    onBlur={handleSaveScenes}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSaveScenes();
+                      if (e.key === 'Escape') setEditingScenes(false);
+                    }}
+                    className="input-field text-xs py-1 px-2 flex-1 min-w-0"
+                    placeholder="e.g. 1-4, 6-12"
+                  />
+                </div>
+              ) : (
+                <button
+                  onClick={handleStartEditScenes}
+                  className="flex items-center gap-1 mt-0.5 group"
+                >
+                  <p className="text-xs text-text-muted">
+                    Scenes {formatSceneRange(look.scenes)} •{' '}
+                    ~{formatEstimatedTime(look.estimatedTime)}
+                  </p>
+                  <svg className="w-3 h-3 text-text-light group-active:text-gold transition-colors flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                  </svg>
+                </button>
+              )}
             </div>
           </div>
 

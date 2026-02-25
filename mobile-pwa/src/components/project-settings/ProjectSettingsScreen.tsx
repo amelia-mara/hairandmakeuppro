@@ -4,6 +4,7 @@ import { PermissionPicker, ProductionTypeSelector } from './PermissionPicker';
 import { DangerZone } from './DangerZone';
 import { InviteCodeShare } from './InviteCodeShare';
 import { useProjectSettingsStore } from '@/stores/projectSettingsStore';
+import { useProductionDetailsStore } from '@/stores/productionDetailsStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { useAuthStore } from '@/stores/authStore';
 import { PROJECT_RETENTION_DAYS } from '@/types';
@@ -14,6 +15,7 @@ interface ProjectSettingsScreenProps {
   onNavigateToTeam?: () => void;
   onNavigateToStats?: () => void;
   onNavigateToExport?: () => void;
+  onNavigateToProductionDetails?: () => void;
   onProjectArchived?: () => void;
   onProjectDeleted?: () => void;
 }
@@ -24,6 +26,7 @@ export function ProjectSettingsScreen({
   onNavigateToTeam,
   onNavigateToStats,
   onNavigateToExport,
+  onNavigateToProductionDetails,
   onProjectArchived,
   onProjectDeleted,
 }: ProjectSettingsScreenProps) {
@@ -41,6 +44,9 @@ export function ProjectSettingsScreen({
 
   const { currentProject, lifecycle, wrapProject, restoreProject, getDaysUntilDeletion } = useProjectStore();
   const { user } = useAuthStore();
+  const { isComplete: isProductionDetailsComplete, getCompletionCount } = useProductionDetailsStore();
+  const productionComplete = isProductionDetailsComplete(projectId);
+  const productionCompletion = getCompletionCount(projectId);
 
   // Determine if current user is the owner
   const isOwner = user && projectSettings ? user.id === projectSettings.ownerId : false;
@@ -191,6 +197,39 @@ export function ProjectSettingsScreen({
               value={projectSettings.type}
               onChange={updateProjectType}
             />
+
+            {/* Production & Invoicing Details */}
+            <button
+              onClick={onNavigateToProductionDetails}
+              className="w-full card flex items-center justify-between active:scale-[0.98] transition-transform"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+                  <svg className="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                  </svg>
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-medium text-text-primary">Production & Invoicing</p>
+                  <p className="text-xs text-text-muted">
+                    {productionComplete
+                      ? 'Production details complete'
+                      : `${productionCompletion.filled}/${productionCompletion.total} required fields filled`
+                    }
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {productionComplete && (
+                  <svg className="w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4" />
+                  </svg>
+                )}
+                <svg className="w-5 h-5 text-text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                </svg>
+              </div>
+            </button>
           </div>
         </section>
 
