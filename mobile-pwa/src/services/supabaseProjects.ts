@@ -345,11 +345,16 @@ export async function getProjectMembers(
   projectId: string
 ): Promise<{ members: (ProjectMember & { user: { name: string; email: string } })[]; error: Error | null }> {
   try {
+    // Use a left join (no !inner) so members are still returned even if the
+    // "Project members can view teammate profiles" RLS policy on the users
+    // table hasn't been applied yet.  Without that policy a user can only
+    // SELECT their own row in `users`, and INNER JOIN would silently drop
+    // every other team member from the result set.
     const { data, error } = await supabase
       .from('project_members')
       .select(`
         *,
-        users!inner (name, email)
+        users (name, email)
       `)
       .eq('project_id', projectId)
       .order('joined_at');
@@ -358,7 +363,10 @@ export async function getProjectMembers(
 
     const members = (data || []).map((pm: any) => ({
       ...pm,
-      user: pm.users,
+      user: {
+        name: pm.users?.name || pm.user_id.slice(0, 8),
+        email: pm.users?.email || '',
+      },
     }));
 
     return { members, error: null };

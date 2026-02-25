@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useProjectStore } from '@/stores/projectStore';
+import { useCallSheetStore } from '@/stores/callSheetStore';
 import { UpgradeModal } from '@/components/dashboard';
 import * as supabaseProjects from '@/services/supabaseProjects';
 import type { ProjectMembership, Project, ProjectRole, ProductionType } from '@/types';
@@ -193,6 +194,9 @@ export function ProjectHubScreen() {
     // 3. Save current project if it has data, before switching
     if (store.currentProject && store.currentProject.scenes.length > 0) {
       store.saveAndClearProject();
+    } else if (store.currentProject) {
+      // Project exists but has no scenes - still clear call sheets to prevent data leaking
+      useCallSheetStore.getState().clearCallSheetsForProject();
     }
 
     // 4. Try to fetch project data from Supabase
@@ -271,9 +275,18 @@ export function ProjectHubScreen() {
       console.error('Failed to fetch project data from server:', err);
     }
 
-    // 5. Fallback: no data on server either, show setup flow
+    // 5. Fallback: no data on server yet
+    // For non-owners (joined via invite code), the owner may not have synced data yet.
+    // Create the project without needsSetup so startSync can pull data via realtime.
     const project = createProjectFromMembership(membership);
-    store.setProjectNeedsSetup(project);
+    if (membership.role === 'owner') {
+      // Owner with no data: show the setup/upload flow
+      store.setProjectNeedsSetup(project);
+    } else {
+      // Non-owner (joined via invite): load project and let sync pull data
+      // startSync in App.tsx will subscribe to realtime updates
+      store.setProject(project);
+    }
     store.setActiveTab('today');
   };
 
@@ -294,8 +307,10 @@ export function ProjectHubScreen() {
 
     if (result.success) {
       const store = useProjectStore.getState();
+      const callSheetStore = useCallSheetStore.getState();
       if (store.currentProject?.id === deleteModalProject.projectId) {
         store.clearProject();
+        callSheetStore.clearCallSheetsForProject();
       }
       if (store.hasSavedProject(deleteModalProject.projectId)) {
         store.removeSavedProject(deleteModalProject.projectId);
