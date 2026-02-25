@@ -19,6 +19,7 @@ const INDEXEDDB_STORES = new Set([
   'hair-makeup-callsheets', // callSheetStore - parsed PDF data
   'hair-makeup-schedule', // scheduleStore - production schedules
   'hair-makeup-timesheet-storage', // timesheetStore - time entries
+  'hair-makeup-budget', // budgetStore - receipts & budget data
 ]);
 
 // Note: Stores not in INDEXEDDB_STORES will automatically use localStorage

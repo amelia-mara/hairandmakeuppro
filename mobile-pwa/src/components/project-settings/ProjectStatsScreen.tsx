@@ -11,16 +11,14 @@ export function ProjectStatsScreen({
   projectId,
   onBack,
 }: ProjectStatsScreenProps) {
-  const { projectStats, isLoading, loadProjectSettings } = useProjectSettingsStore();
+  const { projectStats, isLoading, refreshProjectStats } = useProjectSettingsStore();
 
   useEffect(() => {
-    if (!projectStats) {
-      loadProjectSettings(projectId);
-    }
-  }, [projectId, projectStats, loadProjectSettings]);
+    refreshProjectStats(projectId);
+  }, [projectId, refreshProjectStats]);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-safe-bottom">
       {/* Header */}
       <div className="sticky top-0 z-30 bg-card border-b border-border safe-top">
         <div className="mobile-container">

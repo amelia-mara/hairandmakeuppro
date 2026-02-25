@@ -1211,16 +1211,51 @@ export const useProjectStore = create<ProjectState>()(
         );
 
         if (result.scenesUpdated > 0 || result.charactersCreated > 0) {
-          set((s) => ({
-            currentProject: s.currentProject
-              ? {
-                  ...s.currentProject,
-                  scenes: updatedScenes,
-                  characters: updatedCharacters,
-                  looks: updatedLooks,
-                }
-              : null,
-          }));
+          set((s) => {
+            if (!s.currentProject) return {};
+
+            // Migrate cast profiles from placeholder IDs (cast-N) to real character IDs.
+            // Before the schedule finishes processing, the Lookbooks page shows placeholder
+            // characters with IDs like "cast-1" from the cast list. If the user edits a
+            // cast profile for one of these, the profile is saved under that placeholder ID.
+            // When the sync creates real characters (char-XXXX), those profiles become
+            // orphaned. This migrates them to the correct new character IDs.
+            const existingProfiles = s.currentProject.castProfiles || [];
+            const migratedProfiles = existingProfiles.map(profile => {
+              const placeholderMatch = profile.characterId.match(/^cast-(\d+)$/);
+              if (!placeholderMatch) return profile;
+
+              const castNumber = parseInt(placeholderMatch[1], 10);
+              const castMember = schedule.castList.find(c => c.number === castNumber);
+              if (!castMember) return profile;
+
+              const castName = (castMember.character || castMember.name)
+                .replace(/^\d+\.\s*/, '').trim().toUpperCase();
+              const realChar = updatedCharacters.find(
+                c => c.name.trim().toUpperCase() === castName
+              );
+              if (!realChar) return profile;
+
+              console.log(
+                `[ProjectStore] Migrating cast profile from placeholder ${profile.characterId} to ${realChar.id} (${realChar.name})`
+              );
+              return {
+                ...profile,
+                characterId: realChar.id,
+                id: `cast-${realChar.id}`,
+              };
+            });
+
+            return {
+              currentProject: {
+                ...s.currentProject,
+                scenes: updatedScenes,
+                characters: updatedCharacters,
+                looks: updatedLooks,
+                castProfiles: migratedProfiles,
+              },
+            };
+          });
 
           console.log('[ProjectStore] Cast sync complete:', {
             scenesUpdated: result.scenesUpdated,

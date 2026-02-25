@@ -1060,6 +1060,51 @@ export const calculateInvoiceWithVAT = (
 };
 
 // ============================================
+// PRODUCTION INVOICING DETAILS (per-project)
+// ============================================
+
+export interface ProductionInvoicingDetails {
+  // Production Company
+  productionCompany: string;
+  productionAddress: string;
+  productionPhone: string;
+  productionEmail: string;
+
+  // Accounts Payable Contact
+  accountsPayableContact: string;
+  accountsPayableEmail: string;
+  accountsPayablePhone: string;
+
+  // Job / Contract References
+  poNumber: string;       // Purchase order number
+  costCode: string;       // Production cost code / department code
+  jobReference: string;   // Contract or job reference number
+
+  // Invoice Address (if different from production office)
+  invoiceAddressDifferent: boolean;
+  invoiceAddress: string;
+
+  // Special Instructions
+  invoiceNotes: string;   // Any specific requirements for invoicing
+}
+
+export const createEmptyProductionInvoicingDetails = (): ProductionInvoicingDetails => ({
+  productionCompany: '',
+  productionAddress: '',
+  productionPhone: '',
+  productionEmail: '',
+  accountsPayableContact: '',
+  accountsPayableEmail: '',
+  accountsPayablePhone: '',
+  poNumber: '',
+  costCode: '',
+  jobReference: '',
+  invoiceAddressDifferent: false,
+  invoiceAddress: '',
+  invoiceNotes: '',
+});
+
+// ============================================
 // PROJECT LIFECYCLE & EXPORT TYPES
 // ============================================
 

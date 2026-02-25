@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { UpgradeModal } from '@/components/dashboard';
+import * as supabaseProjects from '@/services/supabaseProjects';
 import type { ProjectMembership, Project, ProjectRole, ProductionType } from '@/types';
+import { createEmptyMakeupDetails, createEmptyHairDetails } from '@/types';
 
 // Format relative time
 const formatRelativeTime = (date: Date): string => {
@@ -108,19 +110,21 @@ function ProjectMenu({
   onSettings,
   onDelete,
   isOwner,
+  openUpward,
 }: {
   isOpen: boolean;
   onClose: () => void;
   onSettings?: () => void;
   onDelete: () => void;
   isOwner: boolean;
+  openUpward?: boolean;
 }) {
   if (!isOpen) return null;
 
   return (
     <>
       <div className="fixed inset-0 z-40" onClick={onClose} />
-      <div className="absolute right-0 top-full mt-1 z-50 bg-card rounded-xl shadow-lg border border-border py-1 min-w-[160px]">
+      <div className={`absolute right-0 z-50 bg-card rounded-xl shadow-lg border border-border py-1 min-w-[160px] ${openUpward ? 'bottom-full mb-1' : 'top-full mt-1'}`}>
         {onSettings && (
           <button
             onClick={() => { onSettings(); onClose(); }}
@@ -168,32 +172,106 @@ export function ProjectHubScreen() {
   const currentProject = sortedProjects.length > 0 ? sortedProjects[0] : null;
   const otherProjects = sortedProjects.slice(1);
 
-  const handleProjectOpen = (membership: ProjectMembership) => {
+  const handleProjectOpen = async (membership: ProjectMembership) => {
     updateLastAccessed(membership.projectId);
 
     const store = useProjectStore.getState();
+
+    // 1. Restore from local save if available
     if (store.hasSavedProject(membership.projectId)) {
       store.restoreSavedProject(membership.projectId);
       store.setActiveTab('today');
       return;
     }
 
+    // 2. Already the active project
     if (store.currentProject?.id === membership.projectId) {
       store.setActiveTab('today');
       return;
     }
 
+    // 3. Save current project if it has data, before switching
     if (store.currentProject && store.currentProject.scenes.length > 0) {
-      const updatedProject: Project = {
-        ...store.currentProject,
-        id: membership.projectId,
-        name: membership.projectName,
-      };
-      store.setProject(updatedProject);
-      store.setActiveTab('today');
-      return;
+      store.saveAndClearProject();
     }
 
+    // 4. Try to fetch project data from Supabase
+    try {
+      const { scenes, characters, looks, sceneCharacters, lookScenes, error } =
+        await supabaseProjects.getProjectData(membership.projectId);
+
+      if (!error && (scenes.length > 0 || characters.length > 0)) {
+        // Build character ID lookup for scene_characters mapping
+        const sceneCharMap = new Map<string, string[]>();
+        for (const sc of sceneCharacters) {
+          const existing = sceneCharMap.get(sc.scene_id) || [];
+          existing.push(sc.character_id);
+          sceneCharMap.set(sc.scene_id, existing);
+        }
+
+        // Build look_scenes mapping
+        const lookSceneMap = new Map<string, string[]>();
+        for (const ls of lookScenes) {
+          const existing = lookSceneMap.get(ls.look_id) || [];
+          existing.push(ls.scene_number);
+          lookSceneMap.set(ls.look_id, existing);
+        }
+
+        // Convert DB scenes to local Scene type
+        const localScenes = scenes.map(s => ({
+          id: s.id,
+          sceneNumber: s.scene_number,
+          slugline: s.location || `Scene ${s.scene_number}`,
+          intExt: (s.int_ext === 'EXT' ? 'EXT' : 'INT') as 'INT' | 'EXT',
+          timeOfDay: (s.time_of_day || 'DAY') as 'DAY' | 'NIGHT' | 'MORNING' | 'EVENING' | 'CONTINUOUS',
+          synopsis: s.synopsis || undefined,
+          characters: sceneCharMap.get(s.id) || [],
+          isComplete: s.is_complete,
+          completedAt: s.completed_at ? new Date(s.completed_at) : undefined,
+          filmingStatus: s.filming_status as any,
+          filmingNotes: s.filming_notes || undefined,
+          shootingDay: s.shooting_day || undefined,
+          characterConfirmationStatus: 'confirmed' as const,
+        }));
+
+        // Convert DB characters to local Character type
+        const localCharacters = characters.map(c => ({
+          id: c.id,
+          name: c.name,
+          initials: c.initials,
+          avatarColour: c.avatar_colour,
+        }));
+
+        // Convert DB looks to local Look type
+        const localLooks = looks.map(l => ({
+          id: l.id,
+          characterId: l.character_id,
+          name: l.name,
+          scenes: lookSceneMap.get(l.id) || [],
+          estimatedTime: l.estimated_time,
+          makeup: (l.makeup_details as any) || createEmptyMakeupDetails(),
+          hair: (l.hair_details as any) || createEmptyHairDetails(),
+        }));
+
+        const project: Project = {
+          id: membership.projectId,
+          name: membership.projectName,
+          createdAt: membership.joinedAt,
+          updatedAt: membership.lastAccessedAt,
+          scenes: localScenes,
+          characters: localCharacters,
+          looks: localLooks,
+        };
+
+        store.setProject(project);
+        store.setActiveTab('today');
+        return;
+      }
+    } catch (err) {
+      console.error('Failed to fetch project data from server:', err);
+    }
+
+    // 5. Fallback: no data on server either, show setup flow
     const project = createProjectFromMembership(membership);
     store.setProjectNeedsSetup(project);
     store.setActiveTab('today');
@@ -238,30 +316,32 @@ export function ProjectHubScreen() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <header className="px-4 pt-4 pb-3 safe-top">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {!hasCompletedOnboarding && (
-              <button
-                onClick={goBack}
-                className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 -ml-1"
-              >
-                <svg className="w-5 h-5 text-text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M19 12H5" />
-                  <path d="M12 19l-7-7 7-7" />
-                </svg>
-              </button>
-            )}
-            <h1 className="text-lg font-semibold text-text-primary">Projects</h1>
+      <div className="sticky top-0 z-30 bg-card border-b border-border safe-top">
+        <div className="mobile-container">
+          <div className="h-14 px-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {!hasCompletedOnboarding && (
+                <button
+                  onClick={goBack}
+                  className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 -ml-2"
+                >
+                  <svg className="w-5 h-5 text-text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M19 12H5" />
+                    <path d="M12 19l-7-7 7-7" />
+                  </svg>
+                </button>
+              )}
+              <h1 className="text-[17px] font-bold text-text-primary">Projects</h1>
+            </div>
+            <button
+              onClick={() => setScreen('profile')}
+              className="w-8 h-8 rounded-full bg-gold-100 flex items-center justify-center text-gold text-xs font-bold active:scale-95 transition-transform"
+            >
+              {getUserInitials()}
+            </button>
           </div>
-          <button
-            onClick={() => setScreen('profile')}
-            className="w-8 h-8 rounded-full bg-gold-100 flex items-center justify-center text-gold text-xs font-bold active:scale-95 transition-transform"
-          >
-            {getUserInitials()}
-          </button>
         </div>
-      </header>
+      </div>
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-4 pb-4">
@@ -355,7 +435,7 @@ export function ProjectHubScreen() {
             {otherProjects.length > 0 && (
               <section>
                 <div className="text-[11px] font-medium tracking-wider text-text-muted uppercase mb-2.5">Other Projects</div>
-                <div className="bg-card rounded-2xl border border-border overflow-hidden divide-y divide-border">
+                <div className="bg-card rounded-2xl border border-border divide-y divide-border">
                   {otherProjects.map((project) => (
                     <div key={project.projectId} className="relative">
                       <button
@@ -397,6 +477,7 @@ export function ProjectHubScreen() {
                               }
                               onDelete={() => setDeleteModalProject(project)}
                               isOwner={project.role === 'owner'}
+                              openUpward
                             />
                           </div>
                           <svg className="w-4 h-4 text-text-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

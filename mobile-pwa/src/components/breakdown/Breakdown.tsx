@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
-import { generateSceneBreakdownCSV } from '@/utils/exportUtils';
+import { generateSceneBreakdownCSV, generateSceneBreakdownXLSX } from '@/utils/exportUtils';
 import { CharacterAvatar } from '@/components/characters/CharacterAvatar';
 import { SceneScriptModal } from '@/components/scenes/SceneScriptModal';
 import {
@@ -228,25 +228,49 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
 
   // Export state
   const [isExporting, setIsExporting] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
 
-  const handleExportBreakdown = useCallback(async () => {
+  const downloadFile = useCallback((blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, []);
+
+  const handleExportCSV = useCallback(async () => {
     if (!currentProject || isExporting) return;
     setIsExporting(true);
+    setShowExportMenu(false);
     try {
       const csvContent = generateSceneBreakdownCSV(currentProject, sceneCaptures);
       const blob = new Blob([csvContent], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${currentProject.name}_Scene_Breakdown.csv`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      downloadFile(blob, `${currentProject.name}_Scene_Breakdown.csv`);
     } finally {
       setIsExporting(false);
     }
-  }, [currentProject, sceneCaptures, isExporting]);
+  }, [currentProject, sceneCaptures, isExporting, downloadFile]);
+
+  const handleExportXLSX = useCallback(async () => {
+    if (!currentProject || isExporting) return;
+    setIsExporting(true);
+    setShowExportMenu(false);
+    try {
+      const buf = generateSceneBreakdownXLSX(currentProject, sceneCaptures);
+      const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      downloadFile(blob, `${currentProject.name}_Scene_Breakdown.xlsx`);
+    } finally {
+      setIsExporting(false);
+    }
+  }, [currentProject, sceneCaptures, isExporting, downloadFile]);
+
+  const handleExportBreakdown = useCallback(async () => {
+    if (!currentProject || isExporting) return;
+    setShowExportMenu(prev => !prev);
+  }, [currentProject, isExporting]);
 
   // Filming status notes modal state
   const [notesModalState, setNotesModalState] = useState<{
@@ -492,24 +516,52 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
                 </button>
               )}
 
-              {/* Export button */}
-              <button
-                onClick={handleExportBreakdown}
-                disabled={isExporting}
-                className="p-2 rounded-lg transition-colors touch-manipulation text-text-muted hover:text-gold disabled:opacity-50"
-                title="Export Scene Breakdown"
-              >
-                {isExporting ? (
-                  <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                ) : (
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                  </svg>
+              {/* Export button with dropdown */}
+              <div className="relative">
+                <button
+                  onClick={handleExportBreakdown}
+                  disabled={isExporting}
+                  className="p-2 rounded-lg transition-colors touch-manipulation text-text-muted hover:text-gold disabled:opacity-50"
+                  title="Export Scene Breakdown"
+                >
+                  {isExporting ? (
+                    <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                    </svg>
+                  )}
+                </button>
+
+                {showExportMenu && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setShowExportMenu(false)} />
+                    <div className="absolute right-0 top-full mt-1 z-50 bg-card border border-border rounded-lg shadow-lg overflow-hidden min-w-[180px]">
+                      <button
+                        onClick={handleExportXLSX}
+                        className="w-full px-4 py-3 text-left text-sm text-text-primary hover:bg-background flex items-center gap-2"
+                      >
+                        <svg className="w-4 h-4 text-green-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h7.5c.621 0 1.125-.504 1.125-1.125m-9.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-7.5A1.125 1.125 0 0112 18.375m9.75-12.75c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125m19.5 0v1.5c0 .621-.504 1.125-1.125 1.125M2.25 5.625v1.5c0 .621.504 1.125 1.125 1.125m0 0h17.25m-17.25 0h7.5c.621 0 1.125.504 1.125 1.125M3.375 8.25c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125m17.25-3.75h-7.5c-.621 0-1.125.504-1.125 1.125m8.625-1.125c.621 0 1.125.504 1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125m-17.25 0h7.5m-7.5 0c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125M12 10.875v-1.5m0 1.5c0 .621-.504 1.125-1.125 1.125M12 10.875c0 .621.504 1.125 1.125 1.125m-2.25 0c.621 0 1.125.504 1.125 1.125M10.875 12c-.621 0-1.125.504-1.125 1.125M12 12c.621 0 1.125.504 1.125 1.125m-2.25 0c.621 0 1.125.504 1.125 1.125m0 0v1.5c0 .621-.504 1.125-1.125 1.125M12 15.375c.621 0 1.125-.504 1.125-1.125" />
+                        </svg>
+                        Excel (.xlsx)
+                      </button>
+                      <button
+                        onClick={handleExportCSV}
+                        className="w-full px-4 py-3 text-left text-sm text-text-primary hover:bg-background flex items-center gap-2 border-t border-border"
+                      >
+                        <svg className="w-4 h-4 text-blue-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                        </svg>
+                        CSV (.csv)
+                      </button>
+                    </div>
+                  </>
                 )}
-              </button>
+              </div>
 
               {/* Filter button */}
               <button

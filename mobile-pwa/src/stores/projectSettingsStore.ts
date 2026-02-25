@@ -7,11 +7,16 @@ import type {
   ProjectPermissions,
   PermissionLevel,
   ManualShootingDay,
+  Project,
+  SceneCapture,
 } from '@/types';
 import {
   generateProjectCode,
   createDefaultProjectPermissions,
 } from '@/types';
+import { useAuthStore } from './authStore';
+import { useProjectStore } from './projectStore';
+import * as supabaseProjects from '@/services/supabaseProjects';
 
 interface ProjectSettingsState {
   // Project settings
@@ -39,6 +44,9 @@ interface ProjectSettingsState {
   changeTeamMemberRole: (userId: string, newRole: TeamMemberRole) => Promise<void>;
   removeTeamMember: (userId: string) => Promise<void>;
 
+  // Stats
+  refreshProjectStats: (projectId: string) => void;
+
   // Schedule management
   saveShootingDay: (dayNumber: number, date: Date, sceneIds: string[]) => Promise<void>;
 
@@ -49,45 +57,109 @@ interface ProjectSettingsState {
 // Mock delay for API simulation
 const mockDelay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Generate mock team members
-const generateMockTeamMembers = (projectId: string): TeamMember[] => {
-  const names = [
-    { name: 'Sarah Chen', role: 'designer' as TeamMemberRole, isOwner: true },
-    { name: 'Mike Torres', role: 'supervisor' as TeamMemberRole, isOwner: false },
-    { name: 'Emma Wright', role: 'key' as TeamMemberRole, isOwner: false },
-    { name: 'David Park', role: 'key' as TeamMemberRole, isOwner: false },
-    { name: 'Lucy Hammond', role: 'hair' as TeamMemberRole, isOwner: false },
-    { name: 'Alex Rivera', role: 'makeup' as TeamMemberRole, isOwner: false },
-    { name: 'Jordan Lee', role: 'sfx' as TeamMemberRole, isOwner: false },
-    { name: 'James Cole', role: 'daily' as TeamMemberRole, isOwner: false },
-  ];
+// Build team members from the current authenticated user
+const getTeamFromCurrentUser = (projectId: string): TeamMember[] => {
+  const { user } = useAuthStore.getState();
+  if (!user) return [];
 
-  return names.map((member, index) => ({
-    userId: `user-${index + 1}`,
+  return [{
+    userId: user.id,
     projectId,
-    name: member.name,
-    email: `${member.name.toLowerCase().replace(' ', '.')}@example.com`,
-    role: member.role,
-    isOwner: member.isOwner,
-    joinedAt: new Date(Date.now() - (30 - index) * 24 * 60 * 60 * 1000),
-    lastActiveAt: new Date(Date.now() - index * 60 * 60 * 1000),
-    editCount: Math.floor(Math.random() * 500) + 50,
-  }));
+    name: user.name,
+    email: user.email,
+    avatarUrl: user.avatarUrl,
+    role: 'designer' as TeamMemberRole,
+    isOwner: true,
+    joinedAt: user.createdAt,
+    lastActiveAt: new Date(),
+    editCount: 0,
+  }];
 };
 
-// Generate mock project stats
-const generateMockStats = (): ProjectStats => ({
-  sceneCount: 142,
-  storyDays: 23,
-  characterCount: 14,
-  completedScenes: 94,
-  completionPercentage: 67,
-  photoCount: 1247,
-  storageUsed: 2.3 * 1024 * 1024 * 1024, // 2.3 GB
-  teamMemberCount: 8,
-  lastActivity: new Date(Date.now() - 2 * 60 * 60 * 1000),
-  mostActiveUser: { name: 'Sarah Chen', editCount: 342 },
-});
+// Compute real project stats from actual project data
+const computeProjectStats = (
+  project: Project | null,
+  sceneCaptures: Record<string, SceneCapture>,
+  teamMemberCount: number
+): ProjectStats => {
+  if (!project) {
+    return {
+      sceneCount: 0,
+      storyDays: 0,
+      characterCount: 0,
+      completedScenes: 0,
+      completionPercentage: 0,
+      photoCount: 0,
+      storageUsed: 0,
+      teamMemberCount,
+      lastActivity: null,
+      mostActiveUser: null,
+    };
+  }
+
+  const sceneCount = project.scenes.length;
+  const characterCount = project.characters.length;
+  const completedScenes = project.scenes.filter(s => s.isComplete).length;
+  const completionPercentage = sceneCount > 0 ? Math.round((completedScenes / sceneCount) * 100) : 0;
+
+  // Count unique shooting days from scenes that have one assigned
+  const uniqueShootingDays = new Set(
+    project.scenes.filter(s => s.shootingDay != null).map(s => s.shootingDay)
+  );
+  const storyDays = uniqueShootingDays.size;
+
+  // Count all photos across scene captures and looks
+  let photoCount = 0;
+  for (const capture of Object.values(sceneCaptures)) {
+    // Standard 4-angle photos
+    if (capture.photos.front) photoCount++;
+    if (capture.photos.left) photoCount++;
+    if (capture.photos.right) photoCount++;
+    if (capture.photos.back) photoCount++;
+    // Additional photos
+    photoCount += capture.additionalPhotos.length;
+    // SFX reference photos
+    if (capture.sfxDetails?.sfxReferencePhotos) {
+      photoCount += capture.sfxDetails.sfxReferencePhotos.length;
+    }
+  }
+  // Look master reference photos
+  for (const look of project.looks) {
+    if (look.masterReference) photoCount++;
+  }
+
+  // Estimate storage (~500KB average per photo)
+  const storageUsed = photoCount * 500 * 1024;
+
+  // Find most recent capture as last activity
+  let lastActivity: Date | null = null;
+  for (const capture of Object.values(sceneCaptures)) {
+    const capturedAt = new Date(capture.capturedAt);
+    if (!lastActivity || capturedAt > lastActivity) {
+      lastActivity = capturedAt;
+    }
+  }
+
+  // Most active user — current user with their capture count
+  const { user } = useAuthStore.getState();
+  const captureCount = Object.keys(sceneCaptures).length;
+  const mostActiveUser = user && captureCount > 0
+    ? { name: user.name, editCount: captureCount }
+    : null;
+
+  return {
+    sceneCount,
+    storyDays,
+    characterCount,
+    completedScenes,
+    completionPercentage,
+    photoCount,
+    storageUsed,
+    teamMemberCount,
+    lastActivity,
+    mostActiveUser,
+  };
+};
 
 export const useProjectSettingsStore = create<ProjectSettingsState>((set, get) => ({
   // Initial state
@@ -100,25 +172,41 @@ export const useProjectSettingsStore = create<ProjectSettingsState>((set, get) =
 
   // Load project settings
   loadProjectSettings: async (projectId) => {
+    // If settings already loaded for this project, just refresh the invite code
+    const existing = get().projectSettings;
+    if (existing && existing.id === projectId) {
+      const { projectMemberships } = useAuthStore.getState();
+      const membership = projectMemberships.find(pm => pm.projectId === projectId);
+      if (membership?.projectCode && membership.projectCode !== existing.inviteCode) {
+        set({ projectSettings: { ...existing, inviteCode: membership.projectCode } });
+      }
+      return;
+    }
+
     set({ isLoading: true, error: null });
 
     try {
-      await mockDelay(400);
+      const { user, projectMemberships } = useAuthStore.getState();
+      const { currentProject, sceneCaptures } = useProjectStore.getState();
+      const teamMembers = getTeamFromCurrentUser(projectId);
 
-      // Mock project settings
+      // Use the real invite code from the project membership (stored from DB)
+      const membership = projectMemberships.find(pm => pm.projectId === projectId);
+      const inviteCode = membership?.projectCode || generateProjectCode();
+
       const settings: ProjectSettings = {
         id: projectId,
-        name: 'The Punishing',
-        type: 'film',
+        name: currentProject?.name || membership?.projectName || projectId,
+        type: (membership?.productionType as ProjectSettings['type']) || 'film',
         status: 'shooting',
-        inviteCode: 'TMK-4827',
-        ownerId: 'user-1',
+        inviteCode,
+        ownerId: user?.id || '',
         permissions: createDefaultProjectPermissions(),
-        createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+        createdAt: currentProject?.createdAt || new Date(),
         archivedAt: null,
       };
 
-      const stats = generateMockStats();
+      const stats = computeProjectStats(currentProject, sceneCaptures, teamMembers.length);
 
       set({
         projectSettings: settings,
@@ -208,12 +296,28 @@ export const useProjectSettingsStore = create<ProjectSettingsState>((set, get) =
 
     set({ isLoading: true });
     try {
-      await mockDelay(500);
-      const newCode = generateProjectCode();
+      // Call Supabase to regenerate the code in the database
+      const { inviteCode: newCode, error } = await supabaseProjects.regenerateInviteCode(projectSettings.id);
+
+      if (error || !newCode) {
+        throw error || new Error('Failed to regenerate invite code');
+      }
+
+      // Update local settings state
       set({
         projectSettings: { ...projectSettings, inviteCode: newCode },
         isLoading: false,
       });
+
+      // Also update the authStore membership so the code stays in sync
+      const authStore = useAuthStore.getState();
+      const updatedMemberships = authStore.projectMemberships.map(pm =>
+        pm.projectId === projectSettings.id
+          ? { ...pm, projectCode: newCode }
+          : pm
+      );
+      useAuthStore.setState({ projectMemberships: updatedMemberships });
+
       return newCode;
     } catch {
       set({ isLoading: false, error: 'Failed to regenerate invite code' });
@@ -261,16 +365,34 @@ export const useProjectSettingsStore = create<ProjectSettingsState>((set, get) =
     }
   },
 
-  // Load team members
+  // Load team members from Supabase (falls back to current user if fetch fails)
   loadTeamMembers: async (projectId) => {
     set({ isLoading: true, error: null });
 
     try {
-      await mockDelay(400);
-      const members = generateMockTeamMembers(projectId);
-      set({ teamMembers: members, isLoading: false });
+      const { members, error } = await supabaseProjects.getProjectMembers(projectId);
+
+      if (!error && members.length > 0) {
+        const teamMembers: TeamMember[] = members.map((m) => ({
+          userId: m.user_id,
+          projectId: m.project_id,
+          name: m.user?.name || 'Unknown',
+          email: m.user?.email || '',
+          role: m.role as TeamMemberRole,
+          isOwner: m.is_owner,
+          joinedAt: new Date(m.joined_at),
+          lastActiveAt: new Date(),
+          editCount: 0,
+        }));
+        set({ teamMembers, isLoading: false });
+      } else {
+        // Fallback to current user only
+        const fallback = getTeamFromCurrentUser(projectId);
+        set({ teamMembers: fallback, isLoading: false });
+      }
     } catch {
-      set({ isLoading: false, error: 'Failed to load team members' });
+      const fallback = getTeamFromCurrentUser(projectId);
+      set({ teamMembers: fallback, isLoading: false, error: 'Failed to load team members' });
     }
   },
 
@@ -308,6 +430,14 @@ export const useProjectSettingsStore = create<ProjectSettingsState>((set, get) =
     } catch {
       set({ isLoading: false, error: 'Failed to remove team member' });
     }
+  },
+
+  // Refresh project stats from live project data
+  refreshProjectStats: (projectId: string) => {
+    const { currentProject, sceneCaptures } = useProjectStore.getState();
+    const teamMembers = getTeamFromCurrentUser(projectId);
+    const stats = computeProjectStats(currentProject, sceneCaptures, teamMembers.length);
+    set({ projectStats: stats });
   },
 
   // Save shooting day

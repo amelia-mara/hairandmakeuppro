@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { useBillingStore } from '@/stores/billingStore';
+import { useProductionDetailsStore } from '@/stores/productionDetailsStore';
+import { useTimesheetStore } from '@/stores/timesheetStore';
 import { useAuthStore } from '@/stores/authStore';
 import type {
   ExportDocument,
@@ -9,7 +11,7 @@ import type {
   ExportDeliveryMethod,
   UserTier,
 } from '@/types';
-import { EXPORT_DOCUMENTS } from '@/types';
+import { EXPORT_DOCUMENTS, calculateInvoiceWithVAT } from '@/types';
 
 interface ProjectExportScreenProps {
   onBack: () => void;
@@ -22,7 +24,10 @@ const INVOICE_TIERS: UserTier[] = ['supervisor', 'designer'];
 
 export function ProjectExportScreen({ onBack, onExportComplete, onNavigateToBilling }: ProjectExportScreenProps) {
   const { currentProject, lifecycle, sceneCaptures } = useProjectStore();
-  const { isBillingComplete } = useBillingStore();
+  const { billingDetails, isBillingComplete } = useBillingStore();
+  const projectId = currentProject?.id ?? '';
+  const pd = useProductionDetailsStore((s) => s.getDetails(projectId));
+  const { entries: timesheetEntries, calculateEntry, rateCard } = useTimesheetStore();
   const { user } = useAuthStore();
   const [documents, setDocuments] = useState<ExportDocument[]>(
     EXPORT_DOCUMENTS.map(doc => ({ ...doc }))
@@ -199,6 +204,103 @@ export function ProjectExportScreen({ onBack, onExportComplete, onNavigateToBill
             mimeType: 'text/csv',
           });
           break;
+        case 'invoice_summary': {
+          const bd = billingDetails;
+          const allEntries = Object.values(timesheetEntries).sort((a, b) => a.date.localeCompare(b.date));
+          if (allEntries.length === 0) break;
+
+          // Calculate totals across all timesheet entries
+          let totalHours = 0;
+          let totalEarnings = 0;
+          let overtimeHours = 0;
+          let preCallHours = 0;
+          allEntries.forEach((entry, i) => {
+            const prevWrap = i > 0 ? allEntries[i - 1].wrapOut : undefined;
+            const calc = calculateEntry(entry, prevWrap);
+            totalHours += calc.totalHours;
+            totalEarnings += calc.totalEarnings;
+            overtimeHours += calc.otHours;
+            preCallHours += calc.preCallHours;
+          });
+
+          const vat = calculateInvoiceWithVAT(totalEarnings, bd.vatSettings);
+          const fmtAddr = (addr: string) =>
+            addr ? addr.split('\n').map((l: string) => l.trim()).filter(Boolean).join('<br>') : '';
+          const billToAddr = pd.invoiceAddressDifferent && pd.invoiceAddress
+            ? fmtAddr(pd.invoiceAddress) : fmtAddr(pd.productionAddress);
+
+          const refLines: string[] = [];
+          if (pd.poNumber) refLines.push(`PO: ${pd.poNumber}`);
+          if (pd.costCode) refLines.push(`Cost Code: ${pd.costCode}`);
+          if (pd.jobReference) refLines.push(`Job Ref: ${pd.jobReference}`);
+
+          const firstDate = allEntries[0].date;
+          const lastDate = allEntries[allEntries.length - 1].date;
+          const invNumber = `INV-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
+          const invDate = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+          const sym = '&pound;';
+
+          const invoiceHtml = `<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><title>Invoice Summary — ${currentProject.name}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; color: #1a1a1a; font-size: 14px; line-height: 1.5; }
+  .hdr { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; padding-bottom: 16px; border-bottom: 3px solid #C9A962; }
+  .hdr h1 { font-size: 20px; font-weight: 700; } .hdr .sub { font-size: 12px; color: #888; }
+  .inv-lbl { font-size: 28px; font-weight: 800; color: #C9A962; letter-spacing: 2px; }
+  .inv-num { font-size: 13px; color: #666; }
+  .cols { display: flex; justify-content: space-between; margin-bottom: 28px; }
+  .col h3 { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 6px; }
+  .col p { font-size: 13px; color: #333; line-height: 1.7; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+  thead th { text-align: left; padding: 8px 10px; font-size: 11px; font-weight: 600; text-transform: uppercase; color: #666; border-bottom: 2px solid #e5e5e5; }
+  tbody td { padding: 10px; border-bottom: 1px solid #f0f0f0; }
+  .amt { text-align: right; font-weight: 600; }
+  .totals { width: 280px; margin-left: auto; margin-bottom: 32px; }
+  .totals .r { display: flex; justify-content: space-between; padding: 5px 0; font-size: 13px; }
+  .totals .r .l { color: #666; } .totals .r .v { font-weight: 600; }
+  .totals .t { border-top: 2px solid #C9A962; padding-top: 8px; margin-top: 4px; }
+  .totals .t .l { font-weight: 700; font-size: 14px; } .totals .t .v { font-weight: 800; font-size: 18px; color: #C9A962; }
+  .box { background: #f8f8f8; border-radius: 8px; padding: 14px 18px; margin-bottom: 12px; font-size: 12px; color: #666; }
+  .box strong { color: #333; }
+  .ft { padding-top: 14px; border-top: 1px solid #e5e5e5; font-size: 11px; color: #aaa; text-align: center; }
+  @media print { body { padding: 20px; } }
+</style></head><body>
+  <div class="hdr">
+    <div>
+      <h1>${bd.businessName || bd.fullName || currentProject.name}</h1>
+      <div class="sub">${bd.businessName && bd.fullName ? bd.fullName : 'Invoice Summary'}</div>
+    </div>
+    <div style="text-align:right"><div class="inv-lbl">INVOICE</div><div class="inv-num">${invNumber}</div></div>
+  </div>
+  <div class="cols">
+    <div class="col"><h3>From</h3><p>${bd.fullName ? `<strong>${bd.fullName}</strong><br>` : ''}${fmtAddr(bd.address) || '—'}${bd.email ? `<br>${bd.email}` : ''}${vat.isVATApplicable && bd.vatSettings.vatNumber ? `<br>VAT: ${bd.vatSettings.vatNumber}` : ''}</p></div>
+    <div class="col"><h3>Bill To</h3><p>${pd.productionCompany ? `<strong>${pd.productionCompany}</strong><br>` : '—'}${billToAddr || ''}${pd.accountsPayableContact ? `<br>Attn: ${pd.accountsPayableContact}` : ''}</p></div>
+    <div class="col" style="text-align:right"><h3>Details</h3><p><strong>Date:</strong> ${invDate}<br><strong>Period:</strong> ${firstDate} — ${lastDate}<br><strong>Due:</strong> ${bd.paymentTerms || 'Payment within 30 days'}${refLines.length ? '<br>' + refLines.join(' | ') : ''}</p></div>
+  </div>
+  <table><thead><tr><th>Description</th><th>Qty</th><th>Rate</th><th class="amt">Amount</th></tr></thead><tbody>
+    <tr><td>Hair &amp; Makeup Services — Day Rate</td><td>${allEntries.length} days</td><td>${sym}${rateCard.dailyRate.toFixed(2)}</td><td class="amt">${sym}${(allEntries.length * rateCard.dailyRate).toFixed(2)}</td></tr>
+    ${overtimeHours > 0 ? `<tr><td>Overtime</td><td>${overtimeHours.toFixed(1)} hrs</td><td>—</td><td class="amt">${sym}${(totalEarnings - allEntries.length * rateCard.dailyRate - allEntries.length * rateCard.kitRental).toFixed(2)}</td></tr>` : ''}
+    ${rateCard.kitRental > 0 ? `<tr><td>Kit / Box Rental</td><td>${allEntries.length} days</td><td>${sym}${rateCard.kitRental.toFixed(2)}</td><td class="amt">${sym}${(allEntries.length * rateCard.kitRental).toFixed(2)}</td></tr>` : ''}
+  </tbody></table>
+  <div class="totals">
+    <div class="r"><span class="l">Subtotal</span><span class="v">${sym}${vat.subtotal.toFixed(2)}</span></div>
+    ${vat.isVATApplicable ? `<div class="r"><span class="l">VAT (${vat.vatRate}%)</span><span class="v">${sym}${vat.vatAmount.toFixed(2)}</span></div>` : ''}
+    <div class="r t"><span class="l">Total Due</span><span class="v">${sym}${vat.total.toFixed(2)}</span></div>
+  </div>
+  ${bd.bankDetails.accountName || bd.bankDetails.sortCode ? `<div class="box"><strong>Bank Details:</strong><br>${bd.bankDetails.accountName ? `Account: ${bd.bankDetails.accountName}<br>` : ''}${bd.bankDetails.sortCode ? `Sort Code: ${bd.bankDetails.sortCode}<br>` : ''}${bd.bankDetails.accountNumber ? `Account No: ${bd.bankDetails.accountNumber}` : ''}</div>` : ''}
+  ${pd.invoiceNotes ? `<div class="box" style="font-style:italic">${pd.invoiceNotes}</div>` : ''}
+  <div class="box"><strong>Payment Terms:</strong> ${bd.paymentTerms || 'Payment within 30 days'}. Please reference <strong>${invNumber}</strong> with payment.</div>
+  <div class="ft">Generated by Checks Happy</div>
+</body></html>`;
+
+          exports.push({
+            filename: `${currentProject.name}_Invoice_Summary.html`,
+            content: invoiceHtml,
+            mimeType: 'text/html',
+          });
+          break;
+        }
         // Add more document types as they're implemented
       }
     }
