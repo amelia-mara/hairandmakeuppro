@@ -361,7 +361,7 @@ export const useProjectStore = create<ProjectState>()(
         );
 
         const newCapture: SceneCapture = {
-          id: key,
+          id: uuidv4(),
           sceneId,
           characterId,
           lookId: look?.id ?? '',
@@ -596,7 +596,7 @@ export const useProjectStore = create<ProjectState>()(
       // Scene management
       addScene: (sceneData) => {
         const newScene: Scene = {
-          id: `scene-${sceneData.sceneNumber}-${Date.now()}`,
+          id: uuidv4(),
           sceneNumber: sceneData.sceneNumber,
           slugline: sceneData.slugline || `Scene ${sceneData.sceneNumber}`,
           intExt: sceneData.intExt || 'INT',
@@ -702,9 +702,9 @@ export const useProjectStore = create<ProjectState>()(
         if (!currentCapture) return nextScene.id;
 
         // Create new capture for next scene, copying data (but not photos)
-        const newCaptureId = `${nextScene.id}-${characterId}`;
+        const newCaptureKey = `${nextScene.id}-${characterId}`;
         const newCapture: SceneCapture = {
-          id: newCaptureId,
+          id: uuidv4(),
           sceneId: nextScene.id,
           characterId,
           lookId: currentCapture.lookId,
@@ -724,7 +724,7 @@ export const useProjectStore = create<ProjectState>()(
         set((state) => ({
           sceneCaptures: {
             ...state.sceneCaptures,
-            [newCaptureId]: newCapture,
+            [newCaptureKey]: newCapture,
           },
           currentSceneId: nextScene.id,
         }));
@@ -1069,7 +1069,7 @@ export const useProjectStore = create<ProjectState>()(
         }
 
         // Generate a new character
-        const id = `char-${uuidv4().slice(0, 8)}`;
+        const id = uuidv4();
         const initials = characterName
           .split(' ')
           .map((w) => w[0])
@@ -1095,7 +1095,7 @@ export const useProjectStore = create<ProjectState>()(
 
           // Create a new look for this character
           const newLook: Look = {
-            id: `look-${newCharacter.id}`,
+            id: uuidv4(),
             characterId: newCharacter.id,
             name: 'Day 1',
             scenes: scene ? [scene.sceneNumber] : [],

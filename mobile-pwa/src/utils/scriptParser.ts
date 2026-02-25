@@ -1030,7 +1030,7 @@ export function convertParsedScriptToProject(
   // Create character ID mapping
   const charIdMap = new Map<string, string>();
   const characters: Character[] = selectedCharacters.map((name, index) => {
-    const id = `char-${uuidv4().slice(0, 8)}`;
+    const id = uuidv4();
     charIdMap.set(name, id);
 
     // Generate initials
@@ -1060,7 +1060,7 @@ export function convertParsedScriptToProject(
       .map(charName => charIdMap.get(charName)!);
 
     return {
-      id: `scene-${ps.sceneNumber}`,
+      id: uuidv4(),
       sceneNumber: ps.sceneNumber,
       slugline: `${ps.intExt}. ${ps.location} - ${ps.timeOfDay}`,
       intExt: ps.intExt,

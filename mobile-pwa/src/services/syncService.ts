@@ -375,7 +375,10 @@ export async function pullProjectData(projectId: string): Promise<boolean> {
         }
       }
 
-      mergedCaptures[dbCapture.id] = dbToSceneCapture(dbCapture, mainPhotos, additionalPhotos);
+      const capture = dbToSceneCapture(dbCapture, mainPhotos, additionalPhotos);
+      // Use composite key for local dict (matches getOrCreateSceneCapture key format)
+      const captureKey = `${dbCapture.scene_id}-${dbCapture.character_id}`;
+      mergedCaptures[captureKey] = capture;
     }
 
     // Update the project store with merged data
@@ -1014,7 +1017,9 @@ function handleContinuityEventChange(
       }
 
       const localCapture = dbToSceneCapture(dbCapture, mainPhotos, additionalPhotos);
-      projectStore.updateSceneCapture(localCapture.id, localCapture);
+      // Use composite key for local dict lookup (matches getOrCreateSceneCapture key format)
+      const captureKey = `${localCapture.sceneId}-${localCapture.characterId}`;
+      projectStore.updateSceneCapture(captureKey, localCapture);
     });
   }
 }
@@ -1187,10 +1192,10 @@ async function pushInitialData(projectId: string, userId?: string): Promise<void
     }
   }
 
-  // Push schedule if complete
+  // Push schedule data regardless of processing status
   const schedule = useScheduleStore.getState().schedule;
-  if (schedule && schedule.status === 'complete') {
-    console.log('[SYNC] pushInitialData: pushing schedule');
+  if (schedule) {
+    console.log('[SYNC] pushInitialData: pushing schedule, status:', schedule.status);
     pushScheduleData(projectId, schedule);
   }
 }

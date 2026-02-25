@@ -81,10 +81,9 @@ export function initSyncSubscriptions(): void {
 
     if (
       state.schedule !== prevState.schedule &&
-      state.schedule &&
-      state.schedule.status === 'complete'
+      state.schedule
     ) {
-      console.log('[SYNC-SUB] Schedule changed, pushing to Supabase');
+      console.log('[SYNC-SUB] Schedule changed, pushing to Supabase, status:', state.schedule.status);
       pushScheduleData(projectId, state.schedule);
     }
   });
