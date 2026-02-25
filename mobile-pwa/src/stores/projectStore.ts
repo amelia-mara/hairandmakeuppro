@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { createHybridStorage } from '@/db/zustandStorage';
 import { useScheduleStore } from './scheduleStore';
+import { useCallSheetStore } from './callSheetStore';
 import type {
   Project,
   Scene,
@@ -260,8 +261,9 @@ export const useProjectStore = create<ProjectState>()(
           const lifecycleToSave = state.lifecycle;
           const needsSetupToSave = state.needsSetup;
 
-          // Also save the schedule data for this project
+          // Also save the schedule and call sheet data for this project
           useScheduleStore.getState().saveScheduleForProject(projectId);
+          useCallSheetStore.getState().saveCallSheetsForProject(projectId);
 
           set((s) => ({
             savedProjects: {
@@ -283,8 +285,9 @@ export const useProjectStore = create<ProjectState>()(
             wrapTriggerReason: null,
           }));
         } else {
-          // Clear schedule data when clearing project without saving
+          // Clear schedule and call sheet data when clearing project without saving
           useScheduleStore.getState().clearScheduleForProject();
+          useCallSheetStore.getState().clearCallSheetsForProject();
 
           set({
             currentProject: null,
@@ -309,8 +312,9 @@ export const useProjectStore = create<ProjectState>()(
         const newSavedProjects = { ...state.savedProjects };
         delete newSavedProjects[projectId];
 
-        // Also restore the schedule data for this project
+        // Also restore the schedule and call sheet data for this project
         useScheduleStore.getState().restoreScheduleForProject(projectId);
+        useCallSheetStore.getState().restoreCallSheetsForProject(projectId);
 
         set({
           currentProject: savedData.project,

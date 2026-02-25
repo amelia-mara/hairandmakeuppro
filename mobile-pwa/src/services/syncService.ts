@@ -240,9 +240,9 @@ function dbToSceneCapture(
 // Pull: Fetch from Supabase → merge into local stores
 // ============================================================================
 
-export async function pullProjectData(projectId: string): Promise<boolean> {
+export async function pullProjectData(projectId: string, retryCount: number = 0): Promise<boolean> {
   if (!isSupabaseConfigured) return false;
-  console.log('[PULL] pullProjectData called for project:', projectId);
+  console.log('[PULL] pullProjectData called for project:', projectId, retryCount > 0 ? `(retry ${retryCount})` : '');
 
   const syncStore = useSyncStore.getState();
   syncStore.setSyncing();
@@ -304,6 +304,18 @@ export async function pullProjectData(projectId: string): Promise<boolean> {
     // Skip merge if server has no data (fresh project)
     if (dbScenes.length === 0 && dbChars.length === 0 && dbLooks.length === 0) {
       console.log('[PULL] Server has no data for this project, skipping merge');
+
+      // If the local project has no data either (e.g. team member just joined),
+      // schedule a delayed retry in case the owner's data hasn't synced yet
+      const project = useProjectStore.getState().currentProject;
+      if (project && project.scenes.length === 0 && retryCount < 3) {
+        const delay = (retryCount + 1) * 3000; // 3s, 6s, 9s
+        console.log(`[PULL] Local project also empty, retrying in ${delay}ms (attempt ${retryCount + 1}/3)`);
+        setTimeout(() => {
+          pullProjectData(projectId, retryCount + 1);
+        }, delay);
+      }
+
       syncStore.setSynced();
       return true;
     }

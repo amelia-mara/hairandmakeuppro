@@ -7,14 +7,23 @@ import { useTimesheetStore } from './timesheetStore';
 import { useProjectStore } from './projectStore';
 
 // Current version of the store schema - increment when making breaking changes
-const STORE_VERSION = 2;
+const STORE_VERSION = 3;
+
+// Saved call sheet data (indexed by project ID)
+interface SavedCallSheetData {
+  callSheets: CallSheet[];
+  activeCallSheetId: string | null;
+}
 
 interface CallSheetState {
-  // All uploaded call sheets
+  // Call sheets for the current project
   callSheets: CallSheet[];
 
   // Currently active call sheet (for "Today" view)
   activeCallSheetId: string | null;
+
+  // Saved call sheets by project ID (for multi-project support)
+  savedCallSheets: Record<string, SavedCallSheetData>;
 
   // Loading state
   isUploading: boolean;
@@ -37,8 +46,14 @@ interface CallSheetState {
     filmingNotes?: string
   ) => void;
 
-  // Clear all call sheets
+  // Clear all call sheets for current project
   clearAll: () => void;
+
+  // Multi-project support: save/restore call sheet data
+  saveCallSheetsForProject: (projectId: string) => void;
+  restoreCallSheetsForProject: (projectId: string) => boolean;
+  hasSavedCallSheets: (projectId: string) => boolean;
+  clearCallSheetsForProject: () => void;
 }
 
 // Validate that a call sheet has proper structure (scenes belong to this call sheet only)
@@ -58,6 +73,7 @@ export const useCallSheetStore = create<CallSheetState>()(
     (set, get) => ({
       callSheets: [],
       activeCallSheetId: null,
+      savedCallSheets: {},
       isUploading: false,
       uploadError: null,
 
@@ -67,9 +83,13 @@ export const useCallSheetStore = create<CallSheetState>()(
         try {
           const callSheet = await parseCallSheetPDF(file);
 
+          // Tag the call sheet with the current project ID
+          const currentProjectId = useProjectStore.getState().currentProject?.id;
+
           // Ensure the new call sheet has a clean scenes array (no merging)
           const cleanCallSheet: CallSheet = {
             ...callSheet,
+            projectId: currentProjectId,
             // Explicitly create a new scenes array to prevent any reference issues
             scenes: [...callSheet.scenes],
           };
@@ -234,6 +254,70 @@ export const useCallSheetStore = create<CallSheetState>()(
       clearAll: () => {
         set({ callSheets: [], activeCallSheetId: null });
       },
+
+      // Save current call sheet data for a project (before switching projects)
+      saveCallSheetsForProject: (projectId: string) => {
+        const state = get();
+        if (state.callSheets.length > 0) {
+          set((s) => ({
+            savedCallSheets: {
+              ...s.savedCallSheets,
+              [projectId]: {
+                callSheets: s.callSheets,
+                activeCallSheetId: s.activeCallSheetId,
+              },
+            },
+            // Clear current call sheets after saving
+            callSheets: [],
+            activeCallSheetId: null,
+            isUploading: false,
+            uploadError: null,
+          }));
+        } else {
+          // No call sheets to save, just clear state
+          set({
+            callSheets: [],
+            activeCallSheetId: null,
+            isUploading: false,
+            uploadError: null,
+          });
+        }
+      },
+
+      // Restore call sheet data for a project (when returning to a project)
+      restoreCallSheetsForProject: (projectId: string) => {
+        const state = get();
+        const savedData = state.savedCallSheets[projectId];
+        if (!savedData) return false;
+
+        // Remove from saved and set as current
+        const newSavedCallSheets = { ...state.savedCallSheets };
+        delete newSavedCallSheets[projectId];
+
+        set({
+          callSheets: savedData.callSheets,
+          activeCallSheetId: savedData.activeCallSheetId,
+          savedCallSheets: newSavedCallSheets,
+          isUploading: false,
+          uploadError: null,
+        });
+        return true;
+      },
+
+      // Check if a project has saved call sheet data
+      hasSavedCallSheets: (projectId: string) => {
+        return !!get().savedCallSheets[projectId];
+      },
+
+      // Clear current call sheets without saving (for switching to a new project)
+      clearCallSheetsForProject: () => {
+        set({
+          callSheets: [],
+          activeCallSheetId: null,
+          isUploading: false,
+          uploadError: null,
+        });
+      },
     }),
     {
       name: 'hair-makeup-callsheets',
@@ -242,6 +326,7 @@ export const useCallSheetStore = create<CallSheetState>()(
       partialize: (state) => ({
         callSheets: state.callSheets,
         activeCallSheetId: state.activeCallSheetId,
+        savedCallSheets: state.savedCallSheets,
       }),
       // Migrate from old versions or corrupted data
       migrate: (persistedState: unknown, version: number) => {
@@ -262,6 +347,7 @@ export const useCallSheetStore = create<CallSheetState>()(
           return {
             callSheets: validCallSheets,
             activeCallSheetId: state.activeCallSheetId || null,
+            savedCallSheets: state.savedCallSheets || {},
             isUploading: false,
             uploadError: null,
           };
@@ -280,6 +366,7 @@ export const useCallSheetStore = create<CallSheetState>()(
           ...currentState,
           callSheets: validCallSheets,
           activeCallSheetId: persisted.activeCallSheetId || null,
+          savedCallSheets: persisted.savedCallSheets || {},
         };
       },
     }
