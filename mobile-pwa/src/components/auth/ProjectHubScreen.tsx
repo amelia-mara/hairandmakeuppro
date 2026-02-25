@@ -275,9 +275,18 @@ export function ProjectHubScreen() {
       console.error('Failed to fetch project data from server:', err);
     }
 
-    // 5. Fallback: no data on server either, show setup flow
+    // 5. Fallback: no data on server yet
+    // For non-owners (joined via invite code), the owner may not have synced data yet.
+    // Create the project without needsSetup so startSync can pull data via realtime.
     const project = createProjectFromMembership(membership);
-    store.setProjectNeedsSetup(project);
+    if (membership.role === 'owner') {
+      // Owner with no data: show the setup/upload flow
+      store.setProjectNeedsSetup(project);
+    } else {
+      // Non-owner (joined via invite): load project and let sync pull data
+      // startSync in App.tsx will subscribe to realtime updates
+      store.setProject(project);
+    }
     store.setActiveTab('today');
   };
 
