@@ -1318,15 +1318,16 @@ export interface AuthState {
 }
 
 // Project code format: ABC-1234 (no ambiguous characters)
-// Excluded: 0, O, 1, l, I
-export const PROJECT_CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+// Excluded: 0, O, 1, I
+export const PROJECT_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
 // Generate a project code in ABC-1234 format
+const PROJECT_CODE_LETTER_COUNT = 24; // Number of letters in PROJECT_CODE_CHARS (before digits)
 export const generateProjectCode = (): string => {
   let code = '';
   // First 3 letters
   for (let i = 0; i < 3; i++) {
-    code += PROJECT_CODE_CHARS.charAt(Math.floor(Math.random() * 23)); // Letters only (first 23 chars)
+    code += PROJECT_CODE_CHARS.charAt(Math.floor(Math.random() * PROJECT_CODE_LETTER_COUNT)); // Letters only
   }
   code += '-';
   // Last 4 alphanumeric
@@ -1337,14 +1338,15 @@ export const generateProjectCode = (): string => {
 };
 
 // Validate project code format
+// Accepts alphanumeric in all positions to handle legacy codes that may have digits in the first 3
 export const isValidProjectCode = (code: string): boolean => {
-  const pattern = /^[ABCDEFGHJKMNPQRSTUVWXYZ]{3}-[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{4}$/;
+  const pattern = /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{3}-[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{4}$/;
   return pattern.test(code.toUpperCase());
 };
 
 // Format project code as user types (add dash after 3 chars)
 export const formatProjectCode = (input: string): string => {
-  const cleaned = input.toUpperCase().replace(/[^ABCDEFGHJKMNPQRSTUVWXYZ23456789]/g, '');
+  const cleaned = input.toUpperCase().replace(/[^ABCDEFGHJKLMNPQRSTUVWXYZ23456789]/g, '');
   if (cleaned.length <= 3) return cleaned;
   return cleaned.slice(0, 3) + '-' + cleaned.slice(3, 7);
 };
