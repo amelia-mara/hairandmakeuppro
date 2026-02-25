@@ -4,6 +4,7 @@ import { getTeamMemberRoleLabel, TEAM_MEMBER_ROLES } from '@/types';
 
 interface TeamMemberCardProps {
   member: TeamMember;
+  isCurrentUser?: boolean;
   canManage: boolean;
   onChangeRole?: (userId: string, newRole: TeamMemberRole) => void;
   onRemove?: (userId: string) => void;
@@ -11,6 +12,7 @@ interface TeamMemberCardProps {
 
 export function TeamMemberCard({
   member,
+  isCurrentUser,
   canManage,
   onChangeRole,
   onRemove,
@@ -72,10 +74,12 @@ export function TeamMemberCard({
     }
   }, [showActions]);
 
+  // Can manage this member (not yourself, not the owner)
+  const canManageThisMember = canManage && !member.isOwner && !isCurrentUser;
+
   const handleLongPress = () => {
-    if (canManage && !member.isOwner) {
+    if (canManageThisMember) {
       setShowActions(true);
-      // Haptic feedback
       if ('vibrate' in navigator) {
         navigator.vibrate(50);
       }
@@ -99,12 +103,12 @@ export function TeamMemberCard({
   return (
     <div className="relative" ref={actionsRef}>
       <div
-        className="card flex items-center gap-3 mb-2"
+        className="flex items-center gap-3 px-3 py-3 rounded-xl bg-card border border-border"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
         onTouchCancel={handleTouchEnd}
         onContextMenu={(e) => {
-          if (canManage && !member.isOwner) {
+          if (canManageThisMember) {
             e.preventDefault();
             setShowActions(true);
           }
@@ -115,11 +119,11 @@ export function TeamMemberCard({
           <img
             src={member.avatarUrl}
             alt={member.name}
-            className="w-12 h-12 rounded-full object-cover"
+            className="w-10 h-10 rounded-full object-cover flex-shrink-0"
           />
         ) : (
           <div
-            className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold ${getAvatarColor(
+            className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-semibold flex-shrink-0 ${getAvatarColor(
               member.name
             )}`}
           >
@@ -129,65 +133,70 @@ export function TeamMemberCard({
 
         {/* Info */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <h3 className="text-sm font-semibold text-text-primary truncate">
+          <div className="flex items-center gap-1.5">
+            <h3 className="text-sm font-medium text-text-primary truncate">
               {member.name}
             </h3>
-            {member.isOwner && (
-              <span className="px-2 py-0.5 text-[10px] font-medium bg-gold-100 text-gold rounded-full">
-                Owner
-              </span>
+            {isCurrentUser && (
+              <span className="text-[10px] text-text-light">(you)</span>
             )}
           </div>
           <p className="text-xs text-text-muted">
             {getTeamMemberRoleLabel(member.role)}
-          </p>
-          <p className="text-xs text-text-light">
-            Joined {formatJoinDate(member.joinedAt)}
+            {member.isOwner && (
+              <span className="text-gold font-medium"> &middot; Owner</span>
+            )}
           </p>
         </div>
 
-        {/* Actions button for managers */}
-        {canManage && !member.isOwner && (
+        {/* Joined date or actions */}
+        {canManageThisMember ? (
           <button
             onClick={() => setShowActions(!showActions)}
-            className="p-2 -m-2 text-text-muted hover:text-text-primary transition-colors"
+            className="p-1.5 -mr-1 text-text-light hover:text-text-primary transition-colors rounded-lg"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
             </svg>
           </button>
+        ) : (
+          <span className="text-[11px] text-text-light flex-shrink-0">
+            {formatJoinDate(member.joinedAt)}
+          </span>
         )}
       </div>
 
       {/* Actions Menu */}
       {showActions && (
-        <div className="absolute right-4 top-full mt-1 z-10 bg-card rounded-xl shadow-lg border border-border overflow-hidden min-w-[160px]">
-          <button
-            onClick={() => {
-              setShowActions(false);
-              setShowRolePicker(true);
-            }}
-            className="w-full px-4 py-3 text-left text-sm text-text-primary hover:bg-gray-50 flex items-center gap-2"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-            </svg>
-            Change Role
-          </button>
-          <button
-            onClick={() => {
-              setShowActions(false);
-              onRemove?.(member.userId);
-            }}
-            className="w-full px-4 py-3 text-left text-sm text-red-500 hover:bg-red-50 flex items-center gap-2"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
-            Remove from Project
-          </button>
-        </div>
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setShowActions(false)} />
+          <div className="absolute right-2 top-full mt-1 z-50 bg-card rounded-xl shadow-lg border border-border overflow-hidden min-w-[170px]">
+            <button
+              onClick={() => {
+                setShowActions(false);
+                setShowRolePicker(true);
+              }}
+              className="w-full px-4 py-3 text-left text-sm text-text-primary hover:bg-background flex items-center gap-2.5"
+            >
+              <svg className="w-4 h-4 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              </svg>
+              Change Role
+            </button>
+            <button
+              onClick={() => {
+                setShowActions(false);
+                onRemove?.(member.userId);
+              }}
+              className="w-full px-4 py-3 text-left text-sm text-red-500 hover:bg-red-50 flex items-center gap-2.5 border-t border-border"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M22 10.5h-6m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 018.624 21c-1.725 0-3.364-.372-4.874-1.073 0-.13.25-.692.25-.692z" />
+              </svg>
+              Remove
+            </button>
+          </div>
+        </>
       )}
 
       {/* Role Picker */}
