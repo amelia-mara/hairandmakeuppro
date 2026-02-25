@@ -14,14 +14,17 @@ export interface ProjectWithRole extends Project {
 
 // Generate a unique invite code
 function generateInviteCode(): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  const alphanumeric = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let code = '';
+  // First 3 characters: letters only
   for (let i = 0; i < 3; i++) {
-    code += chars[Math.floor(Math.random() * chars.length)];
+    code += letters[Math.floor(Math.random() * letters.length)];
   }
   code += '-';
+  // Last 4 characters: letters + digits
   for (let i = 0; i < 4; i++) {
-    code += chars[Math.floor(Math.random() * chars.length)];
+    code += alphanumeric[Math.floor(Math.random() * alphanumeric.length)];
   }
   return code;
 }
