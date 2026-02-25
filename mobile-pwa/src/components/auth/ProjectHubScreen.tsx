@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { useCallSheetStore } from '@/stores/callSheetStore';
@@ -159,11 +159,17 @@ export function ProjectHubScreen() {
     leaveProject,
     isLoading,
     setSettingsProjectId,
+    refreshUserProjects,
   } = useAuthStore();
 
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [deleteModalProject, setDeleteModalProject] = useState<ProjectMembership | null>(null);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+
+  // Refresh project list from server on mount to clear stale/deleted projects
+  useEffect(() => {
+    refreshUserProjects();
+  }, [refreshUserProjects]);
 
   // Sort by last accessed
   const sortedProjects = [...projectMemberships].sort(
