@@ -81,7 +81,6 @@ function AppContent() {
     isAuthenticated,
     hasCompletedOnboarding,
     currentScreen,
-    guestProjectCode,
     selectTier,
     setScreen,
     goBack,
@@ -131,10 +130,10 @@ function AppContent() {
   useEffect(() => {
     // If user completed onboarding but isn't authenticated and has no project,
     // they should be sent to the project hub to sign in or join a project
-    if (hasCompletedOnboarding && !isAuthenticated && !currentProject && !guestProjectCode) {
+    if (hasCompletedOnboarding && !isAuthenticated && !currentProject) {
       setScreen('hub');
     }
-  }, [hasCompletedOnboarding, isAuthenticated, currentProject, guestProjectCode, setScreen]);
+  }, [hasCompletedOnboarding, isAuthenticated, currentProject, setScreen]);
 
   // Memoize the count of complete scenes to avoid creating new array on every render
   const completeScenesCount = useMemo(() => {
@@ -299,8 +298,7 @@ function AppContent() {
   };
 
   // Auth flow - show auth screens for new users or logged out users
-  // Skip if user has a guest project code (they joined without account)
-  if (!hasCompletedOnboarding && !guestProjectCode) {
+  if (!hasCompletedOnboarding) {
     switch (currentScreen) {
       case 'welcome':
         return <WelcomeScreen />;
@@ -308,8 +306,6 @@ function AppContent() {
         return <SignInScreen />;
       case 'signup':
         return <SignUpScreen />;
-      case 'join':
-        return <JoinProjectScreen />;
       case 'hub':
         return <ProjectHubScreen />;
       case 'create-project':
@@ -408,7 +404,7 @@ function AppContent() {
 
   // Safety fallback: If user has completed onboarding but isn't authenticated
   // and has no project, show project hub (they can sign in or join from there)
-  if (hasCompletedOnboarding && !isAuthenticated && !currentProject && !guestProjectCode) {
+  if (hasCompletedOnboarding && !isAuthenticated && !currentProject) {
     return <ProjectHubScreen />;
   }
 
