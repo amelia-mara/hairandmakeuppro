@@ -242,6 +242,7 @@ function dbToSceneCapture(
 
 export async function pullProjectData(projectId: string): Promise<boolean> {
   if (!isSupabaseConfigured) return false;
+  console.log('[PULL] pullProjectData called for project:', projectId);
 
   const syncStore = useSyncStore.getState();
   syncStore.setSyncing();
@@ -291,8 +292,18 @@ export async function pullProjectData(projectId: string): Promise<boolean> {
       : { data: [], error: null };
     const dbPhotos: DbPhoto[] = photosRes.data || [];
 
+    console.log('[PULL] Server data:', {
+      scenes: dbScenes.length,
+      characters: dbChars.length,
+      looks: dbLooks.length,
+      captures: dbCaptures.length,
+      photos: dbPhotos.length,
+      schedule: dbSchedule.length,
+    });
+
     // Skip merge if server has no data (fresh project)
     if (dbScenes.length === 0 && dbChars.length === 0 && dbLooks.length === 0) {
+      console.log('[PULL] Server has no data for this project, skipping merge');
       syncStore.setSynced();
       return true;
     }
@@ -375,6 +386,13 @@ export async function pullProjectData(projectId: string): Promise<boolean> {
       looks: mergedLooks,
     };
 
+    console.log('[PULL] Merging server data into store:', {
+      scenes: mergedScenes.length,
+      characters: mergedChars.length,
+      looks: mergedLooks.length,
+      captures: Object.keys(mergedCaptures).length,
+    });
+
     projectStore.setProject(updatedProject);
 
     // Merge scene captures
@@ -390,6 +408,7 @@ export async function pullProjectData(projectId: string): Promise<boolean> {
       mergeScheduleData(schedule, projectId);
     }
 
+    console.log('[PULL] Pull complete, data merged successfully');
     syncStore.setSynced();
     return true;
   } catch (error) {
