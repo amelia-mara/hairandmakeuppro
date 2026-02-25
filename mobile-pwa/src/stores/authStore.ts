@@ -459,40 +459,119 @@ export const useAuthStore = create<AuthState>()(
             return { success: true, projectName: dbProject.name };
           }
 
-          // Join project via Supabase
-          const { project, error } = await supabaseProjects.joinProject(code, user.id);
+          // Join project via Supabase (RPC with fallback)
+          const { project: joinedProject, error } = await supabaseProjects.joinProject(code, user.id);
 
           if (error) {
             set({ isLoading: false, error: error.message });
             return { success: false, error: error.message };
           }
 
-          if (!project) {
+          if (!joinedProject) {
             set({ isLoading: false, error: 'Failed to join project' });
             return { success: false, error: 'Failed to join project' };
           }
 
-          // Add to local state
+          // Add to local memberships
           const newMembership: ProjectMembership = {
-            projectId: project.id,
-            projectName: project.name,
-            productionType: project.production_type as ProductionType,
+            projectId: joinedProject.id,
+            projectName: joinedProject.name,
+            productionType: joinedProject.production_type as ProductionType,
             role: 'floor',
             joinedAt: new Date(),
             lastAccessedAt: new Date(),
             teamMemberCount: 1,
             sceneCount: 0,
-            projectCode: project.invite_code,
+            projectCode: joinedProject.invite_code,
             status: 'active',
           };
+
+          // Fetch project data and load into project store
+          const { scenes, characters, looks, sceneCharacters, lookScenes } =
+            await supabaseProjects.getProjectData(joinedProject.id);
+
+          const pStore = useProjectStore.getState();
+
+          if (scenes.length > 0 || characters.length > 0) {
+            const sceneCharMap = new Map<string, string[]>();
+            for (const sc of sceneCharacters) {
+              const existing = sceneCharMap.get(sc.scene_id) || [];
+              existing.push(sc.character_id);
+              sceneCharMap.set(sc.scene_id, existing);
+            }
+
+            const lookSceneMap = new Map<string, string[]>();
+            for (const ls of lookScenes) {
+              const existing = lookSceneMap.get(ls.look_id) || [];
+              existing.push(ls.scene_number);
+              lookSceneMap.set(ls.look_id, existing);
+            }
+
+            const localScenes = scenes.map((s: any) => ({
+              id: s.id,
+              sceneNumber: s.scene_number,
+              slugline: s.location || `Scene ${s.scene_number}`,
+              intExt: (s.int_ext === 'EXT' ? 'EXT' : 'INT') as 'INT' | 'EXT',
+              timeOfDay: (s.time_of_day || 'DAY') as 'DAY' | 'NIGHT' | 'MORNING' | 'EVENING' | 'CONTINUOUS',
+              synopsis: s.synopsis || undefined,
+              characters: sceneCharMap.get(s.id) || [],
+              isComplete: s.is_complete,
+              completedAt: s.completed_at ? new Date(s.completed_at) : undefined,
+              filmingStatus: s.filming_status as any,
+              filmingNotes: s.filming_notes || undefined,
+              shootingDay: s.shooting_day || undefined,
+              characterConfirmationStatus: 'confirmed' as const,
+            }));
+
+            const localCharacters = characters.map((c: any) => ({
+              id: c.id,
+              name: c.name,
+              initials: c.initials,
+              avatarColour: c.avatar_colour,
+            }));
+
+            const localLooks = looks.map((l: any) => ({
+              id: l.id,
+              characterId: l.character_id,
+              name: l.name,
+              scenes: lookSceneMap.get(l.id) || [],
+              estimatedTime: l.estimated_time,
+              makeup: (l.makeup_details as any) || createEmptyMakeupDetails(),
+              hair: (l.hair_details as any) || createEmptyHairDetails(),
+            }));
+
+            const loadedProject: Project = {
+              id: joinedProject.id,
+              name: joinedProject.name,
+              createdAt: new Date(joinedProject.created_at),
+              updatedAt: new Date(),
+              scenes: localScenes,
+              characters: localCharacters,
+              looks: localLooks,
+            };
+
+            pStore.setProject(loadedProject);
+          } else {
+            const emptyProject: Project = {
+              id: joinedProject.id,
+              name: joinedProject.name,
+              createdAt: new Date(joinedProject.created_at),
+              updatedAt: new Date(),
+              scenes: [],
+              characters: [],
+              looks: [],
+            };
+            pStore.setProject(emptyProject);
+          }
+
+          pStore.setActiveTab('today');
 
           set({
             isLoading: false,
             projectMemberships: [...projectMemberships, newMembership],
-            currentScreen: 'hub',
           });
 
-          return { success: true, projectName: project.name };
+          return { success: true, projectName: joinedProject.name };
         } catch (error) {
           console.error('Join project error:', error);
           set({ isLoading: false, error: 'Failed to join project. Please try again.' });
