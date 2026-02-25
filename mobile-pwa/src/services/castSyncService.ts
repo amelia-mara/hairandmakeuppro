@@ -93,7 +93,7 @@ function createCharacterFromName(
   name: string,
   existingCount: number
 ): Character {
-  const id = `char-${uuidv4().slice(0, 8)}`;
+  const id = uuidv4();
 
   // Clean up the name
   const cleanName = name
@@ -306,7 +306,7 @@ function createLooksForCharacter(
     );
 
     looks.push({
-      id: `look-${character.id}-day${dayNum}`,
+      id: uuidv4(),
       characterId: character.id,
       name: `Day ${dayNum}`,
       scenes,
@@ -319,7 +319,7 @@ function createLooksForCharacter(
   // If no scenes at all, create a single empty look
   if (looks.length === 0) {
     looks.push({
-      id: `look-${character.id}`,
+      id: uuidv4(),
       characterId: character.id,
       name: 'Day 1',
       scenes: [],
