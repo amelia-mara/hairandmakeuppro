@@ -13,6 +13,7 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useSyncStore } from '@/stores/syncStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
+import { useCallSheetStore } from '@/stores/callSheetStore';
 import * as supabaseStorage from '@/services/supabaseStorage';
 import { savePhotoBlob, getPhotoBlob } from '@/db';
 import { v4 as uuidv4 } from 'uuid';
@@ -22,6 +23,7 @@ import type {
   Look,
   SceneCapture,
   Photo,
+  CallSheet,
   ProductionSchedule,
   ContinuityFlags,
   ContinuityEvent,
@@ -41,6 +43,8 @@ type DbLook = Database['public']['Tables']['looks']['Row'];
 type DbContinuityEvent = Database['public']['Tables']['continuity_events']['Row'];
 type DbPhoto = Database['public']['Tables']['photos']['Row'];
 type DbScheduleData = Database['public']['Tables']['schedule_data']['Row'];
+type DbCallSheetData = Database['public']['Tables']['call_sheet_data']['Row'];
+type DbScriptUpload = Database['public']['Tables']['script_uploads']['Row'];
 
 /** Client ID to filter out own real-time echoes */
 const CLIENT_ID = uuidv4();
@@ -249,11 +253,13 @@ export async function pullProjectData(projectId: string, retryCount: number = 0)
 
   try {
     // Phase 1: Fetch tables that have project_id
-    const [scenesRes, charsRes, looksRes, scheduleRes] = await Promise.all([
+    const [scenesRes, charsRes, looksRes, scheduleRes, callSheetsRes, scriptRes] = await Promise.all([
       supabase.from('scenes').select('*').eq('project_id', projectId).order('scene_number'),
       supabase.from('characters').select('*').eq('project_id', projectId).order('name'),
       supabase.from('looks').select('*').eq('project_id', projectId),
       supabase.from('schedule_data').select('*').eq('project_id', projectId).order('created_at', { ascending: false }).limit(1),
+      supabase.from('call_sheet_data').select('*').eq('project_id', projectId).order('production_day'),
+      supabase.from('script_uploads').select('*').eq('project_id', projectId).eq('is_active', true).limit(1),
     ]);
 
     if (scenesRes.error) throw scenesRes.error;
@@ -264,6 +270,8 @@ export async function pullProjectData(projectId: string, retryCount: number = 0)
     const dbChars: DbCharacter[] = charsRes.data || [];
     const dbLooks: DbLook[] = looksRes.data || [];
     const dbSchedule: DbScheduleData[] = scheduleRes.data || [];
+    const dbCallSheets: DbCallSheetData[] = callSheetsRes.data || [];
+    const dbScript: DbScriptUpload[] = scriptRes.data || [];
 
     // Phase 2: Fetch junction/child tables using IDs from phase 1
     const sceneIds = dbScenes.map(s => s.id);
@@ -299,6 +307,8 @@ export async function pullProjectData(projectId: string, retryCount: number = 0)
       captures: dbCaptures.length,
       photos: dbPhotos.length,
       schedule: dbSchedule.length,
+      callSheets: dbCallSheets.length,
+      script: dbScript.length,
     });
 
     // Skip merge if server has no data (fresh project)
@@ -423,6 +433,16 @@ export async function pullProjectData(projectId: string, retryCount: number = 0)
       mergeScheduleData(schedule, projectId);
     }
 
+    // Merge call sheet data if available
+    if (dbCallSheets.length > 0) {
+      mergeCallSheetData(dbCallSheets, projectId);
+    }
+
+    // Merge script data if available
+    if (dbScript.length > 0) {
+      mergeScriptData(dbScript[0], projectId);
+    }
+
     console.log('[PULL] Pull complete, data merged successfully');
     syncStore.setSynced();
     return true;
@@ -519,6 +539,81 @@ function mergeScheduleData(dbSchedule: DbScheduleData, _projectId: string): void
 
   // Set the schedule directly in the store
   scheduleStore.setSchedule(schedule);
+}
+
+function mergeCallSheetData(dbCallSheets: DbCallSheetData[], _projectId: string): void {
+  const callSheetStore = useCallSheetStore.getState();
+  const currentCallSheets = callSheetStore.callSheets;
+
+  // Skip if local already has call sheets (user may have unsaved changes)
+  if (currentCallSheets.length > 0) return;
+
+  const callSheets: CallSheet[] = dbCallSheets.map((db) => {
+    const parsed = (db.parsed_data || {}) as any;
+    return {
+      ...parsed,
+      id: db.id,
+      date: db.shoot_date,
+      productionDay: db.production_day,
+      rawText: db.raw_text || parsed.rawText,
+      // pdfUri will be restored from storage_path below
+      pdfUri: undefined,
+      uploadedAt: new Date(db.created_at),
+      scenes: parsed.scenes || [],
+    };
+  });
+
+  if (callSheets.length === 0) return;
+
+  // Set call sheets in the store (bypasses upload flow)
+  callSheetStore.clearAll();
+  for (const cs of callSheets) {
+    // Use the internal state setter to add call sheets without re-parsing
+    useCallSheetStore.setState((state) => ({
+      callSheets: [...state.callSheets, cs].sort(
+        (a, b) => a.productionDay - b.productionDay
+      ),
+    }));
+  }
+
+  // Set the most recent as active
+  const latest = callSheets[callSheets.length - 1];
+  if (latest) {
+    callSheetStore.setActiveCallSheet(latest.id);
+  }
+
+  // Download PDFs from storage in the background
+  for (const db of dbCallSheets) {
+    if (db.storage_path) {
+      supabaseStorage.downloadDocumentAsDataUri(db.storage_path).then(({ dataUri }) => {
+        if (!dataUri) return;
+        useCallSheetStore.setState((state) => ({
+          callSheets: state.callSheets.map((cs) =>
+            cs.id === db.id ? { ...cs, pdfUri: dataUri } : cs
+          ),
+        }));
+      });
+    }
+  }
+
+  console.log('[PULL] Merged', callSheets.length, 'call sheets from server');
+}
+
+function mergeScriptData(dbScript: DbScriptUpload, _projectId: string): void {
+  const projectStore = useProjectStore.getState();
+  const currentProject = projectStore.currentProject;
+
+  // Skip if local already has a script
+  if (!currentProject || currentProject.scriptPdfData) return;
+
+  if (!dbScript.storage_path) return;
+
+  // Download script PDF from storage and set on the project
+  supabaseStorage.downloadDocumentAsDataUri(dbScript.storage_path).then(({ dataUri }) => {
+    if (!dataUri) return;
+    projectStore.setScriptPdf(dataUri);
+    console.log('[PULL] Restored script PDF from server');
+  });
 }
 
 // ============================================================================
@@ -735,6 +830,11 @@ export async function pushScheduleData(projectId: string, schedule: ProductionSc
   if (!isSupabaseConfigured) return;
   console.log(`[PUSH] pushScheduleData called: projectId=${projectId}, status=${schedule.status}, days=${schedule.days?.length}`);
 
+  // Upload schedule PDF to storage if we have one and haven't already
+  if (schedule.pdfUri && schedule.pdfUri.startsWith('data:')) {
+    pushSchedulePdf(projectId, schedule);
+  }
+
   debouncedPush('schedule', async () => {
     const { error } = await supabase
       .from('schedule_data')
@@ -747,6 +847,143 @@ export async function pushScheduleData(projectId: string, schedule: ProductionSc
         status: schedule.status === 'complete' ? 'complete' : 'pending',
       }, { onConflict: 'id' });
     if (error) throw error;
+  });
+}
+
+/** Upload the schedule PDF to Supabase Storage (fire-and-forget, deduplicated) */
+const schedulePdfUploading = new Set<string>();
+async function pushSchedulePdf(projectId: string, schedule: ProductionSchedule): Promise<void> {
+  const key = `${projectId}:${schedule.id}`;
+  if (schedulePdfUploading.has(key)) return;
+  schedulePdfUploading.add(key);
+
+  try {
+    const { path, error } = await supabaseStorage.uploadBase64Document(
+      projectId, 'schedules', schedule.pdfUri!
+    );
+    if (error) {
+      console.error('[PUSH] Schedule PDF upload failed:', error);
+      return;
+    }
+    console.log('[PUSH] Schedule PDF uploaded to:', path);
+
+    // Store the storage path on the schedule_data row
+    await supabase
+      .from('schedule_data')
+      .update({ raw_pdf_text: schedule.rawText || null })
+      .eq('id', schedule.id);
+
+    // We don't update schedule.pdfUri in the store here to avoid
+    // triggering another push cycle — the pull side handles it.
+  } catch (err) {
+    console.error('[PUSH] Schedule PDF upload error:', err);
+  }
+}
+
+// ============================================================================
+// Push: Call Sheet Data
+// ============================================================================
+
+export async function pushCallSheetData(
+  projectId: string,
+  callSheet: CallSheet,
+  userId: string | null
+): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  console.log(`[PUSH] pushCallSheetData: date=${callSheet.date}, day=${callSheet.productionDay}`);
+
+  // Upload the call sheet PDF to storage if we have a base64 data URI
+  if (callSheet.pdfUri && callSheet.pdfUri.startsWith('data:')) {
+    pushCallSheetPdf(projectId, callSheet);
+  }
+
+  debouncedPush(`callsheet_${callSheet.date}`, async () => {
+    // Build parsed_data — everything except pdfUri (stored in storage)
+    const { pdfUri, ...parsedData } = callSheet;
+
+    const { error } = await supabase
+      .from('call_sheet_data')
+      .upsert({
+        id: callSheet.id,
+        project_id: projectId,
+        shoot_date: callSheet.date,
+        production_day: callSheet.productionDay,
+        raw_text: callSheet.rawText || null,
+        parsed_data: parsedData as any,
+        uploaded_by: userId,
+      }, { onConflict: 'id' });
+    if (error) throw error;
+  });
+}
+
+/** Upload call sheet PDF to storage (fire-and-forget, deduplicated) */
+const callSheetPdfUploading = new Set<string>();
+async function pushCallSheetPdf(projectId: string, callSheet: CallSheet): Promise<void> {
+  const key = `${projectId}:${callSheet.id}`;
+  if (callSheetPdfUploading.has(key)) return;
+  callSheetPdfUploading.add(key);
+
+  try {
+    const { path, error } = await supabaseStorage.uploadBase64Document(
+      projectId, 'call-sheets', callSheet.pdfUri!
+    );
+    if (error) {
+      console.error('[PUSH] Call sheet PDF upload failed:', error);
+      return;
+    }
+    console.log('[PUSH] Call sheet PDF uploaded to:', path);
+
+    // Store the storage path on the call_sheet_data row
+    await supabase
+      .from('call_sheet_data')
+      .update({ storage_path: path })
+      .eq('id', callSheet.id);
+  } catch (err) {
+    console.error('[PUSH] Call sheet PDF upload error:', err);
+  }
+}
+
+// ============================================================================
+// Push: Script PDF
+// ============================================================================
+
+export async function pushScriptPdf(
+  projectId: string,
+  scriptPdfData: string,
+  userId: string | null
+): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  if (!scriptPdfData || !scriptPdfData.startsWith('data:')) return;
+  console.log(`[PUSH] pushScriptPdf: uploading script for project ${projectId}`);
+
+  debouncedPush('script', async () => {
+    // Upload PDF to storage
+    const { path, error: uploadError } = await supabaseStorage.uploadBase64Document(
+      projectId, 'scripts', scriptPdfData
+    );
+    if (uploadError || !path) {
+      console.error('[PUSH] Script PDF upload failed:', uploadError);
+      return;
+    }
+    console.log('[PUSH] Script PDF uploaded to:', path);
+
+    // Estimate file size from base64
+    const base64Length = scriptPdfData.split(',')[1]?.length || 0;
+    const fileSize = Math.round(base64Length * 0.75);
+
+    // Upsert into script_uploads table (is_active=true triggers deactivation of previous)
+    const { error: dbError } = await supabase
+      .from('script_uploads')
+      .insert({
+        project_id: projectId,
+        storage_path: path,
+        file_name: 'script.pdf',
+        file_size: fileSize,
+        is_active: true,
+        status: 'uploaded',
+        uploaded_by: userId,
+      });
+    if (dbError) throw dbError;
   });
 }
 
@@ -845,6 +1082,36 @@ export function subscribeToProject(projectId: string, userId?: string): void {
     (payload: RealtimePostgresChangesPayload<DbScheduleData>) => {
       if (pushingTables.has('schedule')) return;
       handleScheduleChange(payload, projectId);
+    }
+  );
+
+  // Subscribe to call sheet data changes
+  channel.on(
+    'postgres_changes',
+    {
+      event: '*',
+      schema: 'public',
+      table: 'call_sheet_data',
+      filter: `project_id=eq.${projectId}`,
+    },
+    (payload: RealtimePostgresChangesPayload<DbCallSheetData>) => {
+      if (pushingTables.has(`callsheet_${(payload.new as any)?.shoot_date}`)) return;
+      handleCallSheetChange(payload, projectId);
+    }
+  );
+
+  // Subscribe to script upload changes
+  channel.on(
+    'postgres_changes',
+    {
+      event: '*',
+      schema: 'public',
+      table: 'script_uploads',
+      filter: `project_id=eq.${projectId}`,
+    },
+    (payload: RealtimePostgresChangesPayload<DbScriptUpload>) => {
+      if (pushingTables.has('script')) return;
+      handleScriptChange(payload, projectId);
     }
   );
 
@@ -1046,6 +1313,82 @@ function handleScheduleChange(
   }
 }
 
+function handleCallSheetChange(
+  payload: RealtimePostgresChangesPayload<DbCallSheetData>,
+  _projectId: string
+): void {
+  if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+    const dbCallSheet = payload.new as DbCallSheetData;
+    const parsed = (dbCallSheet.parsed_data || {}) as any;
+
+    const callSheet: CallSheet = {
+      ...parsed,
+      id: dbCallSheet.id,
+      date: dbCallSheet.shoot_date,
+      productionDay: dbCallSheet.production_day,
+      rawText: dbCallSheet.raw_text || parsed.rawText,
+      uploadedAt: new Date(dbCallSheet.created_at),
+      scenes: parsed.scenes || [],
+    };
+
+    const callSheetStore = useCallSheetStore.getState();
+    const existing = callSheetStore.callSheets.find((cs) => cs.id === dbCallSheet.id);
+
+    if (existing) {
+      // Update existing call sheet
+      useCallSheetStore.setState((state) => ({
+        callSheets: state.callSheets.map((cs) =>
+          cs.id === dbCallSheet.id ? { ...callSheet, pdfUri: cs.pdfUri } : cs
+        ),
+      }));
+    } else {
+      // Add new call sheet
+      useCallSheetStore.setState((state) => ({
+        callSheets: [...state.callSheets, callSheet].sort(
+          (a, b) => a.productionDay - b.productionDay
+        ),
+      }));
+    }
+
+    // Download PDF from storage in the background
+    if (dbCallSheet.storage_path) {
+      supabaseStorage.downloadDocumentAsDataUri(dbCallSheet.storage_path).then(({ dataUri }) => {
+        if (!dataUri) return;
+        useCallSheetStore.setState((state) => ({
+          callSheets: state.callSheets.map((cs) =>
+            cs.id === dbCallSheet.id ? { ...cs, pdfUri: dataUri } : cs
+          ),
+        }));
+      });
+    }
+
+    console.log('[RT] Call sheet updated:', dbCallSheet.shoot_date);
+  } else if (payload.eventType === 'DELETE') {
+    const old = payload.old as any;
+    if (old?.id) {
+      useCallSheetStore.getState().deleteCallSheet(old.id);
+      console.log('[RT] Call sheet deleted:', old.id);
+    }
+  }
+}
+
+function handleScriptChange(
+  payload: RealtimePostgresChangesPayload<DbScriptUpload>,
+  _projectId: string
+): void {
+  if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+    const dbScript = payload.new as DbScriptUpload;
+    if (!dbScript.is_active || !dbScript.storage_path) return;
+
+    // Download and set script PDF
+    supabaseStorage.downloadDocumentAsDataUri(dbScript.storage_path).then(({ dataUri }) => {
+      if (!dataUri) return;
+      useProjectStore.getState().setScriptPdf(dataUri);
+      console.log('[RT] Script PDF updated from server');
+    });
+  }
+}
+
 function handlePhotoChange(
   payload: RealtimePostgresChangesPayload<DbPhoto>,
   _projectId: string
@@ -1209,6 +1552,21 @@ async function pushInitialData(projectId: string, userId?: string): Promise<void
   if (schedule) {
     console.log('[SYNC] pushInitialData: pushing schedule, status:', schedule.status);
     pushScheduleData(projectId, schedule);
+  }
+
+  // Push call sheets
+  const callSheets = useCallSheetStore.getState().callSheets;
+  if (callSheets.length > 0) {
+    console.log('[SYNC] pushInitialData: pushing', callSheets.length, 'call sheets');
+    for (const cs of callSheets) {
+      pushCallSheetData(projectId, cs, userId || null);
+    }
+  }
+
+  // Push script PDF if it exists
+  if (project.scriptPdfData) {
+    console.log('[SYNC] pushInitialData: pushing script PDF');
+    pushScriptPdf(projectId, project.scriptPdfData, userId || null);
   }
 }
 
