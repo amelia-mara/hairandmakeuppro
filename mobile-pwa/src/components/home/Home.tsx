@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 import { useProjectStore } from '@/stores/projectStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
 import {
@@ -86,7 +87,7 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
       // Create project immediately with scenes
       const scenes: Scene[] = fastParsed.scenes.map((fs) => {
         return {
-          id: `scene-${fs.sceneNumber}`,
+          id: uuidv4(),
           sceneNumber: fs.sceneNumber,
           slugline: fs.slugline,
           intExt: fs.intExt,
@@ -102,7 +103,7 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
 
       // Use existing project ID if available (preserves server UUID when needsSetup was true)
       // Otherwise create a new local ID
-      const projectId = currentProject?.id || `project-${Date.now()}`;
+      const projectId = currentProject?.id || uuidv4();
       const projectNameToUse = projectName || currentProject?.name || fastParsed.title || file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ') || 'Untitled Project';
 
       const project: Project = {
@@ -328,7 +329,7 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
     if (!parsedScript) {
       // No script parsed - create empty project
       const emptyProject: Project = {
-        id: `project-${Date.now()}`,
+        id: uuidv4(),
         name: projectName || 'Untitled Project',
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -352,7 +353,7 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
 
     // Create empty looks for each character
     const looks = characters.map((char) => ({
-      id: `look-${char.id}`,
+      id: uuidv4(),
       characterId: char.id,
       name: 'Look 1',
       scenes: scenes.filter(s => s.characters.includes(char.id)).map(s => s.sceneNumber),
