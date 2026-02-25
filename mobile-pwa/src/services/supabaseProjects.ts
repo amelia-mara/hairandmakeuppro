@@ -99,12 +99,40 @@ export async function getProjectByInviteCode(
 }
 
 // Join a project by invite code
+// Uses the SECURITY DEFINER RPC function to bypass RLS, with fallback to direct INSERT
 export async function joinProject(
   inviteCode: string,
   userId: string,
   role: ProjectMember['role'] = 'floor'
 ): Promise<{ project: Project | null; error: Error | null }> {
   try {
+    // Try the RPC function first (handles RLS properly via SECURITY DEFINER)
+    const { data: rpcResult, error: rpcError } = await supabase
+      .rpc('join_project_by_invite_code', {
+        invite_code_input: inviteCode.toUpperCase(),
+        role_input: role,
+      });
+
+    if (!rpcError && rpcResult && !rpcResult.error) {
+      // RPC succeeded - build a project-like object from the result
+      const project = {
+        id: rpcResult.project_id,
+        name: rpcResult.project_name,
+        production_type: rpcResult.production_type,
+        invite_code: rpcResult.invite_code,
+        created_at: rpcResult.created_at,
+      } as Project;
+      return { project, error: null };
+    }
+
+    // If RPC returned an application-level error
+    if (!rpcError && rpcResult?.error) {
+      throw new Error(rpcResult.error);
+    }
+
+    // RPC function doesn't exist yet (migration not applied) - fall back to direct queries
+    console.warn('join_project_by_invite_code RPC not available, falling back to direct queries:', rpcError?.message);
+
     // Find project by invite code
     const { data: project, error: findError } = await supabase
       .from('projects')
@@ -114,7 +142,7 @@ export async function joinProject(
 
     if (findError) {
       if (findError.code === 'PGRST116') {
-        throw new Error('Invalid invite code');
+        throw new Error('Invalid project code. Please check and try again.');
       }
       throw findError;
     }
