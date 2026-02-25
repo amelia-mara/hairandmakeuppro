@@ -1338,8 +1338,9 @@ export const generateProjectCode = (): string => {
 };
 
 // Validate project code format
+// Accepts alphanumeric in all positions to handle legacy codes that may have digits in the first 3
 export const isValidProjectCode = (code: string): boolean => {
-  const pattern = /^[ABCDEFGHJKLMNPQRSTUVWXYZ]{3}-[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{4}$/;
+  const pattern = /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{3}-[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{4}$/;
   return pattern.test(code.toUpperCase());
 };
 
