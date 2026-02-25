@@ -7,12 +7,15 @@ import type {
   ProjectPermissions,
   PermissionLevel,
   ManualShootingDay,
+  Project,
+  SceneCapture,
 } from '@/types';
 import {
   generateProjectCode,
   createDefaultProjectPermissions,
 } from '@/types';
 import { useAuthStore } from './authStore';
+import { useProjectStore } from './projectStore';
 
 interface ProjectSettingsState {
   // Project settings
@@ -39,6 +42,9 @@ interface ProjectSettingsState {
   loadTeamMembers: (projectId: string) => Promise<void>;
   changeTeamMemberRole: (userId: string, newRole: TeamMemberRole) => Promise<void>;
   removeTeamMember: (userId: string) => Promise<void>;
+
+  // Stats
+  refreshProjectStats: (projectId: string) => void;
 
   // Schedule management
   saveShootingDay: (dayNumber: number, date: Date, sceneIds: string[]) => Promise<void>;
@@ -69,19 +75,90 @@ const getTeamFromCurrentUser = (projectId: string): TeamMember[] => {
   }];
 };
 
-// Generate mock project stats
-const generateMockStats = (): ProjectStats => ({
-  sceneCount: 142,
-  storyDays: 23,
-  characterCount: 14,
-  completedScenes: 94,
-  completionPercentage: 67,
-  photoCount: 1247,
-  storageUsed: 2.3 * 1024 * 1024 * 1024, // 2.3 GB
-  teamMemberCount: 8,
-  lastActivity: new Date(Date.now() - 2 * 60 * 60 * 1000),
-  mostActiveUser: { name: 'Sarah Chen', editCount: 342 },
-});
+// Compute real project stats from actual project data
+const computeProjectStats = (
+  project: Project | null,
+  sceneCaptures: Record<string, SceneCapture>,
+  teamMemberCount: number
+): ProjectStats => {
+  if (!project) {
+    return {
+      sceneCount: 0,
+      storyDays: 0,
+      characterCount: 0,
+      completedScenes: 0,
+      completionPercentage: 0,
+      photoCount: 0,
+      storageUsed: 0,
+      teamMemberCount,
+      lastActivity: null,
+      mostActiveUser: null,
+    };
+  }
+
+  const sceneCount = project.scenes.length;
+  const characterCount = project.characters.length;
+  const completedScenes = project.scenes.filter(s => s.isComplete).length;
+  const completionPercentage = sceneCount > 0 ? Math.round((completedScenes / sceneCount) * 100) : 0;
+
+  // Count unique shooting days from scenes that have one assigned
+  const uniqueShootingDays = new Set(
+    project.scenes.filter(s => s.shootingDay != null).map(s => s.shootingDay)
+  );
+  const storyDays = uniqueShootingDays.size;
+
+  // Count all photos across scene captures and looks
+  let photoCount = 0;
+  for (const capture of Object.values(sceneCaptures)) {
+    // Standard 4-angle photos
+    if (capture.photos.front) photoCount++;
+    if (capture.photos.left) photoCount++;
+    if (capture.photos.right) photoCount++;
+    if (capture.photos.back) photoCount++;
+    // Additional photos
+    photoCount += capture.additionalPhotos.length;
+    // SFX reference photos
+    if (capture.sfxDetails?.sfxReferencePhotos) {
+      photoCount += capture.sfxDetails.sfxReferencePhotos.length;
+    }
+  }
+  // Look master reference photos
+  for (const look of project.looks) {
+    if (look.masterReference) photoCount++;
+  }
+
+  // Estimate storage (~500KB average per photo)
+  const storageUsed = photoCount * 500 * 1024;
+
+  // Find most recent capture as last activity
+  let lastActivity: Date | null = null;
+  for (const capture of Object.values(sceneCaptures)) {
+    const capturedAt = new Date(capture.capturedAt);
+    if (!lastActivity || capturedAt > lastActivity) {
+      lastActivity = capturedAt;
+    }
+  }
+
+  // Most active user — current user with their capture count
+  const { user } = useAuthStore.getState();
+  const captureCount = Object.keys(sceneCaptures).length;
+  const mostActiveUser = user && captureCount > 0
+    ? { name: user.name, editCount: captureCount }
+    : null;
+
+  return {
+    sceneCount,
+    storyDays,
+    characterCount,
+    completedScenes,
+    completionPercentage,
+    photoCount,
+    storageUsed,
+    teamMemberCount,
+    lastActivity,
+    mostActiveUser,
+  };
+};
 
 export const useProjectSettingsStore = create<ProjectSettingsState>((set, get) => ({
   // Initial state
@@ -104,20 +181,22 @@ export const useProjectSettingsStore = create<ProjectSettingsState>((set, get) =
 
     try {
       const { user } = useAuthStore.getState();
+      const { currentProject, sceneCaptures } = useProjectStore.getState();
+      const teamMembers = getTeamFromCurrentUser(projectId);
 
       const settings: ProjectSettings = {
         id: projectId,
-        name: projectId, // Will be overridden by project store's name
+        name: currentProject?.name || projectId,
         type: 'film',
         status: 'shooting',
         inviteCode: generateProjectCode(),
         ownerId: user?.id || '',
         permissions: createDefaultProjectPermissions(),
-        createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+        createdAt: currentProject?.createdAt || new Date(),
         archivedAt: null,
       };
 
-      const stats = generateMockStats();
+      const stats = computeProjectStats(currentProject, sceneCaptures, teamMembers.length);
 
       set({
         projectSettings: settings,
@@ -306,6 +385,14 @@ export const useProjectSettingsStore = create<ProjectSettingsState>((set, get) =
     } catch {
       set({ isLoading: false, error: 'Failed to remove team member' });
     }
+  },
+
+  // Refresh project stats from live project data
+  refreshProjectStats: (projectId: string) => {
+    const { currentProject, sceneCaptures } = useProjectStore.getState();
+    const teamMembers = getTeamFromCurrentUser(projectId);
+    const stats = computeProjectStats(currentProject, sceneCaptures, teamMembers.length);
+    set({ projectStats: stats });
   },
 
   // Save shooting day

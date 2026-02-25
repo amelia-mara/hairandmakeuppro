@@ -8,7 +8,7 @@ interface ProjectStatsCardProps {
 export function ProjectStatsCard({ stats }: ProjectStatsCardProps) {
   // Format relative time for last activity
   const formatLastActivity = (date: Date | null): string => {
-    if (!date) return 'No activity';
+    if (!date) return 'No activity yet';
 
     const now = new Date();
     const diffMs = now.getTime() - new Date(date).getTime();
@@ -39,10 +39,12 @@ export function ProjectStatsCard({ stats }: ProjectStatsCardProps) {
             <span className="text-sm text-text-muted">Scenes</span>
             <span className="text-sm font-semibold text-text-primary">{stats.sceneCount}</span>
           </div>
-          <div className="flex justify-between items-center">
-            <span className="text-sm text-text-muted">Story Days</span>
-            <span className="text-sm font-semibold text-text-primary">{stats.storyDays}</span>
-          </div>
+          {stats.storyDays > 0 && (
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-text-muted">Shooting Days</span>
+              <span className="text-sm font-semibold text-text-primary">{stats.storyDays}</span>
+            </div>
+          )}
           <div className="flex justify-between items-center">
             <span className="text-sm text-text-muted">Characters</span>
             <span className="text-sm font-semibold text-text-primary">{stats.characterCount}</span>
@@ -81,24 +83,26 @@ export function ProjectStatsCard({ stats }: ProjectStatsCardProps) {
         </h3>
         <div className="card space-y-3">
           <div className="flex justify-between items-center">
-            <span className="text-sm text-text-muted">Photos Uploaded</span>
+            <span className="text-sm text-text-muted">Total Photos</span>
             <span className="text-sm font-semibold text-text-primary">
               {stats.photoCount.toLocaleString()}
             </span>
           </div>
-          <div className="flex justify-between items-center">
-            <span className="text-sm text-text-muted">Storage Used</span>
-            <span className="text-sm font-semibold text-text-primary">
-              {formatStorageSize(stats.storageUsed)}
-            </span>
-          </div>
+          {stats.storageUsed > 0 && (
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-text-muted">Est. Storage</span>
+              <span className="text-sm font-semibold text-text-primary">
+                {formatStorageSize(stats.storageUsed)}
+              </span>
+            </div>
+          )}
         </div>
       </section>
 
-      {/* Team Activity Section */}
+      {/* Activity Section */}
       <section>
         <h3 className="text-[10px] font-bold tracking-wider uppercase text-text-light mb-3">
-          TEAM ACTIVITY
+          ACTIVITY
         </h3>
         <div className="card space-y-3">
           <div className="flex justify-between items-center">
@@ -106,16 +110,16 @@ export function ProjectStatsCard({ stats }: ProjectStatsCardProps) {
             <span className="text-sm font-semibold text-text-primary">{stats.teamMemberCount}</span>
           </div>
           <div className="flex justify-between items-center">
-            <span className="text-sm text-text-muted">Last Activity</span>
+            <span className="text-sm text-text-muted">Last Capture</span>
             <span className="text-sm font-semibold text-text-primary">
               {formatLastActivity(stats.lastActivity)}
             </span>
           </div>
-          {stats.mostActiveUser && (
+          {stats.mostActiveUser && stats.mostActiveUser.editCount > 0 && (
             <div className="flex justify-between items-center">
-              <span className="text-sm text-text-muted">Most Active</span>
+              <span className="text-sm text-text-muted">Scene Captures</span>
               <span className="text-sm font-semibold text-text-primary">
-                {stats.mostActiveUser.name} ({stats.mostActiveUser.editCount.toLocaleString()} edits)
+                {stats.mostActiveUser.editCount.toLocaleString()}
               </span>
             </div>
           )}
