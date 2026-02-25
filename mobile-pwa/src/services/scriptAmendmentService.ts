@@ -8,6 +8,7 @@
  * - Preserve existing breakdown data (characters, looks, continuity photos)
  */
 
+import { v4 as uuidv4 } from 'uuid';
 import type { Scene, SceneAmendmentStatus } from '@/types';
 import type { FastParsedScene } from '@/utils/scriptParser';
 
@@ -226,7 +227,7 @@ export function applyAmendmentToScenes(
     if (change.status === 'new' && options.includeNew && change.newScene) {
       // Add new scene
       const newScene: Scene = {
-        id: `scene-${change.newScene.sceneNumber}-${Date.now()}`,
+        id: uuidv4(),
         sceneNumber: change.newScene.sceneNumber,
         slugline: change.newScene.slugline,
         intExt: change.newScene.intExt,
