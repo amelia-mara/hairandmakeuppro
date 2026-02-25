@@ -399,6 +399,97 @@ export type Database = {
           updated_at?: string
         }
       }
+      call_sheet_data: {
+        Row: {
+          id: string
+          project_id: string
+          shoot_date: string
+          production_day: number
+          storage_path: string | null
+          raw_text: string | null
+          parsed_data: Json
+          uploaded_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          shoot_date: string
+          production_day: number
+          storage_path?: string | null
+          raw_text?: string | null
+          parsed_data: Json
+          uploaded_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          project_id?: string
+          shoot_date?: string
+          production_day?: number
+          storage_path?: string | null
+          raw_text?: string | null
+          parsed_data?: Json
+          uploaded_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      script_uploads: {
+        Row: {
+          id: string
+          project_id: string
+          version_label: string | null
+          version_number: number
+          storage_path: string
+          file_name: string
+          file_size: number | null
+          raw_text: string | null
+          scene_count: number | null
+          character_count: number | null
+          parsed_data: Json | null
+          is_active: boolean
+          status: 'uploaded' | 'parsing' | 'parsed' | 'error'
+          uploaded_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          version_label?: string | null
+          version_number?: number
+          storage_path: string
+          file_name: string
+          file_size?: number | null
+          raw_text?: string | null
+          scene_count?: number | null
+          character_count?: number | null
+          parsed_data?: Json | null
+          is_active?: boolean
+          status?: 'uploaded' | 'parsing' | 'parsed' | 'error'
+          uploaded_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          project_id?: string
+          version_label?: string | null
+          version_number?: number
+          storage_path?: string
+          file_name?: string
+          file_size?: number | null
+          raw_text?: string | null
+          scene_count?: number | null
+          character_count?: number | null
+          parsed_data?: Json | null
+          is_active?: boolean
+          status?: 'uploaded' | 'parsing' | 'parsed' | 'error'
+          uploaded_by?: string | null
+          created_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never
@@ -423,3 +514,5 @@ export type ContinuityEvent = Database['public']['Tables']['continuity_events'][
 export type Photo = Database['public']['Tables']['photos']['Row']
 export type ScheduleData = Database['public']['Tables']['schedule_data']['Row']
 export type Timesheet = Database['public']['Tables']['timesheets']['Row']
+export type CallSheetData = Database['public']['Tables']['call_sheet_data']['Row']
+export type ScriptUpload = Database['public']['Tables']['script_uploads']['Row']

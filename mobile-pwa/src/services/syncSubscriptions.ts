@@ -8,6 +8,7 @@
 
 import { useProjectStore } from '@/stores/projectStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
+import { useCallSheetStore } from '@/stores/callSheetStore';
 import { useAuthStore } from '@/stores/authStore';
 import {
   pushScenes,
@@ -15,6 +16,8 @@ import {
   pushLooks,
   pushSceneCapture,
   pushScheduleData,
+  pushCallSheetData,
+  pushScriptPdf,
   getActiveProjectId,
 } from './syncService';
 
@@ -72,6 +75,13 @@ export function initSyncSubscriptions(): void {
         }
       }
     }
+
+    // Push script PDF if changed
+    if (prev.scriptPdfData !== curr.scriptPdfData && curr.scriptPdfData) {
+      const userId = useAuthStore.getState().user?.id || null;
+      console.log('[SYNC-SUB] Script PDF changed, pushing to Supabase');
+      pushScriptPdf(projectId, curr.scriptPdfData, userId);
+    }
   });
 
   // Watch scheduleStore for changes → push to Supabase
@@ -85,6 +95,25 @@ export function initSyncSubscriptions(): void {
     ) {
       console.log('[SYNC-SUB] Schedule changed, pushing to Supabase, status:', state.schedule.status);
       pushScheduleData(projectId, state.schedule);
+    }
+  });
+
+  // Watch callSheetStore for changes → push to Supabase
+  useCallSheetStore.subscribe((state, prevState) => {
+    const projectId = getActiveProjectId();
+    if (!projectId) return;
+
+    if (state.callSheets !== prevState.callSheets && state.callSheets.length > 0) {
+      const userId = useAuthStore.getState().user?.id || null;
+
+      // Find new or changed call sheets
+      for (const cs of state.callSheets) {
+        const prev = prevState.callSheets.find((p) => p.id === cs.id);
+        if (!prev || prev !== cs) {
+          console.log('[SYNC-SUB] Call sheet changed:', cs.date);
+          pushCallSheetData(projectId, cs, userId);
+        }
+      }
     }
   });
 }

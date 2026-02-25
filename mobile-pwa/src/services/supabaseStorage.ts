@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase';
 import { v4 as uuidv4 } from 'uuid';
 
 const BUCKET_NAME = 'continuity-photos';
+const DOCUMENTS_BUCKET = 'project-documents';
 
 export interface UploadResult {
   path: string;
@@ -185,5 +186,92 @@ export async function downloadPhoto(
     return { blob: data, error: null };
   } catch (error) {
     return { blob: null, error: error as Error };
+  }
+}
+
+// ============================================================================
+// Project Documents (call sheets, scripts, schedules)
+// ============================================================================
+
+// Upload a document (PDF) to the project-documents bucket
+export async function uploadDocument(
+  projectId: string,
+  folder: 'call-sheets' | 'scripts' | 'schedules',
+  file: File | Blob,
+  fileName?: string
+): Promise<{ path: string | null; error: Error | null }> {
+  try {
+    const ext = fileName?.split('.').pop() || 'pdf';
+    const docId = uuidv4();
+    const path = `${projectId}/${folder}/${docId}.${ext}`;
+
+    const { error } = await supabase.storage
+      .from(DOCUMENTS_BUCKET)
+      .upload(path, file, {
+        contentType: file instanceof File ? file.type : 'application/pdf',
+        cacheControl: '3600',
+        upsert: false,
+      });
+
+    if (error) throw error;
+    return { path, error: null };
+  } catch (error) {
+    return { path: null, error: error as Error };
+  }
+}
+
+// Upload a base64 data URI as a document
+export async function uploadBase64Document(
+  projectId: string,
+  folder: 'call-sheets' | 'scripts' | 'schedules',
+  base64DataUri: string
+): Promise<{ path: string | null; error: Error | null }> {
+  try {
+    const response = await fetch(base64DataUri);
+    const blob = await response.blob();
+    return uploadDocument(projectId, folder, blob, 'document.pdf');
+  } catch (error) {
+    return { path: null, error: error as Error };
+  }
+}
+
+// Download a document and return as base64 data URI
+export async function downloadDocumentAsDataUri(
+  path: string
+): Promise<{ dataUri: string | null; error: Error | null }> {
+  try {
+    const { data, error } = await supabase.storage
+      .from(DOCUMENTS_BUCKET)
+      .download(path);
+
+    if (error) throw error;
+    if (!data) throw new Error('No data returned');
+
+    const dataUri = await new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.readAsDataURL(data);
+    });
+
+    return { dataUri, error: null };
+  } catch (error) {
+    return { dataUri: null, error: error as Error };
+  }
+}
+
+// Get a signed URL for a document
+export async function getDocumentSignedUrl(
+  path: string,
+  expiresIn: number = 3600
+): Promise<{ url: string | null; error: Error | null }> {
+  try {
+    const { data, error } = await supabase.storage
+      .from(DOCUMENTS_BUCKET)
+      .createSignedUrl(path, expiresIn);
+
+    if (error) throw error;
+    return { url: data.signedUrl, error: null };
+  } catch (error) {
+    return { url: null, error: error as Error };
   }
 }
