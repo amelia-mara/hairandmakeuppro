@@ -74,6 +74,30 @@ export async function createProject(
   }
 }
 
+// Look up a project by invite code (without adding as member)
+export async function getProjectByInviteCode(
+  inviteCode: string
+): Promise<{ project: Project | null; error: Error | null }> {
+  try {
+    const { data: project, error: findError } = await supabase
+      .from('projects')
+      .select('*')
+      .eq('invite_code', inviteCode.toUpperCase())
+      .single();
+
+    if (findError) {
+      if (findError.code === 'PGRST116') {
+        throw new Error('Invalid project code. Please check and try again.');
+      }
+      throw findError;
+    }
+
+    return { project, error: null };
+  } catch (error) {
+    return { project: null, error: error as Error };
+  }
+}
+
 // Join a project by invite code
 export async function joinProject(
   inviteCode: string,
