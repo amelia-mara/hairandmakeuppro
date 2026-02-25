@@ -3,6 +3,7 @@ import { useTimesheetStore, addDays } from '@/stores/timesheetStore';
 import { useBillingStore } from '@/stores/billingStore';
 import { useProductionDetailsStore } from '@/stores/productionDetailsStore';
 import { useProjectStore } from '@/stores/projectStore';
+import { useAuthStore } from '@/stores/authStore';
 import { calculateInvoiceWithVAT, type WeekSummary } from '@/types';
 
 interface ExportModalProps {
@@ -17,7 +18,16 @@ type ExportFormat = 'pdf' | 'csv' | 'invoice';
 export function ExportModal({ isOpen, onClose, weekSummary, weekStartDate }: ExportModalProps) {
   const { entries, calculateEntry, rateCard } = useTimesheetStore();
   const { billingDetails } = useBillingStore();
-  const projectId = useProjectStore((s) => s.currentProject?.id ?? '');
+  const storeProjectId = useProjectStore((s) => s.currentProject?.id ?? '');
+  const membershipProjectId = useAuthStore((s) => {
+    if (storeProjectId) {
+      const match = s.projectMemberships.find(pm => pm.projectId === storeProjectId);
+      if (match) return match.projectId;
+    }
+    return s.projectMemberships.length > 0 ? s.projectMemberships[0].projectId : '';
+  });
+  // Use the same project ID that production details were saved under
+  const projectId = storeProjectId || membershipProjectId;
   const productionDetails = useProductionDetailsStore((s) => s.getDetails(projectId));
   const [exportFormat, setExportFormat] = useState<ExportFormat>('pdf');
   const [isExporting, setIsExporting] = useState(false);

@@ -54,9 +54,11 @@ export function More({ onNavigateToTab, onStartNewProject, initialView, resetKey
   const { isEditMenuOpen, closeEditMenu, openEditMenu } = useNavigationStore();
   const { projectMemberships, user } = useAuthStore();
   const { projectSettings, clearState: clearProjectSettingsState } = useProjectSettingsStore();
+  const activeProjectId = useProjectStore((s) => s.currentProject?.id ?? '');
 
-  // Get current project membership
-  const currentProjectMembership = projectMemberships.length > 0 ? projectMemberships[0] : null;
+  // Get current project membership — match the ACTIVE project, not just the first in the array
+  const currentProjectMembership = projectMemberships.find(pm => pm.projectId === activeProjectId)
+    || (projectMemberships.length > 0 ? projectMemberships[0] : null);
   const isOwner = currentProjectMembership?.role === 'owner';
   const canManage = currentProjectMembership && user ? canManageProject(user.tier, {
     isOwner,
@@ -124,7 +126,7 @@ export function More({ onNavigateToTab, onStartNewProject, initialView, resetKey
       case 'projectSettings':
         return (
           <ProjectSettingsScreen
-            projectId={currentProjectMembership?.projectId || ''}
+            projectId={activeProjectId || currentProjectMembership?.projectId || ''}
             onBack={() => setCurrentView('menu')}
             onNavigateToTeam={() => setCurrentView('team')}
             onNavigateToStats={() => setCurrentView('projectStats')}
@@ -143,14 +145,14 @@ export function More({ onNavigateToTab, onStartNewProject, initialView, resetKey
       case 'productionDetails':
         return (
           <ProductionDetailsScreen
-            projectId={currentProjectMembership?.projectId || ''}
+            projectId={activeProjectId || currentProjectMembership?.projectId || ''}
             onBack={() => setCurrentView('projectSettings')}
           />
         );
       case 'team':
         return (
           <TeamScreen
-            projectId={currentProjectMembership?.projectId || ''}
+            projectId={activeProjectId || currentProjectMembership?.projectId || ''}
             canManage={canManage}
             isOwner={isOwner}
             onBack={() => setCurrentView('projectSettings')}
@@ -168,7 +170,7 @@ export function More({ onNavigateToTab, onStartNewProject, initialView, resetKey
       case 'projectStats':
         return (
           <ProjectStatsScreen
-            projectId={currentProjectMembership?.projectId || ''}
+            projectId={activeProjectId || currentProjectMembership?.projectId || ''}
             onBack={() => setCurrentView('projectSettings')}
           />
         );
