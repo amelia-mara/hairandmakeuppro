@@ -411,14 +411,19 @@ export function ProjectHubScreen() {
           hair: (l.hair_details as any) || createEmptyHairDetails(),
         }));
 
+        // If server has no scene data, preserve any existing local breakdown
+        // (scenes might not have been pushed yet if the tab was closed too quickly)
+        const existingProject = store.currentProject;
+        const useLocalBreakdown = !hasSceneData && existingProject?.id === membership.projectId && existingProject.scenes.length > 0;
+
         const project: Project = {
           id: membership.projectId,
           name: membership.projectName,
           createdAt: membership.joinedAt,
           updatedAt: membership.lastAccessedAt,
-          scenes: localScenes,
-          characters: localCharacters,
-          looks: localLooks,
+          scenes: useLocalBreakdown ? existingProject.scenes : localScenes,
+          characters: useLocalBreakdown ? existingProject.characters : localCharacters,
+          looks: useLocalBreakdown ? existingProject.looks : localLooks,
         };
 
         store.setProject(project);
