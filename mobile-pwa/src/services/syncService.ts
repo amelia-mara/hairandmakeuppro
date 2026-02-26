@@ -59,6 +59,8 @@ const PUSH_DEBOUNCE_MS = 800;
 let activeChannel: RealtimeChannel | null = null;
 let activeProjectId: string | null = null;
 let pushTimers: Record<string, ReturnType<typeof setTimeout>> = {};
+/** Store pending push functions so they can be flushed immediately */
+let pendingPushFns: Record<string, () => Promise<void>> = {};
 /** Track tables currently being pushed to avoid echo loops */
 let pushingTables = new Set<string>();
 
@@ -82,6 +84,7 @@ function sceneToDb(scene: Scene, projectId: string): Omit<DbScene, 'created_at'>
     filming_notes: scene.filmingNotes || null,
     is_complete: scene.isComplete,
     completed_at: scene.completedAt ? new Date(scene.completedAt).toISOString() : null,
+    script_content: scene.scriptContent || null,
   };
 }
 
@@ -158,8 +161,8 @@ function dbToScene(
     filmingStatus: db.filming_status as Scene['filmingStatus'] || undefined,
     filmingNotes: db.filming_notes || undefined,
     shootingDay: db.shooting_day || undefined,
-    // Preserve local-only fields
-    scriptContent: existingScene?.scriptContent,
+    // Server wins for script content, fall back to local
+    scriptContent: db.script_content || existingScene?.scriptContent,
     hasScheduleDiscrepancy: existingScene?.hasScheduleDiscrepancy,
     characterConfirmationStatus: existingScene?.characterConfirmationStatus,
     suggestedCharacters: existingScene?.suggestedCharacters,
@@ -547,7 +550,11 @@ function mergeScheduleData(dbSchedule: DbScheduleData, _projectId: string): void
   if (!dbSchedule.days && !dbSchedule.cast_list) return;
 
   // If local already has this exact schedule (same ID), skip to avoid overwriting edits
+  // but still restore the PDF if it's missing locally
   if (currentSchedule && currentSchedule.id === dbSchedule.id && currentSchedule.days.length > 0) {
+    if (!currentSchedule.pdfUri && dbSchedule.storage_path) {
+      downloadSchedulePdf(dbSchedule.id, dbSchedule.storage_path);
+    }
     return;
   }
 
@@ -564,6 +571,24 @@ function mergeScheduleData(dbSchedule: DbScheduleData, _projectId: string): void
 
   // Set the schedule directly in the store
   scheduleStore.setSchedule(schedule);
+
+  // Download the PDF from storage in the background if available
+  if (dbSchedule.storage_path) {
+    downloadSchedulePdf(dbSchedule.id, dbSchedule.storage_path);
+  }
+}
+
+/** Download a schedule PDF from Supabase Storage and set it on the store */
+function downloadSchedulePdf(scheduleId: string, storagePath: string): void {
+  supabaseStorage.downloadDocumentAsDataUri(storagePath).then(({ dataUri }) => {
+    if (!dataUri) return;
+    const scheduleStore = useScheduleStore.getState();
+    const current = scheduleStore.schedule;
+    if (current && current.id === scheduleId) {
+      scheduleStore.setSchedule({ ...current, pdfUri: dataUri });
+      console.log('[PULL] Restored PDF for schedule:', scheduleId);
+    }
+  });
 }
 
 /** Download PDFs for call sheets that are missing their pdfUri locally */
@@ -687,10 +712,14 @@ function debouncedPush(table: string, pushFn: () => Promise<void>): void {
     useSyncStore.getState().incrementPending();
   }
 
+  // Store the push function so it can be flushed immediately if needed
+  pendingPushFns[table] = pushFn;
+
   pushTimers[table] = setTimeout(async () => {
-    // Delete timer reference immediately so new calls during async
-    // pushFn get their own fresh increment/decrement cycle.
+    // Delete timer and pending fn references immediately so new calls
+    // during async pushFn get their own fresh increment/decrement cycle.
     delete pushTimers[table];
+    delete pendingPushFns[table];
     pushingTables.add(table);
     try {
       useSyncStore.getState().setSyncing();
@@ -707,6 +736,58 @@ function debouncedPush(table: string, pushFn: () => Promise<void>): void {
       }
     }
   }, PUSH_DEBOUNCE_MS);
+}
+
+/**
+ * Immediately execute all pending debounced push operations.
+ *
+ * Called on visibilitychange (app goes to background) and beforeunload
+ * to ensure data reaches Supabase before the tab closes or the user
+ * navigates away. Without this, the 800ms debounce window can cause
+ * data loss — particularly on temporary preview/staging URLs where
+ * local storage doesn't persist between deployments.
+ */
+export async function flushPendingSyncPushes(): Promise<void> {
+  const tables = Object.keys(pendingPushFns);
+  if (tables.length === 0) return;
+
+  console.log('[SYNC] Flushing pending pushes for:', tables.join(', '));
+
+  const promises: Promise<void>[] = [];
+
+  for (const table of tables) {
+    const pushFn = pendingPushFns[table];
+    if (!pushFn) continue;
+
+    // Clear the debounce timer
+    if (pushTimers[table]) {
+      clearTimeout(pushTimers[table]);
+      delete pushTimers[table];
+    }
+    delete pendingPushFns[table];
+
+    // Execute immediately
+    pushingTables.add(table);
+    promises.push(
+      pushFn()
+        .then(() => {
+          console.log(`[PUSH] ${table} flushed successfully`);
+        })
+        .catch((error) => {
+          console.error(`[PUSH] ${table} flush FAILED:`, error);
+        })
+        .finally(() => {
+          pushingTables.delete(table);
+          useSyncStore.getState().decrementPending();
+        })
+    );
+  }
+
+  await Promise.all(promises);
+
+  if (useSyncStore.getState().pendingChanges === 0) {
+    useSyncStore.getState().setSynced();
+  }
 }
 
 export async function pushScenes(projectId: string, scenes: Scene[]): Promise<void> {
@@ -918,7 +999,7 @@ async function pushSchedulePdf(projectId: string, schedule: ProductionSchedule):
     // Store the storage path on the schedule_data row
     await supabase
       .from('schedule_data')
-      .update({ raw_pdf_text: schedule.rawText || null })
+      .update({ storage_path: path })
       .eq('id', schedule.id);
 
     // We don't update schedule.pdfUri in the store here to avoid
@@ -1020,6 +1101,7 @@ export async function pushScriptPdf(
     const fileSize = Math.round(base64Length * 0.75);
 
     // Upsert into script_uploads table (is_active=true triggers deactivation of previous)
+    const project = useProjectStore.getState().currentProject;
     const { error: dbError } = await supabase
       .from('script_uploads')
       .insert({
@@ -1030,6 +1112,8 @@ export async function pushScriptPdf(
         is_active: true,
         status: 'uploaded',
         uploaded_by: userId,
+        scene_count: project?.scenes.length || null,
+        character_count: project?.characters.length || null,
       });
     if (dbError) throw dbError;
   });
@@ -1544,6 +1628,22 @@ export async function startSync(projectId: string, userId?: string): Promise<voi
       subscribeToProject(projectId, userId);
       pushInitialData(projectId, userId);
     });
+  });
+
+  // Flush pending Supabase pushes when the app goes to background or tab closes.
+  // This prevents data loss from the 800ms debounce window — critical on
+  // temporary preview/staging URLs where local storage doesn't persist.
+  window.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      flushPendingSyncPushes().catch((err) => {
+        console.error('[SYNC] Failed to flush on visibility change:', err);
+      });
+    }
+  });
+  window.addEventListener('beforeunload', () => {
+    // Fire-and-forget — browser may not wait, but gives the best chance
+    // of completing pending pushes before the tab closes.
+    flushPendingSyncPushes().catch(() => {});
   });
 }
 
