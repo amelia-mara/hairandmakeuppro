@@ -64,6 +64,12 @@ export const useProjectStore = create<ProjectState>()(
           : null,
       })),
 
+      mergeServerData: (updates) => set((state) => ({
+        currentProject: state.currentProject
+          ? { ...state.currentProject, ...updates }
+          : null,
+      })),
+
       clearProject: () => set({
         currentProject: null,
         currentSceneId: null,
