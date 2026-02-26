@@ -109,7 +109,7 @@ export async function getProjectByInviteCode(
 // Uses the SECURITY DEFINER RPC function to bypass RLS
 export async function joinProject(
   inviteCode: string,
-  userId: string,
+  _userId: string,
   role: ProjectMember['role'] = 'floor'
 ): Promise<{ project: Project | null; error: Error | null }> {
   try {
