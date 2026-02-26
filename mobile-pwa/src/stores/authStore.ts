@@ -39,6 +39,9 @@ interface AuthState {
   // Guest mode (joined project without account)
   guestProjectCode: string | null;
 
+  // Pinned "current" project (shown at top of hub)
+  pinnedProjectId: string | null;
+
   // Project settings navigation
   settingsProjectId: string | null;
 
@@ -61,6 +64,7 @@ interface AuthState {
   refreshUserProjects: () => Promise<void>;
   deleteProject: (projectId: string) => Promise<{ success: boolean; error?: string }>;
   leaveProject: (projectId: string) => Promise<{ success: boolean; error?: string }>;
+  setPinnedProject: (projectId: string) => void;
   setSettingsProjectId: (projectId: string | null) => void;
 }
 
@@ -116,6 +120,7 @@ export const useAuthStore = create<AuthState>()(
       subscription: createDefaultSubscription(),
       projectMemberships: [],
       guestProjectCode: null,
+      pinnedProjectId: null,
       settingsProjectId: null,
 
       // Initialize auth state from Supabase session
@@ -753,6 +758,10 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
+      setPinnedProject: (projectId) => {
+        set({ pinnedProjectId: projectId });
+      },
+
       setSettingsProjectId: (projectId) => {
         set({ settingsProjectId: projectId });
       },
@@ -768,6 +777,7 @@ export const useAuthStore = create<AuthState>()(
         hasSelectedPlan: state.hasSelectedPlan,
         subscription: state.subscription,
         projectMemberships: state.projectMemberships,
+        pinnedProjectId: state.pinnedProjectId,
         guestProjectCode: state.guestProjectCode,
       }),
     }

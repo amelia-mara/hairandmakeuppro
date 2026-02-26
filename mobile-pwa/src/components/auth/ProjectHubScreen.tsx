@@ -127,15 +127,19 @@ function ProjectMenu({
   isOpen,
   onClose,
   onSettings,
+  onSetCurrent,
   onDelete,
   isOwner,
+  isCurrent,
   openUpward,
 }: {
   isOpen: boolean;
   onClose: () => void;
   onSettings?: () => void;
+  onSetCurrent?: () => void;
   onDelete: () => void;
   isOwner: boolean;
+  isCurrent?: boolean;
   openUpward?: boolean;
 }) {
   if (!isOpen) return null;
@@ -143,7 +147,18 @@ function ProjectMenu({
   return (
     <>
       <div className="fixed inset-0 z-40" onClick={onClose} />
-      <div className={`absolute right-0 z-50 bg-card rounded-xl shadow-lg border border-border py-1 min-w-[160px] ${openUpward ? 'bottom-full mb-1' : 'top-full mt-1'}`}>
+      <div className={`absolute right-0 z-50 bg-card rounded-xl shadow-lg border border-border py-1 min-w-[180px] ${openUpward ? 'bottom-full mb-1' : 'top-full mt-1'}`}>
+        {onSetCurrent && !isCurrent && (
+          <button
+            onClick={() => { onSetCurrent(); onClose(); }}
+            className="w-full text-left px-4 py-2.5 text-sm text-text-primary hover:bg-gray-50 transition-colors flex items-center gap-2"
+          >
+            <svg className="w-4 h-4 text-gold" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+            </svg>
+            Set as Current
+          </button>
+        )}
         {onSettings && (
           <button
             onClick={() => { onSettings(); onClose(); }}
@@ -176,6 +191,8 @@ export function ProjectHubScreen() {
     deleteProject,
     leaveProject,
     isLoading,
+    pinnedProjectId,
+    setPinnedProject,
     setSettingsProjectId,
     refreshUserProjects,
   } = useAuthStore();
@@ -189,13 +206,24 @@ export function ProjectHubScreen() {
     refreshUserProjects();
   }, [refreshUserProjects]);
 
-  // Sort by last accessed
-  const sortedProjects = [...projectMemberships].sort(
-    (a, b) => new Date(b.lastAccessedAt).getTime() - new Date(a.lastAccessedAt).getTime()
-  );
+  // Determine "current" (pinned) project and sort the rest by date created
+  const pinnedProject = pinnedProjectId
+    ? projectMemberships.find((p) => p.projectId === pinnedProjectId) || null
+    : null;
 
-  const currentProject = sortedProjects.length > 0 ? sortedProjects[0] : null;
-  const otherProjects = sortedProjects.slice(1);
+  // If no pinned project, fall back to most recently accessed
+  const currentProject =
+    pinnedProject ||
+    (projectMemberships.length > 0
+      ? [...projectMemberships].sort(
+          (a, b) => new Date(b.lastAccessedAt).getTime() - new Date(a.lastAccessedAt).getTime()
+        )[0]
+      : null);
+
+  // Other projects sorted by date created (joinedAt) descending — newest first
+  const otherProjects = projectMemberships
+    .filter((p) => p.projectId !== currentProject?.projectId)
+    .sort((a, b) => new Date(b.joinedAt).getTime() - new Date(a.joinedAt).getTime());
 
   const handleProjectOpen = async (membership: ProjectMembership) => {
     updateLastAccessed(membership.projectId);
@@ -452,6 +480,8 @@ export function ProjectHubScreen() {
                       <ProjectMenu
                         isOpen={menuOpenId === currentProject.projectId}
                         onClose={() => setMenuOpenId(null)}
+                        onSetCurrent={() => setPinnedProject(currentProject.projectId)}
+                        isCurrent
                         onSettings={
                           canManage(currentProject.role)
                             ? () => { setSettingsProjectId(currentProject.projectId); setScreen('project-settings'); }
@@ -476,6 +506,9 @@ export function ProjectHubScreen() {
                       {currentProject.teamMemberCount > 0 && `${currentProject.teamMemberCount} team`}
                     </p>
                   )}
+                  <p className="text-[11px] text-text-light mt-2">
+                    Last active {formatRelativeTime(currentProject.lastAccessedAt)}
+                  </p>
                 </button>
               </section>
             )}
@@ -508,8 +541,9 @@ export function ProjectHubScreen() {
                             </h4>
                             <p className="text-xs text-text-muted mt-0.5">
                               {getMembershipLabel(project)}
-                              <span className="mx-1.5 text-text-light">&middot;</span>
-                              {formatRelativeTime(project.lastAccessedAt)}
+                            </p>
+                            <p className="text-[11px] text-text-light mt-0.5">
+                              Last active {formatRelativeTime(project.lastAccessedAt)}
                             </p>
                           </div>
                           <div className="flex items-center gap-2 ml-3 flex-shrink-0">
@@ -530,6 +564,7 @@ export function ProjectHubScreen() {
                               <ProjectMenu
                                 isOpen={menuOpenId === project.projectId}
                                 onClose={() => setMenuOpenId(null)}
+                                onSetCurrent={() => setPinnedProject(project.projectId)}
                                 onSettings={
                                   canManage(project.role)
                                     ? () => { setSettingsProjectId(project.projectId); setScreen('project-settings'); }
