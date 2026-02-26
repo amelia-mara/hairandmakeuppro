@@ -59,6 +59,8 @@ const PUSH_DEBOUNCE_MS = 800;
 let activeChannel: RealtimeChannel | null = null;
 let activeProjectId: string | null = null;
 let pushTimers: Record<string, ReturnType<typeof setTimeout>> = {};
+/** Store pending push functions so they can be flushed immediately */
+let pendingPushFns: Record<string, () => Promise<void>> = {};
 /** Track tables currently being pushed to avoid echo loops */
 let pushingTables = new Set<string>();
 
@@ -710,10 +712,14 @@ function debouncedPush(table: string, pushFn: () => Promise<void>): void {
     useSyncStore.getState().incrementPending();
   }
 
+  // Store the push function so it can be flushed immediately if needed
+  pendingPushFns[table] = pushFn;
+
   pushTimers[table] = setTimeout(async () => {
-    // Delete timer reference immediately so new calls during async
-    // pushFn get their own fresh increment/decrement cycle.
+    // Delete timer and pending fn references immediately so new calls
+    // during async pushFn get their own fresh increment/decrement cycle.
     delete pushTimers[table];
+    delete pendingPushFns[table];
     pushingTables.add(table);
     try {
       useSyncStore.getState().setSyncing();
@@ -730,6 +736,58 @@ function debouncedPush(table: string, pushFn: () => Promise<void>): void {
       }
     }
   }, PUSH_DEBOUNCE_MS);
+}
+
+/**
+ * Immediately execute all pending debounced push operations.
+ *
+ * Called on visibilitychange (app goes to background) and beforeunload
+ * to ensure data reaches Supabase before the tab closes or the user
+ * navigates away. Without this, the 800ms debounce window can cause
+ * data loss — particularly on temporary preview/staging URLs where
+ * local storage doesn't persist between deployments.
+ */
+export async function flushPendingSyncPushes(): Promise<void> {
+  const tables = Object.keys(pendingPushFns);
+  if (tables.length === 0) return;
+
+  console.log('[SYNC] Flushing pending pushes for:', tables.join(', '));
+
+  const promises: Promise<void>[] = [];
+
+  for (const table of tables) {
+    const pushFn = pendingPushFns[table];
+    if (!pushFn) continue;
+
+    // Clear the debounce timer
+    if (pushTimers[table]) {
+      clearTimeout(pushTimers[table]);
+      delete pushTimers[table];
+    }
+    delete pendingPushFns[table];
+
+    // Execute immediately
+    pushingTables.add(table);
+    promises.push(
+      pushFn()
+        .then(() => {
+          console.log(`[PUSH] ${table} flushed successfully`);
+        })
+        .catch((error) => {
+          console.error(`[PUSH] ${table} flush FAILED:`, error);
+        })
+        .finally(() => {
+          pushingTables.delete(table);
+          useSyncStore.getState().decrementPending();
+        })
+    );
+  }
+
+  await Promise.all(promises);
+
+  if (useSyncStore.getState().pendingChanges === 0) {
+    useSyncStore.getState().setSynced();
+  }
 }
 
 export async function pushScenes(projectId: string, scenes: Scene[]): Promise<void> {
@@ -1570,6 +1628,22 @@ export async function startSync(projectId: string, userId?: string): Promise<voi
       subscribeToProject(projectId, userId);
       pushInitialData(projectId, userId);
     });
+  });
+
+  // Flush pending Supabase pushes when the app goes to background or tab closes.
+  // This prevents data loss from the 800ms debounce window — critical on
+  // temporary preview/staging URLs where local storage doesn't persist.
+  window.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      flushPendingSyncPushes().catch((err) => {
+        console.error('[SYNC] Failed to flush on visibility change:', err);
+      });
+    }
+  });
+  window.addEventListener('beforeunload', () => {
+    // Fire-and-forget — browser may not wait, but gives the best chance
+    // of completing pending pushes before the tab closes.
+    flushPendingSyncPushes().catch(() => {});
   });
 }
 
