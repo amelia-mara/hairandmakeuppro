@@ -66,9 +66,15 @@ export function ChatAssistant() {
     }
   };
 
-  // Format message content with basic markdown
+  // Format message content with basic markdown (HTML-escaped first to prevent XSS)
   const formatContent = (content: string) => {
-    return content
+    const escaped = content
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+    return escaped
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*(.*?)\*/g, '<em>$1</em>')
       .replace(/`(.*?)`/g, '<code class="bg-black/20 px-1 rounded text-sm">$1</code>')
