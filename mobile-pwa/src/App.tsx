@@ -309,6 +309,8 @@ function AppContent() {
         return <SignUpScreen />;
       case 'hub':
         return <ProjectHubScreen />;
+      case 'join':
+        return <JoinProjectScreen />;
       case 'create-project':
         return <CreateProjectScreen />;
       case 'select-plan':
