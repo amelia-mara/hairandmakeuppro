@@ -31,6 +31,7 @@ import {
 import { SelectPlanScreen } from '@/components/subscription';
 import { UserProfileScreen } from '@/components/profile/UserProfileScreen';
 import { ProjectSettingsScreen } from '@/components/project-settings';
+import { SyncStatusBar } from '@/components/sync';
 import type { NavTab, SubscriptionTier, BillingPeriod } from '@/types';
 
 // Configuration error screen shown when Supabase environment variables are missing
@@ -486,6 +487,9 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Persistent sync status bar - shown at the very top on all project pages */}
+      {currentProject && <SyncStatusBar />}
+
       {/* Lifecycle Banner (shows when project is wrapped/archived) */}
       {lifecycle.state !== 'active' && (
         <LifecycleBanner onExport={() => setShowExport(true)} />
