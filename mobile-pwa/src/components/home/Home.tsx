@@ -135,14 +135,16 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
       // Set the project and proceed
       setProject(project);
 
-      // Save the original PDF for viewing if it's a PDF file
+      // Save the original PDF for viewing if it's a PDF file.
+      // IMPORTANT: Await encoding so scriptPdfData is set BEFORE startSync
+      // runs pushInitialData. Without this, the script never reaches the server.
       if (file.type === 'application/pdf') {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const base64 = reader.result as string;
-          setScriptPdf(base64);
-        };
-        reader.readAsDataURL(file);
+        const base64 = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.readAsDataURL(file);
+        });
+        setScriptPdf(base64);
       }
 
       // Always run character detection
