@@ -134,10 +134,9 @@ export function Today({ onSceneSelect, onNavigateToTab }: TodayProps) {
     return callSheets.find(cs => cs.id === activeCallSheetId) || null;
   }, [callSheets, activeCallSheetId]);
 
-  // Determine which call sheet to display:
-  // 1. If there's a call sheet for the selected date, use that
-  // 2. Otherwise use the active call sheet
-  const baseCallSheet = callSheetForDate || activeCallSheet;
+  // Only show a call sheet that matches the selected date.
+  // If none exists for that date, show the empty/upload state.
+  const baseCallSheet = callSheetForDate;
 
   // Apply local scene overrides to the base call sheet
   const callSheet = useMemo(() => {
@@ -189,10 +188,27 @@ export function Today({ onSceneSelect, onNavigateToTab }: TodayProps) {
   };
 
   // Navigate days - now properly loads call sheet for that date
+  // Get call sheet dates sorted chronologically for arrow navigation
+  const sortedCallSheetDates = useMemo(() => {
+    return [...callSheets]
+      .map(cs => cs.date)
+      .sort((a, b) => a.localeCompare(b));
+  }, [callSheets]);
+
   const navigateDay = (direction: -1 | 1) => {
-    const newDate = new Date(currentDate);
-    newDate.setDate(newDate.getDate() + direction);
-    setCurrentDate(newDate);
+    const currentDateStr = currentDate.toISOString().split('T')[0];
+
+    if (sortedCallSheetDates.length === 0) return;
+
+    // Find the nearest call sheet date in the given direction
+    if (direction === -1) {
+      const prev = sortedCallSheetDates.filter(d => d < currentDateStr).pop();
+      if (prev) setCurrentDate(new Date(prev + 'T00:00:00'));
+    } else {
+      const next = sortedCallSheetDates.find(d => d > currentDateStr);
+      if (next) setCurrentDate(new Date(next + 'T00:00:00'));
+    }
+
     // Clear local overrides when navigating to a different day
     setLocalSceneOverrides(new Map());
   };
@@ -709,25 +725,36 @@ export function Today({ onSceneSelect, onNavigateToTab }: TodayProps) {
       <div className="sticky top-0 z-30 bg-card border-b border-border safe-top">
         <div className="mobile-container">
           <div className="h-14 px-4 flex items-center justify-between">
-            {/* Date navigation */}
+            {/* Date navigation - steps through uploaded call sheet dates */}
             <div className="flex items-center gap-3">
-              <button
-                onClick={() => navigateDay(-1)}
-                className="p-2 -ml-2 text-text-muted active:text-gold transition-colors touch-manipulation"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-              <h1 className="text-lg font-semibold text-text-primary">{formatShortDate(currentDate)}</h1>
-              <button
-                onClick={() => navigateDay(1)}
-                className="p-2 text-text-muted active:text-gold transition-colors touch-manipulation"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
+              {(() => {
+                const dateStr = currentDate.toISOString().split('T')[0];
+                const hasPrev = sortedCallSheetDates.some(d => d < dateStr);
+                const hasNext = sortedCallSheetDates.some(d => d > dateStr);
+                return (
+                  <>
+                    <button
+                      onClick={() => navigateDay(-1)}
+                      disabled={!hasPrev}
+                      className="p-2 -ml-2 text-text-muted active:text-gold transition-colors touch-manipulation disabled:opacity-25 disabled:active:text-text-muted"
+                    >
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </button>
+                    <h1 className="text-lg font-semibold text-text-primary">{formatShortDate(currentDate)}</h1>
+                    <button
+                      onClick={() => navigateDay(1)}
+                      disabled={!hasNext}
+                      className="p-2 text-text-muted active:text-gold transition-colors touch-manipulation disabled:opacity-25 disabled:active:text-text-muted"
+                    >
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </>
+                );
+              })()}
             </div>
 
             {/* Upload button, Reorder button, and Production day badge */}
@@ -1632,23 +1659,18 @@ interface EmptyStateProps {
   hasProjectData?: boolean;
 }
 
-const EmptyState = memo(function EmptyState({ hasAnyCallSheets, onUploadClick, isUploading, isSyncing, hasProjectData }: EmptyStateProps) {
+const EmptyState = memo(function EmptyState({ onUploadClick, isUploading, isSyncing, hasProjectData }: EmptyStateProps) {
   // Show "waiting for sync" state when project has no local data and sync is in progress
-  const isWaitingForSync = isSyncing && !hasProjectData && !hasAnyCallSheets;
+  const isWaitingForSync = isSyncing && !hasProjectData;
 
   return (
     <div className="flex flex-col items-center justify-center py-16 px-6">
       <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mb-4">
         <svg className="w-10 h-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
           {isWaitingForSync ? (
-            // Sync/refresh icon when waiting for data
             <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182M2.985 19.644l3.181-3.183" />
-          ) : hasAnyCallSheets ? (
-            // Calendar icon when call sheets exist but not for this date
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
           ) : (
-            // Document upload icon when no call sheets uploaded
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m6.75 12l-3-3m0 0l-3 3m3-3v6m-1.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
           )}
         </svg>
       </div>
@@ -1664,34 +1686,18 @@ const EmptyState = memo(function EmptyState({ hasAnyCallSheets, onUploadClick, i
             <span>Syncing...</span>
           </div>
         </>
-      ) : hasAnyCallSheets ? (
-        // Message when call sheets exist but not for this date
-        <>
-          <h3 className="text-lg font-semibold text-text-primary mb-1">No Call Sheet for This Date</h3>
-          <p className="text-sm text-text-muted text-center mb-6">
-            Upload a call sheet for this production day to see today's scenes
-          </p>
-          <button
-            onClick={onUploadClick}
-            disabled={isUploading}
-            className="px-6 py-2.5 rounded-button gold-gradient text-white text-sm font-medium active:scale-95 transition-transform disabled:opacity-50"
-          >
-            {isUploading ? 'Uploading...' : 'Upload Call Sheet PDF'}
-          </button>
-        </>
       ) : (
-        // Message when no call sheets uploaded at all
         <>
-          <h3 className="text-lg font-semibold text-text-primary mb-1">Upload a Call Sheet</h3>
+          <h3 className="text-lg font-semibold text-text-primary mb-1">No Call Sheet for Today</h3>
           <p className="text-sm text-text-muted text-center mb-6">
-            Upload your first call sheet to see today's scenes and start tracking continuity
+            Today's call sheet hasn't been uploaded yet
           </p>
           <button
             onClick={onUploadClick}
             disabled={isUploading}
             className="px-6 py-2.5 rounded-button gold-gradient text-white text-sm font-medium active:scale-95 transition-transform disabled:opacity-50"
           >
-            {isUploading ? 'Uploading...' : 'Upload Call Sheet PDF'}
+            {isUploading ? 'Uploading...' : 'Upload Here'}
           </button>
         </>
       )}
