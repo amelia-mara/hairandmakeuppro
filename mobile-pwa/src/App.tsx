@@ -487,6 +487,9 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Persistent sync status bar - shown at the very top on all project pages */}
+      {currentProject && <SyncStatusBar />}
+
       {/* Lifecycle Banner (shows when project is wrapped/archived) */}
       {lifecycle.state !== 'active' && (
         <LifecycleBanner onExport={() => setShowExport(true)} />
@@ -499,9 +502,6 @@ function AppContent() {
           onNavigateToProfile={() => setShowUserProfile(true)}
         />
       )}
-
-      {/* Persistent sync status bar - shown on all project pages */}
-      {currentProject && <SyncStatusBar />}
 
       {renderContent()}
 
