@@ -353,6 +353,7 @@ export type Database = {
           days: Json | null
           status: 'pending' | 'processing' | 'complete' | 'partial'
           processing_progress: Json | null
+          storage_path: string | null
           created_at: string
         }
         Insert: {
@@ -363,6 +364,7 @@ export type Database = {
           days?: Json | null
           status?: 'pending' | 'processing' | 'complete' | 'partial'
           processing_progress?: Json | null
+          storage_path?: string | null
           created_at?: string
         }
         Update: {
@@ -373,6 +375,7 @@ export type Database = {
           days?: Json | null
           status?: 'pending' | 'processing' | 'complete' | 'partial'
           processing_progress?: Json | null
+          storage_path?: string | null
           created_at?: string
         }
       }

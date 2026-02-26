@@ -548,7 +548,11 @@ function mergeScheduleData(dbSchedule: DbScheduleData, _projectId: string): void
   if (!dbSchedule.days && !dbSchedule.cast_list) return;
 
   // If local already has this exact schedule (same ID), skip to avoid overwriting edits
+  // but still restore the PDF if it's missing locally
   if (currentSchedule && currentSchedule.id === dbSchedule.id && currentSchedule.days.length > 0) {
+    if (!currentSchedule.pdfUri && dbSchedule.storage_path) {
+      downloadSchedulePdf(dbSchedule.id, dbSchedule.storage_path);
+    }
     return;
   }
 
@@ -565,6 +569,24 @@ function mergeScheduleData(dbSchedule: DbScheduleData, _projectId: string): void
 
   // Set the schedule directly in the store
   scheduleStore.setSchedule(schedule);
+
+  // Download the PDF from storage in the background if available
+  if (dbSchedule.storage_path) {
+    downloadSchedulePdf(dbSchedule.id, dbSchedule.storage_path);
+  }
+}
+
+/** Download a schedule PDF from Supabase Storage and set it on the store */
+function downloadSchedulePdf(scheduleId: string, storagePath: string): void {
+  supabaseStorage.downloadDocumentAsDataUri(storagePath).then(({ dataUri }) => {
+    if (!dataUri) return;
+    const scheduleStore = useScheduleStore.getState();
+    const current = scheduleStore.schedule;
+    if (current && current.id === scheduleId) {
+      scheduleStore.setSchedule({ ...current, pdfUri: dataUri });
+      console.log('[PULL] Restored PDF for schedule:', scheduleId);
+    }
+  });
 }
 
 /** Download PDFs for call sheets that are missing their pdfUri locally */
@@ -919,7 +941,7 @@ async function pushSchedulePdf(projectId: string, schedule: ProductionSchedule):
     // Store the storage path on the schedule_data row
     await supabase
       .from('schedule_data')
-      .update({ raw_pdf_text: schedule.rawText || null })
+      .update({ storage_path: path })
       .eq('id', schedule.id);
 
     // We don't update schedule.pdfUri in the store here to avoid
