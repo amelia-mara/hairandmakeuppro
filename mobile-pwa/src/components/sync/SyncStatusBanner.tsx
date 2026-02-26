@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useSyncStore, type SyncStatus } from '@/stores/syncStore';
 import { useProjectStore } from '@/stores/projectStore';
-import { pullProjectData, getActiveProjectId } from '@/services/syncService';
+import { useAuthStore } from '@/stores/authStore';
+import { pullProjectData, getActiveProjectId, pushInitialData, flushPendingSyncPushes } from '@/services/syncService';
 
 /** Persistent sync bar shown at the top of every project page.
  *  Tap to trigger a manual sync. */
@@ -24,6 +25,14 @@ export function SyncStatusBar() {
     setIsManualSyncing(true);
     try {
       const projectId = getActiveProjectId() || currentProject.id;
+      const userId = useAuthStore.getState().user?.id;
+      // Push local data first to ensure it reaches the server before pulling.
+      // Without this, a pull could overwrite unpushed local data with
+      // incomplete server state (e.g. missing script or breakdown).
+      await flushPendingSyncPushes();
+      await pushInitialData(projectId, userId);
+      await flushPendingSyncPushes();
+      // Now pull to get any changes from other devices
       await pullProjectData(projectId);
     } catch (err) {
       console.error('[ManualSync] Failed:', err);

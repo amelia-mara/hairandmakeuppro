@@ -330,9 +330,8 @@ export function ProjectHubScreen() {
       }
     }
 
-    // 2. If already the active project, just navigate
+    // 2. If already the active project, just navigate back to it (keep current tab)
     if (store.currentProject?.id === membership.projectId) {
-      store.setActiveTab('today');
       return;
     }
 

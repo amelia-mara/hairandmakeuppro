@@ -64,6 +64,12 @@ export const useProjectStore = create<ProjectState>()(
           : null,
       })),
 
+      mergeServerData: (updates) => set((state) => ({
+        currentProject: state.currentProject
+          ? { ...state.currentProject, ...updates }
+          : null,
+      })),
+
       clearProject: () => set({
         currentProject: null,
         currentSceneId: null,
@@ -191,6 +197,7 @@ export const useProjectStore = create<ProjectState>()(
       storage: createHybridStorage('hair-makeup-pro-storage'),
       partialize: (state) => ({
         currentProject: state.currentProject,
+        activeTab: state.activeTab,
         sceneCaptures: state.sceneCaptures,
         lifecycle: state.lifecycle,
         savedProjects: state.savedProjects,

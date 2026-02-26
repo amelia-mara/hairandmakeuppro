@@ -37,31 +37,26 @@ export function initSyncSubscriptions(): void {
       // pushInitialData() in startSync will catch this data.
       return;
     }
-    if (!state.currentProject) return;
 
     const prev = prevState.currentProject;
     const curr = state.currentProject;
-    if (!prev || !curr) {
-      // First setProject() call (null → project). pushInitialData()
-      // in startSync will handle pushing this initial data.
-      return;
-    }
+    if (!curr) return;
 
-    // Push scenes if changed
-    if (prev.scenes !== curr.scenes) {
-      console.log('[SYNC-SUB] Scenes changed:', prev.scenes.length, '→', curr.scenes.length);
+    // Push scenes if changed (or if project was just set with scenes)
+    if (curr.scenes.length > 0 && (!prev || prev.scenes !== curr.scenes)) {
+      console.log('[SYNC-SUB] Scenes changed:', prev?.scenes.length ?? 0, '→', curr.scenes.length);
       pushScenes(projectId, curr.scenes);
     }
 
     // Push characters if changed
-    if (prev.characters !== curr.characters) {
-      console.log('[SYNC-SUB] Characters changed:', prev.characters.length, '→', curr.characters.length);
+    if (curr.characters.length > 0 && (!prev || prev.characters !== curr.characters)) {
+      console.log('[SYNC-SUB] Characters changed:', prev?.characters.length ?? 0, '→', curr.characters.length);
       pushCharacters(projectId, curr.characters);
     }
 
     // Push looks if changed
-    if (prev.looks !== curr.looks) {
-      console.log('[SYNC-SUB] Looks changed:', prev.looks.length, '→', curr.looks.length);
+    if (curr.looks.length > 0 && (!prev || prev.looks !== curr.looks)) {
+      console.log('[SYNC-SUB] Looks changed:', prev?.looks.length ?? 0, '→', curr.looks.length);
       pushLooks(projectId, curr.looks);
     }
 
@@ -77,7 +72,7 @@ export function initSyncSubscriptions(): void {
     }
 
     // Push script PDF if changed
-    if (prev.scriptPdfData !== curr.scriptPdfData && curr.scriptPdfData) {
+    if (curr.scriptPdfData && (!prev || prev.scriptPdfData !== curr.scriptPdfData)) {
       const userId = useAuthStore.getState().user?.id || null;
       console.log('[SYNC-SUB] Script PDF changed, pushing to Supabase');
       pushScriptPdf(projectId, curr.scriptPdfData, userId);
