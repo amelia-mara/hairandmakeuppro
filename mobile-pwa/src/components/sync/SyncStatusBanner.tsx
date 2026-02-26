@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSyncStore, type SyncStatus } from '@/stores/syncStore';
 import { useProjectStore } from '@/stores/projectStore';
-import { useAuthStore } from '@/stores/authStore';
 import { pullProjectData, getActiveProjectId } from '@/services/syncService';
 
 /** Persistent sync bar shown at the top of every project page.
@@ -9,7 +8,6 @@ import { pullProjectData, getActiveProjectId } from '@/services/syncService';
 export function SyncStatusBar() {
   const { status, onlineMembers, lastSyncedAt, pendingChanges } = useSyncStore();
   const currentProject = useProjectStore((s) => s.currentProject);
-  const user = useAuthStore((s) => s.user);
   const [isManualSyncing, setIsManualSyncing] = useState(false);
   // Force re-render every 30s to update "X ago" text
   const [, setTick] = useState(0);
