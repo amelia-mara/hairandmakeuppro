@@ -5,11 +5,24 @@ import { Button, Input } from '@/components/ui';
 import type { ProductionType, Project } from '@/types';
 import { PRODUCTION_TYPES } from '@/types';
 
+// Owner role options (same set as the join flow)
+const OWNER_ROLES = [
+  { value: 'designer', label: 'Designer' },
+  { value: 'supervisor', label: 'Supervisor' },
+  { value: 'key', label: 'Artist' },
+  { value: 'floor', label: 'Standby' },
+  { value: 'trainee', label: 'Trainee' },
+  { value: 'daily', label: 'Daily' },
+] as const;
+
+type OwnerRole = (typeof OWNER_ROLES)[number]['value'];
+
 export function CreateProjectScreen() {
   const { goBack, createProject, isLoading, error, clearError } = useAuthStore();
 
   const [name, setName] = useState('');
   const [productionType, setProductionType] = useState<ProductionType>('film');
+  const [ownerRole, setOwnerRole] = useState<OwnerRole>('designer');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -17,7 +30,7 @@ export function CreateProjectScreen() {
 
     if (!name.trim()) return;
 
-    const result = await createProject(name.trim(), productionType);
+    const result = await createProject(name.trim(), productionType, ownerRole);
 
     if (result.success && result.code) {
       // Go directly to the upload files flow instead of showing success screen
@@ -103,6 +116,27 @@ export function CreateProjectScreen() {
                   }`}
                 >
                   {type.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Owner role select */}
+          <div>
+            <label className="field-label block mb-2">Your Role</label>
+            <div className="grid grid-cols-3 gap-2">
+              {OWNER_ROLES.map((role) => (
+                <button
+                  key={role.value}
+                  type="button"
+                  onClick={() => setOwnerRole(role.value)}
+                  className={`px-3 py-3 rounded-lg border text-sm font-medium transition-colors ${
+                    ownerRole === role.value
+                      ? 'border-gold bg-gold-50 text-gold'
+                      : 'border-border bg-card text-text-secondary hover:border-gold-300'
+                  }`}
+                >
+                  {role.label}
                 </button>
               ))}
             </div>

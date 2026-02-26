@@ -34,7 +34,8 @@ function generateInviteCode(): string {
 export async function createProject(
   name: string,
   productionType: string,
-  userId: string
+  userId: string,
+  ownerRole: ProjectMember['role'] = 'designer'
 ): Promise<{ project: Project | null; inviteCode: string | null; error: Error | null }> {
   try {
     const inviteCode = generateInviteCode();
@@ -53,13 +54,13 @@ export async function createProject(
 
     if (projectError) throw projectError;
 
-    // Add creator as owner/designer
+    // Add creator as owner with their selected role
     const { error: memberError } = await supabase
       .from('project_members')
       .insert({
         project_id: project.id,
         user_id: userId,
-        role: 'designer',
+        role: ownerRole,
         is_owner: true,
       });
 
