@@ -461,6 +461,7 @@ export const DELETION_GRACE_PERIOD_HOURS = 48;
 // Soft-delete a project (owner only)
 // Sets pending_deletion_at instead of immediately removing data, giving synced
 // team members a 48-hour window to download documents.
+// Falls back to hard delete if the pending_deletion_at column hasn't been migrated yet.
 export async function deleteProject(
   projectId: string,
   userId: string
@@ -477,13 +478,23 @@ export async function deleteProject(
     if (memberError) throw new Error('Failed to verify project ownership');
     if (!membership?.is_owner) throw new Error('Only project owners can delete projects');
 
-    // Set pending_deletion_at to start the grace period
+    // Try soft-delete first (set pending_deletion_at to start the grace period)
     const { error: updateError } = await supabase
       .from('projects')
       .update({ pending_deletion_at: new Date().toISOString() })
       .eq('id', projectId);
 
-    if (updateError) throw updateError;
+    if (updateError) {
+      // If pending_deletion_at column doesn't exist yet, fall back to hard delete
+      const isSchemaError = updateError.message?.includes('schema cache') ||
+        updateError.message?.includes('pending_deletion_at') ||
+        updateError.code === 'PGRST204';
+      if (isSchemaError) {
+        console.warn('[deleteProject] pending_deletion_at column not available, falling back to hard delete');
+        return finalizeProjectDeletion(projectId, userId);
+      }
+      throw updateError;
+    }
 
     return { error: null };
   } catch (error) {
