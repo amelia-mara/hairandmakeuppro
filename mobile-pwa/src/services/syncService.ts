@@ -350,7 +350,7 @@ export async function pullProjectData(projectId: string, retryCount: number = 0)
         mergeCallSheetData(dbCallSheets, projectId);
       }
       if (dbScript.length > 0) {
-        mergeScriptData(dbScript[0], projectId);
+        await mergeScriptData(dbScript[0], projectId);
       }
 
       syncStore.setSynced();
@@ -481,9 +481,9 @@ export async function pullProjectData(projectId: string, retryCount: number = 0)
       mergeCallSheetData(dbCallSheets, projectId);
     }
 
-    // Merge script data if available
+    // Merge script data if available (await download from storage)
     if (dbScript.length > 0) {
-      mergeScriptData(dbScript[0], projectId);
+      await mergeScriptData(dbScript[0], projectId);
     }
 
     console.log('[PULL] Pull complete, data merged successfully');
@@ -700,19 +700,30 @@ function mergeCallSheetData(dbCallSheets: DbCallSheetData[], _projectId: string)
   console.log('[PULL] Merged', callSheets.length, 'call sheets from server');
 }
 
-function mergeScriptData(dbScript: DbScriptUpload, _projectId: string): void {
+async function mergeScriptData(dbScript: DbScriptUpload, _projectId: string): Promise<void> {
   const projectStore = useProjectStore.getState();
   const currentProject = projectStore.currentProject;
 
   if (!currentProject) return;
   if (!dbScript.storage_path) return;
 
-  // Always download latest script from server (server is source of truth)
-  supabaseStorage.downloadDocumentAsDataUri(dbScript.storage_path).then(({ dataUri }) => {
-    if (!dataUri) return;
+  // Download latest script from server (server is source of truth)
+  // Await the download so pullProjectData completes with the script data
+  try {
+    const { dataUri, error } = await supabaseStorage.downloadDocumentAsDataUri(dbScript.storage_path);
+    if (error) {
+      console.error('[PULL] Script PDF download failed:', error);
+      return;
+    }
+    if (!dataUri) {
+      console.warn('[PULL] Script PDF download returned no data');
+      return;
+    }
     projectStore.setScriptPdf(dataUri);
     console.log('[PULL] Restored script PDF from server');
-  });
+  } catch (err) {
+    console.error('[PULL] Script PDF download error:', err);
+  }
 }
 
 // ============================================================================
@@ -1117,8 +1128,8 @@ export async function pushScriptPdf(
       projectId, 'scripts', scriptPdfData
     );
     if (uploadError || !path) {
-      console.error('[PUSH] Script PDF upload failed:', uploadError);
-      return;
+      console.error('[PUSH] Script PDF upload to storage failed:', uploadError);
+      throw uploadError || new Error('Storage upload returned no path');
     }
     console.log('[PUSH] Script PDF uploaded to:', path);
 
@@ -1126,7 +1137,18 @@ export async function pushScriptPdf(
     const base64Length = scriptPdfData.split(',')[1]?.length || 0;
     const fileSize = Math.round(base64Length * 0.75);
 
-    // Upsert into script_uploads table (is_active=true triggers deactivation of previous)
+    // Deactivate any previous script uploads for this project
+    const { error: deactivateError } = await supabase
+      .from('script_uploads')
+      .update({ is_active: false })
+      .eq('project_id', projectId)
+      .eq('is_active', true);
+    if (deactivateError) {
+      console.warn('[PUSH] Failed to deactivate old scripts:', deactivateError);
+      // Non-fatal: proceed with insert
+    }
+
+    // Insert new active script record
     const project = useProjectStore.getState().currentProject;
     const { error: dbError } = await supabase
       .from('script_uploads')
@@ -1141,7 +1163,11 @@ export async function pushScriptPdf(
         scene_count: project?.scenes.length || null,
         character_count: project?.characters.length || null,
       });
-    if (dbError) throw dbError;
+    if (dbError) {
+      console.error('[PUSH] script_uploads INSERT failed:', dbError);
+      throw dbError;
+    }
+    console.log('[PUSH] script_uploads row inserted successfully');
   });
 }
 
@@ -1742,6 +1768,12 @@ export async function pushInitialData(projectId: string, userId?: string): Promi
     console.log('[SYNC] pushInitialData: pushing script PDF');
     pushScriptPdf(projectId, project.scriptPdfData, userId || null);
   }
+
+  // Flush all debounced pushes immediately so initial data actually reaches
+  // the server before this function returns. Without this, pushes sit in an
+  // 800ms debounce timer and may never fire if the user navigates away.
+  console.log('[SYNC] pushInitialData: flushing all pending pushes');
+  await flushPendingSyncPushes();
 }
 
 export function stopSync(): void {
