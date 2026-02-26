@@ -48,7 +48,7 @@ interface AuthState {
   signIn: (email: string, password: string) => Promise<boolean>;
   signUp: (name: string, email: string, password: string) => Promise<boolean>;
   signOut: () => void;
-  joinProject: (code: string) => Promise<{ success: boolean; projectName?: string; error?: string }>;
+  joinProject: (code: string, role?: string) => Promise<{ success: boolean; projectName?: string; error?: string }>;
   createProject: (name: string, type: ProductionType) => Promise<{ success: boolean; code?: string; error?: string }>;
   clearError: () => void;
   setHasCompletedOnboarding: (value: boolean) => void;
@@ -373,8 +373,8 @@ export const useAuthStore = create<AuthState>()(
         });
       },
 
-      // Join a project with invite code
-      joinProject: async (code) => {
+      // Join a project with invite code and selected role
+      joinProject: async (code, role) => {
         const { user, projectMemberships, isAuthenticated } = get();
 
         set({ isLoading: true, error: null });
@@ -386,8 +386,9 @@ export const useAuthStore = create<AuthState>()(
             return { success: false, error: 'Account required' };
           }
 
-          // Join project via Supabase (RPC with fallback)
-          const { project: joinedProject, error } = await supabaseProjects.joinProject(code, user.id);
+          // Join project via Supabase (RPC with fallback) using the selected role
+          const joinRole = (role || 'floor') as any;
+          const { project: joinedProject, error } = await supabaseProjects.joinProject(code, user.id, joinRole);
 
           if (error) {
             set({ isLoading: false, error: error.message });
@@ -412,7 +413,7 @@ export const useAuthStore = create<AuthState>()(
             projectId: joinedProject.id,
             projectName: joinedProject.name,
             productionType: joinedProject.production_type as ProductionType,
-            role: 'floor',
+            role: joinRole as ProjectRole,
             joinedAt: new Date(),
             lastAccessedAt: new Date(),
             teamMemberCount: 1,
