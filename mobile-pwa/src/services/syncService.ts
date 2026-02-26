@@ -1101,7 +1101,14 @@ export async function pushScriptPdf(
   userId: string | null
 ): Promise<void> {
   if (!isSupabaseConfigured) return;
-  if (!scriptPdfData || !scriptPdfData.startsWith('data:')) return;
+  if (!scriptPdfData) {
+    console.warn('[PUSH] pushScriptPdf: no scriptPdfData provided, skipping');
+    return;
+  }
+  if (!scriptPdfData.startsWith('data:')) {
+    console.warn('[PUSH] pushScriptPdf: scriptPdfData is not a data URI (starts with:', scriptPdfData.substring(0, 30), '), skipping');
+    return;
+  }
   console.log(`[PUSH] pushScriptPdf: uploading script for project ${projectId}`);
 
   debouncedPush('script', async () => {
