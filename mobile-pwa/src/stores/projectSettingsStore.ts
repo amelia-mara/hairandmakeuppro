@@ -396,13 +396,20 @@ export const useProjectSettingsStore = create<ProjectSettingsState>((set, get) =
     }
   },
 
-  // Change team member role
+  // Change team member role (persisted to Supabase)
   changeTeamMemberRole: async (userId, newRole) => {
-    const { teamMembers } = get();
+    const { teamMembers, projectSettings } = get();
+    if (!projectSettings) return;
 
     set({ isLoading: true });
     try {
-      await mockDelay(300);
+      const { error } = await supabaseProjects.updateMemberRole(
+        projectSettings.id,
+        userId,
+        newRole as any
+      );
+      if (error) throw error;
+
       const updatedMembers = teamMembers.map((member) =>
         member.userId === userId ? { ...member, role: newRole } : member
       );
@@ -412,13 +419,19 @@ export const useProjectSettingsStore = create<ProjectSettingsState>((set, get) =
     }
   },
 
-  // Remove team member
+  // Remove team member (persisted to Supabase — immediate removal, no grace period)
   removeTeamMember: async (userId) => {
-    const { teamMembers, projectStats } = get();
+    const { teamMembers, projectStats, projectSettings } = get();
+    if (!projectSettings) return;
 
     set({ isLoading: true });
     try {
-      await mockDelay(400);
+      const { error } = await supabaseProjects.removeMember(
+        projectSettings.id,
+        userId
+      );
+      if (error) throw error;
+
       const updatedMembers = teamMembers.filter((member) => member.userId !== userId);
       set({
         teamMembers: updatedMembers,
