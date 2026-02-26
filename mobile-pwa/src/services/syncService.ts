@@ -687,16 +687,8 @@ export async function pushScenes(projectId: string, scenes: Scene[]): Promise<vo
       .upsert(dbScenes, { onConflict: 'id' });
     if (error) throw error;
 
-    // Sync scene_characters junction
-    // Get all scene IDs
+    // Sync scene_characters junction atomically via RPC
     const sceneIds = scenes.map(s => s.id);
-
-    // Delete existing scene_characters for these scenes
-    if (sceneIds.length > 0) {
-      await supabase.from('scene_characters').delete().in('scene_id', sceneIds);
-    }
-
-    // Build new scene_characters entries
     const sceneCharEntries: { scene_id: string; character_id: string }[] = [];
     for (const scene of scenes) {
       for (const charId of scene.characters) {
@@ -707,10 +699,11 @@ export async function pushScenes(projectId: string, scenes: Scene[]): Promise<vo
       }
     }
 
-    if (sceneCharEntries.length > 0) {
-      const { error: scError } = await supabase
-        .from('scene_characters')
-        .insert(sceneCharEntries);
+    if (sceneIds.length > 0) {
+      const { error: scError } = await supabase.rpc('sync_scene_characters', {
+        p_scene_ids: sceneIds,
+        p_entries: sceneCharEntries,
+      });
       if (scError) throw scError;
     }
   });
@@ -740,12 +733,8 @@ export async function pushLooks(projectId: string, looks: Look[]): Promise<void>
       .upsert(dbLooks, { onConflict: 'id' });
     if (lookError) throw lookError;
 
-    // Sync look_scenes junction
+    // Sync look_scenes junction atomically via RPC
     const lookIds = looks.map(l => l.id);
-    if (lookIds.length > 0) {
-      await supabase.from('look_scenes').delete().in('look_id', lookIds);
-    }
-
     const lookSceneEntries: { look_id: string; scene_number: string }[] = [];
     for (const look of looks) {
       for (const sceneNum of look.scenes) {
@@ -756,10 +745,11 @@ export async function pushLooks(projectId: string, looks: Look[]): Promise<void>
       }
     }
 
-    if (lookSceneEntries.length > 0) {
-      const { error: lsError } = await supabase
-        .from('look_scenes')
-        .insert(lookSceneEntries);
+    if (lookIds.length > 0) {
+      const { error: lsError } = await supabase.rpc('sync_look_scenes', {
+        p_look_ids: lookIds,
+        p_entries: lookSceneEntries,
+      });
       if (lsError) throw lsError;
     }
   });
