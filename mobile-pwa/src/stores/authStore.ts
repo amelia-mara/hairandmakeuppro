@@ -611,7 +611,7 @@ export const useAuthStore = create<AuthState>()(
         const { user, projectMemberships } = get();
 
         const tierLimits = user ? TIER_LIMITS[user.tier] : null;
-        if (!user || !tierLimits?.canCreateProjects) {
+        if (!user || (!BETA_MODE && !tierLimits?.canCreateProjects)) {
           set({ error: 'Your account tier does not allow creating projects' });
           return { success: false, error: 'Insufficient permissions' };
         }
@@ -669,6 +669,7 @@ export const useAuthStore = create<AuthState>()(
 
       // Check if user can create projects
       canCreateProjects: () => {
+        if (BETA_MODE) return true;
         const { user } = get();
         if (!user) return false;
         const limits = TIER_LIMITS[user.tier];
