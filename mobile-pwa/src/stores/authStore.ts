@@ -96,6 +96,8 @@ function toProjectMembership(
     sceneCount: 0, // Will be fetched separately if needed
     projectCode: project.invite_code,
     status: project.status === 'wrapped' ? 'wrapped' : 'active',
+    ownerName: project.owner_name,
+    pendingDeletionAt: project.pending_deletion_at ? new Date(project.pending_deletion_at) : null,
   };
 }
 
@@ -148,13 +150,34 @@ export const useAuthStore = create<AuthState>()(
       },
 
       // Refresh user's projects from Supabase
+      // Also finalizes any expired pending deletions for owned projects
       refreshUserProjects: async () => {
         const { user } = get();
         if (!user) return;
 
         try {
           const { projects } = await supabaseProjects.getUserProjects(user.id);
-          const memberships = projects.map(toProjectMembership);
+
+          // For owned projects with expired grace periods, finalize deletion
+          for (const p of projects) {
+            if (
+              p.is_owner &&
+              p.pending_deletion_at &&
+              supabaseProjects.isDeletionGracePeriodExpired(p.pending_deletion_at)
+            ) {
+              await supabaseProjects.finalizeProjectDeletion(p.id, user.id).catch(console.error);
+            }
+          }
+
+          // Re-fetch after any finalizations, or filter out finalized projects
+          const remaining = projects.filter(
+            (p) =>
+              !p.is_owner ||
+              !p.pending_deletion_at ||
+              !supabaseProjects.isDeletionGracePeriodExpired(p.pending_deletion_at)
+          );
+
+          const memberships = remaining.map(toProjectMembership);
           set({ projectMemberships: memberships });
         } catch (error) {
           console.error('Error refreshing projects:', error);
@@ -376,6 +399,14 @@ export const useAuthStore = create<AuthState>()(
             return { success: false, error: 'Failed to join project' };
           }
 
+          // Fetch the project owner's name for the "Synced from" label
+          let ownerName: string | undefined;
+          try {
+            const { members } = await supabaseProjects.getProjectMembers(joinedProject.id);
+            const ownerMember = members.find((m) => m.is_owner);
+            if (ownerMember) ownerName = ownerMember.user.name;
+          } catch { /* non-critical */ }
+
           // Add to local memberships
           const newMembership: ProjectMembership = {
             projectId: joinedProject.id,
@@ -388,6 +419,8 @@ export const useAuthStore = create<AuthState>()(
             sceneCount: 0,
             projectCode: joinedProject.invite_code,
             status: 'active',
+            ownerName,
+            pendingDeletionAt: null,
           };
 
           // Fetch project data and load into project store
@@ -634,6 +667,7 @@ export const useAuthStore = create<AuthState>()(
       },
 
       // Delete a project (owner only)
+      // Initiates a soft-delete with a 48-hour grace period for synced members
       deleteProject: async (projectId) => {
         const { user, projectMemberships } = get();
 
@@ -648,7 +682,7 @@ export const useAuthStore = create<AuthState>()(
           const isLocalProject = projectId.startsWith('project-');
 
           if (!isLocalProject) {
-            // Delete from Supabase
+            // Soft-delete in Supabase (sets pending_deletion_at)
             const { error } = await supabaseProjects.deleteProject(projectId, user.id);
             if (error) {
               set({ isLoading: false, error: error.message });
@@ -656,7 +690,7 @@ export const useAuthStore = create<AuthState>()(
             }
           }
 
-          // Remove from local state
+          // Remove from owner's local state immediately
           const updatedMemberships = projectMemberships.filter(
             (pm) => pm.projectId !== projectId
           );

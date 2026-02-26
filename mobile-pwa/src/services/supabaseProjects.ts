@@ -10,6 +10,7 @@ type Look = Database['public']['Tables']['looks']['Row'];
 export interface ProjectWithRole extends Project {
   role: ProjectMember['role'];
   is_owner: boolean;
+  owner_name?: string;
 }
 
 // Generate a unique invite code
@@ -188,7 +189,7 @@ export async function getUserProjects(
         role,
         is_owner,
         joined_at,
-        projects (*)
+        projects (*, users:created_by (name))
       `)
       .eq('user_id', userId)
       .order('joined_at', { ascending: false });
@@ -199,7 +200,13 @@ export async function getUserProjects(
       ...pm.projects,
       role: pm.role,
       is_owner: pm.is_owner,
+      owner_name: pm.projects?.users?.name || undefined,
     }));
+
+    // Remove the nested users object from the project data
+    for (const p of projects) {
+      delete (p as any).users;
+    }
 
     return { projects, error: null };
   } catch (error) {
@@ -476,8 +483,12 @@ export async function saveSceneCharacters(
   }
 }
 
-// Delete a project (owner only)
-// This deletes the project and all related data
+// Grace period (in hours) before a pending deletion becomes permanent
+export const DELETION_GRACE_PERIOD_HOURS = 48;
+
+// Soft-delete a project (owner only)
+// Sets pending_deletion_at instead of immediately removing data, giving synced
+// team members a 48-hour window to download documents.
 export async function deleteProject(
   projectId: string,
   userId: string
@@ -494,52 +505,63 @@ export async function deleteProject(
     if (memberError) throw new Error('Failed to verify project ownership');
     if (!membership?.is_owner) throw new Error('Only project owners can delete projects');
 
-    // Delete in order to respect foreign key constraints:
-    // 1. Delete scene_characters (references scenes and characters)
-    // 2. Delete look_scenes (references looks)
-    // 3. Delete looks (references characters)
-    // 4. Delete characters
-    // 5. Delete scenes
-    // 6. Delete project_members
-    // 7. Delete the project
+    // Set pending_deletion_at to start the grace period
+    const { error: updateError } = await supabase
+      .from('projects')
+      .update({ pending_deletion_at: new Date().toISOString() })
+      .eq('id', projectId);
 
-    // Get all scene IDs for this project
+    if (updateError) throw updateError;
+
+    return { error: null };
+  } catch (error) {
+    return { error: error as Error };
+  }
+}
+
+// Permanently delete a project and all related data (owner only)
+// Called after the grace period has elapsed.
+export async function finalizeProjectDeletion(
+  projectId: string,
+  userId: string
+): Promise<{ error: Error | null }> {
+  try {
+    // Verify the user is the owner
+    const { data: membership, error: memberError } = await supabase
+      .from('project_members')
+      .select('is_owner')
+      .eq('project_id', projectId)
+      .eq('user_id', userId)
+      .single();
+
+    if (memberError) throw new Error('Failed to verify project ownership');
+    if (!membership?.is_owner) throw new Error('Only project owners can delete projects');
+
+    // Delete in order to respect foreign key constraints
     const { data: scenes } = await supabase
       .from('scenes')
       .select('id')
       .eq('project_id', projectId);
     const sceneIds = scenes?.map(s => s.id) || [];
 
-    // Get all look IDs for this project
     const { data: looks } = await supabase
       .from('looks')
       .select('id')
       .eq('project_id', projectId);
     const lookIds = looks?.map(l => l.id) || [];
 
-    // Delete scene_characters
     if (sceneIds.length > 0) {
       await supabase.from('scene_characters').delete().in('scene_id', sceneIds);
     }
-
-    // Delete look_scenes
     if (lookIds.length > 0) {
       await supabase.from('look_scenes').delete().in('look_id', lookIds);
     }
 
-    // Delete looks
     await supabase.from('looks').delete().eq('project_id', projectId);
-
-    // Delete characters
     await supabase.from('characters').delete().eq('project_id', projectId);
-
-    // Delete scenes
     await supabase.from('scenes').delete().eq('project_id', projectId);
-
-    // Delete project members
     await supabase.from('project_members').delete().eq('project_id', projectId);
 
-    // Finally delete the project
     const { error: deleteError } = await supabase
       .from('projects')
       .delete()
@@ -551,6 +573,21 @@ export async function deleteProject(
   } catch (error) {
     return { error: error as Error };
   }
+}
+
+// Check if a pending deletion's grace period has elapsed
+export function isDeletionGracePeriodExpired(pendingDeletionAt: string | Date): boolean {
+  const deletionTime = new Date(pendingDeletionAt);
+  const expiresAt = new Date(deletionTime.getTime() + DELETION_GRACE_PERIOD_HOURS * 60 * 60 * 1000);
+  return new Date() >= expiresAt;
+}
+
+// Calculate hours remaining in the grace period
+export function hoursUntilDeletion(pendingDeletionAt: string | Date): number {
+  const deletionTime = new Date(pendingDeletionAt);
+  const expiresAt = new Date(deletionTime.getTime() + DELETION_GRACE_PERIOD_HOURS * 60 * 60 * 1000);
+  const remaining = expiresAt.getTime() - new Date().getTime();
+  return Math.max(0, Math.ceil(remaining / (1000 * 60 * 60)));
 }
 
 // Leave a project (for non-owners)
