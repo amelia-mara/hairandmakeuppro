@@ -159,8 +159,8 @@ function dbToScene(
     filmingStatus: db.filming_status as Scene['filmingStatus'] || undefined,
     filmingNotes: db.filming_notes || undefined,
     shootingDay: db.shooting_day || undefined,
-    // Preserve local-only fields
-    scriptContent: existingScene?.scriptContent,
+    // Server wins for script content, fall back to local
+    scriptContent: db.script_content || existingScene?.scriptContent,
     hasScheduleDiscrepancy: existingScene?.hasScheduleDiscrepancy,
     characterConfirmationStatus: existingScene?.characterConfirmationStatus,
     suggestedCharacters: existingScene?.suggestedCharacters,
