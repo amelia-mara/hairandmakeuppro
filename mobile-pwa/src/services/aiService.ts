@@ -69,8 +69,13 @@ export async function callAI(
 
         aiDebugLog('API error:', response.status, errorMessage);
 
-        // Handle rate limiting with exponential backoff
+        // Handle rate limiting
         if (response.status === 429) {
+          // Usage/spend limits are non-retryable — the user is capped until the reset date
+          if (errorMessage.includes('usage limit') || errorMessage.includes('will regain access')) {
+            throw new Error(errorMessage || 'You have reached your API usage limits. Please check your Anthropic console for the reset date.');
+          }
+          // Transient rate limits (requests-per-minute) are retryable
           const waitTime = Math.pow(2, attempt + 1) * 1000; // 2s, 4s, 8s
           aiDebugLog(`Rate limited, waiting ${waitTime}ms before retry...`);
           await new Promise(resolve => setTimeout(resolve, waitTime));
@@ -103,7 +108,7 @@ export async function callAI(
           continue;
         }
 
-        throw new Error(errorData.error || `API error: ${response.status}`);
+        throw new Error(errorMessage || `API error: ${response.status}`);
       }
 
       const data: AIResponse = await response.json();
@@ -126,7 +131,9 @@ export async function callAI(
       // Don't retry for certain errors
       const errorMsg = lastError.message || '';
       if (errorMsg.includes('Insufficient API credits') ||
-          errorMsg.includes('Invalid API key')) {
+          errorMsg.includes('Invalid API key') ||
+          errorMsg.includes('usage limit') ||
+          errorMsg.includes('will regain access')) {
         throw lastError;
       }
 
