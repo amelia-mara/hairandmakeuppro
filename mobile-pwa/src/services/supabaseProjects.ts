@@ -215,21 +215,27 @@ export async function getUserProjects(
   }
 }
 
-// Get full project data (scenes, characters, looks)
+// Get full project data (scenes, characters, looks, documents)
 export async function getProjectData(projectId: string): Promise<{
   scenes: Scene[];
   characters: Character[];
   looks: Look[];
   sceneCharacters: { scene_id: string; character_id: string }[];
   lookScenes: { look_id: string; scene_number: string }[];
+  scheduleData: any[];
+  callSheetData: any[];
+  scriptData: any[];
   error: Error | null;
 }> {
   try {
-    // Phase 1: Fetch project-level tables in parallel
-    const [scenesRes, charactersRes, looksRes] = await Promise.all([
+    // Phase 1: Fetch project-level tables in parallel (including documents)
+    const [scenesRes, charactersRes, looksRes, scheduleRes, callSheetsRes, scriptRes] = await Promise.all([
       supabase.from('scenes').select('*').eq('project_id', projectId).order('scene_number'),
       supabase.from('characters').select('*').eq('project_id', projectId).order('name'),
       supabase.from('looks').select('*').eq('project_id', projectId),
+      supabase.from('schedule_data').select('*').eq('project_id', projectId).order('created_at', { ascending: false }).limit(1),
+      supabase.from('call_sheet_data').select('*').eq('project_id', projectId).order('production_day'),
+      supabase.from('script_uploads').select('*').eq('project_id', projectId).eq('is_active', true).limit(1),
     ]);
 
     if (scenesRes.error) throw scenesRes.error;
@@ -258,6 +264,9 @@ export async function getProjectData(projectId: string): Promise<{
       looks,
       sceneCharacters: sceneCharsRes.data || [],
       lookScenes: lookScenesRes.data || [],
+      scheduleData: scheduleRes.data || [],
+      callSheetData: callSheetsRes.data || [],
+      scriptData: scriptRes.data || [],
       error: null,
     };
   } catch (error) {
@@ -267,6 +276,9 @@ export async function getProjectData(projectId: string): Promise<{
       looks: [],
       sceneCharacters: [],
       lookScenes: [],
+      scheduleData: [],
+      callSheetData: [],
+      scriptData: [],
       error: error as Error,
     };
   }

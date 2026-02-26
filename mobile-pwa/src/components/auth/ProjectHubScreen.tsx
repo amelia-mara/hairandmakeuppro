@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { useCallSheetStore } from '@/stores/callSheetStore';
+import { useScheduleStore } from '@/stores/scheduleStore';
 import { UpgradeModal } from '@/components/dashboard';
 import * as supabaseProjects from '@/services/supabaseProjects';
+import * as supabaseStorage from '@/services/supabaseStorage';
 import { hoursUntilDeletion } from '@/services/supabaseProjects';
-import type { ProjectMembership, Project, ProjectRole, ProductionType } from '@/types';
+import type { ProjectMembership, Project, ProjectRole, ProductionType, CallSheet, ProductionSchedule } from '@/types';
 import { createEmptyMakeupDetails, createEmptyHairDetails } from '@/types';
 
 // Format relative time
@@ -69,6 +71,89 @@ function createProjectFromMembership(membership: ProjectMembership): Project {
     characters: [],
     looks: [],
   };
+}
+
+// Load document data (schedule, call sheets, script) into the appropriate stores.
+// Called immediately on project open so synced users see data right away.
+function loadDocumentsIntoStores(
+  scheduleData: any[],
+  callSheetData: any[],
+  scriptData: any[],
+): void {
+  // Schedule
+  if (scheduleData.length > 0) {
+    const db = scheduleData[0];
+    if (db.days || db.cast_list) {
+      const schedule: ProductionSchedule = {
+        id: db.id,
+        status: db.status === 'complete' ? 'complete' : 'pending',
+        castList: (db.cast_list as any[]) || [],
+        days: (db.days as any[]) || [],
+        totalDays: ((db.days as any[]) || []).length,
+        uploadedAt: new Date(db.created_at),
+        rawText: db.raw_pdf_text || undefined,
+      };
+      useScheduleStore.getState().setSchedule(schedule);
+    }
+  }
+
+  // Call sheets
+  if (callSheetData.length > 0) {
+    const callSheetStore = useCallSheetStore.getState();
+    callSheetStore.clearAll();
+
+    const callSheets: CallSheet[] = callSheetData.map((db: any) => {
+      const parsed = (db.parsed_data || {}) as any;
+      return {
+        ...parsed,
+        id: db.id,
+        date: db.shoot_date,
+        productionDay: db.production_day,
+        rawText: db.raw_text || parsed.rawText,
+        pdfUri: undefined,
+        uploadedAt: new Date(db.created_at),
+        scenes: parsed.scenes || [],
+      };
+    });
+
+    for (const cs of callSheets) {
+      useCallSheetStore.setState((state) => ({
+        callSheets: [...state.callSheets, cs].sort(
+          (a, b) => a.productionDay - b.productionDay
+        ),
+      }));
+    }
+
+    const latest = callSheets[callSheets.length - 1];
+    if (latest) {
+      callSheetStore.setActiveCallSheet(latest.id);
+    }
+
+    // Download call sheet PDFs in background
+    for (const db of callSheetData) {
+      if (db.storage_path) {
+        supabaseStorage.downloadDocumentAsDataUri(db.storage_path).then(({ dataUri }) => {
+          if (!dataUri) return;
+          useCallSheetStore.setState((state) => ({
+            callSheets: state.callSheets.map((cs) =>
+              cs.id === db.id ? { ...cs, pdfUri: dataUri } : cs
+            ),
+          }));
+        });
+      }
+    }
+  }
+
+  // Script
+  if (scriptData.length > 0) {
+    const dbScript = scriptData[0];
+    if (dbScript.storage_path) {
+      supabaseStorage.downloadDocumentAsDataUri(dbScript.storage_path).then(({ dataUri }) => {
+        if (!dataUri) return;
+        useProjectStore.getState().setScriptPdf(dataUri);
+      });
+    }
+  }
 }
 
 // Delete/Leave Confirmation Modal
@@ -230,33 +315,44 @@ export function ProjectHubScreen() {
 
     const store = useProjectStore.getState();
 
-    // 1. Restore from local save if available
-    if (store.hasSavedProject(membership.projectId)) {
-      store.restoreSavedProject(membership.projectId);
-      store.setActiveTab('today');
-      return;
+    // 1. Save current project before switching (if different)
+    if (store.currentProject && store.currentProject.id !== membership.projectId) {
+      if (store.currentProject.scenes.length > 0) {
+        store.saveAndClearProject();
+      } else {
+        useCallSheetStore.getState().clearCallSheetsForProject();
+      }
     }
 
-    // 2. Already the active project
+    // 2. If already the active project, just navigate
     if (store.currentProject?.id === membership.projectId) {
       store.setActiveTab('today');
       return;
     }
 
-    // 3. Save current project if it has data, before switching
-    if (store.currentProject && store.currentProject.scenes.length > 0) {
-      store.saveAndClearProject();
-    } else if (store.currentProject) {
-      // Project exists but has no scenes - still clear call sheets to prevent data leaking
-      useCallSheetStore.getState().clearCallSheetsForProject();
+    // 3. Restore from local save if available (schedules & call sheets are restored too)
+    if (store.hasSavedProject(membership.projectId)) {
+      store.restoreSavedProject(membership.projectId);
+      store.setActiveTab('today');
+      // Don't return — let App.tsx startSync run to refresh from server
+      return;
     }
 
-    // 4. Try to fetch project data from Supabase
-    try {
-      const { scenes, characters, looks, sceneCharacters, lookScenes, error } =
-        await supabaseProjects.getProjectData(membership.projectId);
+    // 4. Clear stale document stores before loading new project data
+    useCallSheetStore.getState().clearAll();
+    useScheduleStore.getState().clearSchedule();
 
-      if (!error && (scenes.length > 0 || characters.length > 0)) {
+    // 5. Fetch ALL project data from Supabase (scenes, characters, looks + documents)
+    try {
+      const {
+        scenes, characters, looks, sceneCharacters, lookScenes,
+        scheduleData, callSheetData, scriptData, error,
+      } = await supabaseProjects.getProjectData(membership.projectId);
+
+      const hasSceneData = !error && (scenes.length > 0 || characters.length > 0);
+      const hasDocuments = scheduleData.length > 0 || callSheetData.length > 0 || scriptData.length > 0;
+
+      if (hasSceneData || hasDocuments) {
         // Build character ID lookup for scene_characters mapping
         const sceneCharMap = new Map<string, string[]>();
         for (const sc of sceneCharacters) {
@@ -320,6 +416,10 @@ export function ProjectHubScreen() {
         };
 
         store.setProject(project);
+
+        // Load documents (schedule, call sheets, script) into their stores
+        loadDocumentsIntoStores(scheduleData, callSheetData, scriptData);
+
         store.setActiveTab('today');
         return;
       }
@@ -327,16 +427,11 @@ export function ProjectHubScreen() {
       console.error('Failed to fetch project data from server:', err);
     }
 
-    // 5. Fallback: no data on server yet
-    // For non-owners (joined via invite code), the owner may not have synced data yet.
-    // Create the project without needsSetup so startSync can pull data via realtime.
+    // 6. Fallback: no data on server yet
     const project = createProjectFromMembership(membership);
     if (membership.role === 'owner') {
-      // Owner with no data: show the setup/upload flow
       store.setProjectNeedsSetup(project);
     } else {
-      // Non-owner (joined via invite): load project and let sync pull data
-      // startSync in App.tsx will subscribe to realtime updates
       store.setProject(project);
     }
     store.setActiveTab('today');
@@ -412,7 +507,7 @@ export function ProjectHubScreen() {
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-4 pb-4">
-        {sortedProjects.length === 0 ? (
+        {projectMemberships.length === 0 ? (
           /* Empty state */
           <div className="flex flex-col items-center justify-center text-center py-16 px-4">
             <div className="w-16 h-16 rounded-2xl bg-card border border-border flex items-center justify-center mb-5">

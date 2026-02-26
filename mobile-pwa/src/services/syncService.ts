@@ -311,8 +311,11 @@ export async function pullProjectData(projectId: string, retryCount: number = 0)
       script: dbScript.length,
     });
 
-    // Skip merge if server has no data (fresh project)
-    if (dbScenes.length === 0 && dbChars.length === 0 && dbLooks.length === 0) {
+    // Check if server has any data at all
+    const hasSceneData = dbScenes.length > 0 || dbChars.length > 0 || dbLooks.length > 0;
+    const hasDocuments = dbSchedule.length > 0 || dbCallSheets.length > 0 || dbScript.length > 0;
+
+    if (!hasSceneData && !hasDocuments) {
       console.log('[PULL] Server has no data for this project, skipping merge');
 
       // If the local project has no data either (e.g. team member just joined),
@@ -324,6 +327,24 @@ export async function pullProjectData(projectId: string, retryCount: number = 0)
         setTimeout(() => {
           pullProjectData(projectId, retryCount + 1);
         }, delay);
+      }
+
+      syncStore.setSynced();
+      return true;
+    }
+
+    // Even if no scene data, still merge documents below
+    if (!hasSceneData && hasDocuments) {
+      console.log('[PULL] Server has documents but no scene data, merging documents only');
+
+      if (dbSchedule.length > 0) {
+        mergeScheduleData(dbSchedule[0], projectId);
+      }
+      if (dbCallSheets.length > 0) {
+        mergeCallSheetData(dbCallSheets, projectId);
+      }
+      if (dbScript.length > 0) {
+        mergeScriptData(dbScript[0], projectId);
       }
 
       syncStore.setSynced();
@@ -519,10 +540,11 @@ function mergeScheduleData(dbSchedule: DbScheduleData, _projectId: string): void
   const scheduleStore = useScheduleStore.getState();
   const currentSchedule = scheduleStore.schedule;
 
-  // Only merge if we have server data and local doesn't exist or is older
+  // Only merge if we have server data
   if (!dbSchedule.days && !dbSchedule.cast_list) return;
-  if (currentSchedule && currentSchedule.days.length > 0) {
-    // Local has data - keep local (user may have unsaved local changes)
+
+  // If local already has this exact schedule (same ID), skip to avoid overwriting edits
+  if (currentSchedule && currentSchedule.id === dbSchedule.id && currentSchedule.days.length > 0) {
     return;
   }
 
@@ -545,8 +567,12 @@ function mergeCallSheetData(dbCallSheets: DbCallSheetData[], _projectId: string)
   const callSheetStore = useCallSheetStore.getState();
   const currentCallSheets = callSheetStore.callSheets;
 
-  // Skip if local already has call sheets (user may have unsaved changes)
-  if (currentCallSheets.length > 0) return;
+  // Skip if local already has the same call sheets (same IDs = already loaded)
+  if (currentCallSheets.length > 0) {
+    const localIds = new Set(currentCallSheets.map((cs) => cs.id));
+    const allMatch = dbCallSheets.every((db) => localIds.has(db.id));
+    if (allMatch && dbCallSheets.length === currentCallSheets.length) return;
+  }
 
   const callSheets: CallSheet[] = dbCallSheets.map((db) => {
     const parsed = (db.parsed_data || {}) as any;
