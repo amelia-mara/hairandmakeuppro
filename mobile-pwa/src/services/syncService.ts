@@ -311,8 +311,11 @@ export async function pullProjectData(projectId: string, retryCount: number = 0)
       script: dbScript.length,
     });
 
-    // Skip merge if server has no data (fresh project)
-    if (dbScenes.length === 0 && dbChars.length === 0 && dbLooks.length === 0) {
+    // Check if server has any data at all
+    const hasSceneData = dbScenes.length > 0 || dbChars.length > 0 || dbLooks.length > 0;
+    const hasDocuments = dbSchedule.length > 0 || dbCallSheets.length > 0 || dbScript.length > 0;
+
+    if (!hasSceneData && !hasDocuments) {
       console.log('[PULL] Server has no data for this project, skipping merge');
 
       // If the local project has no data either (e.g. team member just joined),
@@ -324,6 +327,27 @@ export async function pullProjectData(projectId: string, retryCount: number = 0)
         setTimeout(() => {
           pullProjectData(projectId, retryCount + 1);
         }, delay);
+      }
+
+      syncStore.setSynced();
+      return true;
+    }
+
+    // Even if no scene data, still merge documents below
+    if (!hasSceneData && hasDocuments) {
+      const localProject = useProjectStore.getState().currentProject;
+      const localSceneCount = localProject?.scenes.length || 0;
+      console.log('[PULL] Server has documents but no scene data, merging documents only' +
+        (localSceneCount > 0 ? ` (preserving ${localSceneCount} local scenes — pushInitialData will sync them)` : ''));
+
+      if (dbSchedule.length > 0) {
+        mergeScheduleData(dbSchedule[0], projectId);
+      }
+      if (dbCallSheets.length > 0) {
+        mergeCallSheetData(dbCallSheets, projectId);
+      }
+      if (dbScript.length > 0) {
+        mergeScriptData(dbScript[0], projectId);
       }
 
       syncStore.setSynced();
@@ -519,10 +543,11 @@ function mergeScheduleData(dbSchedule: DbScheduleData, _projectId: string): void
   const scheduleStore = useScheduleStore.getState();
   const currentSchedule = scheduleStore.schedule;
 
-  // Only merge if we have server data and local doesn't exist or is older
+  // Only merge if we have server data
   if (!dbSchedule.days && !dbSchedule.cast_list) return;
-  if (currentSchedule && currentSchedule.days.length > 0) {
-    // Local has data - keep local (user may have unsaved local changes)
+
+  // If local already has this exact schedule (same ID), skip to avoid overwriting edits
+  if (currentSchedule && currentSchedule.id === dbSchedule.id && currentSchedule.days.length > 0) {
     return;
   }
 
@@ -541,12 +566,47 @@ function mergeScheduleData(dbSchedule: DbScheduleData, _projectId: string): void
   scheduleStore.setSchedule(schedule);
 }
 
+/** Download PDFs for call sheets that are missing their pdfUri locally */
+function downloadMissingCallSheetPdfs(
+  dbCallSheets: DbCallSheetData[],
+  localCallSheets: CallSheet[]
+): void {
+  const missingPdfIds = new Set(
+    localCallSheets.filter((cs) => !cs.pdfUri).map((cs) => cs.id)
+  );
+  if (missingPdfIds.size === 0) return;
+
+  console.log('[PULL] Re-downloading', missingPdfIds.size, 'missing call sheet PDFs');
+  for (const db of dbCallSheets) {
+    if (db.storage_path && missingPdfIds.has(db.id)) {
+      supabaseStorage.downloadDocumentAsDataUri(db.storage_path).then(({ dataUri }) => {
+        if (!dataUri) return;
+        useCallSheetStore.setState((state) => ({
+          callSheets: state.callSheets.map((cs) =>
+            cs.id === db.id ? { ...cs, pdfUri: dataUri } : cs
+          ),
+        }));
+        console.log('[PULL] Restored PDF for call sheet:', db.shoot_date);
+      });
+    }
+  }
+}
+
 function mergeCallSheetData(dbCallSheets: DbCallSheetData[], _projectId: string): void {
   const callSheetStore = useCallSheetStore.getState();
   const currentCallSheets = callSheetStore.callSheets;
 
-  // Skip if local already has call sheets (user may have unsaved changes)
-  if (currentCallSheets.length > 0) return;
+  // Skip full merge if local already has the same call sheets (same IDs = already loaded)
+  if (currentCallSheets.length > 0) {
+    const localIds = new Set(currentCallSheets.map((cs) => cs.id));
+    const allMatch = dbCallSheets.every((db) => localIds.has(db.id));
+    if (allMatch && dbCallSheets.length === currentCallSheets.length) {
+      // Even though IDs match, re-download any missing PDFs
+      // (pdfUri can be lost when IndexedDB/localStorage fails to persist large base64 data)
+      downloadMissingCallSheetPdfs(dbCallSheets, currentCallSheets);
+      return;
+    }
+  }
 
   const callSheets: CallSheet[] = dbCallSheets.map((db) => {
     const parsed = (db.parsed_data || {}) as any;
@@ -603,12 +663,10 @@ function mergeScriptData(dbScript: DbScriptUpload, _projectId: string): void {
   const projectStore = useProjectStore.getState();
   const currentProject = projectStore.currentProject;
 
-  // Skip if local already has a script
-  if (!currentProject || currentProject.scriptPdfData) return;
-
+  if (!currentProject) return;
   if (!dbScript.storage_path) return;
 
-  // Download script PDF from storage and set on the project
+  // Always download latest script from server (server is source of truth)
   supabaseStorage.downloadDocumentAsDataUri(dbScript.storage_path).then(({ dataUri }) => {
     if (!dataUri) return;
     projectStore.setScriptPdf(dataUri);
@@ -663,16 +721,8 @@ export async function pushScenes(projectId: string, scenes: Scene[]): Promise<vo
       .upsert(dbScenes, { onConflict: 'id' });
     if (error) throw error;
 
-    // Sync scene_characters junction
-    // Get all scene IDs
+    // Sync scene_characters junction atomically via RPC
     const sceneIds = scenes.map(s => s.id);
-
-    // Delete existing scene_characters for these scenes
-    if (sceneIds.length > 0) {
-      await supabase.from('scene_characters').delete().in('scene_id', sceneIds);
-    }
-
-    // Build new scene_characters entries
     const sceneCharEntries: { scene_id: string; character_id: string }[] = [];
     for (const scene of scenes) {
       for (const charId of scene.characters) {
@@ -683,10 +733,11 @@ export async function pushScenes(projectId: string, scenes: Scene[]): Promise<vo
       }
     }
 
-    if (sceneCharEntries.length > 0) {
-      const { error: scError } = await supabase
-        .from('scene_characters')
-        .insert(sceneCharEntries);
+    if (sceneIds.length > 0) {
+      const { error: scError } = await supabase.rpc('sync_scene_characters', {
+        p_scene_ids: sceneIds,
+        p_entries: sceneCharEntries,
+      });
       if (scError) throw scError;
     }
   });
@@ -716,12 +767,8 @@ export async function pushLooks(projectId: string, looks: Look[]): Promise<void>
       .upsert(dbLooks, { onConflict: 'id' });
     if (lookError) throw lookError;
 
-    // Sync look_scenes junction
+    // Sync look_scenes junction atomically via RPC
     const lookIds = looks.map(l => l.id);
-    if (lookIds.length > 0) {
-      await supabase.from('look_scenes').delete().in('look_id', lookIds);
-    }
-
     const lookSceneEntries: { look_id: string; scene_number: string }[] = [];
     for (const look of looks) {
       for (const sceneNum of look.scenes) {
@@ -732,10 +779,11 @@ export async function pushLooks(projectId: string, looks: Look[]): Promise<void>
       }
     }
 
-    if (lookSceneEntries.length > 0) {
-      const { error: lsError } = await supabase
-        .from('look_scenes')
-        .insert(lookSceneEntries);
+    if (lookIds.length > 0) {
+      const { error: lsError } = await supabase.rpc('sync_look_scenes', {
+        p_look_ids: lookIds,
+        p_entries: lookSceneEntries,
+      });
       if (lsError) throw lsError;
     }
   });

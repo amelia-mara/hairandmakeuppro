@@ -10,6 +10,7 @@ type Look = Database['public']['Tables']['looks']['Row'];
 export interface ProjectWithRole extends Project {
   role: ProjectMember['role'];
   is_owner: boolean;
+  owner_name?: string;
 }
 
 // Generate a unique invite code
@@ -33,7 +34,8 @@ function generateInviteCode(): string {
 export async function createProject(
   name: string,
   productionType: string,
-  userId: string
+  userId: string,
+  ownerRole: ProjectMember['role'] = 'designer'
 ): Promise<{ project: Project | null; inviteCode: string | null; error: Error | null }> {
   try {
     const inviteCode = generateInviteCode();
@@ -52,13 +54,13 @@ export async function createProject(
 
     if (projectError) throw projectError;
 
-    // Add creator as owner/designer
+    // Add creator as owner with their selected role
     const { error: memberError } = await supabase
       .from('project_members')
       .insert({
         project_id: project.id,
         user_id: userId,
-        role: 'designer',
+        role: ownerRole,
         is_owner: true,
       });
 
@@ -79,18 +81,23 @@ export async function getProjectByInviteCode(
   inviteCode: string
 ): Promise<{ project: Project | null; error: Error | null }> {
   try {
-    const { data: project, error: findError } = await supabase
-      .from('projects')
-      .select('*')
-      .eq('invite_code', inviteCode.toUpperCase())
-      .single();
+    const { data: rpcResult, error: rpcError } = await supabase
+      .rpc('lookup_project_by_invite_code', {
+        invite_code_input: inviteCode.toUpperCase(),
+      });
 
-    if (findError) {
-      if (findError.code === 'PGRST116') {
-        throw new Error('Invalid project code. Please check and try again.');
-      }
-      throw findError;
+    if (rpcError) throw rpcError;
+
+    if (rpcResult?.error) {
+      throw new Error(rpcResult.error);
     }
+
+    const project = {
+      id: rpcResult.id,
+      name: rpcResult.name,
+      production_type: rpcResult.production_type,
+      invite_code: rpcResult.invite_code,
+    } as Project;
 
     return { project, error: null };
   } catch (error) {
@@ -99,78 +106,32 @@ export async function getProjectByInviteCode(
 }
 
 // Join a project by invite code
-// Uses the SECURITY DEFINER RPC function to bypass RLS, with fallback to direct INSERT
+// Uses the SECURITY DEFINER RPC function to bypass RLS
 export async function joinProject(
   inviteCode: string,
-  userId: string,
+  _userId: string,
   role: ProjectMember['role'] = 'floor'
 ): Promise<{ project: Project | null; error: Error | null }> {
   try {
-    // Try the RPC function first (handles RLS properly via SECURITY DEFINER)
     const { data: rpcResult, error: rpcError } = await supabase
       .rpc('join_project_by_invite_code', {
         invite_code_input: inviteCode.toUpperCase(),
         role_input: role,
       });
 
-    if (!rpcError && rpcResult && !rpcResult.error) {
-      // RPC succeeded - build a project-like object from the result
-      const project = {
-        id: rpcResult.project_id,
-        name: rpcResult.project_name,
-        production_type: rpcResult.production_type,
-        invite_code: rpcResult.invite_code,
-        created_at: rpcResult.created_at,
-      } as Project;
-      return { project, error: null };
-    }
+    if (rpcError) throw rpcError;
 
-    // If RPC returned an application-level error
-    if (!rpcError && rpcResult?.error) {
+    if (rpcResult?.error) {
       throw new Error(rpcResult.error);
     }
 
-    // RPC function doesn't exist yet (migration not applied) - fall back to direct queries
-    console.warn('join_project_by_invite_code RPC not available, falling back to direct queries:', rpcError?.message);
-
-    // Find project by invite code
-    const { data: project, error: findError } = await supabase
-      .from('projects')
-      .select('*')
-      .eq('invite_code', inviteCode.toUpperCase())
-      .single();
-
-    if (findError) {
-      if (findError.code === 'PGRST116') {
-        throw new Error('Invalid project code. Please check and try again.');
-      }
-      throw findError;
-    }
-
-    // Check if already a member
-    const { data: existingMember } = await supabase
-      .from('project_members')
-      .select('id')
-      .eq('project_id', project.id)
-      .eq('user_id', userId)
-      .single();
-
-    if (existingMember) {
-      return { project, error: null }; // Already a member, just return the project
-    }
-
-    // Add user as member
-    const { error: memberError } = await supabase
-      .from('project_members')
-      .insert({
-        project_id: project.id,
-        user_id: userId,
-        role,
-        is_owner: false,
-      });
-
-    if (memberError) throw memberError;
-
+    const project = {
+      id: rpcResult.project_id,
+      name: rpcResult.project_name,
+      production_type: rpcResult.production_type,
+      invite_code: rpcResult.invite_code,
+      created_at: rpcResult.created_at,
+    } as Project;
     return { project, error: null };
   } catch (error) {
     return { project: null, error: error as Error };
@@ -188,7 +149,7 @@ export async function getUserProjects(
         role,
         is_owner,
         joined_at,
-        projects (*)
+        projects (*, users:created_by (name))
       `)
       .eq('user_id', userId)
       .order('joined_at', { ascending: false });
@@ -199,7 +160,13 @@ export async function getUserProjects(
       ...pm.projects,
       role: pm.role,
       is_owner: pm.is_owner,
+      owner_name: pm.projects?.users?.name || undefined,
     }));
+
+    // Remove the nested users object from the project data
+    for (const p of projects) {
+      delete (p as any).users;
+    }
 
     return { projects, error: null };
   } catch (error) {
@@ -207,21 +174,27 @@ export async function getUserProjects(
   }
 }
 
-// Get full project data (scenes, characters, looks)
+// Get full project data (scenes, characters, looks, documents)
 export async function getProjectData(projectId: string): Promise<{
   scenes: Scene[];
   characters: Character[];
   looks: Look[];
   sceneCharacters: { scene_id: string; character_id: string }[];
   lookScenes: { look_id: string; scene_number: string }[];
+  scheduleData: any[];
+  callSheetData: any[];
+  scriptData: any[];
   error: Error | null;
 }> {
   try {
-    // Phase 1: Fetch project-level tables in parallel
-    const [scenesRes, charactersRes, looksRes] = await Promise.all([
+    // Phase 1: Fetch project-level tables in parallel (including documents)
+    const [scenesRes, charactersRes, looksRes, scheduleRes, callSheetsRes, scriptRes] = await Promise.all([
       supabase.from('scenes').select('*').eq('project_id', projectId).order('scene_number'),
       supabase.from('characters').select('*').eq('project_id', projectId).order('name'),
       supabase.from('looks').select('*').eq('project_id', projectId),
+      supabase.from('schedule_data').select('*').eq('project_id', projectId).order('created_at', { ascending: false }).limit(1),
+      supabase.from('call_sheet_data').select('*').eq('project_id', projectId).order('production_day'),
+      supabase.from('script_uploads').select('*').eq('project_id', projectId).eq('is_active', true).limit(1),
     ]);
 
     if (scenesRes.error) throw scenesRes.error;
@@ -250,6 +223,9 @@ export async function getProjectData(projectId: string): Promise<{
       looks,
       sceneCharacters: sceneCharsRes.data || [],
       lookScenes: lookScenesRes.data || [],
+      scheduleData: scheduleRes.data || [],
+      callSheetData: callSheetsRes.data || [],
+      scriptData: scriptRes.data || [],
       error: null,
     };
   } catch (error) {
@@ -259,6 +235,9 @@ export async function getProjectData(projectId: string): Promise<{
       looks: [],
       sceneCharacters: [],
       lookScenes: [],
+      scheduleData: [],
+      callSheetData: [],
+      scriptData: [],
       error: error as Error,
     };
   }
@@ -476,8 +455,13 @@ export async function saveSceneCharacters(
   }
 }
 
-// Delete a project (owner only)
-// This deletes the project and all related data
+// Grace period (in hours) before a pending deletion becomes permanent
+export const DELETION_GRACE_PERIOD_HOURS = 48;
+
+// Soft-delete a project (owner only)
+// Sets pending_deletion_at instead of immediately removing data, giving synced
+// team members a 48-hour window to download documents.
+// Falls back to hard delete if the pending_deletion_at column hasn't been migrated yet.
 export async function deleteProject(
   projectId: string,
   userId: string
@@ -494,52 +478,73 @@ export async function deleteProject(
     if (memberError) throw new Error('Failed to verify project ownership');
     if (!membership?.is_owner) throw new Error('Only project owners can delete projects');
 
-    // Delete in order to respect foreign key constraints:
-    // 1. Delete scene_characters (references scenes and characters)
-    // 2. Delete look_scenes (references looks)
-    // 3. Delete looks (references characters)
-    // 4. Delete characters
-    // 5. Delete scenes
-    // 6. Delete project_members
-    // 7. Delete the project
+    // Try soft-delete first (set pending_deletion_at to start the grace period)
+    const { error: updateError } = await supabase
+      .from('projects')
+      .update({ pending_deletion_at: new Date().toISOString() })
+      .eq('id', projectId);
 
-    // Get all scene IDs for this project
+    if (updateError) {
+      // If pending_deletion_at column doesn't exist yet, fall back to hard delete
+      const isSchemaError = updateError.message?.includes('schema cache') ||
+        updateError.message?.includes('pending_deletion_at') ||
+        updateError.code === 'PGRST204';
+      if (isSchemaError) {
+        console.warn('[deleteProject] pending_deletion_at column not available, falling back to hard delete');
+        return finalizeProjectDeletion(projectId, userId);
+      }
+      throw updateError;
+    }
+
+    return { error: null };
+  } catch (error) {
+    return { error: error as Error };
+  }
+}
+
+// Permanently delete a project and all related data (owner only)
+// Called after the grace period has elapsed.
+export async function finalizeProjectDeletion(
+  projectId: string,
+  userId: string
+): Promise<{ error: Error | null }> {
+  try {
+    // Verify the user is the owner
+    const { data: membership, error: memberError } = await supabase
+      .from('project_members')
+      .select('is_owner')
+      .eq('project_id', projectId)
+      .eq('user_id', userId)
+      .single();
+
+    if (memberError) throw new Error('Failed to verify project ownership');
+    if (!membership?.is_owner) throw new Error('Only project owners can delete projects');
+
+    // Delete in order to respect foreign key constraints
     const { data: scenes } = await supabase
       .from('scenes')
       .select('id')
       .eq('project_id', projectId);
     const sceneIds = scenes?.map(s => s.id) || [];
 
-    // Get all look IDs for this project
     const { data: looks } = await supabase
       .from('looks')
       .select('id')
       .eq('project_id', projectId);
     const lookIds = looks?.map(l => l.id) || [];
 
-    // Delete scene_characters
     if (sceneIds.length > 0) {
       await supabase.from('scene_characters').delete().in('scene_id', sceneIds);
     }
-
-    // Delete look_scenes
     if (lookIds.length > 0) {
       await supabase.from('look_scenes').delete().in('look_id', lookIds);
     }
 
-    // Delete looks
     await supabase.from('looks').delete().eq('project_id', projectId);
-
-    // Delete characters
     await supabase.from('characters').delete().eq('project_id', projectId);
-
-    // Delete scenes
     await supabase.from('scenes').delete().eq('project_id', projectId);
-
-    // Delete project members
     await supabase.from('project_members').delete().eq('project_id', projectId);
 
-    // Finally delete the project
     const { error: deleteError } = await supabase
       .from('projects')
       .delete()
@@ -551,6 +556,21 @@ export async function deleteProject(
   } catch (error) {
     return { error: error as Error };
   }
+}
+
+// Check if a pending deletion's grace period has elapsed
+export function isDeletionGracePeriodExpired(pendingDeletionAt: string | Date): boolean {
+  const deletionTime = new Date(pendingDeletionAt);
+  const expiresAt = new Date(deletionTime.getTime() + DELETION_GRACE_PERIOD_HOURS * 60 * 60 * 1000);
+  return new Date() >= expiresAt;
+}
+
+// Calculate hours remaining in the grace period
+export function hoursUntilDeletion(pendingDeletionAt: string | Date): number {
+  const deletionTime = new Date(pendingDeletionAt);
+  const expiresAt = new Date(deletionTime.getTime() + DELETION_GRACE_PERIOD_HOURS * 60 * 60 * 1000);
+  const remaining = expiresAt.getTime() - new Date().getTime();
+  return Math.max(0, Math.ceil(remaining / (1000 * 60 * 60)));
 }
 
 // Leave a project (for non-owners)

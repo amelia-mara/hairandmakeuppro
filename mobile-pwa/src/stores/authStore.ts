@@ -15,7 +15,11 @@ import type {
   Project,
 } from '@/types';
 import { TIER_LIMITS, createDefaultSubscription, SubscriptionTier, BETA_MODE, createEmptyMakeupDetails, createEmptyHairDetails } from '@/types';
+import type { CallSheet, ProductionSchedule } from '@/types';
 import { useProjectStore } from './projectStore';
+import { useScheduleStore } from './scheduleStore';
+import { useCallSheetStore } from './callSheetStore';
+import * as supabaseStorage from '@/services/supabaseStorage';
 
 interface AuthState {
   // Auth state
@@ -39,6 +43,9 @@ interface AuthState {
   // Guest mode (joined project without account)
   guestProjectCode: string | null;
 
+  // Pinned "current" project (shown at top of hub)
+  pinnedProjectId: string | null;
+
   // Project settings navigation
   settingsProjectId: string | null;
 
@@ -48,8 +55,8 @@ interface AuthState {
   signIn: (email: string, password: string) => Promise<boolean>;
   signUp: (name: string, email: string, password: string) => Promise<boolean>;
   signOut: () => void;
-  joinProject: (code: string) => Promise<{ success: boolean; projectName?: string; error?: string }>;
-  createProject: (name: string, type: ProductionType) => Promise<{ success: boolean; code?: string; error?: string }>;
+  joinProject: (code: string, role?: string) => Promise<{ success: boolean; projectName?: string; error?: string }>;
+  createProject: (name: string, type: ProductionType, ownerRole?: string) => Promise<{ success: boolean; code?: string; error?: string }>;
   clearError: () => void;
   setHasCompletedOnboarding: (value: boolean) => void;
   canCreateProjects: () => boolean;
@@ -61,6 +68,7 @@ interface AuthState {
   refreshUserProjects: () => Promise<void>;
   deleteProject: (projectId: string) => Promise<{ success: boolean; error?: string }>;
   leaveProject: (projectId: string) => Promise<{ success: boolean; error?: string }>;
+  setPinnedProject: (projectId: string) => void;
   setSettingsProjectId: (projectId: string | null) => void;
 }
 
@@ -96,6 +104,8 @@ function toProjectMembership(
     sceneCount: 0, // Will be fetched separately if needed
     projectCode: project.invite_code,
     status: project.status === 'wrapped' ? 'wrapped' : 'active',
+    ownerName: project.owner_name,
+    pendingDeletionAt: project.pending_deletion_at ? new Date(project.pending_deletion_at) : null,
   };
 }
 
@@ -114,6 +124,7 @@ export const useAuthStore = create<AuthState>()(
       subscription: createDefaultSubscription(),
       projectMemberships: [],
       guestProjectCode: null,
+      pinnedProjectId: null,
       settingsProjectId: null,
 
       // Initialize auth state from Supabase session
@@ -130,7 +141,23 @@ export const useAuthStore = create<AuthState>()(
 
               // Get user's projects
               const { projects } = await supabaseProjects.getUserProjects(session.user.id);
-              const memberships = projects.map(toProjectMembership);
+
+              // Finalize any owner projects whose grace period has expired
+              for (const p of projects) {
+                if (
+                  p.is_owner &&
+                  p.pending_deletion_at &&
+                  supabaseProjects.isDeletionGracePeriodExpired(p.pending_deletion_at)
+                ) {
+                  await supabaseProjects.finalizeProjectDeletion(p.id, session.user.id).catch(console.error);
+                }
+              }
+
+              // Hide owner's pending-deletion projects (synced members still see the warning)
+              const visibleProjects = projects.filter(
+                (p) => !(p.is_owner && p.pending_deletion_at)
+              );
+              const memberships = visibleProjects.map(toProjectMembership);
 
               set({
                 isAuthenticated: true,
@@ -148,13 +175,32 @@ export const useAuthStore = create<AuthState>()(
       },
 
       // Refresh user's projects from Supabase
+      // Also finalizes any expired pending deletions for owned projects
       refreshUserProjects: async () => {
         const { user } = get();
         if (!user) return;
 
         try {
           const { projects } = await supabaseProjects.getUserProjects(user.id);
-          const memberships = projects.map(toProjectMembership);
+
+          // For owned projects with expired grace periods, finalize deletion
+          for (const p of projects) {
+            if (
+              p.is_owner &&
+              p.pending_deletion_at &&
+              supabaseProjects.isDeletionGracePeriodExpired(p.pending_deletion_at)
+            ) {
+              await supabaseProjects.finalizeProjectDeletion(p.id, user.id).catch(console.error);
+            }
+          }
+
+          // For the owner, hide projects they marked for deletion immediately.
+          // For synced (non-owner) members, keep showing until grace period expires.
+          const remaining = projects.filter(
+            (p) => !(p.is_owner && p.pending_deletion_at)
+          );
+
+          const memberships = remaining.map(toProjectMembership);
           set({ projectMemberships: memberships });
         } catch (error) {
           console.error('Error refreshing projects:', error);
@@ -350,8 +396,8 @@ export const useAuthStore = create<AuthState>()(
         });
       },
 
-      // Join a project with invite code
-      joinProject: async (code) => {
+      // Join a project with invite code and selected role
+      joinProject: async (code, role) => {
         const { user, projectMemberships, isAuthenticated } = get();
 
         set({ isLoading: true, error: null });
@@ -363,8 +409,9 @@ export const useAuthStore = create<AuthState>()(
             return { success: false, error: 'Account required' };
           }
 
-          // Join project via Supabase (RPC with fallback)
-          const { project: joinedProject, error } = await supabaseProjects.joinProject(code, user.id);
+          // Join project via Supabase (RPC with fallback) using the selected role
+          const joinRole = (role || 'floor') as any;
+          const { project: joinedProject, error } = await supabaseProjects.joinProject(code, user.id, joinRole);
 
           if (error) {
             set({ isLoading: false, error: error.message });
@@ -376,23 +423,35 @@ export const useAuthStore = create<AuthState>()(
             return { success: false, error: 'Failed to join project' };
           }
 
+          // Fetch the project owner's name for the "Synced from" label
+          let ownerName: string | undefined;
+          try {
+            const { members } = await supabaseProjects.getProjectMembers(joinedProject.id);
+            const ownerMember = members.find((m) => m.is_owner);
+            if (ownerMember) ownerName = ownerMember.user.name;
+          } catch { /* non-critical */ }
+
           // Add to local memberships
           const newMembership: ProjectMembership = {
             projectId: joinedProject.id,
             projectName: joinedProject.name,
             productionType: joinedProject.production_type as ProductionType,
-            role: 'floor',
+            role: joinRole as ProjectRole,
             joinedAt: new Date(),
             lastAccessedAt: new Date(),
             teamMemberCount: 1,
             sceneCount: 0,
             projectCode: joinedProject.invite_code,
             status: 'active',
+            ownerName,
+            pendingDeletionAt: null,
           };
 
           // Fetch project data and load into project store
-          const { scenes, characters, looks, sceneCharacters, lookScenes } =
-            await supabaseProjects.getProjectData(joinedProject.id);
+          const {
+            scenes, characters, looks, sceneCharacters, lookScenes,
+            scheduleData, callSheetData, scriptData,
+          } = await supabaseProjects.getProjectData(joinedProject.id);
 
           const pStore = useProjectStore.getState();
 
@@ -468,6 +527,70 @@ export const useAuthStore = create<AuthState>()(
             pStore.setProject(emptyProject);
           }
 
+          // Load documents (schedule, call sheets, script) into their stores
+          if (scheduleData.length > 0) {
+            const db = scheduleData[0];
+            if (db.days || db.cast_list) {
+              const schedule: ProductionSchedule = {
+                id: db.id,
+                status: db.status === 'complete' ? 'complete' : 'pending',
+                castList: (db.cast_list as any[]) || [],
+                days: (db.days as any[]) || [],
+                totalDays: ((db.days as any[]) || []).length,
+                uploadedAt: new Date(db.created_at),
+                rawText: db.raw_pdf_text || undefined,
+              };
+              useScheduleStore.getState().setSchedule(schedule);
+            }
+          }
+
+          if (callSheetData.length > 0) {
+            const csStore = useCallSheetStore.getState();
+            csStore.clearAll();
+            const callSheets: CallSheet[] = callSheetData.map((db: any) => {
+              const parsed = (db.parsed_data || {}) as any;
+              return {
+                ...parsed,
+                id: db.id,
+                date: db.shoot_date,
+                productionDay: db.production_day,
+                rawText: db.raw_text || parsed.rawText,
+                pdfUri: undefined,
+                uploadedAt: new Date(db.created_at),
+                scenes: parsed.scenes || [],
+              };
+            });
+            for (const cs of callSheets) {
+              useCallSheetStore.setState((state) => ({
+                callSheets: [...state.callSheets, cs].sort(
+                  (a, b) => a.productionDay - b.productionDay
+                ),
+              }));
+            }
+            const latest = callSheets[callSheets.length - 1];
+            if (latest) csStore.setActiveCallSheet(latest.id);
+
+            for (const db of callSheetData) {
+              if (db.storage_path) {
+                supabaseStorage.downloadDocumentAsDataUri(db.storage_path).then(({ dataUri }) => {
+                  if (!dataUri) return;
+                  useCallSheetStore.setState((state) => ({
+                    callSheets: state.callSheets.map((cs) =>
+                      cs.id === db.id ? { ...cs, pdfUri: dataUri } : cs
+                    ),
+                  }));
+                });
+              }
+            }
+          }
+
+          if (scriptData.length > 0 && scriptData[0].storage_path) {
+            supabaseStorage.downloadDocumentAsDataUri(scriptData[0].storage_path).then(({ dataUri }) => {
+              if (!dataUri) return;
+              useProjectStore.getState().setScriptPdf(dataUri);
+            });
+          }
+
           pStore.setActiveTab('today');
 
           set({
@@ -483,8 +606,8 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      // Create a new project
-      createProject: async (name, type) => {
+      // Create a new project with the owner's selected role
+      createProject: async (name, type, ownerRole) => {
         const { user, projectMemberships } = get();
 
         const tierLimits = user ? TIER_LIMITS[user.tier] : null;
@@ -499,7 +622,8 @@ export const useAuthStore = create<AuthState>()(
           const { project, inviteCode, error } = await supabaseProjects.createProject(
             name,
             type,
-            user.id
+            user.id,
+            (ownerRole || 'designer') as any
           );
 
           if (error || !project || !inviteCode) {
@@ -634,6 +758,7 @@ export const useAuthStore = create<AuthState>()(
       },
 
       // Delete a project (owner only)
+      // Initiates a soft-delete with a 48-hour grace period for synced members
       deleteProject: async (projectId) => {
         const { user, projectMemberships } = get();
 
@@ -648,7 +773,7 @@ export const useAuthStore = create<AuthState>()(
           const isLocalProject = projectId.startsWith('project-');
 
           if (!isLocalProject) {
-            // Delete from Supabase
+            // Soft-delete in Supabase (sets pending_deletion_at)
             const { error } = await supabaseProjects.deleteProject(projectId, user.id);
             if (error) {
               set({ isLoading: false, error: error.message });
@@ -656,7 +781,7 @@ export const useAuthStore = create<AuthState>()(
             }
           }
 
-          // Remove from local state
+          // Remove from owner's local state immediately
           const updatedMemberships = projectMemberships.filter(
             (pm) => pm.projectId !== projectId
           );
@@ -717,6 +842,10 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
+      setPinnedProject: (projectId) => {
+        set({ pinnedProjectId: projectId });
+      },
+
       setSettingsProjectId: (projectId) => {
         set({ settingsProjectId: projectId });
       },
@@ -732,6 +861,7 @@ export const useAuthStore = create<AuthState>()(
         hasSelectedPlan: state.hasSelectedPlan,
         subscription: state.subscription,
         projectMemberships: state.projectMemberships,
+        pinnedProjectId: state.pinnedProjectId,
         guestProjectCode: state.guestProjectCode,
       }),
     }
