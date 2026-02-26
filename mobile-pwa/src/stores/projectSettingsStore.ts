@@ -18,6 +18,32 @@ import { useAuthStore } from './authStore';
 import { useProjectStore } from './projectStore';
 import * as supabaseProjects from '@/services/supabaseProjects';
 
+// Map database role enum values to the app's TeamMemberRole.
+// DB roles ('hod', 'floor') don't exist in the app; app roles
+// ('hair', 'makeup', 'sfx') don't exist in the DB.
+function mapDbRoleToAppRole(dbRole: string): TeamMemberRole {
+  switch (dbRole) {
+    case 'hod': return 'designer';
+    case 'floor': return 'makeup';
+    default:
+      // Roles that exist in both: designer, supervisor, key, daily, trainee
+      return (dbRole as TeamMemberRole) || 'trainee';
+  }
+}
+
+// Map app role back to DB role for writes.
+export function mapAppRoleToDbRole(appRole: TeamMemberRole): string {
+  switch (appRole) {
+    case 'hair':
+    case 'makeup':
+    case 'sfx':
+      return 'floor';
+    default:
+      // designer, supervisor, key, daily, trainee exist in both
+      return appRole;
+  }
+}
+
 interface ProjectSettingsState {
   // Project settings
   projectSettings: ProjectSettings | null;
@@ -378,7 +404,7 @@ export const useProjectSettingsStore = create<ProjectSettingsState>((set, get) =
           projectId: m.project_id,
           name: m.user?.name || 'Unknown',
           email: m.user?.email || '',
-          role: m.role as TeamMemberRole,
+          role: mapDbRoleToAppRole(m.role),
           isOwner: m.is_owner,
           joinedAt: new Date(m.joined_at),
           lastActiveAt: new Date(),
@@ -406,7 +432,7 @@ export const useProjectSettingsStore = create<ProjectSettingsState>((set, get) =
       const { error } = await supabaseProjects.updateMemberRole(
         projectSettings.id,
         userId,
-        newRole as any
+        mapAppRoleToDbRole(newRole) as any
       );
       if (error) throw error;
 
