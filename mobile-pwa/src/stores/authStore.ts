@@ -141,7 +141,23 @@ export const useAuthStore = create<AuthState>()(
 
               // Get user's projects
               const { projects } = await supabaseProjects.getUserProjects(session.user.id);
-              const memberships = projects.map(toProjectMembership);
+
+              // Finalize any owner projects whose grace period has expired
+              for (const p of projects) {
+                if (
+                  p.is_owner &&
+                  p.pending_deletion_at &&
+                  supabaseProjects.isDeletionGracePeriodExpired(p.pending_deletion_at)
+                ) {
+                  await supabaseProjects.finalizeProjectDeletion(p.id, session.user.id).catch(console.error);
+                }
+              }
+
+              // Hide owner's pending-deletion projects (synced members still see the warning)
+              const visibleProjects = projects.filter(
+                (p) => !(p.is_owner && p.pending_deletion_at)
+              );
+              const memberships = visibleProjects.map(toProjectMembership);
 
               set({
                 isAuthenticated: true,
@@ -178,12 +194,10 @@ export const useAuthStore = create<AuthState>()(
             }
           }
 
-          // Re-fetch after any finalizations, or filter out finalized projects
+          // For the owner, hide projects they marked for deletion immediately.
+          // For synced (non-owner) members, keep showing until grace period expires.
           const remaining = projects.filter(
-            (p) =>
-              !p.is_owner ||
-              !p.pending_deletion_at ||
-              !supabaseProjects.isDeletionGracePeriodExpired(p.pending_deletion_at)
+            (p) => !(p.is_owner && p.pending_deletion_at)
           );
 
           const memberships = remaining.map(toProjectMembership);
