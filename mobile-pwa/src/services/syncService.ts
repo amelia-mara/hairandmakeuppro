@@ -1021,6 +1021,7 @@ export async function pushScriptPdf(
     const fileSize = Math.round(base64Length * 0.75);
 
     // Upsert into script_uploads table (is_active=true triggers deactivation of previous)
+    const project = useProjectStore.getState().currentProject;
     const { error: dbError } = await supabase
       .from('script_uploads')
       .insert({
@@ -1031,6 +1032,8 @@ export async function pushScriptPdf(
         is_active: true,
         status: 'uploaded',
         uploaded_by: userId,
+        scene_count: project?.scenes.length || null,
+        character_count: project?.characters.length || null,
       });
     if (dbError) throw dbError;
   });
