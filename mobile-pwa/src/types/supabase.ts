@@ -141,6 +141,7 @@ export type Database = {
           filming_notes: string | null
           is_complete: boolean
           completed_at: string | null
+          script_content: string | null
           created_at: string
         }
         Insert: {
@@ -158,6 +159,7 @@ export type Database = {
           filming_notes?: string | null
           is_complete?: boolean
           completed_at?: string | null
+          script_content?: string | null
           created_at?: string
         }
         Update: {
@@ -175,6 +177,7 @@ export type Database = {
           filming_notes?: string | null
           is_complete?: boolean
           completed_at?: string | null
+          script_content?: string | null
           created_at?: string
         }
       }
