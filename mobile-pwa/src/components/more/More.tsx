@@ -1470,8 +1470,8 @@ function ScheduleViewer({ onBack }: ViewerProps) {
         ) : (
           /* Breakdown View */
           <div className="space-y-4">
-            {/* Processing progress indicator */}
-            {isProcessingStage2 && (
+            {/* Processing progress indicator (hide when revision indicator is active) */}
+            {isProcessingStage2 && !isProcessingRevision && (
               <div className="card p-4">
                 <div className="flex items-center gap-3 mb-3">
                   <svg className="w-5 h-5 animate-spin text-gold" fill="none" viewBox="0 0 24 24">
