@@ -629,12 +629,10 @@ function mergeScriptData(dbScript: DbScriptUpload, _projectId: string): void {
   const projectStore = useProjectStore.getState();
   const currentProject = projectStore.currentProject;
 
-  // Skip if local already has a script
-  if (!currentProject || currentProject.scriptPdfData) return;
-
+  if (!currentProject) return;
   if (!dbScript.storage_path) return;
 
-  // Download script PDF from storage and set on the project
+  // Always download latest script from server (server is source of truth)
   supabaseStorage.downloadDocumentAsDataUri(dbScript.storage_path).then(({ dataUri }) => {
     if (!dataUri) return;
     projectStore.setScriptPdf(dataUri);

@@ -31,6 +31,7 @@ import {
 import { SelectPlanScreen } from '@/components/subscription';
 import { UserProfileScreen } from '@/components/profile/UserProfileScreen';
 import { ProjectSettingsScreen } from '@/components/project-settings';
+import { SyncStatusBar } from '@/components/sync';
 import type { NavTab, SubscriptionTier, BillingPeriod } from '@/types';
 
 // Configuration error screen shown when Supabase environment variables are missing
@@ -498,6 +499,9 @@ function AppContent() {
           onNavigateToProfile={() => setShowUserProfile(true)}
         />
       )}
+
+      {/* Persistent sync status bar - shown on all project pages */}
+      {currentProject && <SyncStatusBar />}
 
       {renderContent()}
 
