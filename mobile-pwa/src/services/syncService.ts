@@ -59,6 +59,8 @@ const PUSH_DEBOUNCE_MS = 800;
 let activeChannel: RealtimeChannel | null = null;
 let activeProjectId: string | null = null;
 let pushTimers: Record<string, ReturnType<typeof setTimeout>> = {};
+/** Store pending push functions so they can be flushed on page unload */
+let pendingPushFns: Record<string, () => Promise<void>> = {};
 /** Track tables currently being pushed to avoid echo loops */
 let pushingTables = new Set<string>();
 
@@ -687,10 +689,14 @@ function debouncedPush(table: string, pushFn: () => Promise<void>): void {
     useSyncStore.getState().incrementPending();
   }
 
+  // Store the function so it can be flushed immediately on page unload
+  pendingPushFns[table] = pushFn;
+
   pushTimers[table] = setTimeout(async () => {
     // Delete timer reference immediately so new calls during async
     // pushFn get their own fresh increment/decrement cycle.
     delete pushTimers[table];
+    delete pendingPushFns[table];
     pushingTables.add(table);
     try {
       useSyncStore.getState().setSyncing();
@@ -707,6 +713,46 @@ function debouncedPush(table: string, pushFn: () => Promise<void>): void {
       }
     }
   }, PUSH_DEBOUNCE_MS);
+}
+
+/**
+ * Immediately fire all pending debounced pushes to Supabase.
+ * Called on visibilitychange (hidden) and beforeunload to prevent
+ * data loss when the tab is closed before debounce timers fire.
+ * Critical for preview deployments where there's no local persistence.
+ */
+export async function flushPendingSyncPushes(): Promise<void> {
+  const tables = Object.keys(pendingPushFns);
+  if (tables.length === 0) return;
+
+  console.log('[PUSH] Flushing', tables.length, 'pending pushes:', tables.join(', '));
+
+  const promises: Promise<void>[] = [];
+  for (const table of tables) {
+    const fn = pendingPushFns[table];
+    // Clear the debounce timer
+    if (pushTimers[table]) {
+      clearTimeout(pushTimers[table]);
+      delete pushTimers[table];
+    }
+    delete pendingPushFns[table];
+
+    promises.push(
+      fn().then(() => {
+        console.log(`[PUSH] Flushed ${table} successfully`);
+      }).catch((error) => {
+        console.error(`[PUSH] Flush ${table} FAILED:`, error);
+      }).finally(() => {
+        useSyncStore.getState().decrementPending();
+      })
+    );
+  }
+
+  await Promise.allSettled(promises);
+
+  if (useSyncStore.getState().pendingChanges === 0) {
+    useSyncStore.getState().setSynced();
+  }
 }
 
 export async function pushScenes(projectId: string, scenes: Scene[]): Promise<void> {
@@ -1220,6 +1266,7 @@ export function unsubscribeFromProject(): void {
     clearTimeout(timer);
   }
   pushTimers = {};
+  pendingPushFns = {};
   pushingTables.clear();
 
   useSyncStore.getState().setRealtimeConnected(false);

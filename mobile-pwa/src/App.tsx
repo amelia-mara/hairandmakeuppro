@@ -3,7 +3,7 @@ import { useProjectStore } from '@/stores/projectStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
 import { isSupabaseConfigured } from '@/lib/supabase';
-import { startSync, stopSync } from '@/services/syncService';
+import { startSync, stopSync, flushPendingSyncPushes } from '@/services/syncService';
 import { initSyncSubscriptions } from '@/services/syncSubscriptions';
 import { migrateToIndexedDB, flushPendingWrites } from '@/db/zustandStorage';
 
@@ -115,12 +115,23 @@ function AppContent() {
       console.error('[Storage] Migration failed:', error);
     });
 
-    // Flush pending writes before page unload
+    // Flush pending writes and Supabase pushes before page unload
     const handleBeforeUnload = () => {
       flushPendingWrites();
+      flushPendingSyncPushes(); // Fire pending debounced Supabase pushes
+    };
+    // Flush Supabase pushes when tab goes hidden (more reliable than beforeunload for async)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        flushPendingSyncPushes();
+      }
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
   // Key to force More component to reset when clicking the same tab
   const [tabResetKey, setTabResetKey] = useState(0);
