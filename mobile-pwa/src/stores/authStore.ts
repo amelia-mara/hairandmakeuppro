@@ -15,7 +15,11 @@ import type {
   Project,
 } from '@/types';
 import { TIER_LIMITS, createDefaultSubscription, SubscriptionTier, BETA_MODE, createEmptyMakeupDetails, createEmptyHairDetails } from '@/types';
+import type { CallSheet, ProductionSchedule } from '@/types';
 import { useProjectStore } from './projectStore';
+import { useScheduleStore } from './scheduleStore';
+import { useCallSheetStore } from './callSheetStore';
+import * as supabaseStorage from '@/services/supabaseStorage';
 
 interface AuthState {
   // Auth state
@@ -430,8 +434,10 @@ export const useAuthStore = create<AuthState>()(
           };
 
           // Fetch project data and load into project store
-          const { scenes, characters, looks, sceneCharacters, lookScenes } =
-            await supabaseProjects.getProjectData(joinedProject.id);
+          const {
+            scenes, characters, looks, sceneCharacters, lookScenes,
+            scheduleData, callSheetData, scriptData,
+          } = await supabaseProjects.getProjectData(joinedProject.id);
 
           const pStore = useProjectStore.getState();
 
@@ -505,6 +511,70 @@ export const useAuthStore = create<AuthState>()(
               looks: [],
             };
             pStore.setProject(emptyProject);
+          }
+
+          // Load documents (schedule, call sheets, script) into their stores
+          if (scheduleData.length > 0) {
+            const db = scheduleData[0];
+            if (db.days || db.cast_list) {
+              const schedule: ProductionSchedule = {
+                id: db.id,
+                status: db.status === 'complete' ? 'complete' : 'pending',
+                castList: (db.cast_list as any[]) || [],
+                days: (db.days as any[]) || [],
+                totalDays: ((db.days as any[]) || []).length,
+                uploadedAt: new Date(db.created_at),
+                rawText: db.raw_pdf_text || undefined,
+              };
+              useScheduleStore.getState().setSchedule(schedule);
+            }
+          }
+
+          if (callSheetData.length > 0) {
+            const csStore = useCallSheetStore.getState();
+            csStore.clearAll();
+            const callSheets: CallSheet[] = callSheetData.map((db: any) => {
+              const parsed = (db.parsed_data || {}) as any;
+              return {
+                ...parsed,
+                id: db.id,
+                date: db.shoot_date,
+                productionDay: db.production_day,
+                rawText: db.raw_text || parsed.rawText,
+                pdfUri: undefined,
+                uploadedAt: new Date(db.created_at),
+                scenes: parsed.scenes || [],
+              };
+            });
+            for (const cs of callSheets) {
+              useCallSheetStore.setState((state) => ({
+                callSheets: [...state.callSheets, cs].sort(
+                  (a, b) => a.productionDay - b.productionDay
+                ),
+              }));
+            }
+            const latest = callSheets[callSheets.length - 1];
+            if (latest) csStore.setActiveCallSheet(latest.id);
+
+            for (const db of callSheetData) {
+              if (db.storage_path) {
+                supabaseStorage.downloadDocumentAsDataUri(db.storage_path).then(({ dataUri }) => {
+                  if (!dataUri) return;
+                  useCallSheetStore.setState((state) => ({
+                    callSheets: state.callSheets.map((cs) =>
+                      cs.id === db.id ? { ...cs, pdfUri: dataUri } : cs
+                    ),
+                  }));
+                });
+              }
+            }
+          }
+
+          if (scriptData.length > 0 && scriptData[0].storage_path) {
+            supabaseStorage.downloadDocumentAsDataUri(scriptData[0].storage_path).then(({ dataUri }) => {
+              if (!dataUri) return;
+              useProjectStore.getState().setScriptPdf(dataUri);
+            });
           }
 
           pStore.setActiveTab('today');
