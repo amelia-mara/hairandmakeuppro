@@ -164,6 +164,7 @@ function DeleteProjectModal({
   projectName,
   isOwner,
   isLoading,
+  error,
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -171,6 +172,7 @@ function DeleteProjectModal({
   projectName: string;
   isOwner: boolean;
   isLoading: boolean;
+  error: string | null;
 }) {
   if (!isOpen) return null;
 
@@ -186,6 +188,9 @@ function DeleteProjectModal({
             ? `Team members synced to "${projectName}" will have 48 hours to download any documents before it is permanently deleted.`
             : `You'll need a new invite code to rejoin "${projectName}".`}
         </p>
+        {error && (
+          <p className="text-sm text-red-600 mb-3">{error}</p>
+        )}
         <div className="flex gap-3">
           <button
             onClick={onClose}
@@ -284,6 +289,7 @@ export function ProjectHubScreen() {
 
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [deleteModalProject, setDeleteModalProject] = useState<ProjectMembership | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
 
   // Refresh project list from server on mount to clear stale/deleted projects
@@ -447,6 +453,7 @@ export function ProjectHubScreen() {
 
   const handleDeleteConfirm = async () => {
     if (!deleteModalProject) return;
+    setDeleteError(null);
     const isOwner = deleteModalProject.role === 'owner';
     const result = isOwner
       ? await deleteProject(deleteModalProject.projectId)
@@ -463,6 +470,8 @@ export function ProjectHubScreen() {
         store.removeSavedProject(deleteModalProject.projectId);
       }
       setDeleteModalProject(null);
+    } else {
+      setDeleteError(result.error || 'Something went wrong. Please try again.');
     }
   };
 
@@ -582,7 +591,7 @@ export function ProjectHubScreen() {
                             ? () => { setSettingsProjectId(currentProject.projectId); setScreen('project-settings'); }
                             : undefined
                         }
-                        onDelete={() => setDeleteModalProject(currentProject)}
+                        onDelete={() => { setDeleteError(null); setDeleteModalProject(currentProject); }}
                         isOwner={currentProject.role === 'owner'}
                       />
                     </div>
@@ -665,7 +674,7 @@ export function ProjectHubScreen() {
                                     ? () => { setSettingsProjectId(project.projectId); setScreen('project-settings'); }
                                     : undefined
                                 }
-                                onDelete={() => setDeleteModalProject(project)}
+                                onDelete={() => { setDeleteError(null); setDeleteModalProject(project); }}
                                 isOwner={project.role === 'owner'}
                                 openUpward
                               />
@@ -729,11 +738,12 @@ export function ProjectHubScreen() {
       />
       <DeleteProjectModal
         isOpen={deleteModalProject !== null}
-        onClose={() => setDeleteModalProject(null)}
+        onClose={() => { setDeleteModalProject(null); setDeleteError(null); }}
         onConfirm={handleDeleteConfirm}
         projectName={deleteModalProject?.projectName || ''}
         isOwner={deleteModalProject?.role === 'owner'}
         isLoading={isLoading}
+        error={deleteError}
       />
     </div>
   );
