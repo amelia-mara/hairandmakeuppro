@@ -335,7 +335,10 @@ export async function pullProjectData(projectId: string, retryCount: number = 0)
 
     // Even if no scene data, still merge documents below
     if (!hasSceneData && hasDocuments) {
-      console.log('[PULL] Server has documents but no scene data, merging documents only');
+      const localProject = useProjectStore.getState().currentProject;
+      const localSceneCount = localProject?.scenes.length || 0;
+      console.log('[PULL] Server has documents but no scene data, merging documents only' +
+        (localSceneCount > 0 ? ` (preserving ${localSceneCount} local scenes — pushInitialData will sync them)` : ''));
 
       if (dbSchedule.length > 0) {
         mergeScheduleData(dbSchedule[0], projectId);
@@ -563,15 +566,46 @@ function mergeScheduleData(dbSchedule: DbScheduleData, _projectId: string): void
   scheduleStore.setSchedule(schedule);
 }
 
+/** Download PDFs for call sheets that are missing their pdfUri locally */
+function downloadMissingCallSheetPdfs(
+  dbCallSheets: DbCallSheetData[],
+  localCallSheets: CallSheet[]
+): void {
+  const missingPdfIds = new Set(
+    localCallSheets.filter((cs) => !cs.pdfUri).map((cs) => cs.id)
+  );
+  if (missingPdfIds.size === 0) return;
+
+  console.log('[PULL] Re-downloading', missingPdfIds.size, 'missing call sheet PDFs');
+  for (const db of dbCallSheets) {
+    if (db.storage_path && missingPdfIds.has(db.id)) {
+      supabaseStorage.downloadDocumentAsDataUri(db.storage_path).then(({ dataUri }) => {
+        if (!dataUri) return;
+        useCallSheetStore.setState((state) => ({
+          callSheets: state.callSheets.map((cs) =>
+            cs.id === db.id ? { ...cs, pdfUri: dataUri } : cs
+          ),
+        }));
+        console.log('[PULL] Restored PDF for call sheet:', db.shoot_date);
+      });
+    }
+  }
+}
+
 function mergeCallSheetData(dbCallSheets: DbCallSheetData[], _projectId: string): void {
   const callSheetStore = useCallSheetStore.getState();
   const currentCallSheets = callSheetStore.callSheets;
 
-  // Skip if local already has the same call sheets (same IDs = already loaded)
+  // Skip full merge if local already has the same call sheets (same IDs = already loaded)
   if (currentCallSheets.length > 0) {
     const localIds = new Set(currentCallSheets.map((cs) => cs.id));
     const allMatch = dbCallSheets.every((db) => localIds.has(db.id));
-    if (allMatch && dbCallSheets.length === currentCallSheets.length) return;
+    if (allMatch && dbCallSheets.length === currentCallSheets.length) {
+      // Even though IDs match, re-download any missing PDFs
+      // (pdfUri can be lost when IndexedDB/localStorage fails to persist large base64 data)
+      downloadMissingCallSheetPdfs(dbCallSheets, currentCallSheets);
+      return;
+    }
   }
 
   const callSheets: CallSheet[] = dbCallSheets.map((db) => {
