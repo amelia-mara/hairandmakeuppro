@@ -1305,6 +1305,8 @@ export interface ProjectMembership {
   sceneCount: number;
   projectCode: string;
   status: ProjectStatus;
+  ownerName?: string;
+  pendingDeletionAt?: Date | null;
 }
 
 // Auth screen types for navigation

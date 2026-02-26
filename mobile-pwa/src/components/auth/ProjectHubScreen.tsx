@@ -4,6 +4,7 @@ import { useProjectStore } from '@/stores/projectStore';
 import { useCallSheetStore } from '@/stores/callSheetStore';
 import { UpgradeModal } from '@/components/dashboard';
 import * as supabaseProjects from '@/services/supabaseProjects';
+import { hoursUntilDeletion } from '@/services/supabaseProjects';
 import type { ProjectMembership, Project, ProjectRole, ProductionType } from '@/types';
 import { createEmptyMakeupDetails, createEmptyHairDetails } from '@/types';
 
@@ -31,6 +32,23 @@ const getRoleLabel = (role: ProjectRole): string => {
     daily: 'Daily', trainee: 'Trainee', artist: 'Artist', viewer: 'Viewer',
   };
   return labels[role] || role;
+};
+
+// For synced (non-owner) members, show "Synced from [owner name]"
+const getMembershipLabel = (membership: ProjectMembership): string => {
+  if (membership.role === 'owner') return 'Owner';
+  if (membership.ownerName) return `Synced from ${membership.ownerName}`;
+  return getRoleLabel(membership.role);
+};
+
+// Format deletion countdown for the banner
+const formatDeletionCountdown = (pendingDeletionAt: Date): string => {
+  const hours = hoursUntilDeletion(pendingDeletionAt);
+  if (hours <= 0) return 'This project is being deleted';
+  if (hours === 1) return 'This project will be deleted in 1 hour';
+  if (hours <= 24) return `This project will be deleted in ${hours} hours`;
+  const days = Math.ceil(hours / 24);
+  return `This project will be deleted in ${days} day${days !== 1 ? 's' : ''}`;
 };
 
 const getTypeLabel = (type: ProductionType): string => {
@@ -80,7 +98,7 @@ function DeleteProjectModal({
         </h3>
         <p className="text-sm text-text-secondary mb-5">
           {isOwner
-            ? `This will permanently delete "${projectName}" and all its data for everyone.`
+            ? `Team members synced to "${projectName}" will have 48 hours to download any documents before it is permanently deleted.`
             : `You'll need a new invite code to rejoin "${projectName}".`}
         </p>
         <div className="flex gap-3">
@@ -401,8 +419,18 @@ export function ProjectHubScreen() {
                 <div className="text-[11px] font-medium tracking-wider text-text-muted uppercase mb-2.5">Current</div>
                 <button
                   onClick={() => handleProjectOpen(currentProject)}
-                  className="w-full text-left bg-card rounded-2xl p-4 shadow-sm border border-border active:scale-[0.99] transition-transform"
+                  className={`w-full text-left bg-card rounded-2xl p-4 shadow-sm border active:scale-[0.99] transition-transform ${currentProject.pendingDeletionAt ? 'border-red-300' : 'border-border'}`}
                 >
+                  {currentProject.pendingDeletionAt && (
+                    <div className="flex items-center gap-2 bg-red-50 text-red-700 text-xs font-medium px-3 py-2 rounded-lg mb-3">
+                      <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="8" x2="12" y2="12" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                      </svg>
+                      {formatDeletionCountdown(new Date(currentProject.pendingDeletionAt))}
+                    </div>
+                  )}
                   <div className="flex items-start justify-between mb-2">
                     <h3 className="text-base font-semibold text-text-primary leading-tight pr-2">
                       {currentProject.projectName}
@@ -437,7 +465,7 @@ export function ProjectHubScreen() {
                   <p className="text-xs text-text-muted">
                     {getTypeLabel(currentProject.productionType)}
                     <span className="mx-1.5 text-text-light">&middot;</span>
-                    {getRoleLabel(currentProject.role)}
+                    {getMembershipLabel(currentProject)}
                   </p>
                   {(currentProject.sceneCount > 0 || currentProject.teamMemberCount > 0) && (
                     <p className="text-xs text-text-muted mt-1.5">
@@ -461,49 +489,61 @@ export function ProjectHubScreen() {
                     <div key={project.projectId} className="relative">
                       <button
                         onClick={() => handleProjectOpen(project)}
-                        className="w-full text-left px-4 py-3.5 flex items-center justify-between active:bg-gray-50 transition-colors"
+                        className="w-full text-left px-4 py-3.5 active:bg-gray-50 transition-colors"
                       >
-                        <div className="min-w-0 flex-1">
-                          <h4 className="text-sm font-medium text-text-primary truncate">
-                            {project.projectName}
-                          </h4>
-                          <p className="text-xs text-text-muted mt-0.5">
-                            {getTypeLabel(project.productionType)}
-                            <span className="mx-1.5 text-text-light">&middot;</span>
-                            {formatRelativeTime(project.lastAccessedAt)}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2 ml-3 flex-shrink-0">
-                          <div onClick={(e) => e.stopPropagation()} className="relative">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setMenuOpenId(menuOpenId === project.projectId ? null : project.projectId);
-                              }}
-                              className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100"
-                            >
-                              <svg className="w-4 h-4 text-text-muted" viewBox="0 0 24 24" fill="currentColor">
-                                <circle cx="12" cy="5" r="1.5" />
-                                <circle cx="12" cy="12" r="1.5" />
-                                <circle cx="12" cy="19" r="1.5" />
-                              </svg>
-                            </button>
-                            <ProjectMenu
-                              isOpen={menuOpenId === project.projectId}
-                              onClose={() => setMenuOpenId(null)}
-                              onSettings={
-                                canManage(project.role)
-                                  ? () => { setSettingsProjectId(project.projectId); setScreen('project-settings'); }
-                                  : undefined
-                              }
-                              onDelete={() => setDeleteModalProject(project)}
-                              isOwner={project.role === 'owner'}
-                              openUpward
-                            />
+                        {project.pendingDeletionAt && (
+                          <div className="flex items-center gap-2 bg-red-50 text-red-700 text-xs font-medium px-2.5 py-1.5 rounded-lg mb-2">
+                            <svg className="w-3 h-3 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <circle cx="12" cy="12" r="10" />
+                              <line x1="12" y1="8" x2="12" y2="12" />
+                              <line x1="12" y1="16" x2="12.01" y2="16" />
+                            </svg>
+                            {formatDeletionCountdown(new Date(project.pendingDeletionAt))}
                           </div>
-                          <svg className="w-4 h-4 text-text-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M9 18l6-6-6-6" />
-                          </svg>
+                        )}
+                        <div className="flex items-center justify-between">
+                          <div className="min-w-0 flex-1">
+                            <h4 className="text-sm font-medium text-text-primary truncate">
+                              {project.projectName}
+                            </h4>
+                            <p className="text-xs text-text-muted mt-0.5">
+                              {getMembershipLabel(project)}
+                              <span className="mx-1.5 text-text-light">&middot;</span>
+                              {formatRelativeTime(project.lastAccessedAt)}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2 ml-3 flex-shrink-0">
+                            <div onClick={(e) => e.stopPropagation()} className="relative">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setMenuOpenId(menuOpenId === project.projectId ? null : project.projectId);
+                                }}
+                                className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100"
+                              >
+                                <svg className="w-4 h-4 text-text-muted" viewBox="0 0 24 24" fill="currentColor">
+                                  <circle cx="12" cy="5" r="1.5" />
+                                  <circle cx="12" cy="12" r="1.5" />
+                                  <circle cx="12" cy="19" r="1.5" />
+                                </svg>
+                              </button>
+                              <ProjectMenu
+                                isOpen={menuOpenId === project.projectId}
+                                onClose={() => setMenuOpenId(null)}
+                                onSettings={
+                                  canManage(project.role)
+                                    ? () => { setSettingsProjectId(project.projectId); setScreen('project-settings'); }
+                                    : undefined
+                                }
+                                onDelete={() => setDeleteModalProject(project)}
+                                isOwner={project.role === 'owner'}
+                                openUpward
+                              />
+                            </div>
+                            <svg className="w-4 h-4 text-text-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M9 18l6-6-6-6" />
+                            </svg>
+                          </div>
                         </div>
                       </button>
                     </div>
