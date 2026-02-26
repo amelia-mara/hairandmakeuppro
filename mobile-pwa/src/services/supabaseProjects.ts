@@ -81,18 +81,23 @@ export async function getProjectByInviteCode(
   inviteCode: string
 ): Promise<{ project: Project | null; error: Error | null }> {
   try {
-    const { data: project, error: findError } = await supabase
-      .from('projects')
-      .select('*')
-      .eq('invite_code', inviteCode.toUpperCase())
-      .single();
+    const { data: rpcResult, error: rpcError } = await supabase
+      .rpc('lookup_project_by_invite_code', {
+        invite_code_input: inviteCode.toUpperCase(),
+      });
 
-    if (findError) {
-      if (findError.code === 'PGRST116') {
-        throw new Error('Invalid project code. Please check and try again.');
-      }
-      throw findError;
+    if (rpcError) throw rpcError;
+
+    if (rpcResult?.error) {
+      throw new Error(rpcResult.error);
     }
+
+    const project = {
+      id: rpcResult.id,
+      name: rpcResult.name,
+      production_type: rpcResult.production_type,
+      invite_code: rpcResult.invite_code,
+    } as Project;
 
     return { project, error: null };
   } catch (error) {
@@ -101,78 +106,32 @@ export async function getProjectByInviteCode(
 }
 
 // Join a project by invite code
-// Uses the SECURITY DEFINER RPC function to bypass RLS, with fallback to direct INSERT
+// Uses the SECURITY DEFINER RPC function to bypass RLS
 export async function joinProject(
   inviteCode: string,
   userId: string,
   role: ProjectMember['role'] = 'floor'
 ): Promise<{ project: Project | null; error: Error | null }> {
   try {
-    // Try the RPC function first (handles RLS properly via SECURITY DEFINER)
     const { data: rpcResult, error: rpcError } = await supabase
       .rpc('join_project_by_invite_code', {
         invite_code_input: inviteCode.toUpperCase(),
         role_input: role,
       });
 
-    if (!rpcError && rpcResult && !rpcResult.error) {
-      // RPC succeeded - build a project-like object from the result
-      const project = {
-        id: rpcResult.project_id,
-        name: rpcResult.project_name,
-        production_type: rpcResult.production_type,
-        invite_code: rpcResult.invite_code,
-        created_at: rpcResult.created_at,
-      } as Project;
-      return { project, error: null };
-    }
+    if (rpcError) throw rpcError;
 
-    // If RPC returned an application-level error
-    if (!rpcError && rpcResult?.error) {
+    if (rpcResult?.error) {
       throw new Error(rpcResult.error);
     }
 
-    // RPC function doesn't exist yet (migration not applied) - fall back to direct queries
-    console.warn('join_project_by_invite_code RPC not available, falling back to direct queries:', rpcError?.message);
-
-    // Find project by invite code
-    const { data: project, error: findError } = await supabase
-      .from('projects')
-      .select('*')
-      .eq('invite_code', inviteCode.toUpperCase())
-      .single();
-
-    if (findError) {
-      if (findError.code === 'PGRST116') {
-        throw new Error('Invalid project code. Please check and try again.');
-      }
-      throw findError;
-    }
-
-    // Check if already a member
-    const { data: existingMember } = await supabase
-      .from('project_members')
-      .select('id')
-      .eq('project_id', project.id)
-      .eq('user_id', userId)
-      .single();
-
-    if (existingMember) {
-      return { project, error: null }; // Already a member, just return the project
-    }
-
-    // Add user as member
-    const { error: memberError } = await supabase
-      .from('project_members')
-      .insert({
-        project_id: project.id,
-        user_id: userId,
-        role,
-        is_owner: false,
-      });
-
-    if (memberError) throw memberError;
-
+    const project = {
+      id: rpcResult.project_id,
+      name: rpcResult.project_name,
+      production_type: rpcResult.production_type,
+      invite_code: rpcResult.invite_code,
+      created_at: rpcResult.created_at,
+    } as Project;
     return { project, error: null };
   } catch (error) {
     return { project: null, error: error as Error };
