@@ -191,6 +191,7 @@ export const useProjectStore = create<ProjectState>()(
       storage: createHybridStorage('hair-makeup-pro-storage'),
       partialize: (state) => ({
         currentProject: state.currentProject,
+        activeTab: state.activeTab,
         sceneCaptures: state.sceneCaptures,
         lifecycle: state.lifecycle,
         savedProjects: state.savedProjects,
