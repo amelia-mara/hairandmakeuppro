@@ -82,6 +82,7 @@ function sceneToDb(scene: Scene, projectId: string): Omit<DbScene, 'created_at'>
     filming_notes: scene.filmingNotes || null,
     is_complete: scene.isComplete,
     completed_at: scene.completedAt ? new Date(scene.completedAt).toISOString() : null,
+    script_content: scene.scriptContent || null,
   };
 }
 
