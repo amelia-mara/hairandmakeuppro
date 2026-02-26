@@ -244,6 +244,13 @@ export function JoinProjectScreen() {
                 </div>
               </div>
 
+              {/* Error inside popup */}
+              {error && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg mb-4">
+                  <p className="text-sm text-red-700">{error}</p>
+                </div>
+              )}
+
               {/* Confirm button */}
               <Button
                 fullWidth

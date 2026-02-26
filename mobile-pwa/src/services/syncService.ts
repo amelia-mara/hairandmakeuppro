@@ -430,22 +430,38 @@ export async function pullProjectData(projectId: string, retryCount: number = 0)
       mergedCaptures[captureKey] = capture;
     }
 
-    // Update the project store with merged data
-    const updatedProject = {
-      ...currentProject,
-      scenes: mergedScenes,
-      characters: mergedChars,
-      looks: mergedLooks,
-    };
+    // Preserve local-only scenes/characters/looks that haven't been pushed yet.
+    // Without this, a pull would silently drop any local data not on the server.
+    const serverSceneIds = new Set(dbScenes.map(s => s.id));
+    const localOnlyScenes = currentProject.scenes.filter((s: Scene) => !serverSceneIds.has(s.id));
+
+    const serverCharIds = new Set(dbChars.map(c => c.id));
+    const localOnlyChars = currentProject.characters.filter((c: Character) => !serverCharIds.has(c.id));
+
+    const serverLookIds = new Set(dbLooks.map(l => l.id));
+    const localOnlyLooks = currentProject.looks.filter((l: Look) => !serverLookIds.has(l.id));
+
+    const finalScenes = [...mergedScenes, ...localOnlyScenes];
+    const finalChars = [...mergedChars, ...localOnlyChars];
+    const finalLooks = [...mergedLooks, ...localOnlyLooks];
 
     console.log('[PULL] Merging server data into store:', {
-      scenes: mergedScenes.length,
-      characters: mergedChars.length,
-      looks: mergedLooks.length,
+      serverScenes: mergedScenes.length,
+      localOnlyScenes: localOnlyScenes.length,
+      totalScenes: finalScenes.length,
+      serverChars: mergedChars.length,
+      localOnlyChars: localOnlyChars.length,
+      serverLooks: mergedLooks.length,
+      localOnlyLooks: localOnlyLooks.length,
       captures: Object.keys(mergedCaptures).length,
     });
 
-    projectStore.setProject(updatedProject);
+    // Use mergeServerData instead of setProject to avoid resetting lifecycle state
+    projectStore.mergeServerData({
+      scenes: finalScenes,
+      characters: finalChars,
+      looks: finalLooks,
+    });
 
     // Merge scene captures
     if (Object.keys(mergedCaptures).length > 0) {
@@ -721,17 +737,20 @@ function debouncedPush(table: string, pushFn: () => Promise<void>): void {
     delete pushTimers[table];
     delete pendingPushFns[table];
     pushingTables.add(table);
+    let pushFailed = false;
     try {
       useSyncStore.getState().setSyncing();
       await pushFn();
       console.log(`[PUSH] ${table} pushed successfully`);
     } catch (error) {
+      pushFailed = true;
       console.error(`[PUSH] ${table} FAILED:`, error);
       useSyncStore.getState().setError(`Failed to sync ${table}`);
     } finally {
       pushingTables.delete(table);
       useSyncStore.getState().decrementPending();
-      if (useSyncStore.getState().pendingChanges === 0) {
+      // Only mark as synced if no errors occurred during this push
+      if (!pushFailed && useSyncStore.getState().pendingChanges === 0) {
         useSyncStore.getState().setSynced();
       }
     }
@@ -1082,7 +1101,14 @@ export async function pushScriptPdf(
   userId: string | null
 ): Promise<void> {
   if (!isSupabaseConfigured) return;
-  if (!scriptPdfData || !scriptPdfData.startsWith('data:')) return;
+  if (!scriptPdfData) {
+    console.warn('[PUSH] pushScriptPdf: no scriptPdfData provided, skipping');
+    return;
+  }
+  if (!scriptPdfData.startsWith('data:')) {
+    console.warn('[PUSH] pushScriptPdf: scriptPdfData is not a data URI (starts with:', scriptPdfData.substring(0, 30), '), skipping');
+    return;
+  }
   console.log(`[PUSH] pushScriptPdf: uploading script for project ${projectId}`);
 
   debouncedPush('script', async () => {
@@ -1657,7 +1683,7 @@ export async function startSync(projectId: string, userId?: string): Promise<voi
  * Uses upsert, so pushing data that already exists on the server is
  * idempotent — it won't create duplicates or corrupt existing data.
  */
-async function pushInitialData(projectId: string, userId?: string): Promise<void> {
+export async function pushInitialData(projectId: string, userId?: string): Promise<void> {
   const project = useProjectStore.getState().currentProject;
   if (!project) {
     console.log('[SYNC] pushInitialData: no current project, skipping');
