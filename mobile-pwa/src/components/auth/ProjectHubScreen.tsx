@@ -94,6 +94,17 @@ function loadDocumentsIntoStores(
         rawText: db.raw_pdf_text || undefined,
       };
       useScheduleStore.getState().setSchedule(schedule);
+
+      // Download the schedule PDF from storage in background
+      if (db.storage_path) {
+        supabaseStorage.downloadDocumentAsDataUri(db.storage_path).then(({ dataUri }) => {
+          if (!dataUri) return;
+          const current = useScheduleStore.getState().schedule;
+          if (current && current.id === db.id) {
+            useScheduleStore.getState().setSchedule({ ...current, pdfUri: dataUri });
+          }
+        });
+      }
     }
   }
 
