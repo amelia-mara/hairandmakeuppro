@@ -79,7 +79,6 @@ function migrateLegacyData(): Partial<BudgetState> | null {
 
     // Remove legacy data after successful migration
     localStorage.removeItem(LEGACY_STORAGE_KEY);
-    console.log('Migrated legacy budget data from localStorage to IndexedDB store');
 
     return migrated;
   } catch (error) {

@@ -27,7 +27,6 @@ let initialized = false;
 export function initSyncSubscriptions(): void {
   if (initialized) return;
   initialized = true;
-  console.log('[SYNC-SUB] Initializing sync subscriptions');
 
   // Watch projectStore for changes → push to Supabase
   useProjectStore.subscribe((state, prevState) => {
@@ -44,19 +43,16 @@ export function initSyncSubscriptions(): void {
 
     // Push scenes if changed (or if project was just set with scenes)
     if (curr.scenes.length > 0 && (!prev || prev.scenes !== curr.scenes)) {
-      console.log('[SYNC-SUB] Scenes changed:', prev?.scenes.length ?? 0, '→', curr.scenes.length);
       pushScenes(projectId, curr.scenes);
     }
 
     // Push characters if changed
     if (curr.characters.length > 0 && (!prev || prev.characters !== curr.characters)) {
-      console.log('[SYNC-SUB] Characters changed:', prev?.characters.length ?? 0, '→', curr.characters.length);
       pushCharacters(projectId, curr.characters);
     }
 
     // Push looks if changed
     if (curr.looks.length > 0 && (!prev || prev.looks !== curr.looks)) {
-      console.log('[SYNC-SUB] Looks changed:', prev?.looks.length ?? 0, '→', curr.looks.length);
       pushLooks(projectId, curr.looks);
     }
 
@@ -65,7 +61,6 @@ export function initSyncSubscriptions(): void {
       const userId = useAuthStore.getState().user?.id || null;
       for (const [captureId, capture] of Object.entries(state.sceneCaptures)) {
         if (prevState.sceneCaptures[captureId] !== capture) {
-          console.log('[SYNC-SUB] Scene capture changed:', captureId);
           pushSceneCapture(projectId, capture as any, userId);
         }
       }
@@ -74,7 +69,6 @@ export function initSyncSubscriptions(): void {
     // Push script PDF if changed
     if (curr.scriptPdfData && (!prev || prev.scriptPdfData !== curr.scriptPdfData)) {
       const userId = useAuthStore.getState().user?.id || null;
-      console.log('[SYNC-SUB] Script PDF changed, pushing to Supabase');
       pushScriptPdf(projectId, curr.scriptPdfData, userId);
     }
   });
@@ -88,7 +82,6 @@ export function initSyncSubscriptions(): void {
       state.schedule !== prevState.schedule &&
       state.schedule
     ) {
-      console.log('[SYNC-SUB] Schedule changed, pushing to Supabase, status:', state.schedule.status);
       pushScheduleData(projectId, state.schedule);
     }
   });
@@ -105,7 +98,6 @@ export function initSyncSubscriptions(): void {
       for (const cs of state.callSheets) {
         const prev = prevState.callSheets.find((p) => p.id === cs.id);
         if (!prev || prev !== cs) {
-          console.log('[SYNC-SUB] Call sheet changed:', cs.date);
           pushCallSheetData(projectId, cs, userId);
         }
       }

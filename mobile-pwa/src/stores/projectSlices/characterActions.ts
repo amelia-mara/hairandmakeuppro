@@ -328,9 +328,6 @@ export const createCharacterSlice = (set: ProjectSet, get: ProjectGet) => ({
           );
           if (!realChar) return profile;
 
-          console.log(
-            `[ProjectStore] Migrating cast profile from placeholder ${profile.characterId} to ${realChar.id} (${realChar.name})`
-          );
           return {
             ...profile,
             characterId: realChar.id,
@@ -349,10 +346,6 @@ export const createCharacterSlice = (set: ProjectSet, get: ProjectGet) => ({
         };
       });
 
-      console.log('[ProjectStore] Cast sync complete:', {
-        scenesUpdated: result.scenesUpdated,
-        charactersCreated: result.charactersCreated,
-      });
     }
 
     return result;

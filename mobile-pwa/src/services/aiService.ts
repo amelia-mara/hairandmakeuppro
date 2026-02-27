@@ -13,15 +13,6 @@ interface AIResponse {
   usage?: { input_tokens: number; output_tokens: number };
 }
 
-// Enable verbose logging for debugging
-const DEBUG_AI_SERVICE = true;
-
-function aiDebugLog(...args: any[]) {
-  if (DEBUG_AI_SERVICE) {
-    console.log('[AIService]', ...args);
-  }
-}
-
 /**
  * Call the AI API with retry logic and exponential backoff
  */
@@ -35,7 +26,6 @@ export async function callAI(
 ): Promise<string> {
   const { system, maxTokens = 4000, maxRetries = 3 } = options;
 
-  aiDebugLog('callAI started, maxTokens:', maxTokens, 'prompt length:', prompt.length);
 
   const messages: AIMessage[] = [{ role: 'user', content: prompt }];
 
@@ -43,7 +33,6 @@ export async function callAI(
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
-      aiDebugLog(`Attempt ${attempt + 1}/${maxRetries}...`);
 
       // Use relative URL for Vercel deployment, falls back to local for dev
       const apiUrl = '/api/ai';
@@ -61,13 +50,11 @@ export async function callAI(
         }),
       });
 
-      aiDebugLog('Response status:', response.status);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         const errorMessage = errorData.error?.message || errorData.error || '';
 
-        aiDebugLog('API error:', response.status, errorMessage);
 
         // Handle rate limiting
         if (response.status === 429) {
@@ -77,7 +64,6 @@ export async function callAI(
           }
           // Transient rate limits (requests-per-minute) are retryable
           const waitTime = Math.pow(2, attempt + 1) * 1000; // 2s, 4s, 8s
-          aiDebugLog(`Rate limited, waiting ${waitTime}ms before retry...`);
           await new Promise(resolve => setTimeout(resolve, waitTime));
           continue;
         }
@@ -85,7 +71,6 @@ export async function callAI(
         // Handle server overloaded (529)
         if (response.status === 529) {
           const waitTime = Math.pow(2, attempt + 1) * 1000;
-          aiDebugLog(`Server overloaded, waiting ${waitTime}ms before retry...`);
           await new Promise(resolve => setTimeout(resolve, waitTime));
           continue;
         }
@@ -103,7 +88,6 @@ export async function callAI(
         // Handle 500-level server errors with retry
         if (response.status >= 500) {
           const waitTime = Math.pow(2, attempt + 1) * 1000;
-          aiDebugLog(`Server error ${response.status}, waiting ${waitTime}ms before retry...`);
           await new Promise(resolve => setTimeout(resolve, waitTime));
           continue;
         }
@@ -114,18 +98,12 @@ export async function callAI(
       const data: AIResponse = await response.json();
 
       if (data.content && data.content.length > 0) {
-        const result = data.content[0].text;
-        aiDebugLog('AI call successful, response length:', result.length);
-        if (data.usage) {
-          aiDebugLog('Token usage:', data.usage);
-        }
-        return result;
+        return data.content[0].text;
       }
 
       throw new Error('Empty response from AI');
     } catch (error) {
       lastError = error as Error;
-      aiDebugLog(`AI call attempt ${attempt + 1} failed:`, error);
       console.error(`AI call attempt ${attempt + 1} failed:`, error);
 
       // Don't retry for certain errors
@@ -140,13 +118,11 @@ export async function callAI(
       // Wait before retry (exponential backoff)
       if (attempt < maxRetries - 1) {
         const waitTime = Math.pow(2, attempt + 1) * 1000;
-        aiDebugLog(`Waiting ${waitTime}ms before retry...`);
         await new Promise(resolve => setTimeout(resolve, waitTime));
       }
     }
   }
 
-  aiDebugLog('All retries failed, throwing error');
   throw lastError || new Error('AI call failed after retries');
 }
 
@@ -167,7 +143,6 @@ export async function parseScriptWithAI(
   // This ensures we have a complete cast list to reference across all chunks
   onProgress?.('Pre-extracting character names...');
   const preExtractedCharacters = extractCharacterNamesFromScript(scriptText);
-  console.log(`Pre-extracted ${preExtractedCharacters.length} character names for cross-chunk reference`);
 
   // For very long scripts, we need to process in chunks
   const MAX_CHUNK_SIZE = 30000; // Characters per chunk
@@ -340,7 +315,6 @@ function crossValidateSceneCharacters(
 
           if (charDialoguePattern.test(sceneContent) || charActionPattern.test(sceneContent)) {
             scene.characters.push(charName);
-            console.log(`Cross-validation: Added missing character "${charName}" to scene ${scene.sceneNumber}`);
           }
         }
       }
