@@ -139,6 +139,19 @@ function AppContent() {
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, []);
+
+  // Refresh project memberships when app returns from background (common on mobile)
+  const { refreshUserProjects } = useAuthStore();
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && isAuthenticated) {
+        refreshUserProjects();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [isAuthenticated, refreshUserProjects]);
+
   // Key to force More component to reset when clicking the same tab
   const [tabResetKey, setTabResetKey] = useState(0);
   // SubView for direct navigation to team, invite, stats, project settings, billing, or user profile
