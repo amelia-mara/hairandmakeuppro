@@ -338,8 +338,17 @@ export function ProjectHubScreen() {
     // 3. Restore from local save if available (schedules & call sheets are restored too)
     if (store.hasSavedProject(membership.projectId)) {
       store.restoreSavedProject(membership.projectId);
+
+      // Check if the restored project actually has a script/breakdown.
+      // If not (data was lost), show the upload page so the owner can re-upload.
+      const restored = useProjectStore.getState();
+      const hasLocalData = restored.currentProject &&
+        (restored.currentProject.scenes.length > 0 || restored.currentProject.scriptPdfData);
+      if (!hasLocalData && !restored.needsSetup && membership.role === 'owner') {
+        store.setProjectNeedsSetup(restored.currentProject!);
+      }
+
       store.setActiveTab('today');
-      // Don't return — let App.tsx startSync run to refresh from server
       return;
     }
 
@@ -354,8 +363,10 @@ export function ProjectHubScreen() {
         scheduleData, callSheetData, scriptData, error,
       } = await supabaseProjects.getProjectData(membership.projectId);
 
-      const hasSceneData = !error && (scenes.length > 0 || characters.length > 0);
-      const hasDocuments = scheduleData.length > 0 || callSheetData.length > 0 || scriptData.length > 0;
+      // Project has a breakdown if actual scenes exist (characters alone aren't enough)
+      const hasSceneData = !error && scenes.length > 0;
+      // Project has documents if a script PDF, schedule, or call sheet was uploaded
+      const hasDocuments = scriptData.length > 0 || scheduleData.length > 0 || callSheetData.length > 0;
 
       if (hasSceneData || hasDocuments) {
         // Build character ID lookup for scene_characters mapping
@@ -438,11 +449,12 @@ export function ProjectHubScreen() {
       console.error('Failed to fetch project data from server:', err);
     }
 
-    // 6. Fallback: no data on server yet
+    // 6. Fallback: no script or breakdown on server — show upload page for owners
     const project = createProjectFromMembership(membership);
     if (membership.role === 'owner') {
       store.setProjectNeedsSetup(project);
     } else {
+      // Non-owner: show empty workspace (they're waiting for the owner to upload)
       store.setProject(project);
     }
     store.setActiveTab('today');
