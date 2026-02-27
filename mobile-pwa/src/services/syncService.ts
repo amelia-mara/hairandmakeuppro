@@ -565,16 +565,22 @@ function mergeScheduleData(dbSchedule: DbScheduleData, _projectId: string): void
   // Only merge if we have server data
   if (!dbSchedule.days && !dbSchedule.cast_list) return;
 
-  // If local already has this exact schedule (same ID), skip to avoid overwriting edits
+  const isSameSchedule = currentSchedule && currentSchedule.id === dbSchedule.id;
+
+  // If local already has this exact schedule with data, skip to avoid overwriting edits
   // but still restore the PDF if it's missing locally
-  if (currentSchedule && currentSchedule.id === dbSchedule.id && currentSchedule.days.length > 0) {
+  if (isSameSchedule && currentSchedule.days.length > 0) {
     if (!currentSchedule.pdfUri && dbSchedule.storage_path) {
       downloadSchedulePdf(dbSchedule.id, dbSchedule.storage_path);
     }
     return;
   }
 
-  // Build a ProductionSchedule from DB data
+  // Build a ProductionSchedule from DB data.
+  // Preserve local pdfUri when merging the same schedule — the base64 data URI
+  // lives in-memory from the file upload and isn't stored in the DB row. Without
+  // this, a realtime echo of our own push would overwrite the local schedule and
+  // drop the PDF before the storage upload finishes.
   const schedule: ProductionSchedule = {
     id: dbSchedule.id,
     status: dbSchedule.status === 'complete' ? 'complete' : 'pending',
@@ -583,13 +589,14 @@ function mergeScheduleData(dbSchedule: DbScheduleData, _projectId: string): void
     totalDays: ((dbSchedule.days as any[]) || []).length,
     uploadedAt: new Date(dbSchedule.created_at),
     rawText: dbSchedule.raw_pdf_text || undefined,
+    pdfUri: isSameSchedule ? currentSchedule.pdfUri : undefined,
   };
 
   // Set the schedule directly in the store
   scheduleStore.setSchedule(schedule);
 
-  // Download the PDF from storage in the background if available
-  if (dbSchedule.storage_path) {
+  // Download the PDF from storage if we don't have it locally
+  if (!schedule.pdfUri && dbSchedule.storage_path) {
     downloadSchedulePdf(dbSchedule.id, dbSchedule.storage_path);
   }
 }

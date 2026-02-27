@@ -68,17 +68,6 @@ function splitCombinedSceneNumber(sceneNumber: string): string[] {
   return [...results];
 }
 
-// Format time since last sync
-function formatSyncTime(date: Date): string {
-  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
-  if (seconds < 10) return 'just now';
-  if (seconds < 60) return `${seconds}s ago`;
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return 'over a day ago';
-}
 
 interface TodayProps {
   onSceneSelect: (sceneId: string) => void;
@@ -96,7 +85,6 @@ interface UnmatchedSceneInfo {
 export function Today({ onSceneSelect, onNavigateToTab }: TodayProps) {
   const { currentProject, updateSceneFilmingStatus: syncFilmingStatus, addScene, addCharacterToScene, addCharacterFromScene, setCurrentCharacter } = useProjectStore();
   const syncStatus = useSyncStore(state => state.status);
-  const lastSyncedAt = useSyncStore(state => state.lastSyncedAt);
 
   // Subscribe to actual state values from call sheet store for proper reactivity
   const callSheets = useCallSheetStore(state => state.callSheets);
@@ -818,26 +806,6 @@ export function Today({ onSceneSelect, onNavigateToTab }: TodayProps) {
       </div>
 
       <div className="mobile-container px-4 py-4 space-y-4">
-        {/* Sync status indicator */}
-        {lastSyncedAt && (
-          <div className="flex items-center justify-between px-1">
-            <div className="flex items-center gap-1.5">
-              <div className={`w-1.5 h-1.5 rounded-full ${
-                syncStatus === 'synced' ? 'bg-success' :
-                syncStatus === 'syncing' ? 'bg-warning animate-pulse' :
-                syncStatus === 'error' ? 'bg-destructive' :
-                'bg-gray-400'
-              }`} />
-              <span className="text-[10px] text-text-muted">
-                {syncStatus === 'syncing' ? 'Syncing...' :
-                 syncStatus === 'error' ? 'Sync error' :
-                 syncStatus === 'synced' ? `Synced ${formatSyncTime(lastSyncedAt)}` :
-                 'Offline'}
-              </span>
-            </div>
-          </div>
-        )}
-
         {/* Upload error message */}
         {uploadError && (
           <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -1690,14 +1658,14 @@ const EmptyState = memo(function EmptyState({ onUploadClick, isUploading, isSync
         <>
           <h3 className="text-lg font-semibold text-text-primary mb-1">No Call Sheet for Today</h3>
           <p className="text-sm text-text-muted text-center mb-6">
-            Today's call sheet hasn't been uploaded yet
+            Upload a call sheet to see today's schedule
           </p>
           <button
             onClick={onUploadClick}
             disabled={isUploading}
             className="px-6 py-2.5 rounded-button gold-gradient text-white text-sm font-medium active:scale-95 transition-transform disabled:opacity-50"
           >
-            {isUploading ? 'Uploading...' : 'Upload Here'}
+            {isUploading ? 'Uploading...' : 'Upload Call Sheet'}
           </button>
         </>
       )}

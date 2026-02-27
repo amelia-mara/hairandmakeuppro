@@ -32,6 +32,8 @@ import { SelectPlanScreen } from '@/components/subscription';
 import { UserProfileScreen } from '@/components/profile/UserProfileScreen';
 import { ProjectSettingsScreen } from '@/components/project-settings';
 import { SyncStatusBar } from '@/components/sync';
+import { TutorialOverlay } from '@/components/tutorial/TutorialOverlay';
+import { useTutorialStore } from '@/stores/tutorialStore';
 import type { NavTab, SubscriptionTier, BillingPeriod } from '@/types';
 
 // Configuration error screen shown when Supabase environment variables are missing
@@ -89,6 +91,28 @@ function AppContent() {
     settingsProjectId,
     setSettingsProjectId,
   } = useAuthStore();
+
+  // Tutorial state — show on first login for authenticated users
+  const {
+    hasCompletedTutorial,
+    hasSkippedTutorial,
+    showTutorial,
+    startTutorial,
+  } = useTutorialStore();
+
+  const tutorialTriggered = useRef(false);
+  useEffect(() => {
+    if (
+      isAuthenticated &&
+      !hasCompletedTutorial &&
+      !hasSkippedTutorial &&
+      !showTutorial &&
+      !tutorialTriggered.current
+    ) {
+      tutorialTriggered.current = true;
+      startTutorial();
+    }
+  }, [isAuthenticated, hasCompletedTutorial, hasSkippedTutorial, showTutorial, startTutorial]);
 
   // Track if we're showing the home/setup screen
   // Start as false - will be set true explicitly when needed
@@ -612,6 +636,20 @@ function AppContent() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* First-run tutorial overlay */}
+      {showTutorial && (
+        <TutorialOverlay
+          onOpenGuide={() => {
+            setActiveTab('more');
+            setMoreSubView(undefined);
+            // Small delay so More mounts first, then navigate to help
+            setTimeout(() => {
+              setMoreSubView(undefined);
+            }, 0);
+          }}
+        />
       )}
     </div>
   );
