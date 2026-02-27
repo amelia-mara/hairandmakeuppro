@@ -111,7 +111,6 @@ For dates, always convert to YYYY-MM-DD format regardless of the source format.`
     }
 
     const responseText = data.content[0].text;
-    console.log('[ReceiptAI] Raw response:', responseText);
 
     // Parse the JSON response
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
@@ -139,7 +138,6 @@ For dates, always convert to YYYY-MM-DD format regardless of the source format.`
       confidence: ['high', 'medium', 'low'].includes(parsed.confidence) ? parsed.confidence : 'medium',
     };
 
-    console.log('[ReceiptAI] Extracted data:', extractedData);
 
     return { success: true, data: extractedData };
   } catch (error) {

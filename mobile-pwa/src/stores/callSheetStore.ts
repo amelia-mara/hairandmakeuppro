@@ -62,7 +62,6 @@ function validateCallSheet(cs: CallSheet): boolean {
   // Ensure scenes array is reasonable (not accumulated from multiple days)
   // A single day's call sheet typically has 1-20 scenes, rarely more than 30
   if (cs.scenes.length > 50) {
-    console.warn(`Call sheet ${cs.id} has ${cs.scenes.length} scenes - possible data corruption`);
     return false;
   }
   return true;
@@ -334,15 +333,9 @@ export const useCallSheetStore = create<CallSheetState>()(
 
         // If coming from an older version or no version, validate and clean data
         if (version < STORE_VERSION) {
-          console.log(`Migrating call sheet store from version ${version} to ${STORE_VERSION}`);
 
           // Filter out any corrupted call sheets
           const validCallSheets = (state.callSheets || []).filter(validateCallSheet);
-
-          // If we filtered out corrupted data, log it
-          if (validCallSheets.length !== (state.callSheets || []).length) {
-            console.warn('Removed corrupted call sheet data during migration');
-          }
 
           return {
             callSheets: validCallSheets,

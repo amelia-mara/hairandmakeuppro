@@ -816,7 +816,6 @@ export async function parseScriptFile(
         onProgress?.('Analyzing script with AI...');
         return await parseScriptWithAIFallback(text, onProgress);
       } catch (error) {
-        console.warn('AI parsing failed, falling back to regex parsing:', error);
         onProgress?.('AI unavailable, using standard parsing...');
       }
     } else {
@@ -1278,8 +1277,8 @@ export async function detectCharactersForScene(
           }
         }
       }
-    } catch (error) {
-      console.warn('AI character detection failed, using regex results only:', error);
+    } catch {
+      // AI enhancement is optional, fall back to regex results
     }
   }
 
@@ -1337,7 +1336,6 @@ Return only character names, one per line:`;
 
     return characters;
   } catch (error) {
-    console.warn('AI character detection failed:', error);
     return [];
   }
 }

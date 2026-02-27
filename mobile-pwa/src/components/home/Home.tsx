@@ -63,14 +63,8 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
           schedule = result.schedule;
           setParsedSchedule(schedule);
           setSchedule(schedule);
-          console.log(`Schedule parsed: ${schedule.castList.length} cast members identified`);
-          if (schedule.castList.length === 0) {
-            console.warn('Schedule uploaded but no cast members extracted - character detection will use script regex fallback');
-          } else {
-            console.log('Cast list:', schedule.castList.map(c => `${c.number}.${c.name}`).join(', '));
-          }
-        } catch (e) {
-          console.warn('Schedule parsing failed, continuing without:', e);
+        } catch {
+          // Schedule parsing is optional, continue without it
         }
       }
 
@@ -181,11 +175,6 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
         scriptContent: s.scriptContent || '',
       }));
 
-      console.log(`Starting character detection for ${scenesToDetect.length} scenes`);
-      if (knownCharacters.length > 0) {
-        console.log(`Using ${knownCharacters.length} known characters from schedule:`, knownCharacters);
-      }
-
       // Detect characters in batches
       const results = await detectCharactersForScenesBatch(
         scenesToDetect,
@@ -193,10 +182,7 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
         {
           useAI: false, // Use regex only for fast initial detection
           knownCharacters: knownCharacters.length > 0 ? knownCharacters : undefined,
-          onProgress: (completed, total) => {
-            // Could update a progress indicator here
-            console.log(`Character detection: ${completed}/${total}`);
-          },
+          onProgress: () => {},
         }
       );
 
