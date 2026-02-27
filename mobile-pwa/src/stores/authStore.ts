@@ -13,9 +13,17 @@ import type {
   SubscriptionData,
   BillingPeriod,
   Project,
+  SceneFilmingStatus,
+  MakeupDetails,
+  HairDetails,
+  ScheduleCastMember,
+  ScheduleDay,
 } from '@/types';
 import { TIER_LIMITS, createDefaultSubscription, SubscriptionTier, BETA_MODE, createEmptyMakeupDetails, createEmptyHairDetails } from '@/types';
 import type { CallSheet, ProductionSchedule } from '@/types';
+import type { Database } from '@/types/supabase';
+
+type DbMemberRole = Database['public']['Tables']['project_members']['Row']['role'];
 import { useProjectStore } from './projectStore';
 import { useScheduleStore } from './scheduleStore';
 import { useCallSheetStore } from './callSheetStore';
@@ -449,7 +457,7 @@ export const useAuthStore = create<AuthState>()(
           }
 
           // Join project via Supabase (RPC with fallback) using the selected role
-          const joinRole = (role || 'floor') as any;
+          const joinRole = (role || 'floor') as DbMemberRole;
           const { project: joinedProject, error } = await supabaseProjects.joinProject(code, user.id, joinRole);
 
           if (error) {
@@ -520,7 +528,7 @@ export const useAuthStore = create<AuthState>()(
               characters: sceneCharMap.get(s.id) || [],
               isComplete: s.is_complete,
               completedAt: s.completed_at ? new Date(s.completed_at) : undefined,
-              filmingStatus: s.filming_status as any,
+              filmingStatus: (s.filming_status as SceneFilmingStatus) || undefined,
               filmingNotes: s.filming_notes || undefined,
               shootingDay: s.shooting_day || undefined,
               characterConfirmationStatus: 'confirmed' as const,
@@ -539,8 +547,8 @@ export const useAuthStore = create<AuthState>()(
               name: l.name,
               scenes: lookSceneMap.get(l.id) || [],
               estimatedTime: l.estimated_time,
-              makeup: (l.makeup_details as any) || createEmptyMakeupDetails(),
-              hair: (l.hair_details as any) || createEmptyHairDetails(),
+              makeup: (l.makeup_details as unknown as MakeupDetails) || createEmptyMakeupDetails(),
+              hair: (l.hair_details as unknown as HairDetails) || createEmptyHairDetails(),
             }));
 
             const loadedProject: Project = {
@@ -574,9 +582,9 @@ export const useAuthStore = create<AuthState>()(
               const schedule: ProductionSchedule = {
                 id: db.id,
                 status: db.status === 'complete' ? 'complete' : 'pending',
-                castList: (db.cast_list as any[]) || [],
-                days: (db.days as any[]) || [],
-                totalDays: ((db.days as any[]) || []).length,
+                castList: (db.cast_list as unknown as ScheduleCastMember[]) || [],
+                days: (db.days as unknown as ScheduleDay[]) || [],
+                totalDays: ((db.days as unknown as ScheduleDay[]) || []).length,
                 uploadedAt: new Date(db.created_at),
                 rawText: db.raw_pdf_text || undefined,
               };
@@ -587,18 +595,18 @@ export const useAuthStore = create<AuthState>()(
           if (callSheetData.length > 0) {
             const csStore = useCallSheetStore.getState();
             csStore.clearAll();
-            const callSheets: CallSheet[] = callSheetData.map((db: any) => {
-              const parsed = (db.parsed_data || {}) as any;
+            const callSheets: CallSheet[] = callSheetData.map((db: Record<string, unknown>) => {
+              const parsed = (db.parsed_data || {}) as Record<string, unknown>;
               return {
                 ...parsed,
                 id: db.id,
                 date: db.shoot_date,
                 productionDay: db.production_day,
-                rawText: db.raw_text || parsed.rawText,
+                rawText: db.raw_text || (parsed.rawText as string | undefined),
                 pdfUri: undefined,
-                uploadedAt: new Date(db.created_at),
-                scenes: parsed.scenes || [],
-              };
+                uploadedAt: new Date(db.created_at as string),
+                scenes: (parsed.scenes as CallSheet['scenes']) || [],
+              } as CallSheet;
             });
             for (const cs of callSheets) {
               useCallSheetStore.setState((state) => ({
@@ -663,7 +671,7 @@ export const useAuthStore = create<AuthState>()(
             name,
             type,
             user.id,
-            (ownerRole || 'designer') as any
+            (ownerRole || 'designer') as DbMemberRole
           );
 
           if (error || !project || !inviteCode) {
