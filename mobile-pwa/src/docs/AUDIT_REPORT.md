@@ -335,3 +335,71 @@ The app is feature-complete and architecturally sound. The sync system, auth flo
 - Add try/catch around `JSON.parse()` calls in storage layer to prevent crash loops
 - Test sync thoroughly with multiple concurrent users (the sync architecture looks solid but hasn't been stress-tested based on code review)
 - The desktop web app (root HTML/JS files) has 12 placeholder "Coming soon!" features that should be hidden or implemented before users see them
+
+---
+
+## ADDENDUM: SCRIPT SYNC INVESTIGATION
+
+**Date:** 27 February 2026
+**Issue:** Script and breakdown data does not sync between devices, while schedules and call sheets DO sync.
+
+### ROOT CAUSE ANALYSIS
+
+#### Root Cause 1 (Primary): Race condition — `pushInitialData` could miss `scriptPdfData`
+
+During project creation in `Home.tsx`, the flow was:
+1. `setProject(project)` — sets scenes in store (no scriptPdfData yet)
+2. `await FileReader.readAsDataURL(file)` — encodes PDF (async, yields to event loop)
+3. `setScriptPdf(base64)` — sets scriptPdfData in store
+
+Between step 1 and 3, React's `useEffect` fires and starts `startSync()`, which calls `pullProjectData()` (network), then `subscribeToProject()`, then `pushInitialData()`. If `pullProjectData()` completes before FileReader (possible for empty new projects on fast networks), `pushInitialData` reads the store and finds `scriptPdfData === undefined`, skipping the script PDF push.
+
+The sync subscription (`syncSubscriptions.ts`) fires on both `setProject` and `setScriptPdf`, but returns early because `getActiveProjectId()` is null (sync hasn't initialized yet). The code comments acknowledge this and rely on `pushInitialData()` as a safety net — but the timing of the safety net was not guaranteed.
+
+**Scenes** were NOT affected by this race because they're included in the `setProject()` call (step 1), which happens synchronously before any async gap.
+
+#### Root Cause 2 (Secondary): Revised script PDF never saved
+
+When uploading a "New Draft" via `More.tsx → ScriptViewer`, only the scene amendment diff was applied. The revised script's PDF was never stored via `setScriptPdf`, so the updated PDF never synced to other devices.
+
+### WHY SCHEDULES AND CALL SHEETS WORK
+
+Schedules and call sheets are uploaded via `More.tsx` while the user is INSIDE an active project where sync IS running. The subscription in `syncSubscriptions.ts` detects the store change, finds `getActiveProjectId() !== null`, and pushes immediately. There is no race condition.
+
+### TIMING COMPARISON TABLE
+
+| Data | Where Set | Sync Active? | Push Path | Race Risk |
+|------|-----------|:---:|-----------|:---------:|
+| Scenes | Home.tsx `setProject()` | NO | `pushInitialData` | None (sync) |
+| Script PDF | Home.tsx `setScriptPdf()` | NO | `pushInitialData` | **YES** (was async) |
+| Characters | Home.tsx background detection | YES (500ms later) | Subscription | None |
+| Schedule | More.tsx `scheduleStore.set()` | YES | Subscription | None |
+| Call Sheets | More.tsx `callSheetStore.set()` | YES | Subscription | None |
+
+### FIXES APPLIED
+
+#### Fix 1: Eliminate race condition in `Home.tsx`
+
+Moved PDF encoding to BEFORE `setProject()` and included `scriptPdfData` directly on the project object. Now both scenes and scriptPdfData are set in a single `setProject()` call, eliminating any async gap. When `pushInitialData` reads the store, `scriptPdfData` is guaranteed to be present.
+
+**Before:**
+```typescript
+setProject(project);                    // scenes only
+await FileReader.readAsDataURL(file);   // async gap - useEffect fires here!
+setScriptPdf(base64);                   // too late if pushInitialData already ran
+```
+
+**After:**
+```typescript
+const base64 = await FileReader...;     // encode FIRST
+const project = { ...scenes, scriptPdfData: base64 };
+setProject(project);                    // single atomic update with both
+```
+
+#### Fix 2: Save revised script PDF in `More.tsx`
+
+Added PDF encoding during revised script upload. The encoded PDF is held in `pendingScriptPdf` state and saved via `setScriptPdf` when the user applies the amendment. If the user cancels, the pending PDF is discarded.
+
+**Files changed:**
+- `components/home/Home.tsx` — Moved PDF encoding before `setProject`, removed separate `setScriptPdf` call
+- `components/more/More.tsx` — Added `pendingScriptPdf` state, encode PDF during upload, save on apply
