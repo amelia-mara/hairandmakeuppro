@@ -99,7 +99,12 @@ IMPORTANT:
     throw new Error(`Failed to parse AI response for day ${dayNumber}`);
   }
 
-  const parsed = JSON.parse(jsonMatch[0]);
+  let parsed: any;
+  try {
+    parsed = JSON.parse(jsonMatch[0]);
+  } catch {
+    throw new Error(`Failed to parse AI response for day ${dayNumber} - invalid JSON`);
+  }
 
   const scenes: ScheduleSceneEntry[] = (parsed.scenes || []).map((s: any, index: number) => ({
     sceneNumber: String(s.sceneNumber || ''),

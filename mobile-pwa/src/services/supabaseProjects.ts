@@ -165,7 +165,7 @@ export async function getUserProjects(
 
     // Remove the nested users object from the project data
     for (const p of projects) {
-      delete (p as any).users;
+      delete (p as unknown as Record<string, unknown>).users;
     }
 
     return { projects, error: null };

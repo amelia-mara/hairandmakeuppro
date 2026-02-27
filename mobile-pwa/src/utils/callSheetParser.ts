@@ -184,8 +184,12 @@ SCENE DATA EXTRACTION (VERY IMPORTANT):
       throw new Error('Failed to parse call sheet - invalid AI response');
     }
 
-    const parsed = JSON.parse(jsonMatch[0]);
-
+    let parsed: any;
+    try {
+      parsed = JSON.parse(jsonMatch[0]);
+    } catch {
+      throw new Error('Failed to parse call sheet - AI response contained invalid JSON');
+    }
 
     // Build the CallSheet object with defaults for missing fields
     // Filter out any "Advance Schedule" scenes that may have been extracted

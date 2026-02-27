@@ -29,8 +29,12 @@ import type {
   ContinuityEvent,
   SFXDetails,
   PhotoAngle,
+  MakeupDetails,
+  HairDetails,
+  ScheduleCastMember,
+  ScheduleDay,
 } from '@/types';
-import type { Database } from '@/types/supabase';
+import type { Database, Json } from '@/types/supabase';
 import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 // ============================================================================
@@ -108,8 +112,8 @@ function lookToDb(look: Look, projectId: string): Omit<DbLook, 'created_at'> {
     name: look.name,
     description: look.notes || null,
     estimated_time: look.estimatedTime,
-    makeup_details: look.makeup as any,
-    hair_details: look.hair as any,
+    makeup_details: look.makeup as unknown as Json,
+    hair_details: look.hair as unknown as Json,
   };
 }
 
@@ -131,9 +135,9 @@ function sceneCaptureToDb(
     wounds_blood_notes: null,
     general_notes: capture.notes || null,
     application_time: capture.applicationTime || null,
-    continuity_flags: capture.continuityFlags as any,
-    continuity_events_data: capture.continuityEvents as any,
-    sfx_details: capture.sfxDetails as any,
+    continuity_flags: capture.continuityFlags as unknown as Json,
+    continuity_events_data: capture.continuityEvents as unknown as Json,
+    sfx_details: capture.sfxDetails as unknown as Json,
     checked_by: userId,
     checked_at: null,
   };
@@ -191,14 +195,14 @@ function dbToLook(db: DbLook, sceneNumbers: string[], existingLook?: Look): Look
     name: db.name,
     scenes: sceneNumbers,
     estimatedTime: db.estimated_time,
-    makeup: db.makeup_details as any || {
+    makeup: (db.makeup_details as unknown as MakeupDetails) || {
       foundation: '', coverage: '', concealer: '', concealerPlacement: '',
       contour: '', contourPlacement: '', highlight: '', highlightPlacement: '',
       blush: '', blushPlacement: '', browProduct: '', browShape: '',
       eyePrimer: '', lidColour: '', creaseColour: '', outerV: '',
       liner: '', lashes: '', lipLiner: '', lipColour: '', setting: '',
     },
-    hair: db.hair_details as any || {
+    hair: (db.hair_details as unknown as HairDetails) || {
       style: '', products: '', parting: '', piecesOut: '', pins: '',
       accessories: '', hairType: 'Natural', wigNameId: '', wigType: '',
       wigCapMethod: '', wigAttachment: [], hairline: '', laceTint: '',
@@ -556,9 +560,9 @@ function mergeScheduleData(dbSchedule: DbScheduleData, _projectId: string): void
   const schedule: ProductionSchedule = {
     id: dbSchedule.id,
     status: dbSchedule.status === 'complete' ? 'complete' : 'pending',
-    castList: (dbSchedule.cast_list as any[]) || [],
-    days: (dbSchedule.days as any[]) || [],
-    totalDays: ((dbSchedule.days as any[]) || []).length,
+    castList: (dbSchedule.cast_list as unknown as ScheduleCastMember[]) || [],
+    days: (dbSchedule.days as unknown as ScheduleDay[]) || [],
+    totalDays: ((dbSchedule.days as unknown as ScheduleDay[]) || []).length,
     uploadedAt: new Date(dbSchedule.created_at),
     rawText: dbSchedule.raw_pdf_text || undefined,
     pdfUri: isSameSchedule ? currentSchedule.pdfUri : undefined,
@@ -626,18 +630,18 @@ function mergeCallSheetData(dbCallSheets: DbCallSheetData[], _projectId: string)
   }
 
   const callSheets: CallSheet[] = dbCallSheets.map((db) => {
-    const parsed = (db.parsed_data || {}) as any;
+    const parsed = (db.parsed_data || {}) as Record<string, unknown>;
     return {
       ...parsed,
       id: db.id,
       date: db.shoot_date,
       productionDay: db.production_day,
-      rawText: db.raw_text || parsed.rawText,
+      rawText: db.raw_text || (parsed.rawText as string | undefined),
       // pdfUri will be restored from storage_path below
       pdfUri: undefined,
       uploadedAt: new Date(db.created_at),
-      scenes: parsed.scenes || [],
-    };
+      scenes: (parsed.scenes as CallSheet['scenes']) || [],
+    } as CallSheet;
   });
 
   if (callSheets.length === 0) return;
@@ -966,8 +970,8 @@ export async function pushScheduleData(projectId: string, schedule: ProductionSc
         id: schedule.id,
         project_id: projectId,
         raw_pdf_text: schedule.rawText || null,
-        cast_list: schedule.castList as any,
-        days: schedule.days as any,
+        cast_list: schedule.castList as unknown as Json,
+        days: schedule.days as unknown as Json,
         status: schedule.status === 'complete' ? 'complete' : 'pending',
       }, { onConflict: 'id' });
     if (error) throw error;
@@ -1031,7 +1035,7 @@ export async function pushCallSheetData(
         shoot_date: callSheet.date,
         production_day: callSheet.productionDay,
         raw_text: callSheet.rawText || null,
-        parsed_data: parsedData as any,
+        parsed_data: parsedData as unknown as Json,
         uploaded_by: userId,
       }, { onConflict: 'id' });
     if (error) throw error;
@@ -1201,7 +1205,7 @@ export function subscribeToProject(projectId: string, userId?: string): void {
     },
     (payload: RealtimePostgresChangesPayload<DbContinuityEvent>) => {
       // Filter client-side: only process if scene belongs to current project
-      const record = (payload.new || payload.old) as any;
+      const record = (payload.new || payload.old) as DbContinuityEvent | undefined;
       if (!record?.scene_id) return;
       const project = useProjectStore.getState().currentProject;
       if (!project?.scenes.some((s: Scene) => s.id === record.scene_id)) return;
@@ -1235,7 +1239,7 @@ export function subscribeToProject(projectId: string, userId?: string): void {
       filter: `project_id=eq.${projectId}`,
     },
     (payload: RealtimePostgresChangesPayload<DbCallSheetData>) => {
-      if (pushingTables.has(`callsheet_${(payload.new as any)?.shoot_date}`)) return;
+      if (pushingTables.has(`callsheet_${(payload.new as DbCallSheetData | undefined)?.shoot_date}`)) return;
       handleCallSheetChange(payload, projectId);
     }
   );
@@ -1264,7 +1268,7 @@ export function subscribeToProject(projectId: string, userId?: string): void {
       table: 'photos',
     },
     (payload: RealtimePostgresChangesPayload<DbPhoto>) => {
-      const record = (payload.new || payload.old) as any;
+      const record = (payload.new || payload.old) as DbPhoto | undefined;
       if (!record?.continuity_event_id) return;
       // Only process if capture belongs to our project
       const captures = useProjectStore.getState().sceneCaptures;
@@ -1459,17 +1463,17 @@ function handleCallSheetChange(
 ): void {
   if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
     const dbCallSheet = payload.new as DbCallSheetData;
-    const parsed = (dbCallSheet.parsed_data || {}) as any;
+    const parsed = (dbCallSheet.parsed_data || {}) as Record<string, unknown>;
 
     const callSheet: CallSheet = {
       ...parsed,
       id: dbCallSheet.id,
       date: dbCallSheet.shoot_date,
       productionDay: dbCallSheet.production_day,
-      rawText: dbCallSheet.raw_text || parsed.rawText,
+      rawText: dbCallSheet.raw_text || (parsed.rawText as string | undefined),
       uploadedAt: new Date(dbCallSheet.created_at),
-      scenes: parsed.scenes || [],
-    };
+      scenes: (parsed.scenes as CallSheet['scenes']) || [],
+    } as CallSheet;
 
     const callSheetStore = useCallSheetStore.getState();
     const existing = callSheetStore.callSheets.find((cs) => cs.id === dbCallSheet.id);
@@ -1503,7 +1507,7 @@ function handleCallSheetChange(
     }
 
   } else if (payload.eventType === 'DELETE') {
-    const old = payload.old as any;
+    const old = payload.old as DbCallSheetData | undefined;
     if (old?.id) {
       useCallSheetStore.getState().deleteCallSheet(old.id);
     }
