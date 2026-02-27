@@ -128,14 +128,7 @@ function AppContent() {
     if (migrationAttempted.current) return;
     migrationAttempted.current = true;
 
-    migrateToIndexedDB().then(({ migrated, errors }) => {
-      if (migrated.length > 0) {
-        console.log('[Storage] Migrated to IndexedDB:', migrated);
-      }
-      if (errors.length > 0) {
-        console.warn('[Storage] Migration errors:', errors);
-      }
-    }).catch((error) => {
+    migrateToIndexedDB().catch((error) => {
       console.error('[Storage] Migration failed:', error);
     });
 
@@ -215,7 +208,6 @@ function AppContent() {
       !scheduleProcessingTriggered.current
     ) {
       scheduleProcessingTriggered.current = true;
-      console.log('[App] Starting background schedule Stage 2 processing...');
       startStage2Processing();
     }
   }, [schedule, isProcessingStage2, startStage2Processing]);
@@ -237,7 +229,6 @@ function AppContent() {
       // Get fresh schedule from store for sync
       const freshSchedule = useScheduleStore.getState().schedule;
       if (freshSchedule) {
-        console.log('[App] Schedule processing complete, auto-syncing cast data...');
         syncCastDataFromSchedule(freshSchedule, {
           createMissingCharacters: true,
           overwriteExisting: false,

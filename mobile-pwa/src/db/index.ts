@@ -85,7 +85,6 @@ export class HairMakeupDB extends Dexie {
     }).upgrade(async () => {
       // Migration: Clear old data since photos table format changed
       // Users will need to re-capture photos, but this is acceptable for the migration
-      console.log('Migrating database to version 2 with blob storage');
     });
   }
 }

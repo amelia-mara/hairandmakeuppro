@@ -39,19 +39,15 @@ export async function parseScheduleStage1(file: File): Promise<Stage1Result> {
 
   // Extract text from PDF for cast list parsing
   const text = await extractTextFromPDF(file);
-  console.log('Stage 1: Extracted text length:', text.length);
 
   // Fast extraction of cast list (regex-based)
   const castList = extractCastListFast(text);
-  console.log('Stage 1: Found', castList.length, 'cast members');
 
   // Count total shooting days from "End of Shooting Day X" markers
   const { totalDays, dayTextBlocks } = extractDayCountAndBlocks(text);
-  console.log('Stage 1: Found', totalDays, 'shooting days');
 
   // Extract production metadata
   const metadata = extractMetadata(text);
-  console.log('Stage 1: Production name:', metadata.productionName);
 
   const schedule: ProductionSchedule = {
     id: uuidv4(),
@@ -265,7 +261,6 @@ function extractCastListFast(text: string): ScheduleCastMember[] {
   // Sort by number
   castList.sort((a, b) => a.number - b.number);
 
-  console.log('extractCastListFast: Found', castList.length, 'cast members:', castList.map(c => `${c.number}.${c.name}`).join(', '));
 
   return castList;
 }

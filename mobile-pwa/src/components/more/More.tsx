@@ -834,11 +834,12 @@ function ScriptViewer({ onBack }: ViewerProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedScene, setSelectedScene] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'full' | 'pdf'>('full');
-  const { currentProject, compareScriptAmendment, applyScriptAmendment } = useProjectStore();
+  const { currentProject, compareScriptAmendment, applyScriptAmendment, setScriptPdf } = useProjectStore();
   const sceneRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [amendmentResult, setAmendmentResult] = useState<AmendmentResult | null>(null);
+  const [pendingScriptPdf, setPendingScriptPdf] = useState<string | null>(null);
 
   // Handle revised script upload
   const handleRevisedScriptUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -849,6 +850,16 @@ function ScriptViewer({ onBack }: ViewerProps) {
     try {
       // Parse the new script using fast parsing
       const parsedScript = await parseScenesFast(file);
+
+      // Encode PDF for saving when amendment is applied
+      if (file.type === 'application/pdf') {
+        const base64 = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.readAsDataURL(file);
+        });
+        setPendingScriptPdf(base64);
+      }
 
       // Compare against existing breakdown
       const result = compareScriptAmendment(parsedScript.scenes);
@@ -875,6 +886,11 @@ function ScriptViewer({ onBack }: ViewerProps) {
   }) => {
     if (amendmentResult) {
       applyScriptAmendment(amendmentResult, options);
+      // Save the revised script PDF so it syncs to other devices
+      if (pendingScriptPdf) {
+        setScriptPdf(pendingScriptPdf);
+        setPendingScriptPdf(null);
+      }
       setAmendmentResult(null);
     }
   };
@@ -1143,7 +1159,7 @@ function ScriptViewer({ onBack }: ViewerProps) {
         <AmendmentReviewModal
           amendmentResult={amendmentResult}
           onApply={handleApplyAmendment}
-          onCancel={() => setAmendmentResult(null)}
+          onCancel={() => { setAmendmentResult(null); setPendingScriptPdf(null); }}
         />
       )}
     </>
@@ -1270,21 +1286,11 @@ function ScheduleViewer({ onBack }: ViewerProps) {
     if (!freshSchedule || !currentProject) return;
 
     try {
-      const result = syncCastDataFromSchedule(freshSchedule, {
+      syncCastDataFromSchedule(freshSchedule, {
         createMissingCharacters: options?.createMissingCharacters ?? true,
         overwriteExisting: options?.overwriteExisting ?? false,
         autoConfirm: options?.autoConfirm ?? true,
       });
-
-      if (result) {
-        console.log('[ScheduleViewer] Cast data synced:', {
-          scenesUpdated: result.scenesUpdated,
-          charactersCreated: result.charactersCreated,
-        });
-        if (result.errors.length > 0) {
-          console.warn('[ScheduleViewer] Sync had some errors:', result.errors);
-        }
-      }
     } catch (error) {
       console.error('[ScheduleViewer] Failed to sync cast data:', error);
     }
@@ -1299,7 +1305,6 @@ function ScheduleViewer({ onBack }: ViewerProps) {
       (!schedule.days || schedule.days.length === 0) &&
       schedule.rawText // Has raw text available for processing
     ) {
-      console.log('[ScheduleViewer] Auto-starting processing for unprocessed schedule');
       handleProcessSchedule();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps

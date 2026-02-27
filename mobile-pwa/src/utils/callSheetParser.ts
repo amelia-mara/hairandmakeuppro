@@ -6,15 +6,6 @@ import { callAI } from '@/services/aiService';
 // Configure PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
-// Enable debug logging for call sheet parsing
-const DEBUG_CALLSHEET_PARSER = true;
-
-function debugLog(...args: any[]) {
-  if (DEBUG_CALLSHEET_PARSER) {
-    console.log('[CallSheetParser]', ...args);
-  }
-}
-
 /**
  * Extract text content from a PDF file
  */
@@ -183,37 +174,18 @@ SCENE DATA EXTRACTION (VERY IMPORTANT):
 - ALWAYS extract page counts and timings when available`;
 
   try {
-    debugLog('Starting AI call sheet parsing...');
-    debugLog('Text length:', text.length, 'characters');
 
     const response = await callAI(prompt, { system: systemPrompt, maxTokens: 8000 });
-    debugLog('AI response received, length:', response.length);
 
     // Parse the JSON response
     const jsonMatch = response.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       console.error('No JSON found in AI response:', response);
-      debugLog('ERROR: No JSON found in AI response');
       throw new Error('Failed to parse call sheet - invalid AI response');
     }
 
     const parsed = JSON.parse(jsonMatch[0]);
-    debugLog('JSON parsed successfully');
-    debugLog('Scenes extracted:', parsed.scenes?.length || 0);
-    debugLog('Cast calls extracted:', parsed.castCalls?.length || 0);
 
-    // Log sample scene to verify extraction
-    if (parsed.scenes?.length > 0) {
-      const sampleScene = parsed.scenes[0];
-      debugLog('Sample scene:', {
-        sceneNumber: sampleScene.sceneNumber,
-        setDescription: sampleScene.setDescription,
-        action: sampleScene.action,
-        cast: sampleScene.cast,
-        estimatedTime: sampleScene.estimatedTime,
-        pages: sampleScene.pages
-      });
-    }
 
     // Build the CallSheet object with defaults for missing fields
     // Filter out any "Advance Schedule" scenes that may have been extracted
@@ -370,8 +342,6 @@ SCENE DATA EXTRACTION (VERY IMPORTANT):
     };
   } catch (error) {
     console.error('AI call sheet parsing failed:', error);
-    debugLog('ERROR: AI parsing failed, falling back to regex parser');
-    debugLog('Error details:', error);
     // Fall back to basic regex parsing as a last resort
     return fallbackParseCallSheetText(text, pdfUri);
   }
@@ -382,8 +352,6 @@ SCENE DATA EXTRACTION (VERY IMPORTANT):
  * Extracts basic information that we can reasonably parse with patterns
  */
 function fallbackParseCallSheetText(text: string, pdfUri?: string): CallSheet {
-  debugLog('Using FALLBACK regex parser (AI parsing failed)');
-  debugLog('NOTE: Fallback parser has limited extraction - cast, timing, action fields may be missing');
   // Helper to extract time in HH:MM format
   const extractTime = (match: RegExpMatchArray | null): string | undefined => {
     if (!match) return undefined;
@@ -516,7 +484,6 @@ function fallbackParseCallSheetText(text: string, pdfUri?: string): CallSheet {
   const castSectionMatch = text.match(/CAST\s*INFORMATION[^]*?(?=MINIBUS|TRANSPORT|DEPARTURE|ADVANCE|$)/i);
   if (castSectionMatch) {
     const castSection = castSectionMatch[0];
-    debugLog('Found CAST INFORMATION section, length:', castSection.length);
 
     // Pattern to match cast rows: ID (number), NAME, CHARACTER/ROLE, STATUS, then times
     // Example: "1 JOHN BOYEGA PETER W 06:55 LW 07:20 07:30 07:20 07:40 08:30 08:40"
@@ -552,10 +519,6 @@ function fallbackParseCallSheetText(text: string, pdfUri?: string): CallSheet {
       });
     }
 
-    debugLog('Extracted cast calls:', castCalls.length);
-    if (castCalls.length > 0) {
-      debugLog('Sample cast call:', castCalls[0]);
-    }
   }
 
   // Try to match cast numbers to scenes based on common patterns
@@ -570,7 +533,6 @@ function fallbackParseCallSheetText(text: string, pdfUri?: string): CallSheet {
       if (castListMatch) {
         const castIds = castListMatch[1].split(/\s*,\s*/).map(id => id.trim());
         scenes[index] = { ...scene, cast: castIds };
-        debugLog(`Scene ${scene.sceneNumber} cast:`, castIds);
       }
     }
   });
