@@ -1,0 +1,39 @@
+# Build outputs
+mobile/
+dist/
+build/
+.next/
+
+# Dependencies
+node_modules/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Cache
+.cache/
+.parcel-cache/
+.eslintcache
+
+# Test coverage
+coverage/
+
+# Capacitor native build artifacts
+android/app/build/
+ios/App/Pods/

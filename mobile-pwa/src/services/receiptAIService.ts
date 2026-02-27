@@ -118,7 +118,12 @@ For dates, always convert to YYYY-MM-DD format regardless of the source format.`
       throw new Error('Failed to parse receipt data from AI response');
     }
 
-    const parsed = JSON.parse(jsonMatch[0]);
+    let parsed: any;
+    try {
+      parsed = JSON.parse(jsonMatch[0]);
+    } catch {
+      throw new Error('Failed to parse receipt data - AI response contained invalid JSON');
+    }
 
     // Validate and clean up the extracted data
     const extractedData: ExtractedReceiptData = {

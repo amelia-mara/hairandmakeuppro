@@ -7,7 +7,7 @@ import { UpgradeModal } from '@/components/dashboard';
 import * as supabaseProjects from '@/services/supabaseProjects';
 import * as supabaseStorage from '@/services/supabaseStorage';
 import { hoursUntilDeletion } from '@/services/supabaseProjects';
-import type { ProjectMembership, Project, ProjectRole, ProductionType, CallSheet, ProductionSchedule } from '@/types';
+import type { ProjectMembership, Project, ProjectRole, ProductionType, CallSheet, ProductionSchedule, SceneFilmingStatus, MakeupDetails, HairDetails, ScheduleCastMember, ScheduleDay } from '@/types';
 import { createEmptyMakeupDetails, createEmptyHairDetails } from '@/types';
 
 // Format relative time
@@ -87,9 +87,9 @@ function loadDocumentsIntoStores(
       const schedule: ProductionSchedule = {
         id: db.id,
         status: db.status === 'complete' ? 'complete' : 'pending',
-        castList: (db.cast_list as any[]) || [],
-        days: (db.days as any[]) || [],
-        totalDays: ((db.days as any[]) || []).length,
+        castList: (db.cast_list as unknown as ScheduleCastMember[]) || [],
+        days: (db.days as unknown as ScheduleDay[]) || [],
+        totalDays: ((db.days as unknown as ScheduleDay[]) || []).length,
         uploadedAt: new Date(db.created_at),
         rawText: db.raw_pdf_text || undefined,
       };
@@ -113,18 +113,18 @@ function loadDocumentsIntoStores(
     const callSheetStore = useCallSheetStore.getState();
     callSheetStore.clearAll();
 
-    const callSheets: CallSheet[] = callSheetData.map((db: any) => {
-      const parsed = (db.parsed_data || {}) as any;
+    const callSheets: CallSheet[] = callSheetData.map((db: Record<string, unknown>) => {
+      const parsed = (db.parsed_data || {}) as Record<string, unknown>;
       return {
         ...parsed,
         id: db.id,
         date: db.shoot_date,
         productionDay: db.production_day,
-        rawText: db.raw_text || parsed.rawText,
+        rawText: db.raw_text || (parsed.rawText as string | undefined),
         pdfUri: undefined,
-        uploadedAt: new Date(db.created_at),
-        scenes: parsed.scenes || [],
-      };
+        uploadedAt: new Date(db.created_at as string),
+        scenes: (parsed.scenes as CallSheet['scenes']) || [],
+      } as CallSheet;
     });
 
     for (const cs of callSheets) {
@@ -404,11 +404,11 @@ export function ProjectHubScreen() {
           intExt: (s.int_ext === 'EXT' ? 'EXT' : 'INT') as 'INT' | 'EXT',
           timeOfDay: (s.time_of_day || 'DAY') as 'DAY' | 'NIGHT' | 'MORNING' | 'EVENING' | 'CONTINUOUS',
           synopsis: s.synopsis || undefined,
-          scriptContent: (s as any).script_content || undefined,
+          scriptContent: s.script_content || undefined,
           characters: sceneCharMap.get(s.id) || [],
           isComplete: s.is_complete,
           completedAt: s.completed_at ? new Date(s.completed_at) : undefined,
-          filmingStatus: s.filming_status as any,
+          filmingStatus: (s.filming_status as SceneFilmingStatus) || undefined,
           filmingNotes: s.filming_notes || undefined,
           shootingDay: s.shooting_day || undefined,
           characterConfirmationStatus: 'confirmed' as const,
@@ -429,8 +429,8 @@ export function ProjectHubScreen() {
           name: l.name,
           scenes: lookSceneMap.get(l.id) || [],
           estimatedTime: l.estimated_time,
-          makeup: (l.makeup_details as any) || createEmptyMakeupDetails(),
-          hair: (l.hair_details as any) || createEmptyHairDetails(),
+          makeup: (l.makeup_details as unknown as MakeupDetails) || createEmptyMakeupDetails(),
+          hair: (l.hair_details as unknown as HairDetails) || createEmptyHairDetails(),
         }));
 
         // If server has no scene data, preserve any existing local breakdown

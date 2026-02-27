@@ -10,6 +10,7 @@ import { useProjectStore } from '@/stores/projectStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
 import { useCallSheetStore } from '@/stores/callSheetStore';
 import { useAuthStore } from '@/stores/authStore';
+import type { SceneCapture } from '@/types';
 import {
   pushScenes,
   pushCharacters,
@@ -61,7 +62,7 @@ export function initSyncSubscriptions(): void {
       const userId = useAuthStore.getState().user?.id || null;
       for (const [captureId, capture] of Object.entries(state.sceneCaptures)) {
         if (prevState.sceneCaptures[captureId] !== capture) {
-          pushSceneCapture(projectId, capture as any, userId);
+          pushSceneCapture(projectId, capture as SceneCapture, userId);
         }
       }
     }

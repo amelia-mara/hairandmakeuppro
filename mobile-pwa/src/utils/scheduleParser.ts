@@ -129,7 +129,7 @@ async function extractTextFromPDF(file: File): Promise<string> {
     // Group text items by Y position (row-by-row reconstruction)
     const rows: Map<number, Array<{ x: number; text: string; width: number }>> = new Map();
 
-    for (const item of textContent.items as any[]) {
+    for (const item of textContent.items as Array<{ str: string; transform: number[]; width: number }>) {
       if (!item.str || item.str.trim() === '') continue;
 
       // Round Y position to group items on the same row (allow 3px tolerance)

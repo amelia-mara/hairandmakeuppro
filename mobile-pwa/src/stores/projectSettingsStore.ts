@@ -17,6 +17,9 @@ import {
 import { useAuthStore } from './authStore';
 import { useProjectStore } from './projectStore';
 import * as supabaseProjects from '@/services/supabaseProjects';
+import type { Database } from '@/types/supabase';
+
+type DbMemberRole = Database['public']['Tables']['project_members']['Row']['role'];
 
 // Map database role enum values to the app's TeamMemberRole.
 // DB roles ('hod', 'floor') don't exist in the app; app roles
@@ -32,7 +35,7 @@ function mapDbRoleToAppRole(dbRole: string): TeamMemberRole {
 }
 
 // Map app role back to DB role for writes.
-export function mapAppRoleToDbRole(appRole: TeamMemberRole): string {
+export function mapAppRoleToDbRole(appRole: TeamMemberRole): DbMemberRole {
   switch (appRole) {
     case 'hair':
     case 'makeup':
@@ -432,7 +435,7 @@ export const useProjectSettingsStore = create<ProjectSettingsState>((set, get) =
       const { error } = await supabaseProjects.updateMemberRole(
         projectSettings.id,
         userId,
-        mapAppRoleToDbRole(newRole) as any
+        mapAppRoleToDbRole(newRole)
       );
       if (error) throw error;
 
