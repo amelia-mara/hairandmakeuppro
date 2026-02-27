@@ -21,6 +21,9 @@ import { useScheduleStore } from './scheduleStore';
 import { useCallSheetStore } from './callSheetStore';
 import * as supabaseStorage from '@/services/supabaseStorage';
 
+// Flag to prevent initializeAuth from racing with an in-progress signIn/signUp
+let _manualAuthInProgress = false;
+
 interface AuthState {
   // Auth state
   isAuthenticated: boolean;
@@ -140,7 +143,20 @@ export const useAuthStore = create<AuthState>()(
               const appUser = toAppUser(profile);
 
               // Get user's projects
-              const { projects } = await supabaseProjects.getUserProjects(session.user.id);
+              const { projects, error: projectsError } = await supabaseProjects.getUserProjects(session.user.id);
+
+              if (projectsError) {
+                console.error('Error fetching projects during auth init:', projectsError);
+                // Still set user as authenticated, but preserve any existing memberships
+                set({
+                  isAuthenticated: true,
+                  user: appUser,
+                  hasCompletedOnboarding: true,
+                  hasSelectedPlan: true,
+                  currentScreen: 'hub',
+                });
+                return;
+              }
 
               // Finalize any owner projects whose grace period has expired
               for (const p of projects) {
@@ -181,7 +197,13 @@ export const useAuthStore = create<AuthState>()(
         if (!user) return;
 
         try {
-          const { projects } = await supabaseProjects.getUserProjects(user.id);
+          const { projects, error: projectsError } = await supabaseProjects.getUserProjects(user.id);
+
+          if (projectsError) {
+            console.error('Error refreshing projects:', projectsError);
+            // Don't overwrite existing memberships on error
+            return;
+          }
 
           // For owned projects with expired grace periods, finalize deletion
           for (const p of projects) {
@@ -204,6 +226,7 @@ export const useAuthStore = create<AuthState>()(
           set({ projectMemberships: memberships });
         } catch (error) {
           console.error('Error refreshing projects:', error);
+          // Don't overwrite existing memberships on error
         }
       },
 
@@ -245,6 +268,7 @@ export const useAuthStore = create<AuthState>()(
       // Sign in with Supabase
       signIn: async (email, password) => {
         set({ isLoading: true, error: null });
+        _manualAuthInProgress = true;
 
         try {
           const { user: authUser, error: authError } = await supabaseAuth.signIn({
@@ -268,6 +292,8 @@ export const useAuthStore = create<AuthState>()(
           // Get user profile
           const { profile, error: profileError } = await supabaseAuth.getUserProfile(authUser.id);
 
+          let appUser: User;
+
           if (profileError || !profile) {
             // Profile might not exist yet, create one
             await supabase.from('users').insert({
@@ -277,53 +303,52 @@ export const useAuthStore = create<AuthState>()(
               tier: 'trainee',
             });
 
-            const appUser: User = {
+            appUser = {
               id: authUser.id,
               email: authUser.email!,
               name: authUser.user_metadata?.name || email.split('@')[0],
               tier: 'trainee',
               createdAt: new Date(),
             };
-
-            set({
-              isAuthenticated: true,
-              user: appUser,
-              isLoading: false,
-              error: null,
-              currentScreen: 'hub',
-              hasCompletedOnboarding: true,
-              hasSelectedPlan: true,
-            });
           } else {
-            const appUser = toAppUser(profile);
-
-            // Get user's projects
-            const { projects } = await supabaseProjects.getUserProjects(authUser.id);
-            const memberships = projects.map(toProjectMembership);
-
-            set({
-              isAuthenticated: true,
-              user: appUser,
-              projectMemberships: memberships,
-              isLoading: false,
-              error: null,
-              currentScreen: 'hub',
-              hasCompletedOnboarding: true,
-              hasSelectedPlan: true,
-            });
+            appUser = toAppUser(profile);
           }
+
+          // Always fetch user's projects (regardless of profile path)
+          const { projects, error: projectsError } = await supabaseProjects.getUserProjects(authUser.id);
+
+          // Only update projectMemberships if the fetch succeeded
+          const memberships = !projectsError && projects.length > 0
+            ? projects.map(toProjectMembership)
+            : projectsError
+              ? get().projectMemberships // Keep existing on error
+              : []; // Genuinely empty
+
+          set({
+            isAuthenticated: true,
+            user: appUser,
+            projectMemberships: memberships,
+            isLoading: false,
+            error: null,
+            currentScreen: 'hub',
+            hasCompletedOnboarding: true,
+            hasSelectedPlan: true,
+          });
 
           return true;
         } catch (error) {
           console.error('Sign in error:', error);
           set({ isLoading: false, error: 'An error occurred. Please try again.' });
           return false;
+        } finally {
+          _manualAuthInProgress = false;
         }
       },
 
       // Sign up with Supabase
       signUp: async (name, email, password) => {
         set({ isLoading: true, error: null });
+        _manualAuthInProgress = true;
 
         try {
           const { user: authUser, error: authError } = await supabaseAuth.signUp({
@@ -372,6 +397,8 @@ export const useAuthStore = create<AuthState>()(
           console.error('Sign up error:', error);
           set({ isLoading: false, error: 'An error occurred. Please try again.' });
           return false;
+        } finally {
+          _manualAuthInProgress = false;
         }
       },
 
@@ -381,6 +408,17 @@ export const useAuthStore = create<AuthState>()(
           await supabaseAuth.signOut();
         } catch (error) {
           console.error('Sign out error:', error);
+        }
+
+        // Clear local project stores to prevent stale data on next login
+        try {
+          useProjectStore.getState().clearProject();
+          // Also clear any saved project snapshots
+          useProjectStore.setState({ savedProjects: {}, archivedProjects: [] });
+          useScheduleStore.getState().clearSchedule();
+          useCallSheetStore.getState().clearAll();
+        } catch (error) {
+          console.error('Error clearing local stores on sign out:', error);
         }
 
         set({
@@ -393,6 +431,7 @@ export const useAuthStore = create<AuthState>()(
           subscription: createDefaultSubscription(),
           projectMemberships: [],
           guestProjectCode: null,
+          pinnedProjectId: null,
         });
       },
 
@@ -874,7 +913,9 @@ export const useAuthStore = create<AuthState>()(
 if (isSupabaseConfigured) {
   supabase.auth.onAuthStateChange(async (event, session) => {
     if (event === 'SIGNED_IN' && session?.user) {
-      // User signed in - refresh state
+      // Skip if signIn()/signUp() is already handling auth state
+      // to prevent a race condition where both set projectMemberships
+      if (_manualAuthInProgress) return;
       useAuthStore.getState().initializeAuth();
     } else if (event === 'TOKEN_REFRESHED' && session?.user) {
       // Token refreshed - ensure state is still valid
@@ -886,7 +927,7 @@ if (isSupabaseConfigured) {
       // User profile updated (e.g., email change, password reset)
       useAuthStore.getState().initializeAuth();
     } else if (event === 'SIGNED_OUT') {
-      // User signed out - clear all auth state
+      // Only clear auth state — local store cleanup is handled in signOut()
       useAuthStore.setState({
         isAuthenticated: false,
         user: null,
@@ -897,6 +938,7 @@ if (isSupabaseConfigured) {
         hasSelectedPlan: false,
         subscription: createDefaultSubscription(),
         guestProjectCode: null,
+        pinnedProjectId: null,
       });
     }
   });
