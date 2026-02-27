@@ -156,15 +156,17 @@ export async function getUserProjects(
 
     if (error) throw error;
 
-    const projects: ProjectWithRole[] = (data || []).map((pm: any) => {
-      const { users, ...projectData } = pm.projects || {};
-      return {
-        ...projectData,
-        role: pm.role,
-        is_owner: pm.is_owner,
-        owner_name: users?.name || undefined,
-      };
-    });
+    const projects: ProjectWithRole[] = (data || []).map((pm: any) => ({
+      ...pm.projects,
+      role: pm.role,
+      is_owner: pm.is_owner,
+      owner_name: pm.projects?.users?.name || undefined,
+    }));
+
+    // Remove the nested users object from the project data
+    for (const p of projects) {
+      delete (p as unknown as Record<string, unknown>).users;
+    }
 
     return { projects, error: null };
   } catch (error) {
