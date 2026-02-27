@@ -95,14 +95,8 @@ export const useScheduleStore = create<ScheduleState>()(
         set({ isUploading: true, uploadError: null });
 
         try {
-          console.log('[ScheduleStore] Starting Stage 1 parsing...');
           const result = await parseScheduleStage1(file);
 
-          console.log('[ScheduleStore] Stage 1 complete:', {
-            castCount: result.schedule.castList.length,
-            totalDays: result.schedule.totalDays,
-            productionName: result.schedule.productionName,
-          });
 
           // Mark as pending - Stage 2 can now be triggered
           const schedule = {
@@ -129,7 +123,6 @@ export const useScheduleStore = create<ScheduleState>()(
         set({ isUploading: true, uploadError: null });
 
         try {
-          console.log('[ScheduleStore] Starting revision Stage 1 parsing...');
           const result = await parseScheduleStage1(file);
 
           const pendingSchedule = {
@@ -183,10 +176,6 @@ export const useScheduleStore = create<ScheduleState>()(
             stage2Progress: { current: result.days.length, total: result.days.length },
           }));
 
-          console.log('[ScheduleStore] Revision Stage 2 complete:', {
-            daysProcessed: result.days.length,
-            totalScenes: result.days.reduce((sum, d) => sum + d.scenes.length, 0),
-          });
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Failed to process revised schedule';
           console.error('[ScheduleStore] Revision Stage 2 failed:', error);
@@ -232,10 +221,6 @@ export const useScheduleStore = create<ScheduleState>()(
           pendingSchedule: null,
         });
 
-        console.log('[ScheduleStore] Amendment applied:', {
-          days: mergedSchedule.days.length,
-          totalScenes: mergedSchedule.days.reduce((sum, d) => sum + d.scenes.length, 0),
-        });
       },
 
       // Clear the pending schedule without applying
@@ -283,10 +268,6 @@ export const useScheduleStore = create<ScheduleState>()(
             stage2Progress: { current: result.days.length, total: result.days.length },
           }));
 
-          console.log('[ScheduleStore] Stage 2 complete:', {
-            daysProcessed: result.days.length,
-            totalScenes: result.days.reduce((sum, d) => sum + d.scenes.length, 0),
-          });
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Failed to process schedule';
           console.error('[ScheduleStore] Stage 2 failed:', error);

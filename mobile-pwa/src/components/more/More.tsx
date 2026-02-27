@@ -1270,21 +1270,11 @@ function ScheduleViewer({ onBack }: ViewerProps) {
     if (!freshSchedule || !currentProject) return;
 
     try {
-      const result = syncCastDataFromSchedule(freshSchedule, {
+      syncCastDataFromSchedule(freshSchedule, {
         createMissingCharacters: options?.createMissingCharacters ?? true,
         overwriteExisting: options?.overwriteExisting ?? false,
         autoConfirm: options?.autoConfirm ?? true,
       });
-
-      if (result) {
-        console.log('[ScheduleViewer] Cast data synced:', {
-          scenesUpdated: result.scenesUpdated,
-          charactersCreated: result.charactersCreated,
-        });
-        if (result.errors.length > 0) {
-          console.warn('[ScheduleViewer] Sync had some errors:', result.errors);
-        }
-      }
     } catch (error) {
       console.error('[ScheduleViewer] Failed to sync cast data:', error);
     }
@@ -1299,7 +1289,6 @@ function ScheduleViewer({ onBack }: ViewerProps) {
       (!schedule.days || schedule.days.length === 0) &&
       schedule.rawText // Has raw text available for processing
     ) {
-      console.log('[ScheduleViewer] Auto-starting processing for unprocessed schedule');
       handleProcessSchedule();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps

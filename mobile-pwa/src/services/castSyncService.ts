@@ -241,7 +241,6 @@ function buildStoryDayMap(
   }
 
   if (hasExplicitDays && storyDayMap.size > 0) {
-    console.log('[CastSync] Story days from explicit D1/D2/N1 markers:', storyDayMap.size, 'scenes mapped');
     return storyDayMap;
   }
 
@@ -272,7 +271,6 @@ function buildStoryDayMap(
     }
   }
 
-  console.log('[CastSync] Story days inferred from time-of-day transitions:', currentDay, 'days detected');
   return storyDayMap;
 }
 
@@ -417,10 +415,6 @@ export function syncCastDataToScenes(
   // Build story day map for look grouping
   const storyDayMap = buildStoryDayMap(schedule, scenes);
 
-  console.log(
-    '[CastSync] Scene cast map built:',
-    Object.fromEntries(sceneCastMap)
-  );
 
   // Track new characters and their scenes
   const newCharacters: Character[] = [];
@@ -565,11 +559,6 @@ export function syncCastDataToScenes(
   // Add new looks
   updatedLooks.push(...newLooks);
 
-  console.log('[CastSync] Sync complete:', {
-    scenesUpdated: result.scenesUpdated,
-    charactersCreated: result.charactersCreated,
-    errors: result.errors,
-  });
 
   return {
     result,

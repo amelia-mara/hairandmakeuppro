@@ -249,7 +249,6 @@ function dbToSceneCapture(
 
 export async function pullProjectData(projectId: string, retryCount: number = 0): Promise<boolean> {
   if (!isSupabaseConfigured) return false;
-  console.log('[PULL] pullProjectData called for project:', projectId, retryCount > 0 ? `(retry ${retryCount})` : '');
 
   const syncStore = useSyncStore.getState();
   syncStore.setSyncing();
@@ -303,30 +302,18 @@ export async function pullProjectData(projectId: string, retryCount: number = 0)
       : { data: [], error: null };
     const dbPhotos: DbPhoto[] = photosRes.data || [];
 
-    console.log('[PULL] Server data:', {
-      scenes: dbScenes.length,
-      characters: dbChars.length,
-      looks: dbLooks.length,
-      captures: dbCaptures.length,
-      photos: dbPhotos.length,
-      schedule: dbSchedule.length,
-      callSheets: dbCallSheets.length,
-      script: dbScript.length,
-    });
 
     // Check if server has any data at all
     const hasSceneData = dbScenes.length > 0 || dbChars.length > 0 || dbLooks.length > 0;
     const hasDocuments = dbSchedule.length > 0 || dbCallSheets.length > 0 || dbScript.length > 0;
 
     if (!hasSceneData && !hasDocuments) {
-      console.log('[PULL] Server has no data for this project, skipping merge');
 
       // If the local project has no data either (e.g. team member just joined),
       // schedule a delayed retry in case the owner's data hasn't synced yet
       const project = useProjectStore.getState().currentProject;
       if (project && project.scenes.length === 0 && retryCount < 3) {
         const delay = (retryCount + 1) * 3000; // 3s, 6s, 9s
-        console.log(`[PULL] Local project also empty, retrying in ${delay}ms (attempt ${retryCount + 1}/3)`);
         setTimeout(() => {
           pullProjectData(projectId, retryCount + 1);
         }, delay);
@@ -338,10 +325,6 @@ export async function pullProjectData(projectId: string, retryCount: number = 0)
 
     // Even if no scene data, still merge documents below
     if (!hasSceneData && hasDocuments) {
-      const localProject = useProjectStore.getState().currentProject;
-      const localSceneCount = localProject?.scenes.length || 0;
-      console.log('[PULL] Server has documents but no scene data, merging documents only' +
-        (localSceneCount > 0 ? ` (preserving ${localSceneCount} local scenes — pushInitialData will sync them)` : ''));
 
       if (dbSchedule.length > 0) {
         mergeScheduleData(dbSchedule[0], projectId);
@@ -445,16 +428,6 @@ export async function pullProjectData(projectId: string, retryCount: number = 0)
     const finalChars = [...mergedChars, ...localOnlyChars];
     const finalLooks = [...mergedLooks, ...localOnlyLooks];
 
-    console.log('[PULL] Merging server data into store:', {
-      serverScenes: mergedScenes.length,
-      localOnlyScenes: localOnlyScenes.length,
-      totalScenes: finalScenes.length,
-      serverChars: mergedChars.length,
-      localOnlyChars: localOnlyChars.length,
-      serverLooks: mergedLooks.length,
-      localOnlyLooks: localOnlyLooks.length,
-      captures: Object.keys(mergedCaptures).length,
-    });
 
     // Use mergeServerData instead of setProject to avoid resetting lifecycle state
     projectStore.mergeServerData({
@@ -486,7 +459,6 @@ export async function pullProjectData(projectId: string, retryCount: number = 0)
       await mergeScriptData(dbScript[0], projectId);
     }
 
-    console.log('[PULL] Pull complete, data merged successfully');
     syncStore.setSynced();
     return true;
   } catch (error) {
@@ -609,7 +581,6 @@ function downloadSchedulePdf(scheduleId: string, storagePath: string): void {
     const current = scheduleStore.schedule;
     if (current && current.id === scheduleId) {
       scheduleStore.setSchedule({ ...current, pdfUri: dataUri });
-      console.log('[PULL] Restored PDF for schedule:', scheduleId);
     }
   });
 }
@@ -624,7 +595,6 @@ function downloadMissingCallSheetPdfs(
   );
   if (missingPdfIds.size === 0) return;
 
-  console.log('[PULL] Re-downloading', missingPdfIds.size, 'missing call sheet PDFs');
   for (const db of dbCallSheets) {
     if (db.storage_path && missingPdfIds.has(db.id)) {
       supabaseStorage.downloadDocumentAsDataUri(db.storage_path).then(({ dataUri }) => {
@@ -634,7 +604,6 @@ function downloadMissingCallSheetPdfs(
             cs.id === db.id ? { ...cs, pdfUri: dataUri } : cs
           ),
         }));
-        console.log('[PULL] Restored PDF for call sheet:', db.shoot_date);
       });
     }
   }
@@ -704,7 +673,6 @@ function mergeCallSheetData(dbCallSheets: DbCallSheetData[], _projectId: string)
     }
   }
 
-  console.log('[PULL] Merged', callSheets.length, 'call sheets from server');
 }
 
 async function mergeScriptData(dbScript: DbScriptUpload, _projectId: string): Promise<void> {
@@ -723,11 +691,9 @@ async function mergeScriptData(dbScript: DbScriptUpload, _projectId: string): Pr
       return;
     }
     if (!dataUri) {
-      console.warn('[PULL] Script PDF download returned no data');
       return;
     }
     projectStore.setScriptPdf(dataUri);
-    console.log('[PULL] Restored script PDF from server');
   } catch (err) {
     console.error('[PULL] Script PDF download error:', err);
   }
@@ -759,7 +725,6 @@ function debouncedPush(table: string, pushFn: () => Promise<void>): void {
     try {
       useSyncStore.getState().setSyncing();
       await pushFn();
-      console.log(`[PUSH] ${table} pushed successfully`);
     } catch (error) {
       pushFailed = true;
       console.error(`[PUSH] ${table} FAILED:`, error);
@@ -788,7 +753,6 @@ export async function flushPendingSyncPushes(): Promise<void> {
   const tables = Object.keys(pendingPushFns);
   if (tables.length === 0) return;
 
-  console.log('[SYNC] Flushing pending pushes for:', tables.join(', '));
 
   const promises: Promise<void>[] = [];
 
@@ -808,7 +772,6 @@ export async function flushPendingSyncPushes(): Promise<void> {
     promises.push(
       pushFn()
         .then(() => {
-          console.log(`[PUSH] ${table} flushed successfully`);
         })
         .catch((error) => {
           console.error(`[PUSH] ${table} flush FAILED:`, error);
@@ -829,7 +792,6 @@ export async function flushPendingSyncPushes(): Promise<void> {
 
 export async function pushScenes(projectId: string, scenes: Scene[]): Promise<void> {
   if (!isSupabaseConfigured) return;
-  console.log(`[PUSH] pushScenes called: projectId=${projectId}, count=${scenes.length}`);
 
   debouncedPush('scenes', async () => {
     // Upsert scenes
@@ -863,7 +825,6 @@ export async function pushScenes(projectId: string, scenes: Scene[]): Promise<vo
 
 export async function pushCharacters(projectId: string, characters: Character[]): Promise<void> {
   if (!isSupabaseConfigured) return;
-  console.log(`[PUSH] pushCharacters called: projectId=${projectId}, count=${characters.length}`);
 
   debouncedPush('characters', async () => {
     const dbChars = characters.map(c => characterToDb(c, projectId));
@@ -876,7 +837,6 @@ export async function pushCharacters(projectId: string, characters: Character[])
 
 export async function pushLooks(projectId: string, looks: Look[]): Promise<void> {
   if (!isSupabaseConfigured) return;
-  console.log(`[PUSH] pushLooks called: projectId=${projectId}, count=${looks.length}`);
 
   debouncedPush('looks', async () => {
     const dbLooks = looks.map(l => lookToDb(l, projectId));
@@ -913,7 +873,6 @@ export async function pushSceneCapture(
   userId: string | null
 ): Promise<void> {
   if (!isSupabaseConfigured) return;
-  console.log(`[PUSH] pushSceneCapture called: captureId=${capture.id}, sceneId=${capture.sceneId}`);
 
   debouncedPush(`capture_${capture.id}`, async () => {
     const dbCapture = sceneCaptureToDb(capture, projectId, userId);
@@ -994,7 +953,6 @@ async function syncCapturePhotos(projectId: string, capture: SceneCapture): Prom
 
 export async function pushScheduleData(projectId: string, schedule: ProductionSchedule): Promise<void> {
   if (!isSupabaseConfigured) return;
-  console.log(`[PUSH] pushScheduleData called: projectId=${projectId}, status=${schedule.status}, days=${schedule.days?.length}`);
 
   // Upload schedule PDF to storage if we have one and haven't already
   if (schedule.pdfUri && schedule.pdfUri.startsWith('data:')) {
@@ -1031,7 +989,6 @@ async function pushSchedulePdf(projectId: string, schedule: ProductionSchedule):
       console.error('[PUSH] Schedule PDF upload failed:', error);
       return;
     }
-    console.log('[PUSH] Schedule PDF uploaded to:', path);
 
     // Store the storage path on the schedule_data row
     await supabase
@@ -1056,7 +1013,6 @@ export async function pushCallSheetData(
   userId: string | null
 ): Promise<void> {
   if (!isSupabaseConfigured) return;
-  console.log(`[PUSH] pushCallSheetData: date=${callSheet.date}, day=${callSheet.productionDay}`);
 
   // Upload the call sheet PDF to storage if we have a base64 data URI
   if (callSheet.pdfUri && callSheet.pdfUri.startsWith('data:')) {
@@ -1097,7 +1053,6 @@ async function pushCallSheetPdf(projectId: string, callSheet: CallSheet): Promis
       console.error('[PUSH] Call sheet PDF upload failed:', error);
       return;
     }
-    console.log('[PUSH] Call sheet PDF uploaded to:', path);
 
     // Store the storage path on the call_sheet_data row
     await supabase
@@ -1120,14 +1075,11 @@ export async function pushScriptPdf(
 ): Promise<void> {
   if (!isSupabaseConfigured) return;
   if (!scriptPdfData) {
-    console.warn('[PUSH] pushScriptPdf: no scriptPdfData provided, skipping');
     return;
   }
   if (!scriptPdfData.startsWith('data:')) {
-    console.warn('[PUSH] pushScriptPdf: scriptPdfData is not a data URI (starts with:', scriptPdfData.substring(0, 30), '), skipping');
     return;
   }
-  console.log(`[PUSH] pushScriptPdf: uploading script for project ${projectId}`);
 
   debouncedPush('script', async () => {
     // Upload PDF to storage
@@ -1138,7 +1090,6 @@ export async function pushScriptPdf(
       console.error('[PUSH] Script PDF upload to storage failed:', uploadError);
       throw uploadError || new Error('Storage upload returned no path');
     }
-    console.log('[PUSH] Script PDF uploaded to:', path);
 
     // Estimate file size from base64
     const base64Length = scriptPdfData.split(',')[1]?.length || 0;
@@ -1151,7 +1102,6 @@ export async function pushScriptPdf(
       .eq('project_id', projectId)
       .eq('is_active', true);
     if (deactivateError) {
-      console.warn('[PUSH] Failed to deactivate old scripts:', deactivateError);
       // Non-fatal: proceed with insert
     }
 
@@ -1174,7 +1124,6 @@ export async function pushScriptPdf(
       console.error('[PUSH] script_uploads INSERT failed:', dbError);
       throw dbError;
     }
-    console.log('[PUSH] script_uploads row inserted successfully');
   });
 }
 
@@ -1553,12 +1502,10 @@ function handleCallSheetChange(
       });
     }
 
-    console.log('[RT] Call sheet updated:', dbCallSheet.shoot_date);
   } else if (payload.eventType === 'DELETE') {
     const old = payload.old as any;
     if (old?.id) {
       useCallSheetStore.getState().deleteCallSheet(old.id);
-      console.log('[RT] Call sheet deleted:', old.id);
     }
   }
 }
@@ -1575,7 +1522,6 @@ function handleScriptChange(
     supabaseStorage.downloadDocumentAsDataUri(dbScript.storage_path).then(({ dataUri }) => {
       if (!dataUri) return;
       useProjectStore.getState().setScriptPdf(dataUri);
-      console.log('[RT] Script PDF updated from server');
     });
   }
 }
@@ -1644,10 +1590,8 @@ async function fetchCapturePhotos(captureId: string): Promise<DbPhoto[]> {
 // ============================================================================
 
 export async function startSync(projectId: string, userId?: string): Promise<void> {
-  console.log('[SYNC] startSync called:', { projectId, userId });
 
   if (!isSupabaseConfigured) {
-    console.warn('[SYNC] Supabase not configured, going offline');
     useSyncStore.getState().setOffline();
     return;
   }
@@ -1663,12 +1607,10 @@ export async function startSync(projectId: string, userId?: string): Promise<voi
   }
 
   // Pull latest data from server
-  const pullSuccess = await pullProjectData(projectId);
-  console.log('[SYNC] Pull complete, success:', pullSuccess);
+  await pullProjectData(projectId);
 
   // Set up real-time subscriptions (this sets activeProjectId)
   subscribeToProject(projectId, userId);
-  console.log('[SYNC] Realtime subscriptions active, activeProjectId:', activeProjectId);
 
   // Push any local data that was set before sync started.
   // This fixes the race condition where Zustand store updates happen
@@ -1719,15 +1661,9 @@ export async function startSync(projectId: string, userId?: string): Promise<voi
 export async function pushInitialData(projectId: string, userId?: string): Promise<void> {
   const project = useProjectStore.getState().currentProject;
   if (!project) {
-    console.log('[SYNC] pushInitialData: no current project, skipping');
     return;
   }
 
-  console.log('[SYNC] pushInitialData: pushing local data for project', projectId, {
-    scenes: project.scenes.length,
-    characters: project.characters.length,
-    looks: project.looks.length,
-  });
 
   // Push scenes
   if (project.scenes.length > 0) {
@@ -1748,7 +1684,6 @@ export async function pushInitialData(projectId: string, userId?: string): Promi
   const captures = useProjectStore.getState().sceneCaptures;
   const captureCount = Object.keys(captures).length;
   if (captureCount > 0) {
-    console.log('[SYNC] pushInitialData: pushing', captureCount, 'scene captures');
     for (const capture of Object.values(captures)) {
       pushSceneCapture(projectId, capture as SceneCapture, userId || null);
     }
@@ -1757,14 +1692,12 @@ export async function pushInitialData(projectId: string, userId?: string): Promi
   // Push schedule data regardless of processing status
   const schedule = useScheduleStore.getState().schedule;
   if (schedule) {
-    console.log('[SYNC] pushInitialData: pushing schedule, status:', schedule.status);
     pushScheduleData(projectId, schedule);
   }
 
   // Push call sheets
   const callSheets = useCallSheetStore.getState().callSheets;
   if (callSheets.length > 0) {
-    console.log('[SYNC] pushInitialData: pushing', callSheets.length, 'call sheets');
     for (const cs of callSheets) {
       pushCallSheetData(projectId, cs, userId || null);
     }
@@ -1772,14 +1705,12 @@ export async function pushInitialData(projectId: string, userId?: string): Promi
 
   // Push script PDF if it exists
   if (project.scriptPdfData) {
-    console.log('[SYNC] pushInitialData: pushing script PDF');
     pushScriptPdf(projectId, project.scriptPdfData, userId || null);
   }
 
   // Flush all debounced pushes immediately so initial data actually reaches
   // the server before this function returns. Without this, pushes sit in an
   // 800ms debounce timer and may never fire if the user navigates away.
-  console.log('[SYNC] pushInitialData: flushing all pending pushes');
   await flushPendingSyncPushes();
 }
 

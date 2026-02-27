@@ -490,7 +490,6 @@ export async function deleteProject(
         updateError.message?.includes('pending_deletion_at') ||
         updateError.code === 'PGRST204';
       if (isSchemaError) {
-        console.warn('[deleteProject] pending_deletion_at column not available, falling back to hard delete');
         return finalizeProjectDeletion(projectId, userId);
       }
       throw updateError;
