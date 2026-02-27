@@ -834,11 +834,12 @@ function ScriptViewer({ onBack }: ViewerProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedScene, setSelectedScene] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'full' | 'pdf'>('full');
-  const { currentProject, compareScriptAmendment, applyScriptAmendment } = useProjectStore();
+  const { currentProject, compareScriptAmendment, applyScriptAmendment, setScriptPdf } = useProjectStore();
   const sceneRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [amendmentResult, setAmendmentResult] = useState<AmendmentResult | null>(null);
+  const [pendingScriptPdf, setPendingScriptPdf] = useState<string | null>(null);
 
   // Handle revised script upload
   const handleRevisedScriptUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -849,6 +850,16 @@ function ScriptViewer({ onBack }: ViewerProps) {
     try {
       // Parse the new script using fast parsing
       const parsedScript = await parseScenesFast(file);
+
+      // Encode PDF for saving when amendment is applied
+      if (file.type === 'application/pdf') {
+        const base64 = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.readAsDataURL(file);
+        });
+        setPendingScriptPdf(base64);
+      }
 
       // Compare against existing breakdown
       const result = compareScriptAmendment(parsedScript.scenes);
@@ -875,6 +886,11 @@ function ScriptViewer({ onBack }: ViewerProps) {
   }) => {
     if (amendmentResult) {
       applyScriptAmendment(amendmentResult, options);
+      // Save the revised script PDF so it syncs to other devices
+      if (pendingScriptPdf) {
+        setScriptPdf(pendingScriptPdf);
+        setPendingScriptPdf(null);
+      }
       setAmendmentResult(null);
     }
   };
@@ -1143,7 +1159,7 @@ function ScriptViewer({ onBack }: ViewerProps) {
         <AmendmentReviewModal
           amendmentResult={amendmentResult}
           onApply={handleApplyAmendment}
-          onCancel={() => setAmendmentResult(null)}
+          onCancel={() => { setAmendmentResult(null); setPendingScriptPdf(null); }}
         />
       )}
     </>

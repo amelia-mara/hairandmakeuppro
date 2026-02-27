@@ -41,7 +41,7 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
   const [mergeMap, setMergeMap] = useState<Map<string, string>>(new Map()); // maps merged -> primary
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scheduleInputRef = useRef<HTMLInputElement>(null);
-  const { setProject, setScriptPdf, currentProject } = useProjectStore();
+  const { setProject, currentProject } = useProjectStore();
   const { setSchedule } = useScheduleStore();
 
   // Progressive workflow: Fast scene parsing then background character detection
@@ -100,6 +100,19 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
       const projectId = currentProject?.id || uuidv4();
       const projectNameToUse = projectName || currentProject?.name || fastParsed.title || file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ') || 'Untitled Project';
 
+      // Encode PDF to base64 BEFORE setProject so scriptPdfData is available
+      // when startSync → pushInitialData reads the store. Previously, encoding
+      // happened after setProject, creating a race where pushInitialData could
+      // read the store before scriptPdfData was set.
+      let scriptPdfBase64: string | undefined;
+      if (file.type === 'application/pdf') {
+        scriptPdfBase64 = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.readAsDataURL(file);
+        });
+      }
+
       const project: Project = {
         id: projectId,
         name: projectNameToUse,
@@ -110,6 +123,7 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
         looks: currentProject?.looks || [],
         characterDetectionStatus: 'idle', // Will be updated when detection runs
         scenesConfirmed: 0,
+        scriptPdfData: scriptPdfBase64,
       };
 
       setProcessingProgress(90);
@@ -126,20 +140,9 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
         (project as any)._scheduleCastList = schedule.castList;
       }
 
-      // Set the project and proceed
+      // Set the project with scenes AND scriptPdfData in a single update.
+      // This ensures both are available when startSync → pushInitialData runs.
       setProject(project);
-
-      // Save the original PDF for viewing if it's a PDF file.
-      // IMPORTANT: Await encoding so scriptPdfData is set BEFORE startSync
-      // runs pushInitialData. Without this, the script never reaches the server.
-      if (file.type === 'application/pdf') {
-        const base64 = await new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.readAsDataURL(file);
-        });
-        setScriptPdf(base64);
-      }
 
       // Always run character detection
       // If schedule is provided, use cast list for accurate character identification
@@ -156,7 +159,7 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
       alert(error instanceof Error ? error.message : 'Failed to parse script');
       setView('upload');
     }
-  }, [projectName, setProject, setScriptPdf, setSchedule, onProjectReady, currentProject]);
+  }, [projectName, setProject, setSchedule, onProjectReady, currentProject]);
 
   // Background character detection (runs after project is created)
   // If knownCharacters is provided (from schedule), use it for accurate detection
