@@ -66,19 +66,47 @@ export function ChatAssistant() {
     }
   };
 
-  // Format message content with basic markdown (HTML-escaped first to prevent XSS)
-  const formatContent = (content: string) => {
-    const escaped = content
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
-    return escaped
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/`(.*?)`/g, '<code class="bg-black/20 px-1 rounded text-sm">$1</code>')
-      .replace(/\n/g, '<br />');
+  // Format message content with basic markdown using React elements (no dangerouslySetInnerHTML)
+  const formatContent = (content: string): React.ReactNode[] => {
+    // Split on newlines first, then process inline formatting
+    return content.split('\n').flatMap((line, lineIdx, lines) => {
+      const elements: React.ReactNode[] = [];
+      // Match **bold**, *italic*, and `code` patterns
+      const pattern = /(\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`)/g;
+      let lastIndex = 0;
+      let match: RegExpExecArray | null;
+
+      while ((match = pattern.exec(line)) !== null) {
+        // Add text before the match
+        if (match.index > lastIndex) {
+          elements.push(line.slice(lastIndex, match.index));
+        }
+        if (match[2]) {
+          // **bold**
+          elements.push(<strong key={`${lineIdx}-b-${match.index}`}>{match[2]}</strong>);
+        } else if (match[3]) {
+          // *italic*
+          elements.push(<em key={`${lineIdx}-i-${match.index}`}>{match[3]}</em>);
+        } else if (match[4]) {
+          // `code`
+          elements.push(
+            <code key={`${lineIdx}-c-${match.index}`} className="bg-black/20 px-1 rounded text-sm">
+              {match[4]}
+            </code>
+          );
+        }
+        lastIndex = match.index + match[0].length;
+      }
+      // Add remaining text
+      if (lastIndex < line.length) {
+        elements.push(line.slice(lastIndex));
+      }
+      // Add line break between lines (not after the last one)
+      if (lineIdx < lines.length - 1) {
+        elements.push(<br key={`br-${lineIdx}`} />);
+      }
+      return elements;
+    });
   };
 
   const hasMessages = messages.length > 0;
@@ -216,10 +244,9 @@ export function ChatAssistant() {
                           : undefined
                       }
                     >
-                      <div
-                        className="text-sm leading-relaxed"
-                        dangerouslySetInnerHTML={{ __html: formatContent(message.content) }}
-                      />
+                      <div className="text-sm leading-relaxed">
+                        {formatContent(message.content)}
+                      </div>
                     </div>
                   </div>
                 ))}

@@ -478,7 +478,12 @@ IMPORTANT:
       throw new Error('Invalid AI response format');
     }
 
-    const parsed = JSON.parse(jsonMatch[0]);
+    let parsed: any;
+    try {
+      parsed = JSON.parse(jsonMatch[0]);
+    } catch {
+      throw new Error('AI response contained invalid JSON');
+    }
 
     // Validate and clean up the response
     // Note: synopsis is intentionally NOT extracted here - it's generated on-demand per-scene

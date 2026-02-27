@@ -5,6 +5,7 @@
 
 import type { PersistStorage, StorageValue } from 'zustand/middleware';
 import { saveStoreBackup, getStoreBackup, db } from './index';
+import { safeJsonParse } from '@/utils/safeJson';
 
 // Debounce timers per store
 const debounceTimers: Record<string, ReturnType<typeof setTimeout>> = {};
@@ -109,16 +110,16 @@ export function createHybridStorage<S>(storeName: string): PersistStorage<S> {
           if (state) return state as StorageValue<S>;
           // IndexedDB was empty — check localStorage backup
           const localData = localStorage.getItem(name);
-          return localData ? JSON.parse(localData) : null;
+          return safeJsonParse<StorageValue<S> | null>(localData, null);
         } catch (error) {
           console.error(`Failed to read store ${name} from IndexedDB:`, error);
           // Fall back to localStorage
           const localData = localStorage.getItem(name);
-          return localData ? JSON.parse(localData) : null;
+          return safeJsonParse<StorageValue<S> | null>(localData, null);
         }
       } else {
         const localData = localStorage.getItem(name);
-        return localData ? JSON.parse(localData) : null;
+        return safeJsonParse<StorageValue<S> | null>(localData, null);
       }
     },
 
@@ -215,7 +216,8 @@ export async function migrateToIndexedDB(): Promise<{
         const existingInDb = await getStoreBackup(storeName);
         if (!existingInDb) {
           // Parse and save to IndexedDB
-          const parsed = JSON.parse(localData);
+          const parsed = safeJsonParse(localData, null);
+          if (parsed === null) continue; // Skip corrupt data
           await saveStoreBackup(storeName, parsed);
           migrated.push(storeName);
 

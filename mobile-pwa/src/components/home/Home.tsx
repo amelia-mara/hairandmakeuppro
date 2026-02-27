@@ -133,13 +133,6 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
       setProcessingProgress(100);
       setProcessingStatus('Complete!');
 
-      // Store the raw text for background character detection
-      (project as any)._rawText = fastParsed.rawText;
-      // Store schedule cast list for reference
-      if (schedule) {
-        (project as any)._scheduleCastList = schedule.castList;
-      }
-
       // Set the project with scenes AND scriptPdfData in a single update.
       // This ensures both are available when startSync → pushInitialData runs.
       setProject(project);
