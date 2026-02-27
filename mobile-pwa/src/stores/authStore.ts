@@ -477,6 +477,7 @@ export const useAuthStore = create<AuthState>()(
               intExt: (s.int_ext === 'EXT' ? 'EXT' : 'INT') as 'INT' | 'EXT',
               timeOfDay: (s.time_of_day || 'DAY') as 'DAY' | 'NIGHT' | 'MORNING' | 'EVENING' | 'CONTINUOUS',
               synopsis: s.synopsis || undefined,
+              scriptContent: s.script_content || undefined,
               characters: sceneCharMap.get(s.id) || [],
               isComplete: s.is_complete,
               completedAt: s.completed_at ? new Date(s.completed_at) : undefined,
