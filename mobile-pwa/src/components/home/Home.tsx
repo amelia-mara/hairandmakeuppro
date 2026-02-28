@@ -140,11 +140,9 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
       setProject(project);
 
       // ── Save directly to Supabase ──────────────────────────────
-      // Don't rely on the async sync pipeline. Save the project data
-      // to the server right now, so it exists in the user's account
-      // regardless of what the sync system does later.
+      // Await this so data is on the server before user navigates away.
       const userId = useAuthStore.getState().user?.id || null;
-      saveInitialProjectData({
+      const saveResult = await saveInitialProjectData({
         projectId,
         userId,
         scenes: scenes.map(s => ({
@@ -167,22 +165,20 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
           pdfDataUri: schedule.pdfUri,
         } : null,
         scriptPdfDataUri: scriptPdfBase64,
-      }).then(({ error }) => {
-        if (error) {
-          console.error('[Home] Failed to save project data to server:', error);
-        } else {
-          // Data saved to server — clear pending changes since local matches server
-          useSyncStore.getState().clearChanges();
-          useSyncStore.getState().setUploaded();
-        }
       });
+      if (saveResult.error) {
+        console.error('[Home] Failed to save project data to server:', saveResult.error);
+      } else {
+        useSyncStore.getState().clearChanges();
+        useSyncStore.getState().setUploaded();
+      }
 
       // Always run character detection
       // If schedule is provided, use cast list for accurate character identification
       // Otherwise, use regex detection to find character names
       const castListNames = schedule?.castList?.map(c => c.name) || [];
       setTimeout(() => {
-        startBackgroundCharacterDetection(project, fastParsed.rawText, castListNames);
+        startBackgroundCharacterDetection(project, fastParsed.rawText, castListNames, projectId, userId);
       }, 500);
 
       // Go directly to app
@@ -199,7 +195,9 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
   const startBackgroundCharacterDetection = useCallback(async (
     project: Project,
     rawText: string,
-    knownCharacters: string[] = []
+    knownCharacters: string[] = [],
+    projectId?: string,
+    userId?: string | null,
   ) => {
     try {
       // Mark detection as running
@@ -235,6 +233,34 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
 
       // Mark detection as complete
       store.setCharacterDetectionStatus('complete');
+
+      // ── Save detected characters to Supabase ─────────────────
+      // After detection, the store now has characters and scene_characters.
+      // Push them to the server so they're available on re-login.
+      const pid = projectId || store.currentProject?.id;
+      if (pid) {
+        const updatedProject = useProjectStore.getState().currentProject;
+        if (updatedProject && updatedProject.characters.length > 0) {
+          saveInitialProjectData({
+            projectId: pid,
+            userId: userId ?? null,
+            scenes: [], // already saved
+            characters: updatedProject.characters.map(c => ({
+              id: c.id,
+              name: c.name,
+              initials: c.initials,
+              avatar_colour: c.avatarColour || '#C9A961',
+            })),
+            sceneCharacters: updatedProject.scenes.flatMap(s =>
+              s.characters.map(charId => ({ scene_id: s.id, character_id: charId }))
+            ),
+          }).then(({ error: saveErr }) => {
+            if (saveErr) {
+              console.error('[Home] Failed to save characters to server:', saveErr);
+            }
+          });
+        }
+      }
     } catch (error) {
       console.error('Background character detection failed:', error);
       // Still mark as complete so user can manually add characters
