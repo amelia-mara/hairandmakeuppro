@@ -67,6 +67,14 @@ let pushTimers: Record<string, ReturnType<typeof setTimeout>> = {};
 let pendingPushFns: Record<string, () => Promise<void>> = {};
 /** Track tables currently being pushed to avoid echo loops */
 let pushingTables = new Set<string>();
+/**
+ * Flag set while applying server-sourced updates to local stores.
+ * When true, syncSubscriptions should NOT push the change back to the server.
+ * This breaks the infinite echo loop:
+ *   User A pushes → server broadcasts → User B receives → User B updates store
+ *   → syncSubscriptions fires → (WITHOUT this flag) User B pushes back → loop
+ */
+export let receivingFromServer = false;
 
 // ============================================================================
 // Data Mappers: Local → Supabase
@@ -1333,26 +1341,30 @@ function handleSceneChange(payload: RealtimePostgresChangesPayload<DbScene>): vo
 
   if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
     const dbScene = payload.new as DbScene;
-    const existingScene = project.scenes.find((s: Scene) => s.id === dbScene.id);
 
     // We need to fetch scene_characters for this scene
     fetchSceneCharacters(dbScene.id).then(characterIds => {
+      // Re-read project inside .then() to avoid stale closure
+      const currentProject = useProjectStore.getState().currentProject;
+      if (!currentProject) return;
+
+      const existingScene = currentProject.scenes.find((s: Scene) => s.id === dbScene.id);
       const localScene = dbToScene(dbScene, characterIds, existingScene);
       const updatedScenes = existingScene
-        ? project.scenes.map((s: Scene) => s.id === localScene.id ? localScene : s)
-        : [...project.scenes, localScene];
+        ? currentProject.scenes.map((s: Scene) => s.id === localScene.id ? localScene : s)
+        : [...currentProject.scenes, localScene];
 
-      projectStore.setProject({
-        ...project,
-        scenes: updatedScenes,
-      });
+      receivingFromServer = true;
+      projectStore.mergeServerData({ scenes: updatedScenes });
+      receivingFromServer = false;
     });
   } else if (payload.eventType === 'DELETE') {
     const oldScene = payload.old as { id: string };
-    projectStore.setProject({
-      ...project,
+    receivingFromServer = true;
+    projectStore.mergeServerData({
       scenes: project.scenes.filter((s: Scene) => s.id !== oldScene.id),
     });
+    receivingFromServer = false;
   }
 }
 
@@ -1370,16 +1382,16 @@ function handleCharacterChange(payload: RealtimePostgresChangesPayload<DbCharact
       ? project.characters.map((c: Character) => c.id === localChar.id ? localChar : c)
       : [...project.characters, localChar];
 
-    projectStore.setProject({
-      ...project,
-      characters: updatedChars,
-    });
+    receivingFromServer = true;
+    projectStore.mergeServerData({ characters: updatedChars });
+    receivingFromServer = false;
   } else if (payload.eventType === 'DELETE') {
     const oldChar = payload.old as { id: string };
-    projectStore.setProject({
-      ...project,
+    receivingFromServer = true;
+    projectStore.mergeServerData({
       characters: project.characters.filter((c: Character) => c.id !== oldChar.id),
     });
+    receivingFromServer = false;
   }
 }
 
@@ -1390,27 +1402,31 @@ function handleLookChange(payload: RealtimePostgresChangesPayload<DbLook>): void
 
   if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
     const dbLook = payload.new as DbLook;
-    const existingLook = project.looks.find((l: Look) => l.id === dbLook.id);
 
     // Fetch look_scenes for this look
     fetchLookScenes(dbLook.id).then(sceneNumbers => {
+      // Re-read project inside .then() to avoid stale closure
+      const currentProject = useProjectStore.getState().currentProject;
+      if (!currentProject) return;
+
+      const existingLook = currentProject.looks.find((l: Look) => l.id === dbLook.id);
       const localLook = dbToLook(dbLook, sceneNumbers, existingLook);
 
       const updatedLooks = existingLook
-        ? project.looks.map((l: Look) => l.id === localLook.id ? localLook : l)
-        : [...project.looks, localLook];
+        ? currentProject.looks.map((l: Look) => l.id === localLook.id ? localLook : l)
+        : [...currentProject.looks, localLook];
 
-      projectStore.setProject({
-        ...project,
-        looks: updatedLooks,
-      });
+      receivingFromServer = true;
+      projectStore.mergeServerData({ looks: updatedLooks });
+      receivingFromServer = false;
     });
   } else if (payload.eventType === 'DELETE') {
     const oldLook = payload.old as { id: string };
-    projectStore.setProject({
-      ...project,
+    receivingFromServer = true;
+    projectStore.mergeServerData({
       looks: project.looks.filter((l: Look) => l.id !== oldLook.id),
     });
+    receivingFromServer = false;
   }
 }
 
