@@ -1,1 +1,1 @@
-export { SyncStatusBar, SyncStatusBanner, SyncDot } from './SyncStatusBanner';
+export { SyncStatusBar, SyncStatusBanner, SyncDot, SyncIcon, SyncBottomSheet } from './SyncStatusBanner';
