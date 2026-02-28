@@ -31,7 +31,7 @@ import {
 import { SelectPlanScreen } from '@/components/subscription';
 import { UserProfileScreen } from '@/components/profile/UserProfileScreen';
 import { ProjectSettingsScreen } from '@/components/project-settings';
-import { SyncBottomSheet } from '@/components/sync';
+import { SyncSheet } from '@/components/sync';
 import { TutorialOverlay } from '@/components/tutorial/TutorialOverlay';
 import { useTutorialStore } from '@/stores/tutorialStore';
 import type { NavTab, SubscriptionTier, BillingPeriod } from '@/types';
@@ -519,7 +519,7 @@ function AppContent() {
       />
 
       {/* Sync bottom sheet */}
-      <SyncBottomSheet isOpen={showSyncSheet} onClose={() => setShowSyncSheet(false)} />
+      <SyncSheet isOpen={showSyncSheet} onClose={() => setShowSyncSheet(false)} />
 
       {/* AI Chat Assistant */}
       <ChatAssistant />
