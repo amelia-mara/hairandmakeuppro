@@ -18,6 +18,7 @@ export function UserProfileScreen({ onBack, onNavigateToBilling }: UserProfileSc
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
   // Theme options
   const themeOptions: { value: Theme; label: string; icon: JSX.Element }[] = [
@@ -118,8 +119,10 @@ export function UserProfileScreen({ onBack, onNavigateToBilling }: UserProfileSc
     }
   };
 
-  const handleSignOut = () => {
-    signOut();
+  const handleSignOut = async () => {
+    setIsSigningOut(true);
+    await signOut();
+    // Auth state change navigates away — setIsSigningOut(false) not needed
   };
 
   // Clear message after 4 seconds
@@ -347,17 +350,39 @@ export function UserProfileScreen({ onBack, onNavigateToBilling }: UserProfileSc
           <div className="card">
             <button
               onClick={handleSignOut}
-              className="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-red-50 active:bg-red-100 transition-colors"
+              disabled={isSigningOut}
+              className="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-red-50 active:bg-red-100 transition-colors disabled:opacity-50"
             >
               <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center text-red-500">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
-                </svg>
+                {isSigningOut ? (
+                  <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
+                  </svg>
+                )}
               </div>
-              <span className="text-sm font-medium text-red-500">Sign Out</span>
+              <span className="text-sm font-medium text-red-500">
+                {isSigningOut ? 'Saving & signing out...' : 'Sign Out'}
+              </span>
             </button>
           </div>
         </section>
+
+        {/* Full-screen saving overlay */}
+        {isSigningOut && (
+          <div className="fixed inset-0 z-[9999] bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center gap-4">
+            <svg className="w-10 h-10 text-gold animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+            <p className="text-sm font-medium text-text-primary">Saving your project...</p>
+            <p className="text-xs text-text-muted">Please wait while we save your data</p>
+          </div>
+        )}
 
         {/* App Version */}
         <div className="text-center text-xs text-text-muted py-4">
