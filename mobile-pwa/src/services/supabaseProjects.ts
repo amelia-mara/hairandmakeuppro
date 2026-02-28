@@ -649,6 +649,12 @@ export async function saveInitialProjectData(params: SaveProjectDataParams): Pro
   try {
     // 1. Save scenes
     if (scenes.length > 0) {
+      // Clear existing scenes to avoid unique constraint conflicts on scene_number
+      await supabase
+        .from('scenes')
+        .delete()
+        .eq('project_id', projectId);
+
       const dbScenes = scenes.map(s => ({
         id: s.id,
         project_id: projectId,
