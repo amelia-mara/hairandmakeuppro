@@ -29,9 +29,19 @@ import type { Json } from '@/types/supabase';
 // Debounce infrastructure
 // ============================================================================
 
-const DEBOUNCE_MS = 1500;
+const DEBOUNCE_MS = 800;
 const timers: Record<string, ReturnType<typeof setTimeout>> = {};
 const pendingFns: Record<string, () => Promise<void>> = {};
+
+/** Check if user is still authenticated before writing. */
+async function hasActiveSession(): Promise<boolean> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    return !!session;
+  } catch {
+    return false;
+  }
+}
 
 function debounced(key: string, fn: () => Promise<void>): void {
   if (timers[key]) clearTimeout(timers[key]);
@@ -40,6 +50,10 @@ function debounced(key: string, fn: () => Promise<void>): void {
     delete timers[key];
     delete pendingFns[key];
     try {
+      if (!(await hasActiveSession())) {
+        console.warn(`[AutoSave] ${key} skipped — no active session`);
+        return;
+      }
       await fn();
     } catch (err) {
       console.error(`[AutoSave] ${key} failed:`, err);

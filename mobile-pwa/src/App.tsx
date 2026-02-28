@@ -5,6 +5,7 @@ import { useScheduleStore } from '@/stores/scheduleStore';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { useSyncStore } from '@/stores/syncStore';
 import { initChangeTracking } from '@/services/syncChangeTracker';
+import { flushAutoSave } from '@/services/autoSave';
 import { migrateToIndexedDB, flushPendingWrites } from '@/db/zustandStorage';
 
 // Initialize change tracking (idempotent, runs once)
@@ -245,7 +246,9 @@ function AppContent() {
   };
 
   // Handle switching to a different project (from Project Menu)
-  const handleSwitchProject = () => {
+  const handleSwitchProject = async () => {
+    // Flush pending auto-saves to Supabase before switching
+    await flushAutoSave();
     // Save current project data before clearing (so it can be restored later)
     useProjectStore.getState().saveAndClearProject();
     setShowHome(false);

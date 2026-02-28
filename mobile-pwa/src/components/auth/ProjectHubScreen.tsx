@@ -8,6 +8,7 @@ import * as supabaseProjects from '@/services/supabaseProjects';
 import * as supabaseStorage from '@/services/supabaseStorage';
 import { hoursUntilDeletion } from '@/services/supabaseProjects';
 import { setReceivingFromServer } from '@/services/syncChangeTracker';
+import { flushAutoSave } from '@/services/autoSave';
 import { useSyncStore } from '@/stores/syncStore';
 import type { ProjectMembership, Project, ProjectRole, ProductionType, CallSheet, ProductionSchedule, SceneFilmingStatus, MakeupDetails, HairDetails, ScheduleCastMember, ScheduleDay, SceneCapture, Photo, PhotoAngle, ContinuityFlags, ContinuityEvent, SFXDetails } from '@/types';
 import { savePhotoBlob } from '@/db';
@@ -394,6 +395,9 @@ export function ProjectHubScreen() {
 
     const store = useProjectStore.getState();
 
+    // Flush pending auto-saves to Supabase before switching projects
+    await flushAutoSave();
+
     // Save current project before switching (if different)
     if (store.currentProject && store.currentProject.id !== membership.projectId) {
       if (store.currentProject.scenes.length > 0) {
@@ -468,6 +472,7 @@ export function ProjectHubScreen() {
           estimatedTime: l.estimated_time,
           makeup: (l.makeup_details as unknown as MakeupDetails) || createEmptyMakeupDetails(),
           hair: (l.hair_details as unknown as HairDetails) || createEmptyHairDetails(),
+          notes: l.description || undefined,
         }));
 
         const project: Project = {
