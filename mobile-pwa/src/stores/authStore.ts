@@ -28,6 +28,7 @@ import { useProjectStore } from './projectStore';
 import { useScheduleStore } from './scheduleStore';
 import { useCallSheetStore } from './callSheetStore';
 import * as supabaseStorage from '@/services/supabaseStorage';
+import { flushAutoSave } from '@/services/autoSave';
 
 interface AuthState {
   // Auth state
@@ -385,6 +386,13 @@ export const useAuthStore = create<AuthState>()(
 
       // Sign out
       signOut: async () => {
+        // Flush any pending auto-saves BEFORE destroying the session
+        try {
+          await flushAutoSave();
+        } catch (err) {
+          console.error('Auto-save flush on sign-out failed:', err);
+        }
+
         try {
           await supabaseAuth.signOut();
         } catch (error) {
