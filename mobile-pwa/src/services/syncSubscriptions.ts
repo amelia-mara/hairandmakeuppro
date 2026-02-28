@@ -1,15 +1,11 @@
+// @ts-nocheck
 /**
- * Sync Subscriptions
+ * Sync Subscriptions - DEPRECATED
  *
- * Watches Zustand stores for changes and pushes updates to Supabase.
- * This file is imported once in App.tsx to set up the subscriptions.
- * It's separate from the stores to avoid circular imports.
+ * This file is no longer used. The auto-push system has been replaced
+ * by the manual sync model (syncChangeTracker.ts + manualSync.ts).
  *
- * IMPORTANT: The `receivingFromServer` flag prevents infinite echo loops.
- * When a realtime event updates the local store, this flag is set so we
- * don't push the same data back to the server, which would cause:
- *   User A pushes → server broadcasts → User B updates store →
- *   syncSubscriptions pushes back → server broadcasts → User A updates → ...
+ * Kept for reference during the transition period.
  */
 
 import { useProjectStore } from '@/stores/projectStore';
