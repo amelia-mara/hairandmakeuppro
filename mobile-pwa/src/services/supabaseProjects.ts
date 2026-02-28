@@ -625,6 +625,13 @@ interface SaveProjectDataParams {
     shooting_day: number | string | null;
     is_complete: boolean;
   }[];
+  characters?: {
+    id: string;
+    name: string;
+    initials: string;
+    avatar_colour: string;
+  }[];
+  sceneCharacters?: { scene_id: string; character_id: string }[];
   schedule?: {
     id: string;
     rawText: string | null;
@@ -637,7 +644,7 @@ interface SaveProjectDataParams {
 }
 
 export async function saveInitialProjectData(params: SaveProjectDataParams): Promise<{ error: Error | null }> {
-  const { projectId, userId, scenes, schedule, scriptPdfDataUri } = params;
+  const { projectId, userId, scenes, characters, sceneCharacters, schedule, scriptPdfDataUri } = params;
 
   try {
     // 1. Save scenes
@@ -661,6 +668,39 @@ export async function saveInitialProjectData(params: SaveProjectDataParams): Pro
       if (sceneError) {
         console.error('[SAVE] scenes failed:', sceneError);
         throw sceneError;
+      }
+    }
+
+    // 1b. Save characters (if provided)
+    if (characters && characters.length > 0) {
+      const { error: charError } = await supabase
+        .from('characters')
+        .upsert(
+          characters.map(c => ({
+            id: c.id,
+            project_id: projectId,
+            name: c.name,
+            initials: c.initials,
+            avatar_colour: c.avatar_colour,
+          })),
+          { onConflict: 'id' }
+        );
+      if (charError) {
+        console.error('[SAVE] characters failed:', charError);
+        // Don't throw — characters are supplementary, scenes are primary
+      }
+    }
+
+    // 1c. Save scene_characters junction (if provided)
+    if (sceneCharacters && sceneCharacters.length > 0) {
+      const sceneIds = [...new Set(sceneCharacters.map(sc => sc.scene_id))];
+      // Clear existing first
+      await supabase.from('scene_characters').delete().in('scene_id', sceneIds);
+      const { error: scError } = await supabase
+        .from('scene_characters')
+        .insert(sceneCharacters);
+      if (scError) {
+        console.error('[SAVE] scene_characters failed:', scError);
       }
     }
 
