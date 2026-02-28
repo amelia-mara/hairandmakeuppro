@@ -14,6 +14,7 @@ import {
   parseScheduleStage1,
 } from '@/utils/scheduleParser';
 import { saveInitialProjectData } from '@/services/supabaseProjects';
+import { useSyncStore } from '@/stores/syncStore';
 import type { ParsedScript } from '@/utils/scriptParser';
 import type { Project, Scene, ProductionSchedule } from '@/types';
 import { createEmptyMakeupDetails, createEmptyHairDetails } from '@/types';
@@ -169,6 +170,10 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
       }).then(({ error }) => {
         if (error) {
           console.error('[Home] Failed to save project data to server:', error);
+        } else {
+          // Data saved to server — clear pending changes since local matches server
+          useSyncStore.getState().clearChanges();
+          useSyncStore.getState().setUploaded();
         }
       });
 
