@@ -9,7 +9,8 @@ import * as supabaseStorage from '@/services/supabaseStorage';
 import { hoursUntilDeletion } from '@/services/supabaseProjects';
 import { setReceivingFromServer } from '@/services/syncChangeTracker';
 import { useSyncStore } from '@/stores/syncStore';
-import type { ProjectMembership, Project, ProjectRole, ProductionType, CallSheet, ProductionSchedule, SceneFilmingStatus, MakeupDetails, HairDetails, ScheduleCastMember, ScheduleDay } from '@/types';
+import type { ProjectMembership, Project, ProjectRole, ProductionType, CallSheet, ProductionSchedule, SceneFilmingStatus, MakeupDetails, HairDetails, ScheduleCastMember, ScheduleDay, SceneCapture, Photo, PhotoAngle, ContinuityFlags, ContinuityEvent, SFXDetails } from '@/types';
+import { savePhotoBlob } from '@/db';
 import { createEmptyMakeupDetails, createEmptyHairDetails } from '@/types';
 
 // Format relative time
@@ -167,6 +168,65 @@ function loadDocumentsIntoStores(
       });
     }
   }
+}
+
+// Download a photo from Supabase Storage and cache it in IndexedDB,
+// then update the scene capture in the store with the thumbnail.
+function downloadAndCachePhotoInBackground(
+  dbPhoto: any,
+  captureKey: string,
+  store: ReturnType<typeof useProjectStore.getState>,
+): void {
+  supabaseStorage.downloadPhoto(dbPhoto.storage_path).then(async ({ blob, error }) => {
+    if (error || !blob) return;
+
+    // Create thumbnail
+    const thumbnail = await new Promise<string>((resolve) => {
+      const img = new Image();
+      const url = URL.createObjectURL(blob);
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const size = 80;
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d')!;
+        const scale = Math.max(size / img.width, size / img.height);
+        const x = (size - img.width * scale) / 2;
+        const y = (size - img.height * scale) / 2;
+        ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+        URL.revokeObjectURL(url);
+        resolve(canvas.toDataURL('image/jpeg', 0.6));
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(''); };
+      img.src = url;
+    });
+
+    // Cache in IndexedDB
+    await savePhotoBlob(dbPhoto.id, blob, thumbnail, dbPhoto.angle as PhotoAngle);
+
+    // Update the capture in the store with the thumbnail
+    const capture = store.sceneCaptures[captureKey] as SceneCapture | undefined;
+    if (!capture) return;
+
+    const angle = dbPhoto.angle as string;
+    const updatedPhoto: Photo = {
+      id: dbPhoto.id,
+      uri: '',
+      thumbnail,
+      capturedAt: new Date(dbPhoto.taken_at),
+      angle: angle as PhotoAngle,
+    };
+
+    if (angle !== 'additional' && angle !== 'detail') {
+      setReceivingFromServer(true);
+      store.updateSceneCapture(captureKey, {
+        photos: { ...capture.photos, [angle]: updatedPhoto },
+      });
+      setReceivingFromServer(false);
+    }
+  }).catch(err => {
+    console.warn('[ProjectHub] Photo download failed:', err);
+  });
 }
 
 // Delete/Leave Confirmation Modal
@@ -353,13 +413,15 @@ export function ProjectHubScreen() {
     try {
       const {
         scenes, characters, looks, sceneCharacters, lookScenes,
+        continuityEvents, photos: dbPhotos,
         scheduleData, callSheetData, scriptData, error,
       } = await supabaseProjects.getProjectData(membership.projectId);
 
       const hasSceneData = !error && scenes.length > 0;
+      const hasContinuity = continuityEvents.length > 0;
       const hasDocuments = scriptData.length > 0 || scheduleData.length > 0 || callSheetData.length > 0;
 
-      if (hasSceneData || hasDocuments) {
+      if (hasSceneData || hasDocuments || hasContinuity) {
         const sceneCharMap = new Map<string, string[]>();
         for (const sc of sceneCharacters) {
           const existing = sceneCharMap.get(sc.scene_id) || [];
@@ -423,6 +485,72 @@ export function ProjectHubScreen() {
         try {
           store.setProject(project);
           loadDocumentsIntoStores(scheduleData, callSheetData, scriptData);
+
+          // Load continuity events (scene captures) + photos
+          if (continuityEvents.length > 0) {
+            // Group photos by continuity_event_id
+            const photosByCapture = new Map<string, any[]>();
+            for (const p of dbPhotos) {
+              const existing = photosByCapture.get(p.continuity_event_id) || [];
+              existing.push(p);
+              photosByCapture.set(p.continuity_event_id, existing);
+            }
+
+            for (const ce of continuityEvents) {
+              const captureKey = `${ce.scene_id}-${ce.character_id}`;
+              const cePhotos = photosByCapture.get(ce.id) || [];
+
+              // Build photo objects (download in background)
+              const mainPhotos: { front?: Photo; left?: Photo; right?: Photo; back?: Photo } = {};
+              const additionalPhotos: Photo[] = [];
+
+              for (const dbPhoto of cePhotos) {
+                const photo: Photo = {
+                  id: dbPhoto.id,
+                  uri: '',
+                  thumbnail: '',
+                  capturedAt: new Date(dbPhoto.taken_at),
+                  angle: dbPhoto.angle as PhotoAngle,
+                };
+                if (dbPhoto.angle !== 'additional' && dbPhoto.angle !== 'detail') {
+                  mainPhotos[dbPhoto.angle as keyof typeof mainPhotos] = photo;
+                } else {
+                  additionalPhotos.push(photo);
+                }
+              }
+
+              const capture: SceneCapture = {
+                id: ce.id,
+                sceneId: ce.scene_id,
+                characterId: ce.character_id,
+                lookId: ce.look_id || '',
+                capturedAt: new Date(ce.created_at),
+                photos: mainPhotos,
+                additionalPhotos,
+                continuityFlags: (ce.continuity_flags as unknown as ContinuityFlags) || {
+                  sweat: false, dishevelled: false, blood: false,
+                  dirt: false, wetHair: false, tears: false,
+                },
+                continuityEvents: (ce.continuity_events_data as unknown as ContinuityEvent[]) || [],
+                sfxDetails: (ce.sfx_details as unknown as SFXDetails) || {
+                  sfxRequired: false, sfxTypes: [], prostheticPieces: '',
+                  prostheticAdhesive: '', bloodTypes: [], bloodProducts: '',
+                  bloodPlacement: '', tattooCoverage: '', temporaryTattoos: '',
+                  contactLenses: '', teeth: '', agingCharacterNotes: '',
+                  sfxApplicationTime: null, sfxReferencePhotos: [],
+                },
+                notes: ce.general_notes || '',
+                applicationTime: ce.application_time || undefined,
+              };
+
+              store.updateSceneCapture(captureKey, capture);
+
+              // Download and cache photos in background
+              for (const dbPhoto of cePhotos) {
+                downloadAndCachePhotoInBackground(dbPhoto, captureKey, store);
+              }
+            }
+          }
         } finally {
           setReceivingFromServer(false);
         }
