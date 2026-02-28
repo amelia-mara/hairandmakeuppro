@@ -185,15 +185,27 @@ function AppContent() {
     }
   }, [currentProject, currentSceneId, activeTab, updateActivity]);
 
-  // Start/stop real-time sync when project changes
+  // Start/stop real-time sync when project changes or user authenticates.
+  // Track both the project ID and the user ID that sync was started for,
+  // so we re-sync when the user logs out and back in (new auth session).
   const syncStartedForProject = useRef<string | null>(null);
+  const syncStartedForUser = useRef<string | null>(null);
   useEffect(() => {
-    if (currentProject && currentProject.id !== syncStartedForProject.current) {
+    const projectChanged = currentProject && currentProject.id !== syncStartedForProject.current;
+    const userChanged = currentProject && user?.id && user.id !== syncStartedForUser.current;
+
+    if (currentProject && (projectChanged || userChanged)) {
+      // Stop any existing sync before starting a new one
+      if (syncStartedForProject.current) {
+        stopSync();
+      }
       syncStartedForProject.current = currentProject.id;
+      syncStartedForUser.current = user?.id || null;
       startSync(currentProject.id, user?.id);
     }
     if (!currentProject && syncStartedForProject.current) {
       syncStartedForProject.current = null;
+      syncStartedForUser.current = null;
       stopSync();
     }
     return () => {
