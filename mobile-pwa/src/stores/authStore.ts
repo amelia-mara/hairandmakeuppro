@@ -28,6 +28,7 @@ import { useProjectStore } from './projectStore';
 import { useScheduleStore } from './scheduleStore';
 import { useCallSheetStore } from './callSheetStore';
 import * as supabaseStorage from '@/services/supabaseStorage';
+import { saveEverythingToSupabase } from '@/services/autoSave';
 
 // Flag to prevent initializeAuth from racing with an in-progress signIn/signUp
 let _manualAuthInProgress = false;
@@ -412,6 +413,15 @@ export const useAuthStore = create<AuthState>()(
 
       // Sign out
       signOut: async () => {
+        // Save ALL project data to Supabase BEFORE destroying the session.
+        // This is the safety net — even if debounced auto-saves missed
+        // something, this guarantees everything reaches the server.
+        try {
+          await saveEverythingToSupabase();
+        } catch (err) {
+          console.error('Save-all on sign-out failed:', err);
+        }
+
         try {
           await supabaseAuth.signOut();
         } catch (error) {
