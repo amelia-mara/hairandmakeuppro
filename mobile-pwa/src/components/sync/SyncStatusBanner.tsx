@@ -1,21 +1,60 @@
-import { useState } from 'react';
-import { useSyncStore, type ChangeCategory } from '@/stores/syncStore';
+import { useState, useEffect } from 'react';
+import { useSyncStore } from '@/stores/syncStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { uploadToServer, downloadFromServer } from '@/services/manualSync';
 
-const CATEGORY_LABELS: Record<ChangeCategory, string> = {
-  scenes: 'Scenes',
-  characters: 'Characters',
-  looks: 'Looks',
-  schedule: 'Schedule',
-  callSheets: 'Call Sheets',
-  script: 'Script',
-  captures: 'Continuity',
-};
+// ── Sync Icon (for ProjectHeader) ──────────────────────────────────────
+// Shows a sync arrow icon. Badge with count when pending. Spins when busy.
 
-/** Persistent sync bar shown at the top of every project page.
- *  Shows pending changes and manual upload/download buttons. */
-export function SyncStatusBar() {
+export function SyncIcon({ onClick }: { onClick: () => void }) {
+  const { status, pendingChanges, isOnline } = useSyncStore();
+  const pendingCount = pendingChanges.size;
+  const isBusy = status === 'uploading' || status === 'downloading';
+
+  return (
+    <button
+      onClick={onClick}
+      className="relative w-8 h-8 flex items-center justify-center active:scale-90 transition-transform"
+      aria-label="Sync"
+    >
+      <svg
+        className={`w-[18px] h-[18px] ${
+          !isOnline ? 'text-gray-300' :
+          isBusy ? 'text-text-muted animate-spin' :
+          pendingCount > 0 ? 'text-text-muted' :
+          'text-text-muted'
+        }`}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <polyline points="23 4 23 10 17 10" />
+        <polyline points="1 20 1 14 7 14" />
+        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+      </svg>
+
+      {/* Badge — only when pending and not busy */}
+      {pendingCount > 0 && !isBusy && isOnline && (
+        <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 flex items-center justify-center rounded-full bg-gold text-white text-[10px] font-bold leading-none">
+          {pendingCount}
+        </span>
+      )}
+
+      {/* Offline dot */}
+      {!isOnline && (
+        <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-destructive border-2 border-card" />
+      )}
+    </button>
+  );
+}
+
+// ── Sync Bottom Sheet ──────────────────────────────────────────────────
+// Opens as a modal overlay. Clean, minimal design.
+
+export function SyncBottomSheet({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const {
     status,
     lastUploadedAt,
@@ -24,18 +63,24 @@ export function SyncStatusBar() {
     isOnline,
     error,
     progress,
-    isPanelOpen,
-    togglePanel,
-    closePanel,
   } = useSyncStore();
   const currentProject = useProjectStore((s) => s.currentProject);
   const [isUploading, setIsUploading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
 
-  if (!currentProject) return null;
+  // Force re-render every 30s for time ago
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (!isOpen) return;
+    const interval = setInterval(() => setTick(t => t + 1), 30000);
+    return () => clearInterval(interval);
+  }, [isOpen]);
 
-  const hasPending = pendingChanges.size > 0;
+  if (!isOpen || !currentProject) return null;
+
+  const pendingCount = pendingChanges.size;
   const isBusy = status === 'uploading' || status === 'downloading' || isUploading || isDownloading;
+  const isSynced = pendingCount === 0 && !isBusy && !error;
 
   const handleUpload = async () => {
     if (isBusy || !isOnline) return;
@@ -57,218 +102,141 @@ export function SyncStatusBar() {
     }
   };
 
-  // Status display
-  const getStatusInfo = (): { color: string; label: string } => {
-    if (!isOnline) return { color: 'text-gray-400', label: 'Offline' };
-    if (isBusy) {
-      if (status === 'uploading' || isUploading) return { color: 'text-warning', label: `Uploading${progress > 0 ? ` ${progress}%` : '...'}` };
-      return { color: 'text-warning', label: `Downloading${progress > 0 ? ` ${progress}%` : '...'}` };
-    }
-    if (error) return { color: 'text-destructive', label: 'Sync error' };
-    if (hasPending) return { color: 'text-warning', label: `${pendingChanges.size} unsaved` };
-    if (status === 'synced') return { color: 'text-success', label: 'Saved' };
-    return { color: 'text-gray-400', label: 'Ready' };
-  };
-
-  const { color, label } = getStatusInfo();
-  const lastSync = lastUploadedAt || lastDownloadedAt;
-  const timeAgo = lastSync ? getTimeAgo(lastSync) : null;
+  const lastSync = lastUploadedAt && lastDownloadedAt
+    ? (lastUploadedAt > lastDownloadedAt ? lastUploadedAt : lastDownloadedAt)
+    : lastUploadedAt || lastDownloadedAt;
 
   return (
-    <>
-      <button
-        onClick={togglePanel}
-        className="w-full bg-card/80 backdrop-blur-sm border-b border-border/50 active:bg-gray-50 transition-colors"
+    <div className="fixed inset-0 z-50" onClick={onClose}>
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/40" />
+
+      {/* Sheet */}
+      <div
+        className="absolute bottom-0 inset-x-0 bg-card rounded-t-2xl animate-in slide-in-from-bottom duration-200"
+        onClick={(e) => e.stopPropagation()}
       >
-        <div className="mobile-container">
-          <div className="h-8 px-4 flex items-center justify-between">
-            {/* Left: status */}
-            <div className="flex items-center gap-2">
-              <div className={`w-1.5 h-1.5 rounded-full ${
-                !isOnline ? 'bg-gray-400' :
-                isBusy ? 'bg-warning animate-pulse' :
-                error ? 'bg-destructive' :
-                hasPending ? 'bg-warning' :
-                status === 'synced' ? 'bg-success' :
-                'bg-gray-400'
-              }`} />
-              <span className={`text-[11px] font-medium ${color}`}>{label}</span>
-              {timeAgo && !isBusy && status === 'synced' && (
-                <span className="text-[11px] text-text-light">{timeAgo}</span>
+        {/* Handle */}
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 rounded-full bg-gray-300" />
+        </div>
+
+        <div className="px-6 pb-8 pt-2">
+          {/* Title */}
+          <h2 className="text-lg font-bold text-text-primary text-center mb-6">Sync</h2>
+
+          {/* Error */}
+          {error && (
+            <div className="text-sm text-destructive bg-destructive/10 rounded-xl px-4 py-3 mb-5 text-center">
+              {error}
+            </div>
+          )}
+
+          {/* Progress bar during sync */}
+          {isBusy && progress > 0 && (
+            <div className="w-full bg-gray-100 rounded-full h-1.5 mb-5">
+              <div
+                className="bg-gold h-1.5 rounded-full transition-all duration-300"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          )}
+
+          {isSynced ? (
+            /* ── All synced state ─────────────────────────── */
+            <div className="text-center py-4">
+              <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-success/10 flex items-center justify-center">
+                <svg className="w-6 h-6 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <p className="text-sm font-medium text-text-primary">Everything synced</p>
+              {lastSync && (
+                <p className="text-xs text-text-muted mt-1">Last sync: {getTimeAgo(lastSync)}</p>
               )}
             </div>
-
-            {/* Right: chevron */}
-            <svg
-              className={`w-3 h-3 text-text-muted transition-transform ${isPanelOpen ? 'rotate-180' : ''}`}
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
-          </div>
-        </div>
-      </button>
-
-      {/* Expandable sync panel */}
-      {isPanelOpen && (
-        <div className="bg-card border-b border-border shadow-sm">
-          <div className="mobile-container px-4 py-3 space-y-3">
-            {/* Error message */}
-            {error && (
-              <div className="text-xs text-destructive bg-destructive/10 rounded-lg px-3 py-2">
-                {error}
-              </div>
-            )}
-
-            {/* Pending changes list */}
-            {hasPending && (
-              <div className="space-y-1.5">
-                <p className="text-[11px] font-medium text-text-muted uppercase tracking-wide">
-                  Unsaved changes
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {Array.from(pendingChanges).map((category) => (
-                    <span
-                      key={category}
-                      className="text-[11px] px-2 py-0.5 rounded-full bg-warning/10 text-warning font-medium"
-                    >
-                      {CATEGORY_LABELS[category]}
-                    </span>
-                  ))}
+          ) : (
+            /* ── Has pending changes or is busy ──────────── */
+            <div className="space-y-5">
+              {/* Upload section */}
+              {pendingCount > 0 && (
+                <div className="text-center">
+                  <p className="text-sm text-text-secondary mb-3">
+                    {pendingCount} {pendingCount === 1 ? 'change' : 'changes'} to upload
+                  </p>
+                  <button
+                    onClick={handleUpload}
+                    disabled={isBusy || !isOnline}
+                    className={`w-full py-3 rounded-xl text-sm font-semibold transition-all ${
+                      isBusy || !isOnline
+                        ? 'bg-gray-100 text-gray-400'
+                        : 'gold-gradient text-white shadow-sm active:scale-[0.98]'
+                    }`}
+                  >
+                    {isUploading ? `Uploading${progress > 0 ? ` ${progress}%` : '...'}` : 'Upload Changes'}
+                  </button>
                 </div>
+              )}
+
+              {/* Divider */}
+              {pendingCount > 0 && (
+                <div className="border-t border-border" />
+              )}
+
+              {/* Download section */}
+              <div className="text-center">
+                <button
+                  onClick={handleDownload}
+                  disabled={isBusy || !isOnline}
+                  className={`text-sm font-medium transition-colors ${
+                    isBusy || !isOnline
+                      ? 'text-gray-400'
+                      : 'text-gold active:text-gold/70'
+                  }`}
+                >
+                  {isDownloading ? `Downloading${progress > 0 ? ` ${progress}%` : '...'}` : 'Download from server'}
+                </button>
               </div>
-            )}
 
-            {/* Progress bar */}
-            {isBusy && progress > 0 && (
-              <div className="w-full bg-gray-200 rounded-full h-1">
-                <div
-                  className="bg-gold h-1 rounded-full transition-all duration-300"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-            )}
-
-            {/* Upload/Download buttons */}
-            <div className="flex gap-2">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleUpload();
-                }}
-                disabled={isBusy || !isOnline}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all ${
-                  isBusy || !isOnline
-                    ? 'bg-gray-100 text-gray-400'
-                    : hasPending
-                      ? 'gold-gradient text-white shadow-sm active:scale-[0.98]'
-                      : 'bg-gray-100 text-text-secondary active:bg-gray-200'
-                }`}
-              >
-                <svg className={`w-3.5 h-3.5 ${isUploading ? 'animate-bounce' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="16 16 12 12 8 16" />
-                  <line x1="12" y1="12" x2="12" y2="21" />
-                  <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" />
-                </svg>
-                {isUploading ? 'Uploading...' : 'Upload'}
-              </button>
-
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDownload();
-                }}
-                disabled={isBusy || !isOnline}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all ${
-                  isBusy || !isOnline
-                    ? 'bg-gray-100 text-gray-400'
-                    : 'bg-gray-100 text-text-secondary active:bg-gray-200'
-                }`}
-              >
-                <svg className={`w-3.5 h-3.5 ${isDownloading ? 'animate-bounce' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="8 17 12 21 16 17" />
-                  <line x1="12" y1="12" x2="12" y2="21" />
-                  <path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" />
-                </svg>
-                {isDownloading ? 'Downloading...' : 'Download'}
-              </button>
+              {/* Last sync */}
+              {lastSync && (
+                <p className="text-xs text-text-muted text-center">
+                  Last sync: {getTimeAgo(lastSync)}
+                </p>
+              )}
             </div>
+          )}
 
-            {/* Last sync info */}
-            {(lastUploadedAt || lastDownloadedAt) && (
-              <div className="flex justify-between text-[10px] text-text-light">
-                {lastUploadedAt && (
-                  <span>Last uploaded: {getTimeAgo(lastUploadedAt)}</span>
-                )}
-                {lastDownloadedAt && (
-                  <span>Last downloaded: {getTimeAgo(lastDownloadedAt)}</span>
-                )}
-              </div>
-            )}
-
-            {/* Close panel button */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                closePanel();
-              }}
-              className="w-full text-center text-[11px] text-text-muted py-1"
-            >
-              Close
-            </button>
-          </div>
+          {/* Offline notice */}
+          {!isOnline && (
+            <p className="text-xs text-text-muted text-center mt-4">
+              You're offline. Changes will be saved locally.
+            </p>
+          )}
         </div>
-      )}
-    </>
-  );
-}
-
-/** Compact sync dot for headers */
-export function SyncDot() {
-  const { status, pendingChanges, isOnline } = useSyncStore();
-
-  const getColor = () => {
-    if (!isOnline) return 'bg-gray-400';
-    if (status === 'uploading' || status === 'downloading') return 'bg-warning animate-pulse';
-    if (status === 'error') return 'bg-destructive';
-    if (pendingChanges.size > 0) return 'bg-warning';
-    if (status === 'synced') return 'bg-success';
-    return 'bg-gray-400';
-  };
-
-  return <div className={`w-2 h-2 rounded-full ${getColor()}`} />;
-}
-
-/** Original card-style banner (kept for backwards compatibility) */
-export function SyncStatusBanner() {
-  const { status, pendingChanges, isOnline } = useSyncStore();
-
-  const getStatusInfo = () => {
-    if (!isOnline) return { color: 'bg-gray-400', label: 'Offline' };
-    if (status === 'uploading') return { color: 'bg-warning animate-pulse', label: 'Uploading...' };
-    if (status === 'downloading') return { color: 'bg-warning animate-pulse', label: 'Downloading...' };
-    if (status === 'error') return { color: 'bg-destructive', label: 'Sync error' };
-    if (pendingChanges.size > 0) return { color: 'bg-warning', label: `${pendingChanges.size} unsaved` };
-    if (status === 'synced') return { color: 'bg-success', label: 'Saved' };
-    return { color: 'bg-gray-400', label: 'Ready' };
-  };
-
-  const { color, label } = getStatusInfo();
-
-  return (
-    <div className="bg-card rounded-[10px] px-4 py-3 mb-4 flex items-center justify-between shadow-card">
-      <div className="flex items-center gap-2.5">
-        <div className={`w-2 h-2 rounded-full ${color}`} />
-        <span className="text-xs text-text-secondary">{label}</span>
       </div>
     </div>
   );
 }
+
+// ── Legacy exports (kept so nothing breaks) ────────────────────────────
+
+/** @deprecated Use SyncBottomSheet + SyncIcon instead */
+export function SyncStatusBar() {
+  return null;
+}
+
+/** @deprecated */
+export function SyncStatusBanner() {
+  return null;
+}
+
+/** @deprecated Use SyncIcon instead */
+export function SyncDot() {
+  return null;
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────
 
 function getTimeAgo(date: Date): string {
   const seconds = Math.floor((Date.now() - date.getTime()) / 1000);

@@ -31,7 +31,7 @@ import {
 import { SelectPlanScreen } from '@/components/subscription';
 import { UserProfileScreen } from '@/components/profile/UserProfileScreen';
 import { ProjectSettingsScreen } from '@/components/project-settings';
-import { SyncStatusBar } from '@/components/sync';
+import { SyncBottomSheet } from '@/components/sync';
 import { TutorialOverlay } from '@/components/tutorial/TutorialOverlay';
 import { useTutorialStore } from '@/stores/tutorialStore';
 import type { NavTab, SubscriptionTier, BillingPeriod } from '@/types';
@@ -119,6 +119,7 @@ function AppContent() {
   const [showHome, setShowHome] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [showProcessingNotice, setShowProcessingNotice] = useState(false);
+  const [showSyncSheet, setShowSyncSheet] = useState(false);
 
   // Track if migration has been attempted
   const migrationAttempted = useRef(false);
@@ -496,19 +497,17 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Persistent sync status bar - shown at the very top on all project pages */}
-      {currentProject && <SyncStatusBar />}
-
       {/* Lifecycle Banner (shows when project is wrapped/archived) */}
       {lifecycle.state !== 'active' && (
         <LifecycleBanner onExport={() => setShowExport(true)} />
       )}
 
-      {/* Project Header - simplified with account icon */}
+      {/* Project Header - with sync icon */}
       {showProjectHeader && (
         <ProjectHeader
           onSwitchProject={handleSwitchProject}
           onNavigateToProfile={() => setShowUserProfile(true)}
+          onSyncTap={() => setShowSyncSheet(true)}
         />
       )}
 
@@ -518,6 +517,9 @@ function AppContent() {
         activeTab={activeTab}
         onTabChange={handleTabChange}
       />
+
+      {/* Sync bottom sheet */}
+      <SyncBottomSheet isOpen={showSyncSheet} onClose={() => setShowSyncSheet(false)} />
 
       {/* AI Chat Assistant */}
       <ChatAssistant />
