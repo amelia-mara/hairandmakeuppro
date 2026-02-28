@@ -1626,6 +1626,22 @@ export async function startSync(projectId: string, userId?: string): Promise<voi
     return;
   }
 
+  // Verify we have a valid Supabase session before making any queries.
+  // After logout, the session is cleared. If the projectStore still has data
+  // from IndexedDB rehydration, startSync may fire before the user signs back in.
+  // Without a valid session, all queries would fail due to RLS policies, and
+  // pullProjectData would see empty results — causing it to skip data restoration.
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      useSyncStore.getState().setOffline();
+      return;
+    }
+  } catch {
+    useSyncStore.getState().setOffline();
+    return;
+  }
+
   // Pull latest data from server
   await pullProjectData(projectId);
 
