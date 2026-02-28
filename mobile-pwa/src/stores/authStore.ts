@@ -28,7 +28,7 @@ import { useProjectStore } from './projectStore';
 import { useScheduleStore } from './scheduleStore';
 import { useCallSheetStore } from './callSheetStore';
 import * as supabaseStorage from '@/services/supabaseStorage';
-import { flushAutoSave } from '@/services/autoSave';
+import { saveEverythingToSupabase } from '@/services/autoSave';
 
 interface AuthState {
   // Auth state
@@ -386,11 +386,13 @@ export const useAuthStore = create<AuthState>()(
 
       // Sign out
       signOut: async () => {
-        // Flush any pending auto-saves BEFORE destroying the session
+        // Save ALL project data to Supabase BEFORE destroying the session.
+        // This is the safety net — even if debounced auto-saves missed
+        // something, this guarantees everything reaches the server.
         try {
-          await flushAutoSave();
+          await saveEverythingToSupabase();
         } catch (err) {
-          console.error('Auto-save flush on sign-out failed:', err);
+          console.error('Save-all on sign-out failed:', err);
         }
 
         try {
