@@ -3,12 +3,12 @@ import { useProjectStore } from '@/stores/projectStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
 import { isSupabaseConfigured } from '@/lib/supabase';
-import { startSync, stopSync } from '@/services/syncService';
-import { initSyncSubscriptions } from '@/services/syncSubscriptions';
+import { useSyncStore } from '@/stores/syncStore';
+import { initChangeTracking } from '@/services/syncChangeTracker';
 import { migrateToIndexedDB, flushPendingWrites } from '@/db/zustandStorage';
 
-// Initialize sync subscriptions (idempotent, runs once)
-initSyncSubscriptions();
+// Initialize change tracking (idempotent, runs once)
+initChangeTracking();
 import { BottomNav, ProjectHeader } from '@/components/navigation';
 import { SceneView } from '@/components/scenes';
 import { Today } from '@/components/today';
@@ -185,36 +185,19 @@ function AppContent() {
     }
   }, [currentProject, currentSceneId, activeTab, updateActivity]);
 
-  // Start/stop real-time sync when project changes or user authenticates.
-  // Track both the project ID and the user ID that sync was started for,
-  // so we re-sync when the user logs out and back in (new auth session).
-  const syncStartedForProject = useRef<string | null>(null);
-  const syncStartedForUser = useRef<string | null>(null);
+  // Online/offline detection for manual sync
   useEffect(() => {
-    const projectChanged = currentProject && currentProject.id !== syncStartedForProject.current;
-    const userChanged = currentProject && user?.id && user.id !== syncStartedForUser.current;
-
-    if (currentProject && (projectChanged || userChanged)) {
-      // Stop any existing sync before starting a new one
-      if (syncStartedForProject.current) {
-        stopSync();
-      }
-      syncStartedForProject.current = currentProject.id;
-      syncStartedForUser.current = user?.id || null;
-      startSync(currentProject.id, user?.id);
-    }
-    if (!currentProject && syncStartedForProject.current) {
-      syncStartedForProject.current = null;
-      syncStartedForUser.current = null;
-      stopSync();
-    }
+    const handleOnline = () => useSyncStore.getState().setOnline(true);
+    const handleOffline = () => useSyncStore.getState().setOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    // Set initial state
+    useSyncStore.getState().setOnline(navigator.onLine);
     return () => {
-      // Clean up on unmount
-      if (syncStartedForProject.current) {
-        stopSync();
-      }
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
     };
-  }, [currentProject?.id, user?.id]);
+  }, []);
 
   // Background Schedule Stage 2 Processing: Automatically process pending schedules
   // This extracts detailed scene data from each shooting day using AI
@@ -274,9 +257,6 @@ function AppContent() {
 
   // Handle switching to a different project (from Project Menu)
   const handleSwitchProject = () => {
-    // Stop sync before clearing project
-    stopSync();
-    syncStartedForProject.current = null;
     // Save current project data before clearing (so it can be restored later)
     useProjectStore.getState().saveAndClearProject();
     setShowHome(false);
