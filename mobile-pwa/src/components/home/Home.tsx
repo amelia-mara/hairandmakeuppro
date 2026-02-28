@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useProjectStore } from '@/stores/projectStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
+import { useAuthStore } from '@/stores/authStore';
 import {
   parseScriptFile,
   parseScenesFast,
@@ -12,6 +13,7 @@ import {
 import {
   parseScheduleStage1,
 } from '@/utils/scheduleParser';
+import { saveInitialProjectData } from '@/services/supabaseProjects';
 import type { ParsedScript } from '@/utils/scriptParser';
 import type { Project, Scene, ProductionSchedule } from '@/types';
 import { createEmptyMakeupDetails, createEmptyHairDetails } from '@/types';
@@ -133,9 +135,42 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
       setProcessingProgress(100);
       setProcessingStatus('Complete!');
 
-      // Set the project with scenes AND scriptPdfData in a single update.
-      // This ensures both are available when startSync → pushInitialData runs.
+      // Set the project locally first so the UI updates immediately
       setProject(project);
+
+      // ── Save directly to Supabase ──────────────────────────────
+      // Don't rely on the async sync pipeline. Save the project data
+      // to the server right now, so it exists in the user's account
+      // regardless of what the sync system does later.
+      const userId = useAuthStore.getState().user?.id || null;
+      saveInitialProjectData({
+        projectId,
+        userId,
+        scenes: scenes.map(s => ({
+          id: s.id,
+          scene_number: s.sceneNumber,
+          int_ext: s.intExt || null,
+          location: s.slugline || null,
+          time_of_day: s.timeOfDay || null,
+          synopsis: null,
+          script_content: s.scriptContent || null,
+          shooting_day: s.shootingDay || null,
+          is_complete: false,
+        })),
+        schedule: schedule ? {
+          id: schedule.id,
+          rawText: schedule.rawText || null,
+          castList: schedule.castList,
+          days: schedule.days,
+          status: schedule.status,
+          pdfDataUri: schedule.pdfUri,
+        } : null,
+        scriptPdfDataUri: scriptPdfBase64,
+      }).then(({ error }) => {
+        if (error) {
+          console.error('[Home] Failed to save project data to server:', error);
+        }
+      });
 
       // Always run character detection
       // If schedule is provided, use cast list for accurate character identification
