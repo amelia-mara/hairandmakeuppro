@@ -420,6 +420,8 @@ export function ProjectHubScreen() {
     // ── Load from Supabase ─────────────────────────────────────────
     // The server is the source of truth. Whether you just logged in,
     // switched devices, or tapped the same project — fetch it fresh.
+    // If the server returns partial data (e.g. call sheets but no scenes),
+    // we merge in local saved data to avoid data loss.
     try {
       const {
         scenes, characters, looks, sceneCharacters, lookScenes,
@@ -430,6 +432,18 @@ export function ProjectHubScreen() {
       const hasSceneData = !error && scenes.length > 0;
       const hasContinuity = continuityEvents.length > 0;
       const hasDocuments = scriptData.length > 0 || scheduleData.length > 0 || callSheetData.length > 0;
+
+      console.log(`[ProjectOpen] Server data — scenes: ${scenes.length}, characters: ${characters.length}, looks: ${looks.length}, ` +
+        `scripts: ${scriptData.length}, schedules: ${scheduleData.length}, callSheets: ${callSheetData.length}, ` +
+        `captures: ${continuityEvents.length}${error ? `, error: ${error.message}` : ''}`);
+
+      // Check if local saved data has richer content (scenes/characters)
+      // that the server is missing — this happens when saveInitialProjectData
+      // fails silently (e.g. API key error, RLS block).
+      const savedProjectData = store.hasSavedProject(membership.projectId)
+        ? useProjectStore.getState().savedProjects[membership.projectId]
+        : null;
+      const localHasScenes = (savedProjectData?.project?.scenes?.length ?? 0) > 0;
 
       if (hasSceneData || hasDocuments || hasContinuity) {
         const sceneCharMap = new Map<string, string[]>();
@@ -480,6 +494,23 @@ export function ProjectHubScreen() {
           hair: (l.hair_details as unknown as HairDetails) || createEmptyHairDetails(),
           notes: l.description || undefined,
         }));
+
+        // If server has no scenes but local saved data does, restore the
+        // saved project instead (rescues data when saveInitialProjectData failed).
+        if (!hasSceneData && localHasScenes && savedProjectData) {
+          console.warn('[ProjectOpen] Server has no scenes but local data does — restoring local project to prevent data loss');
+          setReceivingFromServer(true);
+          try {
+            store.restoreSavedProject(membership.projectId);
+            // Also load server-side documents (call sheets etc.) that DO exist
+            loadDocumentsIntoStores(scheduleData, callSheetData, scriptData);
+          } finally {
+            setReceivingFromServer(false);
+          }
+          // Let auto-save fire to push rescued scenes to server
+          store.setActiveTab('today');
+          return;
+        }
 
         const project: Project = {
           id: membership.projectId,
@@ -565,12 +596,26 @@ export function ProjectHubScreen() {
         } finally {
           setReceivingFromServer(false);
         }
-        // Clear any pending changes — we just loaded fresh from server.
-        useSyncStore.getState().clearChanges();
-        // Also clear after a delay to catch async PDF download callbacks
-        // from loadDocumentsIntoStores that fire after this point and
-        // trigger the change tracker with receivingFromServer already false.
-        setTimeout(() => useSyncStore.getState().clearChanges(), 3000);
+        // If we used local scenes because server was missing them,
+        // trigger auto-save so the data gets pushed to Supabase.
+        if (!hasSceneData && localHasScenes) {
+          console.log('[ProjectOpen] Triggering auto-save to push local scenes to server…');
+          // Don't clear changes — let auto-save fire for the rescued data
+        } else {
+          // Clear any pending changes — we just loaded fresh from server.
+          useSyncStore.getState().clearChanges();
+          // Also clear after a delay to catch async PDF download callbacks
+          // from loadDocumentsIntoStores that fire after this point and
+          // trigger the change tracker with receivingFromServer already false.
+          setTimeout(() => useSyncStore.getState().clearChanges(), 3000);
+        }
+        store.setActiveTab('today');
+        return;
+      }
+      // Server returned no data — check local saved data before creating empty project
+      if (store.hasSavedProject(membership.projectId)) {
+        console.log('[ProjectOpen] Server has no data but local saved data exists — restoring local project');
+        store.restoreSavedProject(membership.projectId);
         store.setActiveTab('today');
         return;
       }
@@ -579,13 +624,15 @@ export function ProjectHubScreen() {
 
       // ── Offline fallback: use local data if available ───────────
       if (store.hasSavedProject(membership.projectId)) {
+        console.log('[ProjectOpen] Offline — restoring from local saved data');
         store.restoreSavedProject(membership.projectId);
         store.setActiveTab('today');
         return;
       }
     }
 
-    // ── No data on server (or offline with no local data) ────────
+    // ── No data on server AND no local data ─────────────────────
+    console.log('[ProjectOpen] No data found — showing setup screen');
     const project = createProjectFromMembership(membership);
     if (membership.role === 'owner') {
       store.setProjectNeedsSetup(project);
