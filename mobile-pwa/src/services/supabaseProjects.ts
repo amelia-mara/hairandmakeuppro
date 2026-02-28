@@ -602,3 +602,136 @@ export async function leaveProject(
     return { error: error as Error };
   }
 }
+
+// ============================================================================
+// Direct project data save — bypasses the sync pipeline entirely.
+// Called once after script/schedule upload to guarantee data reaches
+// Supabase before the user can navigate away.
+// ============================================================================
+
+import * as supabaseStorage from './supabaseStorage';
+
+interface SaveProjectDataParams {
+  projectId: string;
+  userId: string | null;
+  scenes: {
+    id: string;
+    scene_number: string;
+    int_ext: string | null;
+    location: string | null;
+    time_of_day: string | null;
+    synopsis: string | null;
+    script_content: string | null;
+    shooting_day: number | string | null;
+    is_complete: boolean;
+  }[];
+  schedule?: {
+    id: string;
+    rawText: string | null;
+    castList: unknown;
+    days: unknown;
+    status: string;
+    pdfDataUri?: string;
+  } | null;
+  scriptPdfDataUri?: string;
+}
+
+export async function saveInitialProjectData(params: SaveProjectDataParams): Promise<{ error: Error | null }> {
+  const { projectId, userId, scenes, schedule, scriptPdfDataUri } = params;
+
+  try {
+    // 1. Save scenes
+    if (scenes.length > 0) {
+      const dbScenes = scenes.map(s => ({
+        id: s.id,
+        project_id: projectId,
+        scene_number: s.scene_number,
+        int_ext: s.int_ext,
+        location: s.location,
+        time_of_day: s.time_of_day,
+        synopsis: s.synopsis,
+        script_content: s.script_content,
+        shooting_day: s.shooting_day,
+        is_complete: s.is_complete,
+      }));
+
+      const { error: sceneError } = await supabase
+        .from('scenes')
+        .upsert(dbScenes, { onConflict: 'id' });
+      if (sceneError) {
+        console.error('[SAVE] scenes failed:', sceneError);
+        throw sceneError;
+      }
+    }
+
+    // 2. Save schedule data
+    if (schedule) {
+      const { error: scheduleError } = await supabase
+        .from('schedule_data')
+        .upsert({
+          id: schedule.id,
+          project_id: projectId,
+          raw_pdf_text: schedule.rawText || null,
+          cast_list: schedule.castList as Database['public']['Tables']['schedule_data']['Row']['cast_list'],
+          days: schedule.days as Database['public']['Tables']['schedule_data']['Row']['days'],
+          status: schedule.status === 'complete' ? 'complete' : 'pending',
+        }, { onConflict: 'id' });
+      if (scheduleError) {
+        console.error('[SAVE] schedule_data failed:', scheduleError);
+        throw scheduleError;
+      }
+
+      // Upload schedule PDF to storage
+      if (schedule.pdfDataUri && schedule.pdfDataUri.startsWith('data:')) {
+        const { path, error: uploadError } = await supabaseStorage.uploadBase64Document(
+          projectId, 'schedules', schedule.pdfDataUri
+        );
+        if (!uploadError && path) {
+          await supabase
+            .from('schedule_data')
+            .update({ storage_path: path })
+            .eq('id', schedule.id);
+        }
+      }
+    }
+
+    // 3. Upload script PDF to storage + create script_uploads record
+    if (scriptPdfDataUri && scriptPdfDataUri.startsWith('data:')) {
+      const { path, error: uploadError } = await supabaseStorage.uploadBase64Document(
+        projectId, 'scripts', scriptPdfDataUri
+      );
+      if (!uploadError && path) {
+        // Deactivate previous uploads
+        await supabase
+          .from('script_uploads')
+          .update({ is_active: false })
+          .eq('project_id', projectId)
+          .eq('is_active', true);
+
+        // Create new record
+        const base64Length = scriptPdfDataUri.split(',')[1]?.length || 0;
+        const fileSize = Math.round(base64Length * 0.75);
+        const { error: dbError } = await supabase
+          .from('script_uploads')
+          .insert({
+            project_id: projectId,
+            storage_path: path,
+            file_name: 'script.pdf',
+            file_size: fileSize,
+            is_active: true,
+            status: 'uploaded',
+            uploaded_by: userId,
+            scene_count: scenes.length,
+          });
+        if (dbError) {
+          console.error('[SAVE] script_uploads failed:', dbError);
+        }
+      }
+    }
+
+    return { error: null };
+  } catch (error) {
+    console.error('[SAVE] saveInitialProjectData failed:', error);
+    return { error: error as Error };
+  }
+}
