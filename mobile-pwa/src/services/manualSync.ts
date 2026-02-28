@@ -694,6 +694,8 @@ export async function downloadFromServer(): Promise<{ error: Error | null }> {
     syncStore.setProgress(100);
 
     syncStore.setDownloaded();
+    // Clear pending changes — local data now matches server
+    syncStore.clearChanges();
     return { error: null };
   } catch (error) {
     console.error('[ManualSync] Download failed:', error);

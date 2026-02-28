@@ -8,6 +8,7 @@ import * as supabaseProjects from '@/services/supabaseProjects';
 import * as supabaseStorage from '@/services/supabaseStorage';
 import { hoursUntilDeletion } from '@/services/supabaseProjects';
 import { setReceivingFromServer } from '@/services/syncChangeTracker';
+import { useSyncStore } from '@/stores/syncStore';
 import type { ProjectMembership, Project, ProjectRole, ProductionType, CallSheet, ProductionSchedule, SceneFilmingStatus, MakeupDetails, HairDetails, ScheduleCastMember, ScheduleDay } from '@/types';
 import { createEmptyMakeupDetails, createEmptyHairDetails } from '@/types';
 
@@ -425,6 +426,12 @@ export function ProjectHubScreen() {
         } finally {
           setReceivingFromServer(false);
         }
+        // Clear any pending changes — we just loaded fresh from server.
+        useSyncStore.getState().clearChanges();
+        // Also clear after a delay to catch async PDF download callbacks
+        // from loadDocumentsIntoStores that fire after this point and
+        // trigger the change tracker with receivingFromServer already false.
+        setTimeout(() => useSyncStore.getState().clearChanges(), 3000);
         store.setActiveTab('today');
         return;
       }
