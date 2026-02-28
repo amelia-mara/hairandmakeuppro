@@ -264,6 +264,14 @@ export async function uploadToServer(): Promise<{ error: Error | null }> {
 
     // 1. Upload scenes + scene_characters
     if (project.scenes.length > 0) {
+      // Clear all server scenes for this project, then upsert local ones.
+      // This avoids unique constraint conflicts when local scenes have new UUIDs
+      // but the same scene_number as stale server rows.
+      await supabase
+        .from('scenes')
+        .delete()
+        .eq('project_id', projectId);
+
       const dbScenes = project.scenes.map(s => sceneToDb(s, projectId));
       const { error } = await supabase
         .from('scenes')
@@ -291,6 +299,11 @@ export async function uploadToServer(): Promise<{ error: Error | null }> {
 
     // 2. Upload characters
     if (project.characters.length > 0) {
+      await supabase
+        .from('characters')
+        .delete()
+        .eq('project_id', projectId);
+
       const dbChars = project.characters.map(c => characterToDb(c, projectId));
       const { error } = await supabase
         .from('characters')
@@ -302,6 +315,11 @@ export async function uploadToServer(): Promise<{ error: Error | null }> {
 
     // 3. Upload looks + look_scenes
     if (project.looks.length > 0) {
+      await supabase
+        .from('looks')
+        .delete()
+        .eq('project_id', projectId);
+
       const dbLooks = project.looks.map(l => lookToDb(l, projectId));
       const { error: lookError } = await supabase
         .from('looks')
