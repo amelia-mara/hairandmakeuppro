@@ -318,6 +318,242 @@ export function autoSaveScript(): void {
 }
 
 // ============================================================================
+// Full save: push ALL current state to Supabase (used before logout)
+// ============================================================================
+
+/**
+ * Save everything in the current project to Supabase immediately.
+ * Unlike the debounced auto-save functions, this reads the CURRENT
+ * state from all stores and pushes every category in parallel.
+ * Call this before destroying the Supabase session (logout).
+ */
+export async function saveEverythingToSupabase(): Promise<void> {
+  if (!isSupabaseConfigured) return;
+
+  // Cancel any pending debounced saves — we're about to save everything
+  for (const key of Object.keys(timers)) {
+    clearTimeout(timers[key]);
+    delete timers[key];
+  }
+  for (const key of Object.keys(pendingFns)) {
+    delete pendingFns[key];
+  }
+
+  const project = useProjectStore.getState().currentProject;
+  if (!project) return;
+
+  const projectId = project.id;
+  const userId = useAuthStore.getState().user?.id || null;
+
+  console.log('[SaveAll] Saving all project data before logout…');
+
+  const errors: string[] = [];
+
+  // ── 1. Scenes + scene_characters ──────────────────────────────
+  if (project.scenes.length > 0) {
+    try {
+      const dbScenes = project.scenes.map(s => sceneToDb(s, projectId));
+      const { error } = await supabase
+        .from('scenes')
+        .upsert(dbScenes, { onConflict: 'id' });
+      if (error) throw error;
+
+      const sceneIds = project.scenes.map(s => s.id);
+      const scEntries: { scene_id: string; character_id: string }[] = [];
+      for (const scene of project.scenes) {
+        for (const charId of scene.characters) {
+          scEntries.push({ scene_id: scene.id, character_id: charId });
+        }
+      }
+      if (sceneIds.length > 0) {
+        await supabase.rpc('sync_scene_characters', {
+          p_scene_ids: sceneIds,
+          p_entries: scEntries,
+        });
+      }
+      console.log('[SaveAll] Scenes saved');
+    } catch (err) {
+      console.error('[SaveAll] Scenes failed:', err);
+      errors.push('scenes');
+    }
+  }
+
+  // ── 2. Characters ─────────────────────────────────────────────
+  if (project.characters.length > 0) {
+    try {
+      const dbChars = project.characters.map(c => characterToDb(c, projectId));
+      const { error } = await supabase
+        .from('characters')
+        .upsert(dbChars, { onConflict: 'id' });
+      if (error) throw error;
+      console.log('[SaveAll] Characters saved');
+    } catch (err) {
+      console.error('[SaveAll] Characters failed:', err);
+      errors.push('characters');
+    }
+  }
+
+  // ── 3. Looks + look_scenes ────────────────────────────────────
+  if (project.looks.length > 0) {
+    try {
+      const dbLooks = project.looks.map(l => lookToDb(l, projectId));
+      const { error } = await supabase
+        .from('looks')
+        .upsert(dbLooks, { onConflict: 'id' });
+      if (error) throw error;
+
+      const lookIds = project.looks.map(l => l.id);
+      const lsEntries: { look_id: string; scene_number: string }[] = [];
+      for (const look of project.looks) {
+        for (const sceneNum of look.scenes) {
+          lsEntries.push({ look_id: look.id, scene_number: sceneNum });
+        }
+      }
+      if (lookIds.length > 0) {
+        await supabase.rpc('sync_look_scenes', {
+          p_look_ids: lookIds,
+          p_entries: lsEntries,
+        });
+      }
+      console.log('[SaveAll] Looks saved');
+    } catch (err) {
+      console.error('[SaveAll] Looks failed:', err);
+      errors.push('looks');
+    }
+  }
+
+  // ── 4. Scene captures (continuity events + photos) ────────────
+  const captures = useProjectStore.getState().sceneCaptures;
+  const captureEntries = Object.values(captures);
+  if (captureEntries.length > 0) {
+    for (const capture of captureEntries) {
+      const sc = capture as SceneCapture;
+      try {
+        const dbCapture = sceneCaptureToDb(sc, userId);
+        const { error } = await supabase
+          .from('continuity_events')
+          .upsert(dbCapture, { onConflict: 'id' });
+        if (error) throw error;
+        await autoUploadCapturePhotos(projectId, sc);
+      } catch (err) {
+        console.error('[SaveAll] Capture failed:', err);
+        errors.push(`capture-${sc.id}`);
+      }
+    }
+    console.log('[SaveAll] Captures saved');
+  }
+
+  // ── 5. Schedule ───────────────────────────────────────────────
+  const schedule = useScheduleStore.getState().schedule;
+  if (schedule) {
+    try {
+      const { error } = await supabase
+        .from('schedule_data')
+        .upsert({
+          id: schedule.id,
+          project_id: projectId,
+          raw_pdf_text: schedule.rawText || null,
+          cast_list: schedule.castList as unknown as Json,
+          days: schedule.days as unknown as Json,
+          status: schedule.status === 'complete' ? 'complete' : 'pending',
+        }, { onConflict: 'id' });
+      if (error) throw error;
+
+      if (schedule.pdfUri && schedule.pdfUri.startsWith('data:')) {
+        const { path, error: uploadError } = await supabaseStorage.uploadBase64Document(
+          projectId, 'schedules', schedule.pdfUri
+        );
+        if (!uploadError && path) {
+          await supabase.from('schedule_data').update({ storage_path: path }).eq('id', schedule.id);
+        }
+      }
+      console.log('[SaveAll] Schedule saved');
+    } catch (err) {
+      console.error('[SaveAll] Schedule failed:', err);
+      errors.push('schedule');
+    }
+  }
+
+  // ── 6. Call sheets ────────────────────────────────────────────
+  const callSheets = useCallSheetStore.getState().callSheets;
+  if (callSheets.length > 0) {
+    try {
+      for (const cs of callSheets) {
+        const { pdfUri, ...parsedData } = cs;
+        const { error } = await supabase
+          .from('call_sheet_data')
+          .upsert({
+            id: cs.id,
+            project_id: projectId,
+            shoot_date: cs.date,
+            production_day: cs.productionDay,
+            raw_text: cs.rawText || null,
+            parsed_data: parsedData as unknown as Json,
+            uploaded_by: userId,
+          }, { onConflict: 'id' });
+        if (error) console.warn('[SaveAll] Call sheet row failed:', error);
+
+        if (pdfUri && pdfUri.startsWith('data:')) {
+          const { path, error: uploadError } = await supabaseStorage.uploadBase64Document(
+            projectId, 'call-sheets', pdfUri
+          );
+          if (!uploadError && path) {
+            await supabase.from('call_sheet_data').update({ storage_path: path }).eq('id', cs.id);
+          }
+        }
+      }
+      console.log('[SaveAll] Call sheets saved');
+    } catch (err) {
+      console.error('[SaveAll] Call sheets failed:', err);
+      errors.push('callSheets');
+    }
+  }
+
+  // ── 7. Script PDF ─────────────────────────────────────────────
+  if (project.scriptPdfData && project.scriptPdfData.startsWith('data:')) {
+    try {
+      // Check if already uploaded
+      const { data: existing } = await supabase
+        .from('script_uploads')
+        .select('id')
+        .eq('project_id', projectId)
+        .eq('is_active', true)
+        .limit(1);
+
+      if (!existing || existing.length === 0) {
+        const { path, error: uploadError } = await supabaseStorage.uploadBase64Document(
+          projectId, 'scripts', project.scriptPdfData
+        );
+        if (!uploadError && path) {
+          const base64Length = project.scriptPdfData.split(',')[1]?.length || 0;
+          const fileSize = Math.round(base64Length * 0.75);
+          await supabase.from('script_uploads').insert({
+            project_id: projectId,
+            storage_path: path,
+            file_name: 'script.pdf',
+            file_size: fileSize,
+            is_active: true,
+            status: 'uploaded',
+            uploaded_by: userId,
+            scene_count: project.scenes.length,
+          });
+        }
+      }
+      console.log('[SaveAll] Script saved');
+    } catch (err) {
+      console.error('[SaveAll] Script failed:', err);
+      errors.push('script');
+    }
+  }
+
+  if (errors.length > 0) {
+    console.warn(`[SaveAll] Completed with errors in: ${errors.join(', ')}`);
+  } else {
+    console.log('[SaveAll] All data saved successfully');
+  }
+}
+
+// ============================================================================
 // Helpers
 // ============================================================================
 
