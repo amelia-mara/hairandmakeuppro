@@ -1016,7 +1016,7 @@ export function Today({ onSceneSelect, onNavigateToTab }: TodayProps) {
             hasAnyCallSheets={callSheets.length > 0}
             onUploadClick={() => fileInputRef.current?.click()}
             isUploading={isUploading}
-            isSyncing={syncStatus === 'syncing' || syncStatus === 'idle'}
+            isSyncing={syncStatus === 'uploading' || syncStatus === 'downloading'}
             hasProjectData={!!currentProject && currentProject.scenes.length > 0}
           />
         )}

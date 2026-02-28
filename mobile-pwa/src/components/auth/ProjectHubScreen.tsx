@@ -7,6 +7,7 @@ import { UpgradeModal } from '@/components/dashboard';
 import * as supabaseProjects from '@/services/supabaseProjects';
 import * as supabaseStorage from '@/services/supabaseStorage';
 import { hoursUntilDeletion } from '@/services/supabaseProjects';
+import { setReceivingFromServer } from '@/services/syncChangeTracker';
 import type { ProjectMembership, Project, ProjectRole, ProductionType, CallSheet, ProductionSchedule, SceneFilmingStatus, MakeupDetails, HairDetails, ScheduleCastMember, ScheduleDay } from '@/types';
 import { createEmptyMakeupDetails, createEmptyHairDetails } from '@/types';
 
@@ -416,8 +417,14 @@ export function ProjectHubScreen() {
           looks: localLooks,
         };
 
-        store.setProject(project);
-        loadDocumentsIntoStores(scheduleData, callSheetData, scriptData);
+        // Set flag so loading from server doesn't mark as pending changes
+        setReceivingFromServer(true);
+        try {
+          store.setProject(project);
+          loadDocumentsIntoStores(scheduleData, callSheetData, scriptData);
+        } finally {
+          setReceivingFromServer(false);
+        }
         store.setActiveTab('today');
         return;
       }
