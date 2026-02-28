@@ -31,7 +31,7 @@ import {
 import { SelectPlanScreen } from '@/components/subscription';
 import { UserProfileScreen } from '@/components/profile/UserProfileScreen';
 import { ProjectSettingsScreen } from '@/components/project-settings';
-import { SyncSheet } from '@/components/sync';
+
 import { TutorialOverlay } from '@/components/tutorial/TutorialOverlay';
 import { useTutorialStore } from '@/stores/tutorialStore';
 import type { NavTab, SubscriptionTier, BillingPeriod } from '@/types';
@@ -119,7 +119,8 @@ function AppContent() {
   const [showHome, setShowHome] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [showProcessingNotice, setShowProcessingNotice] = useState(false);
-  const [showSyncSheet, setShowSyncSheet] = useState(false);
+  // Sync sheet hidden — auto-save handles persistence for solo users
+  // const [showSyncSheet, setShowSyncSheet] = useState(false);
 
   // Track if migration has been attempted
   const migrationAttempted = useRef(false);
@@ -502,12 +503,11 @@ function AppContent() {
         <LifecycleBanner onExport={() => setShowExport(true)} />
       )}
 
-      {/* Project Header - with sync icon */}
+      {/* Project Header */}
       {showProjectHeader && (
         <ProjectHeader
           onSwitchProject={handleSwitchProject}
           onNavigateToProfile={() => setShowUserProfile(true)}
-          onSyncTap={() => setShowSyncSheet(true)}
         />
       )}
 
@@ -518,8 +518,7 @@ function AppContent() {
         onTabChange={handleTabChange}
       />
 
-      {/* Sync bottom sheet */}
-      <SyncSheet isOpen={showSyncSheet} onClose={() => setShowSyncSheet(false)} />
+      {/* Sync bottom sheet — hidden while auto-save handles solo users */}
 
       {/* AI Chat Assistant */}
       <ChatAssistant />

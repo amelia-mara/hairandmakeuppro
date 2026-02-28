@@ -168,6 +168,8 @@ export async function getProjectData(projectId: string): Promise<{
   looks: Look[];
   sceneCharacters: { scene_id: string; character_id: string }[];
   lookScenes: { look_id: string; scene_number: string }[];
+  continuityEvents: any[];
+  photos: any[];
   scheduleData: any[];
   callSheetData: any[];
   scriptData: any[];
@@ -191,18 +193,29 @@ export async function getProjectData(projectId: string): Promise<{
     const scenes = scenesRes.data || [];
     const looks = looksRes.data || [];
 
-    // Phase 2: Fetch junction tables filtered by the scene/look IDs we found
+    // Phase 2: Fetch junction tables + continuity events
     const sceneIds = scenes.map(s => s.id);
     const lookIds = looks.map(l => l.id);
 
-    const [sceneCharsRes, lookScenesRes] = await Promise.all([
+    const [sceneCharsRes, lookScenesRes, capturesRes] = await Promise.all([
       sceneIds.length > 0
         ? supabase.from('scene_characters').select('scene_id, character_id').in('scene_id', sceneIds)
         : Promise.resolve({ data: [], error: null }),
       lookIds.length > 0
         ? supabase.from('look_scenes').select('look_id, scene_number').in('look_id', lookIds)
         : Promise.resolve({ data: [], error: null }),
+      sceneIds.length > 0
+        ? supabase.from('continuity_events').select('*').in('scene_id', sceneIds)
+        : Promise.resolve({ data: [], error: null }),
     ]);
+
+    const continuityEvents = capturesRes.data || [];
+
+    // Phase 3: Fetch photos for continuity events
+    const captureIds = continuityEvents.map((c: any) => c.id);
+    const photosRes = captureIds.length > 0
+      ? await supabase.from('photos').select('*').in('continuity_event_id', captureIds)
+      : { data: [], error: null };
 
     return {
       scenes,
@@ -210,6 +223,8 @@ export async function getProjectData(projectId: string): Promise<{
       looks,
       sceneCharacters: sceneCharsRes.data || [],
       lookScenes: lookScenesRes.data || [],
+      continuityEvents,
+      photos: photosRes.data || [],
       scheduleData: scheduleRes.data || [],
       callSheetData: callSheetsRes.data || [],
       scriptData: scriptRes.data || [],
@@ -222,6 +237,8 @@ export async function getProjectData(projectId: string): Promise<{
       looks: [],
       sceneCharacters: [],
       lookScenes: [],
+      continuityEvents: [],
+      photos: [],
       scheduleData: [],
       callSheetData: [],
       scriptData: [],

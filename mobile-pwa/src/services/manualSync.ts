@@ -54,7 +54,7 @@ type DbScriptUpload = Database['public']['Tables']['script_uploads']['Row'];
 // Data Mappers: Local → Supabase
 // ============================================================================
 
-function sceneToDb(scene: Scene, projectId: string): Omit<DbScene, 'created_at'> {
+export function sceneToDb(scene: Scene, projectId: string): Omit<DbScene, 'created_at'> {
   return {
     id: scene.id,
     project_id: projectId,
@@ -74,7 +74,7 @@ function sceneToDb(scene: Scene, projectId: string): Omit<DbScene, 'created_at'>
   };
 }
 
-function characterToDb(char: Character, projectId: string): Omit<DbCharacter, 'created_at'> {
+export function characterToDb(char: Character, projectId: string): Omit<DbCharacter, 'created_at'> {
   return {
     id: char.id,
     project_id: projectId,
@@ -86,7 +86,7 @@ function characterToDb(char: Character, projectId: string): Omit<DbCharacter, 'c
   };
 }
 
-function lookToDb(look: Look, projectId: string): Omit<DbLook, 'created_at'> {
+export function lookToDb(look: Look, projectId: string): Omit<DbLook, 'created_at'> {
   return {
     id: look.id,
     project_id: projectId,
@@ -99,7 +99,7 @@ function lookToDb(look: Look, projectId: string): Omit<DbLook, 'created_at'> {
   };
 }
 
-function sceneCaptureToDb(
+export function sceneCaptureToDb(
   capture: SceneCapture,
   userId: string | null
 ): Omit<DbContinuityEvent, 'created_at'> {
