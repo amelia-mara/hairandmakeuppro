@@ -167,77 +167,6 @@ function loadDocumentsIntoStores(
   }
 }
 
-// Refresh missing documents without overwriting existing data.
-// Used when the project is already active but may have lost PDF data.
-function refreshMissingDocuments(
-  scheduleData: any[],
-  callSheetData: any[],
-  scriptData: any[],
-): void {
-  // Schedule: only download PDF if local is missing it
-  if (scheduleData.length > 0) {
-    const db = scheduleData[0];
-    const currentSchedule = useScheduleStore.getState().schedule;
-
-    if (!currentSchedule && (db.days || db.cast_list)) {
-      // No local schedule at all — load fully
-      const schedule: ProductionSchedule = {
-        id: db.id,
-        status: db.status === 'complete' ? 'complete' : 'pending',
-        castList: (db.cast_list as unknown as ScheduleCastMember[]) || [],
-        days: (db.days as unknown as ScheduleDay[]) || [],
-        totalDays: ((db.days as unknown as ScheduleDay[]) || []).length,
-        uploadedAt: new Date(db.created_at),
-        rawText: db.raw_pdf_text || undefined,
-      };
-      useScheduleStore.getState().setSchedule(schedule);
-    }
-
-    // Download schedule PDF if missing locally
-    const latest = useScheduleStore.getState().schedule;
-    if (latest && !latest.pdfUri && db.storage_path) {
-      supabaseStorage.downloadDocumentAsDataUri(db.storage_path).then(({ dataUri }) => {
-        if (!dataUri) return;
-        const current = useScheduleStore.getState().schedule;
-        if (current && current.id === db.id) {
-          useScheduleStore.getState().setSchedule({ ...current, pdfUri: dataUri });
-        }
-      });
-    }
-  }
-
-  // Call sheets: download PDFs for any that are missing their pdfUri
-  if (callSheetData.length > 0) {
-    const localCallSheets = useCallSheetStore.getState().callSheets;
-    for (const db of callSheetData) {
-      if (!db.storage_path) continue;
-      const local = localCallSheets.find((cs) => cs.id === db.id);
-      if (local && !local.pdfUri) {
-        supabaseStorage.downloadDocumentAsDataUri(db.storage_path).then(({ dataUri }) => {
-          if (!dataUri) return;
-          useCallSheetStore.setState((state) => ({
-            callSheets: state.callSheets.map((cs) =>
-              cs.id === db.id ? { ...cs, pdfUri: dataUri } : cs
-            ),
-          }));
-        });
-      }
-    }
-  }
-
-  // Script: download PDF if missing locally
-  if (scriptData.length > 0) {
-    const dbScript = scriptData[0];
-    const currentProject = useProjectStore.getState().currentProject;
-    if (currentProject && !currentProject.scriptPdfData && dbScript.storage_path) {
-      supabaseStorage.downloadDocumentAsDataUri(dbScript.storage_path).then(({ dataUri }) => {
-        if (!dataUri) return;
-        useProjectStore.getState().setScriptPdf(dataUri);
-      });
-    }
-  }
-}
-
 // Delete/Leave Confirmation Modal
 function DeleteProjectModal({
   isOpen,
@@ -403,7 +332,7 @@ export function ProjectHubScreen() {
 
     const store = useProjectStore.getState();
 
-    // 1. Save current project before switching (if different)
+    // Save current project before switching (if different)
     if (store.currentProject && store.currentProject.id !== membership.projectId) {
       if (store.currentProject.scenes.length > 0) {
         store.saveAndClearProject();
@@ -412,149 +341,23 @@ export function ProjectHubScreen() {
       }
     }
 
-    // 2. If already the active project, verify data integrity and refresh if needed.
-    // After logout/login the local store may have stale or incomplete data (e.g., PDFs
-    // stripped during IndexedDB persistence). Fetch from Supabase to fill any gaps.
-    if (store.currentProject?.id === membership.projectId) {
-      const project = store.currentProject;
-      const hasLocalScenes = project.scenes.length > 0;
-      const hasLocalScript = !!project.scriptPdfData;
-      const hasLocalSchedulePdf = !!useScheduleStore.getState().schedule?.pdfUri;
-
-      // If local data looks complete, just navigate back.
-      // A project is "complete" if it has scenes. The script PDF and schedule PDF
-      // are nice-to-have — they'll be re-downloaded in the background if missing.
-      if (hasLocalScenes) {
-        // Still re-download missing PDFs in the background
-        if (!hasLocalScript || !hasLocalSchedulePdf) {
-          supabaseProjects.getProjectData(membership.projectId).then(({
-            scheduleData, callSheetData, scriptData,
-          }) => {
-            refreshMissingDocuments(scheduleData, callSheetData, scriptData);
-          }).catch(() => { /* non-critical */ });
-        }
-        return;
-      }
-
-      // Local data is incomplete — refresh from Supabase in the background.
-      // Don't block navigation; the UI will update reactively as data loads.
-      supabaseProjects.getProjectData(membership.projectId).then(({
-        scenes, characters, looks, sceneCharacters, lookScenes,
-        scheduleData, callSheetData, scriptData,
-      }) => {
-        const hasServerScenes = scenes.length > 0;
-        const hasServerDocs = scriptData.length > 0 || scheduleData.length > 0 || callSheetData.length > 0;
-
-        if (hasServerScenes || hasServerDocs) {
-          // Rebuild scenes/characters/looks from server if local is missing them
-          if (hasServerScenes && !hasLocalScenes) {
-            const sceneCharMap = new Map<string, string[]>();
-            for (const sc of sceneCharacters) {
-              const existing = sceneCharMap.get(sc.scene_id) || [];
-              existing.push(sc.character_id);
-              sceneCharMap.set(sc.scene_id, existing);
-            }
-            const lookSceneMap = new Map<string, string[]>();
-            for (const ls of lookScenes) {
-              const existing = lookSceneMap.get(ls.look_id) || [];
-              existing.push(ls.scene_number);
-              lookSceneMap.set(ls.look_id, existing);
-            }
-            const localScenes = scenes.map(s => ({
-              id: s.id,
-              sceneNumber: s.scene_number,
-              slugline: s.location || `Scene ${s.scene_number}`,
-              intExt: (s.int_ext === 'EXT' ? 'EXT' : 'INT') as 'INT' | 'EXT',
-              timeOfDay: (s.time_of_day || 'DAY') as 'DAY' | 'NIGHT' | 'MORNING' | 'EVENING' | 'CONTINUOUS',
-              synopsis: s.synopsis || undefined,
-              scriptContent: s.script_content || undefined,
-              characters: sceneCharMap.get(s.id) || [],
-              isComplete: s.is_complete,
-              completedAt: s.completed_at ? new Date(s.completed_at) : undefined,
-              filmingStatus: (s.filming_status as SceneFilmingStatus) || undefined,
-              filmingNotes: s.filming_notes || undefined,
-              shootingDay: s.shooting_day || undefined,
-              characterConfirmationStatus: 'confirmed' as const,
-            }));
-            const localCharacters = characters.map(c => ({
-              id: c.id,
-              name: c.name,
-              initials: c.initials,
-              avatarColour: c.avatar_colour,
-            }));
-            const localLooks = looks.map(l => ({
-              id: l.id,
-              characterId: l.character_id,
-              name: l.name,
-              scenes: lookSceneMap.get(l.id) || [],
-              estimatedTime: l.estimated_time,
-              makeup: (l.makeup_details as unknown as MakeupDetails) || createEmptyMakeupDetails(),
-              hair: (l.hair_details as unknown as HairDetails) || createEmptyHairDetails(),
-            }));
-            useProjectStore.getState().mergeServerData({
-              scenes: localScenes,
-              characters: localCharacters,
-              looks: localLooks,
-            });
-          }
-
-          // Restore missing documents (PDFs that may have been lost from IndexedDB)
-          refreshMissingDocuments(scheduleData, callSheetData, scriptData);
-        } else if (!hasLocalScenes && membership.role === 'owner') {
-          // No data locally or on server — prompt re-upload
-          store.setProjectNeedsSetup(project);
-        }
-      }).catch(err => {
-        console.error('Background project data refresh failed:', err);
-      });
-
-      return;
-    }
-
-    // 3. Restore from local save if available (schedules & call sheets are restored too)
-    if (store.hasSavedProject(membership.projectId)) {
-      store.restoreSavedProject(membership.projectId);
-
-      // Check if the restored project actually has a script/breakdown.
-      // If not (data was lost), show the upload page so the owner can re-upload.
-      const restored = useProjectStore.getState();
-      const hasLocalData = restored.currentProject &&
-        (restored.currentProject.scenes.length > 0 || restored.currentProject.scriptPdfData);
-      if (!hasLocalData && !restored.needsSetup && membership.role === 'owner') {
-        store.setProjectNeedsSetup(restored.currentProject!);
-      }
-
-      // Also refresh documents in the background to re-download any lost PDFs
-      supabaseProjects.getProjectData(membership.projectId).then(({
-        scheduleData, callSheetData, scriptData,
-      }) => {
-        if (scheduleData.length > 0 || callSheetData.length > 0 || scriptData.length > 0) {
-          refreshMissingDocuments(scheduleData, callSheetData, scriptData);
-        }
-      }).catch(() => { /* non-critical background refresh */ });
-
-      store.setActiveTab('today');
-      return;
-    }
-
-    // 4. Clear stale document stores before loading new project data
+    // Clear document stores so stale data doesn't bleed across projects
     useCallSheetStore.getState().clearAll();
     useScheduleStore.getState().clearSchedule();
 
-    // 5. Fetch ALL project data from Supabase (scenes, characters, looks + documents)
+    // ── Load from Supabase ─────────────────────────────────────────
+    // The server is the source of truth. Whether you just logged in,
+    // switched devices, or tapped the same project — fetch it fresh.
     try {
       const {
         scenes, characters, looks, sceneCharacters, lookScenes,
         scheduleData, callSheetData, scriptData, error,
       } = await supabaseProjects.getProjectData(membership.projectId);
 
-      // Project has a breakdown if actual scenes exist (characters alone aren't enough)
       const hasSceneData = !error && scenes.length > 0;
-      // Project has documents if a script PDF, schedule, or call sheet was uploaded
       const hasDocuments = scriptData.length > 0 || scheduleData.length > 0 || callSheetData.length > 0;
 
       if (hasSceneData || hasDocuments) {
-        // Build character ID lookup for scene_characters mapping
         const sceneCharMap = new Map<string, string[]>();
         for (const sc of sceneCharacters) {
           const existing = sceneCharMap.get(sc.scene_id) || [];
@@ -562,7 +365,6 @@ export function ProjectHubScreen() {
           sceneCharMap.set(sc.scene_id, existing);
         }
 
-        // Build look_scenes mapping
         const lookSceneMap = new Map<string, string[]>();
         for (const ls of lookScenes) {
           const existing = lookSceneMap.get(ls.look_id) || [];
@@ -570,7 +372,6 @@ export function ProjectHubScreen() {
           lookSceneMap.set(ls.look_id, existing);
         }
 
-        // Convert DB scenes to local Scene type
         const localScenes = scenes.map(s => ({
           id: s.id,
           sceneNumber: s.scene_number,
@@ -588,7 +389,6 @@ export function ProjectHubScreen() {
           characterConfirmationStatus: 'confirmed' as const,
         }));
 
-        // Convert DB characters to local Character type
         const localCharacters = characters.map(c => ({
           id: c.id,
           name: c.name,
@@ -596,7 +396,6 @@ export function ProjectHubScreen() {
           avatarColour: c.avatar_colour,
         }));
 
-        // Convert DB looks to local Look type
         const localLooks = looks.map(l => ({
           id: l.id,
           characterId: l.character_id,
@@ -607,39 +406,37 @@ export function ProjectHubScreen() {
           hair: (l.hair_details as unknown as HairDetails) || createEmptyHairDetails(),
         }));
 
-        // If server has no scene data, preserve any existing local breakdown
-        // (scenes might not have been pushed yet if the tab was closed too quickly)
-        const existingProject = store.currentProject;
-        const useLocalBreakdown = !hasSceneData && existingProject?.id === membership.projectId && existingProject.scenes.length > 0;
-
         const project: Project = {
           id: membership.projectId,
           name: membership.projectName,
           createdAt: membership.joinedAt,
           updatedAt: membership.lastAccessedAt,
-          scenes: useLocalBreakdown ? existingProject.scenes : localScenes,
-          characters: useLocalBreakdown ? existingProject.characters : localCharacters,
-          looks: useLocalBreakdown ? existingProject.looks : localLooks,
+          scenes: localScenes,
+          characters: localCharacters,
+          looks: localLooks,
         };
 
         store.setProject(project);
-
-        // Load documents (schedule, call sheets, script) into their stores
         loadDocumentsIntoStores(scheduleData, callSheetData, scriptData);
-
         store.setActiveTab('today');
         return;
       }
     } catch (err) {
-      console.error('Failed to fetch project data from server:', err);
+      console.error('Failed to load project from server:', err);
+
+      // ── Offline fallback: use local data if available ───────────
+      if (store.hasSavedProject(membership.projectId)) {
+        store.restoreSavedProject(membership.projectId);
+        store.setActiveTab('today');
+        return;
+      }
     }
 
-    // 6. Fallback: no script or breakdown on server — show upload page for owners
+    // ── No data on server (or offline with no local data) ────────
     const project = createProjectFromMembership(membership);
     if (membership.role === 'owner') {
       store.setProjectNeedsSetup(project);
     } else {
-      // Non-owner: show empty workspace (they're waiting for the owner to upload)
       store.setProject(project);
     }
     store.setActiveTab('today');
