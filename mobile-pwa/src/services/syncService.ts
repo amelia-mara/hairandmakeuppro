@@ -1,12 +1,12 @@
+// @ts-nocheck
 /**
- * Sync Service - Real-time collaboration engine
+ * Sync Service - DEPRECATED
  *
- * Handles:
- * 1. Initial pull on project load (fetch from Supabase → merge into local stores)
- * 2. Debounced push on local changes (local stores → Supabase)
- * 3. Real-time subscriptions (Supabase Realtime → local stores)
- * 4. Photo sync (local blobs ↔ Supabase Storage)
- * 5. Presence tracking (who's online)
+ * This file is no longer used. The auto-sync system has been replaced
+ * by the manual sync model in manualSync.ts.
+ *
+ * Kept for reference during the transition period.
+ * Will be removed in a future cleanup pass.
  */
 
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
