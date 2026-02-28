@@ -1,12 +1,14 @@
 import { useAuthStore } from '@/stores/authStore';
 import { useProjectStore } from '@/stores/projectStore';
+import { SyncIcon } from '@/components/sync';
 
 interface ProjectHeaderProps {
   onSwitchProject?: () => void;
   onNavigateToProfile?: () => void;
+  onSyncTap?: () => void;
 }
 
-export function ProjectHeader({ onSwitchProject, onNavigateToProfile }: ProjectHeaderProps) {
+export function ProjectHeader({ onSwitchProject, onNavigateToProfile, onSyncTap }: ProjectHeaderProps) {
   const { currentProject } = useProjectStore();
   const { user } = useAuthStore();
 
@@ -46,7 +48,10 @@ export function ProjectHeader({ onSwitchProject, onNavigateToProfile }: ProjectH
               </svg>
             </button>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1">
+              {/* Sync icon */}
+              {onSyncTap && <SyncIcon onClick={onSyncTap} />}
+
               {/* Account icon - navigates directly to profile */}
               <button
                 onClick={onNavigateToProfile}
