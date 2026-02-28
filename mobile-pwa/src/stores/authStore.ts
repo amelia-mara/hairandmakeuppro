@@ -401,6 +401,14 @@ export const useAuthStore = create<AuthState>()(
           console.error('Sign out error:', error);
         }
 
+        // Clear ALL stores so the next login starts clean on the hub.
+        // Without this, stale currentProject/activeTab persist in IndexedDB
+        // and the user lands on a random page instead of the project dashboard.
+        useProjectStore.getState().clearProject();
+        useProjectStore.getState().setActiveTab('today');
+        useScheduleStore.getState().clearSchedule();
+        useCallSheetStore.getState().clearAll();
+
         set({
           isAuthenticated: false,
           user: null,
@@ -411,6 +419,7 @@ export const useAuthStore = create<AuthState>()(
           subscription: createDefaultSubscription(),
           projectMemberships: [],
           guestProjectCode: null,
+          pinnedProjectId: null,
         });
       },
 
@@ -904,7 +913,12 @@ if (isSupabaseConfigured) {
       // User profile updated (e.g., email change, password reset)
       useAuthStore.getState().initializeAuth();
     } else if (event === 'SIGNED_OUT') {
-      // User signed out - clear all auth state
+      // User signed out — clear ALL stores so next login starts on the hub
+      useProjectStore.getState().clearProject();
+      useProjectStore.getState().setActiveTab('today');
+      useScheduleStore.getState().clearSchedule();
+      useCallSheetStore.getState().clearAll();
+
       useAuthStore.setState({
         isAuthenticated: false,
         user: null,
@@ -915,6 +929,7 @@ if (isSupabaseConfigured) {
         hasSelectedPlan: false,
         subscription: createDefaultSubscription(),
         guestProjectCode: null,
+        pinnedProjectId: null,
       });
     }
   });
