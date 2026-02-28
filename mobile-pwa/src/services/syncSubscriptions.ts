@@ -4,6 +4,12 @@
  * Watches Zustand stores for changes and pushes updates to Supabase.
  * This file is imported once in App.tsx to set up the subscriptions.
  * It's separate from the stores to avoid circular imports.
+ *
+ * IMPORTANT: The `receivingFromServer` flag prevents infinite echo loops.
+ * When a realtime event updates the local store, this flag is set so we
+ * don't push the same data back to the server, which would cause:
+ *   User A pushes → server broadcasts → User B updates store →
+ *   syncSubscriptions pushes back → server broadcasts → User A updates → ...
  */
 
 import { useProjectStore } from '@/stores/projectStore';
@@ -20,6 +26,7 @@ import {
   pushCallSheetData,
   pushScriptPdf,
   getActiveProjectId,
+  receivingFromServer,
 } from './syncService';
 
 // Track whether subscriptions have been set up (idempotent)
@@ -37,6 +44,13 @@ export function initSyncSubscriptions(): void {
       // pushInitialData() in startSync will catch this data.
       return;
     }
+
+    // Skip push if this change came from a server realtime event.
+    // The receivingFromServer flag is set by realtime handlers in syncService.ts
+    // right before they call mergeServerData(), and cleared right after.
+    // Since Zustand subscriptions fire synchronously during set(), this
+    // check reliably prevents echo loops.
+    if (receivingFromServer) return;
 
     const prev = prevState.currentProject;
     const curr = state.currentProject;
@@ -78,6 +92,7 @@ export function initSyncSubscriptions(): void {
   useScheduleStore.subscribe((state, prevState) => {
     const projectId = getActiveProjectId();
     if (!projectId) return;
+    if (receivingFromServer) return;
 
     if (
       state.schedule !== prevState.schedule &&
@@ -91,6 +106,7 @@ export function initSyncSubscriptions(): void {
   useCallSheetStore.subscribe((state, prevState) => {
     const projectId = getActiveProjectId();
     if (!projectId) return;
+    if (receivingFromServer) return;
 
     if (state.callSheets !== prevState.callSheets && state.callSheets.length > 0) {
       const userId = useAuthStore.getState().user?.id || null;
