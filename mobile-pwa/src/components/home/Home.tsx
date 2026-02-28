@@ -14,6 +14,7 @@ import {
   parseScheduleStage1,
 } from '@/utils/scheduleParser';
 import { saveInitialProjectData } from '@/services/supabaseProjects';
+import { setReceivingFromServer } from '@/services/syncChangeTracker';
 import { useSyncStore } from '@/stores/syncStore';
 import type { ParsedScript } from '@/utils/scriptParser';
 import type { Project, Scene, ProductionSchedule } from '@/types';
@@ -136,8 +137,11 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
       setProcessingProgress(100);
       setProcessingStatus('Complete!');
 
-      // Set the project locally first so the UI updates immediately
+      // Set the project locally — suppress auto-save since saveInitialProjectData
+      // handles the first write to Supabase (avoids delete+insert race).
+      setReceivingFromServer(true);
       setProject(project);
+      setReceivingFromServer(false);
 
       // ── Save directly to Supabase ──────────────────────────────
       // Await this so data is on the server before user navigates away.
