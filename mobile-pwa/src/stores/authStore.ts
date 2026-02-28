@@ -404,10 +404,16 @@ export const useAuthStore = create<AuthState>()(
         // Clear ALL stores so the next login starts clean on the hub.
         // Without this, stale currentProject/activeTab persist in IndexedDB
         // and the user lands on a random page instead of the project dashboard.
-        useProjectStore.getState().clearProject();
-        useProjectStore.getState().setActiveTab('today');
-        useScheduleStore.getState().clearSchedule();
-        useCallSheetStore.getState().clearAll();
+        try {
+          useProjectStore.getState().clearProject();
+          useProjectStore.getState().setActiveTab('today');
+          // Also clear saved project snapshots so stale data doesn't linger
+          useProjectStore.setState({ savedProjects: {}, archivedProjects: [] });
+          useScheduleStore.getState().clearSchedule();
+          useCallSheetStore.getState().clearAll();
+        } catch (error) {
+          console.error('Error clearing local stores on sign out:', error);
+        }
 
         set({
           isAuthenticated: false,
@@ -913,12 +919,7 @@ if (isSupabaseConfigured) {
       // User profile updated (e.g., email change, password reset)
       useAuthStore.getState().initializeAuth();
     } else if (event === 'SIGNED_OUT') {
-      // User signed out — clear ALL stores so next login starts on the hub
-      useProjectStore.getState().clearProject();
-      useProjectStore.getState().setActiveTab('today');
-      useScheduleStore.getState().clearSchedule();
-      useCallSheetStore.getState().clearAll();
-
+      // Only clear auth state — local store cleanup is handled in signOut()
       useAuthStore.setState({
         isAuthenticated: false,
         user: null,
