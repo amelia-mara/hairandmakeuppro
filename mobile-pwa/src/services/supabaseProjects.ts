@@ -34,43 +34,30 @@ function generateInviteCode(): string {
 export async function createProject(
   name: string,
   productionType: string,
-  userId: string,
+  _userId: string,
   ownerRole: ProjectMember['role'] = 'designer'
 ): Promise<{ project: Project | null; inviteCode: string | null; error: Error | null }> {
   try {
-    const inviteCode = generateInviteCode();
+    // Use SECURITY DEFINER RPC to bypass RLS (same pattern as join flow).
+    // Direct INSERT fails when the JWT is stale and auth.uid() returns NULL.
+    const { data, error: rpcError } = await supabase.rpc('create_project', {
+      project_name: name,
+      production_type_input: productionType,
+      owner_role_input: ownerRole,
+    });
 
-    // Create the project
-    const { data: project, error: projectError } = await supabase
-      .from('projects')
-      .insert({
-        name,
-        production_type: productionType,
-        invite_code: inviteCode,
-        created_by: userId,
-      })
-      .select()
-      .single();
+    if (rpcError) throw rpcError;
+    if (data?.error) throw new Error(data.error);
 
-    if (projectError) throw projectError;
+    const project = {
+      id: data.id,
+      name: data.name,
+      production_type: data.production_type,
+      invite_code: data.invite_code,
+      created_by: data.created_by,
+    } as Project;
 
-    // Add creator as owner with their selected role
-    const { error: memberError } = await supabase
-      .from('project_members')
-      .insert({
-        project_id: project.id,
-        user_id: userId,
-        role: ownerRole,
-        is_owner: true,
-      });
-
-    if (memberError) {
-      // Rollback project creation
-      await supabase.from('projects').delete().eq('id', project.id);
-      throw memberError;
-    }
-
-    return { project, inviteCode, error: null };
+    return { project, inviteCode: data.invite_code, error: null };
   } catch (error) {
     return { project: null, inviteCode: null, error: error as Error };
   }
@@ -181,6 +168,8 @@ export async function getProjectData(projectId: string): Promise<{
   looks: Look[];
   sceneCharacters: { scene_id: string; character_id: string }[];
   lookScenes: { look_id: string; scene_number: string }[];
+  continuityEvents: any[];
+  photos: any[];
   scheduleData: any[];
   callSheetData: any[];
   scriptData: any[];
@@ -204,18 +193,29 @@ export async function getProjectData(projectId: string): Promise<{
     const scenes = scenesRes.data || [];
     const looks = looksRes.data || [];
 
-    // Phase 2: Fetch junction tables filtered by the scene/look IDs we found
+    // Phase 2: Fetch junction tables + continuity events
     const sceneIds = scenes.map(s => s.id);
     const lookIds = looks.map(l => l.id);
 
-    const [sceneCharsRes, lookScenesRes] = await Promise.all([
+    const [sceneCharsRes, lookScenesRes, capturesRes] = await Promise.all([
       sceneIds.length > 0
         ? supabase.from('scene_characters').select('scene_id, character_id').in('scene_id', sceneIds)
         : Promise.resolve({ data: [], error: null }),
       lookIds.length > 0
         ? supabase.from('look_scenes').select('look_id, scene_number').in('look_id', lookIds)
         : Promise.resolve({ data: [], error: null }),
+      sceneIds.length > 0
+        ? supabase.from('continuity_events').select('*').in('scene_id', sceneIds)
+        : Promise.resolve({ data: [], error: null }),
     ]);
+
+    const continuityEvents = capturesRes.data || [];
+
+    // Phase 3: Fetch photos for continuity events
+    const captureIds = continuityEvents.map((c: any) => c.id);
+    const photosRes = captureIds.length > 0
+      ? await supabase.from('photos').select('*').in('continuity_event_id', captureIds)
+      : { data: [], error: null };
 
     return {
       scenes,
@@ -223,6 +223,8 @@ export async function getProjectData(projectId: string): Promise<{
       looks,
       sceneCharacters: sceneCharsRes.data || [],
       lookScenes: lookScenesRes.data || [],
+      continuityEvents,
+      photos: photosRes.data || [],
       scheduleData: scheduleRes.data || [],
       callSheetData: callSheetsRes.data || [],
       scriptData: scriptRes.data || [],
@@ -235,6 +237,8 @@ export async function getProjectData(projectId: string): Promise<{
       looks: [],
       sceneCharacters: [],
       lookScenes: [],
+      continuityEvents: [],
+      photos: [],
       scheduleData: [],
       callSheetData: [],
       scriptData: [],
