@@ -7,8 +7,6 @@ import type { Look, Character } from '@/types';
 import { CharacterSection } from './CharacterSection';
 import { AddLookModal } from './AddLookModal';
 import { LookOverview } from './LookOverview';
-import { SyncStatusBanner } from '@/components/sync';
-
 export function Lookbooks() {
   const { currentProject, sceneCaptures, currentLookId, setCurrentLook, setActiveTab, setCurrentScene } = useProjectStore();
   const { schedule } = useScheduleStore();
@@ -238,8 +236,6 @@ export function Lookbooks() {
 
       <div className="mobile-container">
         <div className="px-4 pt-4 pb-24">
-          {/* Sync Status Banner */}
-          <SyncStatusBanner />
 
           {hasCharacters ? (
             <>
