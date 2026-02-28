@@ -834,14 +834,69 @@ function ScriptViewer({ onBack }: ViewerProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedScene, setSelectedScene] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'full' | 'pdf'>('full');
-  const { currentProject, compareScriptAmendment, applyScriptAmendment, setScriptPdf } = useProjectStore();
+  const { currentProject, compareScriptAmendment, applyScriptAmendment, setScriptPdf, mergeServerData } = useProjectStore();
   const sceneRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [amendmentResult, setAmendmentResult] = useState<AmendmentResult | null>(null);
   const [pendingScriptPdf, setPendingScriptPdf] = useState<string | null>(null);
 
-  // Handle revised script upload
+  // Handle script upload — routes to initial or revised based on project state
+  const handleScriptUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const hasExistingScenes = currentProject && currentProject.scenes.length > 0;
+    if (hasExistingScenes) {
+      return handleRevisedScriptUpload(e);
+    }
+    return handleInitialScriptUpload(e);
+  };
+
+  // Handle initial script upload (empty project — creates scenes from scratch)
+  const handleInitialScriptUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentProject) return;
+
+    setIsUploading(true);
+    try {
+      const parsedScript = await parseScenesFast(file);
+
+      // Build scenes from parsed data
+      const scenes = parsedScript.scenes.map((s) => ({
+        id: crypto.randomUUID ? crypto.randomUUID() : `scene-${s.sceneNumber}-${Date.now()}`,
+        sceneNumber: s.sceneNumber,
+        slugline: s.location || `Scene ${s.sceneNumber}`,
+        intExt: (s.intExt === 'EXT' ? 'EXT' : 'INT') as 'INT' | 'EXT',
+        timeOfDay: (s.timeOfDay || 'DAY') as 'DAY' | 'NIGHT' | 'MORNING' | 'EVENING' | 'CONTINUOUS',
+        synopsis: undefined,
+        scriptContent: s.scriptContent || undefined,
+        characters: [] as string[],
+        isComplete: false,
+        characterConfirmationStatus: 'pending' as const,
+      }));
+
+      // Merge scenes into current project
+      mergeServerData({ scenes });
+
+      // Save PDF for viewing
+      if (file.type === 'application/pdf') {
+        const base64 = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.readAsDataURL(file);
+        });
+        setScriptPdf(base64);
+      }
+    } catch (error) {
+      console.error('Error processing script:', error);
+      alert('Failed to process the script. Please try again.');
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  // Handle revised script upload (compares against existing scenes)
   const handleRevisedScriptUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -971,7 +1026,7 @@ function ScriptViewer({ onBack }: ViewerProps) {
                   ref={fileInputRef}
                   type="file"
                   accept=".pdf,.fdx,.txt,.fountain"
-                  onChange={handleRevisedScriptUpload}
+                  onChange={handleScriptUpload}
                   className="hidden"
                 />
               </>
@@ -1072,9 +1127,19 @@ function ScriptViewer({ onBack }: ViewerProps) {
               <p className="text-sm text-text-muted text-center mb-6">
                 Upload a script (PDF, FDX, or Fountain) to view it here
               </p>
-              <button className="px-4 py-2.5 rounded-button gold-gradient text-white text-sm font-medium active:scale-95 transition-transform">
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="px-4 py-2.5 rounded-button gold-gradient text-white text-sm font-medium active:scale-95 transition-transform"
+              >
                 Upload Script
               </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.fdx,.txt,.fountain"
+                onChange={handleScriptUpload}
+                className="hidden"
+              />
             </div>
           </div>
         ) : viewMode === 'full' ? (
