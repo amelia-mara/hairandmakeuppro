@@ -9,6 +9,7 @@ import {
   CharacterConfirmationProgress,
 } from '@/components/breakdown/SceneCharacterConfirmation';
 import { AmendmentBadge } from '@/components/breakdown/AmendmentReviewModal';
+import { PhotoImg } from '@/hooks';
 import type { Scene, Character, Look, SceneCapture, BreakdownFilters, SceneFilmingStatus } from '@/types';
 import { SCENE_FILMING_STATUS_CONFIG } from '@/types';
 import { clsx } from 'clsx';
@@ -989,8 +990,8 @@ function BreakdownListView({
                                   )}
                                 >
                                   {photo && (
-                                    <img
-                                      src={photo.thumbnail || photo.uri}
+                                    <PhotoImg
+                                      photo={photo}
                                       alt={angle}
                                       className="w-full h-full object-cover"
                                     />
