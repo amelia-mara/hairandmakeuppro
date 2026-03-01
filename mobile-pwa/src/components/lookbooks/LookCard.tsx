@@ -1,4 +1,5 @@
 import { useProjectStore } from '@/stores/projectStore';
+import { PhotoImg } from '@/hooks';
 import type { Look, Character } from '@/types';
 
 interface LookCardProps {
@@ -78,8 +79,8 @@ export function LookCard({ look, character: _character, progress }: LookCardProp
           {/* Master reference thumbnail */}
           <div className="w-[60px] h-[60px] rounded-lg bg-input-bg border border-border flex-shrink-0 overflow-hidden flex items-center justify-center">
             {look.masterReference ? (
-              <img
-                src={look.masterReference.thumbnail || look.masterReference.uri}
+              <PhotoImg
+                photo={look.masterReference}
                 alt="Master reference"
                 className="w-full h-full object-cover"
               />
