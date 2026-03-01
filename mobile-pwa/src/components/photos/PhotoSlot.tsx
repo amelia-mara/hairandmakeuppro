@@ -1,4 +1,5 @@
 import { clsx } from 'clsx';
+import { usePhotoUrl } from '@/hooks';
 import type { Photo, PhotoAngle } from '@/types';
 
 interface PhotoSlotProps {
@@ -28,6 +29,7 @@ export function PhotoSlot({
   showLabel = true,
   isPrimary = false,
 }: PhotoSlotProps) {
+  const photoUrl = usePhotoUrl(photo);
   const hasPhoto = !!photo;
   const label = angleLabels[angle];
 
@@ -65,7 +67,7 @@ export function PhotoSlot({
           // Photo display
           <>
             <img
-              src={photo.thumbnail || photo.uri}
+              src={photoUrl}
               alt={`${label} view`}
               className="w-full h-full object-cover"
             />

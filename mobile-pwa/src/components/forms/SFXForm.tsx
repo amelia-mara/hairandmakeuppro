@@ -1,5 +1,6 @@
 import type { SFXDetails, SFXType, BloodType, Photo } from '@/types';
 import { createEmptySFXDetails, SFX_TYPES, BLOOD_TYPES } from '@/types';
+import { PhotoImg } from '@/hooks';
 import { FormField } from '../ui/FormField';
 import { Switch } from '../ui/Toggle';
 
@@ -291,8 +292,8 @@ function SFXPhotoGrid({ photos, onCapture, onRemove, readOnly }: SFXPhotoGridPro
     <div className="grid grid-cols-4 gap-2">
       {photos.map((photo) => (
         <div key={photo.id} className="relative aspect-square">
-          <img
-            src={photo.thumbnail || photo.uri}
+          <PhotoImg
+            photo={photo}
             alt="SFX reference"
             className="w-full h-full object-cover rounded-lg"
           />

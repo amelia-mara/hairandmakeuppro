@@ -1,4 +1,5 @@
 import { clsx } from 'clsx';
+import { usePhotoUrl } from '@/hooks';
 import type { Photo } from '@/types';
 
 interface MasterReferenceProps {
@@ -16,6 +17,7 @@ export function MasterReference({
   onRemove,
   className,
 }: MasterReferenceProps) {
+  const photoUrl = usePhotoUrl(photo);
   const hasPhoto = !!photo;
 
   const handleClick = () => {
@@ -43,7 +45,7 @@ export function MasterReference({
         {hasPhoto ? (
           // Photo display
           <img
-            src={photo.uri}
+            src={photoUrl}
             alt="Master reference"
             className="w-full h-full object-cover"
           />

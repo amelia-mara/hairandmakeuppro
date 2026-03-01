@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { clsx } from 'clsx';
 import type { ContinuityEvent, ContinuityEventType, Photo, ProgressionStage } from '@/types';
 import { CONTINUITY_EVENT_TYPES, STAGE_SUGGESTIONS } from '@/types';
+import { PhotoImg } from '@/hooks';
 import { BottomSheet, Button, Input, Textarea } from '../ui';
 import { createPhotoFromBlob } from '@/utils/imageUtils';
 import { PhotoCapture } from '../photos';
@@ -419,8 +420,8 @@ export function AddEventModal({ isOpen, onClose, onAdd, availableScenes = [] }: 
             <div className="grid grid-cols-4 gap-2 mb-3">
               {referencePhotos.map((photo) => (
                 <div key={photo.id} className="relative aspect-square rounded-lg overflow-hidden bg-gray-100">
-                  <img
-                    src={photo.thumbnail || photo.uri}
+                  <PhotoImg
+                    photo={photo}
                     alt="Reference"
                     className="w-full h-full object-cover"
                   />
