@@ -1035,16 +1035,26 @@ export function convertParsedScriptToProject(
     };
   });
 
-  // Convert scenes
+  // Convert scenes — deduplicate scene numbers so they satisfy the
+  // UNIQUE(project_id, scene_number) constraint in Supabase.
+  const seenSceneNumbers = new Map<string, number>();
   const scenes: Scene[] = parsed.scenes.map((ps) => {
     // Map character names to IDs for this scene
     const sceneCharIds = ps.characters
       .filter(charName => charIdMap.has(charName))
       .map(charName => charIdMap.get(charName)!);
 
+    // Deduplicate: "45" stays "45", second "45" becomes "45-2", etc.
+    let sceneNum = ps.sceneNumber;
+    const count = (seenSceneNumbers.get(sceneNum) || 0) + 1;
+    seenSceneNumbers.set(sceneNum, count);
+    if (count > 1) {
+      sceneNum = `${sceneNum}-${count}`;
+    }
+
     return {
       id: uuidv4(),
-      sceneNumber: ps.sceneNumber,
+      sceneNumber: sceneNum,
       slugline: `${ps.intExt}. ${ps.location} - ${ps.timeOfDay}`,
       intExt: ps.intExt,
       timeOfDay: ps.timeOfDay,

@@ -157,11 +157,25 @@ export async function parseScriptWithAI(
     // Pass the pre-extracted character list to each chunk
     const chunkResult = await analyzeScriptChunk(chunks[i], i, chunks.length, preExtractedCharacters);
 
-    // Merge scenes with offset for scene numbers
-    const sceneOffset = allScenes.length;
+    // Merge scenes — only apply an offset when the AI clearly restarted
+    // numbering from 1 for this chunk (i.e. its first scene number is ≤ the
+    // highest we've seen so far).  When the AI returns actual script numbers
+    // (e.g. 45-90) we keep them as-is.
+    const maxSeenNum = allScenes.reduce((max, s) => {
+      const n = parseInt(s.sceneNumber, 10);
+      return !isNaN(n) && n > max ? n : max;
+    }, 0);
+
+    const firstChunkNum = chunkResult.scenes.length > 0
+      ? parseInt(chunkResult.scenes[0].sceneNumber, 10)
+      : NaN;
+
+    // Only offset if the chunk restarted numbering (first number ≤ max seen)
+    const needsOffset = i > 0 && !isNaN(firstChunkNum) && firstChunkNum <= maxSeenNum;
+    const sceneOffset = needsOffset ? maxSeenNum : 0;
+
     for (const scene of chunkResult.scenes) {
-      // Adjust scene number if it's sequential
-      if (!scene.sceneNumber.match(/[A-Z]/)) {
+      if (needsOffset && !scene.sceneNumber.match(/[A-Z]/)) {
         const numericPart = parseInt(scene.sceneNumber, 10);
         if (!isNaN(numericPart)) {
           scene.sceneNumber = String(numericPart + sceneOffset);
