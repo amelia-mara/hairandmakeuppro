@@ -86,7 +86,25 @@ export function characterToDb(char: Character, projectId: string): Omit<DbCharac
   };
 }
 
-export function lookToDb(look: Look, projectId: string): Omit<DbLook, 'created_at'> {
+export function lookToDb(look: Look, projectId: string, masterRefStoragePath?: string | null): Omit<DbLook, 'created_at'> {
+  // Embed master reference photo metadata in makeup_details JSON so it
+  // survives server round-trips (the looks table has no dedicated column).
+  const makeupData: Record<string, unknown> = look.makeup ? { ...(look.makeup as unknown as Record<string, unknown>) } : {};
+
+  if (look.masterReference) {
+    makeupData._masterRef = {
+      id: look.masterReference.id,
+      thumbnail: look.masterReference.thumbnail || '',
+      storagePath: masterRefStoragePath ?? (look.masterReference as any)._storagePath ?? null,
+      capturedAt: look.masterReference.capturedAt
+        ? new Date(look.masterReference.capturedAt).toISOString()
+        : null,
+      angle: look.masterReference.angle || null,
+    };
+  } else {
+    delete makeupData._masterRef;
+  }
+
   return {
     id: look.id,
     project_id: projectId,
@@ -94,7 +112,7 @@ export function lookToDb(look: Look, projectId: string): Omit<DbLook, 'created_a
     name: look.name,
     description: look.notes || null,
     estimated_time: look.estimatedTime,
-    makeup_details: look.makeup as unknown as Json,
+    makeup_details: makeupData as unknown as Json,
     hair_details: look.hair as unknown as Json,
   };
 }
@@ -168,13 +186,42 @@ function dbToCharacter(db: DbCharacter, existingChar?: Character): Character {
 }
 
 function dbToLook(db: DbLook, sceneNumbers: string[], existingLook?: Look): Look {
+  // Extract master reference photo metadata from makeup_details JSON
+  const rawMakeup = db.makeup_details as Record<string, unknown> | null;
+  const masterRefMeta = rawMakeup?._masterRef as {
+    id: string; thumbnail: string; storagePath: string | null;
+    capturedAt: string | null; angle: string | null;
+  } | undefined;
+
+  // Strip _masterRef from the makeup data so it doesn't pollute MakeupDetails
+  let cleanMakeup = rawMakeup;
+  if (rawMakeup?._masterRef) {
+    const { _masterRef: _, ...rest } = rawMakeup;
+    cleanMakeup = rest;
+  }
+
+  // Reconstruct masterReference from server metadata, or preserve local version
+  let masterReference = existingLook?.masterReference;
+  if (!masterReference && masterRefMeta?.id) {
+    masterReference = {
+      id: masterRefMeta.id,
+      uri: '',  // Full image downloaded in background
+      thumbnail: masterRefMeta.thumbnail || '',
+      capturedAt: masterRefMeta.capturedAt ? new Date(masterRefMeta.capturedAt) : new Date(),
+      angle: masterRefMeta.angle as PhotoAngle | undefined,
+    };
+    if (masterRefMeta.storagePath) {
+      (masterReference as any)._storagePath = masterRefMeta.storagePath;
+    }
+  }
+
   return {
     id: db.id,
     characterId: db.character_id,
     name: db.name,
     scenes: sceneNumbers,
     estimatedTime: db.estimated_time,
-    makeup: (db.makeup_details as unknown as MakeupDetails) || {
+    makeup: (cleanMakeup as unknown as MakeupDetails) || {
       foundation: '', coverage: '', concealer: '', concealerPlacement: '',
       contour: '', contourPlacement: '', highlight: '', highlightPlacement: '',
       blush: '', blushPlacement: '', browProduct: '', browShape: '',
@@ -188,7 +235,7 @@ function dbToLook(db: DbLook, sceneNumbers: string[], existingLook?: Look): Look
       edgesBabyHairs: '',
     },
     notes: db.description || undefined,
-    masterReference: existingLook?.masterReference,
+    masterReference,
     continuityFlags: existingLook?.continuityFlags,
     continuityEvents: existingLook?.continuityEvents,
     sfxDetails: existingLook?.sfxDetails,

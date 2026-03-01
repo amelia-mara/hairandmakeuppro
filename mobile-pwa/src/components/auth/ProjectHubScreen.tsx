@@ -259,13 +259,73 @@ function downloadAndCachePhotoInBackground(
 
     if (angle !== 'additional' && angle !== 'detail') {
       setReceivingFromServer(true);
-      store.updateSceneCapture(captureKey, {
-        photos: { ...capture.photos, [angle]: updatedPhoto },
-      });
-      setReceivingFromServer(false);
+      try {
+        store.updateSceneCapture(captureKey, {
+          photos: { ...capture.photos, [angle]: updatedPhoto },
+        });
+      } finally {
+        setReceivingFromServer(false);
+      }
     }
   }).catch(err => {
     console.warn('[ProjectHub] Photo download failed:', err);
+  });
+}
+
+// Download a look's master reference photo from Supabase Storage,
+// cache in IndexedDB, and update the look in the store with the thumbnail.
+function downloadMasterRefPhotoInBackground(
+  storagePath: string,
+  lookId: string,
+  photoId: string,
+  store: ReturnType<typeof useProjectStore.getState>,
+): void {
+  supabaseStorage.downloadPhoto(storagePath).then(async ({ blob, error }) => {
+    if (error || !blob) return;
+
+    // Create thumbnail
+    const thumbnail = await new Promise<string>((resolve) => {
+      const img = new Image();
+      const url = URL.createObjectURL(blob);
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const size = 80;
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d')!;
+        const scale = Math.max(size / img.width, size / img.height);
+        const x = (size - img.width * scale) / 2;
+        const y = (size - img.height * scale) / 2;
+        ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+        URL.revokeObjectURL(url);
+        resolve(canvas.toDataURL('image/jpeg', 0.6));
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(''); };
+      img.src = url;
+    });
+
+    // Cache in IndexedDB
+    await savePhotoBlob(photoId, blob, thumbnail);
+
+    // Update the look in the store with the thumbnail
+    const project = useProjectStore.getState().currentProject;
+    if (!project) return;
+    const look = project.looks.find(l => l.id === lookId);
+    if (!look?.masterReference) return;
+
+    setReceivingFromServer(true);
+    try {
+      store.updateLook(lookId, {
+        masterReference: {
+          ...look.masterReference,
+          thumbnail,
+        },
+      });
+    } finally {
+      setReceivingFromServer(false);
+    }
+  }).catch(err => {
+    console.warn('[ProjectHub] Master ref photo download failed:', err);
   });
 }
 
@@ -537,16 +597,48 @@ export function ProjectHubScreen() {
           avatarColour: c.avatar_colour,
         }));
 
-        const localLooks = looks.map(l => ({
-          id: l.id,
-          characterId: l.character_id,
-          name: l.name,
-          scenes: lookSceneMap.get(l.id) || [],
-          estimatedTime: l.estimated_time,
-          makeup: (l.makeup_details as unknown as MakeupDetails) || createEmptyMakeupDetails(),
-          hair: (l.hair_details as unknown as HairDetails) || createEmptyHairDetails(),
-          notes: l.description || undefined,
-        }));
+        const localLooks = looks.map(l => {
+          // Extract _masterRef metadata from makeup_details JSON
+          const rawMakeup = l.makeup_details as Record<string, unknown> | null;
+          const masterRefMeta = rawMakeup?._masterRef as {
+            id: string; thumbnail: string; storagePath: string | null;
+            capturedAt: string | null; angle: string | null;
+          } | undefined;
+
+          // Strip _masterRef so it doesn't pollute MakeupDetails
+          let cleanMakeup = rawMakeup;
+          if (rawMakeup?._masterRef) {
+            const { _masterRef: _, ...rest } = rawMakeup;
+            cleanMakeup = rest;
+          }
+
+          // Reconstruct masterReference Photo stub from server metadata
+          let masterReference: Photo | undefined;
+          if (masterRefMeta?.id) {
+            masterReference = {
+              id: masterRefMeta.id,
+              uri: '',
+              thumbnail: masterRefMeta.thumbnail || '',
+              capturedAt: masterRefMeta.capturedAt ? new Date(masterRefMeta.capturedAt) : new Date(),
+              angle: (masterRefMeta.angle as PhotoAngle) || undefined,
+            };
+            if (masterRefMeta.storagePath) {
+              (masterReference as any)._storagePath = masterRefMeta.storagePath;
+            }
+          }
+
+          return {
+            id: l.id,
+            characterId: l.character_id,
+            name: l.name,
+            scenes: lookSceneMap.get(l.id) || [],
+            estimatedTime: l.estimated_time,
+            makeup: (cleanMakeup as unknown as MakeupDetails) || createEmptyMakeupDetails(),
+            hair: (l.hair_details as unknown as HairDetails) || createEmptyHairDetails(),
+            notes: l.description || undefined,
+            masterReference,
+          };
+        });
 
         // If server has no scenes but local saved data does, restore the
         // saved project instead (rescues data when saveInitialProjectData failed).
@@ -648,6 +740,18 @@ export function ProjectHubScreen() {
               for (const dbPhoto of cePhotos) {
                 downloadAndCachePhotoInBackground(dbPhoto, captureKey, store);
               }
+            }
+          }
+
+          // Download master reference photos for looks in background
+          for (const look of localLooks) {
+            if (look.masterReference && (look.masterReference as any)._storagePath) {
+              downloadMasterRefPhotoInBackground(
+                (look.masterReference as any)._storagePath,
+                look.id,
+                look.masterReference.id,
+                store,
+              );
             }
           }
         } finally {
