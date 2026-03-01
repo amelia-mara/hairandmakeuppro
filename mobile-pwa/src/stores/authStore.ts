@@ -428,10 +428,13 @@ export const useAuthStore = create<AuthState>()(
           console.error('Sign out error:', error);
         }
 
-        // Clear local project stores to prevent stale data on next login
+        // Clear ALL stores so the next login starts clean on the hub.
+        // Without this, stale currentProject/activeTab persist in IndexedDB
+        // and the user lands on a random page instead of the project dashboard.
         try {
           useProjectStore.getState().clearProject();
-          // Also clear any saved project snapshots
+          useProjectStore.getState().setActiveTab('today');
+          // Also clear saved project snapshots so stale data doesn't linger
           useProjectStore.setState({ savedProjects: {}, archivedProjects: [] });
           useScheduleStore.getState().clearSchedule();
           useCallSheetStore.getState().clearAll();
