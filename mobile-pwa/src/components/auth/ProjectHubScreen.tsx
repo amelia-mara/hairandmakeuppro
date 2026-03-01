@@ -598,18 +598,24 @@ export function ProjectHubScreen() {
         }));
 
         const localLooks = looks.map(l => {
-          // Extract _masterRef metadata from makeup_details JSON
+          // Extract embedded metadata from makeup_details JSON
           const rawMakeup = l.makeup_details as Record<string, unknown> | null;
           const masterRefMeta = rawMakeup?._masterRef as {
             id: string; thumbnail: string; storagePath: string | null;
             capturedAt: string | null; angle: string | null;
           } | undefined;
+          const continuityFlagsMeta = rawMakeup?._continuityFlags as ContinuityFlags | undefined;
+          const continuityEventsMeta = rawMakeup?._continuityEvents as ContinuityEvent[] | undefined;
+          const sfxDetailsMeta = rawMakeup?._sfxDetails as SFXDetails | undefined;
 
-          // Strip _masterRef so it doesn't pollute MakeupDetails
-          let cleanMakeup = rawMakeup;
-          if (rawMakeup?._masterRef) {
-            const { _masterRef: _, ...rest } = rawMakeup;
-            cleanMakeup = rest;
+          // Strip all underscore-prefixed metadata so it doesn't pollute MakeupDetails
+          let cleanMakeup: Record<string, unknown> | null = null;
+          if (rawMakeup) {
+            const cleaned: Record<string, unknown> = {};
+            for (const [key, value] of Object.entries(rawMakeup)) {
+              if (!key.startsWith('_')) cleaned[key] = value;
+            }
+            cleanMakeup = cleaned;
           }
 
           // Reconstruct masterReference Photo stub from server metadata
@@ -627,6 +633,32 @@ export function ProjectHubScreen() {
             }
           }
 
+          // Reconstruct continuity events with Photo stubs
+          const continuityEvents = continuityEventsMeta && continuityEventsMeta.length > 0
+            ? continuityEventsMeta.map(ev => ({
+                ...ev,
+                referencePhotos: (ev.referencePhotos || []).map(p => ({
+                  ...p, uri: '' as string, capturedAt: p.capturedAt ? new Date(p.capturedAt as unknown as string) : new Date(),
+                })),
+                progression: ev.progression?.map(ps => ({
+                  ...ps,
+                  referencePhotos: (ps.referencePhotos || []).map(p => ({
+                    ...p, uri: '' as string, capturedAt: p.capturedAt ? new Date(p.capturedAt as unknown as string) : new Date(),
+                  })),
+                })),
+              }))
+            : undefined;
+
+          // Reconstruct SFX details with Photo stubs
+          const sfxDetails = sfxDetailsMeta
+            ? {
+                ...sfxDetailsMeta,
+                sfxReferencePhotos: (sfxDetailsMeta.sfxReferencePhotos || []).map(p => ({
+                  ...p, uri: '' as string, capturedAt: p.capturedAt ? new Date(p.capturedAt as unknown as string) : new Date(),
+                })),
+              }
+            : undefined;
+
           return {
             id: l.id,
             characterId: l.character_id,
@@ -637,6 +669,9 @@ export function ProjectHubScreen() {
             hair: (l.hair_details as unknown as HairDetails) || createEmptyHairDetails(),
             notes: l.description || undefined,
             masterReference,
+            continuityFlags: continuityFlagsMeta || undefined,
+            continuityEvents,
+            sfxDetails,
           };
         });
 
