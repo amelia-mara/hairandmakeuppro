@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
-import { createPhotoFromBlob } from '@/utils/imageUtils';
+import { createPhotoFromBlob, base64ToBlob } from '@/utils/imageUtils';
+import { savePhotoBlob } from '@/db';
 import { formatEstimatedTime, formatSceneRange, parseSceneRange } from '@/utils/helpers';
 import type { Photo, PhotoAngle, ContinuityEvent, SFXDetails } from '@/types';
 import {
@@ -12,6 +13,7 @@ import {
 } from '@/types';
 import { Accordion } from '../ui';
 import { CharacterAvatar } from '../characters/CharacterAvatar';
+import { PhotoImg } from '@/hooks';
 import { MasterReference, PhotoCapture, PhotoViewer } from '../photos';
 import { QuickFlags } from '../continuity/QuickFlags';
 import { ContinuityEvents } from '../continuity/ContinuityEvents';
@@ -86,6 +88,12 @@ export function LookOverview({ lookId, onBack, onSceneClick }: LookOverviewProps
 
   const handlePhotoCapture = async (blob: Blob) => {
     const photo = await createPhotoFromBlob(blob);
+
+    // Save the photo blob to IndexedDB so it can be found by
+    // uploadLookMasterRefPhoto and by the usePhotoUrl hook
+    const photoBlob = base64ToBlob(photo.uri);
+    savePhotoBlob(photo.id, photoBlob, photo.thumbnail, photo.angle).catch(() => {});
+
     if (captureSFX) {
       // Add to look-level SFX reference photos
       const currentSfx = look.sfxDetails || createEmptySFXDetails();
@@ -412,8 +420,8 @@ export function LookOverview({ lookId, onBack, onSceneClick }: LookOverviewProps
                     }`}
                   >
                     {frontPhoto ? (
-                      <img
-                        src={frontPhoto.thumbnail || frontPhoto.uri}
+                      <PhotoImg
+                        photo={frontPhoto}
                         alt={`Scene ${scene.sceneNumber}`}
                         className="w-full h-full object-cover"
                       />
