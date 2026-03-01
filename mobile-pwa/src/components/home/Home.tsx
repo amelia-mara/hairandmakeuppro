@@ -8,12 +8,12 @@ import {
   parseScenesFast,
   convertParsedScriptToProject,
   suggestCharacterMerges,
-  detectCharactersForScenesBatch,
 } from '@/utils/scriptParser';
 import {
   parseScheduleStage1,
 } from '@/utils/scheduleParser';
 import { saveInitialProjectData } from '@/services/supabaseProjects';
+import { runBackgroundCharacterDetection } from '@/services/characterDetectionService';
 import { setReceivingFromServer } from '@/services/syncChangeTracker';
 import { useSyncStore } from '@/stores/syncStore';
 import type { ParsedScript } from '@/utils/scriptParser';
@@ -198,82 +198,13 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
   }, [projectName, setProject, setSchedule, onProjectReady, currentProject]);
 
   // Background character detection (runs after project is created)
-  // If knownCharacters is provided (from schedule), use it for accurate detection
-  const startBackgroundCharacterDetection = useCallback(async (
-    project: Project,
-    rawText: string,
-    knownCharacters: string[] = [],
-    projectId?: string,
-    userId?: string | null,
-  ) => {
-    try {
-      // Mark detection as running
-      useProjectStore.getState().startCharacterDetection();
-
-      // Prepare scenes for batch detection
-      const scenesToDetect = project.scenes.map((s) => ({
-        sceneNumber: s.sceneNumber,
-        scriptContent: s.scriptContent || '',
-      }));
-
-      // Detect characters in batches
-      const results = await detectCharactersForScenesBatch(
-        scenesToDetect,
-        rawText,
-        {
-          useAI: false, // Use regex only for fast initial detection
-          knownCharacters: knownCharacters.length > 0 ? knownCharacters : undefined,
-          onProgress: () => {},
-        }
-      );
-
-      // Update each scene with suggested characters
-      // Use current store state to avoid stale closure on `project` parameter
-      const store = useProjectStore.getState();
-      const currentScenes = store.currentProject?.scenes || project.scenes;
-      results.forEach((characters, sceneNumber) => {
-        const scene = currentScenes.find((s) => s.sceneNumber === sceneNumber);
-        if (scene) {
-          store.updateSceneSuggestedCharacters(scene.id, characters);
-        }
-      });
-
-      // Mark detection as complete
-      store.setCharacterDetectionStatus('complete');
-
-      // ── Save detected characters to Supabase ─────────────────
-      // After detection, the store now has characters and scene_characters.
-      // Push them to the server so they're available on re-login.
-      const pid = projectId || store.currentProject?.id;
-      if (pid) {
-        const updatedProject = useProjectStore.getState().currentProject;
-        if (updatedProject && updatedProject.characters.length > 0) {
-          saveInitialProjectData({
-            projectId: pid,
-            userId: userId ?? null,
-            scenes: [], // already saved
-            characters: updatedProject.characters.map(c => ({
-              id: c.id,
-              name: c.name,
-              initials: c.initials,
-              avatar_colour: c.avatarColour || '#C9A961',
-            })),
-            sceneCharacters: updatedProject.scenes.flatMap(s =>
-              s.characters.map(charId => ({ scene_id: s.id, character_id: charId }))
-            ),
-          }).then(({ error: saveErr }) => {
-            if (saveErr) {
-              console.error('[Home] Failed to save characters to server:', saveErr);
-            }
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Background character detection failed:', error);
-      // Still mark as complete so user can manually add characters
-      useProjectStore.getState().setCharacterDetectionStatus('complete');
-    }
-  }, []);
+  // Uses the shared service so the same logic runs from both the
+  // initial creation flow and the script-page upload flow.
+  const startBackgroundCharacterDetection = useCallback(
+    (project: Project, rawText: string, knownCharacters: string[] = [], projectId?: string, userId?: string | null) =>
+      runBackgroundCharacterDetection(project, rawText, knownCharacters, projectId, userId),
+    [],
+  );
 
   // Original workflow: Full AI parsing then character selection
   const processScript = useCallback(async (file: File, scheduleFile?: File | null) => {
