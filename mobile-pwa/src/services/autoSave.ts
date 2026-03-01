@@ -92,6 +92,28 @@ export async function flushAutoSave(): Promise<void> {
 }
 
 // ============================================================================
+// Helpers
+// ============================================================================
+
+/**
+ * Ensure every scene_number in the batch is unique.
+ * Duplicates (same scene_number) get a suffix: "45" stays, second "45" → "45-2".
+ * This prevents the UNIQUE(project_id, scene_number) constraint from rejecting
+ * the upsert when the local store already contains duplicates from a prior parse.
+ */
+function deduplicateSceneNumbers<T extends { scene_number: string }>(rows: T[]): T[] {
+  const seen = new Map<string, number>();
+  return rows.map(row => {
+    const count = (seen.get(row.scene_number) || 0) + 1;
+    seen.set(row.scene_number, count);
+    if (count > 1) {
+      return { ...row, scene_number: `${row.scene_number}-${count}` };
+    }
+    return row;
+  });
+}
+
+// ============================================================================
 // Per-category auto-save functions
 // ============================================================================
 
@@ -104,10 +126,10 @@ export function autoSaveScenes(): void {
   const scenes = [...project.scenes];
 
   debounced('scenes', async () => {
-    const dbScenes = scenes.map(s => sceneToDb(s, projectId));
+    const dbScenes = deduplicateSceneNumbers(scenes.map(s => sceneToDb(s, projectId)));
     const { error } = await supabase
       .from('scenes')
-      .upsert(dbScenes, { onConflict: 'id' });
+      .upsert(dbScenes, { onConflict: 'project_id,scene_number' });
     if (error) throw error;
 
     // Sync scene_characters junction
@@ -365,10 +387,10 @@ export async function saveEverythingToSupabase(): Promise<void> {
   // ── 1. Scenes + scene_characters ──────────────────────────────
   if (project.scenes.length > 0) {
     try {
-      const dbScenes = project.scenes.map(s => sceneToDb(s, projectId));
+      const dbScenes = deduplicateSceneNumbers(project.scenes.map(s => sceneToDb(s, projectId)));
       const { error } = await supabase
         .from('scenes')
-        .upsert(dbScenes, { onConflict: 'id' });
+        .upsert(dbScenes, { onConflict: 'project_id,scene_number' });
       if (error) throw error;
 
       const sceneIds = project.scenes.map(s => s.id);
