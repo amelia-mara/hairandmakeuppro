@@ -260,9 +260,10 @@ function AppContent() {
   };
 
   // Handle switching to a different project (from Project Menu)
-  const handleSwitchProject = async () => {
-    // Flush pending auto-saves to Supabase before switching
-    await flushAutoSave();
+  const handleSwitchProject = () => {
+    // Flush pending auto-saves in background — don't block navigation.
+    // Local data is preserved by saveAndClearProject() regardless.
+    flushAutoSave().catch(() => {});
     // Save current project data before clearing (so it can be restored later)
     useProjectStore.getState().saveAndClearProject();
     setShowHome(false);
@@ -270,9 +271,9 @@ function AppContent() {
   };
 
   // Handle quick-switching to a different project (from header dropdown)
-  const handleQuickSwitch = async (projectId: string) => {
+  const handleQuickSwitch = (projectId: string) => {
     if (currentProject?.id === projectId) return;
-    await flushAutoSave();
+    flushAutoSave().catch(() => {});
     useProjectStore.getState().saveAndClearProject();
     setShowHome(false);
     setAutoOpenProject(projectId);
