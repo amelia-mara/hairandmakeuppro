@@ -296,20 +296,16 @@ export function autoSaveScript(): void {
   debounced('script', async () => {
     if (!scriptData.startsWith('data:')) return;
 
-    // Deactivate any existing active script before uploading the new one
-    await supabase
-      .from('script_uploads')
-      .update({ is_active: false })
-      .eq('project_id', projectId)
-      .eq('is_active', true);
-
     const { path, error: uploadError } = await supabaseStorage.uploadBase64Document(
       projectId, 'scripts', scriptData
     );
     if (!uploadError && path) {
       const base64Length = scriptData.split(',')[1]?.length || 0;
       const fileSize = Math.round(base64Length * 0.75);
-      await supabase.from('script_uploads').insert({
+
+      // Insert the new record FIRST so there's always at least one active row.
+      // Only deactivate old rows AFTER the insert succeeds.
+      const { error: insertError } = await supabase.from('script_uploads').insert({
         project_id: projectId,
         storage_path: path,
         file_name: 'script.pdf',
@@ -319,6 +315,16 @@ export function autoSaveScript(): void {
         uploaded_by: userId,
         scene_count: sceneCount,
       });
+
+      if (!insertError) {
+        // Deactivate old records (the new one stays active)
+        await supabase
+          .from('script_uploads')
+          .update({ is_active: false })
+          .eq('project_id', projectId)
+          .eq('is_active', true)
+          .neq('storage_path', path);
+      }
     }
     console.log('[AutoSave] Script saved');
   });
@@ -519,20 +525,15 @@ export async function saveEverythingToSupabase(): Promise<void> {
   // ── 7. Script PDF ─────────────────────────────────────────────
   if (project.scriptPdfData && project.scriptPdfData.startsWith('data:')) {
     try {
-      // Deactivate any existing active script before uploading the new one
-      await supabase
-        .from('script_uploads')
-        .update({ is_active: false })
-        .eq('project_id', projectId)
-        .eq('is_active', true);
-
       const { path, error: uploadError } = await supabaseStorage.uploadBase64Document(
         projectId, 'scripts', project.scriptPdfData
       );
       if (!uploadError && path) {
         const base64Length = project.scriptPdfData.split(',')[1]?.length || 0;
         const fileSize = Math.round(base64Length * 0.75);
-        await supabase.from('script_uploads').insert({
+
+        // Insert the new record FIRST so there's always at least one active row.
+        const { error: insertError } = await supabase.from('script_uploads').insert({
           project_id: projectId,
           storage_path: path,
           file_name: 'script.pdf',
@@ -542,6 +543,16 @@ export async function saveEverythingToSupabase(): Promise<void> {
           uploaded_by: userId,
           scene_count: project.scenes.length,
         });
+
+        // Only deactivate old rows AFTER the insert succeeds.
+        if (!insertError) {
+          await supabase
+            .from('script_uploads')
+            .update({ is_active: false })
+            .eq('project_id', projectId)
+            .eq('is_active', true)
+            .neq('storage_path', path);
+        }
       }
       console.log('[SaveAll] Script saved');
     } catch (err) {
