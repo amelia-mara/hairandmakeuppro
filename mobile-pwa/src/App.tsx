@@ -91,6 +91,7 @@ function AppContent() {
     user,
     settingsProjectId,
     setSettingsProjectId,
+    setAutoOpenProject,
   } = useAuthStore();
 
   // Tutorial state — show on first login for authenticated users
@@ -265,6 +266,16 @@ function AppContent() {
     // Save current project data before clearing (so it can be restored later)
     useProjectStore.getState().saveAndClearProject();
     setShowHome(false);
+    setScreen('hub');
+  };
+
+  // Handle quick-switching to a different project (from header dropdown)
+  const handleQuickSwitch = async (projectId: string) => {
+    if (currentProject?.id === projectId) return;
+    await flushAutoSave();
+    useProjectStore.getState().saveAndClearProject();
+    setShowHome(false);
+    setAutoOpenProject(projectId);
     setScreen('hub');
   };
 
@@ -509,8 +520,8 @@ function AppContent() {
     }
   };
 
-  // Show project header on main content tabs (not on More, not when viewing a scene)
-  const showProjectHeader = !currentSceneId && !['more', 'settings', 'script', 'schedule', 'callsheets'].includes(activeTab);
+  // Show project header on all tabs except when viewing a scene (scene has its own navigation)
+  const showProjectHeader = !currentSceneId;
 
   return (
     <div className="min-h-screen bg-background">
@@ -523,6 +534,7 @@ function AppContent() {
       {showProjectHeader && (
         <ProjectHeader
           onSwitchProject={handleSwitchProject}
+          onQuickSwitch={handleQuickSwitch}
           onNavigateToProfile={() => setShowUserProfile(true)}
         />
       )}

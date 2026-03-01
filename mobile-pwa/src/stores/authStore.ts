@@ -61,6 +61,9 @@ interface AuthState {
   // Project settings navigation
   settingsProjectId: string | null;
 
+  // Quick-switch: auto-open this project when the hub mounts (transient, not persisted)
+  autoOpenProjectId: string | null;
+
   // Actions
   setScreen: (screen: AuthScreen, addToHistory?: boolean) => void;
   goBack: () => void;
@@ -82,6 +85,7 @@ interface AuthState {
   leaveProject: (projectId: string) => Promise<{ success: boolean; error?: string }>;
   setPinnedProject: (projectId: string) => void;
   setSettingsProjectId: (projectId: string | null) => void;
+  setAutoOpenProject: (projectId: string | null) => void;
 }
 
 // Valid tiers for lookup safety
@@ -138,6 +142,7 @@ export const useAuthStore = create<AuthState>()(
       guestProjectCode: null,
       pinnedProjectId: null,
       settingsProjectId: null,
+      autoOpenProjectId: null,
 
       // Initialize auth state from Supabase session
       initializeAuth: async () => {
@@ -910,6 +915,10 @@ export const useAuthStore = create<AuthState>()(
 
       setSettingsProjectId: (projectId) => {
         set({ settingsProjectId: projectId });
+      },
+
+      setAutoOpenProject: (projectId) => {
+        set({ autoOpenProjectId: projectId });
       },
     }),
     {

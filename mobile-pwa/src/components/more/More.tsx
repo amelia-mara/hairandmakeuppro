@@ -258,7 +258,7 @@ function MoreMenu({ onNavigate, onNavigateToTab, canManage }: MoreMenuProps) {
 
   return (
     <>
-      <div className="sticky top-0 z-30 bg-card border-b border-border safe-top">
+      <div className="sticky below-project-header z-20 bg-card border-b border-border">
         <div className="mobile-container">
           <div className="h-14 px-4 flex items-center">
             <h1 className="text-lg font-semibold text-text-primary">More</h1>
@@ -554,7 +554,7 @@ function EditMenuScreen({ onDone }: EditMenuScreenProps) {
   return (
     <>
       {/* Header */}
-      <div className="sticky top-0 z-30 bg-card border-b border-border safe-top">
+      <div className="sticky below-project-header z-20 bg-card border-b border-border">
         <div className="mobile-container">
           <div className="h-14 px-4 flex items-center justify-between">
             <h1 className="text-lg font-semibold text-text-primary">Customize Menu</h1>
@@ -841,6 +841,7 @@ function ScriptViewer({ onBack }: ViewerProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [amendmentResult, setAmendmentResult] = useState<AmendmentResult | null>(null);
   const [pendingScriptPdf, setPendingScriptPdf] = useState<string | null>(null);
+  const [pendingScriptFilename, setPendingScriptFilename] = useState<string | null>(null);
 
   // Handle script upload — routes to initial or revised based on project state
   const handleScriptUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -884,7 +885,7 @@ function ScriptViewer({ onBack }: ViewerProps) {
           reader.onload = () => resolve(reader.result as string);
           reader.readAsDataURL(file);
         });
-        setScriptPdf(base64);
+        setScriptPdf(base64, file.name);
       }
 
       // Run character detection — same logic as the initial project creation flow
@@ -922,6 +923,7 @@ function ScriptViewer({ onBack }: ViewerProps) {
           reader.readAsDataURL(file);
         });
         setPendingScriptPdf(base64);
+        setPendingScriptFilename(file.name);
       }
 
       // Compare against existing breakdown
@@ -951,8 +953,9 @@ function ScriptViewer({ onBack }: ViewerProps) {
       applyScriptAmendment(amendmentResult, options);
       // Save the revised script PDF so it syncs to other devices
       if (pendingScriptPdf) {
-        setScriptPdf(pendingScriptPdf);
+        setScriptPdf(pendingScriptPdf, pendingScriptFilename || undefined);
         setPendingScriptPdf(null);
+        setPendingScriptFilename(null);
       }
       setAmendmentResult(null);
     }
@@ -1005,7 +1008,7 @@ function ScriptViewer({ onBack }: ViewerProps) {
 
   return (
     <>
-      <div className="sticky top-0 z-30 bg-card border-b border-border safe-top">
+      <div className="sticky below-project-header z-20 bg-card border-b border-border">
         <div className="mobile-container">
           <div className="h-14 px-4 flex items-center gap-3">
             <button
@@ -1388,7 +1391,7 @@ function ScheduleViewer({ onBack }: ViewerProps) {
   return (
     <>
       {/* Header */}
-      <div className="sticky top-0 z-30 bg-card border-b border-border safe-top">
+      <div className="sticky below-project-header z-20 bg-card border-b border-border">
         <div className="mobile-container">
           <div className="h-14 px-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -1849,7 +1852,7 @@ function CallSheetArchive({ onBack }: ViewerProps) {
 
   return (
     <>
-      <div className="sticky top-0 z-30 bg-card border-b border-border safe-top">
+      <div className="sticky below-project-header z-20 bg-card border-b border-border">
         <div className="mobile-container">
           <div className="h-14 px-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -2079,7 +2082,7 @@ function ArchivedProjectsScreen({ onBack }: ArchivedProjectsScreenProps) {
 
   return (
     <>
-      <div className="sticky top-0 z-30 bg-card border-b border-border safe-top">
+      <div className="sticky below-project-header z-20 bg-card border-b border-border">
         <div className="mobile-container">
           <div className="h-14 px-4 flex items-center gap-3">
             <button

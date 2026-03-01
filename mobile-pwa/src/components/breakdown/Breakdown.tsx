@@ -494,7 +494,7 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
   return (
     <div className="min-h-screen bg-background pb-safe-bottom">
       {/* Header */}
-      <div className="sticky top-0 z-30 bg-card border-b border-border safe-top">
+      <div className="sticky below-project-header z-20 bg-card border-b border-border">
         <div className="mobile-container">
           <div className="h-14 px-4 flex items-center justify-between">
             <h1 className="text-lg font-semibold text-text-primary">Breakdown</h1>
@@ -1258,7 +1258,7 @@ function FilterDrawer({
 function EmptyState() {
   return (
     <div className="min-h-screen bg-background pb-safe-bottom">
-      <div className="sticky top-0 z-30 bg-card border-b border-border safe-top">
+      <div className="sticky below-project-header z-20 bg-card border-b border-border">
         <div className="mobile-container">
           <div className="h-14 px-4 flex items-center">
             <h1 className="text-lg font-semibold text-text-primary">Breakdown</h1>
