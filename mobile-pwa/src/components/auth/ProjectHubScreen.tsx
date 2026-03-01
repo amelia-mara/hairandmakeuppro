@@ -259,13 +259,73 @@ function downloadAndCachePhotoInBackground(
 
     if (angle !== 'additional' && angle !== 'detail') {
       setReceivingFromServer(true);
-      store.updateSceneCapture(captureKey, {
-        photos: { ...capture.photos, [angle]: updatedPhoto },
-      });
-      setReceivingFromServer(false);
+      try {
+        store.updateSceneCapture(captureKey, {
+          photos: { ...capture.photos, [angle]: updatedPhoto },
+        });
+      } finally {
+        setReceivingFromServer(false);
+      }
     }
   }).catch(err => {
     console.warn('[ProjectHub] Photo download failed:', err);
+  });
+}
+
+// Download a look's master reference photo from Supabase Storage,
+// cache in IndexedDB, and update the look in the store with the thumbnail.
+function downloadMasterRefPhotoInBackground(
+  storagePath: string,
+  lookId: string,
+  photoId: string,
+  store: ReturnType<typeof useProjectStore.getState>,
+): void {
+  supabaseStorage.downloadPhoto(storagePath).then(async ({ blob, error }) => {
+    if (error || !blob) return;
+
+    // Create thumbnail
+    const thumbnail = await new Promise<string>((resolve) => {
+      const img = new Image();
+      const url = URL.createObjectURL(blob);
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const size = 80;
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d')!;
+        const scale = Math.max(size / img.width, size / img.height);
+        const x = (size - img.width * scale) / 2;
+        const y = (size - img.height * scale) / 2;
+        ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+        URL.revokeObjectURL(url);
+        resolve(canvas.toDataURL('image/jpeg', 0.6));
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(''); };
+      img.src = url;
+    });
+
+    // Cache in IndexedDB
+    await savePhotoBlob(photoId, blob, thumbnail);
+
+    // Update the look in the store with the thumbnail
+    const project = useProjectStore.getState().currentProject;
+    if (!project) return;
+    const look = project.looks.find(l => l.id === lookId);
+    if (!look?.masterReference) return;
+
+    setReceivingFromServer(true);
+    try {
+      store.updateLook(lookId, {
+        masterReference: {
+          ...look.masterReference,
+          thumbnail,
+        },
+      });
+    } finally {
+      setReceivingFromServer(false);
+    }
+  }).catch(err => {
+    console.warn('[ProjectHub] Master ref photo download failed:', err);
   });
 }
 
@@ -398,6 +458,8 @@ export function ProjectHubScreen() {
     setPinnedProject,
     setSettingsProjectId,
     refreshUserProjects,
+    autoOpenProjectId,
+    setAutoOpenProject,
   } = useAuthStore();
 
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -405,6 +467,7 @@ export function ProjectHubScreen() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [isQuickSwitching, setIsQuickSwitching] = useState(false);
 
   const handleSignOut = async () => {
     setIsSigningOut(true);
@@ -415,6 +478,19 @@ export function ProjectHubScreen() {
   useEffect(() => {
     refreshUserProjects();
   }, [refreshUserProjects]);
+
+  // Auto-open a project when quick-switching from the header dropdown
+  useEffect(() => {
+    if (!autoOpenProjectId || projectMemberships.length === 0) return;
+    const membership = projectMemberships.find(p => p.projectId === autoOpenProjectId);
+    if (membership) {
+      setIsQuickSwitching(true);
+      setAutoOpenProject(null);
+      handleProjectOpen(membership).finally(() => setIsQuickSwitching(false));
+    } else {
+      setAutoOpenProject(null);
+    }
+  }, [autoOpenProjectId, projectMemberships]);
 
   // Determine "current" (pinned) project and sort the rest by date created
   const pinnedProject = pinnedProjectId
@@ -436,8 +512,6 @@ export function ProjectHubScreen() {
     .sort((a, b) => new Date(b.joinedAt).getTime() - new Date(a.joinedAt).getTime());
 
   const handleProjectOpen = async (membership: ProjectMembership) => {
-    updateLastAccessed(membership.projectId);
-
     const store = useProjectStore.getState();
 
     // Flush pending auto-saves to Supabase before switching projects
@@ -523,16 +597,48 @@ export function ProjectHubScreen() {
           avatarColour: c.avatar_colour,
         }));
 
-        const localLooks = looks.map(l => ({
-          id: l.id,
-          characterId: l.character_id,
-          name: l.name,
-          scenes: lookSceneMap.get(l.id) || [],
-          estimatedTime: l.estimated_time,
-          makeup: (l.makeup_details as unknown as MakeupDetails) || createEmptyMakeupDetails(),
-          hair: (l.hair_details as unknown as HairDetails) || createEmptyHairDetails(),
-          notes: l.description || undefined,
-        }));
+        const localLooks = looks.map(l => {
+          // Extract _masterRef metadata from makeup_details JSON
+          const rawMakeup = l.makeup_details as Record<string, unknown> | null;
+          const masterRefMeta = rawMakeup?._masterRef as {
+            id: string; thumbnail: string; storagePath: string | null;
+            capturedAt: string | null; angle: string | null;
+          } | undefined;
+
+          // Strip _masterRef so it doesn't pollute MakeupDetails
+          let cleanMakeup = rawMakeup;
+          if (rawMakeup?._masterRef) {
+            const { _masterRef: _, ...rest } = rawMakeup;
+            cleanMakeup = rest;
+          }
+
+          // Reconstruct masterReference Photo stub from server metadata
+          let masterReference: Photo | undefined;
+          if (masterRefMeta?.id) {
+            masterReference = {
+              id: masterRefMeta.id,
+              uri: '',
+              thumbnail: masterRefMeta.thumbnail || '',
+              capturedAt: masterRefMeta.capturedAt ? new Date(masterRefMeta.capturedAt) : new Date(),
+              angle: (masterRefMeta.angle as PhotoAngle) || undefined,
+            };
+            if (masterRefMeta.storagePath) {
+              (masterReference as any)._storagePath = masterRefMeta.storagePath;
+            }
+          }
+
+          return {
+            id: l.id,
+            characterId: l.character_id,
+            name: l.name,
+            scenes: lookSceneMap.get(l.id) || [],
+            estimatedTime: l.estimated_time,
+            makeup: (cleanMakeup as unknown as MakeupDetails) || createEmptyMakeupDetails(),
+            hair: (l.hair_details as unknown as HairDetails) || createEmptyHairDetails(),
+            notes: l.description || undefined,
+            masterReference,
+          };
+        });
 
         // If server has no scenes but local saved data does, restore the
         // saved project instead (rescues data when saveInitialProjectData failed).
@@ -550,6 +656,7 @@ export function ProjectHubScreen() {
             setReceivingFromServer(false);
           }
           // Let auto-save fire to push rescued scenes to server
+          updateLastAccessed(membership.projectId);
           store.setActiveTab('today');
           return;
         }
@@ -635,6 +742,18 @@ export function ProjectHubScreen() {
               }
             }
           }
+
+          // Download master reference photos for looks in background
+          for (const look of localLooks) {
+            if (look.masterReference && (look.masterReference as any)._storagePath) {
+              downloadMasterRefPhotoInBackground(
+                (look.masterReference as any)._storagePath,
+                look.id,
+                look.masterReference.id,
+                store,
+              );
+            }
+          }
         } finally {
           setReceivingFromServer(false);
         }
@@ -650,6 +769,7 @@ export function ProjectHubScreen() {
           // setReceivingFromServer guards, so they won't trigger auto-save.
           useSyncStore.getState().clearChanges();
         }
+        updateLastAccessed(membership.projectId);
         store.setActiveTab('today');
         return;
       }
@@ -657,6 +777,7 @@ export function ProjectHubScreen() {
       if (store.hasSavedProject(membership.projectId)) {
         console.log('[ProjectOpen] Server has no data but local saved data exists — restoring local project');
         store.restoreSavedProject(membership.projectId);
+        updateLastAccessed(membership.projectId);
         store.setActiveTab('today');
         return;
       }
@@ -667,6 +788,7 @@ export function ProjectHubScreen() {
       if (store.hasSavedProject(membership.projectId)) {
         console.log('[ProjectOpen] Offline — restoring from local saved data');
         store.restoreSavedProject(membership.projectId);
+        updateLastAccessed(membership.projectId);
         store.setActiveTab('today');
         return;
       }
@@ -680,6 +802,7 @@ export function ProjectHubScreen() {
     } else {
       store.setProject(project);
     }
+    updateLastAccessed(membership.projectId);
     store.setActiveTab('today');
   };
 
@@ -971,15 +1094,19 @@ export function ProjectHubScreen() {
         </button>
       </div>
 
-      {/* Full-screen saving overlay */}
-      {isSigningOut && (
+      {/* Full-screen loading overlay (signing out or quick-switching) */}
+      {(isSigningOut || isQuickSwitching) && (
         <div className="fixed inset-0 z-[9999] bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center gap-4">
           <svg className="w-10 h-10 text-gold animate-spin" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
           </svg>
-          <p className="text-sm font-medium text-text-primary">Saving your project...</p>
-          <p className="text-xs text-text-muted">Please wait while we save your data</p>
+          <p className="text-sm font-medium text-text-primary">
+            {isSigningOut ? 'Saving your project...' : 'Switching project...'}
+          </p>
+          <p className="text-xs text-text-muted">
+            {isSigningOut ? 'Please wait while we save your data' : 'Loading project data'}
+          </p>
         </div>
       )}
 

@@ -13,18 +13,16 @@ export function InviteCodeShare({
   isOwner,
   onRegenerateCode,
 }: InviteCodeShareProps) {
-  const [copied, setCopied] = useState<'code' | 'link' | null>(null);
+  const [copied, setCopied] = useState(false);
   const [showRegenerateConfirm, setShowRegenerateConfirm] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [currentCode, setCurrentCode] = useState(inviteCode);
 
-  const joinLink = `checkshappy.app/join/${currentCode}`;
-
-  const copyToClipboard = async (text: string, type: 'code' | 'link') => {
+  const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
-      setCopied(type);
-      setTimeout(() => setCopied(null), 2000);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     } catch {
       // Fallback for older browsers
       const textArea = document.createElement('textarea');
@@ -33,8 +31,8 @@ export function InviteCodeShare({
       textArea.select();
       document.execCommand('copy');
       document.body.removeChild(textArea);
-      setCopied(type);
-      setTimeout(() => setCopied(null), 2000);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     }
   };
 
@@ -44,14 +42,13 @@ export function InviteCodeShare({
         await navigator.share({
           title: 'Join my project on Checks Happy',
           text: `Use code ${currentCode} to join my production on Checks Happy!`,
-          url: `https://${joinLink}`,
         });
       } catch {
         // User cancelled or share failed
       }
     } else {
-      // Fallback - copy link
-      copyToClipboard(`https://${joinLink}`, 'link');
+      // Fallback - copy code
+      copyToClipboard(currentCode);
     }
   };
 
@@ -84,10 +81,10 @@ export function InviteCodeShare({
           <div className="flex gap-3">
             <Button
               variant="outline"
-              onClick={() => copyToClipboard(currentCode, 'code')}
+              onClick={() => copyToClipboard(currentCode)}
               fullWidth
             >
-              {copied === 'code' ? (
+              {copied ? (
                 <>
                   <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -110,55 +107,6 @@ export function InviteCodeShare({
               Share
             </Button>
           </div>
-        </div>
-
-        {/* Divider */}
-        <div className="border-t border-border" />
-
-        {/* Link Section */}
-        <div>
-          <p className="text-sm text-text-muted mb-3">Or share this link:</p>
-
-          <div className="bg-gray-50 rounded-xl p-3 mb-3">
-            <p className="text-sm text-text-primary font-mono break-all">{joinLink}</p>
-          </div>
-
-          <Button
-            variant="secondary"
-            onClick={() => copyToClipboard(`https://${joinLink}`, 'link')}
-            fullWidth
-          >
-            {copied === 'link' ? (
-              <>
-                <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                Link Copied!
-              </>
-            ) : (
-              <>
-                <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                </svg>
-                Copy Link
-              </>
-            )}
-          </Button>
-        </div>
-
-        {/* Divider */}
-        <div className="border-t border-border" />
-
-        {/* Tip */}
-        <div className="flex gap-3 p-4 bg-gold-50/50 rounded-xl">
-          <div className="flex-shrink-0">
-            <svg className="w-5 h-5 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-            </svg>
-          </div>
-          <p className="text-sm text-text-muted">
-            <span className="font-medium text-text-primary">Tip:</span> Add the code to your call sheet so the whole team can join easily.
-          </p>
         </div>
 
         {/* Regenerate Code Section (Owner Only) */}

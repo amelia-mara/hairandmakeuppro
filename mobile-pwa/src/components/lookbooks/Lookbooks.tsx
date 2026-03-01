@@ -314,7 +314,7 @@ export function Lookbooks() {
 // Header component
 function LookbooksHeader({ onExport, isExporting }: { onExport?: () => void; isExporting?: boolean }) {
   return (
-    <div className="sticky top-0 z-30 bg-card border-b border-border safe-top">
+    <div className="sticky below-project-header z-20 bg-card border-b border-border">
       <div className="mobile-container">
         <div className="h-14 px-4 flex items-center justify-between">
           {/* Spacer for centering */}

@@ -70,7 +70,7 @@ export function CharacterProfile({ sceneId, characterId }: CharacterProfileProps
     return null;
   }
 
-  const captureId = capture.id;
+  const captureId = `${sceneId}-${characterId}`;
 
   // Handle photo capture
   const handleOpenCapture = (angle: PhotoAngle, isMaster: boolean = false, isSFX: boolean = false) => {
