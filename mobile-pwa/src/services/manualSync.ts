@@ -105,6 +105,37 @@ export function lookToDb(look: Look, projectId: string, masterRefStoragePath?: s
     delete makeupData._masterRef;
   }
 
+  // Embed look-level continuity defaults that have no dedicated DB columns.
+  // Strip large base64 URIs from any embedded photos (keep thumbnails only).
+  if (look.continuityFlags) {
+    makeupData._continuityFlags = look.continuityFlags;
+  }
+  if (look.continuityEvents && look.continuityEvents.length > 0) {
+    makeupData._continuityEvents = look.continuityEvents.map(ev => ({
+      ...ev,
+      referencePhotos: ev.referencePhotos.map(p => ({
+        id: p.id, thumbnail: p.thumbnail || '', angle: p.angle || null,
+        capturedAt: p.capturedAt ? new Date(p.capturedAt).toISOString() : null,
+      })),
+      progression: ev.progression?.map(ps => ({
+        ...ps,
+        referencePhotos: ps.referencePhotos.map(p => ({
+          id: p.id, thumbnail: p.thumbnail || '', angle: p.angle || null,
+          capturedAt: p.capturedAt ? new Date(p.capturedAt).toISOString() : null,
+        })),
+      })),
+    }));
+  }
+  if (look.sfxDetails) {
+    makeupData._sfxDetails = {
+      ...look.sfxDetails,
+      sfxReferencePhotos: look.sfxDetails.sfxReferencePhotos.map(p => ({
+        id: p.id, thumbnail: p.thumbnail || '', angle: p.angle || null,
+        capturedAt: p.capturedAt ? new Date(p.capturedAt).toISOString() : null,
+      })),
+    };
+  }
+
   return {
     id: look.id,
     project_id: projectId,
@@ -193,11 +224,19 @@ function dbToLook(db: DbLook, sceneNumbers: string[], existingLook?: Look): Look
     capturedAt: string | null; angle: string | null;
   } | undefined;
 
-  // Strip _masterRef from the makeup data so it doesn't pollute MakeupDetails
+  // Extract look-level continuity defaults
+  const continuityFlagsMeta = rawMakeup?._continuityFlags as ContinuityFlags | undefined;
+  const continuityEventsMeta = rawMakeup?._continuityEvents as ContinuityEvent[] | undefined;
+  const sfxDetailsMeta = rawMakeup?._sfxDetails as SFXDetails | undefined;
+
+  // Strip all underscore-prefixed metadata so it doesn't pollute MakeupDetails
   let cleanMakeup = rawMakeup;
-  if (rawMakeup?._masterRef) {
-    const { _masterRef: _, ...rest } = rawMakeup;
-    cleanMakeup = rest;
+  if (rawMakeup) {
+    const cleaned: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(rawMakeup)) {
+      if (!key.startsWith('_')) cleaned[key] = value;
+    }
+    cleanMakeup = cleaned;
   }
 
   // Reconstruct masterReference from server metadata, or preserve local version
@@ -236,9 +275,29 @@ function dbToLook(db: DbLook, sceneNumbers: string[], existingLook?: Look): Look
     },
     notes: db.description || undefined,
     masterReference,
-    continuityFlags: existingLook?.continuityFlags,
-    continuityEvents: existingLook?.continuityEvents,
-    sfxDetails: existingLook?.sfxDetails,
+    continuityFlags: existingLook?.continuityFlags || continuityFlagsMeta || undefined,
+    continuityEvents: existingLook?.continuityEvents || (continuityEventsMeta && continuityEventsMeta.length > 0
+      ? continuityEventsMeta.map(ev => ({
+          ...ev,
+          referencePhotos: (ev.referencePhotos || []).map(p => ({
+            ...p, uri: '', capturedAt: p.capturedAt ? new Date(p.capturedAt) : new Date(),
+          })),
+          progression: ev.progression?.map(ps => ({
+            ...ps,
+            referencePhotos: (ps.referencePhotos || []).map(p => ({
+              ...p, uri: '', capturedAt: p.capturedAt ? new Date(p.capturedAt) : new Date(),
+            })),
+          })),
+        }))
+      : undefined),
+    sfxDetails: existingLook?.sfxDetails || (sfxDetailsMeta
+      ? {
+          ...sfxDetailsMeta,
+          sfxReferencePhotos: (sfxDetailsMeta.sfxReferencePhotos || []).map(p => ({
+            ...p, uri: '', capturedAt: p.capturedAt ? new Date(p.capturedAt) : new Date(),
+          })),
+        }
+      : undefined),
   };
 }
 
