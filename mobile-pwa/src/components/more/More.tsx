@@ -20,6 +20,7 @@ import {
 } from '@/components/project-settings';
 import { useProjectSettingsStore } from '@/stores/projectSettingsStore';
 import { parseScenesFast } from '@/utils/scriptParser';
+import { runBackgroundCharacterDetection } from '@/services/characterDetectionService';
 import { AmendmentReviewModal } from '@/components/breakdown/AmendmentReviewModal';
 import type { AmendmentResult } from '@/services/scriptAmendmentService';
 import { ScheduleAmendmentModal } from '@/components/schedule/ScheduleAmendmentModal';
@@ -885,6 +886,13 @@ function ScriptViewer({ onBack }: ViewerProps) {
         });
         setScriptPdf(base64);
       }
+
+      // Run character detection — same logic as the initial project creation flow
+      const projectWithScenes = { ...currentProject, scenes };
+      const userId = useAuthStore.getState().user?.id || null;
+      setTimeout(() => {
+        runBackgroundCharacterDetection(projectWithScenes, parsedScript.rawText, [], currentProject.id, userId);
+      }, 500);
     } catch (error) {
       console.error('Error processing script:', error);
       alert('Failed to process the script. Please try again.');
