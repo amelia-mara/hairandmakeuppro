@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { PhotoImg } from '@/hooks';
 import type { ContinuityEvent } from '@/types';
 
 interface EventCardProps {
@@ -96,9 +97,9 @@ export function EventCard({ event, onRemove }: EventCardProps) {
           <div className="field-label mb-2">REFERENCE PHOTOS</div>
           <div className="flex gap-2 overflow-x-auto hide-scrollbar">
             {event.referencePhotos.map((photo) => (
-              <img
+              <PhotoImg
                 key={photo.id}
-                src={photo.thumbnail || photo.uri}
+                photo={photo}
                 alt="Reference"
                 className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
               />
@@ -162,9 +163,9 @@ export function EventCard({ event, onRemove }: EventCardProps) {
                       {ps.referencePhotos && ps.referencePhotos.length > 0 && (
                         <div className="flex gap-1.5 mt-1.5">
                           {ps.referencePhotos.map((photo) => (
-                            <img
+                            <PhotoImg
                               key={photo.id}
-                              src={photo.thumbnail || photo.uri}
+                              photo={photo}
                               alt="Stage reference"
                               className="w-10 h-10 rounded object-cover"
                             />

@@ -1,4 +1,5 @@
 import { clsx } from 'clsx';
+import { PhotoImg } from '@/hooks';
 import type { Photo, PhotoAngle } from '@/types';
 import { PhotoSlot } from './PhotoSlot';
 
@@ -76,8 +77,8 @@ export function AdditionalPhotosGrid({
             onClick={() => onView?.(photo, index)}
             className="w-full aspect-square rounded-lg overflow-hidden border-2 border-gold touch-manipulation focus:outline-none focus:ring-2 focus:ring-gold"
           >
-            <img
-              src={photo.thumbnail || photo.uri}
+            <PhotoImg
+              photo={photo}
               alt={`Additional photo ${index + 1}`}
               className="w-full h-full object-cover"
             />
