@@ -436,8 +436,6 @@ export function ProjectHubScreen() {
     .sort((a, b) => new Date(b.joinedAt).getTime() - new Date(a.joinedAt).getTime());
 
   const handleProjectOpen = async (membership: ProjectMembership) => {
-    updateLastAccessed(membership.projectId);
-
     const store = useProjectStore.getState();
 
     // Flush pending auto-saves to Supabase before switching projects
@@ -550,6 +548,7 @@ export function ProjectHubScreen() {
             setReceivingFromServer(false);
           }
           // Let auto-save fire to push rescued scenes to server
+          updateLastAccessed(membership.projectId);
           store.setActiveTab('today');
           return;
         }
@@ -650,6 +649,7 @@ export function ProjectHubScreen() {
           // setReceivingFromServer guards, so they won't trigger auto-save.
           useSyncStore.getState().clearChanges();
         }
+        updateLastAccessed(membership.projectId);
         store.setActiveTab('today');
         return;
       }
@@ -657,6 +657,7 @@ export function ProjectHubScreen() {
       if (store.hasSavedProject(membership.projectId)) {
         console.log('[ProjectOpen] Server has no data but local saved data exists — restoring local project');
         store.restoreSavedProject(membership.projectId);
+        updateLastAccessed(membership.projectId);
         store.setActiveTab('today');
         return;
       }
@@ -667,6 +668,7 @@ export function ProjectHubScreen() {
       if (store.hasSavedProject(membership.projectId)) {
         console.log('[ProjectOpen] Offline — restoring from local saved data');
         store.restoreSavedProject(membership.projectId);
+        updateLastAccessed(membership.projectId);
         store.setActiveTab('today');
         return;
       }
@@ -680,6 +682,7 @@ export function ProjectHubScreen() {
     } else {
       store.setProject(project);
     }
+    updateLastAccessed(membership.projectId);
     store.setActiveTab('today');
   };
 
