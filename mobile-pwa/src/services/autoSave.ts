@@ -22,7 +22,7 @@ import {
 } from '@/services/manualSync';
 import * as supabaseStorage from '@/services/supabaseStorage';
 import { getPhotoBlob } from '@/db';
-import type { SceneCapture, Photo } from '@/types';
+import type { SceneCapture, Photo, Look } from '@/types';
 import type { Json } from '@/types/supabase';
 
 // ============================================================================
@@ -177,7 +177,20 @@ export function autoSaveLooks(): void {
   const looks = [...project.looks];
 
   debounced('looks', async () => {
-    const dbLooks = looks.map(l => lookToDb(l, projectId));
+    // Upload master reference photos and collect their storage paths
+    const masterRefPaths = new Map<string, string>();
+    for (const look of looks) {
+      if (look.masterReference) {
+        try {
+          const storagePath = await uploadLookMasterRefPhoto(projectId, look);
+          if (storagePath) masterRefPaths.set(look.id, storagePath);
+        } catch (err) {
+          console.warn(`[AutoSave] Master ref photo upload failed for look ${look.id}:`, err);
+        }
+      }
+    }
+
+    const dbLooks = looks.map(l => lookToDb(l, projectId, masterRefPaths.get(l.id)));
     const { error } = await supabase
       .from('looks')
       .upsert(dbLooks, { onConflict: 'id' });
@@ -428,10 +441,23 @@ export async function saveEverythingToSupabase(): Promise<void> {
     }
   }
 
-  // ── 3. Looks + look_scenes ────────────────────────────────────
+  // ── 3. Looks + look_scenes + master reference photos ─────────
   if (project.looks.length > 0) {
     try {
-      const dbLooks = project.looks.map(l => lookToDb(l, projectId));
+      // Upload master reference photos first
+      const masterRefPaths = new Map<string, string>();
+      for (const look of project.looks) {
+        if (look.masterReference) {
+          try {
+            const storagePath = await uploadLookMasterRefPhoto(projectId, look);
+            if (storagePath) masterRefPaths.set(look.id, storagePath);
+          } catch (err) {
+            console.warn(`[SaveAll] Master ref photo upload failed for look ${look.id}:`, err);
+          }
+        }
+      }
+
+      const dbLooks = project.looks.map(l => lookToDb(l, projectId, masterRefPaths.get(l.id)));
       const { error } = await supabase
         .from('looks')
         .upsert(dbLooks, { onConflict: 'id' });
@@ -639,6 +665,55 @@ async function autoUploadCapturePhotos(projectId: string, capture: SceneCapture)
       });
     }
   }
+}
+
+/**
+ * Upload a look's master reference photo to Supabase Storage.
+ * Uses a deterministic path based on look + photo ID to avoid duplicates.
+ */
+async function uploadLookMasterRefPhoto(
+  projectId: string,
+  look: Look,
+): Promise<string | null> {
+  const photo = look.masterReference;
+  if (!photo) return null;
+
+  // If we already know the storage path, skip re-upload
+  if ((photo as any)._storagePath) return (photo as any)._storagePath;
+
+  // Deterministic path so repeated uploads are idempotent
+  const path = `${projectId}/master-refs/${look.id}/${photo.id}.jpg`;
+
+  // Get the photo blob — either from IndexedDB or from base64 data
+  let blob: Blob | null = null;
+  const localBlob = await getPhotoBlob(photo.id);
+  if (localBlob) {
+    blob = localBlob.blob;
+  } else if (photo.uri && photo.uri.startsWith('data:')) {
+    try {
+      const response = await fetch(photo.uri);
+      blob = await response.blob();
+    } catch {
+      // base64 fetch failed
+    }
+  }
+
+  if (!blob) return null;
+
+  const { error } = await supabase.storage
+    .from('continuity-photos')
+    .upload(path, blob, {
+      contentType: 'image/jpeg',
+      cacheControl: '3600',
+      upsert: true,
+    });
+
+  if (error) {
+    console.warn(`[AutoSave] Look master ref upload failed:`, error);
+    return null;
+  }
+
+  return path;
 }
 
 // ============================================================================
