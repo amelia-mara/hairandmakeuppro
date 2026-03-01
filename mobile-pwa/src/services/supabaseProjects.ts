@@ -732,9 +732,11 @@ export async function saveInitialProjectData(params: SaveProjectDataParams): Pro
         is_complete: s.is_complete,
       }));
 
+      // Use the composite unique key so re-parsing a script (new UUIDs but
+      // same scene numbers) updates existing rows instead of failing.
       const { error: sceneError } = await supabase
         .from('scenes')
-        .upsert(dbScenes, { onConflict: 'id' });
+        .upsert(dbScenes, { onConflict: 'project_id,scene_number' });
       if (sceneError) {
         console.error('[SAVE] scenes upsert failed:', sceneError.message, sceneError);
         throw sceneError;
