@@ -313,7 +313,7 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
     }
   };
 
-  const handleStartProject = () => {
+  const handleStartProject = async () => {
     if (!parsedScript) {
       // No script parsed - create empty project
       const emptyProject: Project = {
@@ -350,6 +350,16 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
       hair: createEmptyHairDetails(),
     }));
 
+    // Encode PDF to base64 so the script is viewable later
+    let scriptPdfBase64: string | undefined;
+    if (uploadedFile && uploadedFile.type === 'application/pdf') {
+      scriptPdfBase64 = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.readAsDataURL(uploadedFile);
+      });
+    }
+
     // Use existing project ID if available (preserves server UUID when needsSetup was true)
     const projectId = currentProject?.id || `project-${Date.now()}`;
     const projectNameToUse = projectName || currentProject?.name || parsedScript.title || 'Untitled Project';
@@ -362,6 +372,7 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
       scenes,
       characters,
       looks,
+      scriptPdfData: scriptPdfBase64,
     };
 
     setProject(project);
