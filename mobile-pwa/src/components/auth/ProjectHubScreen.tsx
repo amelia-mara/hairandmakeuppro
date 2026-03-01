@@ -77,6 +77,37 @@ function createProjectFromMembership(membership: ProjectMembership): Project {
   };
 }
 
+/**
+ * Fix duplicate scene numbers in the current local project.
+ * Appends "-2", "-3" etc. so every sceneNumber is unique, which prevents the
+ * UNIQUE(project_id, scene_number) constraint from rejecting auto-save.
+ */
+function deduplicateLocalSceneNumbers(): void {
+  const project = useProjectStore.getState().currentProject;
+  if (!project) return;
+
+  const seen = new Map<string, number>();
+  let changed = false;
+  const fixedScenes = project.scenes.map(scene => {
+    const count = (seen.get(scene.sceneNumber) || 0) + 1;
+    seen.set(scene.sceneNumber, count);
+    if (count > 1) {
+      changed = true;
+      return { ...scene, sceneNumber: `${scene.sceneNumber}-${count}` };
+    }
+    return scene;
+  });
+
+  if (changed) {
+    console.log('[ProjectOpen] Fixed duplicate scene numbers in local data');
+    useProjectStore.setState(state => ({
+      currentProject: state.currentProject
+        ? { ...state.currentProject, scenes: fixedScenes }
+        : null,
+    }));
+  }
+}
+
 // Load document data (schedule, call sheets, script) into the appropriate stores.
 // Called immediately on project open so synced users see data right away.
 function loadDocumentsIntoStores(
@@ -510,6 +541,9 @@ export function ProjectHubScreen() {
           setReceivingFromServer(true);
           try {
             store.restoreSavedProject(membership.projectId);
+            // Fix duplicate scene numbers in the restored project so
+            // auto-save doesn't keep failing the unique constraint.
+            deduplicateLocalSceneNumbers();
             // Also load server-side documents (call sheets etc.) that DO exist
             loadDocumentsIntoStores(scheduleData, callSheetData, scriptData);
           } finally {
@@ -608,6 +642,7 @@ export function ProjectHubScreen() {
         // trigger auto-save so the data gets pushed to Supabase.
         if (!hasSceneData && localHasScenes) {
           console.log('[ProjectOpen] Triggering auto-save to push local scenes to server…');
+          deduplicateLocalSceneNumbers();
           // Don't clear changes — let auto-save fire for the rescued data
         } else {
           // Clear any pending changes — we just loaded fresh from server.

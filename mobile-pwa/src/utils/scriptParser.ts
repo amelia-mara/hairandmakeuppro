@@ -521,9 +521,10 @@ function parseSceneHeadingLine(line: string): ParsedSceneHeading {
   // Remove revision asterisks from end
   let cleanLine = trimmed.replace(/\s*\*+\s*$/, '').trim();
 
-  // Pattern to match scene numbers (with optional letter suffix)
-  const sceneNumPattern = /^(\d+[A-Z]?)\s+/i;
-  const trailingSceneNumPattern = /\s+(\d+[A-Z]?)\s*$/i;
+  // Pattern to match scene numbers (with optional letter/word suffix)
+  // Handles: "33", "33A", "33AA", "33AB", "145PT1", "A1", etc.
+  const sceneNumPattern = /^(\d+[A-Z]{0,4})\s+/i;
+  const trailingSceneNumPattern = /\s+(\d+[A-Z]{0,4})\s*$/i;
 
   let sceneNumber: string | null = null;
   let workingLine = cleanLine;
@@ -1035,16 +1036,26 @@ export function convertParsedScriptToProject(
     };
   });
 
-  // Convert scenes
+  // Convert scenes — deduplicate scene numbers so they satisfy the
+  // UNIQUE(project_id, scene_number) constraint in Supabase.
+  const seenSceneNumbers = new Map<string, number>();
   const scenes: Scene[] = parsed.scenes.map((ps) => {
     // Map character names to IDs for this scene
     const sceneCharIds = ps.characters
       .filter(charName => charIdMap.has(charName))
       .map(charName => charIdMap.get(charName)!);
 
+    // Deduplicate: "45" stays "45", second "45" becomes "45-2", etc.
+    let sceneNum = ps.sceneNumber;
+    const count = (seenSceneNumbers.get(sceneNum) || 0) + 1;
+    seenSceneNumbers.set(sceneNum, count);
+    if (count > 1) {
+      sceneNum = `${sceneNum}-${count}`;
+    }
+
     return {
       id: uuidv4(),
-      sceneNumber: ps.sceneNumber,
+      sceneNumber: sceneNum,
       slugline: `${ps.intExt}. ${ps.location} - ${ps.timeOfDay}`,
       intExt: ps.intExt,
       timeOfDay: ps.timeOfDay,

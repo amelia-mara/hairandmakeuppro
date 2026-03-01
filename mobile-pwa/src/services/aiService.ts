@@ -157,11 +157,25 @@ export async function parseScriptWithAI(
     // Pass the pre-extracted character list to each chunk
     const chunkResult = await analyzeScriptChunk(chunks[i], i, chunks.length, preExtractedCharacters);
 
-    // Merge scenes with offset for scene numbers
-    const sceneOffset = allScenes.length;
+    // Merge scenes — only apply an offset when the AI clearly restarted
+    // numbering from 1 for this chunk (i.e. its first scene number is ≤ the
+    // highest we've seen so far).  When the AI returns actual script numbers
+    // (e.g. 45-90) we keep them as-is.
+    const maxSeenNum = allScenes.reduce((max, s) => {
+      const n = parseInt(s.sceneNumber, 10);
+      return !isNaN(n) && n > max ? n : max;
+    }, 0);
+
+    const firstChunkNum = chunkResult.scenes.length > 0
+      ? parseInt(chunkResult.scenes[0].sceneNumber, 10)
+      : NaN;
+
+    // Only offset if the chunk restarted numbering (first number ≤ max seen)
+    const needsOffset = i > 0 && !isNaN(firstChunkNum) && firstChunkNum <= maxSeenNum;
+    const sceneOffset = needsOffset ? maxSeenNum : 0;
+
     for (const scene of chunkResult.scenes) {
-      // Adjust scene number if it's sequential
-      if (!scene.sceneNumber.match(/[A-Z]/)) {
+      if (needsOffset && !scene.sceneNumber.match(/[A-Z]/)) {
         const numericPart = parseInt(scene.sceneNumber, 10);
         if (!isNaN(numericPart)) {
           scene.sceneNumber = String(numericPart + sceneOffset);
@@ -415,6 +429,7 @@ IMPORTANT RULES:
 3. Character names appear in ALL CAPS before their dialogue
 4. Character names may have extensions like (V.O.), (O.S.), (CONT'D) - these should be stripped from the normalized name
 5. Scene numbers may appear before the INT/EXT (e.g., "15 INT. OFFICE - DAY" or "4A EXT. PARK - NIGHT")
+   Scene numbers often have letter suffixes for variations (33A, 33B, 145A, 12AA) — preserve the FULL scene number including any suffix
 6. Ignore transitions like CUT TO:, FADE IN:, FADE OUT, DISSOLVE TO:, etc.
 7. IMPORTANT: Also extract characters who are PHYSICALLY PRESENT in scenes but do NOT have dialogue
    - These appear in action/description lines, often in ALL CAPS (e.g., "a handsome LOCAL MAN", "the TAXI DRIVER")
@@ -463,7 +478,7 @@ IMPORTANT:
 - Include ALL characters who are PHYSICALLY PRESENT in each scene, not just speaking characters
 - Characters mentioned in action/description lines count as present (e.g., "a handsome LOCAL MAN", "Gwen approaches")
 - Character descriptors like "LOCAL MAN", "YOUNG WOMAN", "TAXI DRIVER" should be included as characters
-- Scene numbers should match what's in the script, or be sequential if not numbered
+- Scene numbers should match EXACTLY what's in the script (e.g. "33A", "33B", "145A"), or be sequential if not numbered
 - Characters list should include everyone physically in the scene, with accurate scene counts
 - For intExt, use only "INT" or "EXT"
 - For timeOfDay, standardize to: DAY, NIGHT, MORNING, EVENING, CONTINUOUS, or DAWN/DUSK`;
