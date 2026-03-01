@@ -1,5 +1,4 @@
 // Project Settings Components
-export { ProjectMenu } from './ProjectMenu';
 export { TeamMemberCard } from './TeamMemberCard';
 export { TeamMemberList } from './TeamMemberList';
 export { InviteCodeShare } from './InviteCodeShare';
