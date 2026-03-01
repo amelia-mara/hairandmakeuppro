@@ -36,6 +36,7 @@ export function ProjectHeader({ onSwitchProject, onQuickSwitch, onNavigateToProf
   const [saveFailures, setSaveFailures] = useState(0);
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const dropdownPanelRef = useRef<HTMLDivElement>(null);
 
   // Poll for auto-save failures every 5 seconds
   useEffect(() => {
@@ -49,7 +50,11 @@ export function ProjectHeader({ onSwitchProject, onQuickSwitch, onNavigateToProf
   useEffect(() => {
     if (!showDropdown) return;
     const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (
+        dropdownRef.current && !dropdownRef.current.contains(target) &&
+        dropdownPanelRef.current && !dropdownPanelRef.current.contains(target)
+      ) {
         setShowDropdown(false);
       }
     };
@@ -171,7 +176,7 @@ export function ProjectHeader({ onSwitchProject, onQuickSwitch, onNavigateToProf
           <div className="fixed inset-0 z-40 bg-black/30" onClick={() => setShowDropdown(false)} />
 
           {/* Dropdown panel */}
-          <div className="fixed left-0 right-0 z-50 px-4 below-project-header">
+          <div ref={dropdownPanelRef} className="fixed left-0 right-0 z-50 px-4 below-project-header">
             <div className="mobile-container">
               <div className="bg-card rounded-2xl shadow-xl border border-border overflow-hidden max-h-[60vh] flex flex-col">
                 {/* Current project */}
