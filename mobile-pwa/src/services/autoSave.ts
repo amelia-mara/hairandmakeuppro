@@ -296,16 +296,12 @@ export function autoSaveScript(): void {
   debounced('script', async () => {
     if (!scriptData.startsWith('data:')) return;
 
-    // Check if already uploaded by looking for active script
-    const { data: existing } = await supabase
+    // Deactivate any existing active script before uploading the new one
+    await supabase
       .from('script_uploads')
-      .select('id')
+      .update({ is_active: false })
       .eq('project_id', projectId)
-      .eq('is_active', true)
-      .limit(1);
-
-    // Only upload if no active script exists (initial save handles the first upload)
-    if (existing && existing.length > 0) return;
+      .eq('is_active', true);
 
     const { path, error: uploadError } = await supabaseStorage.uploadBase64Document(
       projectId, 'scripts', scriptData
@@ -523,32 +519,29 @@ export async function saveEverythingToSupabase(): Promise<void> {
   // ── 7. Script PDF ─────────────────────────────────────────────
   if (project.scriptPdfData && project.scriptPdfData.startsWith('data:')) {
     try {
-      // Check if already uploaded
-      const { data: existing } = await supabase
+      // Deactivate any existing active script before uploading the new one
+      await supabase
         .from('script_uploads')
-        .select('id')
+        .update({ is_active: false })
         .eq('project_id', projectId)
-        .eq('is_active', true)
-        .limit(1);
+        .eq('is_active', true);
 
-      if (!existing || existing.length === 0) {
-        const { path, error: uploadError } = await supabaseStorage.uploadBase64Document(
-          projectId, 'scripts', project.scriptPdfData
-        );
-        if (!uploadError && path) {
-          const base64Length = project.scriptPdfData.split(',')[1]?.length || 0;
-          const fileSize = Math.round(base64Length * 0.75);
-          await supabase.from('script_uploads').insert({
-            project_id: projectId,
-            storage_path: path,
-            file_name: 'script.pdf',
-            file_size: fileSize,
-            is_active: true,
-            status: 'uploaded',
-            uploaded_by: userId,
-            scene_count: project.scenes.length,
-          });
-        }
+      const { path, error: uploadError } = await supabaseStorage.uploadBase64Document(
+        projectId, 'scripts', project.scriptPdfData
+      );
+      if (!uploadError && path) {
+        const base64Length = project.scriptPdfData.split(',')[1]?.length || 0;
+        const fileSize = Math.round(base64Length * 0.75);
+        await supabase.from('script_uploads').insert({
+          project_id: projectId,
+          storage_path: path,
+          file_name: 'script.pdf',
+          file_size: fileSize,
+          is_active: true,
+          status: 'uploaded',
+          uploaded_by: userId,
+          scene_count: project.scenes.length,
+        });
       }
       console.log('[SaveAll] Script saved');
     } catch (err) {
