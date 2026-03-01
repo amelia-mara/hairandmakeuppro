@@ -201,7 +201,7 @@ export async function getProjectData(projectId: string): Promise<{
       supabase.from('looks').select('*').eq('project_id', projectId),
       supabase.from('schedule_data').select('*').eq('project_id', projectId).order('created_at', { ascending: false }).limit(1),
       supabase.from('call_sheet_data').select('*').eq('project_id', projectId).order('production_day'),
-      supabase.from('script_uploads').select('*').eq('project_id', projectId).eq('is_active', true).limit(1),
+      supabase.from('script_uploads').select('*').eq('project_id', projectId).eq('is_active', true).order('created_at', { ascending: false }).limit(1),
     ]);
 
     // Log any per-table errors (RLS violations often surface here)
@@ -216,6 +216,28 @@ export async function getProjectData(projectId: string): Promise<{
     if (charactersRes.error) throw charactersRes.error;
     if (looksRes.error) throw looksRes.error;
 
+    // Fallback: if no active script was found, fetch the most recent one
+    // regardless of is_active. This recovers scripts orphaned by the old
+    // deactivate-before-insert race condition.
+    let scriptData = scriptRes.data || [];
+    if (scriptData.length === 0 && !scriptRes.error) {
+      const fallbackRes = await supabase
+        .from('script_uploads')
+        .select('*')
+        .eq('project_id', projectId)
+        .order('created_at', { ascending: false })
+        .limit(1);
+      if (fallbackRes.data && fallbackRes.data.length > 0) {
+        console.log('[LoadProject] No active script found — recovered most recent upload');
+        scriptData = fallbackRes.data;
+        // Re-activate it so future loads work without this fallback
+        await supabase
+          .from('script_uploads')
+          .update({ is_active: true })
+          .eq('id', fallbackRes.data[0].id);
+      }
+    }
+
     const scenes = scenesRes.data || [];
     const looks = looksRes.data || [];
 
@@ -223,7 +245,7 @@ export async function getProjectData(projectId: string): Promise<{
     console.log(
       `[LoadProject] Rows loaded — scenes: ${scenes.length}, characters: ${(charactersRes.data || []).length}, ` +
       `looks: ${looks.length}, schedule: ${(scheduleRes.data || []).length}, ` +
-      `callSheets: ${(callSheetsRes.data || []).length}, scripts: ${(scriptRes.data || []).length}`
+      `callSheets: ${(callSheetsRes.data || []).length}, scripts: ${scriptData.length}`
     );
 
     // Phase 2: Fetch junction tables + continuity events
@@ -266,7 +288,7 @@ export async function getProjectData(projectId: string): Promise<{
       photos: photosRes.data || [],
       scheduleData: scheduleRes.data || [],
       callSheetData: callSheetsRes.data || [],
-      scriptData: scriptRes.data || [],
+      scriptData,
       error: null,
     };
   } catch (error) {
@@ -796,14 +818,7 @@ export async function saveInitialProjectData(params: SaveProjectDataParams): Pro
       if (uploadError) {
         console.error('[SAVE] Script PDF storage upload failed:', uploadError);
       } else if (path) {
-        // Deactivate previous uploads
-        await supabase
-          .from('script_uploads')
-          .update({ is_active: false })
-          .eq('project_id', projectId)
-          .eq('is_active', true);
-
-        // Create new record
+        // Insert the new record FIRST so there's always at least one active row.
         const base64Length = scriptPdfDataUri.split(',')[1]?.length || 0;
         const fileSize = Math.round(base64Length * 0.75);
         const { error: dbError } = await supabase
@@ -821,6 +836,13 @@ export async function saveInitialProjectData(params: SaveProjectDataParams): Pro
         if (dbError) {
           console.error('[SAVE] script_uploads record failed:', dbError.message, dbError);
         } else {
+          // Only deactivate old rows AFTER the insert succeeds.
+          await supabase
+            .from('script_uploads')
+            .update({ is_active: false })
+            .eq('project_id', projectId)
+            .eq('is_active', true)
+            .neq('storage_path', path);
           console.log('[SAVE] Script saved successfully');
         }
       }

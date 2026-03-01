@@ -103,10 +103,12 @@ function loadDocumentsIntoStores(
       if (db.storage_path) {
         supabaseStorage.downloadDocumentAsDataUri(db.storage_path).then(({ dataUri }) => {
           if (!dataUri) return;
+          setReceivingFromServer(true);
           const current = useScheduleStore.getState().schedule;
           if (current && current.id === db.id) {
             useScheduleStore.getState().setSchedule({ ...current, pdfUri: dataUri });
           }
+          setReceivingFromServer(false);
         });
       }
     }
@@ -149,23 +151,29 @@ function loadDocumentsIntoStores(
       if (db.storage_path) {
         supabaseStorage.downloadDocumentAsDataUri(db.storage_path).then(({ dataUri }) => {
           if (!dataUri) return;
+          setReceivingFromServer(true);
           useCallSheetStore.setState((state) => ({
             callSheets: state.callSheets.map((cs) =>
               cs.id === db.id ? { ...cs, pdfUri: dataUri } : cs
             ),
           }));
+          setReceivingFromServer(false);
         });
       }
     }
   }
 
-  // Script
+  // Script — download in background, but suppress auto-save so we don't
+  // re-upload the PDF we just downloaded (which would create duplicate
+  // script_uploads rows and risk deactivating the original).
   if (scriptData.length > 0) {
     const dbScript = scriptData[0];
     if (dbScript.storage_path) {
       supabaseStorage.downloadDocumentAsDataUri(dbScript.storage_path).then(({ dataUri }) => {
         if (!dataUri) return;
+        setReceivingFromServer(true);
         useProjectStore.getState().setScriptPdf(dataUri);
+        setReceivingFromServer(false);
       });
     }
   }
@@ -603,11 +611,9 @@ export function ProjectHubScreen() {
           // Don't clear changes — let auto-save fire for the rescued data
         } else {
           // Clear any pending changes — we just loaded fresh from server.
+          // Async PDF download callbacks in loadDocumentsIntoStores now use
+          // setReceivingFromServer guards, so they won't trigger auto-save.
           useSyncStore.getState().clearChanges();
-          // Also clear after a delay to catch async PDF download callbacks
-          // from loadDocumentsIntoStores that fire after this point and
-          // trigger the change tracker with receivingFromServer already false.
-          setTimeout(() => useSyncStore.getState().clearChanges(), 3000);
         }
         store.setActiveTab('today');
         return;
