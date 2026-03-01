@@ -429,6 +429,7 @@ IMPORTANT RULES:
 3. Character names appear in ALL CAPS before their dialogue
 4. Character names may have extensions like (V.O.), (O.S.), (CONT'D) - these should be stripped from the normalized name
 5. Scene numbers may appear before the INT/EXT (e.g., "15 INT. OFFICE - DAY" or "4A EXT. PARK - NIGHT")
+   Scene numbers often have letter suffixes for variations (33A, 33B, 145A, 12AA) — preserve the FULL scene number including any suffix
 6. Ignore transitions like CUT TO:, FADE IN:, FADE OUT, DISSOLVE TO:, etc.
 7. IMPORTANT: Also extract characters who are PHYSICALLY PRESENT in scenes but do NOT have dialogue
    - These appear in action/description lines, often in ALL CAPS (e.g., "a handsome LOCAL MAN", "the TAXI DRIVER")
@@ -477,7 +478,7 @@ IMPORTANT:
 - Include ALL characters who are PHYSICALLY PRESENT in each scene, not just speaking characters
 - Characters mentioned in action/description lines count as present (e.g., "a handsome LOCAL MAN", "Gwen approaches")
 - Character descriptors like "LOCAL MAN", "YOUNG WOMAN", "TAXI DRIVER" should be included as characters
-- Scene numbers should match what's in the script, or be sequential if not numbered
+- Scene numbers should match EXACTLY what's in the script (e.g. "33A", "33B", "145A"), or be sequential if not numbered
 - Characters list should include everyone physically in the scene, with accurate scene counts
 - For intExt, use only "INT" or "EXT"
 - For timeOfDay, standardize to: DAY, NIGHT, MORNING, EVENING, CONTINUOUS, or DAWN/DUSK`;
