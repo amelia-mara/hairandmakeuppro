@@ -65,7 +65,7 @@ export interface ProjectState {
   setProject: (project: Project) => void;
   setProjectNeedsSetup: (project: Project) => void;
   clearNeedsSetup: () => void;
-  setScriptPdf: (pdfData: string) => void;
+  setScriptPdf: (pdfData: string, filename?: string) => void;
   /** Merge server data into the current project without resetting lifecycle or other state.
    *  Used by sync pull to safely update scenes/characters/looks. */
   mergeServerData: (updates: Partial<Pick<Project, 'scenes' | 'characters' | 'looks'>>) => void;

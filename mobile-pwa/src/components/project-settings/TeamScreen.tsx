@@ -108,7 +108,7 @@ export function TeamScreen({
                   </div>
                   <div className="text-left">
                     <p className="text-sm font-medium">Invite team members</p>
-                    <p className="text-xs opacity-70">Share a code or link to join this project</p>
+                    <p className="text-xs opacity-70">Share a code to join this project</p>
                   </div>
                 </button>
               </div>

@@ -102,7 +102,7 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
       // Use existing project ID if available (preserves server UUID when needsSetup was true)
       // Otherwise create a new local ID
       const projectId = currentProject?.id || uuidv4();
-      const projectNameToUse = projectName || currentProject?.name || fastParsed.title || file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ') || 'Untitled Project';
+      const projectNameToUse = currentProject?.name || projectName || fastParsed.title || file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ') || 'Untitled Project';
 
       // Encode PDF to base64 BEFORE setProject so scriptPdfData is available
       // when startSync → pushInitialData reads the store. Previously, encoding
@@ -128,6 +128,7 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
         characterDetectionStatus: 'idle', // Will be updated when detection runs
         scenesConfirmed: 0,
         scriptPdfData: scriptPdfBase64,
+        scriptFilename: file.name,
       };
 
       setProcessingProgress(90);
@@ -292,9 +293,11 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
     const file = e.target.files?.[0];
     if (file) {
       setUploadedFile(file);
-      // Extract project name from filename
-      const name = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
-      setProjectName(name);
+      // Extract project name from filename (only if project doesn't already have a name)
+      if (!currentProject?.name) {
+        const name = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
+        setProjectName(name);
+      }
       // Don't auto-process - let user click Continue after uploading all files
     }
   };
@@ -362,7 +365,7 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
 
     // Use existing project ID if available (preserves server UUID when needsSetup was true)
     const projectId = currentProject?.id || `project-${Date.now()}`;
-    const projectNameToUse = projectName || currentProject?.name || parsedScript.title || 'Untitled Project';
+    const projectNameToUse = currentProject?.name || projectName || parsedScript.title || 'Untitled Project';
 
     const project: Project = {
       id: projectId,
@@ -373,6 +376,7 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
       characters,
       looks,
       scriptPdfData: scriptPdfBase64,
+      scriptFilename: uploadedFile?.name,
     };
 
     setProject(project);
