@@ -58,9 +58,9 @@ export const useProjectStore = create<ProjectState>()(
 
       clearNeedsSetup: () => set({ needsSetup: false }),
 
-      setScriptPdf: (pdfData) => set((state) => ({
+      setScriptPdf: (pdfData, filename) => set((state) => ({
         currentProject: state.currentProject
-          ? { ...state.currentProject, scriptPdfData: pdfData }
+          ? { ...state.currentProject, scriptPdfData: pdfData, ...(filename ? { scriptFilename: filename } : {}) }
           : null,
       })),
 

@@ -19,6 +19,8 @@ export interface Project {
 
   // Original script PDF stored as base64 for viewing
   scriptPdfData?: string;
+  // Original filename of the uploaded script (for revision colour/date display)
+  scriptFilename?: string;
 }
 
 // Character confirmation status for progressive scene-by-scene workflow

@@ -85,6 +85,11 @@
     padding-top: env(safe-area-inset-top);
   }
 
+  /* Sub-header offset: stacks below the sticky ProjectHeader (h-12 = 3rem + safe-area) */
+  .below-project-header {
+    top: calc(3rem + env(safe-area-inset-top, 0px));
+  }
+
   .safe-bottom {
     padding-bottom: env(safe-area-inset-bottom);
   }
