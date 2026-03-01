@@ -521,9 +521,10 @@ function parseSceneHeadingLine(line: string): ParsedSceneHeading {
   // Remove revision asterisks from end
   let cleanLine = trimmed.replace(/\s*\*+\s*$/, '').trim();
 
-  // Pattern to match scene numbers (with optional letter suffix)
-  const sceneNumPattern = /^(\d+[A-Z]?)\s+/i;
-  const trailingSceneNumPattern = /\s+(\d+[A-Z]?)\s*$/i;
+  // Pattern to match scene numbers (with optional letter/word suffix)
+  // Handles: "33", "33A", "33AA", "33AB", "145PT1", "A1", etc.
+  const sceneNumPattern = /^(\d+[A-Z]{0,4})\s+/i;
+  const trailingSceneNumPattern = /\s+(\d+[A-Z]{0,4})\s*$/i;
 
   let sceneNumber: string | null = null;
   let workingLine = cleanLine;
