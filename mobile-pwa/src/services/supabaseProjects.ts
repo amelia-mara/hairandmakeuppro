@@ -176,6 +176,24 @@ export async function getProjectData(projectId: string): Promise<{
   error: Error | null;
 }> {
   try {
+    console.log(`[LoadProject] Fetching data for project ${projectId}…`);
+
+    // Pre-flight: verify the current user is a member of this project.
+    // If RLS blocks even this query, something is fundamentally wrong.
+    const { data: memberCheck, error: memberError } = await supabase
+      .from('project_members')
+      .select('user_id, role, is_owner')
+      .eq('project_id', projectId)
+      .limit(1);
+
+    if (memberError) {
+      console.error('[LoadProject] Membership check failed:', memberError.message);
+    } else if (!memberCheck || memberCheck.length === 0) {
+      console.warn('[LoadProject] WARNING: No project_members rows visible for this project. RLS may be blocking access or the membership row is missing.');
+    } else {
+      console.log(`[LoadProject] Membership confirmed (${memberCheck.length} visible members)`);
+    }
+
     // Phase 1: Fetch project-level tables in parallel (including documents)
     const [scenesRes, charactersRes, looksRes, scheduleRes, callSheetsRes, scriptRes] = await Promise.all([
       supabase.from('scenes').select('*').eq('project_id', projectId).order('scene_number'),
@@ -186,12 +204,27 @@ export async function getProjectData(projectId: string): Promise<{
       supabase.from('script_uploads').select('*').eq('project_id', projectId).eq('is_active', true).limit(1),
     ]);
 
+    // Log any per-table errors (RLS violations often surface here)
+    if (scenesRes.error) console.error('[LoadProject] scenes query error:', scenesRes.error.message);
+    if (charactersRes.error) console.error('[LoadProject] characters query error:', charactersRes.error.message);
+    if (looksRes.error) console.error('[LoadProject] looks query error:', looksRes.error.message);
+    if (scheduleRes.error) console.warn('[LoadProject] schedule query error:', scheduleRes.error.message);
+    if (callSheetsRes.error) console.warn('[LoadProject] call_sheets query error:', callSheetsRes.error.message);
+    if (scriptRes.error) console.warn('[LoadProject] script query error:', scriptRes.error.message);
+
     if (scenesRes.error) throw scenesRes.error;
     if (charactersRes.error) throw charactersRes.error;
     if (looksRes.error) throw looksRes.error;
 
     const scenes = scenesRes.data || [];
     const looks = looksRes.data || [];
+
+    // ── Diagnostic: log row counts so we can see exactly what was loaded ──
+    console.log(
+      `[LoadProject] Rows loaded — scenes: ${scenes.length}, characters: ${(charactersRes.data || []).length}, ` +
+      `looks: ${looks.length}, schedule: ${(scheduleRes.data || []).length}, ` +
+      `callSheets: ${(callSheetsRes.data || []).length}, scripts: ${(scriptRes.data || []).length}`
+    );
 
     // Phase 2: Fetch junction tables + continuity events
     const sceneIds = scenes.map(s => s.id);
@@ -217,6 +250,12 @@ export async function getProjectData(projectId: string): Promise<{
       ? await supabase.from('photos').select('*').in('continuity_event_id', captureIds)
       : { data: [], error: null };
 
+    console.log(
+      `[LoadProject] Junctions — sceneChars: ${(sceneCharsRes.data || []).length}, ` +
+      `lookScenes: ${(lookScenesRes.data || []).length}, captures: ${continuityEvents.length}, ` +
+      `photos: ${(photosRes.data || []).length}`
+    );
+
     return {
       scenes,
       characters: charactersRes.data || [],
@@ -231,6 +270,7 @@ export async function getProjectData(projectId: string): Promise<{
       error: null,
     };
   } catch (error) {
+    console.error('[LoadProject] getProjectData FAILED:', (error as Error).message);
     return {
       scenes: [],
       characters: [],
@@ -650,15 +690,13 @@ interface SaveProjectDataParams {
 export async function saveInitialProjectData(params: SaveProjectDataParams): Promise<{ error: Error | null }> {
   const { projectId, userId, scenes, characters, sceneCharacters, schedule, scriptPdfDataUri } = params;
 
-  try {
-    // 1. Save scenes
-    if (scenes.length > 0) {
-      // Clear existing scenes to avoid unique constraint conflicts on scene_number
-      await supabase
-        .from('scenes')
-        .delete()
-        .eq('project_id', projectId);
+  console.log(`[SAVE] saveInitialProjectData called — project: ${projectId}, scenes: ${scenes.length}, characters: ${characters?.length || 0}`);
 
+  try {
+    // 1. Save scenes — use upsert with onConflict to avoid data loss.
+    // IMPORTANT: We previously used delete-then-insert which could lose data
+    // if the insert failed after the delete succeeded. Pure upsert is safer.
+    if (scenes.length > 0) {
       const dbScenes = scenes.map(s => ({
         id: s.id,
         project_id: projectId,
@@ -676,9 +714,10 @@ export async function saveInitialProjectData(params: SaveProjectDataParams): Pro
         .from('scenes')
         .upsert(dbScenes, { onConflict: 'id' });
       if (sceneError) {
-        console.error('[SAVE] scenes failed:', sceneError);
+        console.error('[SAVE] scenes upsert failed:', sceneError.message, sceneError);
         throw sceneError;
       }
+      console.log(`[SAVE] ${scenes.length} scenes saved successfully`);
     }
 
     // 1b. Save characters (if provided)
@@ -696,21 +735,24 @@ export async function saveInitialProjectData(params: SaveProjectDataParams): Pro
           { onConflict: 'id' }
         );
       if (charError) {
-        console.error('[SAVE] characters failed:', charError);
-        // Don't throw — characters are supplementary, scenes are primary
+        console.error('[SAVE] characters failed:', charError.message, charError);
+      } else {
+        console.log(`[SAVE] ${characters.length} characters saved successfully`);
       }
     }
 
     // 1c. Save scene_characters junction (if provided)
     if (sceneCharacters && sceneCharacters.length > 0) {
+      // Use the RPC function for atomic sync (delete old + insert new in one call)
       const sceneIds = [...new Set(sceneCharacters.map(sc => sc.scene_id))];
-      // Clear existing first
-      await supabase.from('scene_characters').delete().in('scene_id', sceneIds);
-      const { error: scError } = await supabase
-        .from('scene_characters')
-        .insert(sceneCharacters);
+      const { error: scError } = await supabase.rpc('sync_scene_characters', {
+        p_scene_ids: sceneIds,
+        p_entries: sceneCharacters,
+      });
       if (scError) {
-        console.error('[SAVE] scene_characters failed:', scError);
+        console.error('[SAVE] scene_characters failed:', scError.message, scError);
+      } else {
+        console.log(`[SAVE] ${sceneCharacters.length} scene_characters saved successfully`);
       }
     }
 
@@ -747,10 +789,13 @@ export async function saveInitialProjectData(params: SaveProjectDataParams): Pro
 
     // 3. Upload script PDF to storage + create script_uploads record
     if (scriptPdfDataUri && scriptPdfDataUri.startsWith('data:')) {
+      console.log('[SAVE] Uploading script PDF to storage…');
       const { path, error: uploadError } = await supabaseStorage.uploadBase64Document(
         projectId, 'scripts', scriptPdfDataUri
       );
-      if (!uploadError && path) {
+      if (uploadError) {
+        console.error('[SAVE] Script PDF storage upload failed:', uploadError);
+      } else if (path) {
         // Deactivate previous uploads
         await supabase
           .from('script_uploads')
@@ -774,14 +819,17 @@ export async function saveInitialProjectData(params: SaveProjectDataParams): Pro
             scene_count: scenes.length,
           });
         if (dbError) {
-          console.error('[SAVE] script_uploads failed:', dbError);
+          console.error('[SAVE] script_uploads record failed:', dbError.message, dbError);
+        } else {
+          console.log('[SAVE] Script saved successfully');
         }
       }
     }
 
+    console.log('[SAVE] saveInitialProjectData completed successfully');
     return { error: null };
   } catch (error) {
-    console.error('[SAVE] saveInitialProjectData failed:', error);
+    console.error('[SAVE] saveInitialProjectData FAILED:', (error as Error).message, error);
     return { error: error as Error };
   }
 }

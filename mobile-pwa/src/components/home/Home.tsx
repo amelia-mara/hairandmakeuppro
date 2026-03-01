@@ -172,6 +172,9 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
       });
       if (saveResult.error) {
         console.error('[Home] Failed to save project data to server:', saveResult.error);
+        // Mark changes as pending so auto-save will retry on next mutation
+        useSyncStore.getState().markChanged('scenes');
+        useSyncStore.getState().markChanged('script');
       } else {
         useSyncStore.getState().clearChanges();
         useSyncStore.getState().setUploaded();

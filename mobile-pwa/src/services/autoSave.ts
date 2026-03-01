@@ -33,6 +33,14 @@ const DEBOUNCE_MS = 800;
 const timers: Record<string, ReturnType<typeof setTimeout>> = {};
 const pendingFns: Record<string, () => Promise<void>> = {};
 
+/** Track recent save failures so we can surface them to the user. */
+let _consecutiveFailures = 0;
+let _lastFailureMessage = '';
+
+/** Returns the number of consecutive auto-save failures (resets on success). */
+export function getAutoSaveFailureCount(): number { return _consecutiveFailures; }
+export function getLastAutoSaveError(): string { return _lastFailureMessage; }
+
 /** Check if user is still authenticated before writing. */
 async function hasActiveSession(): Promise<boolean> {
   try {
@@ -55,8 +63,11 @@ function debounced(key: string, fn: () => Promise<void>): void {
         return;
       }
       await fn();
+      _consecutiveFailures = 0; // reset on success
     } catch (err) {
-      console.error(`[AutoSave] ${key} failed:`, err);
+      _consecutiveFailures++;
+      _lastFailureMessage = err instanceof Error ? err.message : String(err);
+      console.error(`[AutoSave] ${key} failed (failure #${_consecutiveFailures}):`, err);
     }
   }, DEBOUNCE_MS);
 }
@@ -602,4 +613,39 @@ async function autoUploadCapturePhotos(projectId: string, capture: SceneCapture)
       });
     }
   }
+}
+
+// ============================================================================
+// Debug helper: verify data in Supabase from the browser console
+// Usage: open browser DevTools → Console → type: __checkProjectData()
+// ============================================================================
+if (typeof window !== 'undefined') {
+  (window as any).__checkProjectData = async () => {
+    const project = useProjectStore.getState().currentProject;
+    if (!project) {
+      console.log('[Debug] No current project loaded');
+      return;
+    }
+
+    console.log(`[Debug] Checking Supabase data for project: ${project.name} (${project.id})`);
+
+    // Check membership
+    const { data: members, error: memErr } = await supabase
+      .from('project_members')
+      .select('user_id, role, is_owner')
+      .eq('project_id', project.id);
+    console.log(`[Debug] project_members: ${memErr ? `ERROR: ${memErr.message}` : `${(members || []).length} rows`}`, members);
+
+    // Check data tables
+    const tables = ['scenes', 'characters', 'looks', 'schedule_data', 'call_sheet_data', 'script_uploads'] as const;
+    for (const table of tables) {
+      const { data, error } = await supabase.from(table).select('id').eq('project_id', project.id);
+      console.log(`[Debug] ${table}: ${error ? `ERROR: ${error.message}` : `${(data || []).length} rows`}`);
+    }
+
+    // Check auto-save status
+    console.log(`[Debug] Auto-save consecutive failures: ${_consecutiveFailures}`);
+    if (_lastFailureMessage) console.log(`[Debug] Last failure: ${_lastFailureMessage}`);
+    console.log(`[Debug] Local state — scenes: ${project.scenes.length}, characters: ${project.characters.length}, looks: ${project.looks.length}`);
+  };
 }

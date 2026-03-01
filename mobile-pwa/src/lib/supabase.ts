@@ -38,3 +38,20 @@ export const getCurrentSession = async () => {
   if (error) throw error;
   return session;
 };
+
+// ── Startup diagnostic ──────────────────────────────────────────
+// Log whether the Supabase client is properly configured.
+// This helps diagnose "No API key" errors in production.
+if (typeof window !== 'undefined') {
+  const urlOk = !!supabaseUrl && supabaseUrl !== 'https://your-project.supabase.co';
+  const keyOk = !!supabaseAnonKey && supabaseAnonKey !== 'your-anon-key-here' && supabaseAnonKey.length > 20;
+  if (!urlOk || !keyOk) {
+    console.error(
+      '[Supabase] MISCONFIGURED — URL valid:', urlOk,
+      '| Key valid:', keyOk,
+      '| isSupabaseConfigured:', isSupabaseConfigured
+    );
+  } else {
+    console.log('[Supabase] Client configured OK — URL:', supabaseUrl?.substring(0, 30) + '…');
+  }
+}

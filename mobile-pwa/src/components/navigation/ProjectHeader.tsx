@@ -1,6 +1,8 @@
+import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { SyncIcon } from '@/components/sync';
+import { getAutoSaveFailureCount, getLastAutoSaveError } from '@/services/autoSave';
 
 interface ProjectHeaderProps {
   onSwitchProject?: () => void;
@@ -11,6 +13,15 @@ interface ProjectHeaderProps {
 export function ProjectHeader({ onSwitchProject, onNavigateToProfile, onSyncTap }: ProjectHeaderProps) {
   const { currentProject } = useProjectStore();
   const { user } = useAuthStore();
+  const [saveFailures, setSaveFailures] = useState(0);
+
+  // Poll for auto-save failures every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setSaveFailures(getAutoSaveFailureCount());
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   if (!currentProject) return null;
 
@@ -63,6 +74,20 @@ export function ProjectHeader({ onSwitchProject, onNavigateToProfile, onSyncTap 
           </div>
         </div>
       </div>
+
+      {/* Save failure warning banner */}
+      {saveFailures >= 2 && (
+        <div className="bg-red-500/10 border-b border-red-500/20 px-4 py-1.5">
+          <p className="text-xs text-red-600 dark:text-red-400 text-center">
+            Auto-save failing — your changes may not be saved to the cloud.
+            {getLastAutoSaveError() && (
+              <span className="block text-[10px] opacity-70 mt-0.5">
+                {getLastAutoSaveError()}
+              </span>
+            )}
+          </p>
+        </div>
+      )}
     </>
   );
 }
