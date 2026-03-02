@@ -1,8 +1,21 @@
 {
-  "name": "hairandmakeuppro",
+  "name": "checks-happy",
+  "private": true,
   "version": "1.0.0",
   "type": "module",
   "engines": {
     "node": "22.x"
+  },
+  "workspaces": [
+    "packages/*",
+    "mobile-pwa",
+    "desktop"
+  ],
+  "scripts": {
+    "dev:mobile": "npm -w mobile-pwa run dev",
+    "dev:desktop": "npm -w desktop run dev",
+    "build:mobile": "npm -w mobile-pwa run build",
+    "build:desktop": "npm -w desktop run build",
+    "build:shared": "npm -w @checks-happy/shared run build"
   }
 }

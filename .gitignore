@@ -37,3 +37,6 @@ coverage/
 # Capacitor native build artifacts
 android/app/build/
 ios/App/Pods/
+
+# Shared package build output
+packages/shared/dist/
