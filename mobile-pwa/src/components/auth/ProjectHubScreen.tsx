@@ -132,15 +132,21 @@ function loadDocumentsIntoStores(
 
       // Download the schedule PDF from storage in background
       if (db.storage_path) {
-        supabaseStorage.downloadDocumentAsDataUri(db.storage_path).then(({ dataUri }) => {
-          if (!dataUri) return;
-          setReceivingFromServer(true);
-          const current = useScheduleStore.getState().schedule;
-          if (current && current.id === db.id) {
-            useScheduleStore.getState().setSchedule({ ...current, pdfUri: dataUri });
+        supabaseStorage.downloadDocumentAsDataUri(db.storage_path).then(({ dataUri, error }) => {
+          if (error || !dataUri) {
+            console.warn('[ProjectOpen] Schedule PDF download failed:', error?.message || 'no data', db.storage_path);
+            return;
           }
-          setReceivingFromServer(false);
-        });
+          setReceivingFromServer(true);
+          try {
+            const current = useScheduleStore.getState().schedule;
+            if (current && current.id === db.id) {
+              useScheduleStore.getState().setSchedule({ ...current, pdfUri: dataUri });
+            }
+          } finally {
+            setReceivingFromServer(false);
+          }
+        }).catch(err => console.warn('[ProjectOpen] Schedule PDF download error:', err));
       }
     }
   }
@@ -180,16 +186,22 @@ function loadDocumentsIntoStores(
     // Download call sheet PDFs in background
     for (const db of callSheetData) {
       if (db.storage_path) {
-        supabaseStorage.downloadDocumentAsDataUri(db.storage_path).then(({ dataUri }) => {
-          if (!dataUri) return;
+        supabaseStorage.downloadDocumentAsDataUri(db.storage_path).then(({ dataUri, error }) => {
+          if (error || !dataUri) {
+            console.warn('[ProjectOpen] Call sheet PDF download failed:', error?.message || 'no data', db.storage_path);
+            return;
+          }
           setReceivingFromServer(true);
-          useCallSheetStore.setState((state) => ({
-            callSheets: state.callSheets.map((cs) =>
-              cs.id === db.id ? { ...cs, pdfUri: dataUri } : cs
-            ),
-          }));
-          setReceivingFromServer(false);
-        });
+          try {
+            useCallSheetStore.setState((state) => ({
+              callSheets: state.callSheets.map((cs) =>
+                cs.id === db.id ? { ...cs, pdfUri: dataUri } : cs
+              ),
+            }));
+          } finally {
+            setReceivingFromServer(false);
+          }
+        }).catch(err => console.warn('[ProjectOpen] Call sheet PDF download error:', err));
       }
     }
   }
@@ -200,13 +212,25 @@ function loadDocumentsIntoStores(
   if (scriptData.length > 0) {
     const dbScript = scriptData[0];
     if (dbScript.storage_path) {
-      supabaseStorage.downloadDocumentAsDataUri(dbScript.storage_path).then(({ dataUri }) => {
-        if (!dataUri) return;
+      console.log('[ProjectOpen] Downloading script PDF from:', dbScript.storage_path);
+      supabaseStorage.downloadDocumentAsDataUri(dbScript.storage_path).then(({ dataUri, error }) => {
+        if (error || !dataUri) {
+          console.warn('[ProjectOpen] Script PDF download failed:', error?.message || 'no data returned', 'path:', dbScript.storage_path);
+          return;
+        }
+        console.log('[ProjectOpen] Script PDF downloaded successfully');
         setReceivingFromServer(true);
-        useProjectStore.getState().setScriptPdf(dataUri);
-        setReceivingFromServer(false);
-      });
+        try {
+          useProjectStore.getState().setScriptPdf(dataUri);
+        } finally {
+          setReceivingFromServer(false);
+        }
+      }).catch(err => console.warn('[ProjectOpen] Script PDF download error:', err));
+    } else {
+      console.warn('[ProjectOpen] Script record found but storage_path is null — script PDF cannot be loaded');
     }
+  } else {
+    console.log('[ProjectOpen] No script_uploads records found for this project');
   }
 }
 

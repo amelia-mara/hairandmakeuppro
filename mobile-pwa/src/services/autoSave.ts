@@ -359,9 +359,13 @@ export function autoSaveScript(): void {
           .eq('project_id', projectId)
           .eq('is_active', true)
           .neq('storage_path', path);
+        console.log('[AutoSave] Script saved');
+      } else {
+        console.warn('[AutoSave] Script upload succeeded but DB record failed:', insertError);
       }
+    } else {
+      console.warn('[AutoSave] Script PDF upload to storage failed:', uploadError);
     }
-    console.log('[AutoSave] Script saved');
   });
 }
 
@@ -600,9 +604,15 @@ export async function saveEverythingToSupabase(): Promise<void> {
             .eq('project_id', projectId)
             .eq('is_active', true)
             .neq('storage_path', path);
+          console.log('[SaveAll] Script saved');
+        } else {
+          console.warn('[SaveAll] Script storage upload OK but DB record failed:', insertError);
+          errors.push('script');
         }
+      } else {
+        console.warn('[SaveAll] Script PDF storage upload failed:', uploadError);
+        errors.push('script');
       }
-      console.log('[SaveAll] Script saved');
     } catch (err) {
       console.error('[SaveAll] Script failed:', err);
       errors.push('script');
