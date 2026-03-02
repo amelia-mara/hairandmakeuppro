@@ -9,8 +9,7 @@ import {
   CharacterConfirmationProgress,
 } from '@/components/breakdown/SceneCharacterConfirmation';
 import { AmendmentBadge } from '@/components/breakdown/AmendmentReviewModal';
-import { PhotoImg } from '@/hooks';
-import type { Scene, Character, Look, SceneCapture, BreakdownFilters, SceneFilmingStatus } from '@/types';
+import type { Scene, Character, Look, BreakdownFilters, SceneFilmingStatus } from '@/types';
 import { SCENE_FILMING_STATUS_CONFIG } from '@/types';
 import { clsx } from 'clsx';
 
@@ -223,7 +222,6 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
     filmingStatus: 'all',
     lookId: null,
   });
-  const [expandedSceneId, setExpandedSceneId] = useState<string | null>(null);
   const [scriptModalSceneId, setScriptModalSceneId] = useState<string | null>(null);
   const [characterConfirmSceneId, setCharacterConfirmSceneId] = useState<string | null>(null);
 
@@ -439,18 +437,6 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
     return map;
   }, [currentProject?.scenes, sceneCaptures]);
 
-  // Map: "characterId-sceneNumber" -> Look (pre-computed look assignments)
-  const characterLookMap = useMemo(() => {
-    if (!currentProject) return new Map<string, Look>();
-    const map = new Map<string, Look>();
-    for (const look of currentProject.looks) {
-      for (const sceneNum of look.scenes) {
-        map.set(`${look.characterId}-${sceneNum}`, look);
-      }
-    }
-    return map;
-  }, [currentProject?.looks]);
-
   // Fast lookup functions using pre-computed maps
   const getSceneProgress = (scene: Scene) => {
     return sceneProgressMap.get(scene.id) || { captured: 0, total: 0 };
@@ -458,14 +444,6 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
 
   const getCharactersForScene = (scene: Scene): Character[] => {
     return sceneCharactersMap.get(scene.id) || [];
-  };
-
-  const getLookForCharacter = (characterId: string, sceneNumber: string) => {
-    return characterLookMap.get(`${characterId}-${sceneNumber}`);
-  };
-
-  const getCapture = (sceneId: string, characterId: string) => {
-    return sceneCaptures[`${sceneId}-${characterId}`];
   };
 
   // Clear all filters
@@ -620,13 +598,9 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
         ) : (
           <BreakdownListView
             scenes={filteredScenes}
-            expandedSceneId={expandedSceneId}
-            onToggleExpand={(id) => setExpandedSceneId(expandedSceneId === id ? null : id)}
             onSceneSelect={onSceneSelect}
             onSynopsisClick={(sceneId) => setScriptModalSceneId(sceneId)}
             getCharactersForScene={getCharactersForScene}
-            getLookForCharacter={getLookForCharacter}
-            getCapture={getCapture}
             getSceneProgress={getSceneProgress}
             onCharacterConfirm={(sceneId) => setCharacterConfirmSceneId(sceneId)}
             onFilmingStatusChange={handleFilmingStatusChange}
@@ -682,13 +656,9 @@ export function Breakdown({ onSceneSelect }: BreakdownProps) {
 // List View Component
 interface BreakdownListViewProps {
   scenes: Scene[];
-  expandedSceneId: string | null;
-  onToggleExpand: (id: string) => void;
   onSceneSelect: (id: string) => void;
   onSynopsisClick: (sceneId: string) => void;
   getCharactersForScene: (scene: Scene) => Character[];
-  getLookForCharacter: (characterId: string, sceneNumber: string) => Look | null | undefined;
-  getCapture: (sceneId: string, characterId: string) => SceneCapture | null | undefined;
   getSceneProgress: (scene: Scene) => { captured: number; total: number };
   onCharacterConfirm: (sceneId: string) => void;
   onFilmingStatusChange: (sceneNumber: string, status: SceneFilmingStatus, notes?: string) => void;
@@ -713,13 +683,9 @@ const getGlassOverlayClass = (filmingStatus?: string | null) => {
 
 function BreakdownListView({
   scenes,
-  expandedSceneId,
-  onToggleExpand,
   onSceneSelect,
   onSynopsisClick,
   getCharactersForScene,
-  getLookForCharacter,
-  getCapture,
   getSceneProgress,
   onCharacterConfirm,
   onFilmingStatusChange,
@@ -729,15 +695,9 @@ function BreakdownListView({
   return (
     <div className="space-y-2">
       {scenes.map((scene) => {
-        const isExpanded = expandedSceneId === scene.id;
         const characters = getCharactersForScene(scene);
         const progress = getSceneProgress(scene);
         const isComplete = progress.total > 0 && progress.captured === progress.total;
-
-        // Get filming status styling
-        const filmingStatusConfig = scene.filmingStatus
-          ? SCENE_FILMING_STATUS_CONFIG[scene.filmingStatus]
-          : null;
 
         const glassOverlayClass = getGlassOverlayClass(scene.filmingStatus);
 
@@ -763,9 +723,9 @@ function BreakdownListView({
             )}
             {/* Left accent bar */}
             <div className={clsx('absolute left-0 top-0 bottom-0 w-1 rounded-l-card', getAccentBarClass())} />
-            {/* Row header - always visible */}
+            {/* Row header - tap to open continuity tracking */}
             <button
-              onClick={() => onToggleExpand(scene.id)}
+              onClick={() => onSceneSelect(scene.id)}
               className="w-full flex items-center gap-3 p-3 text-left touch-manipulation"
             >
               {/* Scene number + Amendment badge */}
@@ -828,18 +788,15 @@ function BreakdownListView({
                 <span className="w-2.5 h-2.5 rounded-full flex-shrink-0 bg-gold" />
               )}
 
-              {/* Expand chevron */}
+              {/* Forward chevron - indicates tappable */}
               <svg
-                className={clsx(
-                  'w-4 h-4 text-text-light transition-transform flex-shrink-0',
-                  isExpanded && 'rotate-180'
-                )}
+                className="w-4 h-4 text-text-light flex-shrink-0"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
                 strokeWidth={2}
               >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
               </svg>
             </button>
 
@@ -892,163 +849,9 @@ function BreakdownListView({
               </div>
             </div>
 
-            {/* Expanded content */}
-            {isExpanded && (
-              <div className="border-t border-border px-3 pb-3 pt-3 space-y-3">
-                {/* Filming status with notes */}
-                {scene.filmingStatus && (
-                  <div className={clsx(
-                    'p-2.5 rounded-lg',
-                    filmingStatusConfig?.bgClass
-                  )}>
-                    <div className="flex items-center gap-2">
-                      <FilmingStatusIcon status={scene.filmingStatus} />
-                      <span className={clsx('text-sm font-medium', filmingStatusConfig?.textClass)}>
-                        {filmingStatusConfig?.label}
-                      </span>
-                    </div>
-                    {scene.filmingNotes && (
-                      <p className={clsx('text-xs mt-1.5', filmingStatusConfig?.textClass)}>
-                        {scene.filmingNotes}
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {/* Character breakdown cards */}
-                <div className="space-y-2">
-                  {characters.map((char) => {
-                    const look = getLookForCharacter(char.id, scene.sceneNumber);
-                    const capture = getCapture(scene.id, char.id);
-                    const hasCaptured = capture && Object.keys(capture.photos).length > 0;
-                    const activeFlags = capture
-                      ? Object.entries(capture.continuityFlags)
-                          .filter(([_, v]) => v)
-                          .map(([k]) => k)
-                      : [];
-
-                    return (
-                      <div key={char.id} className="bg-gray-50 rounded-lg p-2.5">
-                        <div className="flex items-center gap-2 mb-2">
-                          <CharacterAvatar character={char} size="sm" />
-                          <div className="flex-1 min-w-0">
-                            <span className="text-sm font-medium text-text-primary">{char.name}</span>
-                            {look && (
-                              <span className="text-xs text-gold ml-2">• {look.name}</span>
-                            )}
-                          </div>
-                          {hasCaptured && (
-                            <svg className="w-4 h-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                            </svg>
-                          )}
-                        </div>
-
-                        {/* Look details if available */}
-                        {look && (
-                          <div className="grid grid-cols-2 gap-2 text-[11px]">
-                            {look.makeup.foundation && (
-                              <div>
-                                <span className="text-text-light">Makeup:</span>{' '}
-                                <span className="text-text-secondary">{look.makeup.foundation}</span>
-                              </div>
-                            )}
-                            {look.hair.style && (
-                              <div>
-                                <span className="text-text-light">Hair:</span>{' '}
-                                <span className="text-text-secondary">{look.hair.style}</span>
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Continuity flags */}
-                        {activeFlags.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {activeFlags.map((flag) => (
-                              <span
-                                key={flag}
-                                className="px-1.5 py-0.5 text-[9px] font-medium rounded bg-amber-100 text-amber-700 capitalize"
-                              >
-                                {flag.replace(/([A-Z])/g, ' $1').trim()}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Photo thumbnails if captured */}
-                        {capture && Object.keys(capture.photos).length > 0 && (
-                          <div className="flex gap-1 mt-2">
-                            {(['front', 'left', 'right', 'back'] as const).map((angle) => {
-                              const photo = capture.photos[angle];
-                              return (
-                                <div
-                                  key={angle}
-                                  className={clsx(
-                                    'w-10 h-10 rounded overflow-hidden bg-gray-200',
-                                    !photo && 'opacity-30'
-                                  )}
-                                >
-                                  {photo && (
-                                    <PhotoImg
-                                      photo={photo}
-                                      alt={angle}
-                                      className="w-full h-full object-cover"
-                                    />
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Action button */}
-                <button
-                  onClick={() => onSceneSelect(scene.id)}
-                  className="w-full py-2.5 rounded-button gold-gradient text-white text-sm font-medium active:scale-[0.98] transition-transform"
-                >
-                  {progress.captured > 0 ? 'Edit Details' : 'Capture Continuity'}
-                </button>
-              </div>
-            )}
           </div>
         );
       })}
-    </div>
-  );
-}
-
-// Filming status icon component
-function FilmingStatusIcon({ status }: { status: SceneFilmingStatus }) {
-  const config = SCENE_FILMING_STATUS_CONFIG[status];
-
-  if (status === 'complete') {
-    return (
-      <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: config.color }}>
-        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-        </svg>
-      </div>
-    );
-  }
-  if (status === 'partial') {
-    return (
-      <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: config.color }}>
-        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-        </svg>
-      </div>
-    );
-  }
-  return (
-    <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: config.color }}>
-      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-      </svg>
     </div>
   );
 }

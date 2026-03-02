@@ -213,6 +213,7 @@ function dbToCharacter(db: DbCharacter, existingChar?: Character): Character {
     initials: db.initials,
     avatarColour: db.avatar_colour,
     actorNumber: existingChar?.actorNumber,
+    role: existingChar?.role,
   };
 }
 

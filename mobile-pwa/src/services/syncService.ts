@@ -193,6 +193,7 @@ function dbToCharacter(db: DbCharacter, existingChar?: Character): Character {
     avatarColour: db.avatar_colour,
     // Preserve local-only fields
     actorNumber: existingChar?.actorNumber,
+    role: existingChar?.role,
   };
 }
 
