@@ -12,6 +12,7 @@ import { flushAutoSave } from '@/services/autoSave';
 import { useSyncStore } from '@/stores/syncStore';
 import type { ProjectMembership, Project, ProjectRole, ProductionType, CallSheet, ProductionSchedule, SceneFilmingStatus, MakeupDetails, HairDetails, ScheduleCastMember, ScheduleDay, SceneCapture, Photo, PhotoAngle, ContinuityFlags, ContinuityEvent, SFXDetails } from '@/types';
 import { savePhotoBlob } from '@/db';
+import { detectCharactersForScene } from '@/utils/scriptParser';
 import { createEmptyMakeupDetails, createEmptyHairDetails } from '@/types';
 
 // Format relative time
@@ -611,7 +612,9 @@ export function ProjectHubScreen() {
           filmingStatus: (s.filming_status as SceneFilmingStatus) || undefined,
           filmingNotes: s.filming_notes || undefined,
           shootingDay: s.shooting_day || undefined,
-          characterConfirmationStatus: 'confirmed' as const,
+          characterConfirmationStatus: ((sceneCharMap.get(s.id) || []).length > 0 || !s.script_content)
+            ? 'confirmed' as const
+            : 'pending' as const,
         }));
 
         const localCharacters = characters.map(c => ({
@@ -828,6 +831,30 @@ export function ProjectHubScreen() {
           // setReceivingFromServer guards, so they won't trigger auto-save.
           useSyncStore.getState().clearChanges();
         }
+        // Re-detect characters for scenes with script content but no confirmed characters.
+        // suggestedCharacters is local-only and lost on logout, so re-run detection.
+        const pendingDetectionScenes = localScenes.filter(
+          s => s.scriptContent && s.characters.length === 0
+        );
+        if (pendingDetectionScenes.length > 0) {
+          (async () => {
+            try {
+              for (const scene of pendingDetectionScenes) {
+                const detected = await detectCharactersForScene(
+                  scene.scriptContent!, '', { useAI: false }
+                );
+                if (detected.length > 0) {
+                  useProjectStore.getState().updateSceneSuggestedCharacters(
+                    scene.id, detected
+                  );
+                }
+              }
+            } catch (err) {
+              console.error('[ProjectOpen] Character re-detection failed:', err);
+            }
+          })();
+        }
+
         updateLastAccessed(membership.projectId);
         store.setActiveTab('today');
         return;

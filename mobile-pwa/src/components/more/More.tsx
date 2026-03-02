@@ -842,6 +842,7 @@ function ScriptViewer({ onBack }: ViewerProps) {
   const [amendmentResult, setAmendmentResult] = useState<AmendmentResult | null>(null);
   const [pendingScriptPdf, setPendingScriptPdf] = useState<string | null>(null);
   const [pendingScriptFilename, setPendingScriptFilename] = useState<string | null>(null);
+  const [pendingRawText, setPendingRawText] = useState<string | null>(null);
 
   // Handle script upload — routes to initial or revised based on project state
   const handleScriptUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -926,6 +927,9 @@ function ScriptViewer({ onBack }: ViewerProps) {
         setPendingScriptFilename(file.name);
       }
 
+      // Store raw text for character detection after amendment is applied
+      setPendingRawText(parsedScript.rawText);
+
       // Compare against existing breakdown
       const result = compareScriptAmendment(parsedScript.scenes);
       if (result) {
@@ -958,6 +962,20 @@ function ScriptViewer({ onBack }: ViewerProps) {
         setPendingScriptFilename(null);
       }
       setAmendmentResult(null);
+
+      // Run character detection on the updated scenes so new/modified scenes
+      // get suggested characters (previously this was skipped for revised uploads)
+      const rawText = pendingRawText || '';
+      setPendingRawText(null);
+      if (rawText) {
+        const updatedProject = useProjectStore.getState().currentProject;
+        if (updatedProject) {
+          const userId = useAuthStore.getState().user?.id || null;
+          setTimeout(() => {
+            runBackgroundCharacterDetection(updatedProject, rawText, [], updatedProject.id, userId);
+          }, 500);
+        }
+      }
     }
   };
 
