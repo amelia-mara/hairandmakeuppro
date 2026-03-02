@@ -56,12 +56,15 @@ export interface Scene {
   amendmentNotes?: string; // Auto-generated summary of what changed
 }
 
+export type CharacterRole = 'lead' | 'supporting' | 'background';
+
 export interface Character {
   id: string;
   name: string;
   initials: string;
   avatarColour?: string;
   actorNumber?: number; // Cast number from production schedule
+  role?: CharacterRole; // Lead, Supporting Artist, or Background
 }
 
 // Cast Profile - stores actor-specific information linked to a character
