@@ -372,6 +372,111 @@ function isCharacterCue(line: string): boolean {
   const wordCount = nameWithoutParen.split(/\s+/).length;
   if (wordCount > 4) return false;
 
+  // Comprehensive blacklist of non-character words.
+  // Used for single-word rejection AND multi-word phrase filtering.
+  const nonCharacterWords = new Set([
+    // Pronouns (never character names)
+    'HE', 'SHE', 'IT', 'WE', 'ME', 'US', 'HIM', 'HER', 'HIS', 'ITS',
+    'THEY', 'THEM', 'THEIR', 'WHO', 'WHOM', 'WHOSE', 'WHAT', 'WHICH',
+    'THAT', 'THIS', 'THESE', 'THOSE', 'MYSELF', 'HIMSELF', 'HERSELF',
+    'ITSELF', 'OURSELVES', 'THEMSELVES', 'YOURSELF',
+    // Prepositions / conjunctions / function words
+    'BUT', 'FOR', 'NOT', 'ALL', 'WITH', 'FROM', 'INTO', 'UPON',
+    'THAN', 'YET', 'NOR', 'SINCE', 'UNTIL', 'WHILE', 'DURING',
+    'THROUGH', 'BETWEEN', 'AGAINST', 'WITHOUT', 'WITHIN', 'BEYOND',
+    'ALONG', 'ACROSS', 'TOWARD', 'TOWARDS', 'AROUND', 'OVER', 'UNDER',
+    'AFTER', 'BEFORE', 'NEAR', 'FAR',
+    'AS', 'AT', 'BY', 'IF', 'OF', 'ON', 'OR', 'TO', 'UP', 'SO',
+    'DO', 'GO', 'AM', 'AN', 'BE', 'MY', 'OUR', 'YOUR', 'TOO',
+    'HOW', 'WHY', 'OFF', 'OUT', 'BACK', 'DOWN', 'AWAY',
+    // Scene elements / locations
+    'INT', 'EXT', 'ROAD', 'STREET', 'HOUSE', 'ROOM', 'OFFICE', 'BUILDING',
+    'HALL', 'HALLWAY', 'CORRIDOR', 'LOBBY', 'FOYER', 'STAIRS', 'STAIRCASE',
+    'BASEMENT', 'ATTIC', 'GARAGE', 'PORCH', 'BALCONY', 'TERRACE', 'ROOFTOP',
+    'GARDEN', 'YARD', 'ALLEY', 'PARK', 'FIELD', 'PLAZA', 'SQUARE',
+    'BRIDGE', 'TUNNEL', 'CAVE', 'CLIFF', 'LEDGE', 'RIDGE', 'SUMMIT', 'PEAK',
+    'CHURCH', 'TEMPLE', 'HOSPITAL', 'SCHOOL', 'PRISON', 'JAIL', 'COURTHOUSE',
+    'AIRPORT', 'STATION', 'HARBOR', 'HARBOUR', 'DOCK', 'PIER', 'WAREHOUSE',
+    'FACTORY', 'LABORATORY', 'BUNKER', 'SHELTER', 'CABIN', 'COTTAGE', 'MANOR',
+    'CASTLE', 'PALACE', 'TOWER', 'FORT', 'FORTRESS', 'CAMP', 'TENT',
+    'KITCHEN', 'BATHROOM', 'BEDROOM', 'PARLOR', 'PARLOUR', 'STUDY', 'LIBRARY',
+    'CAFETERIA', 'RESTAURANT', 'BAR', 'PUB', 'CLUB', 'CASINO', 'THEATER', 'THEATRE',
+    'CEMETERY', 'GRAVEYARD', 'MORGUE', 'AUTOPSY', 'COURTROOM', 'PRECINCT',
+    'CLASSROOM', 'GYMNASIUM', 'STADIUM', 'ARENA', 'RINK',
+    // Time
+    'DAY', 'NIGHT', 'MORNING', 'EVENING', 'DAWN', 'DUSK', 'LATER', 'CONTINUOUS',
+    'MIDNIGHT', 'NOON', 'AFTERNOON', 'TWILIGHT', 'SUNSET', 'SUNRISE',
+    // Common adjectives / adverbs (often in caps for emphasis)
+    'EDENIC', 'VERDANT', 'TOWERING', 'LONELY', 'BEAUTIFUL', 'GORGEOUS', 'STUNNING',
+    'SERENE', 'PEACEFUL', 'WILD', 'FIERCE', 'ANCIENT', 'MODERN', 'RUSTIC',
+    'EXTREME', 'ALMOST', 'ABOUT', 'READY', 'SUDDENLY', 'FINALLY', 'SLOWLY',
+    'QUICKLY', 'QUIETLY', 'LOUDLY', 'SOFTLY', 'GENTLY', 'ROUGHLY', 'BARELY',
+    'EXACTLY', 'SIMPLY', 'MERELY', 'UTTERLY', 'COMPLETELY', 'ENTIRELY',
+    'ACTUALLY', 'BASICALLY', 'APPARENTLY', 'OBVIOUSLY', 'CLEARLY', 'CERTAINLY',
+    'PERHAPS', 'MAYBE', 'PROBABLY', 'POSSIBLY', 'LIKELY', 'UNLIKELY',
+    'TOGETHER', 'ALONE', 'APART', 'AHEAD', 'BEHIND', 'ABOVE', 'BELOW',
+    'INSIDE', 'OUTSIDE', 'UPSTAIRS', 'DOWNSTAIRS', 'NEARBY', 'ELSEWHERE',
+    'FOREVER', 'ALWAYS', 'NEVER', 'SOMETIMES', 'OFTEN', 'RARELY', 'SELDOM',
+    'ALREADY', 'ANYWAY', 'HOWEVER', 'MEANWHILE', 'OTHERWISE', 'THEREFORE',
+    'ABSOLUTELY', 'DEFINITELY', 'SERIOUSLY', 'LITERALLY', 'BASICALLY',
+    // Common nouns / abstract words (caps for emphasis)
+    'SILENCE', 'DARKNESS', 'NOTHING', 'EVERYTHING', 'SOMETHING', 'ANYTHING',
+    'NOBODY', 'EVERYBODY', 'SOMEONE', 'ANYONE', 'EVERYONE', 'NOWHERE', 'EVERYWHERE',
+    'TIME', 'SPACE', 'PLACE', 'HOME', 'WORLD', 'EARTH', 'HEAVEN', 'HELL',
+    'LOVE', 'HATE', 'FEAR', 'HOPE', 'DEATH', 'LIFE', 'TRUTH', 'LIES', 'POWER',
+    'MONEY', 'BLOOD', 'FIRE', 'SMOKE', 'DUST', 'SAND', 'MUD', 'ICE', 'FROST',
+    'THUNDER', 'LIGHTNING', 'STORM', 'EXPLOSION', 'CRASH', 'BANG', 'BOOM',
+    'SCREAM', 'SILENCE', 'WHISPER', 'ECHO', 'VOICE', 'SOUND', 'NOISE', 'MUSIC',
+    'CHAOS', 'PANIC', 'MAYHEM', 'CARNAGE', 'WRECKAGE', 'DEBRIS', 'RUBBLE',
+    'SHOCK', 'HORROR', 'TERROR', 'RAGE', 'FURY', 'AGONY', 'GRIEF', 'ANGER',
+    'RELIEF', 'DESPAIR', 'SURPRISE', 'WONDER', 'DISGUST', 'SORROW', 'DREAD',
+    'LIKE', 'JUST', 'ONLY', 'REAL', 'TRUE', 'SAME', 'DIFFERENT', 'SPECIAL',
+    'SECRET', 'PRIVATE', 'PUBLIC', 'FINAL', 'TOTAL', 'PERFECT', 'COMPLETE',
+    'TYPE', 'OPEN', 'SHUT', 'EMPTY', 'FULL', 'BUSY', 'FREE', 'SAFE',
+    'LUCKY', 'SORRY', 'GUILTY', 'WRONG', 'CRAZY', 'ANGRY', 'UPSET',
+    // Nature / scenery
+    'MOUNTAINS', 'MOUNTAIN', 'HILLS', 'VALLEY', 'RIVER', 'STREAM', 'LAKE', 'OCEAN',
+    'FOREST', 'WOODS', 'TREE', 'TREES', 'SKY', 'SUN', 'MOON', 'MELTWATER',
+    'DESERT', 'JUNGLE', 'SWAMP', 'MARSH', 'BOG', 'MEADOW', 'PRAIRIE', 'PLAIN',
+    'ISLAND', 'COAST', 'SHORE', 'WATERFALL', 'VOLCANO', 'GLACIER', 'CANYON',
+    // Colors
+    'RED', 'BLUE', 'GREEN', 'YELLOW', 'ORANGE', 'PURPLE', 'BLACK', 'WHITE', 'GOLDEN',
+    'CRIMSON', 'SCARLET', 'AZURE', 'IVORY', 'SILVER',
+    // Numbers / quantities
+    'VERY', 'MUCH', 'MORE', 'MOST', 'JUST', 'ONLY', 'ALSO', 'EVEN', 'STILL', 'WELL',
+    'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE', 'TEN',
+    'FIRST', 'SECOND', 'THIRD', 'LAST', 'NEXT', 'ANOTHER', 'HALF', 'DOUBLE', 'TRIPLE',
+    // Screenplay terms
+    'CONTINUED', 'FADE', 'CUT', 'DISSOLVE', 'ANGLE', 'SHOT', 'VIEW', 'CLOSE', 'WIDE',
+    'RESUME', 'BEGIN', 'END', 'STOP', 'START', 'PAUSE', 'BEAT',
+    'PRELAP', 'OVERLAP', 'INTERCUT', 'MONTAGE', 'SERIES', 'SEQUENCE',
+    // Objects / props
+    'PHONE', 'GUN', 'KNIFE', 'SWORD', 'WEAPON', 'BOMB', 'GRENADE', 'RIFLE',
+    'CAR', 'TRUCK', 'BUS', 'TRAIN', 'PLANE', 'HELICOPTER', 'BOAT', 'SHIP',
+    'TAXI', 'AMBULANCE', 'MOTORCYCLE', 'BICYCLE', 'WHEELCHAIR', 'VEHICLE',
+    'DOOR', 'WINDOW', 'WALL', 'FLOOR', 'CEILING', 'ROOF',
+    'TABLE', 'CHAIR', 'DESK', 'BED', 'COUCH', 'SOFA', 'BENCH',
+    'LAMP', 'MIRROR', 'CLOCK', 'SCREEN', 'MONITOR', 'COMPUTER', 'LAPTOP',
+    'RADIO', 'TELEVISION', 'CAMERA', 'MICROPHONE', 'SPEAKER',
+    'BAG', 'BOX', 'CASE', 'TRUNK', 'CHEST', 'DRAWER', 'CABINET', 'SHELF',
+    'BOTTLE', 'GLASS', 'CUP', 'PLATE', 'BOWL', 'TRAY', 'BASKET',
+    'KEY', 'LOCK', 'CHAIN', 'ROPE', 'WIRE', 'CABLE', 'PIPE', 'TUBE',
+    'SIGN', 'FLAG', 'BANNER', 'POSTER', 'PHOTO', 'PICTURE', 'PAINTING',
+    'BOOK', 'LETTER', 'NOTE', 'MAP', 'CARD', 'ENVELOPE', 'PACKAGE',
+    'RING', 'NECKLACE', 'BRACELET', 'WATCH', 'HELMET', 'MASK', 'BADGE',
+    // Misc common words that appear in caps in scripts
+    'TITLE', 'CREDIT', 'CREDITS', 'SUBTITLE', 'CAPTION', 'CARD',
+    'CHAPTER', 'PART', 'ACT', 'SCENE', 'EPISODE', 'PILOT',
+    'DREAM', 'NIGHTMARE', 'MEMORY', 'VISION', 'FLASHBACK', 'FANTASY',
+    'PRESENT', 'PAST', 'FUTURE', 'HISTORY', 'LEGEND', 'MYTH', 'PROPHECY',
+    'UNKNOWN', 'UNTITLED', 'UNNAMED', 'UNIDENTIFIED', 'ANONYMOUS',
+    'VARIOUS', 'SEVERAL', 'MULTIPLE', 'NUMEROUS', 'COUNTLESS',
+    'OTHER', 'ANOTHER', 'EITHER', 'NEITHER', 'BOTH', 'NONE', 'EACH', 'EVERY',
+    'HERE', 'THERE', 'WHERE', 'WHEN', 'THEN', 'NOW', 'SOON', 'AGO', 'HENCE',
+    'AGAIN', 'ONCE', 'TWICE', 'THRICE', 'OFTEN', 'SELDOM', 'NEVER', 'ALWAYS',
+    'OKAY', 'YEAH', 'SURE', 'RIGHT', 'WRONG', 'TRUE', 'FALSE', 'YES', 'NO',
+  ]);
+
   // Single word checks - filter out words that are NOT character names
   if (wordCount === 1) {
     // Filter out words ending in common adjective/verb suffixes.
@@ -383,95 +488,33 @@ function isCharacterCue(line: string): boolean {
       if (nonNameSuffixes.test(nameWithoutParen)) return false;
     }
 
-    // Filter out common non-character single words
-    // This must be comprehensive — any ALL CAPS English word on its own line
-    // can be mistaken for a character cue in badly-formatted scripts
-    const nonCharacterSingleWords = new Set([
-      // Scene elements / locations
-      'INT', 'EXT', 'ROAD', 'STREET', 'HOUSE', 'ROOM', 'OFFICE', 'BUILDING',
-      'HALL', 'HALLWAY', 'CORRIDOR', 'LOBBY', 'FOYER', 'STAIRS', 'STAIRCASE',
-      'BASEMENT', 'ATTIC', 'GARAGE', 'PORCH', 'BALCONY', 'TERRACE', 'ROOFTOP',
-      'GARDEN', 'YARD', 'ALLEY', 'PARK', 'FIELD', 'PLAZA', 'SQUARE',
-      'BRIDGE', 'TUNNEL', 'CAVE', 'CLIFF', 'LEDGE', 'RIDGE', 'SUMMIT', 'PEAK',
-      'CHURCH', 'TEMPLE', 'HOSPITAL', 'SCHOOL', 'PRISON', 'JAIL', 'COURTHOUSE',
-      'AIRPORT', 'STATION', 'HARBOR', 'HARBOUR', 'DOCK', 'PIER', 'WAREHOUSE',
-      'FACTORY', 'LABORATORY', 'BUNKER', 'SHELTER', 'CABIN', 'COTTAGE', 'MANOR',
-      'CASTLE', 'PALACE', 'TOWER', 'FORT', 'FORTRESS', 'CAMP', 'TENT',
-      'KITCHEN', 'BATHROOM', 'BEDROOM', 'PARLOR', 'PARLOUR', 'STUDY', 'LIBRARY',
-      'CAFETERIA', 'RESTAURANT', 'BAR', 'PUB', 'CLUB', 'CASINO', 'THEATER', 'THEATRE',
-      'CEMETERY', 'GRAVEYARD', 'MORGUE', 'AUTOPSY', 'COURTROOM', 'PRECINCT',
-      'CLASSROOM', 'GYMNASIUM', 'STADIUM', 'ARENA', 'RINK',
-      // Time
-      'DAY', 'NIGHT', 'MORNING', 'EVENING', 'DAWN', 'DUSK', 'LATER', 'CONTINUOUS',
-      'MIDNIGHT', 'NOON', 'AFTERNOON', 'TWILIGHT', 'SUNSET', 'SUNRISE',
-      // Common adjectives / adverbs (often in caps for emphasis)
-      'EDENIC', 'VERDANT', 'TOWERING', 'LONELY', 'BEAUTIFUL', 'GORGEOUS', 'STUNNING',
-      'SERENE', 'PEACEFUL', 'WILD', 'FIERCE', 'ANCIENT', 'MODERN', 'RUSTIC',
-      'EXTREME', 'ALMOST', 'ABOUT', 'READY', 'SUDDENLY', 'FINALLY', 'SLOWLY',
-      'QUICKLY', 'QUIETLY', 'LOUDLY', 'SOFTLY', 'GENTLY', 'ROUGHLY', 'BARELY',
-      'EXACTLY', 'SIMPLY', 'MERELY', 'UTTERLY', 'COMPLETELY', 'ENTIRELY',
-      'ACTUALLY', 'BASICALLY', 'APPARENTLY', 'OBVIOUSLY', 'CLEARLY', 'CERTAINLY',
-      'PERHAPS', 'MAYBE', 'PROBABLY', 'POSSIBLY', 'LIKELY', 'UNLIKELY',
-      'TOGETHER', 'ALONE', 'APART', 'AHEAD', 'BEHIND', 'ABOVE', 'BELOW',
-      'INSIDE', 'OUTSIDE', 'UPSTAIRS', 'DOWNSTAIRS', 'NEARBY', 'ELSEWHERE',
-      'FOREVER', 'ALWAYS', 'NEVER', 'SOMETIMES', 'OFTEN', 'RARELY', 'SELDOM',
-      'ALREADY', 'ANYWAY', 'HOWEVER', 'MEANWHILE', 'OTHERWISE', 'THEREFORE',
-      'ABSOLUTELY', 'DEFINITELY', 'SERIOUSLY', 'LITERALLY', 'BASICALLY',
-      // Common verbs / action words (caps for emphasis)
-      'SILENCE', 'DARKNESS', 'NOTHING', 'EVERYTHING', 'SOMETHING', 'ANYTHING',
-      'NOBODY', 'EVERYBODY', 'SOMEONE', 'ANYONE', 'EVERYONE', 'NOWHERE', 'EVERYWHERE',
-      'TIME', 'SPACE', 'PLACE', 'HOME', 'WORLD', 'EARTH', 'HEAVEN', 'HELL',
-      'LOVE', 'HATE', 'FEAR', 'HOPE', 'DEATH', 'LIFE', 'TRUTH', 'LIES', 'POWER',
-      'MONEY', 'BLOOD', 'FIRE', 'SMOKE', 'DUST', 'SAND', 'MUD', 'ICE', 'FROST',
-      'THUNDER', 'LIGHTNING', 'STORM', 'EXPLOSION', 'CRASH', 'BANG', 'BOOM',
-      'SCREAM', 'SILENCE', 'WHISPER', 'ECHO', 'VOICE', 'SOUND', 'NOISE', 'MUSIC',
-      'CHAOS', 'PANIC', 'MAYHEM', 'CARNAGE', 'WRECKAGE', 'DEBRIS', 'RUBBLE',
-      'LIKE', 'JUST', 'ONLY', 'REAL', 'TRUE', 'SAME', 'DIFFERENT', 'SPECIAL',
-      'SECRET', 'PRIVATE', 'PUBLIC', 'FINAL', 'TOTAL', 'PERFECT', 'COMPLETE',
-      // Nature / scenery
-      'MOUNTAINS', 'MOUNTAIN', 'HILLS', 'VALLEY', 'RIVER', 'STREAM', 'LAKE', 'OCEAN',
-      'FOREST', 'WOODS', 'TREE', 'TREES', 'SKY', 'SUN', 'MOON', 'MELTWATER',
-      'DESERT', 'JUNGLE', 'SWAMP', 'MARSH', 'BOG', 'MEADOW', 'PRAIRIE', 'PLAIN',
-      'ISLAND', 'COAST', 'SHORE', 'WATERFALL', 'VOLCANO', 'GLACIER', 'CANYON',
-      // Colors
-      'RED', 'BLUE', 'GREEN', 'YELLOW', 'ORANGE', 'PURPLE', 'BLACK', 'WHITE', 'GOLDEN',
-      'CRIMSON', 'SCARLET', 'AZURE', 'IVORY', 'SILVER',
-      // Numbers / quantities
-      'VERY', 'MUCH', 'MORE', 'MOST', 'JUST', 'ONLY', 'ALSO', 'EVEN', 'STILL', 'WELL',
-      'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE', 'TEN',
-      'FIRST', 'SECOND', 'THIRD', 'LAST', 'NEXT', 'ANOTHER', 'HALF', 'DOUBLE', 'TRIPLE',
-      // Screenplay terms
-      'CONTINUED', 'FADE', 'CUT', 'DISSOLVE', 'ANGLE', 'SHOT', 'VIEW', 'CLOSE', 'WIDE',
-      'RESUME', 'BEGIN', 'END', 'STOP', 'START', 'PAUSE', 'BEAT',
-      'PRELAP', 'OVERLAP', 'INTERCUT', 'MONTAGE', 'SERIES', 'SEQUENCE',
-      // Objects / props
-      'PHONE', 'GUN', 'KNIFE', 'SWORD', 'WEAPON', 'BOMB', 'GRENADE', 'RIFLE',
-      'CAR', 'TRUCK', 'BUS', 'TRAIN', 'PLANE', 'HELICOPTER', 'BOAT', 'SHIP',
-      'TAXI', 'AMBULANCE', 'MOTORCYCLE', 'BICYCLE', 'WHEELCHAIR', 'VEHICLE',
-      'DOOR', 'WINDOW', 'WALL', 'FLOOR', 'CEILING', 'ROOF',
-      'TABLE', 'CHAIR', 'DESK', 'BED', 'COUCH', 'SOFA', 'BENCH',
-      'LAMP', 'MIRROR', 'CLOCK', 'SCREEN', 'MONITOR', 'COMPUTER', 'LAPTOP',
-      'RADIO', 'TELEVISION', 'CAMERA', 'MICROPHONE', 'SPEAKER',
-      'BAG', 'BOX', 'CASE', 'TRUNK', 'CHEST', 'DRAWER', 'CABINET', 'SHELF',
-      'BOTTLE', 'GLASS', 'CUP', 'PLATE', 'BOWL', 'TRAY', 'BASKET',
-      'KEY', 'LOCK', 'CHAIN', 'ROPE', 'WIRE', 'CABLE', 'PIPE', 'TUBE',
-      'SIGN', 'FLAG', 'BANNER', 'POSTER', 'PHOTO', 'PICTURE', 'PAINTING',
-      'BOOK', 'LETTER', 'NOTE', 'MAP', 'CARD', 'ENVELOPE', 'PACKAGE',
-      'RING', 'NECKLACE', 'BRACELET', 'WATCH', 'HELMET', 'MASK', 'BADGE',
-      // Misc common words that appear in caps in scripts
-      'TITLE', 'CREDIT', 'CREDITS', 'SUBTITLE', 'CAPTION', 'CARD',
-      'CHAPTER', 'PART', 'ACT', 'SCENE', 'EPISODE', 'PILOT',
-      'DREAM', 'NIGHTMARE', 'MEMORY', 'VISION', 'FLASHBACK', 'FANTASY',
-      'PRESENT', 'PAST', 'FUTURE', 'HISTORY', 'LEGEND', 'MYTH', 'PROPHECY',
-      'UNKNOWN', 'UNTITLED', 'UNNAMED', 'UNIDENTIFIED', 'ANONYMOUS',
-      'VARIOUS', 'SEVERAL', 'MULTIPLE', 'NUMEROUS', 'COUNTLESS',
-      'OTHER', 'ANOTHER', 'EITHER', 'NEITHER', 'BOTH', 'NONE', 'EACH', 'EVERY',
-      'HERE', 'THERE', 'WHERE', 'WHEN', 'THEN', 'NOW', 'SOON', 'AGO', 'HENCE',
-      'AGAIN', 'ONCE', 'TWICE', 'THRICE', 'OFTEN', 'SELDOM', 'NEVER', 'ALWAYS',
-      'OKAY', 'YEAH', 'SURE', 'RIGHT', 'WRONG', 'TRUE', 'FALSE', 'YES', 'NO',
-    ]);
+    if (nonCharacterWords.has(nameWithoutParen)) return false;
+  }
 
-    if (nonCharacterSingleWords.has(nameWithoutParen)) return false;
+  // Multi-word checks — filter out compound phrases that aren't character names
+  if (wordCount >= 2) {
+    const words = nameWithoutParen.split(/\s+/);
+
+    // If every word in the phrase is a known non-character word, reject
+    if (words.every(w => nonCharacterWords.has(w))) return false;
+
+    // Curated multi-word non-character phrases (screenplay terms, directions)
+    const nonCharacterPhrases = new Set([
+      'TYPE WRITER', 'VOICE OVER', 'VOICE MAIL',
+      'TIME LAPSE', 'TIME CUT', 'TIME JUMP',
+      'SLOW MOTION', 'FREEZE FRAME', 'SPLIT SCREEN',
+      'WIDE SHOT', 'CLOSE UP', 'MEDIUM SHOT', 'LONG SHOT', 'AERIAL SHOT',
+      'PUSH IN', 'PULL BACK', 'PAN LEFT', 'PAN RIGHT',
+      'SMASH CUT', 'JUMP CUT', 'MATCH CUT', 'HARD CUT',
+      'FADE IN', 'FADE OUT', 'FADE UP', 'BLACK OUT', 'WHITE OUT',
+      'TITLE CARD', 'END CREDITS', 'OPENING CREDITS',
+      'STOCK FOOTAGE', 'NEXT DAY', 'SAME DAY', 'THAT NIGHT',
+      'NEXT MORNING', 'SOME TIME', 'YEARS LATER', 'MONTHS LATER',
+      'DAYS LATER', 'HOURS LATER', 'WEEKS LATER',
+      'DREAM SEQUENCE', 'TITLE SEQUENCE', 'ACTION SEQUENCE',
+      'THE END', 'TO BE',
+    ]);
+    if (nonCharacterPhrases.has(nameWithoutParen)) return false;
   }
 
   // Character names should be reasonably short

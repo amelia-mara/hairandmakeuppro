@@ -524,12 +524,6 @@ export function SceneCharacterConfirmation({
                               </svg>
                             </button>
                           )}
-                          {isSelected && (
-                            <RoleSelector
-                              value={roles[name]}
-                              onChange={(r) => setRole(name, r)}
-                            />
-                          )}
                         </div>
                       </div>
                     </div>
