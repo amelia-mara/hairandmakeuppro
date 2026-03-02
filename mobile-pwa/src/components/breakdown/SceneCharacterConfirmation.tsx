@@ -111,6 +111,25 @@ export function SceneCharacterConfirmation({
     return existingNames;
   });
 
+  // When on-demand detection populates suggestedCharacters after mount,
+  // auto-select the newly detected names so they're pre-checked.
+  useEffect(() => {
+    const suggested = scene.suggestedCharacters || [];
+    if (suggested.length > 0) {
+      setSelectedSuggestedNames(prev => {
+        const next = new Set(prev);
+        let changed = false;
+        for (const name of suggested) {
+          if (!next.has(name)) {
+            next.add(name);
+            changed = true;
+          }
+        }
+        return changed ? next : prev;
+      });
+    }
+  }, [scene.suggestedCharacters]);
+
   // Track edited names — keyed by original suggested name (or existing char id)
   const [editedNames, setEditedNames] = useState<Record<string, string>>({});
   // Track which row is in edit mode (key = original name or char id)
