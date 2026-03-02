@@ -374,9 +374,14 @@ function isCharacterCue(line: string): boolean {
 
   // Single word checks - filter out words that are NOT character names
   if (wordCount === 1) {
-    // Filter out words ending in common adjective/verb suffixes
-    const nonNameSuffixes = /^[A-Z]+(ING|ED|LY|TION|SION|NESS|MENT|ABLE|IBLE|ICAL|IOUS|EOUS|ULAR|TERN|ERN|WARD|WARDS|LIKE|LESS|FUL|IC|AL|ARY|ORY|IVE|OUS|ANT|ENT)$/;
-    if (nonNameSuffixes.test(nameWithoutParen)) return false;
+    // Filter out words ending in common adjective/verb suffixes.
+    // Only apply to words with 6+ characters to avoid rejecting short names
+    // like TED, FRED, NED (ED), LILY, EMILY, SALLY (LY), ERIC (IC),
+    // KING (ING), GRANT (ANT), CLIVE (IVE), etc.
+    if (nameWithoutParen.length >= 6) {
+      const nonNameSuffixes = /^[A-Z]+(ING|ED|LY|TION|SION|NESS|MENT|ABLE|IBLE|ICAL|IOUS|EOUS|ULAR|TERN|ERN|WARD|WARDS|LIKE|LESS|FUL|IC|AL|ARY|ORY|IVE|OUS|ANT|ENT)$/;
+      if (nonNameSuffixes.test(nameWithoutParen)) return false;
+    }
 
     // Filter out common non-character single words
     // This must be comprehensive — any ALL CAPS English word on its own line
