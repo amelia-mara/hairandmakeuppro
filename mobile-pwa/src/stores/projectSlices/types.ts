@@ -2,6 +2,7 @@ import type {
   Project,
   Scene,
   Character,
+  CharacterRole,
   Look,
   SceneCapture,
   Photo,
@@ -128,7 +129,8 @@ export interface ProjectState {
   updateSceneSuggestedCharacters: (sceneId: string, characters: string[]) => void;
   updateSceneConfirmationStatus: (sceneId: string, status: CharacterConfirmationStatus) => void;
   confirmSceneCharacters: (sceneId: string, confirmedCharacterIds: string[]) => void;
-  addCharacterFromScene: (sceneId: string, characterName: string) => Character;
+  addCharacterFromScene: (sceneId: string, characterName: string, role?: CharacterRole) => Character;
+  updateCharacter: (characterId: string, updates: Partial<Pick<Character, 'name' | 'role'>>) => void;
   getUnconfirmedScenesCount: () => number;
   getConfirmedScenesCount: () => number;
 
