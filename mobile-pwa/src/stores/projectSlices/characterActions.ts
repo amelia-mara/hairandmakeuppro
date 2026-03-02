@@ -1,5 +1,6 @@
 import type {
   Character,
+  CharacterRole,
   Look,
   CharacterConfirmationStatus,
   CharacterDetectionStatus,
@@ -173,7 +174,7 @@ export const createCharacterSlice = (set: ProjectSet, get: ProjectGet) => ({
     });
   },
 
-  addCharacterFromScene: (sceneId: string, characterName: string): Character => {
+  addCharacterFromScene: (sceneId: string, characterName: string, role?: CharacterRole): Character => {
     const state = get();
     if (!state.currentProject) {
       throw new Error('No project loaded');
@@ -196,6 +197,7 @@ export const createCharacterSlice = (set: ProjectSet, get: ProjectGet) => ({
       name: characterName,
       initials,
       avatarColour,
+      role,
     };
 
     // Find the scene to get its sceneNumber
@@ -352,6 +354,31 @@ export const createCharacterSlice = (set: ProjectSet, get: ProjectGet) => ({
   },
 
   canSyncCastData: (schedule: ProductionSchedule | null) => canSyncCastData(schedule),
+
+  updateCharacter: (characterId: string, updates: Partial<Pick<Character, 'name' | 'role'>>) => {
+    set((state) => {
+      if (!state.currentProject) return state;
+
+      return {
+        currentProject: {
+          ...state.currentProject,
+          characters: state.currentProject.characters.map((c) => {
+            if (c.id !== characterId) return c;
+            const updated = { ...c, ...updates };
+            // Recalculate initials if name changed
+            if (updates.name && updates.name !== c.name) {
+              updated.initials = updates.name
+                .split(' ')
+                .map((w) => w[0])
+                .join('')
+                .slice(0, 2);
+            }
+            return updated;
+          }),
+        },
+      };
+    });
+  },
 
   getCharacter: (characterId: string) => {
     return get().currentProject?.characters.find(c => c.id === characterId);
