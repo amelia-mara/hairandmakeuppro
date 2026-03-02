@@ -185,12 +185,23 @@ export function Home({ onProjectReady, onBack }: HomeProps) {
       // If schedule is provided, use cast list for accurate character identification
       // Otherwise, use regex detection to find character names
       const castListNames = schedule?.castList?.map(c => c.name) || [];
-      setTimeout(() => {
-        startBackgroundCharacterDetection(project, fastParsed.rawText, castListNames, projectId, userId);
-      }, 500);
+
+      // Start detection immediately (not in a setTimeout) so it runs before
+      // the user navigates to the app. Detection is async but fast (regex-only),
+      // so it typically completes in the same microtask queue as the await below.
+      const detectionPromise = startBackgroundCharacterDetection(
+        project, fastParsed.rawText, castListNames, projectId, userId
+      );
+
+      // Wait for detection to finish (or time out after 3s) before navigating,
+      // so suggested characters are available when the user opens a scene.
+      await Promise.race([
+        detectionPromise,
+        new Promise(r => setTimeout(r, 3000)),
+      ]);
 
       // Go directly to app
-      setTimeout(() => onProjectReady(), 500);
+      onProjectReady();
     } catch (error) {
       console.error('Script parsing error:', error);
       alert(error instanceof Error ? error.message : 'Failed to parse script');

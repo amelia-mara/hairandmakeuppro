@@ -1,6 +1,7 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { CharacterAvatar } from '@/components/characters/CharacterAvatar';
+import { detectCharactersForScene } from '@/utils/scriptParser';
 import type { Scene, Character, CharacterRole } from '@/types';
 import { clsx } from 'clsx';
 
@@ -61,7 +62,33 @@ export function SceneCharacterConfirmation({
     confirmSceneCharacters,
     addCharacterFromScene,
     updateCharacter,
+    updateSceneSuggestedCharacters,
   } = useProjectStore();
+
+  // On-demand character detection: if detection never ran for this scene
+  // (status is 'pending') and script content is available, detect now.
+  // This handles cases where background detection was skipped (e.g. revised
+  // script upload) or failed silently.
+  const [isDetecting, setIsDetecting] = useState(false);
+  useEffect(() => {
+    const status = scene.characterConfirmationStatus;
+    const hasScript = !!scene.scriptContent;
+    const alreadyDetected = !!scene.suggestedCharacters;
+
+    if ((status === 'pending' || !status) && hasScript && !alreadyDetected) {
+      setIsDetecting(true);
+      detectCharactersForScene(scene.scriptContent!, '', { useAI: false })
+        .then((characters) => {
+          if (characters.length > 0) {
+            updateSceneSuggestedCharacters(scene.id, characters);
+          }
+        })
+        .catch(() => {
+          // Detection is optional — user can still add characters manually
+        })
+        .finally(() => setIsDetecting(false));
+    }
+  }, [scene.id, scene.characterConfirmationStatus, scene.scriptContent, scene.suggestedCharacters, updateSceneSuggestedCharacters]);
 
   // Track selected character IDs (start with already confirmed characters)
   const [selectedCharacterIds, setSelectedCharacterIds] = useState<Set<string>>(() => {
@@ -83,6 +110,25 @@ export function SceneCharacterConfirmation({
     suggested.forEach(name => existingNames.add(name));
     return existingNames;
   });
+
+  // When on-demand detection populates suggestedCharacters after mount,
+  // auto-select the newly detected names so they're pre-checked.
+  useEffect(() => {
+    const suggested = scene.suggestedCharacters || [];
+    if (suggested.length > 0) {
+      setSelectedSuggestedNames(prev => {
+        const next = new Set(prev);
+        let changed = false;
+        for (const name of suggested) {
+          if (!next.has(name)) {
+            next.add(name);
+            changed = true;
+          }
+        }
+        return changed ? next : prev;
+      });
+    }
+  }, [scene.suggestedCharacters]);
 
   // Track edited names — keyed by original suggested name (or existing char id)
   const [editedNames, setEditedNames] = useState<Record<string, string>>({});
@@ -108,11 +154,23 @@ export function SceneCharacterConfirmation({
   // Get all existing project characters
   const projectCharacters = currentProject?.characters || [];
 
-  // Map suggested names to existing project characters
+  // Map suggested names to existing project characters.
+  // Includes both auto-detected names AND manually added names from the input.
   const suggestedWithExisting = useMemo(() => {
-    const suggested = scene.suggestedCharacters || [];
-    return suggested.map(name => {
-      // Check if this character name already exists in project
+    const detected = scene.suggestedCharacters || [];
+    // Include manually added names not already in the detected or confirmed set
+    const detectedUpper = new Set(detected.map(n => n.toUpperCase()));
+    const confirmedUpper = new Set(
+      (scene.characters || []).map(id => {
+        const c = projectCharacters.find(ch => ch.id === id);
+        return c ? c.name.toUpperCase() : '';
+      })
+    );
+    const manuallyAdded = Array.from(selectedSuggestedNames).filter(
+      name => !detectedUpper.has(name.toUpperCase()) && !confirmedUpper.has(name.toUpperCase())
+    );
+    const allNames = [...detected, ...manuallyAdded];
+    return allNames.map(name => {
       const existing = projectCharacters.find(
         c => c.name.toUpperCase() === name.toUpperCase()
       );
@@ -122,7 +180,7 @@ export function SceneCharacterConfirmation({
         isInProject: !!existing,
       };
     });
-  }, [scene.suggestedCharacters, projectCharacters]);
+  }, [scene.suggestedCharacters, projectCharacters, selectedSuggestedNames, scene.characters]);
 
   const setRole = useCallback((key: string, role: CharacterRole | undefined) => {
     setRoles(prev => ({ ...prev, [key]: role }));
@@ -478,12 +536,6 @@ export function SceneCharacterConfirmation({
                               </svg>
                             </button>
                           )}
-                          {isSelected && (
-                            <RoleSelector
-                              value={roles[name]}
-                              onChange={(r) => setRole(name, r)}
-                            />
-                          )}
                         </div>
                       </div>
                     </div>
@@ -494,7 +546,7 @@ export function SceneCharacterConfirmation({
           )}
 
           {/* Detection status message */}
-          {scene.characterConfirmationStatus === 'detecting' && (
+          {(scene.characterConfirmationStatus === 'detecting' || isDetecting) && (
             <div className="flex items-center gap-2 text-text-muted text-sm mb-4 p-3 bg-gray-50 rounded-lg">
               <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -504,9 +556,9 @@ export function SceneCharacterConfirmation({
             </div>
           )}
 
-          {scene.characterConfirmationStatus === 'pending' && !scene.suggestedCharacters?.length && (
+          {!isDetecting && scene.characterConfirmationStatus === 'pending' && !scene.suggestedCharacters?.length && (
             <div className="text-text-muted text-sm mb-4 p-3 bg-gray-50 rounded-lg">
-              No characters detected yet. Add characters manually below.
+              No characters detected. Add characters manually below.
             </div>
           )}
 
