@@ -154,11 +154,23 @@ export function SceneCharacterConfirmation({
   // Get all existing project characters
   const projectCharacters = currentProject?.characters || [];
 
-  // Map suggested names to existing project characters
+  // Map suggested names to existing project characters.
+  // Includes both auto-detected names AND manually added names from the input.
   const suggestedWithExisting = useMemo(() => {
-    const suggested = scene.suggestedCharacters || [];
-    return suggested.map(name => {
-      // Check if this character name already exists in project
+    const detected = scene.suggestedCharacters || [];
+    // Include manually added names not already in the detected or confirmed set
+    const detectedUpper = new Set(detected.map(n => n.toUpperCase()));
+    const confirmedUpper = new Set(
+      (scene.characters || []).map(id => {
+        const c = projectCharacters.find(ch => ch.id === id);
+        return c ? c.name.toUpperCase() : '';
+      })
+    );
+    const manuallyAdded = Array.from(selectedSuggestedNames).filter(
+      name => !detectedUpper.has(name.toUpperCase()) && !confirmedUpper.has(name.toUpperCase())
+    );
+    const allNames = [...detected, ...manuallyAdded];
+    return allNames.map(name => {
       const existing = projectCharacters.find(
         c => c.name.toUpperCase() === name.toUpperCase()
       );
@@ -168,7 +180,7 @@ export function SceneCharacterConfirmation({
         isInProject: !!existing,
       };
     });
-  }, [scene.suggestedCharacters, projectCharacters]);
+  }, [scene.suggestedCharacters, projectCharacters, selectedSuggestedNames, scene.characters]);
 
   const setRole = useCallback((key: string, role: CharacterRole | undefined) => {
     setRoles(prev => ({ ...prev, [key]: role }));
