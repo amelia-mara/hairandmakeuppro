@@ -1,6 +1,7 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { CharacterAvatar } from '@/components/characters/CharacterAvatar';
+import { detectCharactersForScene } from '@/utils/scriptParser';
 import type { Scene, Character, CharacterRole } from '@/types';
 import { clsx } from 'clsx';
 
@@ -61,7 +62,33 @@ export function SceneCharacterConfirmation({
     confirmSceneCharacters,
     addCharacterFromScene,
     updateCharacter,
+    updateSceneSuggestedCharacters,
   } = useProjectStore();
+
+  // On-demand character detection: if detection never ran for this scene
+  // (status is 'pending') and script content is available, detect now.
+  // This handles cases where background detection was skipped (e.g. revised
+  // script upload) or failed silently.
+  const [isDetecting, setIsDetecting] = useState(false);
+  useEffect(() => {
+    const status = scene.characterConfirmationStatus;
+    const hasScript = !!scene.scriptContent;
+    const alreadyDetected = !!scene.suggestedCharacters;
+
+    if ((status === 'pending' || !status) && hasScript && !alreadyDetected) {
+      setIsDetecting(true);
+      detectCharactersForScene(scene.scriptContent!, '', { useAI: false })
+        .then((characters) => {
+          if (characters.length > 0) {
+            updateSceneSuggestedCharacters(scene.id, characters);
+          }
+        })
+        .catch(() => {
+          // Detection is optional — user can still add characters manually
+        })
+        .finally(() => setIsDetecting(false));
+    }
+  }, [scene.id, scene.characterConfirmationStatus, scene.scriptContent, scene.suggestedCharacters, updateSceneSuggestedCharacters]);
 
   // Track selected character IDs (start with already confirmed characters)
   const [selectedCharacterIds, setSelectedCharacterIds] = useState<Set<string>>(() => {
@@ -494,7 +521,7 @@ export function SceneCharacterConfirmation({
           )}
 
           {/* Detection status message */}
-          {scene.characterConfirmationStatus === 'detecting' && (
+          {(scene.characterConfirmationStatus === 'detecting' || isDetecting) && (
             <div className="flex items-center gap-2 text-text-muted text-sm mb-4 p-3 bg-gray-50 rounded-lg">
               <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -504,9 +531,9 @@ export function SceneCharacterConfirmation({
             </div>
           )}
 
-          {scene.characterConfirmationStatus === 'pending' && !scene.suggestedCharacters?.length && (
+          {!isDetecting && scene.characterConfirmationStatus === 'pending' && !scene.suggestedCharacters?.length && (
             <div className="text-text-muted text-sm mb-4 p-3 bg-gray-50 rounded-lg">
-              No characters detected yet. Add characters manually below.
+              No characters detected. Add characters manually below.
             </div>
           )}
 
