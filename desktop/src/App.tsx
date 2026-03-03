@@ -27,16 +27,20 @@ function App() {
   return (
     <BrowserRouter basename="/desktop">
       <Routes>
+        {/* Script breakdown always accessible (local-only mode for Phase 1) */}
+        <Route element={<AppLayout />}>
+          <Route path="/breakdown" element={<ScriptBreakdown />} />
+          <Route path="/breakdown/:projectId" element={<ScriptBreakdown />} />
+        </Route>
+
         {!isAuthenticated ? (
           <Route element={<AuthLayout />}>
             <Route path="/login" element={<Login />} />
-            <Route path="*" element={<Navigate to="/login" />} />
+            <Route path="*" element={<Navigate to="/breakdown" />} />
           </Route>
         ) : (
           <Route element={<AppLayout />}>
             <Route path="/" element={<Projects />} />
-            <Route path="/breakdown" element={<ScriptBreakdown />} />
-            <Route path="/breakdown/:projectId" element={<ScriptBreakdown />} />
             <Route path="/project/:id" element={<Dashboard />} />
             <Route path="/project/:id/breakdown" element={<ScriptBreakdown />} />
             <Route path="/project/:id/characters" element={<Characters />} />

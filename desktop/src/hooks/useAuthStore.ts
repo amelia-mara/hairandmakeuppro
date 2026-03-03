@@ -125,7 +125,7 @@ export const useAuthStore = create<AuthState>()(
   ),
 );
 
-// Initialize auth on load
-if (isSupabaseConfigured) {
-  useAuthStore.getState().initializeAuth();
-}
+// Initialize auth on load — always call so isLoading becomes false.
+// When Supabase is not configured, initializeAuth sets isLoading=false
+// immediately so the app can render (skip-auth / local-only mode).
+useAuthStore.getState().initializeAuth();
