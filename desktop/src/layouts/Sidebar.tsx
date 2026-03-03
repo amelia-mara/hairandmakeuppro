@@ -30,6 +30,10 @@ export default function Sidebar() {
           Projects
         </NavLink>
 
+        <NavLink to="/breakdown" className={navLinkClass}>
+          Script Breakdown
+        </NavLink>
+
         {id && (
           <>
             <div className="pt-4 pb-2 px-4 text-xs text-neutral-600 uppercase tracking-wider">
