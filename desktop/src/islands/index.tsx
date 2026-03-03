@@ -19,6 +19,7 @@ import { createRoot, Root } from 'react-dom/client';
 import { patchLegacyFunctions, notifyStateChange, isLegacyReady } from './bridge';
 import BreakdownProgress from './BreakdownProgress';
 import SceneNavigator from './SceneNavigator';
+import ScriptUpload from './ScriptUpload';
 
 // ── Island registry ─────────────────────────────────────────────────────────
 
@@ -37,6 +38,10 @@ const ISLANDS: IslandConfig[] = [
   {
     mountId: 'island-scene-navigator',
     component: SceneNavigator,
+  },
+  {
+    mountId: 'island-script-upload',
+    component: ScriptUpload,
   },
 ];
 
