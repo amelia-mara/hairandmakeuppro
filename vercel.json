@@ -2,11 +2,9 @@
   "buildCommand": "npm install && cd mobile-pwa && npm run build && cd ../desktop && npm run build",
   "outputDirectory": ".",
   "framework": null,
-  "rewrites": [
-    { "source": "/api/:path*", "destination": "/api/:path*" },
-    { "source": "/desktop/assets/:path*", "destination": "/desktop-dist/assets/:path*" },
-    { "source": "/desktop/:path*", "destination": "/desktop-dist/index.html" },
-    { "source": "/desktop", "destination": "/desktop-dist/index.html" },
-    { "source": "/mobile/:path*", "destination": "/mobile/:path*" }
+  "routes": [
+    { "src": "/desktop/assets/(.*)", "dest": "/desktop-dist/assets/$1" },
+    { "src": "/desktop(/.*)?", "dest": "/desktop-dist/index.html" },
+    { "handle": "filesystem" }
   ]
 }
