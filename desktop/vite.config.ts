@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 import path from 'path'
 
 export default defineConfig({
+  base: '/desktop/',
   plugins: [react()],
   resolve: {
     alias: {
@@ -15,6 +16,7 @@ export default defineConfig({
     host: true,
   },
   build: {
-    outDir: 'dist',
+    outDir: '../desktop-dist',
+    emptyDirBeforeWrite: true,
   },
 })

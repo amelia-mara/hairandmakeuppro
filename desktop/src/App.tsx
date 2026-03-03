@@ -25,7 +25,7 @@ function App() {
   }
 
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/desktop">
       <Routes>
         {!isAuthenticated ? (
           <Route element={<AuthLayout />}>

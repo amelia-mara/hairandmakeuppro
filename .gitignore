@@ -1,5 +1,6 @@
 # Build outputs
 mobile/
+desktop-dist/
 dist/
 build/
 .next/
