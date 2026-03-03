@@ -12,7 +12,7 @@ import Settings from '@/pages/Settings';
 
 export function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/desktop">
       <Routes>
         {/* Project Hub — no sidebar */}
         <Route path="/" element={<ProjectHub />} />

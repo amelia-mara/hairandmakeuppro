@@ -1,5 +1,11 @@
 {
-  "buildCommand": "cd mobile-pwa && npm install && npm run build",
+  "buildCommand": "cd mobile-pwa && npm install && npm run build && cd ../desktop && npm install && npm run build",
   "outputDirectory": ".",
-  "framework": null
+  "framework": null,
+  "rewrites": [
+    { "source": "/desktop/assets/:path*", "destination": "/desktop-out/assets/:path*" },
+    { "source": "/desktop/favicon.svg", "destination": "/desktop-out/favicon.svg" },
+    { "source": "/desktop/:path*", "destination": "/desktop-out/index.html" },
+    { "source": "/desktop", "destination": "/desktop-out/index.html" }
+  ]
 }
