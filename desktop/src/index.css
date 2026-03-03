@@ -1,0 +1,107 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-base: #0a0a0a;
+  --bg-surface: #0f0f0f;
+  --bg-elevated: #1a1a1a;
+  --bg-hover: #252525;
+  --bg-active: #2a2a2a;
+  --bg-input: #1a1a1a;
+
+  --border-subtle: #1a1a1a;
+  --border-default: #2a2a2a;
+  --border-strong: #3a3a3a;
+  --border-focus: #c9a961;
+
+  --text-primary: #ffffff;
+  --text-secondary: #a0a0a0;
+  --text-muted: #666666;
+  --text-placeholder: #4a4a4a;
+  --text-inverse: #000000;
+
+  --accent-gold: #c9a961;
+  --accent-gold-hover: #d4b97a;
+  --accent-gold-muted: rgba(201, 169, 97, 0.15);
+  --accent-gold-border: rgba(201, 169, 97, 0.3);
+
+  --status-success: #22c55e;
+  --status-warning: #f59e0b;
+  --status-error: #ef4444;
+  --status-info: #3b82f6;
+
+  --category-hair: #a855f7;
+  --category-makeup: #ec4899;
+  --category-sfx: #ef4444;
+  --category-cast: #fbbf24;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #2a2a2a #0f0f0f;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: #0f0f0f;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #2a2a2a;
+  border-radius: 3px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #3a3a3a;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+}
+
+#root {
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+/* Script view styling */
+.script-content {
+  font-family: 'Courier Prime', 'Courier New', monospace;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.script-content .scene-heading {
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.script-content .character-name {
+  color: var(--accent-gold);
+  cursor: pointer;
+  transition: opacity 150ms;
+}
+
+.script-content .character-name:hover {
+  opacity: 0.8;
+}
+
+/* Focus visible styles */
+:focus-visible {
+  outline: 2px solid var(--accent-gold);
+  outline-offset: 2px;
+}
+
+/* Transition utilities */
+.transition-colors-fast {
+  transition: background-color 100ms cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 100ms cubic-bezier(0.4, 0, 0.2, 1),
+    color 100ms cubic-bezier(0.4, 0, 0.2, 1);
+}
