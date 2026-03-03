@@ -1,9 +1,5 @@
 {
   "buildCommand": "cd mobile-pwa && npm install && npm run build && cd ../desktop && npm install && npm run build",
   "outputDirectory": ".",
-  "framework": null,
-  "rewrites": [
-    { "source": "/desktop/(.*)", "destination": "/desktop/dist/$1" },
-    { "source": "/desktop", "destination": "/desktop/dist/index.html" }
-  ]
+  "framework": null
 }

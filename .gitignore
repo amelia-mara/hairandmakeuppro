@@ -1,5 +1,6 @@
 # Build outputs
 mobile/
+prep-happy/
 dist/
 build/
 .next/

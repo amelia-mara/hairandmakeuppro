@@ -5,7 +5,11 @@ import path from 'path'
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  base: '/desktop/',
+  base: '/prep-happy/',
+  build: {
+    outDir: '../prep-happy',
+    emptyOutDir: true,
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
