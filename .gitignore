@@ -1,6 +1,7 @@
 # Build outputs
 mobile/
 desktop-dist/
+islands-dist/
 dist/
 build/
 .next/

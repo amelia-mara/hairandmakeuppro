@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:islands": "vite build --config vite.islands.config.ts",
     "preview": "vite preview"
   },
   "dependencies": {

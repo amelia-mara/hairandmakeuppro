@@ -1,10 +1,9 @@
 {
-  "buildCommand": "npm install && cd mobile-pwa && npm run build && cd ../desktop && npm run build",
+  "buildCommand": "npm install && cd mobile-pwa && npm run build && cd ../desktop && npm run build:islands",
   "outputDirectory": ".",
   "framework": null,
   "routes": [
-    { "src": "/desktop/assets/(.*)", "dest": "/desktop-dist/assets/$1" },
-    { "src": "/desktop(/.*)?", "dest": "/desktop-dist/index.html" },
-    { "handle": "filesystem" }
+    { "handle": "filesystem" },
+    { "src": "/mobile/(.*)", "dest": "/mobile/$1" }
   ]
 }
