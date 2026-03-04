@@ -113,6 +113,7 @@ function toProjectMembership(
     projectId: project.id,
     projectName: project.name,
     productionType: project.production_type as ProductionType,
+    department: ((project as unknown as Record<string, unknown>).department as 'hmu' | 'costume') || 'hmu',
     role: project.is_owner ? 'owner' : (project.role as ProjectRole),
     joinedAt: new Date(project.created_at),
     lastAccessedAt: new Date(),
@@ -496,11 +497,15 @@ export const useAuthStore = create<AuthState>()(
             if (ownerMember) ownerName = ownerMember.user.name;
           } catch { /* non-critical */ }
 
+          // Read department from the joined project (may come from DB once column exists)
+          const joinedDept = ((joinedProject as Record<string, unknown>).department as 'hmu' | 'costume') || 'hmu';
+
           // Add to local memberships
           const newMembership: ProjectMembership = {
             projectId: joinedProject.id,
             projectName: joinedProject.name,
             productionType: joinedProject.production_type as ProductionType,
+            department: joinedDept,
             role: joinRole as ProjectRole,
             joinedAt: new Date(),
             lastAccessedAt: new Date(),
@@ -572,6 +577,7 @@ export const useAuthStore = create<AuthState>()(
             const loadedProject: Project = {
               id: joinedProject.id,
               name: joinedProject.name,
+              department: joinedDept,
               createdAt: new Date(joinedProject.created_at),
               updatedAt: new Date(),
               scenes: localScenes,
@@ -584,6 +590,7 @@ export const useAuthStore = create<AuthState>()(
             const emptyProject: Project = {
               id: joinedProject.id,
               name: joinedProject.name,
+              department: joinedDept,
               createdAt: new Date(joinedProject.created_at),
               updatedAt: new Date(),
               scenes: [],
@@ -689,7 +696,8 @@ export const useAuthStore = create<AuthState>()(
             name,
             type,
             user.id,
-            (ownerRole || 'designer') as DbMemberRole
+            (ownerRole || 'designer') as DbMemberRole,
+            department || 'hmu'
           );
 
           if (error || !project || !inviteCode) {
