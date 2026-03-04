@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Plus, Search, Folder, Clock, MoreHorizontal } from 'lucide-react';
 import { useProjectStore, type Project } from '@/stores/projectStore';
+import { PROJECT_TYPES } from '@/types';
 
 interface ProjectHubProps {
   onCreateProject: () => void;
@@ -9,13 +9,16 @@ interface ProjectHubProps {
 
 export function ProjectHub({ onCreateProject, onSelectProject }: ProjectHubProps) {
   const projects = useProjectStore((s) => s.projects);
+  const deleteProject = useProjectStore((s) => s.deleteProject);
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState<'all' | 'active' | 'wrapped'>('all');
+  const [filter, setFilter] = useState('All');
+  const [sort, setSort] = useState('Newest First');
+
+  const filterOptions = ['All', ...PROJECT_TYPES];
 
   const filtered = projects
     .filter((p) => {
-      if (filter === 'active') return p.status !== 'wrapped';
-      if (filter === 'wrapped') return p.status === 'wrapped';
+      if (filter !== 'All') return p.type === filter;
       return true;
     })
     .filter(
@@ -23,129 +26,143 @@ export function ProjectHub({ onCreateProject, onSelectProject }: ProjectHubProps
         !search ||
         p.title.toLowerCase().includes(search.toLowerCase()) ||
         p.genre.toLowerCase().includes(search.toLowerCase())
-    );
+    )
+    .sort((a, b) => {
+      if (sort === 'Newest First') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      if (sort === 'Oldest First') return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      if (sort === 'A-Z') return a.title.localeCompare(b.title);
+      return 0;
+    });
+
+  const activeCount = projects.filter((p) => p.status === 'active').length;
+  const setupCount = projects.filter((p) => p.status === 'setup').length;
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] px-8 py-8 animate-fade-in">
-      {/* Header */}
-      <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1
-              className="text-2xl font-bold"
-              style={{
-                fontFamily: 'var(--font-serif)',
-                color: 'var(--text-primary)',
-              }}
-            >
-              Projects
-            </h1>
-            <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
-              {projects.length} production{projects.length !== 1 ? 's' : ''}
-            </p>
+    <div className="animate-fade-in">
+      {/* Dashboard Stats */}
+      <div style={{ padding: '20px 40px 0' }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: '16px',
+            marginBottom: '20px',
+          }}
+        >
+          <div className="stat-card">
+            <div className="stat-value">{projects.length}</div>
+            <div className="stat-label">Total Projects</div>
           </div>
+          <div className="stat-card">
+            <div className="stat-value">{activeCount}</div>
+            <div className="stat-label">Active</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-value">{setupCount}</div>
+            <div className="stat-label">In Setup</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-value">
+              {projects.length > 0
+                ? Math.round(projects.reduce((sum, p) => sum + p.progress, 0) / projects.length)
+                : 0}%
+            </div>
+            <div className="stat-label">Avg Progress</div>
+          </div>
+        </div>
+      </div>
 
-          <button
-            onClick={onCreateProject}
-            className="btn-gold px-5 py-2.5 rounded-lg text-sm flex items-center gap-2"
-          >
-            <Plus size={16} />
-            New Project
-          </button>
+      {/* Controls Row */}
+      <div
+        style={{
+          padding: '0 40px 20px',
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          gap: '16px',
+        }}
+      >
+        {/* Search */}
+        <div style={{ flex: '0 0 360px', minWidth: '200px' }}>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search projects..."
+            className="input-field"
+          />
         </div>
 
-        {/* Search and filters */}
-        {projects.length > 0 && (
-          <div className="flex items-center gap-3 mb-6">
-            <div className="relative flex-1 max-w-sm">
-              <Search
-                size={16}
-                className="absolute left-3 top-1/2 -translate-y-1/2"
-                style={{ color: 'var(--text-muted)' }}
-              />
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search projects..."
-                className="input-field pl-9 py-2.5 text-sm"
-              />
-            </div>
-            <div className="flex gap-1.5">
-              {(['all', 'active', 'wrapped'] as const).map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setFilter(f)}
-                  className="px-4 py-2 rounded-lg text-xs font-medium capitalize transition-all"
-                  style={{
-                    backgroundColor:
-                      filter === f ? 'var(--gold-muted)' : 'transparent',
-                    color:
-                      filter === f
-                        ? 'var(--gold-primary)'
-                        : 'var(--text-muted)',
-                    border: `1px solid ${
-                      filter === f
-                        ? 'var(--gold-border)'
-                        : 'var(--border-subtle)'
-                    }`,
-                  }}
-                >
-                  {f}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Projects grid */}
-        {filtered.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {/* New Project card */}
+        {/* Filter pills */}
+        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', flex: 1 }}>
+          {filterOptions.map((f) => (
             <button
-              onClick={onCreateProject}
-              className="flex flex-col items-center justify-center min-h-[220px] rounded-[14px] transition-all"
-              style={{
-                backgroundColor: 'var(--bg-card)',
-                border: '1px dashed var(--border-default)',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = 'var(--gold-border)';
-                e.currentTarget.style.backgroundColor = 'var(--bg-hover)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = 'var(--border-default)';
-                e.currentTarget.style.backgroundColor = 'var(--bg-card)';
-              }}
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`filter-btn ${filter === f ? 'active' : ''}`}
             >
-              <div
-                className="w-12 h-12 rounded-full flex items-center justify-center mb-3"
-                style={{ border: '1px solid var(--border-default)' }}
-              >
-                <Plus size={20} style={{ color: 'var(--gold-primary)' }} />
-              </div>
-              <span
-                className="text-sm font-medium"
-                style={{ color: 'var(--text-primary)' }}
-              >
-                New Project
-              </span>
+              {f}
             </button>
+          ))}
+        </div>
 
-            {/* Existing projects */}
-            {filtered.map((project) => (
-              <ProjectCard
-                key={project.id}
-                project={project}
-                onClick={() => onSelectProject(project.id)}
-              />
-            ))}
-          </div>
-        ) : projects.length === 0 ? (
-          <EmptyState onCreateProject={onCreateProject} />
-        ) : (
-          <div className="text-center py-16">
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+        {/* Sort */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '0.8125em', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+            Sort:
+          </span>
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value)}
+            className="select-field"
+            style={{ width: 'auto', minWidth: '140px' }}
+          >
+            <option>Newest First</option>
+            <option>Oldest First</option>
+            <option>A-Z</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Projects Grid */}
+      <div style={{ padding: '0 40px 40px' }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+            gap: '20px',
+          }}
+        >
+          {/* New Project Card */}
+          <button className="new-project-card" onClick={onCreateProject}>
+            <div className="icon-circle">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ color: 'var(--accent-gold)' }}>
+                <path d="M12 5v14M5 12h14" strokeLinecap="round"/>
+              </svg>
+            </div>
+            <span style={{ fontSize: '1em', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
+              Create New Project
+            </span>
+            <span style={{ fontSize: '0.8125em', color: 'var(--text-secondary)' }}>
+              Start your breakdown
+            </span>
+          </button>
+
+          {/* Project Cards */}
+          {filtered.map((project) => (
+            <ProjectCard
+              key={project.id}
+              project={project}
+              onClick={() => onSelectProject(project.id)}
+              onDelete={() => deleteProject(project.id)}
+            />
+          ))}
+        </div>
+
+        {/* Empty search results */}
+        {filtered.length === 0 && projects.length > 0 && (
+          <div style={{ textAlign: 'center', padding: '60px 0' }}>
+            <p style={{ fontSize: '0.875em', color: 'var(--text-muted)' }}>
               No projects match your search
             </p>
           </div>
@@ -158,146 +175,95 @@ export function ProjectHub({ onCreateProject, onSelectProject }: ProjectHubProps
 function ProjectCard({
   project,
   onClick,
+  onDelete,
 }: {
   project: Project;
   onClick: () => void;
+  onDelete: () => void;
 }) {
-  const timeAgo = getTimeAgo(project.lastActive);
+  const statusLabel = project.status === 'active' ? 'Active' : project.status === 'setup' ? 'Setup' : 'Wrapped';
 
   return (
-    <button
-      onClick={onClick}
-      className="text-left rounded-[14px] overflow-hidden transition-all group"
-      style={{
-        backgroundColor: 'var(--bg-card)',
-        border: '1px solid var(--border-subtle)',
-        boxShadow: 'var(--shadow-card)',
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = 'var(--gold-border)';
-        e.currentTarget.style.transform = 'translateY(-2px)';
-        e.currentTarget.style.boxShadow = 'var(--shadow-gold)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = 'var(--border-subtle)';
-        e.currentTarget.style.transform = 'translateY(0)';
-        e.currentTarget.style.boxShadow = 'var(--shadow-card)';
-      }}
-    >
-      {/* Top section with gradient */}
-      <div
-        className="relative h-28 flex items-center justify-center"
-        style={{
-          background:
-            'linear-gradient(135deg, var(--bg-elevated) 0%, var(--bg-surface) 100%)',
-        }}
-      >
-        <Folder
-          size={32}
-          style={{ color: 'var(--gold-primary)', opacity: 0.6 }}
-        />
-        <div className="absolute top-3 right-3">
-          <MoreHorizontal
-            size={16}
-            style={{ color: 'var(--text-muted)' }}
-          />
-        </div>
-        {/* Progress bar */}
-        <div
-          className="absolute bottom-0 left-0 right-0 h-0.5"
-          style={{ backgroundColor: 'var(--border-subtle)' }}
-        >
-          <div
-            className="h-full"
-            style={{
-              width: `${project.progress}%`,
-              background:
-                'linear-gradient(90deg, var(--gold-primary), var(--gold-light))',
-            }}
-          />
-        </div>
+    <div className="project-card">
+      {/* Progress bar at top */}
+      <div className="progress-bar">
+        <div className="progress-fill" style={{ width: `${project.progress}%` }} />
       </div>
 
-      {/* Details */}
-      <div className="p-4">
-        <h3
-          className="font-semibold text-sm mb-1 truncate"
-          style={{ color: 'var(--text-primary)' }}
-        >
+      {/* Header */}
+      <div className="project-card-header" style={{ cursor: 'pointer' }} onClick={onClick}>
+        <h3 style={{ fontSize: '1.25em', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
           {project.title}
         </h3>
-        <p
-          className="text-xs mb-3 truncate"
-          style={{ color: 'var(--text-muted)' }}
-        >
-          {project.genre || project.type}
-        </p>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <Clock size={12} style={{ color: 'var(--text-muted)' }} />
-            <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
-              {timeAgo}
-            </span>
+        <span style={{ fontSize: '0.8125em', color: 'var(--text-secondary)' }}>
+          {project.type || 'Not Set'}
+        </span>
+      </div>
+
+      {/* Body — stats grid */}
+      <div className="project-card-body" style={{ cursor: 'pointer' }} onClick={onClick}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+          <div>
+            <div style={{ fontSize: '0.75em', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>
+              Script
+            </div>
+            <div style={{ fontSize: '1em', fontWeight: 600, color: 'var(--text-primary)' }}>
+              {project.scriptFilename ? '...' : '\u2014'}
+            </div>
           </div>
-          <span
-            className="text-[11px] font-medium"
-            style={{ color: 'var(--gold-primary)' }}
-          >
-            {project.progress}%
-          </span>
+          <div>
+            <div style={{ fontSize: '0.75em', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>
+              Scenes
+            </div>
+            <div style={{ fontSize: '1em', fontWeight: 600, color: 'var(--text-primary)' }}>
+              {project.scenes || 0}
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: '0.75em', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>
+              Characters
+            </div>
+            <div style={{ fontSize: '1em', fontWeight: 600, color: 'var(--text-primary)' }}>
+              {project.characters || 0}
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: '0.75em', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>
+              Progress
+            </div>
+            <div style={{ fontSize: '1em', fontWeight: 700, color: 'var(--text-primary)' }}>
+              {project.progress}%
+            </div>
+          </div>
+        </div>
+
+        {/* Date info */}
+        <div style={{
+          paddingTop: '12px',
+          borderTop: '1px solid var(--glass-border)',
+          fontSize: '0.8125em',
+          color: 'var(--text-muted)',
+        }}>
+          {project.genre ? project.genre : 'No dates set'}
         </div>
       </div>
-    </button>
-  );
-}
 
-function EmptyState({ onCreateProject }: { onCreateProject: () => void }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-24 animate-fade-in-up">
-      <div
-        className="w-20 h-20 rounded-2xl flex items-center justify-center mb-6"
-        style={{
-          backgroundColor: 'var(--gold-muted)',
-          border: '1px solid var(--gold-border)',
-        }}
-      >
-        <Folder size={36} style={{ color: 'var(--gold-primary)' }} />
+      {/* Footer */}
+      <div className="project-card-footer">
+        <div className={`status-dot ${project.status}`} />
+        <span style={{ fontSize: '0.8125em', color: 'var(--text-secondary)', marginRight: 'auto' }}>
+          {statusLabel}
+        </span>
+        <button className="btn-import" onClick={(e) => { e.stopPropagation(); }}>
+          Import Script
+        </button>
+        <button className="btn-edit" onClick={(e) => { e.stopPropagation(); onClick(); }}>
+          Edit
+        </button>
+        <button className="btn-delete" onClick={(e) => { e.stopPropagation(); onDelete(); }}>
+          Delete
+        </button>
       </div>
-      <h2
-        className="text-xl font-bold mb-2"
-        style={{ fontFamily: 'var(--font-serif)', color: 'var(--text-primary)' }}
-      >
-        No projects yet
-      </h2>
-      <p
-        className="text-sm mb-6 text-center max-w-sm"
-        style={{ color: 'var(--text-secondary)' }}
-      >
-        Create your first project to get started with script breakdowns,
-        character management, and continuity tracking.
-      </p>
-      <button
-        onClick={onCreateProject}
-        className="btn-gold px-8 py-3 rounded-lg text-sm flex items-center gap-2"
-      >
-        <Plus size={16} />
-        Create First Project
-      </button>
     </div>
   );
-}
-
-function getTimeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const minutes = Math.floor(diff / 60000);
-  if (minutes < 1) return 'Just now';
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d ago`;
-  return new Date(dateStr).toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'short',
-  });
 }
