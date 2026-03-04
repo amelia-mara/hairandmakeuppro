@@ -152,7 +152,7 @@
                         <div class="chat-assistant-welcome-icon">✨</div>
                         <div class="chat-assistant-welcome-title">Scriptie</div>
                         <div class="chat-assistant-welcome-text">
-                            I have access to your project data including characters, looks, scenes, and timesheets. How can I help?
+                            Here to help with your characters, looks, scenes, and schedule — just ask.
                         </div>
                         <div class="chat-assistant-suggestions">
                             <button class="chat-assistant-suggestion" data-prompt="Give me an overview of all characters in this project">
