@@ -17,6 +17,8 @@ const SUGGESTIONS = [
   },
 ];
 
+type ChatMode = 'team' | 'scriptie';
+
 export function ChatAssistant() {
   const {
     messages,
@@ -30,6 +32,10 @@ export function ChatAssistant() {
   } = useChatStore();
 
   const [inputValue, setInputValue] = useState('');
+  const [activeMode, setActiveMode] = useState<ChatMode>('team');
+  const [scriptieActivated, setScriptieActivated] = useState<boolean>(() => {
+    return localStorage.getItem('scriptieActivated') === 'true';
+  });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -64,6 +70,16 @@ export function ChatAssistant() {
       e.preventDefault();
       handleSend();
     }
+  };
+
+  const switchMode = (mode: ChatMode) => {
+    setActiveMode(mode);
+  };
+
+  const toggleScriptieActivation = () => {
+    const next = !scriptieActivated;
+    setScriptieActivated(next);
+    localStorage.setItem('scriptieActivated', next ? 'true' : 'false');
   };
 
   // Format message content with basic markdown using React elements (no dangerouslySetInnerHTML)
@@ -113,32 +129,26 @@ export function ChatAssistant() {
 
   return (
     <>
-      {/* Toggle Button */}
+      {/* Toggle Button — only visible when chat is closed */}
+      {!isOpen && (
       <button
         onClick={toggleChat}
-        className={`fixed bottom-24 right-4 z-50 w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all active:scale-95 ${
-          isOpen ? 'gold-gradient rotate-0' : 'gold-gradient'
-        }`}
+        className="fixed bottom-24 right-4 z-50 w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all active:scale-95 gold-gradient"
         style={{
           boxShadow: '0 4px 20px rgba(201, 169, 97, 0.4)',
         }}
-        aria-label={isOpen ? 'Close chat' : 'Open chat assistant'}
+        aria-label="Open project chat"
       >
-        {isOpen ? (
-          <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        ) : (
-          <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-            />
-          </svg>
-        )}
+        <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+          />
+        </svg>
       </button>
+      )}
 
       {/* Chat Panel - z-30 to stay below BottomNav (z-40) so users can navigate away */}
       {isOpen && (
@@ -157,7 +167,7 @@ export function ChatAssistant() {
             <div className="flex items-center gap-3">
               <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
               <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                Claude Assistant
+                Project Chat
               </h2>
             </div>
             <div className="flex items-center gap-2">
@@ -188,145 +198,305 @@ export function ChatAssistant() {
             </div>
           </div>
 
-          {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto px-4 py-4">
-            {!hasMessages ? (
-              // Welcome screen
-              <div className="flex flex-col items-center justify-center h-full text-center px-4">
-                <div className="text-5xl mb-4">🎬</div>
-                <h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--color-text-primary)' }}>
-                  Project Assistant
-                </h3>
-                <p className="text-sm mb-6" style={{ color: 'var(--color-text-muted)' }}>
-                  I have access to your project data including characters, looks, scenes, and timesheets. How can I help?
-                </p>
-
-                {/* Suggestions */}
-                <div className="space-y-2 w-full max-w-sm">
-                  {SUGGESTIONS.map((suggestion, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => handleSuggestionClick(suggestion.prompt)}
-                      className="w-full p-3 rounded-card text-left transition-all active:scale-[0.98]"
-                      style={{
-                        backgroundColor: 'var(--color-card)',
-                        border: '1px solid var(--color-border)',
-                      }}
-                    >
-                      <span className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
-                        {suggestion.label}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              // Messages list
-              <div className="space-y-4">
-                {messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div
-                      className={`max-w-[85%] rounded-2xl px-4 py-3 ${
-                        message.role === 'user'
-                          ? 'gold-gradient text-white rounded-br-sm'
-                          : 'rounded-bl-sm'
-                      }`}
-                      style={
-                        message.role === 'assistant'
-                          ? {
-                              backgroundColor: 'var(--color-card)',
-                              border: '1px solid var(--color-border)',
-                              color: 'var(--color-text-primary)',
-                            }
-                          : undefined
-                      }
-                    >
-                      <div className="text-sm leading-relaxed">
-                        {formatContent(message.content)}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-
-                {/* Loading indicator */}
-                {isLoading && (
-                  <div className="flex justify-start">
-                    <div
-                      className="rounded-2xl rounded-bl-sm px-4 py-3"
-                      style={{
-                        backgroundColor: 'var(--color-card)',
-                        border: '1px solid var(--color-border)',
-                      }}
-                    >
-                      <div className="flex gap-1">
-                        <span
-                          className="w-2 h-2 rounded-full animate-bounce"
-                          style={{ backgroundColor: 'var(--color-text-muted)', animationDelay: '0ms' }}
-                        />
-                        <span
-                          className="w-2 h-2 rounded-full animate-bounce"
-                          style={{ backgroundColor: 'var(--color-text-muted)', animationDelay: '150ms' }}
-                        />
-                        <span
-                          className="w-2 h-2 rounded-full animate-bounce"
-                          style={{ backgroundColor: 'var(--color-text-muted)', animationDelay: '300ms' }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Error message */}
-                {error && (
-                  <div className="text-center py-2">
-                    <span className="text-sm text-error">{error}</span>
-                  </div>
-                )}
-
-                <div ref={messagesEndRef} />
-              </div>
-            )}
-          </div>
-
-          {/* Input Area - extra bottom padding to sit above BottomNav */}
+          {/* Mode Toggle Tabs */}
           <div
-            className="px-4 pt-3 pb-24"
+            className="flex gap-1 px-3 py-2"
             style={{
               backgroundColor: 'var(--color-card)',
-              borderTop: '1px solid var(--color-border)',
+              borderBottom: '1px solid var(--color-border)',
             }}
           >
-            <div className="flex items-end gap-2">
-              <textarea
-                ref={inputRef}
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Ask about your project..."
-                rows={1}
-                className="flex-1 input-field resize-none max-h-32"
-                style={{ minHeight: '44px' }}
-                disabled={isLoading}
-              />
-              <button
-                onClick={handleSend}
-                disabled={!inputValue.trim() || isLoading}
-                className="p-3 rounded-button gold-gradient text-white disabled:opacity-50 transition-all active:scale-95"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                  />
-                </svg>
-              </button>
-            </div>
+            <button
+              onClick={() => switchMode('team')}
+              className="flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all"
+              style={{
+                backgroundColor: activeMode === 'team' ? 'rgba(201, 169, 97, 0.15)' : 'transparent',
+                border: `1px solid ${activeMode === 'team' ? 'rgba(201, 169, 97, 0.4)' : 'var(--color-border)'}`,
+                color: activeMode === 'team' ? 'var(--color-gold)' : 'var(--color-text-muted)',
+              }}
+            >
+              Team Chat
+            </button>
+            <button
+              onClick={() => switchMode('scriptie')}
+              className="flex-1 py-1.5 px-3 rounded-lg text-sm font-medium transition-all"
+              style={{
+                backgroundColor: activeMode === 'scriptie' ? 'rgba(201, 169, 97, 0.15)' : 'transparent',
+                border: `1px solid ${activeMode === 'scriptie' ? 'rgba(201, 169, 97, 0.4)' : 'var(--color-border)'}`,
+                color: activeMode === 'scriptie' ? 'var(--color-gold)' : 'var(--color-text-muted)',
+              }}
+            >
+              <span className="flex flex-col items-center leading-tight">
+                <span>Ask Scriptie</span>
+                <span className="text-[10px] opacity-50 font-normal">Project assistant</span>
+              </span>
+            </button>
           </div>
+
+          {/* TEAM CHAT PANEL */}
+          {activeMode === 'team' && (
+            <>
+              <div className="flex-1 overflow-y-auto px-4 py-4">
+                <div className="flex flex-col items-center justify-center h-full text-center px-4">
+                  <svg className="w-16 h-16 mb-4" style={{ color: 'var(--color-text-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1}
+                      d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z"
+                    />
+                  </svg>
+                  <h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--color-text-primary)' }}>
+                    Project Chat
+                  </h3>
+                  <p className="text-sm mb-6" style={{ color: 'var(--color-text-muted)' }}>
+                    Synced project messaging for your team. Share updates, notes, and coordinate on set.
+                  </p>
+                </div>
+              </div>
+
+              {/* Team Chat Input */}
+              <div
+                className="px-4 pt-3 pb-24"
+                style={{
+                  backgroundColor: 'var(--color-card)',
+                  borderTop: '1px solid var(--color-border)',
+                }}
+              >
+                <div className="flex items-end gap-2">
+                  <textarea
+                    placeholder="Message your team..."
+                    rows={1}
+                    className="flex-1 input-field resize-none max-h-32"
+                    style={{ minHeight: '44px' }}
+                  />
+                  <button
+                    className="p-3 rounded-button gold-gradient text-white disabled:opacity-50 transition-all active:scale-95"
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* SCRIPTIE PANEL */}
+          {activeMode === 'scriptie' && (
+            <>
+              <div className="flex-1 overflow-y-auto px-4 py-4">
+                {!scriptieActivated ? (
+                  // Scriptie activation gate — toggle to enable
+                  <div className="flex flex-col items-center justify-center h-full text-center px-4">
+                    <h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--color-text-primary)' }}>
+                      Ask Scriptie
+                    </h3>
+                    <p className="text-sm mb-6" style={{ color: 'var(--color-text-muted)' }}>
+                      Your project assistant. Get instant answers about characters, looks, scenes, and timesheets.
+                    </p>
+
+                    {/* Toggle Switch */}
+                    <button
+                      onClick={toggleScriptieActivation}
+                      className="flex items-center gap-3 px-5 py-3 rounded-xl transition-all active:scale-[0.97]"
+                      style={{
+                        backgroundColor: 'var(--color-card)',
+                        border: '1px solid var(--color-border)',
+                      }}
+                    >
+                      <div
+                        className="relative w-12 h-7 rounded-full transition-colors"
+                        style={{
+                          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                        }}
+                      >
+                        <div
+                          className="absolute top-0.5 left-0.5 w-6 h-6 rounded-full transition-transform"
+                          style={{
+                            backgroundColor: 'var(--color-text-muted)',
+                            transform: 'translateX(0)',
+                          }}
+                        />
+                      </div>
+                      <span className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
+                        Enable Ask Scriptie
+                      </span>
+                    </button>
+                  </div>
+                ) : !hasMessages ? (
+                  // Scriptie welcome screen (activated)
+                  <div className="flex flex-col items-center justify-center h-full text-center px-4">
+                    <h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--color-text-primary)' }}>
+                      Ask Scriptie
+                    </h3>
+                    <p className="text-sm mb-6" style={{ color: 'var(--color-text-muted)' }}>
+                      Here to help with your characters, looks, scenes, and schedule — just ask.
+                    </p>
+
+                    {/* Disable toggle */}
+                    <button
+                      onClick={toggleScriptieActivation}
+                      className="flex items-center gap-3 px-4 py-2 rounded-lg mb-6 transition-all active:scale-[0.97]"
+                      style={{
+                        backgroundColor: 'var(--color-card)',
+                        border: '1px solid var(--color-border)',
+                      }}
+                    >
+                      <div
+                        className="relative w-10 h-6 rounded-full transition-colors"
+                        style={{
+                          backgroundColor: 'rgba(201, 169, 97, 0.4)',
+                        }}
+                      >
+                        <div
+                          className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full transition-transform"
+                          style={{
+                            backgroundColor: 'var(--color-gold)',
+                            transform: 'translateX(16px)',
+                          }}
+                        />
+                      </div>
+                      <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                        Scriptie enabled
+                      </span>
+                    </button>
+
+                    {/* Suggestions */}
+                    <div className="space-y-2 w-full max-w-sm">
+                      {SUGGESTIONS.map((suggestion, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => handleSuggestionClick(suggestion.prompt)}
+                          className="w-full p-3 rounded-card text-left transition-all active:scale-[0.98]"
+                          style={{
+                            backgroundColor: 'var(--color-card)',
+                            border: '1px solid var(--color-border)',
+                          }}
+                        >
+                          <span className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
+                            {suggestion.label}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  // Messages list
+                  <div className="space-y-4">
+                    {messages.map((message) => (
+                      <div
+                        key={message.id}
+                        className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div
+                          className={`max-w-[85%] rounded-2xl px-4 py-3 ${
+                            message.role === 'user'
+                              ? 'gold-gradient text-white rounded-br-sm'
+                              : 'rounded-bl-sm'
+                          }`}
+                          style={
+                            message.role === 'assistant'
+                              ? {
+                                  backgroundColor: 'var(--color-card)',
+                                  border: '1px solid var(--color-border)',
+                                  color: 'var(--color-text-primary)',
+                                }
+                              : undefined
+                          }
+                        >
+                          <div className="text-sm leading-relaxed">
+                            {formatContent(message.content)}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Loading indicator */}
+                    {isLoading && (
+                      <div className="flex justify-start">
+                        <div
+                          className="rounded-2xl rounded-bl-sm px-4 py-3"
+                          style={{
+                            backgroundColor: 'var(--color-card)',
+                            border: '1px solid var(--color-border)',
+                          }}
+                        >
+                          <div className="flex gap-1">
+                            <span
+                              className="w-2 h-2 rounded-full animate-bounce"
+                              style={{ backgroundColor: 'var(--color-text-muted)', animationDelay: '0ms' }}
+                            />
+                            <span
+                              className="w-2 h-2 rounded-full animate-bounce"
+                              style={{ backgroundColor: 'var(--color-text-muted)', animationDelay: '150ms' }}
+                            />
+                            <span
+                              className="w-2 h-2 rounded-full animate-bounce"
+                              style={{ backgroundColor: 'var(--color-text-muted)', animationDelay: '300ms' }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Error message */}
+                    {error && (
+                      <div className="text-center py-2">
+                        <span className="text-sm text-error">{error}</span>
+                      </div>
+                    )}
+
+                    <div ref={messagesEndRef} />
+                  </div>
+                )}
+              </div>
+
+              {/* Scriptie Input Area — only when activated */}
+              {scriptieActivated && (
+              <div
+                className="px-4 pt-3 pb-24"
+                style={{
+                  backgroundColor: 'var(--color-card)',
+                  borderTop: '1px solid var(--color-border)',
+                }}
+              >
+                <div className="flex items-end gap-2">
+                  <textarea
+                    ref={inputRef}
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Ask Scriptie..."
+                    rows={1}
+                    className="flex-1 input-field resize-none max-h-32"
+                    style={{ minHeight: '44px' }}
+                    disabled={isLoading}
+                  />
+                  <button
+                    onClick={handleSend}
+                    disabled={!inputValue.trim() || isLoading}
+                    className="p-3 rounded-button gold-gradient text-white disabled:opacity-50 transition-all active:scale-95"
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              )}
+            </>
+          )}
         </div>
       )}
     </>

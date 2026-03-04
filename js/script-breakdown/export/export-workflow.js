@@ -331,9 +331,9 @@ ${scene.text || scene.content || ''}`;
 
         const scriptTitle = state.scriptData?.title || state.currentProject || 'Untitled';
 
-        showTopLoadingBar('Creating AI Context', `Analyzing ${state.scenes.length} scenes...`, 0);
+        showTopLoadingBar('Analyzing Script', `Analyzing ${state.scenes.length} scenes...`, 0);
 
-        updateTopLoadingBar('Creating AI Context', 'Performing comprehensive analysis...', 25);
+        updateTopLoadingBar('Analyzing Script', 'Performing comprehensive analysis...', 25);
         const masterContext = await performComprehensiveAnalysis(fullScriptText, scriptTitle);
 
         if (masterContext) {
@@ -342,7 +342,7 @@ ${scene.text || scene.content || ''}`;
             localStorage.setItem('masterContext', JSON.stringify(masterContext));
             localStorage.setItem('scriptMasterContext', JSON.stringify(masterContext));
 
-            updateTopLoadingBar('Creating AI Context', 'Building character profiles...', 75);
+            updateTopLoadingBar('Analyzing Script', 'Building character profiles...', 75);
             populateFromMasterContext(masterContext);
 
             window.contextReady = true;
@@ -352,8 +352,8 @@ ${scene.text || scene.content || ''}`;
                 window.highlightCharacterNames();
             }
 
-            updateTopLoadingBar('Analysis Complete', 'AI context created successfully', 100);
-            showToast('AI context created successfully', 'success');
+            updateTopLoadingBar('Analysis Complete', 'Context created successfully', 100);
+            showToast('Context created successfully', 'success');
             console.log('AI context initialized successfully');
 
             closeTopLoadingBar();
@@ -364,7 +364,7 @@ ${scene.text || scene.content || ''}`;
         return false;
     } catch (error) {
         console.error('Failed to initialize AI context:', error);
-        showToast('AI context creation failed: ' + error.message, 'error');
+        showToast('Context creation failed: ' + error.message, 'error');
         closeTopLoadingBar(0);
         return false;
     }

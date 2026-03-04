@@ -453,12 +453,12 @@ export async function generateSuggestions() {
     }
 
     // Show loading indicator
-    showLoadingModal('Generating AI suggestions...');
+    showLoadingModal('Generating suggestions...');
 
     try {
         await manager.generateAllSuggestions();
         closeLoadingModal();
-        showToast('AI suggestions generated', 'success');
+        showToast('Suggestions generated', 'success');
         refreshCurrentSceneDisplay();
     } catch (error) {
         closeLoadingModal();
