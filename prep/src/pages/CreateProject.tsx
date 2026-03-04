@@ -797,7 +797,7 @@ function ProcessingStep({ fileName, progress, status }: { fileName: string; prog
               borderRadius: '999px',
               transition: 'width 0.5s ease-out',
               width: `${progress}%`,
-              background: 'linear-gradient(90deg, var(--accent-gold), rgba(201, 169, 97, 0.6))',
+              background: 'linear-gradient(90deg, var(--accent-gold), rgba(186, 174, 128, 0.6))',
             }}
           />
         </div>
