@@ -1,5 +1,5 @@
 {
-  "buildCommand": "cd mobile-pwa && npm install && npm run build",
+  "buildCommand": "cd mobile-pwa && npm install && npm run build && cd ../prep && npm install && npm run build && cd .. && rm -rf prep && mv prep-dist prep",
   "outputDirectory": ".",
   "framework": null
 }
