@@ -10,15 +10,21 @@ interface CostumePhotoGridProps {
   className?: string;
 }
 
+// Split categories into groups
+const masterCategory = COSTUME_PHOTO_CATEGORIES[0]; // Master Reference
+const angleCategories = COSTUME_PHOTO_CATEGORIES.filter(
+  (c) => ['frontFull', 'backFull', 'leftSideFull', 'rightSideFull'].includes(c.key)
+);
+const detailCategories = COSTUME_PHOTO_CATEGORIES.filter(
+  (c) => ['detailJewellery', 'detailAccessories', 'detailShoes', 'detailHeadwear', 'closeupFastenings'].includes(c.key)
+);
+
 export function CostumePhotoGrid({
   photos,
   onCapture,
   onView,
   className,
 }: CostumePhotoGridProps) {
-  const masterCategory = COSTUME_PHOTO_CATEGORIES[0]; // Master Reference
-  const otherCategories = COSTUME_PHOTO_CATEGORIES.slice(1);
-
   return (
     <div className={clsx('space-y-3', className)}>
       {/* Master Reference - larger card with gold dashed border */}
@@ -34,21 +40,45 @@ export function CostumePhotoGrid({
         }
       />
 
-      {/* Other categories in 3-column grid */}
-      <div className="grid grid-cols-3 gap-2">
-        {otherCategories.map((cat) => (
-          <CostumePhotoSlot
-            key={cat.key}
-            photo={photos[cat.key]}
-            category={cat.key}
-            label={cat.label}
-            onCapture={() => onCapture(cat.key)}
-            onView={photos[cat.key] && onView
-              ? () => onView(photos[cat.key]!, cat.key)
-              : undefined
-            }
-          />
-        ))}
+      {/* Front / Back / Left / Right - 4-column row like HMU */}
+      <div>
+        <p className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider mb-1.5">Scene Photos</p>
+        <div className="grid grid-cols-4 gap-2">
+          {angleCategories.map((cat) => (
+            <CostumePhotoSlot
+              key={cat.key}
+              photo={photos[cat.key]}
+              category={cat.key}
+              label={cat.label.replace(' Full Length', '')}
+              onCapture={() => onCapture(cat.key)}
+              onView={photos[cat.key] && onView
+                ? () => onView(photos[cat.key]!, cat.key)
+                : undefined
+              }
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Detail categories - horizontally scrollable row */}
+      <div>
+        <p className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider mb-1.5">Details</p>
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+          {detailCategories.map((cat) => (
+            <div key={cat.key} className="flex-shrink-0 w-[calc(25%-6px)]">
+              <CostumePhotoSlot
+                photo={photos[cat.key]}
+                category={cat.key}
+                label={cat.label.replace('Detail: ', '').replace('Close-up: ', '')}
+                onCapture={() => onCapture(cat.key)}
+                onView={photos[cat.key] && onView
+                  ? () => onView(photos[cat.key]!, cat.key)
+                  : undefined
+                }
+              />
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
