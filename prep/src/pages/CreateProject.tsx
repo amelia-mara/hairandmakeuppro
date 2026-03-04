@@ -142,77 +142,93 @@ export function CreateProject({ onComplete, onCancel }: CreateProjectProps) {
     }
   };
 
-  // Step indicator
   const steps = [
     { key: 'details', label: 'Details' },
     { key: 'upload', label: 'Files' },
   ] as const;
-  const currentStepIndex = step === 'details' ? 0 : step === 'upload' ? 1 : 1;
+  const currentStepIndex = step === 'details' ? 0 : 1;
 
   return (
-    <div
-      className="min-h-[calc(100vh-4rem)] flex"
-      style={{ backgroundColor: 'var(--bg-base)' }}
-    >
-      {/* Left panel: decorative */}
+    <div style={{ minHeight: 'calc(100vh - 80px)', display: 'flex', background: 'var(--bg-primary)' }}>
+      {/* Left panel */}
       <div
-        className="hidden lg:flex w-[400px] flex-col items-center justify-center relative overflow-hidden"
-        style={{ backgroundColor: 'var(--bg-surface)' }}
+        className="hidden lg:flex"
+        style={{
+          width: '400px',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          position: 'relative',
+          overflow: 'hidden',
+          background: 'rgba(20, 18, 16, 0.6)',
+          backdropFilter: 'blur(20px)',
+          borderRight: '1px solid var(--glass-border)',
+        }}
       >
-        {/* Subtle gold glow */}
+        {/* Gold glow */}
         <div
-          className="absolute top-1/4 left-1/2 -translate-x-1/2 w-64 h-64 rounded-full opacity-20 blur-[100px]"
-          style={{ backgroundColor: 'var(--gold-primary)' }}
+          style={{
+            position: 'absolute',
+            top: '25%',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: '256px',
+            height: '256px',
+            borderRadius: '50%',
+            opacity: 0.15,
+            filter: 'blur(100px)',
+            backgroundColor: 'var(--accent-gold)',
+          }}
         />
 
-        <div className="relative z-10 text-center px-12">
-          {/* Film strip icon */}
+        <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', padding: '0 48px' }}>
           <div
-            className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-8"
             style={{
-              background: 'var(--gold-muted)',
-              border: '1px solid var(--gold-border)',
+              width: '80px',
+              height: '80px',
+              borderRadius: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 32px',
+              background: 'var(--accent-gold-soft)',
+              border: '1px solid var(--border-medium)',
             }}
           >
-            <Clapperboard
-              size={36}
-              style={{ color: 'var(--gold-primary)' }}
-            />
+            <Clapperboard size={36} style={{ color: 'var(--accent-gold)' }} />
           </div>
 
-          <h2
-            className="text-2xl font-bold mb-3"
-            style={{ fontFamily: 'var(--font-serif)', color: 'var(--text-primary)' }}
-          >
+          <h2 style={{ fontSize: '1.5em', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-primary)', marginBottom: '12px' }}>
             Start Something New
           </h2>
-          <p
-            className="text-sm leading-relaxed"
-            style={{ color: 'var(--text-secondary)' }}
-          >
+          <p style={{ fontSize: '0.875em', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
             Set up your production, upload your script, and let Prep Happy do the
             heavy lifting. Your breakdown, characters, and continuity tracking
             will be ready in moments.
           </p>
 
-          {/* Feature list */}
-          <div className="mt-10 space-y-4 text-left">
+          <div style={{ marginTop: '40px', textAlign: 'left' }}>
             {[
               { icon: FileText, text: 'Automatic scene detection' },
               { icon: Sparkles, text: 'Character extraction' },
               { icon: Calendar, text: 'Schedule integration' },
             ].map(({ icon: Icon, text }) => (
-              <div key={text} className="flex items-center gap-3">
+              <div key={text} style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
                 <div
-                  className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                  style={{ background: 'var(--gold-muted)' }}
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    background: 'var(--accent-gold-soft)',
+                  }}
                 >
-                  <Icon size={16} style={{ color: 'var(--gold-primary)' }} />
+                  <Icon size={16} style={{ color: 'var(--accent-gold)' }} />
                 </div>
-                <span
-                  className="text-sm"
-                  style={{ color: 'var(--text-secondary)' }}
-                >
+                <span style={{ fontSize: '0.875em', color: 'var(--text-secondary)' }}>
                   {text}
                 </span>
               </div>
@@ -221,64 +237,67 @@ export function CreateProject({ onComplete, onCancel }: CreateProjectProps) {
         </div>
       </div>
 
-      {/* Right panel: form content */}
-      <div className="flex-1 flex flex-col">
-        {/* Header */}
+      {/* Right panel */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        {/* Sub-header */}
         <div
-          className="h-16 flex items-center justify-between px-8 border-b"
-          style={{ borderColor: 'var(--border-subtle)' }}
+          style={{
+            height: '64px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0 32px',
+            borderBottom: '1px solid var(--border-subtle)',
+          }}
         >
           <button
             onClick={step === 'details' ? onCancel : handleBack}
-            className="flex items-center gap-2 text-sm transition-colors"
-            style={{ color: 'var(--text-secondary)' }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.color = 'var(--text-primary)')
-            }
-            onMouseLeave={(e) =>
-              (e.currentTarget.style.color = 'var(--text-secondary)')
-            }
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontSize: '0.875em',
+              color: 'var(--text-secondary)',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              transition: 'color 0.3s ease',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-secondary)')}
           >
             <ArrowLeft size={18} />
             {step === 'details' ? 'Back to Projects' : 'Back'}
           </button>
 
-          {/* Step indicator (only for details/upload) */}
           {(step === 'details' || step === 'upload') && (
-            <div className="flex items-center gap-2">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               {steps.map((s, i) => (
-                <div key={s.key} className="flex items-center gap-2">
-                  <div className="flex items-center gap-1.5">
+                <div key={s.key} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <div
-                      className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold transition-all"
                       style={{
-                        backgroundColor:
-                          i <= currentStepIndex
-                            ? 'var(--gold-primary)'
-                            : 'var(--bg-card)',
-                        color:
-                          i <= currentStepIndex
-                            ? '#1a1510'
-                            : 'var(--text-muted)',
-                        border:
-                          i <= currentStepIndex
-                            ? 'none'
-                            : '1px solid var(--border-default)',
+                        width: '24px',
+                        height: '24px',
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '0.75em',
+                        fontWeight: 600,
+                        transition: 'all 0.3s',
+                        backgroundColor: i <= currentStepIndex ? 'var(--accent-gold)' : 'transparent',
+                        color: i <= currentStepIndex ? 'var(--bg-primary)' : 'var(--text-muted)',
+                        border: i <= currentStepIndex ? 'none' : '1px solid var(--border-subtle)',
                       }}
                     >
-                      {i < currentStepIndex ? (
-                        <Check size={12} />
-                      ) : (
-                        i + 1
-                      )}
+                      {i < currentStepIndex ? <Check size={12} /> : i + 1}
                     </div>
                     <span
-                      className="text-xs font-medium hidden sm:inline"
                       style={{
-                        color:
-                          i <= currentStepIndex
-                            ? 'var(--text-primary)'
-                            : 'var(--text-muted)',
+                        fontSize: '0.75em',
+                        fontWeight: 500,
+                        color: i <= currentStepIndex ? 'var(--text-primary)' : 'var(--text-muted)',
                       }}
                     >
                       {s.label}
@@ -286,12 +305,10 @@ export function CreateProject({ onComplete, onCancel }: CreateProjectProps) {
                   </div>
                   {i < steps.length - 1 && (
                     <div
-                      className="w-8 h-px"
                       style={{
-                        backgroundColor:
-                          i < currentStepIndex
-                            ? 'var(--gold-primary)'
-                            : 'var(--border-default)',
+                        width: '32px',
+                        height: '1px',
+                        backgroundColor: i < currentStepIndex ? 'var(--accent-gold)' : 'var(--border-subtle)',
                       }}
                     />
                   )}
@@ -300,11 +317,11 @@ export function CreateProject({ onComplete, onCancel }: CreateProjectProps) {
             </div>
           )}
 
-          <div className="w-24" />
+          <div style={{ width: '96px' }} />
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto">
+        <div style={{ flex: 1, overflowY: 'auto' }}>
           {step === 'details' && (
             <DetailsStep
               title={title}
@@ -329,22 +346,11 @@ export function CreateProject({ onComplete, onCancel }: CreateProjectProps) {
               onDragOverScript={setDragOverScript}
               onDragOverSchedule={setDragOverSchedule}
               onDropScript={(e) =>
-                handleDrop(e, setScriptFile, setDragOverScript, [
-                  '.pdf',
-                  '.fdx',
-                  '.fountain',
-                  '.txt',
-                ])
+                handleDrop(e, setScriptFile, setDragOverScript, ['.pdf', '.fdx', '.fountain', '.txt'])
               }
               onDropSchedule={(e) =>
-                handleDrop(e, setScheduleFile, setDragOverSchedule, [
-                  '.pdf',
-                  '.xlsx',
-                  '.csv',
-                ])
+                handleDrop(e, setScheduleFile, setDragOverSchedule, ['.pdf', '.xlsx', '.csv'])
               }
-              onSelectScript={(e) => handleFileSelect(e, setScriptFile)}
-              onSelectSchedule={(e) => handleFileSelect(e, setScheduleFile)}
               onClearScript={() => setScriptFile(null)}
               onClearSchedule={() => setScheduleFile(null)}
               onNext={handleNext}
@@ -391,7 +397,7 @@ export function CreateProject({ onComplete, onCancel }: CreateProjectProps) {
   );
 }
 
-/* ━━━ Step 1: Project Details ━━━ */
+/* ━━━ Step 1: Details ━━━ */
 
 interface DetailsStepProps {
   title: string;
@@ -415,26 +421,20 @@ function DetailsStep({
   canProceed,
 }: DetailsStepProps) {
   return (
-    <div className="max-w-lg mx-auto px-8 py-12 animate-fade-in-up">
-      <div className="mb-10">
-        <h1
-          className="text-3xl font-bold mb-2"
-          style={{ fontFamily: 'var(--font-serif)', color: 'var(--text-primary)' }}
-        >
+    <div className="animate-fade-in-up" style={{ maxWidth: '480px', margin: '0 auto', padding: '48px 32px' }}>
+      <div style={{ marginBottom: '40px' }}>
+        <h1 style={{ fontSize: '1.5em', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-primary)', marginBottom: '8px' }}>
           Create New Project
         </h1>
-        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+        <p style={{ fontSize: '0.875em', color: 'var(--text-secondary)' }}>
           Tell us about your production. You can always update these later.
         </p>
       </div>
 
-      <div className="space-y-6">
-        {/* Project Title */}
-        <div className="animate-fade-in-up stagger-1">
-          <label
-            className="block text-xs font-semibold uppercase tracking-wider mb-2"
-            style={{ color: 'var(--text-muted)' }}
-          >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        {/* Title */}
+        <div>
+          <label style={{ display: 'block', fontSize: '0.875em', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '8px' }}>
             Project Title
           </label>
           <input
@@ -442,17 +442,15 @@ function DetailsStep({
             value={title}
             onChange={(e) => onTitleChange(e.target.value)}
             placeholder="e.g. The Deadline"
-            className="input-field text-base"
+            className="input-field"
+            style={{ padding: '12px 16px', fontSize: '0.9375em' }}
             autoFocus
           />
         </div>
 
         {/* Genre */}
-        <div className="animate-fade-in-up stagger-2">
-          <label
-            className="block text-xs font-semibold uppercase tracking-wider mb-2"
-            style={{ color: 'var(--text-muted)' }}
-          >
+        <div>
+          <label style={{ display: 'block', fontSize: '0.875em', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '8px' }}>
             Genre
           </label>
           <input
@@ -461,18 +459,17 @@ function DetailsStep({
             onChange={(e) => onGenreChange(e.target.value)}
             placeholder="e.g. Thriller, Comedy, Drama"
             className="input-field"
+            style={{ padding: '12px 16px', fontSize: '0.9375em' }}
           />
+          <p style={{ fontSize: '0.75em', color: 'var(--text-muted)', marginTop: '4px' }}>Optional</p>
         </div>
 
-        {/* Project Type (visual selector) */}
-        <div className="animate-fade-in-up stagger-3">
-          <label
-            className="block text-xs font-semibold uppercase tracking-wider mb-3"
-            style={{ color: 'var(--text-muted)' }}
-          >
+        {/* Type selector */}
+        <div>
+          <label style={{ display: 'block', fontSize: '0.875em', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '12px' }}>
             Production Type
           </label>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
             {PROJECT_TYPES.map((type) => {
               const Icon = TYPE_ICONS[type];
               const selected = projectType === type;
@@ -480,51 +477,23 @@ function DetailsStep({
                 <button
                   key={type}
                   onClick={() => onTypeChange(type)}
-                  className="flex flex-col items-center gap-2 p-4 rounded-xl transition-all"
+                  className="glass"
                   style={{
-                    backgroundColor: selected
-                      ? 'var(--gold-muted)'
-                      : 'var(--bg-card)',
-                    border: `1px solid ${
-                      selected
-                        ? 'var(--gold-primary)'
-                        : 'var(--border-subtle)'
-                    }`,
-                    boxShadow: selected ? 'var(--shadow-gold)' : 'none',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!selected) {
-                      e.currentTarget.style.borderColor =
-                        'var(--border-default)';
-                      e.currentTarget.style.backgroundColor =
-                        'var(--bg-hover)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!selected) {
-                      e.currentTarget.style.borderColor =
-                        'var(--border-subtle)';
-                      e.currentTarget.style.backgroundColor =
-                        'var(--bg-card)';
-                    }
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '16px 8px',
+                    borderRadius: '12px',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    borderColor: selected ? 'var(--border-glow)' : undefined,
+                    background: selected ? 'var(--accent-gold-soft)' : undefined,
+                    boxShadow: selected ? 'var(--glow-medium)' : undefined,
                   }}
                 >
-                  <Icon
-                    size={22}
-                    style={{
-                      color: selected
-                        ? 'var(--gold-primary)'
-                        : 'var(--text-muted)',
-                    }}
-                  />
-                  <span
-                    className="text-xs font-medium"
-                    style={{
-                      color: selected
-                        ? 'var(--gold-primary)'
-                        : 'var(--text-secondary)',
-                    }}
-                  >
+                  <Icon size={22} style={{ color: selected ? 'var(--accent-gold)' : 'var(--text-muted)' }} />
+                  <span style={{ fontSize: '0.75em', fontWeight: 500, color: selected ? 'var(--accent-gold)' : 'var(--text-secondary)' }}>
                     {type}
                   </span>
                 </button>
@@ -534,28 +503,23 @@ function DetailsStep({
         </div>
       </div>
 
-      {/* Continue button */}
-      <div className="mt-10 animate-fade-in-up stagger-4">
+      {/* Continue */}
+      <div style={{ marginTop: '40px' }}>
         <button
           onClick={onNext}
           disabled={!canProceed}
-          className="btn-gold w-full py-3.5 rounded-lg text-sm flex items-center justify-center gap-2"
+          className="btn-gold"
+          style={{ width: '100%', padding: '14px', borderRadius: '8px', fontSize: '1em', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
         >
           Continue
           <ArrowRight size={16} />
         </button>
-        <p
-          className="text-center text-xs mt-3"
-          style={{ color: 'var(--text-muted)' }}
-        >
-          Step 1 of 2
-        </p>
       </div>
     </div>
   );
 }
 
-/* ━━━ Step 2: File Upload ━━━ */
+/* ━━━ Step 2: Upload ━━━ */
 
 interface UploadStepProps {
   scriptFile: File | null;
@@ -568,8 +532,6 @@ interface UploadStepProps {
   onDragOverSchedule: (v: boolean) => void;
   onDropScript: (e: React.DragEvent) => void;
   onDropSchedule: (e: React.DragEvent) => void;
-  onSelectScript: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onSelectSchedule: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onClearScript: () => void;
   onClearSchedule: () => void;
   onNext: () => void;
@@ -587,116 +549,77 @@ function UploadStep({
   onDragOverSchedule,
   onDropScript,
   onDropSchedule,
-  onSelectScript,
-  onSelectSchedule,
   onClearScript,
   onClearSchedule,
   onNext,
   hasScript,
 }: UploadStepProps) {
   return (
-    <div className="max-w-lg mx-auto px-8 py-12 animate-fade-in-up">
-      <div className="mb-10">
-        <h1
-          className="text-3xl font-bold mb-2"
-          style={{ fontFamily: 'var(--font-serif)', color: 'var(--text-primary)' }}
-        >
+    <div className="animate-fade-in-up" style={{ maxWidth: '480px', margin: '0 auto', padding: '48px 32px' }}>
+      <div style={{ marginBottom: '40px' }}>
+        <h1 style={{ fontSize: '1.5em', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-primary)', marginBottom: '8px' }}>
           Upload Files
         </h1>
-        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-          Upload your script to auto-detect scenes and characters. You can also
-          add these manually later.
+        <p style={{ fontSize: '0.875em', color: 'var(--text-secondary)' }}>
+          Upload your script to auto-detect scenes and characters.
         </p>
       </div>
 
-      <div className="space-y-6">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
         {/* Script upload */}
-        <div className="animate-fade-in-up stagger-1">
-          <div className="flex items-center gap-2 mb-3">
-            <span
-              className="text-xs font-semibold uppercase tracking-wider"
-              style={{ color: 'var(--text-muted)' }}
-            >
-              Script
-            </span>
-            <span
-              className="text-[10px] px-2 py-0.5 rounded-full font-semibold"
-              style={{
-                backgroundColor: 'var(--gold-muted)',
-                color: 'var(--gold-primary)',
-              }}
-            >
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+            <label style={{ fontSize: '0.875em', fontWeight: 500, color: 'var(--text-primary)' }}>Script</label>
+            <span style={{
+              fontSize: '0.625em',
+              padding: '2px 8px',
+              borderRadius: '999px',
+              fontWeight: 600,
+              background: 'var(--accent-gold-soft)',
+              color: 'var(--accent-gold)',
+            }}>
               Recommended
             </span>
           </div>
 
           {scriptFile ? (
-            <div
-              className="upload-zone has-file p-5 flex items-center gap-4"
-            >
-              <div
-                className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-                style={{
-                  backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                }}
-              >
+            <div className="upload-zone has-file" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: 'rgba(34, 197, 94, 0.1)' }}>
                 <Check size={22} style={{ color: 'var(--status-success)' }} />
               </div>
-              <div className="flex-1 min-w-0">
-                <p
-                  className="text-sm font-medium truncate"
-                  style={{ color: 'var(--text-primary)' }}
-                >
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: '0.875em', fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {scriptFile.name}
                 </p>
-                <p
-                  className="text-xs"
-                  style={{ color: 'var(--status-success)' }}
-                >
+                <p style={{ fontSize: '0.75em', color: 'var(--status-success)' }}>
                   {(scriptFile.size / 1024).toFixed(0)} KB
                 </p>
               </div>
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onClearScript();
-                }}
-                className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
-                style={{ color: 'var(--text-muted)' }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.color = 'var(--status-error)')
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.color = 'var(--text-muted)')
-                }
+                onClick={(e) => { e.stopPropagation(); onClearScript(); }}
+                style={{ width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', transition: 'color 0.2s' }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--status-error)')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
               >
                 <X size={16} />
               </button>
             </div>
           ) : (
             <div
-              className={`upload-zone p-8 text-center ${dragOverScript ? 'drag-over' : ''}`}
+              className={`upload-zone ${dragOverScript ? 'drag-over' : ''}`}
+              style={{ padding: '32px', textAlign: 'center' }}
               onClick={() => scriptInputRef.current?.click()}
-              onDragOver={(e) => {
-                e.preventDefault();
-                onDragOverScript(true);
-              }}
+              onDragOver={(e) => { e.preventDefault(); onDragOverScript(true); }}
               onDragLeave={() => onDragOverScript(false)}
               onDrop={onDropScript}
             >
-              <div
-                className="w-14 h-14 rounded-xl flex items-center justify-center mx-auto mb-4"
-                style={{ backgroundColor: 'var(--gold-muted)' }}
-              >
-                <Upload size={24} style={{ color: 'var(--gold-primary)' }} />
+              <div style={{ width: '56px', height: '56px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', background: 'var(--accent-gold-soft)' }}>
+                <Upload size={24} style={{ color: 'var(--accent-gold)' }} />
               </div>
-              <p
-                className="text-sm font-medium mb-1"
-                style={{ color: 'var(--text-primary)' }}
-              >
+              <p style={{ fontSize: '0.875em', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '4px' }}>
                 Drop your script here or click to browse
               </p>
-              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              <p style={{ fontSize: '0.75em', color: 'var(--text-muted)' }}>
                 PDF, Final Draft (.fdx), Fountain, or plain text
               </p>
             </div>
@@ -704,150 +627,86 @@ function UploadStep({
         </div>
 
         {/* Schedule upload */}
-        <div className="animate-fade-in-up stagger-2">
-          <div className="flex items-center gap-2 mb-3">
-            <span
-              className="text-xs font-semibold uppercase tracking-wider"
-              style={{ color: 'var(--text-muted)' }}
-            >
-              Production Schedule
-            </span>
-            <span
-              className="text-[10px] px-2 py-0.5 rounded-full font-medium"
-              style={{
-                backgroundColor: 'var(--bg-card)',
-                color: 'var(--text-muted)',
-                border: '1px solid var(--border-subtle)',
-              }}
-            >
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+            <label style={{ fontSize: '0.875em', fontWeight: 500, color: 'var(--text-primary)' }}>Production Schedule</label>
+            <span style={{
+              fontSize: '0.625em',
+              padding: '2px 8px',
+              borderRadius: '999px',
+              fontWeight: 500,
+              background: 'transparent',
+              color: 'var(--text-muted)',
+              border: '1px solid var(--border-subtle)',
+            }}>
               Optional
             </span>
           </div>
 
           {scheduleFile ? (
-            <div
-              className="upload-zone has-file p-5 flex items-center gap-4"
-            >
-              <div
-                className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-                style={{
-                  backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                }}
-              >
+            <div className="upload-zone has-file" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: 'rgba(34, 197, 94, 0.1)' }}>
                 <Check size={22} style={{ color: 'var(--status-success)' }} />
               </div>
-              <div className="flex-1 min-w-0">
-                <p
-                  className="text-sm font-medium truncate"
-                  style={{ color: 'var(--text-primary)' }}
-                >
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: '0.875em', fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {scheduleFile.name}
                 </p>
-                <p
-                  className="text-xs"
-                  style={{ color: 'var(--status-success)' }}
-                >
+                <p style={{ fontSize: '0.75em', color: 'var(--status-success)' }}>
                   {(scheduleFile.size / 1024).toFixed(0)} KB
                 </p>
               </div>
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onClearSchedule();
-                }}
-                className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
-                style={{ color: 'var(--text-muted)' }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.color = 'var(--status-error)')
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.color = 'var(--text-muted)')
-                }
+                onClick={(e) => { e.stopPropagation(); onClearSchedule(); }}
+                style={{ width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', transition: 'color 0.2s' }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--status-error)')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
               >
                 <X size={16} />
               </button>
             </div>
           ) : (
             <div
-              className={`upload-zone p-6 text-center ${dragOverSchedule ? 'drag-over' : ''}`}
+              className={`upload-zone ${dragOverSchedule ? 'drag-over' : ''}`}
+              style={{ padding: '24px', display: 'flex', alignItems: 'center', gap: '16px' }}
               onClick={() => scheduleInputRef.current?.click()}
-              onDragOver={(e) => {
-                e.preventDefault();
-                onDragOverSchedule(true);
-              }}
+              onDragOver={(e) => { e.preventDefault(); onDragOverSchedule(true); }}
               onDragLeave={() => onDragOverSchedule(false)}
               onDrop={onDropSchedule}
             >
-              <div className="flex items-center gap-4">
-                <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: 'var(--bg-card)' }}
-                >
-                  <Calendar
-                    size={18}
-                    style={{ color: 'var(--text-muted)' }}
-                  />
-                </div>
-                <div className="text-left">
-                  <p
-                    className="text-sm font-medium"
-                    style={{ color: 'var(--text-secondary)' }}
-                  >
-                    Drop schedule here or click to browse
-                  </p>
-                  <p
-                    className="text-xs"
-                    style={{ color: 'var(--text-muted)' }}
-                  >
-                    PDF or spreadsheet (strips, one-liner)
-                  </p>
-                </div>
+              <div style={{ width: '40px', height: '40px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: 'var(--bg-secondary)' }}>
+                <Calendar size={18} style={{ color: 'var(--text-muted)' }} />
+              </div>
+              <div>
+                <p style={{ fontSize: '0.875em', fontWeight: 500, color: 'var(--text-secondary)' }}>
+                  Drop schedule here or click to browse
+                </p>
+                <p style={{ fontSize: '0.75em', color: 'var(--text-muted)' }}>
+                  PDF or spreadsheet (strips, one-liner)
+                </p>
               </div>
             </div>
           )}
         </div>
 
         {/* Info cards */}
-        <div className="space-y-3 animate-fade-in-up stagger-3">
-          <div
-            className="flex gap-3 p-4 rounded-xl"
-            style={{
-              backgroundColor: 'rgba(59, 130, 246, 0.06)',
-              border: '1px solid rgba(59, 130, 246, 0.15)',
-            }}
-          >
-            <Info
-              size={18}
-              className="flex-shrink-0 mt-0.5"
-              style={{ color: 'var(--status-info)' }}
-            />
-            <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-              <p className="font-semibold mb-0.5">Faster with a schedule</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div className="glass" style={{ display: 'flex', gap: '12px', padding: '16px', borderRadius: '12px', borderColor: 'rgba(59, 130, 246, 0.15)' }}>
+            <Info size={18} style={{ flexShrink: 0, marginTop: '2px', color: 'var(--status-info)' }} />
+            <div style={{ fontSize: '0.75em' }}>
+              <p style={{ fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '2px' }}>Faster with a schedule</p>
               <p style={{ color: 'var(--text-muted)' }}>
-                The schedule contains the official cast list with character
-                numbers. This allows instant, accurate character detection per
-                scene.
+                The schedule contains the official cast list with character numbers for instant, accurate detection.
               </p>
             </div>
           </div>
 
-          <div
-            className="flex gap-3 p-4 rounded-xl"
-            style={{
-              backgroundColor: 'var(--gold-muted)',
-              border: '1px solid var(--gold-border)',
-            }}
-          >
-            <Clock
-              size={18}
-              className="flex-shrink-0 mt-0.5"
-              style={{ color: 'var(--gold-primary)' }}
-            />
-            <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-              <p className="font-semibold mb-0.5">Background processing</p>
+          <div className="glass" style={{ display: 'flex', gap: '12px', padding: '16px', borderRadius: '12px', background: 'var(--accent-gold-soft)', borderColor: 'var(--border-medium)' }}>
+            <Clock size={18} style={{ flexShrink: 0, marginTop: '2px', color: 'var(--accent-gold)' }} />
+            <div style={{ fontSize: '0.75em' }}>
+              <p style={{ fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '2px' }}>Background processing</p>
               <p style={{ color: 'var(--text-muted)' }}>
-                Character assignments will be confirmed within a few minutes.
-                You can start working right away.
+                Character assignments will be confirmed within a few minutes. You can start working right away.
               </p>
             </div>
           </div>
@@ -855,82 +714,67 @@ function UploadStep({
       </div>
 
       {/* Actions */}
-      <div className="mt-10 space-y-3 animate-fade-in-up stagger-4">
+      <div style={{ marginTop: '40px' }}>
         <button
           onClick={onNext}
-          className="btn-gold w-full py-3.5 rounded-lg text-sm flex items-center justify-center gap-2"
+          className="btn-gold"
+          style={{ width: '100%', padding: '14px', borderRadius: '8px', fontSize: '1em', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
         >
           {hasScript ? (
-            <>
-              Start Processing
-              <Sparkles size={16} />
-            </>
+            <>Start Processing <Sparkles size={16} /></>
           ) : (
-            <>
-              Create Project
-              <ArrowRight size={16} />
-            </>
+            <>Create Project <ArrowRight size={16} /></>
           )}
         </button>
 
         {!hasScript && (
-          <p
-            className="text-center text-xs"
-            style={{ color: 'var(--text-muted)' }}
-          >
+          <p style={{ textAlign: 'center', fontSize: '0.75em', color: 'var(--text-muted)', marginTop: '12px' }}>
             You can upload a script later from the project dashboard
           </p>
         )}
       </div>
-
-      {/* Hidden inputs for file selection */}
-      <input
-        ref={scriptInputRef}
-        type="file"
-        accept=".pdf,.fdx,.fountain,.txt"
-        onChange={onSelectScript}
-        className="hidden"
-      />
-      <input
-        ref={scheduleInputRef}
-        type="file"
-        accept=".pdf,.xlsx,.csv"
-        onChange={onSelectSchedule}
-        className="hidden"
-      />
     </div>
   );
 }
 
-/* ━━━ Processing Step ━━━ */
+/* ━━━ Processing ━━━ */
 
-interface ProcessingStepProps {
-  fileName: string;
-  progress: number;
-  status: string;
-}
-
-function ProcessingStep({ fileName, progress, status }: ProcessingStepProps) {
+function ProcessingStep({ fileName, progress, status }: { fileName: string; progress: number; status: string }) {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] px-8 animate-fade-in">
-      {/* Animated icon */}
+    <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', padding: '32px' }}>
       <div
-        className="w-24 h-24 rounded-2xl flex items-center justify-center mb-8 relative"
         style={{
-          backgroundColor: 'var(--gold-muted)',
-          border: '1px solid var(--gold-border)',
+          width: '96px',
+          height: '96px',
+          borderRadius: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: '32px',
+          position: 'relative',
+          background: 'var(--accent-gold-soft)',
+          border: '1px solid var(--border-medium)',
         }}
       >
         <FileText
           size={40}
-          style={{ color: 'var(--gold-primary)' }}
+          style={{ color: 'var(--accent-gold)' }}
           className={progress < 100 ? 'animate-pulse' : ''}
         />
         {progress >= 100 && (
           <div
-            className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full flex items-center justify-center animate-scale-in"
+            className="animate-scale-in"
             style={{
-              backgroundColor: 'var(--status-success)',
+              position: 'absolute',
+              bottom: '-4px',
+              right: '-4px',
+              width: '32px',
+              height: '32px',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'var(--status-success)',
             }}
           >
             <Check size={16} color="white" />
@@ -938,175 +782,87 @@ function ProcessingStep({ fileName, progress, status }: ProcessingStepProps) {
         )}
       </div>
 
-      <h2
-        className="text-xl font-bold mb-1"
-        style={{ fontFamily: 'var(--font-serif)', color: 'var(--text-primary)' }}
-      >
+      <h2 style={{ fontSize: '1.25em', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-primary)', marginBottom: '4px' }}>
         Processing Script
       </h2>
-      <p
-        className="text-sm mb-8 truncate max-w-xs"
-        style={{ color: 'var(--text-muted)' }}
-      >
+      <p style={{ fontSize: '0.875em', color: 'var(--text-muted)', marginBottom: '32px', maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {fileName}
       </p>
 
-      {/* Progress bar */}
-      <div className="w-80 max-w-full">
-        <div
-          className="h-2 rounded-full overflow-hidden"
-          style={{ backgroundColor: 'var(--bg-card)' }}
-        >
+      <div style={{ width: '320px', maxWidth: '100%' }}>
+        <div style={{ height: '8px', borderRadius: '999px', overflow: 'hidden', background: 'var(--bg-secondary)' }}>
           <div
-            className="h-full rounded-full transition-all duration-500 ease-out"
             style={{
+              height: '100%',
+              borderRadius: '999px',
+              transition: 'width 0.5s ease-out',
               width: `${progress}%`,
-              background:
-                'linear-gradient(90deg, #a07628 0%, #c19a4e 50%, #d4b06a 100%)',
+              background: 'linear-gradient(90deg, var(--accent-gold), rgba(201, 169, 97, 0.6))',
             }}
           />
         </div>
-        <div className="flex justify-between items-center mt-3">
-          <p
-            className="text-xs font-medium"
-            style={{ color: 'var(--text-secondary)' }}
-          >
-            {status}
-          </p>
-          <p
-            className="text-xs font-mono"
-            style={{ color: 'var(--text-muted)' }}
-          >
-            {progress}%
-          </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
+          <p style={{ fontSize: '0.75em', fontWeight: 500, color: 'var(--text-secondary)' }}>{status}</p>
+          <p style={{ fontSize: '0.75em', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>{progress}%</p>
         </div>
       </div>
     </div>
   );
 }
 
-/* ━━━ Ready Step ━━━ */
+/* ━━━ Ready ━━━ */
 
-interface ReadyStepProps {
-  title: string;
-  type: string;
-  hasScript: boolean;
-  hasSchedule: boolean;
-  onCreate: () => void;
-}
-
-function ReadyStep({
-  title,
-  type,
-  hasScript,
-  hasSchedule,
-  onCreate,
-}: ReadyStepProps) {
+function ReadyStep({ title, type, hasScript, hasSchedule, onCreate }: { title: string; type: string; hasScript: boolean; hasSchedule: boolean; onCreate: () => void }) {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] px-8 animate-fade-in-up">
-      {/* Success icon */}
+    <div className="animate-fade-in-up" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', padding: '32px' }}>
       <div
-        className="w-20 h-20 rounded-full flex items-center justify-center mb-6"
         style={{
-          background:
-            'linear-gradient(135deg, rgba(16,185,129,0.15) 0%, rgba(16,185,129,0.05) 100%)',
-          border: '1px solid rgba(16,185,129,0.3)',
+          width: '80px',
+          height: '80px',
+          borderRadius: '50%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: '24px',
+          background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(34, 197, 94, 0.05) 100%)',
+          border: '1px solid rgba(34, 197, 94, 0.3)',
         }}
       >
         <Check size={36} style={{ color: 'var(--status-success)' }} />
       </div>
 
-      <h2
-        className="text-2xl font-bold mb-2"
-        style={{ fontFamily: 'var(--font-serif)', color: 'var(--text-primary)' }}
-      >
+      <h2 style={{ fontSize: '1.5em', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-primary)', marginBottom: '8px' }}>
         Ready to Go
       </h2>
-      <p
-        className="text-sm mb-8 text-center max-w-sm"
-        style={{ color: 'var(--text-secondary)' }}
-      >
-        Your project has been set up successfully. Everything is ready for you to
-        start working.
+      <p style={{ fontSize: '0.875em', color: 'var(--text-secondary)', marginBottom: '32px', textAlign: 'center', maxWidth: '360px' }}>
+        Your project has been set up successfully. Everything is ready for you to start working.
       </p>
 
-      {/* Summary */}
+      {/* Summary card */}
       <div
-        className="w-full max-w-sm rounded-xl p-5 mb-8 space-y-3"
-        style={{
-          backgroundColor: 'var(--bg-card)',
-          border: '1px solid var(--border-subtle)',
-        }}
+        className="glass"
+        style={{ width: '100%', maxWidth: '360px', borderRadius: '12px', padding: '20px', marginBottom: '32px' }}
       >
-        <div className="flex justify-between items-center">
-          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            Project
-          </span>
-          <span
-            className="text-sm font-semibold"
-            style={{ color: 'var(--text-primary)' }}
-          >
-            {title}
-          </span>
-        </div>
-        <div
-          className="h-px"
-          style={{ backgroundColor: 'var(--border-subtle)' }}
-        />
-        <div className="flex justify-between items-center">
-          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            Type
-          </span>
-          <span
-            className="text-sm"
-            style={{ color: 'var(--text-secondary)' }}
-          >
-            {type}
-          </span>
-        </div>
-        <div
-          className="h-px"
-          style={{ backgroundColor: 'var(--border-subtle)' }}
-        />
-        <div className="flex justify-between items-center">
-          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            Script
-          </span>
-          <span
-            className="text-sm"
-            style={{
-              color: hasScript
-                ? 'var(--status-success)'
-                : 'var(--text-muted)',
-            }}
-          >
-            {hasScript ? 'Uploaded' : 'Not uploaded'}
-          </span>
-        </div>
-        <div
-          className="h-px"
-          style={{ backgroundColor: 'var(--border-subtle)' }}
-        />
-        <div className="flex justify-between items-center">
-          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            Schedule
-          </span>
-          <span
-            className="text-sm"
-            style={{
-              color: hasSchedule
-                ? 'var(--status-success)'
-                : 'var(--text-muted)',
-            }}
-          >
-            {hasSchedule ? 'Uploaded' : 'Not uploaded'}
-          </span>
-        </div>
+        {[
+          { label: 'Project', value: title, color: 'var(--text-primary)', weight: 600 },
+          { label: 'Type', value: type, color: 'var(--text-secondary)', weight: 400 },
+          { label: 'Script', value: hasScript ? 'Uploaded' : 'Not uploaded', color: hasScript ? 'var(--status-success)' : 'var(--text-muted)', weight: 400 },
+          { label: 'Schedule', value: hasSchedule ? 'Uploaded' : 'Not uploaded', color: hasSchedule ? 'var(--status-success)' : 'var(--text-muted)', weight: 400 },
+        ].map((item, i, arr) => (
+          <div key={item.label}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0' }}>
+              <span style={{ fontSize: '0.75em', color: 'var(--text-muted)' }}>{item.label}</span>
+              <span style={{ fontSize: '0.875em', fontWeight: item.weight, color: item.color }}>{item.value}</span>
+            </div>
+            {i < arr.length - 1 && <div style={{ height: '1px', background: 'var(--glass-border)' }} />}
+          </div>
+        ))}
       </div>
 
       <button
         onClick={onCreate}
-        className="btn-gold px-12 py-3.5 rounded-lg text-sm flex items-center justify-center gap-2"
+        className="btn-gold"
+        style={{ padding: '14px 48px', borderRadius: '8px', fontSize: '0.875em', display: 'flex', alignItems: 'center', gap: '8px' }}
       >
         Open Project
         <ArrowRight size={16} />

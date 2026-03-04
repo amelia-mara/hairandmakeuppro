@@ -1,70 +1,81 @@
-import { Sun, Moon, Monitor } from 'lucide-react';
-import { useThemeStore, type Theme } from '@/stores/themeStore';
-
 export function TopBar() {
-  const { theme, setTheme } = useThemeStore();
-
-  const cycleTheme = () => {
-    const order: Theme[] = ['dark', 'light', 'system'];
-    const next = order[(order.indexOf(theme) + 1) % order.length];
-    setTheme(next);
-  };
-
-  const ThemeIcon = theme === 'dark' ? Moon : theme === 'light' ? Sun : Monitor;
-
   return (
-    <header
-      className="h-16 flex items-center justify-between px-8 border-b"
-      style={{
-        backgroundColor: 'var(--bg-surface)',
-        borderColor: 'var(--border-subtle)',
-      }}
-    >
-      {/* Wordmark */}
-      <div className="flex items-center gap-1">
-        <span
-          className="text-sm font-semibold tracking-[0.15em] uppercase"
-          style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-sans)' }}
-        >
-          PREP
-        </span>
-        <span
-          className="text-sm font-bold italic"
-          style={{ color: 'var(--gold-primary)', fontFamily: 'var(--font-serif)' }}
-        >
-          HAPPY
-        </span>
-      </div>
-
-      {/* Right side */}
-      <div className="flex items-center gap-3">
-        {/* Theme toggle */}
-        <button
-          onClick={cycleTheme}
-          className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors"
-          style={{ color: 'var(--text-muted)' }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'var(--bg-hover)';
-            e.currentTarget.style.color = 'var(--text-secondary)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-            e.currentTarget.style.color = 'var(--text-muted)';
-          }}
-          title={`Theme: ${theme}`}
-        >
-          <ThemeIcon size={18} />
-        </button>
-
-        {/* Avatar */}
-        <div
-          className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-semibold"
+    <header className="app-header">
+      <div className="flex items-center justify-between">
+        <h1
           style={{
-            background: 'linear-gradient(135deg, #d4b06a 0%, #a07628 100%)',
-            color: '#1a1510',
+            fontSize: '1.875em',
+            fontWeight: 600,
+            letterSpacing: '-0.02em',
+            color: 'var(--text-primary)',
           }}
         >
-          AM
+          Prep Happy
+        </h1>
+
+        <div className="flex items-center gap-3">
+          {/* Back to Checks Happy */}
+          <a
+            href="/"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 18px',
+              background: 'linear-gradient(135deg, rgba(201, 169, 97, 0.15) 0%, rgba(201, 169, 97, 0.08) 100%)',
+              border: '1px solid rgba(201, 169, 97, 0.4)',
+              borderRadius: '10px',
+              color: 'var(--accent-gold)',
+              fontWeight: 600,
+              fontSize: '0.875rem',
+              textDecoration: 'none',
+              transition: 'all 0.3s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, rgba(201, 169, 97, 0.25) 0%, rgba(201, 169, 97, 0.15) 100%)';
+              e.currentTarget.style.boxShadow = 'var(--glow-medium)';
+              e.currentTarget.style.transform = 'translateY(-1px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, rgba(201, 169, 97, 0.15) 0%, rgba(201, 169, 97, 0.08) 100%)';
+              e.currentTarget.style.boxShadow = 'none';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+            Checks Happy
+          </a>
+
+          {/* Profile */}
+          <button
+            style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, rgba(201, 169, 97, 0.9) 0%, rgba(184, 150, 81, 0.9) 100%)',
+              border: '1px solid rgba(201, 169, 97, 0.3)',
+              color: 'var(--bg-primary)',
+              fontWeight: 600,
+              fontSize: '0.8125em',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'scale(1.05)';
+              e.currentTarget.style.boxShadow = 'var(--glow-medium)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'scale(1)';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+          >
+            AM
+          </button>
         </div>
       </div>
     </header>
