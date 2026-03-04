@@ -143,7 +143,7 @@ export async function processScenesBatchForSynopsisAndCharacters(
   // Check if AI is available for synopsis generation
   const aiAvailable = await checkAIAvailability();
   if (!aiAvailable) {
-    onProgress?.('Character identification complete (AI unavailable for synopses)', 100);
+    onProgress?.('Character identification complete (synopsis generation unavailable)', 100);
     return results;
   }
 

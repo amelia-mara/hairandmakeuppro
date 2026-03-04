@@ -347,7 +347,7 @@ export function exportHybridBreakdownHTML() {
         <div class="header">
             <h1>${breakdown.script}</h1>
             <div class="meta">
-                Hybrid AI-Assisted Breakdown Report<br>
+                Breakdown Report<br>
                 Generated: ${new Date(breakdown.exportedAt).toLocaleString()}
             </div>
         </div>
@@ -433,7 +433,7 @@ export function exportHybridBreakdownHTML() {
         // Add pending suggestions
         const pendingSuggestions = scene.suggestions.filter(s => s.status === 'pending');
         if (pendingSuggestions.length > 0) {
-            html += '<h3>Pending AI Suggestions</h3>';
+            html += '<h3>Pending Suggestions</h3>';
             pendingSuggestions.forEach(item => {
                 html += `
                 <div class="item pending">

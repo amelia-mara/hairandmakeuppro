@@ -331,9 +331,9 @@ ${scene.text || scene.content || ''}`;
 
         const scriptTitle = state.scriptData?.title || state.currentProject || 'Untitled';
 
-        showTopLoadingBar('Creating AI Context', `Analyzing ${state.scenes.length} scenes...`, 0);
+        showTopLoadingBar('Analyzing Script', `Analyzing ${state.scenes.length} scenes...`, 0);
 
-        updateTopLoadingBar('Creating AI Context', 'Performing comprehensive analysis...', 25);
+        updateTopLoadingBar('Analyzing Script', 'Performing comprehensive analysis...', 25);
         const masterContext = await performComprehensiveAnalysis(fullScriptText, scriptTitle);
 
         if (masterContext) {
@@ -342,7 +342,7 @@ ${scene.text || scene.content || ''}`;
             localStorage.setItem('masterContext', JSON.stringify(masterContext));
             localStorage.setItem('scriptMasterContext', JSON.stringify(masterContext));
 
-            updateTopLoadingBar('Creating AI Context', 'Building character profiles...', 75);
+            updateTopLoadingBar('Analyzing Script', 'Building character profiles...', 75);
             populateFromMasterContext(masterContext);
 
             window.contextReady = true;
